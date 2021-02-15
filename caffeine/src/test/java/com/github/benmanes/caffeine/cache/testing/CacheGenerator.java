@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static org.mockito.Mockito.reset;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +39,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -135,7 +132,6 @@ final class CacheGenerator {
         ImmutableSet.copyOf(asyncLoading),
         ImmutableSet.copyOf(computations),
         ImmutableSet.copyOf(cacheSpec.loader()),
-        ImmutableSet.copyOf(cacheSpec.writer()),
         ImmutableSet.copyOf(implementations));
   }
 
@@ -173,7 +169,6 @@ final class CacheGenerator {
         (Boolean) combination.get(index++),
         (Compute) combination.get(index++),
         (Loader) combination.get(index++),
-        (Writer) combination.get(index++),
         (Implementation) combination.get(index++),
         cacheSpec);
   }
@@ -196,19 +191,13 @@ final class CacheGenerator {
         && !Arrays.stream(cacheSpec.mustExpireWithAnyOf()).anyMatch(context::expires);
     boolean schedulerIgnored = (context.cacheScheduler != CacheScheduler.DEFAULT)
         && !context.expires();
-    boolean writerIncompatible = context.writes()
-        && ((context.implementation() != Implementation.Caffeine)
-            || (context.evictionListenerType() != Listener.DEFAULT)
-            || context.isAsync() || context.isWeakKeys());
     boolean evictionListenerIncompatible = (context.evictionListenerType() != Listener.DEFAULT)
         && ((context.implementation() != Implementation.Caffeine)
             || (context.isAsync() && context.isWeakKeys()));
 
-    boolean skip = asyncIncompatible || asyncLoaderIncompatible
-        || writerIncompatible || evictionListenerIncompatible
-        || refreshIncompatible || weigherIncompatible
-        || expiryIncompatible || expirationIncompatible
-        || referenceIncompatible || schedulerIgnored;
+    boolean skip = asyncIncompatible || asyncLoaderIncompatible || evictionListenerIncompatible
+        || refreshIncompatible || weigherIncompatible || expiryIncompatible
+        || expirationIncompatible || referenceIncompatible || schedulerIgnored;
     return !skip;
   }
 
@@ -235,7 +224,6 @@ final class CacheGenerator {
     int last = BASE + maximum - 1;
     int middle = Math.max(first, BASE + ((last - first) / 2));
 
-    context.disableRejectingCacheWriter();
     for (int i = 0; i < maximum; i++) {
       Map.Entry<Integer, Integer> entry = INTS.get(i);
 
@@ -255,10 +243,6 @@ final class CacheGenerator {
       cache.put(key, value);
       context.original.put(key, value);
       context.ticker().advance(context.advance.timeNanos(), TimeUnit.NANOSECONDS);
-    }
-    context.enableRejectingCacheWriter();
-    if (context.writer() == Writer.MOCKITO) {
-      reset(context.cacheWriter());
     }
   }
 

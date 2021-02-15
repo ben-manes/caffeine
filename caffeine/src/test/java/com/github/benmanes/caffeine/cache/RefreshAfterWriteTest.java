@@ -22,7 +22,6 @@ import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -50,7 +49,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
 import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
 import com.github.benmanes.caffeine.cache.testing.TrackingExecutor;
@@ -69,7 +67,6 @@ public final class RefreshAfterWriteTest {
 
   /* --------------- getIfPresent --------------- */
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NEGATIVE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -83,7 +80,6 @@ public final class RefreshAfterWriteTest {
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NEGATIVE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -99,7 +95,6 @@ public final class RefreshAfterWriteTest {
 
   /* --------------- getAllPresent --------------- */
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -116,7 +111,6 @@ public final class RefreshAfterWriteTest {
 
   /* --------------- getFunc --------------- */
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -131,7 +125,6 @@ public final class RefreshAfterWriteTest {
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -149,7 +142,6 @@ public final class RefreshAfterWriteTest {
 
   /* --------------- get --------------- */
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -163,7 +155,6 @@ public final class RefreshAfterWriteTest {
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -242,7 +233,6 @@ public final class RefreshAfterWriteTest {
 
   /* --------------- getAll --------------- */
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
@@ -262,7 +252,6 @@ public final class RefreshAfterWriteTest {
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })

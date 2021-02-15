@@ -99,9 +99,6 @@ public final class CaffeineCacheFromContext {
     if (context.evictionListenerType != Listener.DEFAULT) {
       builder.evictionListener(context.evictionListener);
     }
-    if (context.writes()) {
-      builder.writer(context.cacheWriter());
-    }
     if (context.isAsync()) {
       if (context.loader == null) {
         context.asyncCache = builder.buildAsync();

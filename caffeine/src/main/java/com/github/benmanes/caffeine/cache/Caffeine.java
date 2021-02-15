@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
-import java.io.Serializable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.ref.SoftReference;
@@ -40,6 +39,7 @@ import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.github.benmanes.caffeine.cache.Async.AsyncEvictionListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.cache.Async.AsyncRemovalListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
@@ -161,8 +161,6 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
   @Nullable RemovalListener<? super K, ? super V> evictionListener;
   @Nullable RemovalListener<? super K, ? super V> removalListener;
   @Nullable Supplier<StatsCounter> statsCounterSupplier;
-  @SuppressWarnings("deprecation")
-  @Nullable CacheWriter<? super K, ? super V> writer;
   @Nullable Weigher<? super K, ? super V> weigher;
   @Nullable Expiry<? super K, ? super V> expiry;
   @Nullable Scheduler scheduler;
@@ -484,18 +482,14 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
    * entries are cleaned up as part of the routine maintenance described in the class javadoc.
    * <p>
-   * This feature cannot be used in conjunction with {@link #writer}.
-   * <p>
-   * This feature cannot be used in conjunction with {@link #writer} or when {@link #weakKeys()} is
-   * combined with {@link #buildAsync}.
+   * This feature cannot be used in conjunction when {@link #weakKeys()} is combined with
+   * {@link #buildAsync}.
    *
    * @return this {@code Caffeine} instance (for chaining)
-   * @throws IllegalStateException if the key strength was already set or the writer was set
+   * @throws IllegalStateException if the key strength was already set
    */
   public Caffeine<K, V> weakKeys() {
     requireState(keyStrength == null, "Key strength was already set to %s", keyStrength);
-    requireState(writer == null, "Weak keys may not be used with CacheWriter");
-
     keyStrength = Strength.WEAK;
     return this;
   }
@@ -869,6 +863,15 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
     return self;
   }
 
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  <K1 extends K, V1 extends V> @Nullable RemovalListener<K1, V1> getEvictionListener(
+      boolean async) {
+    var castedListener = (RemovalListener<K1, V1>) evictionListener;
+    return async && (castedListener != null)
+        ? new AsyncEvictionListener(castedListener)
+        : castedListener;
+  }
+
   /**
    * Specifies a listener instance that caches should notify each time an entry is removed for any
    * {@linkplain RemovalCause reason}. The cache will invoke this listener on the configured
@@ -917,63 +920,6 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
     return async && (castedListener != null)
         ? new AsyncRemovalListener(castedListener, getExecutor())
         : castedListener;
-  }
-
-  /**
-   * Specifies a writer instance that caches should notify each time an entry is explicitly created
-   * or modified, or removed for any {@linkplain RemovalCause reason}. The writer is not notified
-   * when an entry is loaded or computed. Each cache created by this builder will invoke this writer
-   * as part of the atomic operation that modifies the cache.
-   * <p>
-   * <b>Important note:</b> after invoking this method, do not continue to use <i>this</i> cache
-   * builder reference; instead use the reference this method <i>returns</i>. At runtime, these
-   * point to the same instance, but only the returned reference has the correct generic type
-   * information so as to ensure type safety. For best results, use the standard method-chaining
-   * idiom illustrated in the class documentation above, configuring a builder and building your
-   * cache in a single statement. Failure to heed this advice can result in a
-   * {@link ClassCastException} being thrown by a cache operation at some <i>undefined</i> point in
-   * the future.
-   * <p>
-   * <b>Warning:</b> any exception thrown by {@code writer} will be propagated to the {@code Cache}
-   * user.
-   * <p>
-   * This feature cannot be used in conjunction with {@link #weakKeys()},
-   * {@link #evictionListener(RemovalListener)}, or {@link #buildAsync}.
-   *
-   * @param writer a writer instance that caches should notify each time an entry is explicitly
-   *        created or modified, or removed for any reason
-   * @param <K1> the key type of the writer
-   * @param <V1> the value type of the writer
-   * @return the cache builder reference that should be used instead of {@code this} for any
-   *         remaining configuration and cache building
-   * @throws IllegalStateException if a writer was already set or if the key strength is weak
-   * @throws NullPointerException if the specified writer is null
-   * @deprecated Scheduled for removal in version 3.0.0. Consider instead using {@link Map} compute
-   *             methods for extending manual write and remove operations, and using
-   *             {@link #evictionListener(RemovalListener)} for extending removals due to eviction.
-   */
-  @Deprecated
-  public <K1 extends K, V1 extends V> Caffeine<K1, V1> writer(
-      CacheWriter<? super K1, ? super V1> writer) {
-    requireState(this.writer == null, "Writer was already set to %s", this.writer);
-    requireState(keyStrength == null, "Weak keys may not be used with CacheWriter");
-    requireState(evictionListener == null, "Eviction listener may not be used with CacheWriter");
-
-    @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    self.writer = requireNonNull(writer);
-    return self;
-  }
-
-  @SuppressWarnings({"deprecation", "unchecked"})
-  <K1 extends K, V1 extends V> CacheWriter<K1, V1> getCacheWriter(boolean async) {
-    CacheWriter<K1, V1> castedWriter;
-    if (evictionListener == null) {
-      castedWriter = (CacheWriter<K1, V1>) writer;
-    } else {
-      castedWriter = new CacheWriterAdapter<>(evictionListener, async);
-    }
-    return (castedWriter == null) ? CacheWriter.disabledWriter() : castedWriter;
   }
 
   /**
@@ -1093,9 +1039,8 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
    * <p>
-   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()},
-   * {@link #writer(CacheWriter)}, or when {@link #weakKeys()} are combined with
-   * {@link #evictionListener(RemovalListener)}.
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or when
+   * {@link #weakKeys()} are combined with {@link #evictionListener(RemovalListener)}.
    *
    * @param <K1> the key type of the cache
    * @param <V1> the value type of the cache
@@ -1104,7 +1049,6 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
   @CheckReturnValue
   public <K1 extends K, V1 extends V> AsyncCache<K1, V1> buildAsync() {
     requireState(valueStrength == null, "Weak or soft values can not be combined with AsyncCache");
-    requireState(writer == null, "CacheWriter can not be combined with AsyncCache");
     requireState(isStrongKeys() || (evictionListener == null),
         "Weak keys cannot be combined eviction listener and with AsyncLoadingCache");
     requireWeightWithWeigher();
@@ -1127,9 +1071,8 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
    * <p>
-   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()},
-   * {@link #writer(CacheWriter)}, or when {@link #weakKeys()} are combined with
-   * {@link #evictionListener(RemovalListener)}.
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or when
+   * {@link #weakKeys()} are combined with {@link #evictionListener(RemovalListener)}.
    *
    * @param loader the cache loader used to obtain new values
    * @param <K1> the key type of the loader
@@ -1152,9 +1095,8 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
    * <p>
-   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()},
-   * {@link #writer(CacheWriter)}, or when {@link #weakKeys()} are combined with
-   * {@link #evictionListener(RemovalListener)}.
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or when
+   * {@link #weakKeys()} are combined with {@link #evictionListener(RemovalListener)}.
    *
    * @param loader the cache loader used to obtain new values
    * @param <K1> the key type of the loader
@@ -1166,7 +1108,6 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
       AsyncCacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null,
         "Weak or soft values can not be combined with AsyncLoadingCache");
-    requireState(writer == null, "CacheWriter can not be combined with AsyncLoadingCache");
     requireState(isStrongKeys() || (evictionListener == null),
         "Weak keys cannot be combined eviction listener and with AsyncLoadingCache");
     requireWeightWithWeigher();
@@ -1252,43 +1193,9 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
     if (removalListener != null) {
       s.append("removalListener, ");
     }
-    if (writer != null) {
-      s.append("writer, ");
-    }
     if (s.length() > baseLength) {
       s.deleteCharAt(s.length() - 2);
     }
     return s.append('}').toString();
-  }
-
-  @SuppressWarnings("deprecation")
-  static final class CacheWriterAdapter<K, V> implements CacheWriter<K, V>, Serializable {
-    private static final long serialVersionUID = 1;
-
-    final RemovalListener<? super K, ? super  V> delegate;
-    final boolean isAsync;
-
-    CacheWriterAdapter(RemovalListener<? super K, ? super  V> delegate, boolean isAsync) {
-      this.delegate = delegate;
-      this.isAsync = isAsync;
-    }
-
-    @Override public void write(K key, V value) {}
-
-    @Override
-    public void delete(K key, @Nullable V value, RemovalCause cause) {
-      if (cause.wasEvicted()) {
-        try {
-          if (isAsync && (value != null)) {
-            @SuppressWarnings("unchecked")
-            CompletableFuture<V> future = (CompletableFuture<V>) value;
-            value = Async.getIfReady(future);
-          }
-          delegate.onRemoval(key, value, cause);
-        } catch (Throwable t) {
-          logger.log(Level.WARNING, "Exception thrown by eviction listener", t);
-        }
-      }
-    }
   }
 }

@@ -40,12 +40,6 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Returns the {@link StatsCounter} used by this cache. */
   StatsCounter statsCounter();
 
-  /** Returns whether this cache notifies when an entry is removed. */
-  boolean hasRemovalListener();
-
-  /** Returns the {@link RemovalListener} used by this cache. */
-  RemovalListener<K, V> removalListener();
-
   /** Asynchronously sends a removal notification to the listener. */
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause);
 
@@ -89,13 +83,6 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   /** See {@link Cache#getAllPresent}. */
   Map<K, V> getAllPresent(Iterable<? extends K> keys);
-
-  /**
-   * See {@link Cache#put(Object, Object)}. This method differs by allowing the operation to not
-   * notify the writer when an entry was inserted or updated.
-   */
-  @Nullable
-  V put(K key, V value, boolean notifyWriter);
 
   @Override
   default @Nullable V compute(K key,

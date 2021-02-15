@@ -94,6 +94,34 @@ final class Async {
   }
 
   /**
+   * An eviction listener that forwards the value stored in a {@link CompletableFuture} to the
+   * user-supplied eviction listener.
+   */
+  static final class AsyncEvictionListener<K, V>
+      implements RemovalListener<K, CompletableFuture<V>>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    final RemovalListener<K, V> delegate;
+
+    AsyncEvictionListener(RemovalListener<K, V> delegate) {
+      this.delegate = requireNonNull(delegate);
+    }
+
+    @Override
+    public void onRemoval(@Nullable K key,
+        @Nullable CompletableFuture<V> future, RemovalCause cause) {
+      V value = Async.getIfReady(future);
+      if (value != null) {
+        delegate.onRemoval(key, value, cause);
+      }
+    }
+
+    Object writeReplace() {
+      return delegate;
+    }
+  }
+
+  /**
    * A weigher for asynchronous computations. When the value is being loaded this weigher returns
    * {@code 0} to indicate that the entry should not be evicted due to a size constraint. If the
    * value is computed successfully the entry must be reinserted so that the weight is updated and

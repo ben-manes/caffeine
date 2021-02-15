@@ -24,12 +24,12 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
+import com.github.benmanes.caffeine.cache.Async.AsyncEvictionListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalLoadingCache;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalManualCache;
-import com.github.benmanes.caffeine.cache.Caffeine.CacheWriterAdapter;
 import com.github.benmanes.caffeine.cache.LocalAsyncLoadingCache.LoadingCacheView;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalLoadingCache;
@@ -158,13 +158,6 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     desc.expectThat("same isRecordingStats",
         copy.isRecordingStats, is(original.isRecordingStats));
 
-    if (original.writer instanceof CacheWriterAdapter) {
-      desc.expectThat("same writer", ((CacheWriterAdapter<?, ?>) copy.writer).delegate.getClass(),
-          is(((CacheWriterAdapter<?, ?>) original.writer).delegate.getClass()));
-    } else {
-      desc.expectThat("same writer", copy.writer, is(original.writer));
-    }
-
     if (original.removalListener == null) {
       desc.expectThat("same removalListener", copy.removalListener, is(nullValue()));
     } else if (copy.removalListener == null) {
@@ -256,6 +249,19 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
           copy.refreshAfterWriteNanos(), is(original.refreshAfterWriteNanos()));
     } else {
       desc.expectThat("", copy.refreshAfterWrite(), is(false));
+    }
+
+    if (original.evictionListener == null) {
+      desc.expectThat("same evictionListener", copy.evictionListener, is(nullValue()));
+    } else if (copy.evictionListener == null) {
+      desc.expected("non-null evictionListener");
+    } else if (original.evictionListener instanceof AsyncEvictionListener<?, ?>) {
+      var copyListener = ((AsyncEvictionListener<?, ?>) copy.evictionListener).delegate;
+      var originalListener = ((AsyncEvictionListener<?, ?>) original.evictionListener).delegate;
+      desc.expectThat("same evictionListener",
+          copyListener.getClass(), is(originalListener.getClass()));
+    } else if (copy.evictionListener.getClass() != original.evictionListener.getClass()) {
+      desc.expected("same removalListener but was " + copy.removalListener().getClass());
     }
 
     if (original.removalListener() == null) {

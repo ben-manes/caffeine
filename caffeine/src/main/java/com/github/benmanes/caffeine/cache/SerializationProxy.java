@@ -22,8 +22,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.github.benmanes.caffeine.cache.Caffeine.CacheWriterAdapter;
-
 /**
  * Serializes the configuration of the cache, reconsitituting it as a {@link Cache},
  * {@link LoadingCache}, or {@link AsyncLoadingCache} using {@link Caffeine} upon
@@ -48,10 +46,9 @@ final class SerializationProxy<K, V> implements Serializable {
   @Nullable Ticker ticker;
   @Nullable Expiry<?, ?> expiry;
   @Nullable Weigher<?, ?> weigher;
-  @SuppressWarnings("deprecation")
-  @Nullable CacheWriter<?, ?> writer;
   @Nullable AsyncCacheLoader<?, ?> loader;
   @Nullable RemovalListener<?, ?> removalListener;
+  @Nullable RemovalListener<?, ?> evictionListener;
 
   @SuppressWarnings({"unchecked", "PreferJavaTimeOverload", "deprecation"})
   Caffeine<Object, Object> recreateCaffeine() {
@@ -91,14 +88,10 @@ final class SerializationProxy<K, V> implements Serializable {
       builder.softValues();
     }
     if (removalListener != null) {
-      builder.removalListener((RemovalListener<Object, Object>) removalListener);
+      builder.removalListener(removalListener);
     }
-    if ((writer != null) && (writer != CacheWriter.disabledWriter())) {
-      if (writer instanceof CacheWriterAdapter) {
-        builder.evictionListener(((CacheWriterAdapter<?, ?>) writer).delegate);
-      } else {
-        builder.writer((CacheWriter<Object, Object>) writer);
-      }
+    if (evictionListener != null) {
+      builder.evictionListener(evictionListener);
     }
     return builder;
   }

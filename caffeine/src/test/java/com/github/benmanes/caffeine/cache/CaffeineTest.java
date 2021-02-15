@@ -49,7 +49,6 @@ public final class CaffeineTest {
   @Mock StatsCounter statsCounter;
   @Mock Expiry<Object, Object> expiry;
   @Mock CacheLoader<Object, Object> loader;
-  @Mock CacheWriter<Object, Object> writer;
 
   AutoCloseable mocks;
 
@@ -139,11 +138,6 @@ public final class CaffeineTest {
   }
 
   @Test(expectedExceptions = IllegalStateException.class)
-  public void async_writer() {
-    Caffeine.newBuilder().writer(writer).buildAsync(loader);
-  }
-
-  @Test(expectedExceptions = IllegalStateException.class)
   public void async_weakKeys_evictionListener() {
     RemovalListener<Object, Object> evictionListener = (k, v, c) -> {};
     Caffeine.newBuilder().weakKeys().evictionListener(evictionListener).buildAsync();
@@ -178,11 +172,6 @@ public final class CaffeineTest {
   @Test(expectedExceptions = IllegalStateException.class)
   public void asyncLoader_softValues() {
     Caffeine.newBuilder().softValues().buildAsync(loader);
-  }
-
-  @Test(expectedExceptions = IllegalStateException.class)
-  public void asyncLoader_writer() {
-    Caffeine.newBuilder().writer(writer).buildAsync(loader);
   }
 
   @Test(expectedExceptions = IllegalStateException.class)
@@ -569,11 +558,6 @@ public final class CaffeineTest {
     Caffeine.newBuilder().weakKeys().weakKeys();
   }
 
-  @Test(expectedExceptions = IllegalStateException.class)
-  public void weakKeys_writer() {
-    Caffeine.newBuilder().writer(writer).weakKeys();
-  }
-
   @Test
   public void weakKeys() {
     Caffeine.newBuilder().weakKeys().build();
@@ -741,30 +725,6 @@ public final class CaffeineTest {
     RemovalListener<Object, Object> removalListener = (k, v, c) -> {};
     Caffeine<?, ?> builder = Caffeine.newBuilder().evictionListener(removalListener);
     assertThat(builder.evictionListener, is(removalListener));
-    builder.build();
-  }
-
-  /* --------------- cacheWriter --------------- */
-
-  @Test(expectedExceptions = NullPointerException.class)
-  public void writer_null() {
-    Caffeine.newBuilder().writer(null);
-  }
-
-  @Test(expectedExceptions = IllegalStateException.class)
-  public void writer_twice() {
-    Caffeine.newBuilder().writer(writer).writer(writer);
-  }
-
-  @Test(expectedExceptions = IllegalStateException.class)
-  public void writer_weakKeys() {
-    Caffeine.newBuilder().writer(writer).weakKeys();
-  }
-
-  @Test
-  public void writer() {
-    Caffeine<?, ?> builder = Caffeine.newBuilder().writer(writer);
-    assertThat(builder.getCacheWriter(false), is(writer));
     builder.build();
   }
 }

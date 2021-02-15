@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
-import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -83,7 +82,6 @@ public final class ExpireAfterWriteTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -102,7 +100,6 @@ public final class ExpireAfterWriteTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -120,7 +117,6 @@ public final class ExpireAfterWriteTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   /* --------------- LoadingCache --------------- */
@@ -140,7 +136,6 @@ public final class ExpireAfterWriteTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -163,7 +158,6 @@ public final class ExpireAfterWriteTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   /* --------------- AsyncLoadingCache --------------- */
@@ -201,7 +195,6 @@ public final class ExpireAfterWriteTest {
     long count = context.initialSize();
     assertThat(map.size(), is(1));
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   /* --------------- Policy --------------- */

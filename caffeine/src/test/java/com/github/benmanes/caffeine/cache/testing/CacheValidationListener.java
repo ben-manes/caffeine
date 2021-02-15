@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.testing;
 import static com.github.benmanes.caffeine.cache.IsValidAsyncCache.validAsyncCache;
 import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
 import static com.github.benmanes.caffeine.cache.IsValidMapView.validAsMap;
-import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -64,7 +63,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -152,7 +150,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       if (!foundCache) {
         assertThat(context.cache, is(validCache()));
       }
-      checkWriter(testResult, context);
       checkNoStats(testResult, context);
       checkExecutor(testResult, context);
     }
@@ -214,18 +211,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
   }
 
-  /** Checks the writer if {@link CheckNoWriter} is found. */
-  private static void checkWriter(ITestResult testResult, CacheContext context) {
-    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    CheckNoWriter checkWriter = testMethod.getAnnotation(CheckNoWriter.class);
-    if (checkWriter == null) {
-      return;
-    }
-
-    assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
-    verifyWriter(context, verifier -> verifier.zeroInteractions());
-  }
-
   /** Checks the statistics if {@link CheckNoStats} is found. */
   private static void checkNoStats(ITestResult testResult, CacheContext context) {
     Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
@@ -265,9 +250,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     for (Object param : testResult.getParameters()) {
       if (param instanceof CacheContext) {
         CacheContext context = (CacheContext) param;
-        if (context.writer() == Writer.MOCKITO) {
-          Mockito.clearInvocations(context.cacheWriter());
-        }
         if (context.expiryType() == CacheExpiry.MOCKITO) {
           Mockito.clearInvocations(context.expiry());
         }

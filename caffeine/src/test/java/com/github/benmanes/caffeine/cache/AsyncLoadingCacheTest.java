@@ -59,7 +59,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -78,20 +77,17 @@ public final class AsyncLoadingCacheTest {
   /* --------------- get --------------- */
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_null(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null);
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey()), is(futureOf(context.absentValue())));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   public void get_absent_failure(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -100,7 +96,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL, executor = CacheExecutor.THREADED,
       executorFailure = ExecutorFailure.IGNORED)
@@ -120,7 +115,6 @@ public final class AsyncLoadingCacheTest {
     await().until(() -> cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -132,7 +126,7 @@ public final class AsyncLoadingCacheTest {
 
   /* --------------- getAll --------------- */
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_iterable_null(
@@ -140,7 +134,7 @@ public final class AsyncLoadingCacheTest {
     cache.getAll(null);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -149,7 +143,7 @@ public final class AsyncLoadingCacheTest {
     cache.getAll(Collections.singletonList(null));
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -160,13 +154,11 @@ public final class AsyncLoadingCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(context.absentKeys()).join().clear();
   }
 
-  @CheckNoWriter
   @CacheSpec(loader = Loader.BULK_NULL)
   @Test(dataProvider = "caches", expectedExceptions = CompletionException.class)
   public void getAll_absent_bulkNull(
@@ -181,7 +173,6 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
-  @CheckNoWriter
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   @Test(dataProvider = "caches", expectedExceptions = CompletionException.class)
   public void getAll_absent_failure(
@@ -198,7 +189,6 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -211,7 +201,6 @@ public final class AsyncLoadingCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(count).success(loads).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -228,7 +217,6 @@ public final class AsyncLoadingCacheTest {
     verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -241,7 +229,6 @@ public final class AsyncLoadingCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(result.size()).success(1).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -259,7 +246,6 @@ public final class AsyncLoadingCacheTest {
         verifier.hits(context.initialSize()).misses(absentKeys.size()).success(loads).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -273,7 +259,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL },
@@ -288,7 +273,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_NEGATIVE_EXCEEDS },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -302,7 +286,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -316,7 +299,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })

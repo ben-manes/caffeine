@@ -100,8 +100,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
     long startTime = cache().statsTicker().read();
     try {
       var loaded = mappingFunction.apply(keysToLoad);
-      loaded.forEach((key, value) ->
-          cache().put(key, value, /* notifyWriter */ false));
+      loaded.forEach(cache()::put);
       for (K key : keysToLoad) {
         V value = loaded.get(key);
         if (value == null) {

@@ -46,7 +46,6 @@ import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.CacheLoader;
-import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -600,39 +599,6 @@ public @interface CacheSpec {
         return loader.asyncLoadAll(keys, executor);
       }
     }
-  }
-
-  /* --------------- CacheWriter --------------- */
-
-  Writer[] writer() default {
-    Writer.DISABLED,
-    Writer.MOCKITO,
-  };
-
-  /** The {@link CacheWriter} for the external resource. */
-  enum Writer {
-    /** A writer that does nothing. */
-    DISABLED {
-      @Override public <K, V> CacheWriter<K, V> create() {
-        return CacheWriter.disabledWriter();
-      }
-    },
-    /** A writer that records interactions. */
-    MOCKITO {
-      @Override public <K, V> CacheWriter<K, V> create() {
-        @SuppressWarnings("unchecked")
-        CacheWriter<K, V> mock = Mockito.mock(CacheWriter.class);
-        return mock;
-      }
-    },
-    /** A writer that always throws an exception. */
-    EXCEPTIONAL {
-      @Override public <K, V> CacheWriter<K, V> create() {
-        return new RejectingCacheWriter<K, V>();
-      }
-    };
-
-    public abstract <K, V> CacheWriter<K, V> create();
   }
 
   /* --------------- Executor --------------- */

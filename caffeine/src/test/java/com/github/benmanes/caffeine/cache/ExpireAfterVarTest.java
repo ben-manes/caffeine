@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
@@ -30,10 +29,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -58,10 +54,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -125,7 +119,6 @@ public final class ExpireAfterVarTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -147,7 +140,6 @@ public final class ExpireAfterVarTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -168,7 +160,6 @@ public final class ExpireAfterVarTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -190,7 +181,6 @@ public final class ExpireAfterVarTest {
 
     long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
-    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -203,8 +193,6 @@ public final class ExpireAfterVarTest {
 
     context.cleanUp();
     assertThat(map.size(), is(0));
-    long count = context.initialSize();
-    verifyWriter(context, verifier -> verifier.deletions(count));
   }
 
   @Test(dataProvider = "caches")
@@ -218,8 +206,6 @@ public final class ExpireAfterVarTest {
 
     context.cleanUp();
     assertThat(map, is(emptyMap()));
-    long count = context.initialSize();
-    verifyWriter(context, verifier -> verifier.deletions(count));
   }
 
   /* --------------- Exceptional --------------- */
@@ -241,7 +227,7 @@ public final class ExpireAfterVarTest {
 
   @SuppressWarnings("deprecation")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
-      expiry = CacheExpiry.MOCKITO, writer = Writer.MOCKITO, removalListener = Listener.REJECTING)
+      expiry = CacheExpiry.MOCKITO, removalListener = Listener.REJECTING)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void get_expiryFails_create(Cache<Integer, Integer> cache, CacheContext context) {
     try {
@@ -252,7 +238,6 @@ public final class ExpireAfterVarTest {
     } finally {
       context.ticker().advance(-1, TimeUnit.HOURS);
       assertThat(cache.asMap(), equalTo(context.original()));
-      verify(context.cacheWriter(), never()).write(anyInt(), anyInt());
     }
   }
 
@@ -443,7 +428,7 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy: putIfAbsent --------------- */
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -452,7 +437,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.putIfAbsent(null, 2, 3, TimeUnit.SECONDS);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -461,7 +446,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.putIfAbsent(1, null, 3, TimeUnit.SECONDS);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -470,7 +455,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.putIfAbsent(1, 2, 3, null);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -479,7 +464,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.putIfAbsent(1, 2, -10, TimeUnit.SECONDS);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -526,7 +511,7 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy: put --------------- */
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -535,7 +520,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.put(null, 2, 3, TimeUnit.SECONDS);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -544,7 +529,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.put(1, null, 3, TimeUnit.SECONDS);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -553,7 +538,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.put(1, 2, 3, null);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -562,7 +547,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.put(1, 2, -10, TimeUnit.SECONDS);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)

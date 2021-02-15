@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
@@ -29,10 +28,12 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +42,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -50,24 +50,18 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
-import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.Maps;
 
 /**
  * The test cases for caches with a page replacement algorithm.
@@ -116,31 +110,19 @@ public final class EvictionTest {
     int count = context.absentKeys().size();
     verifyStats(context, verifier -> verifier.evictions(count));
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.SIZE));
-
-    verifyWriter(context, verifier -> {
-      Map<Integer, Integer> all = new HashMap<>(context.original());
-      all.putAll(context.absent());
-      MapDifference<Integer, Integer> diff = Maps.difference(all, cache.asMap());
-      verifier.deletedAll(diff.entriesOnlyOnLeft(), RemovalCause.SIZE);
-    });
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.TEN,
-      weigher = CacheWeigher.COLLECTION, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
-      writer = Writer.MOCKITO)
+      weigher = CacheWeigher.COLLECTION, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void evict_weighted(Cache<Integer, List<Integer>> cache,
       CacheContext context, Eviction<?, ?> eviction) {
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    CacheWriter<Integer, List<Integer>> writer = (CacheWriter) context.cacheWriter();
-
     // Enforce full initialization of internal structures
     for (int i = 0; i < context.maximumSize(); i++) {
       cache.put(i, Collections.emptyList());
     }
     cache.invalidateAll();
-    Mockito.<Object>reset(writer);
 
     List<Integer> value1 = asList(8, 9, 10);
     List<Integer> value2 = asList(3, 4, 5, 6, 7);
@@ -162,29 +144,17 @@ public final class EvictionTest {
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(cache.asMap().containsKey(4), is(false));
     assertThat(eviction.weightedSize().getAsLong(), is(10L));
-    verifyWriter(context, verifier -> {
-      verify(writer).delete(4, value4, RemovalCause.SIZE);
-      verifier.deletions(1, RemovalCause.SIZE);
-    });
 
     // [0 | 1, 2, 3] -> [0, 4 | 2, 3]
     cache.put(4, value4);
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(cache.asMap().containsKey(1), is(false));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
-    verifyWriter(context, verifier -> {
-      verify(writer).delete(1, value1, RemovalCause.SIZE);
-      verifier.deletions(2, RemovalCause.SIZE);
-    });
 
     // [0, 4 | 2, 3] remains (5 exceeds window and has the same usage history, so evicted)
     cache.put(5, value5);
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
-    verifyWriter(context, verifier -> {
-      verify(writer).delete(5, value5, RemovalCause.SIZE);
-      verifier.deletions(3, RemovalCause.SIZE);
-    });
     verifyStats(context, verifier -> verifier.evictions(3).evictionWeight(13));
   }
 
@@ -241,7 +211,6 @@ public final class EvictionTest {
     await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
 
     verifyListeners(context, verifier -> verifier.hasOnly(1, RemovalCause.SIZE));
-    verifyWriter(context, verifier -> verifier.deletions(1, RemovalCause.SIZE));
     verifyStats(context, verifier -> verifier.evictionWeight(5));
   }
 
@@ -270,27 +239,23 @@ public final class EvictionTest {
     await().until(() -> cache.synchronous().estimatedSize(), is(0L));
 
     verifyListeners(context, verifier -> verifier.hasOnly(1, RemovalCause.SIZE));
-    verifyWriter(context, verifier -> verifier.deletions(1, RemovalCause.SIZE));
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, maximumSize = Maximum.FULL,
-      weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
-      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void evict_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
-    try {
-      cache.policy().eviction().ifPresent(policy -> policy.setMaximum(0));
-    } finally {
-      context.disableRejectingCacheWriter();
-      assertThat(cache.asMap(), equalTo(context.original()));
-    }
+      population = Population.FULL, maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      evictionListener = Listener.MOCKITO, removalListener = Listener.REJECTING)
+  public void evict_evictionListenerFails(Cache<Integer, Integer> cache, CacheContext context) {
+    doThrow(RuntimeException.class)
+        .when(context.evictionListener()).onRemoval(any(), any(), any());
+    cache.policy().eviction().ifPresent(policy -> policy.setMaximum(0));
+    verify(context.evictionListener(), times((int) context.initialSize()))
+        .onRemoval(any(), any(), any());
   }
 
   /* --------------- Weighted --------------- */
 
-  @CheckNoWriter
   @CacheSpec(maximumSize = Maximum.FULL,
       weigher = CacheWeigher.NEGATIVE, population = Population.EMPTY)
   @Test(dataProvider = "caches",
@@ -304,9 +269,6 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   public void put_zeroWeight(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
-    verifyWriter(context, verifier -> {
-      verifier.wrote(context.absentKey(), context.absentValue());
-    });
   }
 
   @Test(dataProvider = "caches")
@@ -339,20 +301,10 @@ public final class EvictionTest {
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put_changeWeight(Cache<String, List<Integer>> cache,
       CacheContext context, Eviction<?, ?> eviction) {
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    CacheWriter<String, List<Integer>> writer = (CacheWriter) context.cacheWriter();
-
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
-
     cache.put("a", asList(-1, -2, -3, -4));
     assertThat(cache.estimatedSize(), is(2L));
     assertThat(eviction.weightedSize().getAsLong(), is(5L));
-
-    verifyWriter(context, verifier -> {
-      verify(writer).write("a", asList(1, 2, 3));
-      verify(writer).write("b", asList(1));
-      verify(writer).write("a", asList(-1, -2, -3, -4));
-    });
   }
 
   @Test(dataProvider = "caches")

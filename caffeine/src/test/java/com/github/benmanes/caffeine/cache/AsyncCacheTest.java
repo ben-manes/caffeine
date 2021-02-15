@@ -63,10 +63,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -84,14 +82,12 @@ public final class AsyncCacheTest {
 
   /* --------------- getIfPresent --------------- */
 
-  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getIfPresent_nullKey(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.getIfPresent(null);
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresent_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -99,7 +95,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -113,27 +108,24 @@ public final class AsyncCacheTest {
   /* --------------- getFunc --------------- */
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getFunc_nullKey(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null, key -> null);
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getFunc_nullLoader(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.get(context.absentKey(), (Function<Integer, Integer>) null);
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getFunc_nullKeyAndLoader(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null, (Function<Integer, Integer>) null);
   }
 
-  @CheckNoWriter @CacheSpec
+  @CacheSpec
   @Test(dataProvider = "caches")
   public void getFunc_absent_null(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -144,7 +136,6 @@ public final class AsyncCacheTest {
     assertThat(cache.getIfPresent(key), is(nullValue()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.THREADED, executorFailure = ExecutorFailure.IGNORED)
   public void getFunc_absent_null_async(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -167,7 +158,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void getFunc_absent_failure(AsyncCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> valueFuture = cache.get(context.absentKey(),
@@ -178,7 +168,6 @@ public final class AsyncCacheTest {
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.THREADED, executorFailure = ExecutorFailure.IGNORED)
   public void getFunc_absent_failure_async(
@@ -200,7 +189,6 @@ public final class AsyncCacheTest {
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.THREADED, executorFailure = ExecutorFailure.IGNORED)
   public void getFunc_absent_cancelled(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -220,7 +208,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void getFunc_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -229,7 +216,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(1).success(1).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getFunc_present(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -246,14 +232,12 @@ public final class AsyncCacheTest {
   /* --------------- getBiFunc --------------- */
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_nullKey(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null, (key, executor) -> CompletableFuture.completedFuture(null));
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_nullLoader(AsyncCache<Integer, Integer> cache, CacheContext context) {
     BiFunction<Integer, Executor, CompletableFuture<Integer>> mappingFunction = null;
@@ -261,7 +245,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_nullKeyAndLoader(AsyncCache<Integer, Integer> cache, CacheContext context) {
     BiFunction<Integer, Executor, CompletableFuture<Integer>> mappingFunction = null;
@@ -269,7 +252,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getBiFunc_throwsException(AsyncCache<Integer, Integer> cache, CacheContext context) {
     try {
@@ -280,7 +262,7 @@ public final class AsyncCacheTest {
     }
   }
 
-  @CheckNoWriter @CacheSpec
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_absent_null(AsyncCache<Integer, Integer> cache,
       CacheContext context) {
@@ -288,7 +270,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void getBiFunc_absent_failure_before(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -304,7 +285,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void getBiFunc_absent_failure_after(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -320,7 +300,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void getBiFunc_absent_cancelled(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -333,7 +312,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void getBiFunc_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -343,7 +321,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(1).success(1).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getBiFunc_present(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -360,14 +337,14 @@ public final class AsyncCacheTest {
 
   /* --------------- getAllFunc --------------- */
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_nullKeys(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(null, keys -> { throw new AssertionError(); });
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_nullKeys_nullFunction(
@@ -375,7 +352,7 @@ public final class AsyncCacheTest {
     cache.getAll(null, (Function<Set<? extends Integer>, Map<Integer, Integer>>) null);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_nullFunction(
@@ -384,14 +361,14 @@ public final class AsyncCacheTest {
         (Function<Set<? extends Integer>, Map<Integer, Integer>>) null);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_nullKey(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(Collections.singletonList(null), keys -> { throw new AssertionError(); });
   }
 
-  @CheckNoWriter @CacheSpec
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = CompletionException.class)
   public void getAllFunction_absent_failure(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -403,7 +380,6 @@ public final class AsyncCacheTest {
     }
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -415,7 +391,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(count).success(1).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -434,7 +409,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_exceeds(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -452,7 +426,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(result.size()).success(1).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -472,7 +445,6 @@ public final class AsyncCacheTest {
     assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -487,7 +459,6 @@ public final class AsyncCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -503,7 +474,6 @@ public final class AsyncCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -517,7 +487,6 @@ public final class AsyncCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_present_ordered_exceeds(
@@ -536,7 +505,6 @@ public final class AsyncCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -551,14 +519,14 @@ public final class AsyncCacheTest {
 
   /* --------------- getAllBiFunc --------------- */
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_nullKeys(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(null, (keys, executor) -> { throw new AssertionError(); });
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_nullKeys_nullBifunction(
@@ -568,7 +536,7 @@ public final class AsyncCacheTest {
     cache.getAll(null, (f = null));
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_nullBifunction(
@@ -578,7 +546,7 @@ public final class AsyncCacheTest {
     cache.getAll(context.original().keySet(), (f = null));
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_nullKey(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -586,7 +554,7 @@ public final class AsyncCacheTest {
         (keys, executor) -> { throw new AssertionError(); });
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_iterable_empty(
@@ -596,7 +564,7 @@ public final class AsyncCacheTest {
     assertThat(result, is(anEmptyMap()));
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_iterable_empty(
@@ -607,7 +575,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllFunction_immutable(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAll(context.absentKeys(),
@@ -616,7 +583,6 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllBifunction_immutable(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAll(context.absentKeys(), (keys, executor) -> {
@@ -625,7 +591,7 @@ public final class AsyncCacheTest {
     result.clear();
   }
 
-  @CheckNoWriter @CacheSpec
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = CompletionException.class)
   public void getAllFunction_absent_null(AsyncCache<Integer, Integer> cache, CacheContext context) {
     try {
@@ -636,7 +602,7 @@ public final class AsyncCacheTest {
     }
   }
 
-  @CheckNoWriter @CacheSpec
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = CompletionException.class)
   public void getAllBifunction_absent_null(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -644,14 +610,14 @@ public final class AsyncCacheTest {
         (keys, executor) -> CompletableFuture.completedFuture(null)).join();
   }
 
-  @CheckNoWriter @CacheSpec
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAllBifunction_absent_nullValue(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(context.absentKeys(), (keys, executor) -> null).join();
   }
 
-  @CheckNoWriter @CacheSpec
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = CompletionException.class)
   public void getAllBifunction_absent_failure(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -667,7 +633,6 @@ public final class AsyncCacheTest {
     }
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -679,7 +644,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(count).success(1).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -699,7 +663,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_exceeds(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -718,7 +681,6 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(result.size()).success(1).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -740,7 +702,6 @@ public final class AsyncCacheTest {
     assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -757,7 +718,6 @@ public final class AsyncCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -775,7 +735,6 @@ public final class AsyncCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -789,7 +748,6 @@ public final class AsyncCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_present_ordered_exceeds(
@@ -809,7 +767,6 @@ public final class AsyncCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -825,7 +782,6 @@ public final class AsyncCacheTest {
 
   /* --------------- put --------------- */
 
-  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKey(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -833,21 +789,18 @@ public final class AsyncCacheTest {
     cache.put(null, value);
   }
 
-  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullValue(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), null);
   }
 
-  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKeyAndValue(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.put(null, null);
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_insert_failure_before(
@@ -860,7 +813,6 @@ public final class AsyncCacheTest {
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_insert_failure_after(
@@ -883,7 +835,6 @@ public final class AsyncCacheTest {
     assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(context.absentValue()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -897,7 +848,6 @@ public final class AsyncCacheTest {
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize() - 1));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -937,8 +887,8 @@ public final class AsyncCacheTest {
     verify(context.removalListener(), never()).onRemoval(anyInt(), any(), any(RemovalCause.class));
   }
 
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(writer = Writer.EXCEPTIONAL)
   public void serialize(AsyncCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache, is(reserializable()));
   }
