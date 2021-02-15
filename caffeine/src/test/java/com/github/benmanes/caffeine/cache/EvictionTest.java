@@ -154,28 +154,38 @@ public final class EvictionTest {
     cache.put(1, value1);
     cache.put(2, value2);
     cache.put(3, value3);
-    await().until(cache::estimatedSize, is(4L));
+    assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(10L));
+
+    // [0 | 1, 2, 3] remains (4 exceeds window and has the same usage history, so evicted)
+    cache.put(4, value4);
+    assertThat(cache.estimatedSize(), is(4L));
+    assertThat(cache.asMap().containsKey(4), is(false));
+    assertThat(eviction.weightedSize().getAsLong(), is(10L));
+    verifyWriter(context, verifier -> {
+      verify(writer).delete(4, value4, RemovalCause.SIZE);
+      verifier.deletions(1, RemovalCause.SIZE);
+    });
 
     // [0 | 1, 2, 3] -> [0, 4 | 2, 3]
     cache.put(4, value4);
-    await().until(cache::estimatedSize, is(4L));
+    assertThat(cache.estimatedSize(), is(4L));
     assertThat(cache.asMap().containsKey(1), is(false));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
     verifyWriter(context, verifier -> {
       verify(writer).delete(1, value1, RemovalCause.SIZE);
-      verifier.deletions(1, RemovalCause.SIZE);
+      verifier.deletions(2, RemovalCause.SIZE);
     });
 
     // [0, 4 | 2, 3] remains (5 exceeds window and has the same usage history, so evicted)
     cache.put(5, value5);
-    await().until(cache::estimatedSize, is(4L));
+    assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
     verifyWriter(context, verifier -> {
       verify(writer).delete(5, value5, RemovalCause.SIZE);
-      verifier.deletions(2);
+      verifier.deletions(3, RemovalCause.SIZE);
     });
-    verifyStats(context, verifier -> verifier.evictions(2).evictionWeight(12));
+    verifyStats(context, verifier -> verifier.evictions(3).evictionWeight(13));
   }
 
   @Test(dataProvider = "caches")
@@ -183,8 +193,8 @@ public final class EvictionTest {
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
       maximumSize = Maximum.TEN, weigher = CacheWeigher.VALUE)
   public void evict_weighted_entryTooBig(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.put(1, 1);
     cache.put(9, 9);
+    cache.put(1, 1);
     assertThat(cache.estimatedSize(), is(2L));
     cache.policy().eviction().ifPresent(eviction -> {
       assertThat(eviction.weightedSize().getAsLong(), is(10L));

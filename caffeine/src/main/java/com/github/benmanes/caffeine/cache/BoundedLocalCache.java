@@ -646,10 +646,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /**
    * Evicts entries from the main space if the cache exceeds the maximum capacity. The main space
    * determines whether admitting an entry (coming from the window space) is preferable to retaining
-   * the eviction policy's victim. This is decision is made using a frequency filter so that the
+   * the eviction policy's victim. This decision is made using a frequency filter so that the
    * least frequently used entry is removed.
    *
-   * The window space candidates were previously placed in the MRU position and the eviction
+   * The window space's candidates were previously placed in the MRU position and the eviction
    * policy's victim is at the LRU position. The two ends of the queue are evaluated while an
    * eviction is required. The number of remaining candidates is provided and decremented on
    * eviction, so that when there are no more candidates the victim is evicted.
@@ -662,9 +662,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Node<K, V> victim = accessOrderProbationDeque().peekFirst();
     Node<K, V> candidate = accessOrderProbationDeque().peekLast();
     while (weightedSize() > maximum()) {
-      // Stop trying to evict candidates and always prefer the victim
+      // Search the admission window for additional candidates
       if (candidates == 0) {
-        candidate = null;
+        candidate = accessOrderWindowDeque().peekLast();
       }
 
       // Try evicting from the protected and window queues
@@ -688,7 +688,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         victim = victim.getNextInAccessOrder();
         continue;
       } else if ((candidate != null) && (candidate.getPolicyWeight() == 0)) {
-        candidate = candidate.getPreviousInAccessOrder();
+        candidate = (candidates > 0)
+            ? candidate.getPreviousInAccessOrder()
+            : candidate.getNextInAccessOrder();
         candidates--;
         continue;
       }
@@ -718,18 +720,22 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       } else if (candidateKey == null) {
-        candidates--;
         @NonNull Node<K, V> evict = candidate;
-        candidate = candidate.getPreviousInAccessOrder();
+        candidate = (candidates > 0)
+            ? candidate.getPreviousInAccessOrder()
+            : candidate.getNextInAccessOrder();
+        candidates--;
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       }
 
       // Evict immediately if the candidate's weight exceeds the maximum
       if (candidate.getPolicyWeight() > maximum()) {
-        candidates--;
         Node<K, V> evict = candidate;
-        candidate = candidate.getPreviousInAccessOrder();
+        candidate = (candidates > 0)
+            ? candidate.getPreviousInAccessOrder()
+            : candidate.getNextInAccessOrder();
+        candidates--;
         evictEntry(evict, RemovalCause.SIZE, 0L);
         continue;
       }
@@ -743,7 +749,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         candidate = candidate.getPreviousInAccessOrder();
       } else {
         Node<K, V> evict = candidate;
-        candidate = candidate.getPreviousInAccessOrder();
+        candidate = (candidates > 0)
+            ? candidate.getPreviousInAccessOrder()
+            : candidate.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
       }
     }
@@ -1665,8 +1673,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (expiresAfterWrite()) {
           writeOrderDeque().add(node);
         }
-        if (evicts() || expiresAfterAccess()) {
-          accessOrderWindowDeque().add(node);
+        if (evicts() && (weight > windowMaximum())) {
+          accessOrderWindowDeque().offerFirst(node);
+        } else if (evicts() || expiresAfterAccess()) {
+          accessOrderWindowDeque().offerLast(node);
         }
         if (expiresVariable()) {
           timerWheel().schedule(node);
@@ -1731,15 +1741,36 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       if (evicts()) {
+        int oldWeightedSize = node.getPolicyWeight();
+        node.setPolicyWeight(oldWeightedSize + weightDifference);
         if (node.inWindow()) {
+          if (node.getPolicyWeight() <= windowMaximum()) {
+            onAccess(node);
+          } else if (accessOrderWindowDeque().contains(node)) {
+            accessOrderWindowDeque().moveToFront(node);
+          }
           setWindowWeightedSize(windowWeightedSize() + weightDifference);
+        } else if (node.inMainProbation()) {
+            if (node.getPolicyWeight() <= maximum()) {
+              onAccess(node);
+            } else if (accessOrderProbationDeque().remove(node)) {
+              accessOrderWindowDeque().addFirst(node);
+              setWindowWeightedSize(windowWeightedSize() + node.getPolicyWeight());
+            }
         } else if (node.inMainProtected()) {
-          setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
+          if (node.getPolicyWeight() <= maximum()) {
+            onAccess(node);
+            setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
+          } else if (accessOrderProtectedDeque().remove(node)) {
+            accessOrderWindowDeque().addFirst(node);
+            setWindowWeightedSize(windowWeightedSize() + node.getPolicyWeight());
+            setMainProtectedWeightedSize(mainProtectedWeightedSize() - oldWeightedSize);
+          } else {
+            setMainProtectedWeightedSize(mainProtectedWeightedSize() - oldWeightedSize);
+          }
         }
         setWeightedSize(weightedSize() + weightDifference);
-        node.setPolicyWeight(node.getPolicyWeight() + weightDifference);
-      }
-      if (evicts() || expiresAfterAccess()) {
+      } else if (expiresAfterAccess()) {
         onAccess(node);
       }
       if (expiresAfterWrite()) {

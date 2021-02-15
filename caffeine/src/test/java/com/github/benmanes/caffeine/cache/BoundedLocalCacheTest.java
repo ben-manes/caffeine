@@ -30,8 +30,10 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,6 +71,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -337,6 +340,67 @@ public final class BoundedLocalCacheTest {
     await().untilAtomic(evictedValue, is(newValue));
     await().untilAtomic(previousValue, is(oldValue));
     await().untilAtomic(removedValues, is(oldValue + newValue));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, initialCapacity = InitialCapacity.EXCESSIVE,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, maximumSize = Maximum.TEN,
+      weigher = CacheWeigher.VALUE, removalListener = Listener.CONSUMING)
+  public void evict_update_entryTooBig_window(
+      Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    cache.put(9, 9);
+    cache.put(1, 1);
+
+    assertThat(localCache.data.get(1).inWindow(), is(true));
+    cache.put(1, 20);
+
+    assertThat(localCache.weightedSize(), is(lessThanOrEqualTo(context.maximumSize())));
+    assertThat(context.removalNotifications(), hasItem(
+        new RemovalNotification<>(1, 20, RemovalCause.SIZE)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, initialCapacity = InitialCapacity.EXCESSIVE,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, maximumSize = Maximum.TEN,
+      weigher = CacheWeigher.VALUE, removalListener = Listener.CONSUMING)
+  public void evict_update_entryTooBig_probation(
+      Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    for (int i = 1; i <= 10; i++) {
+      cache.put(i, 1);
+    }
+
+    assertThat(localCache.data.get(1).inMainProbation(), is(true));
+    cache.put(1, 20);
+
+    assertThat(localCache.weightedSize(), is(lessThanOrEqualTo(context.maximumSize())));
+    assertThat(context.removalNotifications(), hasItem(
+        new RemovalNotification<>(1, 20, RemovalCause.SIZE)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, initialCapacity = InitialCapacity.EXCESSIVE,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, maximumSize = Maximum.TEN,
+      weigher = CacheWeigher.VALUE, removalListener = Listener.CONSUMING)
+  public void evict_update_entryTooBig_protected(
+      Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    for (int i = 1; i <= 10; i++) {
+      cache.put(i, 1);
+      cache.getIfPresent(1);
+    }
+    cache.cleanUp();
+
+    assertThat(localCache.data.get(1).inMainProtected(), is(true));
+    cache.put(1, 20);
+
+    assertThat(localCache.weightedSize(), is(lessThanOrEqualTo(context.maximumSize())));
+    assertThat(context.removalNotifications(), hasItem(
+        new RemovalNotification<>(1, 20, RemovalCause.SIZE)));
   }
 
   @Test(groups = "slow")
