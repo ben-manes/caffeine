@@ -19,7 +19,7 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
       - name: Cache Gradle packages
-        uses: actions/cache@v2
+        uses: actions/cache@v2.1.4
         with:
           path: |
             ~/.gradle/wrapper
