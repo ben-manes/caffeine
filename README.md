@@ -35,7 +35,7 @@ Caffeine provides flexible construction to create a cache with a combination of 
  * keys automatically wrapped in [weak references][reference]
  * values automatically wrapped in [weak or soft references][reference]
  * [notification][listener] of evicted (or otherwise removed) entries
- * [writes propagated][writer] to an external resource
+ * [writes propagated][compute] to an external resource
  * accumulation of cache access [statistics][statistics]
 
 In addition, Caffeine offers the following extensions:
@@ -82,11 +82,11 @@ Powering infrastructure near you:
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-implementation 'com.github.ben-manes.caffeine:caffeine:2.9.0'
+implementation 'com.github.ben-manes.caffeine:caffeine:3.0.0'
 
 // Optional extensions
-implementation 'com.github.ben-manes.caffeine:guava:2.9.0'
-implementation 'com.github.ben-manes.caffeine:jcache:2.9.0'
+implementation 'com.github.ben-manes.caffeine:guava:3.0.0'
+implementation 'com.github.ben-manes.caffeine:jcache:3.0.0'
 ```
 
 See the [release notes][releases] for details of the changes.
@@ -105,7 +105,7 @@ Snapshots of the development version are available in
 [refresh]: https://github.com/ben-manes/caffeine/wiki/Refresh
 [reference]: https://github.com/ben-manes/caffeine/wiki/Eviction#reference-based
 [listener]: https://github.com/ben-manes/caffeine/wiki/Removal
-[writer]: https://github.com/ben-manes/caffeine/wiki/Writer
+[compute]: https://github.com/ben-manes/caffeine/wiki/Compute
 [statistics]: https://github.com/ben-manes/caffeine/wiki/Statistics
 [simulator]: https://github.com/ben-manes/caffeine/wiki/Simulator
 [guava-adapter]: https://github.com/ben-manes/caffeine/wiki/Guava

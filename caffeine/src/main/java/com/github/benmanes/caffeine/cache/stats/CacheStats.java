@@ -99,6 +99,7 @@ public final class CacheStats {
    * @param totalLoadTime the total load time (success and failure)
    * @param evictionCount the number of entries evicted from the cache
    * @param evictionWeight the sum of weights of entries evicted from the cache
+   * @return a {@code CacheStats} representing the specified statistics
    */
   public static CacheStats of(@NonNegative long hitCount, @NonNegative long missCount,
       @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,

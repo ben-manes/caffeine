@@ -39,8 +39,8 @@ allprojects {
 
   group = 'com.github.ben-manes.caffeine'
   version.with {
-    major = 2 // incompatible API changes
-    minor = 9 // backwards-compatible additions
+    major = 3 // incompatible API changes
+    minor = 0 // backwards-compatible additions
     patch = 0 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }

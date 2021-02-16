@@ -123,6 +123,8 @@ public interface AsyncCacheLoader<K extends @NonNull Object, V extends @NonNull 
    *   AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
    * }</pre>
    *
+   * @param <K> the key type
+   * @param <V> the value type
    * @param mappingFunction the function to asynchronously compute the values
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
@@ -145,6 +147,8 @@ public interface AsyncCacheLoader<K extends @NonNull Object, V extends @NonNull 
    *   AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
    * }</pre>
    *
+   * @param <K> the key type
+   * @param <V> the value type
    * @param mappingFunction the function to asynchronously compute the values
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null

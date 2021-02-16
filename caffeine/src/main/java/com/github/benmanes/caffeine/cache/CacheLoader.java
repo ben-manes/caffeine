@@ -209,6 +209,8 @@ public interface CacheLoader<K extends @NonNull Object, V extends @NonNull Objec
    *   LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
    * }</pre>
    *
+   * @param <K> the key type
+   * @param <V> the value type
    * @param mappingFunction the function to compute the values
    * @return a cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
