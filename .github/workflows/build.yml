@@ -1,5 +1,5 @@
 name: build
-on: [ push, pull_request ]
+on: [ push, pull_request, release ]
 
 env:
   ORG_GRADLE_PROJECT_checksumFailOn: build_finish
@@ -31,6 +31,12 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
       - name: Run tests
         run: ./.github/scripts/test.sh
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v3
+        with:
+          gpg-private-key: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+          passphrase: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
       - name: Publish Coverage
         if: >
           matrix.java == env.MIN_JVM
@@ -56,4 +62,13 @@ jobs:
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-        run: ./gradlew publish
+        run: ./gradlew publishToSonatype
+      - name: Releasing
+        if: >
+          matrix.java == env.MIN_JVM
+          && github.event_name == 'release'
+          && github.event.action == 'created'
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository -Prelease

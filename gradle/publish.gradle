@@ -59,18 +59,6 @@ publishing {
           }
         }
       }
-      repositories {
-        maven {
-          def releasesUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
-          def snapshotsUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
-          url = project.version.releaseBuild ? releasesUrl : snapshotsUrl
-
-          credentials {
-            username = project.properties['nexusUsername'] ?: System.env.'NEXUS_USERNAME'
-            password = project.properties['nexusPassword'] ?: System.env.'NEXUS_PASSWORD'
-          }
-        }
-      }
     }
   }
 }
@@ -87,8 +75,4 @@ javadoc {
   if (JavaVersion.current().isJava9Compatible()) {
     options.addBooleanOption('html5', true)
   }
-}
-
-if (JavaVersion.current().isJava9Compatible()) {
-  [publish, publishMavenJavaPublicationToMavenRepository]*.enabled = false
 }
