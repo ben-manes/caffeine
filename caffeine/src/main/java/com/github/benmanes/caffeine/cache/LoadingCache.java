@@ -111,4 +111,23 @@ public interface LoadingCache<K extends @NonNull Object, V extends @NonNull Obje
    * @throws NullPointerException if the specified key is null
    */
   CompletableFuture<V> refresh(K key);
+
+  /**
+   * Loads a new value for each {@code key}, asynchronously. While the new value is loading the
+   * previous value (if any) will continue to be returned by {@code get(key)} unless it is evicted.
+   * If the new value is loaded successfully it will replace the previous value in the cache; if an
+   * exception is thrown while refreshing the previous value will remain, <i>and the exception will
+   * be logged (using {@link System.Logger}) and swallowed</i>. If another thread is currently
+   * loading the value for {@code key}, then does not perform an additional load.
+   * <p>
+   * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
+   * currently contains a value for the {@code key}, and {@link CacheLoader#load} otherwise. Loading
+   * is asynchronous by delegating to the default executor.
+   *
+   * @param keys the keys whose associated values are to be returned
+   * @return the future containing an unmodifiable mapping of keys to values for the specified keys
+   *         that are loading the values
+   * @throws NullPointerException if the specified collection is null or contains a null element
+   */
+  CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys);
 }

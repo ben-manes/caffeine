@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;
@@ -193,6 +194,15 @@ abstract class LocalAsyncLoadingCache<K, V>
           return future;
         }
       }
+    }
+
+    @Override
+    public CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
+      Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
+      for (K key : keys) {
+        result.computeIfAbsent(key, this::refresh);
+      }
+      return composeResult(result);
     }
 
     /** Attempts to avoid a reload if the entry is absent, or a load or reload is in-flight. */

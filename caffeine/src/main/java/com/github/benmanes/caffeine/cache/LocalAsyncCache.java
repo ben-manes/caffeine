@@ -80,8 +80,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   }
 
   @SuppressWarnings({"FutureReturnValueIgnored", "NullAway"})
-  default CompletableFuture<V> get(K key,
-      BiFunction<? super K, ? super Executor, ? extends CompletableFuture<? extends V>> mappingFunction, boolean recordStats) {
+  default CompletableFuture<V> get(K key, BiFunction<? super K, ? super Executor,
+      ? extends CompletableFuture<? extends V>> mappingFunction, boolean recordStats) {
     long startTime = cache().statsTicker().read();
     @SuppressWarnings({"unchecked", "rawtypes"})
     CompletableFuture<? extends V>[] result = new CompletableFuture[1];
@@ -151,7 +151,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
    * combined mapping if successful. If any future fails then it is automatically removed from
    * the cache if still present.
    */
-  default CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
+  static <K, V> CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
     if (futures.isEmpty()) {
       return CompletableFuture.completedFuture(Collections.emptyMap());
     }

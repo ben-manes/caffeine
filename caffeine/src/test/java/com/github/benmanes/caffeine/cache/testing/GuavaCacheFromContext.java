@@ -514,6 +514,33 @@ public final class GuavaCacheFromContext {
       error.remove();
       return CompletableFuture.failedFuture(e);
     }
+
+    @Override
+    public CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
+      Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
+      for (K key : keys) {
+        result.computeIfAbsent(key, this::refresh);
+      }
+      return composeResult(result);
+    }
+
+    CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
+      if (futures.isEmpty()) {
+        return CompletableFuture.completedFuture(Collections.emptyMap());
+      }
+      @SuppressWarnings("rawtypes")
+      CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
+      return CompletableFuture.allOf(array).thenApply(ignored -> {
+        Map<K, V> result = new LinkedHashMap<>(futures.size());
+        futures.forEach((key, future) -> {
+          V value = future.getNow(null);
+          if (value != null) {
+            result.put(key, value);
+          }
+        });
+        return Collections.unmodifiableMap(result);
+      });
+    }
   }
 
   static final class GuavaWeigher<K, V> implements Weigher<K, V>, Serializable {

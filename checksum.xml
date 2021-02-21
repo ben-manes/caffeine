@@ -184,6 +184,7 @@
     <trusted-key id='b2c4d8b48a99f98a' group='org.jetbrains.kotlin' />
     <trusted-key id='66f8e4860bf74983' group='org.jooq' />
     <trusted-key id='145d819475314d97' group='org.json' />
+    <trusted-key id='83d7db7c18913ca4' group='org.json' />
     <trusted-key id='8db9fa0b0718bbf9' group='org.jsr107.ri' />
     <trusted-key id='0315bfb7970a144f' group='org.jvnet.staxex' />
     <trusted-key id='f1f286fc184b6bda' group='org.kordamp.gradle' />
@@ -355,6 +356,9 @@
     <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.6.0'>
       <sha512>80BE5ADF1A1D5F182DA3BC718953D0149673C43844690DEA30FE00D83EA3886517E88473DA48619007932047FD45E461643EC07704B3B7C5B52D798801C6066E</sha512>
     </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.6.1'>
+      <sha512>97823390838111768E99E68A9EB8E603E528A910850EF58B1A9198828C5DE9C8F4BE53238DBED56C46A2471E5F1871FA4CD1D34F86FA44B4E3643BD3D03901A9</sha512>
+    </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>
     </dependency>
@@ -364,11 +368,11 @@
     <dependency group='io.ehdev' module='gradle-semantic-versioning' version='1.1.0'>
       <sha512>1A47AAF2442159C1CBD22521F31C74B4C71C4168AF5B22D04B4691FDD286E90F02B2792DEDAD3EEEC12B5034ADA1A9EE751C975B5A169AE0B33EE800A8D96E7F</sha512>
     </dependency>
-    <dependency group='io.github.gradle-nexus' module='publish-plugin' version='1.0.0'>
-      <sha512>B57469B9FA2C5D598688FF9C6A3B3283496921B91E269EA6D5A1DA6511125BD2545E2CFA8D3736739787B0BACF69C0AF5C5ECDEA474CB9FD56C96495E654682B</sha512>
-    </dependency>
     <dependency group='io.freefair.gradle' module='lombok-plugin' version='5.3.0'>
       <sha512>4C8808B0607564006379FBEB63BCEFC03A0F5FE83F307E455EE66B0B40AC238D14388CEA3C1D883835AF089238F824037A423124348571085C6D5415AB3981CF</sha512>
+    </dependency>
+    <dependency group='io.github.gradle-nexus' module='publish-plugin' version='1.0.0'>
+      <sha512>B57469B9FA2C5D598688FF9C6A3B3283496921B91E269EA6D5A1DA6511125BD2545E2CFA8D3736739787B0BACF69C0AF5C5ECDEA474CB9FD56C96495E654682B</sha512>
     </dependency>
     <dependency group='javax.inject' module='javax.inject' version='1'>
       <sha512>E126B7CCF3E42FD1984A0BEEF1004A7269A337C202E59E04E8E2AF714280D2F2D8D2BA5E6F59481B8DCD34AAF35C966A688D0B48EC7E96F102C274DC0D3B381E</sha512>
@@ -435,6 +439,9 @@
     </dependency>
     <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.15'>
       <sha512>A2001C5E2F3D7EB6FFF5DD19E92925114DF28AE0E23357D811E7C82955751220C39AE73BFEB0EA0BC34C3AF95E27A1D39EBB9E7F5F9522F3957D269F72FD920E</sha512>
+    </dependency>
+    <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.16'>
+      <sha512>5A630269AE2E19E48529A5D768DD9C01DCC9A91247A9D24CC777F0D2B79DBA06AC40AEAC4560C57BFCB6BBBD423621313013B742B78C24C8861490C957A4DC92</sha512>
     </dependency>
     <dependency group='org.codehaus.groovy.modules.http-builder' module='http-builder' version='0.7.1'>
       <sha512>BC7BC2A514F8CA104A392ECF8736F4A3D316EE988FA91299D33B0AF46134B38E14E4A5061449D17B2DF7A521643E6C02DFA37CC277ED7CAB7CE83C28C00E9719</sha512>

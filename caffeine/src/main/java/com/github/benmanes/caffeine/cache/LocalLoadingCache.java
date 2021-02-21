@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;
@@ -173,6 +174,15 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     @SuppressWarnings("unchecked")
     CompletableFuture<V> castedFuture = (CompletableFuture<V>) future;
     return castedFuture;
+  }
+
+  @Override
+  default CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
+    Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
+    for (K key : keys) {
+      result.computeIfAbsent(key, this::refresh);
+    }
+    return composeResult(result);
   }
 
   /** Returns a mapping function that adapts to {@link CacheLoader#load}. */
