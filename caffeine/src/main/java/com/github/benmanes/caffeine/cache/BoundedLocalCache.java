@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1508,8 +1509,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
-   * Performs the maintenance work, blocking until the lock is acquired. Any exception thrown, such
-   * as by {@link CacheWriter#delete}, is propagated to the caller.
+   * Performs the maintenance work, blocking until the lock is acquired.
    *
    * @param task an additional pending task to run, or {@code null} if not present
    */
@@ -3484,6 +3484,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return null;
       }
       return transformer.apply(node.getValue());
+    }
+    @Override public Map<K, CompletableFuture<V>> refreshes() {
+      var refreshes = cache.refreshes;
+      if ((refreshes == null) || refreshes.isEmpty()) {
+        return Map.of();
+      } if (cache.collectKeys()) {
+        var inFlight = new IdentityHashMap<K, CompletableFuture<V>>(refreshes.size());
+        for (var entry : refreshes.entrySet()) {
+          @SuppressWarnings("unchecked")
+          var key = ((InternalReference<K>) entry.getKey()).get();
+          @SuppressWarnings("unchecked")
+          var future = (CompletableFuture<V>) entry.getValue();
+          if (key != null) {
+            inFlight.put(key, future);
+          }
+        }
+        return Collections.unmodifiableMap(inFlight);
+      }
+      @SuppressWarnings("unchecked")
+      var castedRefreshes = (Map<K, CompletableFuture<V>>) (Object) refreshes;
+      return Map.copyOf(castedRefreshes);
     }
     @Override public Optional<Eviction<K, V>> eviction() {
       return cache.evicts()

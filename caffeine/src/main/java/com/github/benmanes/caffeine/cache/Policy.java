@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.checkerframework.checker.index.qual.NonNegative;
@@ -55,6 +56,13 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
    */
   @Nullable
   V getIfPresentQuietly(K key);
+
+  /**
+   * Returns an unmodifiable snapshot {@link Map} view of the in-flight refresh operations.
+   *
+   * @return a snapshot view of the in-flight refresh operations
+   */
+  Map<K, CompletableFuture<V>> refreshes();
 
   /**
    * Returns access to perform operations based on the maximum size or maximum weight eviction

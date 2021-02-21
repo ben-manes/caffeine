@@ -21,6 +21,8 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -373,7 +375,25 @@ public final class RefreshAfterWriteTest {
     future2.cancel(true);
   }
 
-  /* --------------- Policy --------------- */
+  /* --------------- Policy: refreshes --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.ASYNC_INCOMPLETE, implementation = Implementation.Caffeine,
+      refreshAfterWrite = Expire.ONE_MINUTE, population = Population.FULL)
+  public void refreshes(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    cache.getIfPresent(context.firstKey());
+    assertThat(cache.policy().refreshes(), is(aMapWithSize(1)));
+
+    var future = cache.policy().refreshes().get(context.firstKey());
+    assertThat(future, is(not(nullValue())));
+
+    future.complete(Integer.MAX_VALUE);
+    assertThat(cache.policy().refreshes(), is(anEmptyMap()));
+    assertThat(cache.getIfPresent(context.firstKey()), is(Integer.MAX_VALUE));
+  }
+
+  /* --------------- Policy: refreshAfterWrite --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)

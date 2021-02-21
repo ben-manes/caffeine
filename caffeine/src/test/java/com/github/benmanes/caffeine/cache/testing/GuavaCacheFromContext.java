@@ -436,6 +436,9 @@ public final class GuavaCacheFromContext {
         @Override public V getIfPresentQuietly(K key) {
           return cache.asMap().get(key);
         }
+        @Override public Map<K, CompletableFuture<V>> refreshes() {
+          return Map.of();
+        }
         @Override public Optional<Eviction<K, V>> eviction() {
           return Optional.empty();
         }

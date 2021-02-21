@@ -921,6 +921,15 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override public V getIfPresentQuietly(Object key) {
       return transformer.apply(cache.data.get(key));
     }
+    @Override public Map<K, CompletableFuture<V>> refreshes() {
+      var refreshes = cache.refreshes;
+      if (refreshes == null) {
+        return Map.of();
+      }
+      @SuppressWarnings("unchecked")
+      var castedRefreshes = (Map<K, CompletableFuture<V>>) (Object) refreshes;
+      return Map.copyOf(castedRefreshes);
+    }
     @Override public Optional<Eviction<K, V>> eviction() {
       return Optional.empty();
     }

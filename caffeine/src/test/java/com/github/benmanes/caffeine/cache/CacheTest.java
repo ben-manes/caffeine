@@ -22,6 +22,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
@@ -726,5 +727,21 @@ public final class CacheTest {
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey()), is(not(nullValue())));
     assertThat(cache.policy().getIfPresentQuietly(context.middleKey()), is(not(nullValue())));
     assertThat(cache.policy().getIfPresentQuietly(context.lastKey()), is(not(nullValue())));
+  }
+
+  /* --------------- Policy: refreshes --------------- */
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void refreshes_empty(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.policy().refreshes(), is(anEmptyMap()));
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void refreshes_unmodifiable(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.policy().refreshes().clear();
   }
 }

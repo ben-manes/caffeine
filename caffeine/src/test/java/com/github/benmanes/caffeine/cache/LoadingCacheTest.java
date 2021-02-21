@@ -23,6 +23,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.empty;
@@ -810,5 +811,23 @@ public final class LoadingCacheTest {
     });
     assertThat(loader.loadAll(Set.of(1, 2)), is(Map.of(1, 1, 2, 2)));
     assertThat(loader.load(1), is(1));
+  }
+
+  /* --------------- Policy: refreshes --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.ASYNC_INCOMPLETE, implementation = Implementation.Caffeine)
+  public void refreshes(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    var key1 = Iterables.get(context.absentKeys(), 0);
+    var key2 = context.original().isEmpty()
+        ? Iterables.get(context.absentKeys(), 1)
+        : context.firstKey();
+    var future1 = cache.refresh(key1);
+    var future2 = cache.refresh(key2);
+    assertThat(cache.policy().refreshes(), is(equalTo(Map.of(key1, future1, key2, future2))));
+
+    future1.complete(1);
+    future2.cancel(true);
+    assertThat(cache.policy().refreshes(), is(anEmptyMap()));
   }
 }
