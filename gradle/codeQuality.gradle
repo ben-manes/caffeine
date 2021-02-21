@@ -37,7 +37,7 @@ dependencies {
 // Instead we have to download and trick the build to put the jar on the compiler's classpath
 // See the downloadCaffeineLocal() task and https://github.com/gradle/gradle/issues/11625
 task downloadCaffeineLocal() {
-  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.8.8/caffeine-2.8.8.jar'
+  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.9.0/caffeine-2.9.0.jar'
   def local = file("${rootDir}/build/libs/caffeine_local.jar")
   if (!local.exists()) {
     local.parentFile.mkdirs()
@@ -46,6 +46,7 @@ task downloadCaffeineLocal() {
 }
 
 javadoc.options.links(
+  'https://checkerframework.org/api/',
   'https://lightbend.github.io/config/latest/api/',
   "https://guava.dev/releases/${versions.guava}/api/docs/",
   "https://docs.oracle.com/en/java/javase/${JavaVersion.current().majorVersion}/docs/api/")
