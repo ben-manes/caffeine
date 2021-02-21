@@ -26,6 +26,7 @@
     <trusted-key id='07d3516820bcf6b1' group='com.github.ben-manes.caffeine' />
     <trusted-key id='3c0a8f4744f37328' group='com.github.ben-manes.caffeine' />
     <trusted-key id='935869efbf04b2a9' group='com.github.h908714124' />
+    <trusted-key id='379ce192d401ab61' group='com.github.javaparser' />
     <trusted-key id='53dfc5afe188b729' group='com.github.jbellis' />
     <trusted-key id='218fa0f6a941a037' group='com.github.kevinstern' />
     <trusted-key id='711c0a9a896fe336' group='com.github.luben' />
@@ -232,6 +233,21 @@
     </dependency>
     <dependency group='aopalliance' module='aopalliance' version='1.0'>
       <sha512>3F44A932D8C00CFEEE2EB057BCD7C301A2D029063E0A916E1E20B3AEC4877D19D67A2FD8AAF58FA2D5A00133D1602128A7F50912FFB6CABC7B0FDC7FBDA3F8A1</sha512>
+    </dependency>
+    <dependency group='biz.aQute.bnd' module='biz.aQute.bnd.embedded-repo' version='5.4.0-SNAPSHOT'>
+      <sha512>B683854D72E20AB8BE7AEBB41212A559D1B984560675D38423A6603C2F0B71578502431B0BBF7F94EB8833E66017B7237B0966DCF7165349B05A6385C595DA7B</sha512>
+    </dependency>
+    <dependency group='biz.aQute.bnd' module='biz.aQute.bnd.gradle' version='5.4.0-SNAPSHOT'>
+      <sha512>4C5619A1191B8450FCC10AFD613F38B286B95EA28C4F20150AE388569ED7BDC6D963C042233A5FD45A8933DF86CD4DDCABDFFBD855181578289D1E0A5CD3E981</sha512>
+    </dependency>
+    <dependency group='biz.aQute.bnd' module='biz.aQute.bndlib' version='5.4.0-SNAPSHOT'>
+      <sha512>A10FD1E1534E4054656DD0A372172ECFE45E3BA79BDF2F8E807ED63B54BE8013894F0E850F961DC3693523C3209F2DF2B74286024786E9E4D54C2D4E1C1243B7</sha512>
+    </dependency>
+    <dependency group='biz.aQute.bnd' module='biz.aQute.repository' version='5.4.0-SNAPSHOT'>
+      <sha512>2623B6B94D30365A2F8EC881CD88AD079789B1A876DA96E756689AB260B0AE7BAE9632BADF84858B3252CC8C691579DB2C65CCE7A9ABCC1931FCC8FE50D29EC</sha512>
+    </dependency>
+    <dependency group='biz.aQute.bnd' module='biz.aQute.resolve' version='5.4.0-SNAPSHOT'>
+      <sha512>D8862371CE47D917CE42D9E6D0B515A689389732F914A8FCCE68BF4F5E23199B7632EA3A29578E530584337C816E5787B4168EFD0123FC59D114FBE5D94267D0</sha512>
     </dependency>
     <dependency group='com.beust' module='jcommander' version='1.78'>
       <sha512>5EE2EF4C12888A48D7C830189D06EE8A653C7664A53C9B6FA935D4E7866B0454111F8092D7ECE086EC80C61EDAB2856187A1E247873E5C8E4724EFB02C37504B</sha512>
@@ -451,6 +467,9 @@
     </dependency>
     <dependency group='org.codehaus.jackson' module='jackson-mapper-asl' version='1.9.4'>
       <sha512>C3E9D22597510BBB2960D8219CBA762293262F1418C5DB830A2BC28B3A9D75B58317FCE868029F10EA3149B59A3C8A6ACE5C6C0D48D58A543CC465014AA18956</sha512>
+    </dependency>
+    <dependency group='org.javamodularity' module='moduleplugin' version='1.7.0'>
+      <sha512>8CF524598AFCC9B4D9C52FB3924FE0611622179E8EA505DA6268D2CAAF072AEFAA337804745C0247876E7867EADBECC0C7558C38E144B23C2FAE432D940DE762</sha512>
     </dependency>
     <dependency group='org.jboss' module='jandex' version='2.0.1.Final'>
       <sha512>5E95C4C5B28EFCBAE4BEED6D35317A84E191F1782BA6C462575D53188295B740ED7D5FF1E538FC8A31FC972BFA5603C01A3FF34FB1DCB188782AA34EEEEDEBEA</sha512>

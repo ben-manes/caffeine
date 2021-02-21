@@ -15,7 +15,7 @@ eclipse.classpath.file.whenMerged {
 
 dependencies {
   afterEvaluate {
-    jmh configurations.testCompile.allDependencies
+    jmh configurations.testImplementation.allDependencies
   }
 }
 

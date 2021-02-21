@@ -119,7 +119,7 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
   Optional<FixedRefresh<K, V>> refreshAfterWrite();
 
   /** The low-level operations for a cache with a size-based eviction policy. */
-  interface Eviction<K, V> {
+  interface Eviction<K extends @NonNull Object, V extends @NonNull Object> {
 
     /**
      * Returns whether the cache is bounded by a maximum size or maximum weight.
@@ -203,7 +203,7 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
   }
 
   /** The low-level operations for a cache with a fixed expiration policy. */
-  interface FixedExpiration<K, V> {
+  interface FixedExpiration<K extends @NonNull Object, V extends @NonNull Object> {
 
     /**
      * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
@@ -322,7 +322,7 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
   }
 
   /** The low-level operations for a cache with a variable expiration policy. */
-  interface VarExpiration<K, V> {
+  interface VarExpiration<K extends @NonNull Object, V extends @NonNull Object> {
 
     /**
      * Returns the duration until the entry should be automatically removed. The expiration policy
@@ -480,7 +480,7 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
   }
 
   /** The low-level operations for a cache with a fixed refresh policy. */
-  interface FixedRefresh<K, V> {
+  interface FixedRefresh<K extends @NonNull Object, V extends @NonNull Object> {
 
     /**
      * Returns the age of the entry based on the refresh policy. The entry's age is the cache's
