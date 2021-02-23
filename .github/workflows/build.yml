@@ -1,5 +1,5 @@
 name: build
-on: [ push, pull_request, release ]
+on: [ push, pull_request ]
 
 env:
   ORG_GRADLE_PROJECT_checksumFailOn: build_finish
@@ -63,12 +63,3 @@ jobs:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
         run: ./gradlew publishToSonatype
-      - name: Releasing
-        if: >
-          matrix.java == env.MIN_JVM
-          && github.event_name == 'release'
-          && github.event.action == 'created'
-        env:
-          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository -Prelease
