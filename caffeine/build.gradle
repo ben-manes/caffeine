@@ -66,10 +66,6 @@ dependencies {
   javaPoetImplementation libraries.googleJavaFormat
 }
 
-java {
-  withSourcesJar()
-}
-
 compileCodeGenJava {
   gradle.taskGraph.whenReady {
     enabled = gradle.taskGraph.hasTask('uploadArchives')

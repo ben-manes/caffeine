@@ -153,6 +153,12 @@ tasks.coveralls {
   onlyIf { System.env.'CI' && !JavaVersion.current().isJava9Compatible() }
 }
 
-dependencyUpdates.resolutionStrategy {
-  force testLibraries.truth
+def isNonStable = { String version ->
+  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+  def regex = /^[0-9,.v-]+(-r)?$/
+  return !stableKeyword && !(version ==~ regex)
+}
+
+dependencyUpdates.rejectVersionIf {
+  it.candidate.group == 'org.slf4j' && isNonStable(it.candidate.version)
 }

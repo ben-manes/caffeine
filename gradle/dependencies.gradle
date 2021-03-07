@@ -25,16 +25,16 @@
  */
 ext {
   versions = [
-    akka: '2.6.12',
+    akka: '2.6.13',
     cache2k: '2.1.1.Alpha',
-    checkerFramework: '3.10.0',
+    checkerFramework: '3.11.0',
     coherence: '20.06',
     commonsCompress: '1.20',
-    commonsLang3: '3.11',
+    commonsLang3: '3.12.0',
     commonsMath3: '3.6.1',
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.1',
-    ehcache3: '3.9.1',
+    ehcache3: '3.9.2',
     errorprone: '2.5.1',
     errorproneJavac: '9+181-r4173-1',
     elasticSearch: '7.11.1',
@@ -49,7 +49,7 @@ ext {
     javaObjectLayout: '0.14',
     javapoet: '1.13.0',
     jcache: '1.1.1',
-    jmh: '1.27',
+    jmh: '1.28',
     joor: '0.9.13',
     jsr330: '1',
     nullaway: '0.8.0',
@@ -62,28 +62,29 @@ ext {
     univocityParsers: '2.9.1',
     ycsb: '0.17.0',
     xz: '1.8',
-    zstd: '1.4.8-4',
+    zstd: '1.4.8-7',
   ]
   testVersions = [
     awaitility: '4.0.3',
     easymock: '4.2',
+    guice: '5.0.1',
     hamcrest: '2.2',
     jcacheTck: '1.1.1',
-    jctools: '3.2.0',
+    jctools: '3.3.0',
     junit: '4.13.2',
-    mockito: '3.7.7',
+    mockito: '3.8.0',
     paxExam: '4.13.4',
-    testng: '7.3.0',
-    truth: '0.24',
+    testng: '7.4.0',
+    truth: '1.1.2',
     felix: '7.0.0',
-    felixScr: '2.1.24',
+    felixScr: '2.1.26',
     osgiUtilFunction: '1.1.0',
     osgiUtilPromise: '1.1.1',
   ]
   pluginVersions = [
-    bnd: '5.2.0',
-    checkerFramework: '0.5.16',
-    checkstyle: '8.40',
+    bnd: '5.3.0',
+    checkerFramework: '0.5.17',
+    checkstyle: '8.41',
     coveralls: '2.8.4',
     errorprone: '1.3.0',
     jacoco: '0.8.6',
@@ -91,14 +92,14 @@ ext {
     jmhReport: '0.9.0',
     nexusPublish: '1.0.0',
     nullaway: '1.0.2',
-    pmd: '6.31.0',
+    pmd: '6.32.0',
     semanticVersioning: '1.1.0',
     shadow: '6.1.0',
     sonarqube: '3.1.1',
-    spotbugs: '4.2.0',
-    spotbugsPlugin: '4.6.1',
+    spotbugs: '4.2.2',
+    spotbugsPlugin: '4.6.2',
     stats: '0.2.2',
-    versions: '0.36.0',
+    versions: '0.38.0',
   ]
   annotationProcessorVersions = [
     autoValue: '1.7.4',
@@ -181,7 +182,7 @@ ext {
         exclude group: 'junit'
         exclude group: 'guice'
       },
-      'com.google.inject:guice:4.2.3'
+      "com.google.inject:guice:${testVersions.guice}"
     ],
     truth: "com.google.truth:truth:${testVersions.truth}",
   ]

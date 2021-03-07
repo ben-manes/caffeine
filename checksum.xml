@@ -8,6 +8,7 @@
   <trusted-keys>
     <trusted-key id='36feecf06c2da10b' group='biz.aQute.bnd' />
     <trusted-key id='52e6585e0102b84d' group='biz.aQute.bnd' />
+    <trusted-key id='c5cc0278b1ee1c33' group='biz.aQute.bnd' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools.build' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools.ddms' />
@@ -45,6 +46,7 @@
     <trusted-key id='9a259c7ee636c5ed' group='com.google.googlejavaformat' />
     <trusted-key id='abe9f3126bb741c1' group='com.google.guava' />
     <trusted-key id='f6d4a1d411e9d1ae' group='com.google.guava' />
+    <trusted-key id='0a2496e4955cac56' group='com.google.inject' />
     <trusted-key id='f0df21d1d0a3c384' group='com.google.inject' />
     <trusted-key id='29579f18fa8fd93b' group='com.google.j2objc' />
     <trusted-key id='a7764f502a938c99' group='com.google.protobuf' />
@@ -139,6 +141,7 @@
     <trusted-key id='9ae296fd02e9f65b' group='org.apache.commons' />
     <trusted-key id='a2115ae15f6b8b72' group='org.apache.commons' />
     <trusted-key id='3fcf529ff2f27a06' group='org.apache.felix' />
+    <trusted-key id='8d37f2f060a1af50' group='org.apache.felix' />
     <trusted-key id='9054823a859a7237' group='org.apache.felix' />
     <trusted-key id='bff2ee42c8282e76' group='org.apache.felix' />
     <trusted-key id='de78987a9cd4d9d3' group='org.apache.htrace' />
@@ -216,9 +219,11 @@
     <trusted-key id='cfca4a29d26468de' group='org.sonarsource.scanner.api' />
     <trusted-key id='cfca4a29d26468de' group='org.sonarsource.scanner.gradle' />
     <trusted-key id='9440c8d6decafa12' group='org.testng' />
+    <trusted-key id='dddafa7674e54418' group='org.testng' />
     <trusted-key id='72385ff0af338d52' group='org.threeten' />
     <trusted-key id='38ee757d69184620' group='org.tukaani' />
     <trusted-key id='04633a577c200941' group='org.vafer' />
+    <trusted-key id='e0130a3ed5a2079e' group='org.webjars' />
     <trusted-key id='55c7e5e701832382' group='org.yaml' />
     <trusted-key id='e65e11d40d80db7c' group='site.ycsb' />
     <trusted-key id='a840320c83d56348' group='systems.comodal' />
@@ -301,6 +306,9 @@
     <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.36.0'>
       <sha512>D57AC7E2C3AB7135504C2ADED5E622032AB03905EF259645A0EE2B0D3B9868BC15131AD50027F47044F710DBA681AD2A54B669451C795E8189378AD2525D4E44</sha512>
     </dependency>
+    <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.38.0'>
+      <sha512>C1AB30AA9984AAF40E0DEF6474F535875ABCCA1568E6D495317D1092B782AC39D13505BBBD50877589610A59273AC89ADE0B68EEE0501961C1AF17CA5D509178</sha512>
+    </dependency>
     <dependency group='com.github.brianfrankcooper.YCSB' module='core' version='0.15.0'>
       <sha512>DF5BFED7DFC327166FE0CB81BD6A9655F44CCB268E7E69204BD09955147CE9A97EBBCC28F9ACF315DBAF49E850A43CE8744F44E68D7BE816EACCAF0BEE41B203</sha512>
     </dependency>
@@ -375,6 +383,9 @@
     </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.6.1'>
       <sha512>97823390838111768E99E68A9EB8E603E528A910850EF58B1A9198828C5DE9C8F4BE53238DBED56C46A2471E5F1871FA4CD1D34F86FA44B4E3643BD3D03901A9</sha512>
+    </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.6.2'>
+      <sha512>A9789681117B1D01021884DB7D0F6367CA3B7F4AC6A4630BC6769DFDF6D1003E49CD7A894D803BFA6244AEE5135F610EEAA4E2E1AD67F8C5196C8B7A1CEEE451</sha512>
     </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>
@@ -459,6 +470,9 @@
     </dependency>
     <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.16'>
       <sha512>5A630269AE2E19E48529A5D768DD9C01DCC9A91247A9D24CC777F0D2B79DBA06AC40AEAC4560C57BFCB6BBBD423621313013B742B78C24C8861490C957A4DC92</sha512>
+    </dependency>
+    <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.17'>
+      <sha512>6B9620FFEA84B67D27132B6BD8D2EB080C519383CC3187474CABD10EB398BEB259D25974386508AADA1194A2BDAB5D223FAB584AC84E6B03D007EDEBFCBD9A68</sha512>
     </dependency>
     <dependency group='org.codehaus.groovy.modules.http-builder' module='http-builder' version='0.7.1'>
       <sha512>BC7BC2A514F8CA104A392ECF8736F4A3D316EE988FA91299D33B0AF46134B38E14E4A5061449D17B2DF7A521643E6C02DFA37CC277ED7CAB7CE83C28C00E9719</sha512>
