@@ -24,6 +24,7 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew test jacocoRootReport
+      continue-on-error: true
     - name: DeepSource Test Coverage Action
       uses: deepsourcelabs/test-coverage-action@v1.0.0
       with:
