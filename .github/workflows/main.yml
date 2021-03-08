@@ -1,0 +1,37 @@
+# This workflow will build a Java project with Gradle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    environment: DEEPSOURCE_DSN
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      run: ./gradlew test jacocoRootReport
+    - name: DeepSource Test Coverage Action
+      uses: deepsourcelabs/test-coverage-action@v1.0.0
+      with:
+        # Programming language shortcode for which coverage is reported. Allowed values are — python, go
+        key: java
+        # Path to the coverage data file. e.g. ./coverage.xml
+        coverage-file: ./build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
+        # DeepSource DSN of this repository. It is available under Settings → Reporting tab of the repository page on DeepSource.
+        dsn: ${{secrets.DEEPSOURCE_DSN}}
+        # Should the CI build fail if there is an error while uploading the report to DeepSource? Allowed values are — true, false
+        fail-ci-on-error: true
