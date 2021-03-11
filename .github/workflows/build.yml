@@ -38,7 +38,8 @@ jobs:
           && endsWith(github.ref, github.event.repository.default_branch)
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        run: ./gradlew coveralls
+        run: ./gradlew coveralls -S
+        continue-on-error: true
       - name: SonarQube
         if: >
           matrix.java == env.MAX_JVM
@@ -47,7 +48,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonarqube
+        run: ./gradlew sonarqube -S
+        continue-on-error: true
       - name: Publish Snapshot
         if: >
           matrix.java == env.MIN_JVM

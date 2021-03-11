@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executo
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -156,6 +157,22 @@ public final class EvictionTest {
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
     verifyStats(context, verifier -> verifier.evictions(3).evictionWeight(13));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.TEN,
+      weigher = CacheWeigher.COLLECTION, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  public void evict_weighted_reorder(Cache<Integer, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
+    eviction.setMaximum(3);
+    for (int i = 1; i <= 3; i++) {
+      cache.put(i, List.of(1));
+    }
+    cache.asMap().computeIfPresent(1, (k, v) -> List.of(1, 2));
+    assertThat(cache.getIfPresent(1), hasSize(2));
+    assertThat(cache.asMap(), is(aMapWithSize(2)));
+    assertThat(eviction.weightedSize().getAsLong(), is(3L));
   }
 
   @Test(dataProvider = "caches")

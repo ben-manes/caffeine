@@ -37,7 +37,7 @@ ext {
     ehcache3: '3.9.2',
     errorprone: '2.5.1',
     errorproneJavac: '9+181-r4173-1',
-    elasticSearch: '7.11.1',
+    elasticSearch: '7.11.2',
     expiringMap: '0.5.9',
     fastfilter: '1.0',
     fastutil: '8.5.2',
@@ -62,7 +62,7 @@ ext {
     univocityParsers: '2.9.1',
     ycsb: '0.17.0',
     xz: '1.8',
-    zstd: '1.4.8-7',
+    zstd: '1.4.9-1',
   ]
   testVersions = [
     awaitility: '4.0.3',
@@ -97,7 +97,7 @@ ext {
     shadow: '6.1.0',
     sonarqube: '3.1.1',
     spotbugs: '4.2.2',
-    spotbugsPlugin: '4.6.2',
+    spotbugsPlugin: '4.7.0',
     stats: '0.2.2',
     versions: '0.38.0',
   ]

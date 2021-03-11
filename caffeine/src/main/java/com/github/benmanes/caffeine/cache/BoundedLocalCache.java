@@ -1630,6 +1630,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       // Ignore stale accesses for an entry that is no longer present
       return;
     } else if (node.getPolicyWeight() > mainProtectedMaximum()) {
+      reorder(accessOrderProbationDeque(), node);
       return;
     }
 

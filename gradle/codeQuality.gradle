@@ -98,24 +98,14 @@ jacocoTestReport {
   }
 }
 
-task jacocoMerge(type: JacocoMerge) {
-  executionData tasks.withType(Test)
-
-  doFirst {
-    executionData = files(executionData.findAll { it.exists() })
-  }
-}
-
 sonarqube {
   properties {
     property 'sonar.organization', 'caffeine'
     property 'sonar.projectKey', 'caffeine:caffeine'
     property 'sonar.login', System.env.'SONAR_TOKEN'
     property 'sonar.host.url', 'https://sonarcloud.io'
-    property 'sonar.jacoco.reportPath', jacocoMerge.destinationFile
   }
 }
-tasks.sonarqube.dependsOn(jacocoMerge)
 
 tasks.withType(JavaCompile).configureEach {
   dependsOn downloadCaffeineLocal
