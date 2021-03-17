@@ -49,6 +49,7 @@ public final class StripedBufferTest {
 
   @Test(dataProvider = "probes")
   public void probe(Probe probe) {
+    probe.get();
     probe.initialize();
     assertThat(probe.get(), is(not(0)));
 

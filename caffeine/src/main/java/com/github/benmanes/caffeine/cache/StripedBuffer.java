@@ -340,7 +340,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
 
   /** Uses a thread local to maintain a random probe value. */
   static final class ThreadLocalProbe implements Probe {
-    static final ThreadLocal<int[]> threadHashCode = new ThreadLocal<>();
+    static final ThreadLocal<int[]> threadHashCode = ThreadLocal.withInitial(() -> new int[1]);
 
     @Override public int get() {
       return threadHashCode.get()[0];
@@ -351,7 +351,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     @Override public void initialize() {
       // Avoid zero to allow xorShift rehash
       int hash = 1 | ThreadLocalRandom.current().nextInt();
-      threadHashCode.set(new int[] { hash });
+      threadHashCode.get()[0] = hash;
     }
   }
 }
