@@ -79,8 +79,7 @@ compileCodeGenJava {
 
 jar.manifest {
   attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine'
-  attributes 'Import-Package':
-    'sun.misc.*;resolution:=optional'
+  attributes 'Import-Package': ''
   attributes 'Export-Package': [
     'com.github.benmanes.caffeine',
     'com.github.benmanes.caffeine.base',
