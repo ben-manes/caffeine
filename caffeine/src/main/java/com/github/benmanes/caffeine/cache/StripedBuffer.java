@@ -72,7 +72,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    * thread were bound to a CPU, there would exist a perfect hash function mapping threads to slots
    * that eliminates collisions. When we reach capacity, we search for this mapping by varying the
    * hash codes of colliding threads. Because search is random, and collisions only become known via
-   * CAS failures, convergence can be slow, and because threads are typically not bound to CPUS
+   * CAS failures, convergence can be slow, and because threads are typically not bound to CPUs
    * forever, may not occur at all. However, despite these limitations, observed contention rates
    * are typically low in these cases.
    *
@@ -115,65 +115,22 @@ abstract class StripedBuffer<E> implements Buffer<E> {
 
   @Override
   public int offer(E e) {
+    long z = mix64(Thread.currentThread().getId());
+    int increment = (int) (z >>> 32) | 1;
+    int h = (int) z;
+
     int mask;
     int result;
     Buffer<E> buffer;
     boolean uncontended = true;
     Buffer<E>[] buffers = table;
-
-    long z = mix64(Thread.currentThread().getId());
-    int increment = (int) (z >>> 32) | 1;
-    int h = (int) z;
     if ((buffers == null)
         || ((mask = buffers.length - 1) < 0)
         || ((buffer = buffers[h & mask]) == null)
         || !(uncontended = ((result = buffer.offer(e)) != Buffer.FAILED))) {
-      return expandOrRetry(e, h + increment, increment, uncontended);
+      return expandOrRetry(e, h, increment, uncontended);
     }
     return result;
-  }
-
-  @Override
-  public void drainTo(Consumer<E> consumer) {
-    Buffer<E>[] buffers = table;
-    if (buffers == null) {
-      return;
-    }
-    for (Buffer<E> buffer : buffers) {
-      if (buffer != null) {
-        buffer.drainTo(consumer);
-      }
-    }
-  }
-
-  @Override
-  public long reads() {
-    Buffer<E>[] buffers = table;
-    if (buffers == null) {
-      return 0;
-    }
-    long reads = 0;
-    for (Buffer<E> buffer : buffers) {
-      if (buffer != null) {
-        reads += buffer.reads();
-      }
-    }
-    return reads;
-  }
-
-  @Override
-  public long writes() {
-    Buffer<E>[] buffers = table;
-    if (buffers == null) {
-      return 0;
-    }
-    long writes = 0;
-    for (Buffer<E> buffer : buffers) {
-      if (buffer != null) {
-        writes += buffer.writes();
-      }
-    }
-    return writes;
   }
 
   /**
@@ -182,12 +139,11 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    * optimistic retry code, relying on rechecked sets of reads.
    *
    * @param e the element to add
-   * @param h the element's hash
+   * @param h the thread's hash
    * @param increment the amount to increment by when rehashing
-   * @param wasUncontended false if CAS failed before call
+   * @param wasUncontended false if CAS failed before this call
    * @return {@code Buffer.SUCCESS}, {@code Buffer.FAILED}, or {@code Buffer.FULL}
    */
-  @SuppressWarnings("PMD.ConfusingTernary")
   final int expandOrRetry(E e, int h, int increment, boolean wasUncontended) {
     int result = Buffer.FAILED;
     boolean collide = false; // True if last slot nonempty
@@ -255,6 +211,49 @@ abstract class StripedBuffer<E> implements Buffer<E> {
       }
     }
     return result;
+  }
+
+  @Override
+  public void drainTo(Consumer<E> consumer) {
+    Buffer<E>[] buffers = table;
+    if (buffers == null) {
+      return;
+    }
+    for (Buffer<E> buffer : buffers) {
+      if (buffer != null) {
+        buffer.drainTo(consumer);
+      }
+    }
+  }
+
+  @Override
+  public long reads() {
+    Buffer<E>[] buffers = table;
+    if (buffers == null) {
+      return 0;
+    }
+    long reads = 0;
+    for (Buffer<E> buffer : buffers) {
+      if (buffer != null) {
+        reads += buffer.reads();
+      }
+    }
+    return reads;
+  }
+
+  @Override
+  public long writes() {
+    Buffer<E>[] buffers = table;
+    if (buffers == null) {
+      return 0;
+    }
+    long writes = 0;
+    for (Buffer<E> buffer : buffers) {
+      if (buffer != null) {
+        writes += buffer.writes();
+      }
+    }
+    return writes;
   }
 
   /** Computes Stafford variant 13 of 64-bit mix function. */
