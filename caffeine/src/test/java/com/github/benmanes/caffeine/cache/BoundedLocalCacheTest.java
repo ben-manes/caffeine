@@ -525,10 +525,10 @@ public final class BoundedLocalCacheTest {
     cache.put(-1, -1);
     assertThat(localCache.skipReadBuffer(), is(false));
     assertThat(cache.getIfPresent(0), is(not(nullValue())));
-    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.readBuffer.writes(), is(1L));
 
     cache.cleanUp();
-    assertThat(localCache.readBuffer.reads(), is(1));
+    assertThat(localCache.readBuffer.reads(), is(1L));
   }
 
   @Test(dataProvider = "caches")
@@ -565,12 +565,12 @@ public final class BoundedLocalCacheTest {
       localCache.get(context.firstKey());
     }
 
-    int pending = buffer.size();
+    long pending = buffer.size();
     assertThat(buffer.writes(), is(equalTo(pending)));
-    assertThat(pending, is(BoundedBuffer.BUFFER_SIZE));
+    assertThat(pending, is((long) BoundedBuffer.BUFFER_SIZE));
 
     localCache.get(context.firstKey());
-    assertThat(buffer.size(), is(0));
+    assertThat(buffer.size(), is(0L));
   }
 
   @Test(dataProvider = "caches")
@@ -580,14 +580,14 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Buffer<Node<Integer, Integer>> buffer = localCache.readBuffer;
     localCache.get(context.firstKey());
-    assertThat(buffer.size(), is(1));
+    assertThat(buffer.size(), is(1L));
 
     assertThat(localCache.get(context.absentKey()), is(nullValue()));
-    assertThat(buffer.size(), is(1));
+    assertThat(buffer.size(), is(1L));
 
     localCache.drainStatus = REQUIRED;
     assertThat(localCache.get(context.absentKey()), is(nullValue()));
-    assertThat(buffer.size(), is(0));
+    assertThat(buffer.size(), is(0L));
   }
 
   @Test(dataProvider = "caches")
@@ -758,8 +758,8 @@ public final class BoundedLocalCacheTest {
     // If within the tolerance, treat the update as a read
     cache.put(1, 2);
     if (mayCheckReads) {
-      assertThat(localCache.readBuffer.reads(), is(0));
-      assertThat(localCache.readBuffer.writes(), is(1));
+      assertThat(localCache.readBuffer.reads(), is(0L));
+      assertThat(localCache.readBuffer.writes(), is(1L));
     }
     assertThat(localCache.writeBuffer().producerIndex, is(2L));
 
@@ -767,8 +767,8 @@ public final class BoundedLocalCacheTest {
     context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
     cache.put(1, 3);
     if (mayCheckReads) {
-      assertThat(localCache.readBuffer.reads(), is(1));
-      assertThat(localCache.readBuffer.writes(), is(1));
+      assertThat(localCache.readBuffer.reads(), is(1L));
+      assertThat(localCache.readBuffer.writes(), is(1L));
     }
     assertThat(localCache.writeBuffer().producerIndex, is(4L));
   }
@@ -783,31 +783,31 @@ public final class BoundedLocalCacheTest {
 
     // If within the tolerance, treat the update as a read
     cache.put(1, 2);
-    assertThat(localCache.readBuffer.reads(), is(0));
-    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.readBuffer.reads(), is(0L));
+    assertThat(localCache.readBuffer.writes(), is(1L));
     assertThat(localCache.writeBuffer().producerIndex, is(2L));
 
     // If exceeds the tolerance, treat the update as a write
     context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
     cache.put(1, 3);
-    assertThat(localCache.readBuffer.reads(), is(1));
-    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.readBuffer.reads(), is(1L));
+    assertThat(localCache.readBuffer.writes(), is(1L));
     assertThat(localCache.writeBuffer().producerIndex, is(4L));
 
     // If the expire time reduces by more than the tolerance, treat the update as a write
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
     cache.put(1, 4);
-    assertThat(localCache.readBuffer.reads(), is(1));
-    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.readBuffer.reads(), is(1L));
+    assertThat(localCache.readBuffer.writes(), is(1L));
     assertThat(localCache.writeBuffer().producerIndex, is(6L));
 
     // If the expire time increases by more than the tolerance, treat the update as a write
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenReturn(Expire.FOREVER.timeNanos());
     cache.put(1, 4);
-    assertThat(localCache.readBuffer.reads(), is(1));
-    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.readBuffer.reads(), is(1L));
+    assertThat(localCache.readBuffer.writes(), is(1L));
     assertThat(localCache.writeBuffer().producerIndex, is(8L));
   }
 }

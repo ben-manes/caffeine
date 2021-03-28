@@ -106,7 +106,7 @@ public final class IsValidBoundedLocalCache<K, V>
   private Boolean tryDrainBuffers(BoundedLocalCache<K, V> cache) {
     cache.cleanUp();
     Buffer<?> buffer = cache.readBuffer;
-    return (buffer.size() == 0) && buffer.reads() == buffer.writes();
+    return (buffer.size() == 0L) && (buffer.reads() == buffer.writes());
   }
 
   private void checkCache(BoundedLocalCache<K, V> cache) {

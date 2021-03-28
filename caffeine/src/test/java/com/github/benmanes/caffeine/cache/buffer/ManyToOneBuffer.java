@@ -79,13 +79,13 @@ final class ManyToOneBuffer<E> extends ManyToOneHeader.ReadAndWriteCounterRef<E>
   }
 
   @Override
-  public int reads() {
-    return (int) readCounter;
+  public long reads() {
+    return readCounter;
   }
 
   @Override
-  public int writes() {
-    return (int) writeCounter;
+  public long writes() {
+    return writeCounter;
   }
 }
 

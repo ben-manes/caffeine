@@ -48,7 +48,7 @@ public final class BoundedBufferTest {
         buffer.offer(DUMMY);
       }
     });
-    assertThat(buffer.writes(), is(greaterThan(0)));
+    assertThat(buffer.writes(), is(greaterThan(0L)));
     assertThat(buffer.writes(), is(buffer.size()));
   }
 
@@ -57,7 +57,7 @@ public final class BoundedBufferTest {
     for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
       buffer.offer(DUMMY);
     }
-    int[] read = new int[1];
+    long[] read = new long[1];
     buffer.drainTo(e -> read[0]++);
     assertThat(read[0], is(buffer.reads()));
     assertThat(read[0], is(buffer.writes()));
@@ -79,7 +79,7 @@ public final class BoundedBufferTest {
       }
     });
     buffer.drainTo(e -> reads.incrementAndGet());
-    assertThat(reads.intValue(), is(buffer.reads()));
-    assertThat(reads.intValue(), is(buffer.writes()));
+    assertThat(reads.longValue(), is(buffer.reads()));
+    assertThat(reads.longValue(), is(buffer.writes()));
   }
 }

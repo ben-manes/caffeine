@@ -21,15 +21,11 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
-import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -65,22 +61,20 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    * available, threads try other slots. During these retries, there is increased contention and
    * reduced locality, which is still better than alternatives.
    *
-   * The Thread probe fields maintained via ThreadLocalRandom serve as per-thread hash codes. We let
-   * them remain uninitialized as zero (if they come in this way) until they contend at slot 0. They
-   * are then initialized to values that typically do not often conflict with others. Contention
-   * and/or table collisions are indicated by failed CASes when performing an update operation. Upon
-   * a collision, if the table size is less than the capacity, it is doubled in size unless some
-   * other thread holds the lock. If a hashed slot is empty, and lock is available, a new Buffer is
-   * created. Otherwise, if the slot exists, a CAS is tried. Retries proceed by "double hashing",
-   * using a secondary hash (Marsaglia XorShift) to try to find a free slot.
+   * Contention and/or table collisions are indicated by failed CASes when performing an update
+   * operation. Upon a collision, if the table size is less than the capacity, it is doubled in size
+   * unless some other thread holds the lock. If a hashed slot is empty, and lock is available, a
+   * new Buffer is created. Otherwise, if the slot exists, a CAS is tried. The Thread id serves as
+   * the base for per-thread hash codes. Retries proceed by "incremental hashing", using the top
+   * half of the seed to increment the bottom half used as the probe to try to find a free slot.
    *
    * The table size is capped because, when there are more threads than CPUs, supposing that each
    * thread were bound to a CPU, there would exist a perfect hash function mapping threads to slots
-   * that eliminates collisions. When we reach capacity, we search for this mapping by randomly
-   * varying the hash codes of colliding threads. Because search is random, and collisions only
-   * become known via CAS failures, convergence can be slow, and because threads are typically not
-   * bound to CPUS forever, may not occur at all. However, despite these limitations, observed
-   * contention rates are typically low in these cases.
+   * that eliminates collisions. When we reach capacity, we search for this mapping by varying the
+   * hash codes of colliding threads. Because search is random, and collisions only become known via
+   * CAS failures, convergence can be slow, and because threads are typically not bound to CPUS
+   * forever, may not occur at all. However, despite these limitations, observed contention rates
+   * are typically low in these cases.
    *
    * It is possible for a Buffer to become unused when threads that once hashed to it terminate, as
    * well as in the case where doubling the table causes no thread to hash to it under expanded
@@ -90,9 +84,6 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    */
 
   static final VarHandle TABLE_BUSY;
-
-  /** A probe value for the current thread. */
-  static final Probe PROBE;
 
   /** Number of CPUS. */
   static final int NCPU = Runtime.getRuntime().availableProcessors();
@@ -114,15 +105,6 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     return TABLE_BUSY.compareAndSet(this, 0, 1);
   }
 
-  /** Pseudo-randomly advances and records the given probe value for the given thread. */
-  static final int advanceProbe(int probe) {
-    probe ^= probe << 13; // xorshift
-    probe ^= probe >>> 17;
-    probe ^= probe << 5;
-    PROBE.set(probe);
-    return probe;
-  }
-
   /**
    * Creates a new buffer instance after resizing to accommodate a producer.
    *
@@ -134,15 +116,19 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   @Override
   public int offer(E e) {
     int mask;
-    int result = 0;
+    int result;
     Buffer<E> buffer;
     boolean uncontended = true;
     Buffer<E>[] buffers = table;
+
+    long z = mix64(Thread.currentThread().getId());
+    int increment = (int) (z >>> 32) | 1;
+    int h = (int) z;
     if ((buffers == null)
-        || (mask = buffers.length - 1) < 0
-        || (buffer = buffers[PROBE.get() & mask]) == null
+        || ((mask = buffers.length - 1) < 0)
+        || ((buffer = buffers[h & mask]) == null)
         || !(uncontended = ((result = buffer.offer(e)) != Buffer.FAILED))) {
-      expandOrRetry(e, uncontended);
+      return expandOrRetry(e, h + increment, increment, uncontended);
     }
     return result;
   }
@@ -161,12 +147,12 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   }
 
   @Override
-  public int reads() {
+  public long reads() {
     Buffer<E>[] buffers = table;
     if (buffers == null) {
       return 0;
     }
-    int reads = 0;
+    long reads = 0;
     for (Buffer<E> buffer : buffers) {
       if (buffer != null) {
         reads += buffer.reads();
@@ -176,12 +162,12 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   }
 
   @Override
-  public int writes() {
+  public long writes() {
     Buffer<E>[] buffers = table;
     if (buffers == null) {
       return 0;
     }
-    int writes = 0;
+    long writes = 0;
     for (Buffer<E> buffer : buffers) {
       if (buffer != null) {
         writes += buffer.writes();
@@ -196,16 +182,14 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    * optimistic retry code, relying on rechecked sets of reads.
    *
    * @param e the element to add
+   * @param h the element's hash
+   * @param increment the amount to increment by when rehashing
    * @param wasUncontended false if CAS failed before call
+   * @return {@code Buffer.SUCCESS}, {@code Buffer.FAILED}, or {@code Buffer.FULL}
    */
   @SuppressWarnings("PMD.ConfusingTernary")
-  final void expandOrRetry(E e, boolean wasUncontended) {
-    int h;
-    if ((h = PROBE.get()) == 0) {
-      PROBE.initialize();
-      h = PROBE.get();
-      wasUncontended = true;
-    }
+  final int expandOrRetry(E e, int h, int increment, boolean wasUncontended) {
+    int result = Buffer.FAILED;
     boolean collide = false; // True if last slot nonempty
     for (int attempt = 0; attempt < ATTEMPTS; attempt++) {
       Buffer<E>[] buffers;
@@ -234,13 +218,13 @@ abstract class StripedBuffer<E> implements Buffer<E> {
           collide = false;
         } else if (!wasUncontended) { // CAS already known to fail
           wasUncontended = true;      // Continue after rehash
-        } else if (buffer.offer(e) != Buffer.FAILED) {
+        } else if ((result = buffer.offer(e)) != Buffer.FAILED) {
           break;
-        } else if (n >= MAXIMUM_TABLE_SIZE || table != buffers) {
+        } else if ((n >= MAXIMUM_TABLE_SIZE) || (table != buffers)) {
           collide = false; // At max size or stale
         } else if (!collide) {
           collide = true;
-        } else if (tableBusy == 0 && casTableBusy()) {
+        } else if ((tableBusy == 0) && casTableBusy()) {
           try {
             if (table == buffers) { // Expand table unless stale
               table = Arrays.copyOf(buffers, n << 1);
@@ -251,7 +235,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
           collide = false;
           continue; // Retry with expanded table
         }
-        h = advanceProbe(h);
+        h += increment;
       } else if ((tableBusy == 0) && (table == buffers) && casTableBusy()) {
         boolean init = false;
         try { // Initialize table
@@ -270,6 +254,14 @@ abstract class StripedBuffer<E> implements Buffer<E> {
         }
       }
     }
+    return result;
+  }
+
+  /** Computes Stafford variant 13 of 64-bit mix function. */
+  static long mix64(long z) {
+    z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9L;
+    z = (z ^ (z >>> 27)) * 0x94d049bb133111ebL;
+    return z ^ (z >>> 31);
   }
 
   static {
@@ -278,80 +270,6 @@ abstract class StripedBuffer<E> implements Buffer<E> {
           .findVarHandle(StripedBuffer.class, "tableBusy", int.class);
     } catch (ReflectiveOperationException e) {
       throw new ExceptionInInitializerError(e);
-    }
-
-    Probe probe = null;
-    List<Supplier<Probe>> suppliers = List.of(
-        UnsafeProbe::new, VarHandleProbe::new, ThreadLocalProbe::new);
-    for (var supplier : suppliers) {
-      try {
-        probe = supplier.get();
-        break;
-      } catch (Throwable ignored) { /* Try next strategy */ }
-    }
-    PROBE = requireNonNull(probe, "Unable to determine a probe strategy");
-  }
-
-  interface Probe {
-    int get();
-    void set(int value);
-    void initialize();
-  }
-
-  /** Uses the Thread's random probe value, if accessible. */
-  static final class UnsafeProbe implements Probe {
-    static final long PROBE = UnsafeAccess.objectFieldOffset(
-        Thread.class, "threadLocalRandomProbe");
-
-    @Override public int get() {
-      return UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), PROBE);
-    }
-    @Override public void set(int probe) {
-      UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), PROBE, probe);
-    }
-    @Override public void initialize() {
-      ThreadLocalRandom.current(); // force initialization
-    }
-  }
-
-  /** Uses the Thread's random probe value, if accessible. */
-  static final class VarHandleProbe implements Probe {
-    static final VarHandle PROBE;
-
-    static {
-      try {
-        PROBE = MethodHandles.privateLookupIn(Thread.class, MethodHandles.lookup())
-            .findVarHandle(Thread.class, "threadLocalRandomProbe", int.class);
-      } catch (ReflectiveOperationException e) {
-        throw new ExceptionInInitializerError(e);
-      }
-    }
-
-    @Override public int get() {
-      return (int) PROBE.get(Thread.currentThread());
-    }
-    @Override public void set(int probe) {
-      PROBE.set(Thread.currentThread(), probe);
-    }
-    @Override public void initialize() {
-      ThreadLocalRandom.current(); // force initialization
-    }
-  }
-
-  /** Uses a thread local to maintain a random probe value. */
-  static final class ThreadLocalProbe implements Probe {
-    static final ThreadLocal<int[]> threadHashCode = ThreadLocal.withInitial(() -> new int[1]);
-
-    @Override public int get() {
-      return threadHashCode.get()[0];
-    }
-    @Override public void set(int probe) {
-      threadHashCode.get()[0] = probe;
-    }
-    @Override public void initialize() {
-      // Avoid zero to allow xorShift rehash
-      int hash = 1 | ThreadLocalRandom.current().nextInt();
-      threadHashCode.get()[0] = hash;
     }
   }
 }

@@ -83,13 +83,13 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
   }
 
   @Override
-  public int reads() {
-    return (int) readCounter / OFFSET;
+  public long reads() {
+    return readCounter / OFFSET;
   }
 
   @Override
-  public int writes() {
-    return (int) writeCounter / OFFSET;
+  public long writes() {
+    return writeCounter / OFFSET;
   }
 }
 

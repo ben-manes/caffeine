@@ -547,7 +547,6 @@ public class CacheBuilderTest extends TestCase {
    */
   @GwtIncompatible("QueuingRemovalListener")
   @SuppressWarnings("FutureReturnValueIgnored")
-  // FIXME(ben): disabled due to TravisCI killing the process
   public void testRemovalNotification_get_basher() throws InterruptedException {
     int nTasks = 1000;
     int nThreads = 100;
