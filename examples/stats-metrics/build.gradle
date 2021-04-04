@@ -1,18 +1,18 @@
 plugins {
-  id 'java'
-  id 'com.github.ben-manes.versions' version '0.17.0'
+  id 'java-library'
+  id 'com.github.ben-manes.versions' version '0.38.0'
 }
 
 repositories {
-  jcenter()
+  mavenCentral()
 }
 
 dependencies {
-  compile 'com.github.ben-manes.caffeine:caffeine:2.7.0'
-  compile 'io.dropwizard.metrics:metrics-core:4.0.2'
+  implementation 'com.github.ben-manes.caffeine:caffeine:3.0.1'
+  implementation 'io.dropwizard.metrics:metrics-core:4.1.18'
 
-  testCompile 'org.testng:testng:6.14.3'
-  testCompile 'org.hamcrest:java-hamcrest:2.0.0.0'
+  testImplementation 'org.testng:testng:7.4.0'
+  testImplementation 'org.hamcrest:java-hamcrest:2.0.0.0'
 }
 
 test {

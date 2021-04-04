@@ -27,7 +27,7 @@ ext {
   versions = [
     akka: '2.6.13',
     cache2k: '2.1.2.Alpha',
-    checkerFramework: '3.11.0',
+    checkerFramework: '3.12.0',
     coherence: '20.06',
     commonsCompress: '1.20',
     commonsLang3: '3.12.0',
@@ -35,18 +35,18 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.1',
     ehcache3: '3.9.2',
-    errorprone: '2.5.1',
+    errorprone: '2.6.0',
     errorproneJavac: '9+181-r4173-1',
     elasticSearch: '7.12.0',
     expiringMap: '0.5.9',
     fastfilter: '1.0',
     fastutil: '8.5.4',
     flipTables: '1.1.0',
-    googleJavaFormat: '1.9',
+    googleJavaFormat: '1.10.0',
     guava: '30.1.1-jre',
     jackrabbit: '1.38.0',
     jamm: '0.3.3',
-    javaObjectLayout: '0.14',
+    javaObjectLayout: '0.15',
     javapoet: '1.13.0',
     jcache: '1.1.1',
     jmh: '1.29',
@@ -62,7 +62,7 @@ ext {
     univocityParsers: '2.9.1',
     ycsb: '0.17.0',
     xz: '1.9',
-    zstd: '1.4.9-1',
+    zstd: '1.4.9-3',
   ]
   testVersions = [
     awaitility: '4.0.3',
@@ -83,7 +83,7 @@ ext {
   ]
   pluginVersions = [
     bnd: '5.3.0',
-    checkerFramework: '0.5.17',
+    checkerFramework: '0.5.18',
     checkstyle: '8.41.1',
     coveralls: '2.8.4',
     errorprone: '2.0.1',

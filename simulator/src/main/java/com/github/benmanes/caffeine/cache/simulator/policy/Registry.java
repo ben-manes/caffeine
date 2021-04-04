@@ -34,6 +34,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual.GdsfPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPlusPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.DClockPolicy;
@@ -119,6 +120,7 @@ public final class Registry {
     registerProduct();
     registerTwoQueue();
     registerAdaptive();
+    registerGreedyDual();
   }
 
   /** Registers the policy based on the annotated name. */
@@ -211,6 +213,10 @@ public final class Registry {
     register(ArcPolicy.class, ArcPolicy::new);
     register(CarPolicy.class, CarPolicy::new);
     register(CartPolicy.class, CartPolicy::new);
+  }
+
+  private void registerGreedyDual() {
+    register(GdsfPolicy.class, GdsfPolicy::new);
   }
 
   private void registerProduct() {

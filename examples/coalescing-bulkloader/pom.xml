@@ -10,7 +10,7 @@
 
   <properties>
     <java.version>1.8</java.version>
-    <caffeine.version>2.7.0</caffeine.version>
+    <caffeine.version>3.0.1</caffeine.version>
     <junit.version>4.13.1</junit.version>
     <awaitility.version>3.1.6</awaitility.version>
   </properties>

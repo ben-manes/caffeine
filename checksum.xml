@@ -43,6 +43,7 @@
     <trusted-key id='1669c4bb543e0445' group='com.google.errorprone' />
     <trusted-key id='912d2c0eccda55c0' group='com.google.errorprone' />
     <trusted-key id='9a259c7ee636c5ed' group='com.google.errorprone' />
+    <trusted-key id='eba8e97b15086e24' group='com.google.errorprone' />
     <trusted-key id='9a259c7ee636c5ed' group='com.google.googlejavaformat' />
     <trusted-key id='abe9f3126bb741c1' group='com.google.guava' />
     <trusted-key id='f6d4a1d411e9d1ae' group='com.google.guava' />
@@ -485,6 +486,9 @@
     </dependency>
     <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.17'>
       <sha512>6B9620FFEA84B67D27132B6BD8D2EB080C519383CC3187474CABD10EB398BEB259D25974386508AADA1194A2BDAB5D223FAB584AC84E6B03D007EDEBFCBD9A68</sha512>
+    </dependency>
+    <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.18'>
+      <sha512>F21E8EBD12D3BAAF1289485AACD4AD9E9965F40EE4D1F21833DAE92277B7DD56FFEB073E187600AB205C42221A3EAD5551A2EAD20F746F9BD497C75E59871603</sha512>
     </dependency>
     <dependency group='org.codehaus.groovy.modules.http-builder' module='http-builder' version='0.7.1'>
       <sha512>BC7BC2A514F8CA104A392ECF8736F4A3D316EE988FA91299D33B0AF46134B38E14E4A5061449D17B2DF7A521643E6C02DFA37CC277ED7CAB7CE83C28C00E9719</sha512>

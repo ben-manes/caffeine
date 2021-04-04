@@ -25,8 +25,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 
-import com.github.benmanes.caffeine.cache.CacheWriter;
-
 import io.reactivex.subjects.PublishSubject;
 
 /**
