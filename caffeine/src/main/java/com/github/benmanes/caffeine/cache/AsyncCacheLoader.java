@@ -24,8 +24,6 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
@@ -46,7 +44,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
  */
 @FunctionalInterface
 @SuppressWarnings("PMD.SignatureDeclareThrowsException")
-public interface AsyncCacheLoader<K extends @NonNull Object, V extends @NonNull Object> {
+public interface AsyncCacheLoader<K extends Object, V extends Object> {
 
   /**
    * Asynchronously computes or retrieves the value corresponding to {@code key}.

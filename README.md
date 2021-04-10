@@ -126,7 +126,7 @@ Snapshots of the development version are available in
 [hbase]: https://hbase.apache.org
 [cassandra]: http://cassandra.apache.org
 [solr]: https://lucene.apache.org/solr
-[infinispan]: http://infinispan.org/docs/stable/user_guide/user_guide.html#eviction_strategy
+[infinispan]: https://infinispan.org
 [neo4j]: https://github.com/neo4j/neo4j
 [finagle]: https://github.com/twitter/finagle
 [druid]: https://druid.apache.org/docs/latest/configuration/index.html#cache-configuration

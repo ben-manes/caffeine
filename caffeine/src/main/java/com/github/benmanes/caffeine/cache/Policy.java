@@ -24,7 +24,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -34,7 +33,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
+public interface Policy<K extends Object, V extends Object> {
 
   /**
    * Returns whether the cache statistics are being accumulated.
@@ -127,7 +126,7 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
   Optional<FixedRefresh<K, V>> refreshAfterWrite();
 
   /** The low-level operations for a cache with a size-based eviction policy. */
-  interface Eviction<K extends @NonNull Object, V extends @NonNull Object> {
+  interface Eviction<K extends Object, V extends Object> {
 
     /**
      * Returns whether the cache is bounded by a maximum size or maximum weight.
@@ -211,7 +210,7 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
   }
 
   /** The low-level operations for a cache with a fixed expiration policy. */
-  interface FixedExpiration<K extends @NonNull Object, V extends @NonNull Object> {
+  interface FixedExpiration<K extends Object, V extends Object> {
 
     /**
      * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
@@ -330,7 +329,7 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
   }
 
   /** The low-level operations for a cache with a variable expiration policy. */
-  interface VarExpiration<K extends @NonNull Object, V extends @NonNull Object> {
+  interface VarExpiration<K extends Object, V extends Object> {
 
     /**
      * Returns the duration until the entry should be automatically removed. The expiration policy
@@ -488,7 +487,7 @@ public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
   }
 
   /** The low-level operations for a cache with a fixed refresh policy. */
-  interface FixedRefresh<K extends @NonNull Object, V extends @NonNull Object> {
+  interface FixedRefresh<K extends Object, V extends Object> {
 
     /**
      * Returns the age of the entry based on the refresh policy. The entry's age is the cache's

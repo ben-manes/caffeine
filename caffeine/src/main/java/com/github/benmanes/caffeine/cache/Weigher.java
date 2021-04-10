@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.Serializable;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Calculates the weights of cache entries. The total weight threshold is used to determine when an
@@ -31,7 +30,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @FunctionalInterface
-public interface Weigher<K extends @NonNull Object, V extends @NonNull Object> {
+public interface Weigher<K extends Object, V extends Object> {
 
   /**
    * Returns the weight of a cache entry. There is no unit for entry weights; rather they are simply
