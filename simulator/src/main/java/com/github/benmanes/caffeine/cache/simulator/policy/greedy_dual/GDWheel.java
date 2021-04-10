@@ -212,26 +212,17 @@ public class GDWheel implements Policy {
     static class EventComparator implements Comparator<AccessEvent> {
         @Override
         public int compare(AccessEvent e1, AccessEvent e2) {
-            double res = e1.missPenalty() - e2.missPenalty();
-            if (res < 0) {
-                return -1;
-            } else if (res > 0) {
-                return 1;
-            } else {
-                return 0;
-            }
+            return Double.compare(e1.missPenalty(),e2.missPenalty());
         }
     }
 
     static class Node {
         AccessEvent event;
-        long key;
         int wheel;
         int q;
 
         public Node(AccessEvent event, int wheel, int q) {
             this.event = event;
-            this.key = event.key();
             this.wheel = wheel;
             this.q = q;
         }
