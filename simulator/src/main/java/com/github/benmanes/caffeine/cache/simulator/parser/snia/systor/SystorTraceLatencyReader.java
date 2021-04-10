@@ -50,7 +50,6 @@ public final class SystorTraceLatencyReader extends TextTraceReader {
             .filter(array -> array[2].equals("R") && array[1].length() > 0)
             .map(array -> {
               long key = new BigInteger(array[4]).longValue();
-//              System.out.println(key);
               double responseTime = Double.parseDouble(array[1]);
               responseTime *= 1000; //convert to milliseconds from seconds
               return AccessEvent.forKeyAndPenalties(key, 0, responseTime);

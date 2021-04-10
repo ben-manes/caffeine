@@ -19,7 +19,6 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 
 import java.math.BigInteger;
 import java.util.Set;
