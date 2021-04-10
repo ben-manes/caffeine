@@ -67,7 +67,6 @@ public class GDWheel implements Policy {
         }
         this.currentSize = 0;
         this.admittor = admission.from(config, policyStats);
-
     }
 
     public static Set<Policy> policies(Config config) {
@@ -83,14 +82,11 @@ public class GDWheel implements Policy {
     public void record(AccessEvent event) {
         long key = event.key();
         policyStats.recordOperation();
-
         Node node = data.get(key);
         int w = 0;
         if (node == null) {
             while (event.weight() + currentSize > maximumSize) {
-
                 int ch0 = wheels[0].getNextIndex();
-
                 boolean fullRound = CH[0] > ch0 || !wheels[0].queueNotEmpty(ch0);
                 CH[0] = ch0;
                 AccessEvent q = wheels[0].evict(CH[0]);
@@ -106,7 +102,6 @@ public class GDWheel implements Policy {
                     currentSize -= q.weight();
                     policyStats.recordEviction();
                 }
-
             }
             policyStats.recordWeightedMiss(event.weight());
             for (int i = 0; i < NW; i++) {
