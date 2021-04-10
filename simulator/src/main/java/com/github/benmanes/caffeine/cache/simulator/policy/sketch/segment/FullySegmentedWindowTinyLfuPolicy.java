@@ -26,9 +26,11 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.google.common.base.MoreObjects;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -40,7 +42,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.TooManyFields")
+@PolicySpec(name = "sketch.FullySegmentedWindowTinyLfu")
 public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -62,16 +64,14 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public FullySegmentedWindowTinyLfuPolicy(
       double percentMain, FullySegmentedWindowTinyLfuSettings settings) {
-    String name = String.format(
-        "sketch.FullySegmentedWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
-    this.policyStats = new PolicyStats(name);
-    int maxMain = (int) (settings.maximumSize() * percentMain);
-    this.maxWindow = settings.maximumSize() - maxMain;
+    this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    int maxMain = (int) (maximumSize * percentMain);
+    this.maxWindow = maximumSize - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxWindowProtected = (int) (maxWindow * settings.percentWindowProtected());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
     this.headWindowProbation = new Node();
     this.headWindowProtected = new Node();
     this.headMainProbation = new Node();

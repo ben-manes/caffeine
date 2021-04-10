@@ -17,13 +17,11 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static java.util.Locale.US;
 
-import java.util.Set;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import net.jodah.expiringmap.ExpirationPolicy;
@@ -34,22 +32,18 @@ import net.jodah.expiringmap.ExpiringMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "product.ExpiringMap")
 public final class ExpiringMapPolicy implements KeyOnlyPolicy {
   private final ExpiringMap<Object, Object> cache;
   private final PolicyStats policyStats;
 
   public ExpiringMapPolicy(Config config) {
-    policyStats = new PolicyStats("product.ExpiringMap");
     ExpiringMapSettings settings = new ExpiringMapSettings(config);
+    policyStats = new PolicyStats(name());
     cache = ExpiringMap.builder()
+        .maxSize(Ints.checkedCast(settings.maximumSize()))
         .expirationPolicy(settings.policy())
-        .maxSize(settings.maximumSize())
         .build();
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new ExpiringMapPolicy(config));
   }
 
   @Override

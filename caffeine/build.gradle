@@ -35,6 +35,7 @@ dependencies {
   api libraries.checkerAnnotations
   api libraries.errorproneAnnotations
 
+  testImplementation libraries.joor
   testImplementation libraries.ycsb
   testImplementation libraries.guava
   testImplementation libraries.fastutil
@@ -47,12 +48,12 @@ dependencies {
   javaAgent libraries.jamm
 
   jmh libraries.jamm
+  jmh libraries.guava
   jmh libraries.tcache
   jmh libraries.cache2k
   jmh libraries.ehcache3
-  jmh libraries.koloboke
+  jmh libraries.fastutil
   jmh libraries.slf4jNop
-  jmh libraries.collision
   jmh libraries.flipTables
   jmh libraries.jackrabbit
   jmh libraries.expiringMap
@@ -63,10 +64,6 @@ dependencies {
   javaPoetImplementation libraries.javapoet
   javaPoetImplementation libraries.commonsLang3
   javaPoetImplementation libraries.googleJavaFormat
-}
-
-java {
-  withSourcesJar()
 }
 
 compileCodeGenJava {
@@ -82,8 +79,7 @@ compileCodeGenJava {
 
 jar.manifest {
   attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine'
-  attributes 'Import-Package':
-    'sun.misc.*;resolution:=optional'
+  attributes 'Import-Package': ''
   attributes 'Export-Package': [
     'com.github.benmanes.caffeine',
     'com.github.benmanes.caffeine.base',

@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/ben-manes/caffeine.svg)](https://travis-ci.org/ben-manes/caffeine)
+[![Build Status](https://github.com/ben-manes/caffeine/workflows/build/badge.svg)](https://github.com/ben-manes/caffeine/actions?query=workflow%3Abuild)
 [![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine)
 [![JavaDoc](http://www.javadoc.io/badge/com.github.ben-manes.caffeine/caffeine.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
@@ -8,9 +8,9 @@
 <img align="right" height="90px" src="https://raw.githubusercontent.com/ben-manes/caffeine/master/wiki/logo.png">
 </a>
 
-Caffeine is a [high performance][benchmarks], [near optimal][efficiency] caching library based on
-Java 8. For more details, see our [user's guide][users-guide] and browse the [API docs][javadoc] for
-the latest release.
+Caffeine is a [high performance][benchmarks], [near optimal][efficiency] caching library. For more
+details, see our [user's guide][users-guide] and browse the [API docs][javadoc] for the latest
+release.
 
 ### Cache
 
@@ -35,7 +35,7 @@ Caffeine provides flexible construction to create a cache with a combination of 
  * keys automatically wrapped in [weak references][reference]
  * values automatically wrapped in [weak or soft references][reference]
  * [notification][listener] of evicted (or otherwise removed) entries
- * [writes propagated][writer] to an external resource
+ * [writes propagated][compute] to an external resource
  * accumulation of cache access [statistics][statistics]
 
 In addition, Caffeine offers the following extensions:
@@ -82,11 +82,11 @@ Powering infrastructure near you:
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:2.8.5'
+implementation 'com.github.ben-manes.caffeine:caffeine:3.0.1'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:2.8.5'
-compile 'com.github.ben-manes.caffeine:jcache:2.8.5'
+implementation 'com.github.ben-manes.caffeine:guava:3.0.1'
+implementation 'com.github.ben-manes.caffeine:jcache:3.0.1'
 ```
 
 See the [release notes][releases] for details of the changes.
@@ -105,7 +105,7 @@ Snapshots of the development version are available in
 [refresh]: https://github.com/ben-manes/caffeine/wiki/Refresh
 [reference]: https://github.com/ben-manes/caffeine/wiki/Eviction#reference-based
 [listener]: https://github.com/ben-manes/caffeine/wiki/Removal
-[writer]: https://github.com/ben-manes/caffeine/wiki/Writer
+[compute]: https://github.com/ben-manes/caffeine/wiki/Compute
 [statistics]: https://github.com/ben-manes/caffeine/wiki/Statistics
 [simulator]: https://github.com/ben-manes/caffeine/wiki/Simulator
 [guava-adapter]: https://github.com/ben-manes/caffeine/wiki/Guava

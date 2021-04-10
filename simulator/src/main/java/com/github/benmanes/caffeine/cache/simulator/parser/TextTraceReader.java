@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -39,7 +38,7 @@ public abstract class TextTraceReader extends AbstractTraceReader implements Tra
 
   /** Returns a stream of each line in the trace file. */
   @SuppressWarnings("PMD.CloseResource")
-  protected Stream<String> lines() throws IOException {
+  protected Stream<String> lines() {
     InputStream input = readFile();
     Reader reader = new InputStreamReader(input, UTF_8);
     return new BufferedReader(reader).lines().map(String::trim)

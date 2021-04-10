@@ -1,0 +1,18 @@
+/**
+ * Configurations for AutoValue
+ */
+dependencies {
+  annotationProcessor annotationProcessors.values()
+  compileOnly annotationProcessors.values()
+}
+
+compileJava {
+  File path = file("${buildDir}/generated-sources/main")
+  options.annotationProcessorGeneratedSourcesDirectory = path
+  sourceSets.main.java.srcDirs += path
+  outputs.dir path
+  doFirst {
+    delete path
+    mkdir path
+  }
+}

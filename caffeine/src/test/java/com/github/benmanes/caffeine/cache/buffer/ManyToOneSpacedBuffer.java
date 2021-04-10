@@ -17,7 +17,8 @@ package com.github.benmanes.caffeine.cache.buffer;
 
 import java.util.function.Consumer;
 
-import com.github.benmanes.caffeine.base.UnsafeAccess;
+import org.jctools.util.UnsafeAccess;
+
 import com.github.benmanes.caffeine.cache.ReadBuffer;
 
 /**
@@ -82,13 +83,13 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
   }
 
   @Override
-  public int reads() {
-    return (int) readCounter / OFFSET;
+  public long reads() {
+    return readCounter / OFFSET;
   }
 
   @Override
-  public int writes() {
-    return (int) writeCounter / OFFSET;
+  public long writes() {
+    return writeCounter / OFFSET;
   }
 }
 
@@ -102,8 +103,7 @@ final class ManyToOneSpacedHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the read count. */
   abstract static class ReadCounterRef<E> extends PadReadCounter<E> {
-    static final long READ_OFFSET =
-        UnsafeAccess.objectFieldOffset(ReadCounterRef.class, "readCounter");
+    static final long READ_OFFSET = UnsafeAccess.fieldOffset(ReadCounterRef.class, "readCounter");
 
     volatile long readCounter;
 
@@ -120,7 +120,7 @@ final class ManyToOneSpacedHeader {
   /** Enforces a memory layout to avoid false sharing by padding the write count. */
   abstract static class ReadAndWriteCounterRef<E> extends PadWriteCounter<E> {
     static final long WRITE_OFFSET =
-        UnsafeAccess.objectFieldOffset(ReadAndWriteCounterRef.class, "writeCounter");
+        UnsafeAccess.fieldOffset(ReadAndWriteCounterRef.class, "writeCounter");
 
     volatile long writeCounter;
 

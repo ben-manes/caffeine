@@ -1,15 +1,17 @@
 /**
  * Configurations for code quality analysis
  */
+import static org.gradle.util.GradleVersion.version
+
 apply plugin: 'org.kordamp.gradle.stats'
+apply plugin: 'org.checkerframework'
 apply plugin: 'com.github.spotbugs'
 apply plugin: 'net.ltgt.errorprone'
 apply plugin: 'net.ltgt.nullaway'
 apply plugin: 'org.sonarqube'
-apply plugin: 'net.ltgt.apt'
+apply plugin: 'java-library'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
-apply plugin: 'java'
 apply plugin: 'pmd'
 
 configurations {
@@ -23,6 +25,7 @@ repositories {
 }
 
 dependencies {
+  checkerFramework libraries.checkerFramework
   checkstyleConfig gradlePlugins.checkstyle
   errorproneJavac libraries.errorproneJavac
   errorprone libraries.errorproneCore
@@ -34,7 +37,7 @@ dependencies {
 // Instead we have to download and trick the build to put the jar on the compiler's classpath
 // See the downloadCaffeineLocal() task and https://github.com/gradle/gradle/issues/11625
 task downloadCaffeineLocal() {
-  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.8.0/caffeine-2.8.0.jar'
+  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.9.0/caffeine-2.9.0.jar'
   def local = file("${rootDir}/build/libs/caffeine_local.jar")
   if (!local.exists()) {
     local.parentFile.mkdirs()
@@ -43,20 +46,24 @@ task downloadCaffeineLocal() {
 }
 
 javadoc.options.links(
+  'https://checkerframework.org/api/',
   'https://lightbend.github.io/config/latest/api/',
-  "https://guava.dev/releases/${versions.guava}/api/docs/")
-def majorVersion = JavaVersion.current().majorVersion
-if (JavaVersion.current().isJava11Compatible()) {
-  javadoc.options.links("https://docs.oracle.com/en/java/javase/${majorVersion}/docs/api/")
-} else {
-  javadoc.options.links("https://docs.oracle.com/javase/${majorVersion}/docs/api/")
-}
+  "https://guava.dev/releases/${versions.guava}/api/docs/",
+  "https://docs.oracle.com/en/java/javase/${JavaVersion.current().majorVersion}/docs/api/")
 
 jar {
   manifest.attributes 'Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0'
   metaInf {
     from "${rootDir}/LICENSE"
   }
+}
+
+checkerFramework {
+  checkers = [
+    'org.checkerframework.checker.nullness.NullnessChecker',
+  ]
+  extraJavacArgs = [ '-Werror' ]
+  excludeTests = true
 }
 
 checkstyle {
@@ -67,18 +74,18 @@ checkstyle {
 
 spotbugs {
   effort = 'max'
-  toolVersion = pluginVersions.spotbugs
   excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
+  toolVersion = [version(pluginVersions.spotbugs), version(toolVersion.get())].max().version
 }
 
 pmd {
   ruleSets = []
-  toolVersion = pluginVersions.pmd
   ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
+  toolVersion = [version(pluginVersions.pmd), version(toolVersion)].max().version
 }
 
 jacoco {
-  toolVersion = pluginVersions.jacoco
+  toolVersion = [version(pluginVersions.jacoco), version(toolVersion)].max().version
 }
 
 jacocoTestReport {
@@ -91,22 +98,26 @@ jacocoTestReport {
   }
 }
 
-task jacocoMerge(type: JacocoMerge) {
-  executionData tasks.withType(Test)
-
-  doFirst {
-    executionData = files(executionData.findAll { it.exists() })
-  }
-}
-
 sonarqube {
   properties {
-    property 'sonar.jacoco.reportPath', jacocoMerge.destinationFile
+    property 'sonar.organization', 'caffeine'
+    property 'sonar.projectKey', 'caffeine:caffeine'
+    property 'sonar.login', System.env.'SONAR_TOKEN'
+    property 'sonar.host.url', 'https://sonarcloud.io'
   }
 }
-tasks.sonarqube.dependsOn(jacocoMerge)
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaExec) {
+  jvmArgs += [
+    '--add-exports', 'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
+    '--add-exports', 'jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
+    '--add-exports', 'jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
+    '--add-exports', 'jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
+    '--add-exports', 'jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED',
+  ]
+}
+
+tasks.withType(JavaCompile).configureEach {
   dependsOn downloadCaffeineLocal
   options.compilerArgs << '-Xlint:all,-auxiliaryclass'
   options.encoding = 'UTF-8'
@@ -131,11 +142,13 @@ tasks.withType(JavaCompile) {
     disable('EmptyCatch')
     disable('MissingSummary')
     error('NullAway')
+    excludedPaths = "${buildDir}/generated-sources/.*"
 
     nullaway {
       annotatedPackages.add('com.github.benmanes.caffeine')
     }
   }
+  checkerFramework.skipCheckerFramework = true
 }
 
 tasks.named('compileTestJava').configure {
@@ -150,7 +163,6 @@ tasks.withType(Test) {
     jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=0'
   }
   if (System.env.'CI') {
-    maxHeapSize = '512m'
     reports.html.enabled = false
   }
   testLogging {

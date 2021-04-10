@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.awaitility.Awaitility;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -71,7 +70,7 @@ public final class CoalescingBulkloaderTest {
         );
     }
 
-    @NonNull private AsyncLoadingCache<Integer, Integer> createCache(AtomicInteger loaderCalled) {
+    private AsyncLoadingCache<Integer, Integer> createCache(AtomicInteger loaderCalled) {
         return Caffeine.newBuilder().buildAsync(cbl.apply(ints -> {
             loaderCalled.incrementAndGet();
             try {

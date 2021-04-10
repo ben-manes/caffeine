@@ -78,7 +78,7 @@ public final class CacheProvider {
   /**
    * Converts each scenario into test case parameters. Supports injecting {@link LoadingCache},
    * {@link Cache}, {@link CacheContext}, the {@link ConcurrentMap} {@link Cache#asMap()} view,
-   * {@link Policy.Eviction}, and {@link Policy.Expiration}.
+   * {@link Policy.Eviction}, and {@link Policy.FixedExpiration}.
    */
   private static Iterator<Object[]> asTestCases(Method testMethod,
       Stream<Map.Entry<CacheContext, Cache<Integer, Integer>>> scenarios) {
@@ -108,10 +108,12 @@ public final class CacheProvider {
           params[i] = cache.asMap();
         } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
           params[i] = cache.policy().eviction().get();
-        } else if (clazz.isAssignableFrom(Policy.Expiration.class)) {
+        } else if (clazz.isAssignableFrom(Policy.FixedExpiration.class)) {
           params[i] = expirationPolicy(parameters[i], cache);
         } else if (clazz.isAssignableFrom(Policy.VarExpiration.class)) {
           params[i] = cache.policy().expireVariably().get();
+        } else if (clazz.isAssignableFrom(Policy.FixedRefresh.class)) {
+          params[i] = refreshPolicy(parameters[i], cache);
         }
         if (params[i] == null) {
           checkNotNull(params[i], "Unknown parameter type: %s", clazz);
@@ -122,13 +124,20 @@ public final class CacheProvider {
   }
 
   /** Returns the fixed expiration policy for the given parameter. */
-  private static Policy.Expiration<Integer, Integer> expirationPolicy(
+  private static Policy.FixedExpiration<Integer, Integer> expirationPolicy(
       Parameter parameter, Cache<Integer, Integer> cache) {
     if (parameter.isAnnotationPresent(ExpireAfterAccess.class)) {
       return cache.policy().expireAfterAccess().get();
     } else if (parameter.isAnnotationPresent(ExpireAfterWrite.class)) {
       return cache.policy().expireAfterWrite().get();
-    } else if (parameter.isAnnotationPresent(RefreshAfterWrite.class)) {
+    }
+    throw new AssertionError("Expiration parameter must have a qualifier annotation");
+  }
+
+  /** Returns the fixed expiration policy for the given parameter. */
+  private static Policy.FixedRefresh<Integer, Integer> refreshPolicy(
+      Parameter parameter, Cache<Integer, Integer> cache) {
+    if (parameter.isAnnotationPresent(RefreshAfterWrite.class)) {
       return cache.policy().refreshAfterWrite().get();
     }
     throw new AssertionError("Expiration parameter must have a qualifier annotation");

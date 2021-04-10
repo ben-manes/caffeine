@@ -15,19 +15,30 @@
  */
 
 /**
- * This package contains caching utilities.
+ * This package contains in-memory caching functionality. All cache variants are configured and
+ * created by using the {@link Caffeine} builder.
  * <p>
- * The core interface used to represent caches is {@link com.github.benmanes.caffeine.cache.Cache}.
- * A cache may be specialized as either a {@link com.github.benmanes.caffeine.cache.LoadingCache}
- * or {@link com.github.benmanes.caffeine.cache.AsyncLoadingCache}.
+ * A {@link Cache} provides similar characteristics as
+ * {@link java.util.concurrent.ConcurrentHashMap} with additional support for policies to bound the
+ * map by. When built with a {@link CacheLoader}, the {@link LoadingCache} variant allows the cache
+ * to populate itself on miss and offers refresh capabilities.
  * <p>
- * In-memory caches can be configured and created using
- * {@link com.github.benmanes.caffeine.cache.Caffeine}. The cache entries may be loaded by
- * {@link com.github.benmanes.caffeine.cache.CacheLoader}, weighed by
- * {@link com.github.benmanes.caffeine.cache.Weigher}, and on removal forwarded to
- * {@link com.github.benmanes.caffeine.cache.RemovalListener}. Statistics about cache performance
- * are exposed using {@link com.github.benmanes.caffeine.cache.stats.CacheStats}.
+ * A {@link AsyncCache} is similar to a {@link Cache} except that a cache entry holds a
+ * {@link java.util.concurrent.CompletableFuture} of the value. This entry will be automatically
+ * removed if the future fails, resolves to {@code null}, or based on an eviction policy. When built
+ * with a {@link AsyncCacheLoader}, the {@link AsyncLoadingCache} variant allows the cache to
+ * populate itself on miss and offers refresh capabilities.
+ * <p>
+ * Additional functionality such as bounding by the entry's size, removal notifications, statistics,
+ * and eviction policies are described in the {@link Caffeine} builder.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@DefaultQualifier(value = NonNull.class, locations = TypeUseLocation.FIELD)
+@DefaultQualifier(value = NonNull.class, locations = TypeUseLocation.PARAMETER)
+@DefaultQualifier(value = NonNull.class, locations = TypeUseLocation.RETURN)
 package com.github.benmanes.caffeine.cache;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.framework.qual.DefaultQualifier;
+import org.checkerframework.framework.qual.TypeUseLocation;

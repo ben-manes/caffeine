@@ -19,8 +19,6 @@ import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
-import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 
 import java.lang.ref.Reference;
 
@@ -76,13 +74,12 @@ public final class AddHealth extends NodeRule {
       // Set the value to null only when dead, as otherwise the explicit removal of an expired async
       // value will be notified as explicit rather than expired due to the isComputingAsync() check
       if (finalized) {
-        action.addStatement("$T.UNSAFE.putObject(this, $N, null)",
-            UNSAFE_ACCESS, offsetName("value"));
+        action.addStatement("$L.set(this, null)", varHandleName("value"));
       }
     } else {
       action.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
     }
-    action.addStatement("$T.UNSAFE.putObject(this, $N, $N)", UNSAFE_ACCESS, offsetName("key"), arg);
+    action.addStatement("$L.set(this, $N)", varHandleName("key"), arg);
     context.nodeSubtype.addMethod(action.build());
   }
 }

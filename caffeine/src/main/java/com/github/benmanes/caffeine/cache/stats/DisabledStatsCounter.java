@@ -15,6 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
+import org.checkerframework.checker.index.qual.NonNegative;
+
+import com.github.benmanes.caffeine.cache.RemovalCause;
+
 /**
  * A {@link StatsCounter} implementation that does not record any cache events.
  *
@@ -36,8 +40,7 @@ enum DisabledStatsCounter implements StatsCounter {
   public void recordLoadFailure(long loadTime) {}
 
   @Override
-  @SuppressWarnings("deprecation")
-  public void recordEviction() {}
+  public void recordEviction(@NonNegative int weight, RemovalCause cause) {}
 
   @Override
   public CacheStats snapshot() {

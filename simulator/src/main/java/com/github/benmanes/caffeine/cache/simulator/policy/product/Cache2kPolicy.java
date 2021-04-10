@@ -28,9 +28,8 @@ import org.cache2k.event.CacheEntryEvictedListener;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -38,50 +37,43 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "product.Cache2k", characteristics = WEIGHTED)
 public final class Cache2kPolicy implements Policy {
   private static final Logger logger = Logger.getLogger("org.cache2k");
 
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
-  private final int maximumSize;
 
-  public Cache2kPolicy(Config config) {
+  public Cache2kPolicy(Config config, Set<Characteristic> characteristics) {
     logger.setLevel(Level.WARNING);
 
-    policyStats = new PolicyStats("product.Cache2k");
+    policyStats = new PolicyStats(name());
     CacheEntryEvictedListener<Long, AccessEvent> listener =
         (cache, entry) -> policyStats.recordEviction();
     BasicSettings settings = new BasicSettings(config);
-    cache = Cache2kBuilder.of(Long.class, AccessEvent.class)
-        .weigher((Long key, AccessEvent value) -> value.weight())
-        .maximumWeight(settings.maximumSize())
+    Cache2kBuilder<Long, AccessEvent> builder = Cache2kBuilder.of(Long.class, AccessEvent.class)
         .addListener(listener)
-        .strictEviction(true)
-        .eternal(true)
-        .build();
-    maximumSize = settings.maximumSize();
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new Cache2kPolicy(config));
-  }
-
-  @Override public Set<Characteristic> characteristics() {
-    return Sets.immutableEnumSet(WEIGHTED);
+        .strictEviction(true);
+    if (characteristics.contains(WEIGHTED)) {
+      builder.weigher((Long key, AccessEvent value) -> value.weight());
+      builder.maximumWeight(settings.maximumSize());
+    } else {
+      builder.entryCapacity(settings.maximumSize());
+    }
+    cache = builder.build();
   }
 
   @Override
   public void record(AccessEvent event) {
-    Object value = cache.peek(event.key());
+    AccessEvent value = cache.peek(event.key());
     if (value == null) {
-      policyStats.recordWeightedMiss(event.weight());
-      if (cache.asMap().size() == maximumSize) {
-        policyStats.recordEviction();
-      }
       cache.put(event.key(), event);
+      policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
+      if (event.weight() != value.weight()) {
+        cache.put(event.key(), event);
+      }
     }
   }
 

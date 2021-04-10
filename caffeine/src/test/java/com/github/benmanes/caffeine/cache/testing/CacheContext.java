@@ -39,7 +39,6 @@ import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
-import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -62,7 +61,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext.GuavaLoadingCache;
 import com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext.SingleLoader;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
@@ -76,14 +74,16 @@ import com.google.common.testing.FakeTicker;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("deprecation")
 public final class CacheContext {
+  final RemovalListener<Integer, Integer> evictionListener;
   final RemovalListener<Integer, Integer> removalListener;
-  final CacheWriter<Integer, Integer> cacheWriter;
   final InitialCapacity initialCapacity;
   final Expiry<Integer, Integer> expiry;
   final Map<Integer, Integer> original;
   final Implementation implementation;
   final CacheScheduler cacheScheduler;
+  final Listener evictionListenerType;
   final Listener removalListenerType;
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
@@ -102,7 +102,6 @@ public final class CacheContext {
   final Advance advance;
   final Expire refresh;
   final Loader loader;
-  final Writer writer;
   final Stats stats;
 
   final boolean isAsyncLoading;
@@ -127,8 +126,9 @@ public final class CacheContext {
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
       Expire refresh, Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, CacheScheduler cacheScheduler, Listener removalListenerType,
-      Population population, boolean isLoading, boolean isAsyncLoading, Compute compute,
-      Loader loader, Writer writer, Implementation implementation, CacheSpec cacheSpec) {
+      Listener evictionListenerType, Population population, boolean isLoading,
+      boolean isAsyncLoading, Compute compute, Loader loader,
+      Implementation implementation, CacheSpec cacheSpec) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = requireNonNull(weigher);
@@ -145,11 +145,11 @@ public final class CacheContext {
     this.scheduler = cacheScheduler.create();
     this.removalListenerType = removalListenerType;
     this.removalListener = removalListenerType.create();
+    this.evictionListenerType = evictionListenerType;
+    this.evictionListener = evictionListenerType.create();
     this.population = requireNonNull(population);
     this.loader = isLoading ? requireNonNull(loader) : null;
     this.isAsyncLoading = isAsyncLoading;
-    this.writer = requireNonNull(writer);
-    this.cacheWriter = writer.create();
     this.ticker = new SerializableFakeTicker();
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
@@ -319,30 +319,6 @@ public final class CacheContext {
     return loader;
   }
 
-  public Writer writer() {
-    return writer;
-  }
-
-  public CacheWriter<Integer, Integer> cacheWriter() {
-    return cacheWriter;
-  }
-
-  public boolean writes() {
-    return (writer != Writer.DISABLED);
-  }
-
-  public void disableRejectingCacheWriter() {
-    if (cacheWriter instanceof RejectingCacheWriter) {
-      ((RejectingCacheWriter<?, ?>) cacheWriter).ignoreWrites();
-    }
-  }
-
-  public void enableRejectingCacheWriter() {
-    if (cacheWriter instanceof RejectingCacheWriter) {
-      ((RejectingCacheWriter<?, ?>) cacheWriter).rejectWrites();
-    }
-  }
-
   public Listener removalListenerType() {
     return removalListenerType;
   }
@@ -351,9 +327,23 @@ public final class CacheContext {
     return requireNonNull(removalListener);
   }
 
-  public List<RemovalNotification<Integer, Integer>> consumedNotifications() {
+  public List<RemovalNotification<Integer, Integer>> removalNotifications() {
     return (removalListenerType() == Listener.CONSUMING)
-        ? ((ConsumingRemovalListener<Integer, Integer>) removalListener).evicted()
+        ? ((ConsumingRemovalListener<Integer, Integer>) removalListener).removed()
+        : Collections.emptyList();
+  }
+
+  public Listener evictionListenerType() {
+    return evictionListenerType;
+  }
+
+  public RemovalListener<Integer, Integer> evictionListener() {
+    return requireNonNull(evictionListener);
+  }
+
+  public List<RemovalNotification<Integer, Integer>> evictionNotifications() {
+    return (evictionListenerType() == Listener.CONSUMING)
+        ? ((ConsumingRemovalListener<Integer, Integer>) evictionListener).removed()
         : Collections.emptyList();
   }
 
@@ -482,10 +472,10 @@ public final class CacheContext {
         .add("compute", compute)
         .add("loader", loader)
         .add("isAsyncLoading", isAsyncLoading)
-        .add("writer", writer)
         .add("cacheExecutor", cacheExecutor)
         .add("cacheScheduler", cacheScheduler)
         .add("removalListener", removalListenerType)
+        .add("evictionListener", evictionListenerType)
         .add("initialCapacity", initialCapacity)
         .add("stats", stats)
         .add("implementation", implementation)

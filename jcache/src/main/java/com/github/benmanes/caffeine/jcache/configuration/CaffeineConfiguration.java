@@ -23,7 +23,6 @@ import java.util.OptionalLong;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Factory;
@@ -32,7 +31,10 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.Expiry;
+import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
@@ -49,6 +51,7 @@ import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<K, V> {
+  private static final Factory<Scheduler> DISABLED_SCHEDULER = Scheduler::disabledScheduler;
   private static final Factory<Copier> JAVA_COPIER = JavaSerializationCopier::new;
   private static final Factory<Executor> COMMON_POOL = ForkJoinPool::commonPool;
   private static final Factory<Ticker> SYSTEM_TICKER = Ticker::systemTicker;
@@ -59,6 +62,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private @Nullable Factory<Weigher<K, V>> weigherFactory;
   private @Nullable Factory<Expiry<K, V>> expiryFactory;
 
+  private Factory<Scheduler> schedulerFactory;
   private Factory<Executor> executorFactory;
   private Factory<Copier> copierFactory;
   private Factory<Ticker> tickerFactory;
@@ -68,10 +72,12 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private @Nullable Long expireAfterWriteNanos;
   private @Nullable Long maximumWeight;
   private @Nullable Long maximumSize;
+  private boolean nativeStatistics;
 
   public CaffeineConfiguration() {
     delegate = new MutableConfiguration<>();
     delegate.setStoreByValue(false);
+    schedulerFactory = DISABLED_SCHEDULER;
     tickerFactory = SYSTEM_TICKER;
     executorFactory = COMMON_POOL;
     copierFactory = JAVA_COPIER;
@@ -84,6 +90,8 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       refreshAfterWriteNanos = config.refreshAfterWriteNanos;
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
+      nativeStatistics = config.nativeStatistics;
+      schedulerFactory = config.schedulerFactory;
       executorFactory = config.executorFactory;
       expiryFactory = config.expiryFactory;
       copierFactory = config.copierFactory;
@@ -92,6 +100,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       maximumWeight = config.maximumWeight;
       maximumSize = config.maximumSize;
     } else {
+      schedulerFactory = DISABLED_SCHEDULER;
       tickerFactory = SYSTEM_TICKER;
       executorFactory = COMMON_POOL;
       copierFactory = JAVA_COPIER;
@@ -205,6 +214,26 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     delegate.setStoreByValue(isStoreByValue);
   }
 
+  /**
+   * Checks whether native statistics collection is enabled in this cache.
+   * <p>
+   * The default value is <code>false</code>.
+   *
+   * @return true if native statistics collection is enabled
+   */
+  public boolean isNativeStatisticsEnabled() {
+    return nativeStatistics;
+  }
+
+  /**
+   * Sets whether native statistics gathering is enabled on a cache.
+   *
+   * @param enabled true to enable native statistics, false to disable.
+   */
+  public void setNativeStatisticsEnabled(boolean enabled) {
+    this.nativeStatistics = enabled;
+  }
+
   @Override
   public boolean isStatisticsEnabled() {
     return delegate.isStatisticsEnabled();
@@ -242,6 +271,24 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    */
   public void setCopierFactory(Factory<Copier> factory) {
     copierFactory = requireNonNull(factory);
+  }
+
+  /**
+   * Returns the {@link Factory} for the {@link Scheduler} to be used for the cache.
+   *
+   * @return the {@link Factory} for the {@link Scheduler}
+   */
+  public Factory<Scheduler> getSchedulerFactory() {
+    return schedulerFactory;
+  }
+
+  /**
+   * Set the {@link Factory} for the {@link Scheduler}.
+   *
+   * @param factory the {@link Scheduler} {@link Factory}
+   */
+  public void setSchedulerFactory(Factory<Scheduler> factory) {
+    schedulerFactory = requireNonNull(factory);
   }
 
   /**

@@ -52,12 +52,12 @@ public abstract class ReadBuffer<E> implements Buffer<E> {
   }
 
   /** Returns the total number of events recorded. */
-  public int recorded() {
+  public long recorded() {
     return writes();
   }
 
   /** Returns the total number of events consumed. */
-  public int drained() {
+  public long drained() {
     drain();
     return reads();
   }

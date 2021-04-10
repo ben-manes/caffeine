@@ -33,6 +33,8 @@ import javax.cache.spi.CachingProvider;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
+
 /**
  * An implementation of JSR-107 {@link CacheManager} that manages Caffeine-based caches.
  *
@@ -45,11 +47,14 @@ public final class CacheManagerImpl implements CacheManager {
   private final CachingProvider cacheProvider;
   private final Properties properties;
   private final URI uri;
+  private final boolean runsAsAnOsgiBundle;
 
   private volatile boolean closed;
 
   public CacheManagerImpl(CachingProvider cacheProvider,
       URI uri, ClassLoader classLoader, Properties properties) {
+    this.runsAsAnOsgiBundle = (cacheProvider instanceof CaffeineCachingProvider)
+        && ((CaffeineCachingProvider) cacheProvider).isOsgiComponent();
     this.classLoaderReference = new WeakReference<>(requireNonNull(classLoader));
     this.cacheProvider = requireNonNull(cacheProvider);
     this.properties = requireNonNull(properties);
@@ -80,63 +85,90 @@ public final class CacheManagerImpl implements CacheManager {
   @Override
   public <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(
       String cacheName, C configuration) {
-    requireNotClosed();
-    requireNonNull(configuration);
-
-    CacheProxy<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
-      if ((existing != null) && !existing.isClosed()) {
-        throw new CacheException("Cache " + cacheName + " already exists");
-      } else if (CacheFactory.isDefinedExternally(cacheName)) {
-        throw new CacheException("Cache " + cacheName + " is configured externally");
+    ClassLoader old = Thread.currentThread().getContextClassLoader();
+    try {
+      if (runsAsAnOsgiBundle) {
+        // override the context class loader with the CachingManager's classloader
+        Thread.currentThread().setContextClassLoader(getClassLoader());
       }
-      return CacheFactory.createCache(this, cacheName, configuration);
-    });
-    enableManagement(cache.getName(), cache.getConfiguration().isManagementEnabled());
-    enableStatistics(cache.getName(), cache.getConfiguration().isStatisticsEnabled());
+      requireNotClosed();
+      requireNonNull(configuration);
 
-    @SuppressWarnings("unchecked")
-    Cache<K, V> castedCache = (Cache<K, V>) cache;
-    return castedCache;
+      CacheProxy<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
+        if ((existing != null) && !existing.isClosed()) {
+          throw new CacheException("Cache " + cacheName + " already exists");
+        } else if (CacheFactory.isDefinedExternally(cacheName)) {
+          throw new CacheException("Cache " + cacheName + " is configured externally");
+        }
+        return CacheFactory.createCache(this, cacheName, configuration);
+      });
+      enableManagement(cache.getName(), cache.getConfiguration().isManagementEnabled());
+      enableStatistics(cache.getName(), cache.getConfiguration().isStatisticsEnabled());
+
+      @SuppressWarnings("unchecked")
+      Cache<K, V> castedCache = (Cache<K, V>) cache;
+      return castedCache;
+    } finally {
+      Thread.currentThread().setContextClassLoader(old);
+    }
   }
 
   @Override
   public @Nullable <K, V> Cache<K, V> getCache(
       String cacheName, Class<K> keyType, Class<V> valueType) {
-    CacheProxy<K, V> cache = getCache(cacheName);
-    if (cache == null) {
-      return null;
-    }
-    requireNonNull(keyType);
-    requireNonNull(valueType);
+    ClassLoader old = Thread.currentThread().getContextClassLoader();
+    try {
+      if (runsAsAnOsgiBundle) {
+        // override the context class loader with the CachingManager's classloader
+        Thread.currentThread().setContextClassLoader(getClassLoader());
+      }
+      CacheProxy<K, V> cache = getCache(cacheName);
+      if (cache == null) {
+        return null;
+      }
+      requireNonNull(keyType);
+      requireNonNull(valueType);
 
-    Configuration<?, ?> config = cache.getConfiguration();
-    if (keyType != config.getKeyType()) {
-      throw new ClassCastException("Incompatible cache key types specified, expected " +
-          config.getKeyType() + " but " + keyType + " was specified");
-    } else if (valueType != config.getValueType()) {
-      throw new ClassCastException("Incompatible cache value types specified, expected " +
-          config.getValueType() + " but " + valueType + " was specified");
+      Configuration<?, ?> config = cache.getConfiguration();
+      if (keyType != config.getKeyType()) {
+        throw new ClassCastException("Incompatible cache key types specified, expected " +
+                config.getKeyType() + " but " + keyType + " was specified");
+      } else if (valueType != config.getValueType()) {
+        throw new ClassCastException("Incompatible cache value types specified, expected " +
+                config.getValueType() + " but " + valueType + " was specified");
+      }
+      return cache;
+    } finally {
+      Thread.currentThread().setContextClassLoader(old);
     }
-    return cache;
   }
 
   @Override
   public <K, V> CacheProxy<K, V> getCache(String cacheName) {
-    requireNonNull(cacheName);
-    requireNotClosed();
-
-    CacheProxy<?, ?> cache = caches.computeIfAbsent(cacheName, name -> {
-      CacheProxy<?, ?> created = CacheFactory.tryToCreateFromExternalSettings(this, name);
-      if (created != null) {
-        created.enableManagement(created.getConfiguration().isManagementEnabled());
-        created.enableStatistics(created.getConfiguration().isStatisticsEnabled());
+    ClassLoader old = Thread.currentThread().getContextClassLoader();
+    try {
+      if (runsAsAnOsgiBundle) {
+        // override the context class loader with the CachingManager's classloader
+        Thread.currentThread().setContextClassLoader(getClassLoader());
       }
-      return created;
-    });
+      requireNonNull(cacheName);
+      requireNotClosed();
 
-    @SuppressWarnings("unchecked")
-    CacheProxy<K, V> castedCache = (CacheProxy<K, V>) cache;
-    return castedCache;
+      CacheProxy<?, ?> cache = caches.computeIfAbsent(cacheName, name -> {
+        CacheProxy<?, ?> created = CacheFactory.tryToCreateFromExternalSettings(this, name);
+        if (created != null) {
+          created.enableManagement(created.getConfiguration().isManagementEnabled());
+          created.enableStatistics(created.getConfiguration().isStatisticsEnabled());
+        }
+        return created;
+      });
+
+      @SuppressWarnings("unchecked")
+      CacheProxy<K, V> castedCache = (CacheProxy<K, V>) cache;
+      return castedCache;
+    } finally {
+      Thread.currentThread().setContextClassLoader(old);
+    }
   }
 
   @Override

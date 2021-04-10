@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -37,7 +38,8 @@ public final class TinyCacheAdapter implements Frequency {
    */
   public TinyCacheAdapter(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    int nrSets = sampleFactor * settings.maximumSize() / 64; // number of (independent sets)
+    // number of (independent sets)
+    int nrSets = Ints.checkedCast(sampleFactor * settings.maximumSize() / 64);
     tcs = new TinyCacheSketch(nrSets, 64,settings.randomSeed());
   }
 

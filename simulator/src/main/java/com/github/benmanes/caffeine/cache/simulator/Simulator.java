@@ -17,12 +17,19 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.ERROR;
 import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.FINISH;
+import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.INIT;
 import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.START;
 import static java.util.stream.Collectors.toList;
+import static scala.collection.JavaConverters.seqAsJavaList;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
+
+import org.apache.commons.lang3.mutable.Mutable;
+import org.apache.commons.lang3.mutable.MutableObject;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader;
@@ -32,7 +39,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
 import com.github.benmanes.caffeine.cache.simulator.report.Reporter;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Iterators;
 import com.typesafe.config.Config;
 
 import akka.actor.AbstractActor;
@@ -63,69 +69,78 @@ import akka.routing.Router;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Simulator extends AbstractActor {
-  public enum Message { START, FINISH, ERROR }
+  public enum Message { INIT, START, FINISH, ERROR }
 
-  private final TraceReader traceReader;
-  private final BasicSettings settings;
-  private final Stopwatch stopwatch;
-  private final Reporter reporter;
-  private final Router router;
-  private final int batchSize;
-  private int remaining;
-
-  public Simulator() {
-    Config config = context().system().settings().config().getConfig("caffeine.simulator");
-    settings = new BasicSettings(config);
-    traceReader = makeTraceReader();
-
-    List<Routee> routes = makeRoutes();
-    router = new Router(new BroadcastRoutingLogic(), routes);
-    remaining = routes.size();
-
-    batchSize = settings.batchSize();
-    stopwatch = Stopwatch.createStarted();
-    reporter = settings.report().format().create(config);
-  }
+  private TraceReader traceReader;
+  private BasicSettings settings;
+  private Stopwatch stopwatch;
+  private Reporter reporter;
+  private Router router;
 
   @Override
   public void preStart() {
-    self().tell(START, self());
+    self().tell(INIT, self());
+  }
+
+  @Override
+  public void preRestart(Throwable t, Optional<Object> message) {
+    context().stop(self());
   }
 
   @Override
   public Receive createReceive() {
     return receiveBuilder()
+        .matchEquals(INIT, msg -> initialize())
         .matchEquals(START, msg -> broadcast())
         .matchEquals(ERROR, msg -> context().stop(self()))
         .match(PolicyStats.class, this::reportStats)
         .build();
   }
 
+  private void initialize() {
+    Config config = context().system().settings().config().getConfig("caffeine.simulator");
+    settings = new BasicSettings(config);
+
+    traceReader = makeTraceReader();
+    stopwatch = Stopwatch.createStarted();
+    router = new Router(new BroadcastRoutingLogic(), makeRoutes());
+    reporter = settings.report().format().create(config, traceReader.characteristics());
+
+    self().tell(START, self());
+  }
+
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() {
-    if (remaining == 0) {
+    if (seqAsJavaList(router.routees()).isEmpty()) {
       context().system().log().error("No active policies in the current configuration");
       context().stop(self());
       return;
     }
 
-    try (Stream<AccessEvent> events = traceReader.events()) {
-      Iterators.partition(events.iterator(), batchSize)
-          .forEachRemaining(batch -> router.route(batch, self()));
+    long skip = settings.trace().skip();
+    long limit = settings.trace().limit();
+    int batchSize = settings.batchSize();
+    try (Stream<AccessEvent> events = traceReader.events().skip(skip).limit(limit)) {
+      Mutable<List<AccessEvent>> batch = new MutableObject<>(new ArrayList<>(batchSize));
+      events.forEach(event -> {
+        batch.getValue().add(event);
+        if (batch.getValue().size() == batchSize) {
+          router.route(batch.getValue(), self());
+          batch.setValue(new ArrayList<>(batchSize));
+        }
+      });
+      router.route(batch.getValue(), self());
       router.route(FINISH, self());
-    } catch (Exception e) {
-      context().system().log().error(e, "");
-      context().stop(self());
     }
   }
 
   /** Returns a trace reader for the access events. */
   private TraceReader makeTraceReader() {
-    if (settings.isSynthetic()) {
-      return Synthetic.generate(settings);
+    if (settings.trace().isSynthetic()) {
+      return Synthetic.generate(settings.trace());
     }
-    List<String> filePaths = settings.traceFiles().paths();
-    TraceFormat format = settings.traceFiles().format();
+    List<String> filePaths = settings.trace().traceFiles().paths();
+    TraceFormat format = settings.trace().traceFiles().format();
     return format.readFiles(filePaths);
   }
 
@@ -141,7 +156,8 @@ public final class Simulator extends AbstractActor {
   /** Add the stats to the reporter, print if completed, and stop the simulator. */
   private void reportStats(PolicyStats stats) throws IOException {
     reporter.add(stats);
-    if (--remaining == 0) {
+
+    if (reporter.stats().size() == seqAsJavaList(router.routees()).size()) {
       reporter.print();
       context().stop(self());
       System.out.println("Executed in " + stopwatch);

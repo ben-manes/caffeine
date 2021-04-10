@@ -15,11 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.google.common.collect.Maps.immutableEntry;
@@ -27,7 +24,6 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
@@ -64,6 +60,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -109,8 +106,8 @@ public final class AsyncAsMapTest {
   public void clear(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.asMap().clear();
     assertThat(cache.asMap(), is(emptyMap()));
-    assertThat(cache, hasRemovalNotifications(context,
-        context.original().size(), RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier ->
+        verifier.hasOnly(context.original().size(), RemovalCause.EXPLICIT));
   }
 
   /* ---------------- contains -------------- */
@@ -296,7 +293,7 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().get(key), is(value));
     }
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(context.consumedNotifications(), hasSize(0));
+    assertThat(context.removalNotifications(), hasSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -312,7 +309,7 @@ public final class AsyncAsMapTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* ---------------- putAll -------------- */
@@ -351,7 +348,8 @@ public final class AsyncAsMapTest {
         .collect(toMap(identity(), CompletableFuture::completedFuture));
     cache.asMap().putAll(entries);
     assertThat(cache.asMap(), is(equalTo(entries)));
-    assertThat(cache, hasRemovalNotifications(context, entries.size(), RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier ->
+        verifier.hasOnly(entries.size(), RemovalCause.REPLACED));
   }
 
   @Test(dataProvider = "caches")
@@ -372,7 +370,8 @@ public final class AsyncAsMapTest {
 
     cache.asMap().putAll(entries);
     assertThat(cache.asMap(), is(equalTo(entries)));
-    assertThat(cache, hasRemovalNotifications(context, replaced.size(), RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier ->
+        verifier.hasOnly(replaced.size(), RemovalCause.REPLACED));
   }
 
   /* ---------------- putIfAbsent -------------- */
@@ -449,7 +448,7 @@ public final class AsyncAsMapTest {
         context.original().size() - context.firstMiddleLastKeys().size()));
 
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   /* ---------------- remove conditionally -------------- */
@@ -510,7 +509,7 @@ public final class AsyncAsMapTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.asMap().size(), is(context.original().size() - count));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   /* ---------------- replace -------------- */
@@ -553,7 +552,7 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().get(key), is(value));
     }
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(context.consumedNotifications(), hasSize(0));
+    assertThat(context.removalNotifications(), hasSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -567,7 +566,7 @@ public final class AsyncAsMapTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* ---------------- replace conditionally -------------- */
@@ -657,7 +656,7 @@ public final class AsyncAsMapTest {
     assertThat(cache.asMap().size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   @Test(dataProvider = "caches")
@@ -670,7 +669,7 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().get(key), is(value));
     }
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(context.consumedNotifications(), hasSize(0));
+    assertThat(context.removalNotifications(), hasSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -686,7 +685,7 @@ public final class AsyncAsMapTest {
     assertThat(cache.asMap().size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* ---------------- replaceAll -------------- */
@@ -711,7 +710,7 @@ public final class AsyncAsMapTest {
   public void replaceAll_sameValue(AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.asMap().replaceAll((key, value) -> value);
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
-    assertThat(context.consumedNotifications(), hasSize(0));
+    assertThat(context.removalNotifications(), hasSize(0));
   }
 
   @CacheSpec
@@ -721,8 +720,8 @@ public final class AsyncAsMapTest {
     cache.asMap().forEach((key, value) -> {
       assertThat(value.join(), is(equalTo(key)));
     });
-    assertThat(cache, hasRemovalNotifications(
-        context, cache.asMap().size(), RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier ->
+        verifier.hasOnly(cache.asMap().size(), RemovalCause.REPLACED));
   }
 
   /* ---------------- computeIfAbsent -------------- */
@@ -750,10 +749,8 @@ public final class AsyncAsMapTest {
     assertThat(cache.asMap().size(), is(context.original().size()));
   }
 
-  // FIXME: Requires JDK8 release with JDK-8062841 fix
-  @CheckNoStats
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  @Test(enabled = false, dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine)
   public void computeIfAbsent_recursive(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Function<Integer, CompletableFuture<Integer>> mappingFunction =
         new Function<Integer, CompletableFuture<Integer>>() {
@@ -761,22 +758,25 @@ public final class AsyncAsMapTest {
             return cache.asMap().computeIfAbsent(key, this);
           }
         };
-    cache.asMap().computeIfAbsent(context.absentKey(), mappingFunction);
+    try {
+      cache.asMap().computeIfAbsent(context.absentKey(), mappingFunction);
+      Assert.fail();
+    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
   }
 
-  // FIXME: Requires JDK8 release with JDK-8062841 fix
-  @CheckNoStats
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  @Test(enabled = false, dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine)
   public void computeIfAbsent_pingpong(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Function<Integer, CompletableFuture<Integer>> mappingFunction =
         new Function<Integer, CompletableFuture<Integer>>() {
           @Override public CompletableFuture<Integer> apply(Integer key) {
-            Integer value = context.original().get(key);
-            return cache.asMap().computeIfAbsent(value, this);
+            return cache.asMap().computeIfAbsent(-key, this);
           }
         };
-    cache.asMap().computeIfAbsent(context.absentKey(), mappingFunction);
+    try {
+      cache.asMap().computeIfAbsent(context.absentKey(), mappingFunction);
+      Assert.fail();
+    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
   }
 
   @Test(dataProvider = "caches")
@@ -787,10 +787,9 @@ public final class AsyncAsMapTest {
           key -> { throw new IllegalStateException(); });
       Assert.fail();
     } catch (IllegalStateException e) {}
-    assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
 
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
     assertThat(cache.asMap().computeIfAbsent(context.absentKey(),
         key -> CompletableFuture.completedFuture(key)).join(), is(context.absentKey()));
   }
@@ -805,8 +804,7 @@ public final class AsyncAsMapTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(count).misses(0).success(0).failures(0));
   }
 
   @Test(dataProvider = "caches")
@@ -815,8 +813,8 @@ public final class AsyncAsMapTest {
   public void computeIfAbsent_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
     assertThat(cache.asMap().computeIfAbsent(context.absentKey(), key -> value), is(value));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(1).failures(0));
+
     assertThat(cache.asMap().get(context.absentKey()), is(value));
     assertThat(cache.asMap().size(), is(1 + context.original().size()));
   }
@@ -848,7 +846,7 @@ public final class AsyncAsMapTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.asMap().size(), is(context.original().size() - count));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -905,9 +903,8 @@ public final class AsyncAsMapTest {
       Assert.fail();
     } catch (IllegalStateException e) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
     assertThat(cache.asMap().computeIfPresent(context.firstKey(),
         (k, v) -> CompletableFuture.completedFuture(-k)).join(), is(-context.firstKey()));
   }
@@ -930,14 +927,13 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().computeIfPresent(key, (k, v) -> value), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(cache.synchronous().asMap().get(key), is(key));
     }
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* ---------------- compute -------------- */
@@ -967,13 +963,11 @@ public final class AsyncAsMapTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.asMap().size(), is(context.original().size() - count));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
-  // FIXME: Requires JDK8 release with JDK-8062841 fix
-  @CheckNoStats
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  @Test(enabled = false, dataProvider = "caches", expectedExceptions = StackOverflowError.class)
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine)
   public void compute_recursive(AsyncCache<Integer, Integer> cache, CacheContext context) {
     BiFunction<Integer, CompletableFuture<Integer>, CompletableFuture<Integer>> mappingFunction =
         new BiFunction<Integer, CompletableFuture<Integer>, CompletableFuture<Integer>>() {
@@ -982,26 +976,30 @@ public final class AsyncAsMapTest {
             return cache.asMap().compute(key, this);
           }
         };
-    cache.asMap().compute(context.absentKey(), mappingFunction);
+    try {
+      cache.asMap().compute(context.absentKey(), mappingFunction);
+      Assert.fail();
+    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
   }
 
-  // FIXME: Requires JDK8 release with JDK-8062841 fix
-  @CheckNoStats
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  @Test(enabled = false, dataProvider = "caches", expectedExceptions = StackOverflowError.class)
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine)
+  @Test(dataProvider = "caches")
   public void compute_pingpong(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    var key1 = 1;
+    var key2 = 2;
     BiFunction<Integer, CompletableFuture<Integer>, CompletableFuture<Integer>> mappingFunction =
         new BiFunction<Integer, CompletableFuture<Integer>, CompletableFuture<Integer>>() {
           @Override public CompletableFuture<Integer> apply(
               Integer key, CompletableFuture<Integer> value) {
-            return cache.asMap().computeIfPresent(context.lastKey(), this);
+            return cache.asMap().compute((key == key1) ? key2 : key1, this);
           }
         };
-    cache.asMap().computeIfPresent(context.firstKey(), mappingFunction);
+    try {
+      cache.asMap().compute(key1, mappingFunction);
+      Assert.fail();
+    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
   }
 
-  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void compute_error(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -1011,11 +1009,10 @@ public final class AsyncAsMapTest {
       Assert.fail();
     } catch (IllegalStateException e) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
-    assertThat(cache.asMap().computeIfPresent(context.absentKey(),
-        (k, v) -> CompletableFuture.completedFuture(-k)), is(nullValue()));
+    var future = CompletableFuture.completedFuture(-context.absentKey());
+    assertThat(cache.asMap().compute(context.absentKey(), (k, v) -> future), is(future));
   }
 
   @CheckNoStats
@@ -1032,8 +1029,8 @@ public final class AsyncAsMapTest {
   public void compute_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
     assertThat(cache.asMap().compute(context.absentKey(), (k, v) -> value), is(value));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(1).failures(0));
+
     assertThat(cache.asMap().size(), is(1 + context.original().size()));
     assertThat(cache.asMap().get(context.absentKey()), is(value));
   }
@@ -1046,15 +1043,14 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().compute(key, (k, v) -> v), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       Integer value = context.original().get(key);
       assertThat(cache.synchronous().asMap().get(key), is(value));
     }
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(context.consumedNotifications(), hasSize(0));
+    assertThat(context.removalNotifications(), hasSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -1065,13 +1061,13 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().compute(key, (k, v) -> value), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
+
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(cache.synchronous().asMap().get(key), is(key));
     }
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* ---------------- merge -------------- */
@@ -1107,7 +1103,7 @@ public final class AsyncAsMapTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.asMap().size(), is(context.original().size() - count));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -1161,9 +1157,8 @@ public final class AsyncAsMapTest {
       Assert.fail();
     } catch (IllegalStateException e) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
     assertThat(cache.asMap().merge(context.firstKey(), cache.asMap().get(context.firstKey()),
         (oldValue, value) -> CompletableFuture.completedFuture(context.absentValue())).join(),
         is(context.absentValue()));
@@ -1189,14 +1184,14 @@ public final class AsyncAsMapTest {
           (oldValue, v) -> oldValue), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
+
     for (Integer key : context.firstMiddleLastKeys()) {
       Integer value = context.original().get(key);
       assertThat(cache.synchronous().asMap().get(key), is(value));
     }
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(context.consumedNotifications(), hasSize(0));
+    assertThat(context.removalNotifications(), hasSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -1207,14 +1202,13 @@ public final class AsyncAsMapTest {
           CompletableFuture.completedFuture(oldValue.join() + v.join())).join(), is(0));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(cache.synchronous().asMap().get(key), is(0));
     }
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* ---------------- equals / hashCode -------------- */
@@ -1352,7 +1346,7 @@ public final class AsyncAsMapTest {
     cache.asMap().keySet().clear();
     assertThat(cache.asMap(), is(emptyMap()));
     int count = context.original().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1382,7 +1376,8 @@ public final class AsyncAsMapTest {
       iterations++;
       i.remove();
     }
-    assertThat(cache, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
+    int count = iterations;
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(cache.asMap(), is(emptyMap()));
   }
@@ -1519,7 +1514,7 @@ public final class AsyncAsMapTest {
     cache.asMap().values().clear();
     assertThat(cache.asMap(), is(emptyMap()));
     int count = context.original().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1560,7 +1555,7 @@ public final class AsyncAsMapTest {
     }
     assertThat(cache.asMap(), is(emptyMap()));
     int count = context.original().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1573,7 +1568,8 @@ public final class AsyncAsMapTest {
       iterations++;
       i.remove();
     }
-    assertThat(cache, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
+    int count = iterations;
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(cache.asMap(), is(emptyMap()));
   }
@@ -1718,7 +1714,7 @@ public final class AsyncAsMapTest {
     cache.asMap().entrySet().clear();
     assertThat(cache.asMap(), is(emptyMap()));
     int count = context.original().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1760,7 +1756,7 @@ public final class AsyncAsMapTest {
     });
     assertThat(cache.asMap(), is(emptyMap()));
     int count = context.original().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1776,7 +1772,8 @@ public final class AsyncAsMapTest {
       iterations++;
       i.remove();
     }
-    assertThat(cache, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
+    int count = iterations;
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(cache.asMap(), is(emptyMap()));
   }
@@ -1888,7 +1885,7 @@ public final class AsyncAsMapTest {
     entry.setValue(value);
     assertThat(cache.asMap().get(entry.getKey()), is(value));
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   @CheckNoStats

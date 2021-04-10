@@ -18,8 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -27,12 +27,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import org.checkerframework.checker.index.qual.Positive;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A scheduler that submits a task to an executor after a given delay.
@@ -49,30 +43,27 @@ public interface Scheduler {
    * @param command the runnable task to schedule
    * @param delay how long to delay, in units of {@code unit}
    * @param unit a {@code TimeUnit} determining how to interpret the {@code delay} parameter
-   * @return a scheduled future representing pending completion of the task
+   * @return a scheduled future representing pending submission of the task
    */
-  @NonNull Future<?> schedule(@NonNull Executor executor,
-      @NonNull Runnable command, @Positive long delay, @NonNull TimeUnit unit);
+  Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit);
 
   /**
    * Returns a scheduler that always returns a successfully completed future.
    *
    * @return a scheduler that always returns a successfully completed future
    */
-  static @NonNull Scheduler disabledScheduler() {
+  static Scheduler disabledScheduler() {
     return DisabledScheduler.INSTANCE;
   }
 
   /**
-   * Returns a scheduler that uses the system-wide scheduling thread if available, or else returns
-   * {@link #disabledScheduler()} if not present. This scheduler is provided in Java 9 or above
-   * by using {@link CompletableFuture} {@code delayedExecutor}.
+   * Returns a scheduler that uses the system-wide scheduling thread by using
+   * {@link CompletableFuture#delayedExecutor}.
    *
-   * @return a scheduler that uses the system-wide scheduling thread if available, or else a
-   *         disabled scheduler
+   * @return a scheduler that uses the system-wide scheduling thread
    */
-  static @NonNull Scheduler systemScheduler() {
-    return SystemScheduler.isPresent() ? SystemScheduler.INSTANCE : disabledScheduler();
+  static Scheduler systemScheduler() {
+    return SystemScheduler.INSTANCE;
   }
 
   /**
@@ -81,8 +72,7 @@ public interface Scheduler {
    * @param scheduledExecutorService the executor to schedule on
    * @return a scheduler that delegates to the a {@link ScheduledExecutorService}
    */
-  static @NonNull Scheduler forScheduledExecutorService(
-      @NonNull ScheduledExecutorService scheduledExecutorService) {
+  static Scheduler forScheduledExecutorService(ScheduledExecutorService scheduledExecutorService) {
     return new ExecutorServiceScheduler(scheduledExecutorService);
   }
 
@@ -93,7 +83,7 @@ public interface Scheduler {
    * @param scheduler the scheduler to delegate to
    * @return an scheduler that suppresses and logs any exception thrown by the delegate
    */
-  static @NonNull Scheduler guardedScheduler(@NonNull Scheduler scheduler) {
+  static Scheduler guardedScheduler(Scheduler scheduler) {
     return (scheduler instanceof GuardedScheduler) ? scheduler : new GuardedScheduler(scheduler);
   }
 }
@@ -101,40 +91,15 @@ public interface Scheduler {
 enum SystemScheduler implements Scheduler {
   INSTANCE;
 
-  static final @Nullable Method delayedExecutor = getDelayedExecutorMethod();
-
   @Override
-  @SuppressWarnings("NullAway")
   public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
-    requireNonNull(executor);
-    requireNonNull(command);
-    requireNonNull(unit);
-
-    try {
-      Executor scheduler = (Executor) delayedExecutor.invoke(
-          CompletableFuture.class, delay, unit, executor);
-      return CompletableFuture.runAsync(command, scheduler);
-    } catch (IllegalAccessException | InvocationTargetException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  static @Nullable Method getDelayedExecutorMethod() {
-    try {
-      return CompletableFuture.class.getMethod(
-          "delayedExecutor", long.class, TimeUnit.class, Executor.class);
-    } catch (NoSuchMethodException | SecurityException e) {
-      return null;
-    }
-  }
-
-  static boolean isPresent() {
-    return (delayedExecutor != null);
+    Executor delayedExecutor = CompletableFuture.delayedExecutor(delay, unit, executor);
+    return CompletableFuture.runAsync(command, delayedExecutor);
   }
 }
 
 final class ExecutorServiceScheduler implements Scheduler, Serializable {
-  static final Logger logger = Logger.getLogger(ExecutorServiceScheduler.class.getName());
+  static final Logger logger = System.getLogger(ExecutorServiceScheduler.class.getName());
   static final long serialVersionUID = 1;
 
   final ScheduledExecutorService scheduledExecutorService;
@@ -164,7 +129,7 @@ final class ExecutorServiceScheduler implements Scheduler, Serializable {
 }
 
 final class GuardedScheduler implements Scheduler, Serializable {
-  static final Logger logger = Logger.getLogger(GuardedScheduler.class.getName());
+  static final Logger logger = System.getLogger(GuardedScheduler.class.getName());
   static final long serialVersionUID = 1;
 
   final Scheduler delegate;
@@ -174,8 +139,7 @@ final class GuardedScheduler implements Scheduler, Serializable {
   }
 
   @Override
-  public @NonNull Future<?> schedule(@NonNull Executor executor,
-      @NonNull Runnable command, long delay, @NonNull TimeUnit unit) {
+  public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
     try {
       Future<?> future = delegate.schedule(executor, command, delay, unit);
       return (future == null) ? DisabledFuture.INSTANCE : future;

@@ -17,9 +17,10 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentMap;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+
+import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache
@@ -32,7 +33,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
+public interface AsyncLoadingCache<K extends @NonNull Object, V extends @NonNull Object>
+    extends AsyncCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
@@ -50,8 +52,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does when constructing the
    *         future, in which case the mapping is left unestablished
    */
-  @NonNull
-  CompletableFuture<V> get(@NonNull K key);
+  CompletableFuture<V> get(K key);
 
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
@@ -79,24 +80,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *         {@link AsyncCacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing
    *         the future, in which case the mapping is left unestablished
    */
-  @NonNull
-  CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys);
-
-  /**
-   * Returns a view of the entries stored in this cache as a thread-safe map. Modifications made to
-   * the map directly affect the cache.
-   * <p>
-   * Iterators from the returned map are at least <i>weakly consistent</i>: they are safe for
-   * concurrent use, but if the cache is modified (including by eviction) after the iterator is
-   * created, it is undefined which of the changes (if any) will be reflected in that iterator.
-   *
-   * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
-   */
-  @Override
-  default @NonNull ConcurrentMap<@NonNull K, @NonNull CompletableFuture<V>> asMap() {
-    // This method was added & implemented in version 2.7.0
-    throw new UnsupportedOperationException();
-  }
+  CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys);
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link LoadingCache}. A
@@ -106,7 +90,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *
    * @return a thread-safe synchronous view of this cache
    */
-  @NonNull
   @Override
+  @CheckReturnValue
   LoadingCache<K, V> synchronous();
 }

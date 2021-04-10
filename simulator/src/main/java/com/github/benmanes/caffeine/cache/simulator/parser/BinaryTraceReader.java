@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -45,8 +44,8 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
 
   @Override
   @SuppressWarnings("PMD.CloseResource")
-  public Stream<AccessEvent> events() throws IOException {
-    DataInputStream input = new DataInputStream(new BufferedInputStream(readFile()));
+  public Stream<AccessEvent> events() {
+    DataInputStream input = new DataInputStream(readFile());
     Stream<AccessEvent> stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
         new TraceIterator(input), Spliterator.ORDERED), /* parallel */ false);
     return stream.onClose(() -> Closeables.closeQuietly(input));

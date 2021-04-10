@@ -53,8 +53,8 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
@@ -175,7 +175,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       start = millis = 0L;
     }
 
-    setAccessExpirationTime(expirable, millis);
+    setAccessExpirationTime(key, expirable, millis);
     V value = copyValue(expirable);
     if (statsEnabled) {
       statistics.recordHits(1L);
@@ -225,7 +225,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return true;
       }
       if (updateAccessTime) {
-        setAccessExpirationTime(entry.getValue(), millis[0]);
+        setAccessExpirationTime(entry.getKey(), entry.getValue(), millis[0]);
       }
       return false;
     });
@@ -530,7 +530,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         removed[0] = true;
         return null;
       }
-      setAccessExpirationTime(expirable, millis);
+      setAccessExpirationTime(key, expirable, millis);
       return expirable;
     });
     dispatcher.awaitSynchronous();
@@ -606,7 +606,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         replaced[0] = true;
       } else {
         result = expirable;
-        setAccessExpirationTime(expirable, millis);
+        setAccessExpirationTime(key, expirable, millis);
       }
       return result;
     });
@@ -816,7 +816,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         }
         return expirable;
       case READ: {
-        setAccessExpirationTime(expirable, 0L);
+        setAccessExpirationTime(entry.getKey(), expirable, 0L);
         return expirable;
       }
       case CREATED:
@@ -915,7 +915,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param outer the outermost error, or null if unset
    * @return the outermost error, or null if unset and successful
    */
-  private static @Nullable Throwable tryClose(Object o, @Nullable Throwable outer) {
+  private static @Nullable Throwable tryClose(@Nullable Object o, @Nullable Throwable outer) {
     if (o instanceof Closeable) {
       try {
         ((Closeable) o).close();
@@ -1064,7 +1064,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return a copy of the object if storing by value or the same instance if by reference
    */
   @SuppressWarnings("NullAway")
-  protected final @NonNull <T> T copyOf(@Nullable T object) {
+  protected final <T> @PolyNull T copyOf(@PolyNull T object) {
     if (object == null) {
       return null;
     }
@@ -1078,7 +1078,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param expirable the expirable value to be copied
    * @return a copy of the value if storing by value or the same instance if by reference
    */
-  protected final @Nullable V copyValue(@Nullable Expirable<V> expirable) {
+  @SuppressWarnings("NullAway")
+  protected final @PolyNull V copyValue(@PolyNull Expirable<V> expirable) {
     if (expirable == null) {
       return null;
     }
@@ -1112,10 +1113,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   /**
    * Sets the access expiration time.
    *
+   * @param key the entry's key
    * @param expirable the entry that was operated on
    * @param currentTimeMS the current time, or 0 if not read yet
    */
-  protected final void setAccessExpirationTime(Expirable<?> expirable, long currentTimeMS) {
+  protected final void setAccessExpirationTime(K key, Expirable<?> expirable, long currentTimeMS) {
     try {
       Duration duration = expiry.getExpiryForAccess();
       if (duration == null) {
@@ -1131,6 +1133,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         long expireTimeMS = duration.getAdjustedTime(currentTimeMS);
         expirable.setExpireTimeMS(expireTimeMS);
       }
+      cache.policy().expireVariably().ifPresent(policy -> {
+        policy.setExpiresAfter(key, duration.getDurationAmount(), duration.getTimeUnit());
+      });
     } catch (Exception e) {
       logger.log(Level.WARNING, "Failed to set the entry's expiration time", e);
     }
@@ -1172,7 +1177,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         Map.Entry<K, Expirable<V>> entry = delegate.next();
         long millis = entry.getValue().isEternal() ? 0L : currentTimeMillis();
         if (!entry.getValue().hasExpired(millis)) {
-          setAccessExpirationTime(entry.getValue(), millis);
+          setAccessExpirationTime(entry.getKey(), entry.getValue(), millis);
           cursor = entry;
         }
       }

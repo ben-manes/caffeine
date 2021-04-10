@@ -63,6 +63,7 @@ public final class PolicyActor extends AbstractActor
       }
     } catch (Exception e) {
       sender().tell(ERROR, self());
+      context().system().stop(self());
       context().system().log().error(e, "");
     } finally {
       policy.stats().stopwatch().stop();
@@ -75,6 +76,7 @@ public final class PolicyActor extends AbstractActor
       sender().tell(policy.stats(), self());
     } catch (Exception e) {
       sender().tell(ERROR, self());
+      context().system().stop(self());
       context().system().log().error(e, "");
     }
   }

@@ -22,7 +22,6 @@ import org.jctools.maps.NonBlockingHashMap;
 
 import com.github.benmanes.caffeine.cache.impl.Cache2k;
 import com.github.benmanes.caffeine.cache.impl.CaffeineCache;
-import com.github.benmanes.caffeine.cache.impl.Collision;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
 import com.github.benmanes.caffeine.cache.impl.Ehcache3;
@@ -74,11 +73,6 @@ public enum CacheType {
   Caffeine {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new CaffeineCache<>(maximumSize);
-    }
-  },
-  Collision {
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new Collision<>(maximumSize);
     }
   },
   ConcurrentLinkedHashMap {

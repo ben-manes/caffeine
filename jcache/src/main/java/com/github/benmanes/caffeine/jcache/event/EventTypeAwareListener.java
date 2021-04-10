@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
@@ -49,7 +48,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
 
   /** Returns if the backing listener consumes this type of event. */
   @SuppressWarnings("PMD.SwitchStmtsShouldHaveDefault")
-  public boolean isCompatible(@NonNull EventType eventType) {
+  public boolean isCompatible(EventType eventType) {
     switch (eventType) {
       case CREATED:
         return (listener instanceof CacheEntryCreatedListener<?, ?>);
@@ -65,7 +64,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
 
   /** Processes the event and logs if an exception is thrown. */
   @SuppressWarnings("PMD.SwitchStmtsShouldHaveDefault")
-  public void dispatch(@NonNull JCacheEntryEvent<K, V> event) {
+  public void dispatch(JCacheEntryEvent<K, V> event) {
     try {
       if (event.getSource().isClosed()) {
         return;

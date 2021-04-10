@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import java.util.concurrent.atomic.LongAdder;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 
@@ -71,19 +69,6 @@ public final class ConcurrentStatsCounter implements StatsCounter {
     totalLoadTime.add(loadTime);
   }
 
-  @Override @Deprecated
-  @SuppressWarnings("deprecation")
-  public void recordEviction() {
-    evictionCount.increment();
-  }
-
-  @Override @Deprecated
-  @SuppressWarnings("deprecation")
-  public void recordEviction(int weight) {
-    evictionCount.increment();
-    evictionWeight.add(weight);
-  }
-
   @Override
   public void recordEviction(int weight, RemovalCause cause) {
     evictionCount.increment();
@@ -92,7 +77,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
 
   @Override
   public CacheStats snapshot() {
-    return new CacheStats(
+    return CacheStats.of(
         negativeToMaxValue(hitCount.sum()),
         negativeToMaxValue(missCount.sum()),
         negativeToMaxValue(loadSuccessCount.sum()),
@@ -112,7 +97,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
    *
    * @param other the counter to increment from
    */
-  public void incrementBy(@NonNull StatsCounter other) {
+  public void incrementBy(StatsCounter other) {
     CacheStats otherStats = other.snapshot();
     hitCount.add(otherStats.hitCount());
     missCount.add(otherStats.missCount());

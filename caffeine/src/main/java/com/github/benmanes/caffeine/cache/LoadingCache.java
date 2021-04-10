@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -32,7 +33,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-public interface LoadingCache<K, V> extends Cache<K, V> {
+public interface LoadingCache<K extends @NonNull Object, V extends @NonNull Object>
+    extends Cache<K, V> {
 
   /**
    * Returns the value associated with the {@code key} in this cache, obtaining that value from
@@ -60,7 +62,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    *         is left unestablished
    */
   @Nullable
-  V get(@NonNull K key);
+  V get(K key);
 
   /**
    * Returns a map of the values associated with the {@code keys}, creating or retrieving those
@@ -88,22 +90,44 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    *         values, or fails to return an entry for each requested key. In all cases, the mapping
    *         is left unestablished
    */
-  @NonNull
-  Map<@NonNull K, @NonNull V> getAll(@NonNull Iterable<? extends @NonNull K> keys);
+  Map<K, V> getAll(Iterable<? extends K> keys);
 
   /**
    * Loads a new value for the {@code key}, asynchronously. While the new value is loading the
    * previous value (if any) will continue to be returned by {@code get(key)} unless it is evicted.
    * If the new value is loaded successfully it will replace the previous value in the cache; if an
    * exception is thrown while refreshing the previous value will remain, <i>and the exception will
-   * be logged (using {@link java.util.logging.Logger}) and swallowed</i>.
+   * be logged (using {@link System.Logger}) and swallowed</i>.
+   * <p>
+   * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
+   * currently contains a value for the {@code key}, and {@link CacheLoader#load} otherwise. Loading
+   * is asynchronous by delegating to the default executor.
+   * <p>
+   * Returns an existing future without doing anything if another thread is currently loading the
+   * value for {@code key}.
+   *
+   * @param key key with which a value may be associated
+   * @return the future that is loading the value
+   * @throws NullPointerException if the specified key is null
+   */
+  CompletableFuture<V> refresh(K key);
+
+  /**
+   * Loads a new value for each {@code key}, asynchronously. While the new value is loading the
+   * previous value (if any) will continue to be returned by {@code get(key)} unless it is evicted.
+   * If the new value is loaded successfully it will replace the previous value in the cache; if an
+   * exception is thrown while refreshing the previous value will remain, <i>and the exception will
+   * be logged (using {@link System.Logger}) and swallowed</i>. If another thread is currently
+   * loading the value for {@code key}, then does not perform an additional load.
    * <p>
    * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
    * currently contains a value for the {@code key}, and {@link CacheLoader#load} otherwise. Loading
    * is asynchronous by delegating to the default executor.
    *
-   * @param key key with which a value may be associated
-   * @throws NullPointerException if the specified key is null
+   * @param keys the keys whose associated values are to be returned
+   * @return the future containing an unmodifiable mapping of keys to values for the specified keys
+   *         that are loading the values
+   * @throws NullPointerException if the specified collection is null or contains a null element
    */
-  void refresh(@NonNull K key);
+  CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys);
 }

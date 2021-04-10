@@ -23,13 +23,14 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CompletionListener;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
@@ -104,7 +105,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
     V value = null;
     if (expirable != null) {
-      setAccessExpirationTime(expirable, millis);
+      setAccessExpirationTime(key, expirable, millis);
       value = copyValue(expirable);
     }
     if (statsEnabled) {

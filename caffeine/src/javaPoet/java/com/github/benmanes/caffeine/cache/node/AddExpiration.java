@@ -16,9 +16,6 @@
 package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.NODE;
-import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
-import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
-import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import javax.lang.model.element.Modifier;
@@ -86,23 +83,21 @@ public final class AddExpiration extends NodeRule {
   private void addVariableTime(String varName) {
     MethodSpec getter = MethodSpec.methodBuilder("getVariableTime")
         .addModifiers(Modifier.PUBLIC)
-        .addStatement("return $T.UNSAFE.getLong(this, $N)",
-            UNSAFE_ACCESS, offsetName(varName))
+        .addStatement("return (long) $L.get(this)", varHandleName(varName))
         .returns(long.class)
         .build();
     MethodSpec setter = MethodSpec.methodBuilder("setVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(long.class, varName)
-        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName(varName), varName)
+        .addStatement("$L.set(this, $N)", varHandleName(varName), varName)
         .build();
     MethodSpec cas = MethodSpec.methodBuilder("casVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(long.class, "expect")
         .addParameter(long.class, "update")
         .returns(boolean.class)
-        .addStatement("return ($N == $N)\n&& $T.UNSAFE.compareAndSwapLong(this, $N, $N, $N)",
-            varName, "expect", UNSAFE_ACCESS, offsetName(varName), "expect", "update")
+        .addStatement("return ($N == $N)\n&& $L.compareAndSet(this, $N, $N)",
+            varName, "expect", varHandleName(varName), "expect", "update")
         .build();
     context.nodeSubtype
         .addMethod(getter)
@@ -114,10 +109,12 @@ public final class AddExpiration extends NodeRule {
     if (!context.generateFeatures.contains(Feature.EXPIRE_ACCESS)) {
       return;
     }
-    context.nodeSubtype.addField(newFieldOffset(context.className, "accessTime"))
+
+    context.nodeSubtype
         .addField(long.class, "accessTime", Modifier.VOLATILE)
-        .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.LAZY))
-        .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.LAZY));
+        .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.PLAIN))
+        .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.PLAIN));
+    addVarHandle("accessTime", TypeName.get(long.class));
     addTimeConstructorAssignment(context.constructorByKey, "accessTime");
     addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime");
   }
@@ -125,10 +122,11 @@ public final class AddExpiration extends NodeRule {
   private void addWriteExpiration() {
     if (!Feature.useWriteTime(context.parentFeatures)
         && Feature.useWriteTime(context.generateFeatures)) {
-      context.nodeSubtype.addField(newFieldOffset(context.className, "writeTime"))
+      context.nodeSubtype
           .addField(long.class, "writeTime", Modifier.VOLATILE)
-          .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY))
-          .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
+          .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.PLAIN))
+          .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
+      addVarHandle("writeTime", TypeName.get(long.class));
       addTimeConstructorAssignment(context.constructorByKey, "writeTime");
       addTimeConstructorAssignment(context.constructorByKeyRef, "writeTime");
     }
@@ -143,14 +141,13 @@ public final class AddExpiration extends NodeRule {
         .addParameter(long.class, "expect")
         .addParameter(long.class, "update")
         .returns(boolean.class)
-        .addStatement("return ($N == $N)\n&& $T.UNSAFE.compareAndSwapLong(this, $N, $N, $N)",
-            "writeTime", "expect", UNSAFE_ACCESS, offsetName("writeTime"), "expect", "update")
+        .addStatement("return ($N == $N)\n&& $L.compareAndSet(this, $N, $N)",
+            "writeTime", "expect", varHandleName("writeTime"), "expect", "update")
         .build());
   }
 
   /** Adds a long constructor assignment. */
   private void addTimeConstructorAssignment(MethodSpec.Builder constructor, String field) {
-    constructor.addStatement("$T.UNSAFE.putLong(this, $N, $N)",
-        UNSAFE_ACCESS, offsetName(field), "now");
+    constructor.addStatement("$L.set(this, $N)", varHandleName(field), "now");
   }
 }

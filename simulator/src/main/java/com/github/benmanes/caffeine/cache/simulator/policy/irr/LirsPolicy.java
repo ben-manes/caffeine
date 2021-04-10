@@ -19,14 +19,13 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -54,7 +53,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.TooManyFields")
+@PolicySpec(name = "irr.Lirs")
 public final class LirsPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
@@ -78,20 +77,15 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
   public LirsPolicy(Config config) {
     LirsSettings settings = new LirsSettings(config);
-    this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
-    this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
-    this.policyStats = new PolicyStats("irr.Lirs");
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumNonResidentSize = (int) (maximumSize * settings.nonResidentMultiplier());
+    this.maximumHotSize = (int) (maximumSize * settings.percentHot());
+    this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
     this.evicted = new ArrayList<>();
     this.headNR = new Node();
     this.headS = new Node();
     this.headQ = new Node();
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new LirsPolicy(config));
   }
 
   @Override

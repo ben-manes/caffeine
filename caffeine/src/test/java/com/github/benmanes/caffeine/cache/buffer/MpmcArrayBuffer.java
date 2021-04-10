@@ -47,12 +47,12 @@ final class MpmcArrayBuffer<E> extends ReadBuffer<E> {
   }
 
   @Override
-  public int reads() {
-    return (int) drained;
+  public long reads() {
+    return drained;
   }
 
   @Override
-  public int writes() {
+  public long writes() {
     return drained() + queue.size();
   }
 }

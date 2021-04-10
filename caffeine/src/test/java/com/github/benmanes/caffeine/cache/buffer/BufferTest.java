@@ -51,8 +51,8 @@ public final class BufferTest {
         Thread.yield();
       }
     });
-    int recorded = buffer.recorded();
-    assertThat(recorded, is(ReadBuffer.BUFFER_SIZE));
+    long recorded = buffer.recorded();
+    assertThat(recorded, is((long) ReadBuffer.BUFFER_SIZE));
   }
 
   @Test(dataProvider = "buffers")
@@ -61,8 +61,8 @@ public final class BufferTest {
       buffer.offer(Boolean.TRUE);
     }
     buffer.drain();
-    int drained = buffer.drained();
-    int recorded = buffer.recorded();
+    long drained = buffer.drained();
+    long recorded = buffer.recorded();
     assertThat(drained, is(recorded));
   }
 
@@ -79,8 +79,8 @@ public final class BufferTest {
       }
     });
     buffer.drain();
-    int drained = buffer.drained();
-    int recorded = buffer.recorded();
+    long drained = buffer.drained();
+    long recorded = buffer.recorded();
     assertThat(drained, is(recorded));
   }
 }

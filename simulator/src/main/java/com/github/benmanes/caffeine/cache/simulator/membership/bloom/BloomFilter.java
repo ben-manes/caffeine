@@ -45,6 +45,12 @@ public final class BloomFilter implements Membership {
   long[] table;
 
   /**
+   * Creates a lazily initialized membership sketch, requiring {@link #ensureCapacity} be called
+   * when the expected number of insertions and the false positive probability have been determined.
+   */
+  public BloomFilter() {}
+
+  /**
    * Creates a membership sketch based on the expected number of insertions and the false positive
    * probability.
    */
@@ -61,18 +67,15 @@ public final class BloomFilter implements Membership {
    * @param expectedInsertions the number of expected insertions
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    */
-  void ensureCapacity(@NonNegative long expectedInsertions, @NonNegative double fpp) {
+  public void ensureCapacity(@NonNegative long expectedInsertions, @NonNegative double fpp) {
     checkArgument(expectedInsertions >= 0);
     checkArgument(fpp > 0 && fpp < 1);
 
     double optimalBitsFactor = -Math.log(fpp) / (Math.log(2) * Math.log(2));
     int optimalNumberOfBits = (int) (expectedInsertions * optimalBitsFactor);
-    int optimalSize = optimalNumberOfBits >>> BITS_PER_LONG_SHIFT;
+    int optimalSize = Math.max(2, optimalNumberOfBits >>> BITS_PER_LONG_SHIFT);
     if ((table != null) && (table.length >= optimalSize)) {
       return;
-    } else if (optimalSize == 0) {
-      tableShift = Integer.SIZE - 1;
-      table = new long[1];
     } else {
       int powerOfTwoShift = Integer.SIZE - Integer.numberOfLeadingZeros(optimalSize - 1);
       tableShift = Integer.SIZE - powerOfTwoShift;

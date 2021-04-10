@@ -151,6 +151,7 @@ public final class TypesafeConfigurator {
       addKeyValueTypes();
       addStoreByValue();
       addExecutor();
+      addScheduler();
       addListeners();
       addReadThrough();
       addWriteThrough();
@@ -192,6 +193,13 @@ public final class TypesafeConfigurator {
       }
     }
 
+    /** Adds the scheduler settings. */
+    public void addScheduler() {
+      if (isSet("scheduler")) {
+        configuration.setSchedulerFactory(factoryCreator.factoryOf(merged.getString("scheduler")));
+      }
+    }
+
     /** Adds the entry listeners settings. */
     private void addListeners() {
       for (String path : merged.getStringList("listeners")) {
@@ -229,8 +237,9 @@ public final class TypesafeConfigurator {
       }
     }
 
-    /** Adds the JMX monitoring settings. */
+    /** Adds the monitoring settings. */
     private void addMonitoring() {
+      configuration.setNativeStatisticsEnabled(merged.getBoolean("monitoring.native-statistics"));
       configuration.setStatisticsEnabled(merged.getBoolean("monitoring.statistics"));
       configuration.setManagementEnabled(merged.getBoolean("monitoring.management"));
     }

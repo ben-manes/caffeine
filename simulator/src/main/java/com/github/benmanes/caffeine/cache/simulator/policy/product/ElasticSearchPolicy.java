@@ -27,9 +27,8 @@ import org.elasticsearch.common.cache.CacheBuilder;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -37,37 +36,34 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "product.ElasticSearch", characteristics = WEIGHTED)
 public final class ElasticSearchPolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
-  public ElasticSearchPolicy(Config config) {
-    policyStats = new PolicyStats("product.ElasticSearch");
+  public ElasticSearchPolicy(Config config, Set<Characteristic> characteristics) {
+    policyStats = new PolicyStats(name());
     BasicSettings settings = new BasicSettings(config);
-    cache = CacheBuilder.<Long, AccessEvent>builder()
+    CacheBuilder<Long, AccessEvent> builder = CacheBuilder.<Long, AccessEvent>builder()
         .removalListener(notification -> policyStats.recordEviction())
-        .setMaximumWeight(settings.maximumSize())
-        .weigher((key, value) -> value.weight())
-        .build();
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new ElasticSearchPolicy(config));
-  }
-
-  @Override public Set<Characteristic> characteristics() {
-    return Sets.immutableEnumSet(WEIGHTED);
+        .setMaximumWeight(settings.maximumSize());
+    if (characteristics.contains(WEIGHTED)) {
+      builder.weigher((key, value) -> value.weight());
+    }
+    cache = builder.build();
   }
 
   @Override
   public void record(AccessEvent event) {
-    Object value = cache.get(event.key());
+    AccessEvent value = cache.get(event.key());
     if (value == null) {
       cache.put(event.key(), event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
+      if (event.weight() != value.weight()) {
+        cache.put(event.key(), event);
+      }
     }
   }
 
@@ -81,6 +77,5 @@ public final class ElasticSearchPolicy implements Policy {
     CacheStats stats = cache.stats();
     checkState(policyStats.hitCount() == stats.getHits());
     checkState(policyStats.missCount() == stats.getMisses());
-    checkState(policyStats.evictionCount() == stats.getEvictions());
   }
 }

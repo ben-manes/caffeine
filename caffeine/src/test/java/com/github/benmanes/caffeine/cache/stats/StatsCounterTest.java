@@ -41,13 +41,11 @@ public final class StatsCounterTest {
     StatsCounter counter = DisabledStatsCounter.INSTANCE;
     counter.recordHits(1);
     counter.recordMisses(1);
-    counter.recordEviction();
-    counter.recordEviction(10);
     counter.recordEviction(1, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0, 0)));
-    assertThat(counter.toString(), is(new CacheStats(0, 0, 0, 0, 0, 0, 0).toString()));
+    assertThat(counter.snapshot(), is(CacheStats.of(0, 0, 0, 0, 0, 0, 0)));
+    assertThat(counter.toString(), is(CacheStats.of(0, 0, 0, 0, 0, 0, 0).toString()));
 
     for (DisabledStatsCounter type : DisabledStatsCounter.values()) {
       assertThat(DisabledStatsCounter.valueOf(type.name()), is(counter));
@@ -59,18 +57,16 @@ public final class StatsCounterTest {
     ConcurrentStatsCounter counter = new ConcurrentStatsCounter();
     counter.recordHits(1);
     counter.recordMisses(1);
-    counter.recordEviction();
-    counter.recordEviction(10);
-    counter.recordEviction(1, RemovalCause.SIZE);
+    counter.recordEviction(10, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 3, 11);
+    CacheStats expected = CacheStats.of(1, 1, 1, 1, 2, 1, 10);
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));
 
     counter.incrementBy(counter);
-    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 6, 22)));
+    assertThat(counter.snapshot(), is(CacheStats.of(2, 2, 2, 2, 4, 2, 20)));
   }
 
   @Test
@@ -79,12 +75,11 @@ public final class StatsCounterTest {
     ConcurrentTestHarness.timeTasks(5, () -> {
       counter.recordHits(1);
       counter.recordMisses(1);
-      counter.recordEviction();
-      counter.recordEviction(10);
+      counter.recordEviction(10, RemovalCause.SIZE);
       counter.recordLoadSuccess(1);
       counter.recordLoadFailure(1);
     });
-    assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 10, 50)));
+    assertThat(counter.snapshot(), is(CacheStats.of(5, 5, 5, 5, 10, 5, 50)));
   }
 
   @Test
@@ -92,12 +87,10 @@ public final class StatsCounterTest {
     StatsCounter counter = StatsCounter.guardedStatsCounter(new ConcurrentStatsCounter());
     counter.recordHits(1);
     counter.recordMisses(1);
-    counter.recordEviction();
-    counter.recordEviction(10);
-    counter.recordEviction(1, RemovalCause.SIZE);
+    counter.recordEviction(10, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 3, 11);
+    CacheStats expected = CacheStats.of(1, 1, 1, 1, 2, 1, 10);
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));
@@ -107,7 +100,6 @@ public final class StatsCounterTest {
   public void guarded_exception() {
     StatsCounter statsCounter = Mockito.mock(StatsCounter.class);
     when(statsCounter.snapshot()).thenThrow(new NullPointerException());
-    doThrow(NullPointerException.class).when(statsCounter).recordEviction();
     doThrow(NullPointerException.class).when(statsCounter).recordHits(anyInt());
     doThrow(NullPointerException.class).when(statsCounter).recordMisses(anyInt());
     doThrow(NullPointerException.class).when(statsCounter).recordEviction(anyInt(), any());
@@ -117,18 +109,14 @@ public final class StatsCounterTest {
     StatsCounter guarded = StatsCounter.guardedStatsCounter(statsCounter);
     guarded.recordHits(1);
     guarded.recordMisses(1);
-    guarded.recordEviction();
-    guarded.recordEviction(10);
-    guarded.recordEviction(1, RemovalCause.SIZE);
+    guarded.recordEviction(10, RemovalCause.SIZE);
     guarded.recordLoadSuccess(1);
     guarded.recordLoadFailure(1);
     assertThat(guarded.snapshot(), is(CacheStats.empty()));
 
     verify(statsCounter).recordHits(1);
     verify(statsCounter).recordMisses(1);
-    verify(statsCounter).recordEviction();
-    verify(statsCounter).recordEviction(10);
-    verify(statsCounter).recordEviction(1, RemovalCause.SIZE);
+    verify(statsCounter).recordEviction(10, RemovalCause.SIZE);
     verify(statsCounter).recordLoadSuccess(1);
     verify(statsCounter).recordLoadFailure(1);
   }

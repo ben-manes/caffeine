@@ -15,20 +15,25 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
-import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.google.common.base.Preconditions.checkState;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
+import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
 import java.util.function.Consumer;
 
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.Feature;
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.Iterables;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -80,13 +85,13 @@ public abstract class NodeRule implements Consumer<NodeContext> {
         || context.generateFeatures.contains(Feature.STRONG_VALUES);
   }
 
-  protected TypeName keyReferenceType() {
+  protected ParameterizedTypeName keyReferenceType() {
     checkState(context.generateFeatures.contains(Feature.WEAK_KEYS));
     return ParameterizedTypeName.get(
         ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
   }
 
-  protected TypeName valueReferenceType() {
+  protected ParameterizedTypeName valueReferenceType() {
     checkState(!context.generateFeatures.contains(Feature.STRONG_VALUES));
     String clazz = context.generateFeatures.contains(Feature.WEAK_VALUES)
         ? "WeakValueReference"
@@ -94,13 +99,29 @@ public abstract class NodeRule implements Consumer<NodeContext> {
     return ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME + ".References", clazz), vTypeVar);
   }
 
+  /** Returns the name of the VarHandle to this variable. */
+  protected String varHandleName(String varName) {
+    return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName);
+  }
+
+  /** Creates a VarHandle to the instance field. */
+  public void addVarHandle(String varName, TypeName type) {
+    String fieldName = varHandleName(varName);
+    context.nodeSubtype.addField(FieldSpec.builder(VarHandle.class, fieldName,
+        Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL).build());
+    Consumer<CodeBlock.Builder> statement = builder -> builder
+        .addStatement("$L = lookup.findVarHandle($T.class, $L.$L, $T.class)", fieldName,
+            ClassName.bestGuess(context.className), NODE_FACTORY.rawType.simpleName(),
+            fieldName, type);
+    context.varHandles.add(statement);
+  }
+
   /** Creates an accessor that returns the reference. */
   protected final MethodSpec newGetRef(String varName) {
     MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName) + "Reference")
         .addModifiers(context.publicFinalModifiers())
         .returns(Object.class);
-    getter.addStatement("return $T.UNSAFE.getObject(this, $N)",
-        UNSAFE_ACCESS, offsetName(varName));
+    getter.addStatement("return $L.get(this)", varHandleName(varName));
     return getter.build();
   }
 
@@ -110,28 +131,21 @@ public abstract class NodeRule implements Consumer<NodeContext> {
     MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName))
         .addModifiers(context.publicFinalModifiers())
         .returns(varType);
-    String type;
-    if (varType.isPrimitive()) {
-      type = varType.equals(TypeName.INT) ? "Int" : "Long";
-    } else {
-      type = "Object";
-    }
     if (strength == Strength.STRONG) {
-      if (visibility.isRelaxed) {
+      if (visibility.isPlain) {
         if (varType.isPrimitive()) {
-          getter.addStatement("return $T.UNSAFE.get$N(this, $N)",
-              UNSAFE_ACCESS, type, offsetName(varName));
+          getter.addStatement("return ($L) $L.get(this)",
+              varType.toString(), varHandleName(varName));
         } else {
-          getter.addStatement("return ($T) $T.UNSAFE.get$N(this, $N)",
-              varType, UNSAFE_ACCESS, type, offsetName(varName));
+          getter.addStatement("return ($T) $L.get(this)", varType, varHandleName(varName));
         }
       } else {
         getter.addStatement("return $N", varName);
       }
     } else {
-      if (visibility.isRelaxed) {
-        getter.addStatement("return (($T<$T>) $T.UNSAFE.get$N(this, $N)).get()",
-            Reference.class, varType, UNSAFE_ACCESS, type, offsetName(varName));
+      if (visibility.isPlain) {
+        getter.addStatement("return (($T<$T>) $L.get(this)).get()",
+            Reference.class, varType, varHandleName(varName));
       } else {
         getter.addStatement("return $N.get()", varName);
       }
@@ -142,22 +156,14 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   /** Creates a mutator to the variable. */
   protected final MethodSpec newSetter(TypeName varType, String varName, Visibility visibility) {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
-    String type;
-    if (varType.isPrimitive()) {
-      type = varType.equals(TypeName.INT) ? "Int" : "Long";
-    } else {
-      type = "Object";
-    }
     MethodSpec.Builder setter = MethodSpec.methodBuilder(methodName)
         .addModifiers(context.publicFinalModifiers())
         .addParameter(varType, varName);
-    if (visibility.isRelaxed) {
-      setter.addStatement("$T.UNSAFE.put$L(this, $N, $N)",
-          UNSAFE_ACCESS, type, offsetName(varName), varName);
+    if (visibility.isPlain) {
+      setter.addStatement("$L.set(this, $N)", varHandleName(varName), varName);
     } else {
       setter.addStatement("this.$N = $N", varName, varName);
     }
-
     return setter.build();
   }
 
@@ -171,16 +177,16 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   }
 
   protected enum Strength {
-    STRONG, WEAK, SOFT,
+    STRONG, WEAK, SOFT;
   }
 
   protected enum Visibility {
-    IMMEDIATE(false), LAZY(true);
+    IMMEDIATE(false), PLAIN(true);
 
-    final boolean isRelaxed;
+    final boolean isPlain;
 
     Visibility(boolean mode) {
-      this.isRelaxed = mode;
+      this.isPlain = mode;
     }
   }
 }

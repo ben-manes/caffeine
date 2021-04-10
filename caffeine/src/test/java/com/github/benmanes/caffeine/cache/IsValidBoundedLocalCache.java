@@ -15,16 +15,20 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -37,11 +41,11 @@ import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table.Cell;
 
 /**
  * A matcher that evaluates a {@link BoundedLocalCache} to determine if it is in a valid state.
@@ -79,17 +83,30 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void drain(BoundedLocalCache<K, V> cache) {
-    do {
+    long adjustment = 0;
+    for (;;) {
       cache.cleanUp();
-    } while (cache.buffersWrites() && cache.writeBuffer().size() > 0);
+
+      if (cache.buffersWrites() && (cache.writeBuffer().size() > 0)) {
+        continue; // additional writes to drain
+      } else if (cache.evicts() && (cache.adjustment() != adjustment)) {
+        adjustment = cache.adjustment();
+        continue; // finish climbing
+      }
+      break;
+    }
   }
 
   private void checkReadBuffer(BoundedLocalCache<K, V> cache) {
+    if (!tryDrainBuffers(cache)) {
+      await().pollInSameThread().until(() -> tryDrainBuffers(cache));
+    }
+  }
+
+  private Boolean tryDrainBuffers(BoundedLocalCache<K, V> cache) {
+    cache.cleanUp();
     Buffer<?> buffer = cache.readBuffer;
-    Awaits.await().until(() -> {
-      cache.cleanUp();
-      return (buffer.size() == 0) && buffer.reads() == buffer.writes();
-    });
+    return (buffer.size() == 0L) && (buffer.reads() == buffer.writes());
   }
 
   private void checkCache(BoundedLocalCache<K, V> cache) {
@@ -112,8 +129,12 @@ public final class IsValidBoundedLocalCache<K, V>
     if (cache.evicts()) {
       cache.evictionLock.lock();
       try {
-        long weightedSize = cache.weightedSize();
-        desc.expectThat("overflow", cache.maximum(), is(greaterThanOrEqualTo(weightedSize)));
+        desc.expectThat("overflow", cache.weightedSize(),
+            is(lessThanOrEqualTo(cache.maximum())));
+        desc.expectThat("window", cache.windowWeightedSize(),
+            is(lessThanOrEqualTo(cache.windowMaximum())));
+        desc.expectThat("main", cache.mainProtectedWeightedSize(),
+            is(lessThanOrEqualTo(cache.mainProtectedMaximum())));
       } finally {
         cache.evictionLock.unlock();
       }
@@ -131,6 +152,8 @@ public final class IsValidBoundedLocalCache<K, V>
   private void checkTimerWheel(BoundedLocalCache<K, V> cache) {
     if (!cache.expiresVariable()) {
       return;
+    } else if (!doesTimerWheelMatch(cache)) {
+      await().pollInSameThread().until(() -> doesTimerWheelMatch(cache));
     }
 
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
@@ -158,22 +181,51 @@ public final class IsValidBoundedLocalCache<K, V>
     desc.expectThat("Timers != Entries", seen, hasSize(cache.size()));
   }
 
+  private boolean doesTimerWheelMatch(BoundedLocalCache<K, V> cache) {
+    cache.evictionLock.lock();
+    try {
+      Set<Node<K, V>> seen = Sets.newIdentityHashSet();
+      for (int i = 0; i < cache.timerWheel().wheel.length; i++) {
+        for (int j = 0; j < cache.timerWheel().wheel[i].length; j++) {
+          Node<K, V> sentinel = cache.timerWheel().wheel[i][j];
+
+          for (Node<K, V> node = sentinel.getNextInVariableOrder();
+              node != sentinel; node = node.getNextInVariableOrder()) {
+            if (!seen.add(node)) {
+              return false;
+            }
+          }
+        }
+      }
+      return cache.size() == seen.size();
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
   private void checkEvictionDeque(BoundedLocalCache<K, V> cache) {
     if (cache.evicts()) {
-      ImmutableList<LinkedDeque<Node<K, V>>> deques = ImmutableList.of(
-          cache.accessOrderWindowDeque(),
-          cache.accessOrderProbationDeque(),
-          cache.accessOrderProtectedDeque());
+      long mainProbation = cache.weightedSize()
+          - cache.windowWeightedSize() - cache.mainProtectedWeightedSize();
+      ImmutableTable<String, Long, LinkedDeque<Node<K, V>>> deques =
+          new ImmutableTable.Builder<String, Long, LinkedDeque<Node<K, V>>>()
+            .put("window", cache.windowWeightedSize(), cache.accessOrderWindowDeque())
+            .put("probation", mainProbation, cache.accessOrderProbationDeque())
+            .put("protected", cache.mainProtectedWeightedSize(), cache.accessOrderProtectedDeque())
+            .build();
       checkLinks(cache, deques, desc);
       checkDeque(cache.accessOrderWindowDeque(), desc);
       checkDeque(cache.accessOrderProbationDeque(), desc);
     } else if (cache.expiresAfterAccess()) {
-      checkLinks(cache, ImmutableList.of(cache.accessOrderWindowDeque()), desc);
+      checkLinks(cache,
+          ImmutableTable.of("window", cache.estimatedSize(), cache.accessOrderWindowDeque()), desc);
       checkDeque(cache.accessOrderWindowDeque(), desc);
     }
 
     if (cache.expiresAfterWrite()) {
-      checkLinks(cache, ImmutableList.of(cache.writeOrderDeque()), desc);
+      long expectedSize = cache.evicts() ? cache.weightedSize() : cache.estimatedSize();
+      checkLinks(cache,
+          ImmutableTable.of("writeOrder", expectedSize, cache.writeOrderDeque()), desc);
       checkDeque(cache.writeOrderDeque(), desc);
     }
   }
@@ -183,16 +235,22 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkLinks(BoundedLocalCache<K, V> cache,
-      ImmutableList<LinkedDeque<Node<K, V>>> deques, DescriptionBuilder desc) {
-    int size = 0;
-    long weightedSize = 0;
-    Set<Node<K, V>> seen = Sets.newIdentityHashSet();
-    for (LinkedDeque<Node<K, V>> deque : deques) {
-      size += deque.size();
-      weightedSize += scanLinks(cache, seen, deque, desc);
+      ImmutableTable<String, Long, LinkedDeque<Node<K, V>>> deques, DescriptionBuilder desc) {
+    if (!doLinksMatch(cache, deques.values())) {
+      await().pollInSameThread().until(() -> doLinksMatch(cache, deques.values()));
     }
-    if (cache.size() != size) {
-      desc.expectThat(() -> "deque size " + deques, size, is(cache.size()));
+
+    int totalSize = 0;
+    long totalWeightedSize = 0;
+    Set<Node<K, V>> seen = Sets.newIdentityHashSet();
+    for (Cell<String, Long, LinkedDeque<Node<K, V>>> cell : deques.cellSet()) {
+      long weightedSize = scanLinks(cache, seen, cell.getValue(), desc);
+      desc.expectThat(cell.getRowKey(), weightedSize, is(equalTo(cell.getColumnKey())));
+      totalSize += cell.getValue().size();
+      totalWeightedSize += weightedSize;
+    }
+    if (cache.size() != totalSize) {
+      desc.expectThat(() -> "deque size " + deques, totalSize, is(cache.size()));
     }
 
     Supplier<String> errorMsg = () -> String.format(
@@ -201,13 +259,27 @@ public final class IsValidBoundedLocalCache<K, V>
     desc.expectThat(errorMsg, cache.size(), is(seen.size()));
 
     if (cache.evicts()) {
-      long weighted = weightedSize;
+      long weighted = totalWeightedSize;
       long expectedWeightedSize = Math.max(0, cache.weightedSize());
       Supplier<String> error = () -> String.format(
           "WeightedSize != link weights [%d vs %d] {%d vs %d}",
           expectedWeightedSize, weighted, seen.size(), cache.size());
-      desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
-      desc.expectThat(error, expectedWeightedSize, is(weightedSize));
+      desc.expectThat("non-negative weight", totalWeightedSize, is(greaterThanOrEqualTo(0L)));
+      desc.expectThat(error, expectedWeightedSize, is(totalWeightedSize));
+    }
+  }
+
+  private boolean doLinksMatch(BoundedLocalCache<K, V> cache,
+      Collection<LinkedDeque<Node<K, V>>> deques) {
+    cache.evictionLock.lock();
+    try {
+      Set<Node<K, V>> seen = Sets.newIdentityHashSet();
+      for (LinkedDeque<Node<K, V>> deque : deques) {
+        scanLinks(cache, seen, deque, desc);
+      }
+      return cache.size() == seen.size();
+    } finally {
+      cache.evictionLock.unlock();
     }
   }
 

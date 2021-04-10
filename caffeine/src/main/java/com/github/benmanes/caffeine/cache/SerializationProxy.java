@@ -29,7 +29,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.TooManyFields")
 final class SerializationProxy<K, V> implements Serializable {
   private static final long serialVersionUID = 1;
 
@@ -47,11 +46,11 @@ final class SerializationProxy<K, V> implements Serializable {
   @Nullable Ticker ticker;
   @Nullable Expiry<?, ?> expiry;
   @Nullable Weigher<?, ?> weigher;
-  @Nullable CacheWriter<?, ?> writer;
   @Nullable AsyncCacheLoader<?, ?> loader;
   @Nullable RemovalListener<?, ?> removalListener;
+  @Nullable RemovalListener<?, ?> evictionListener;
 
-  @SuppressWarnings({"unchecked", "PreferJavaTimeOverload"})
+  @SuppressWarnings({"unchecked", "PreferJavaTimeOverload", "deprecation"})
   Caffeine<Object, Object> recreateCaffeine() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (ticker != null) {
@@ -89,10 +88,10 @@ final class SerializationProxy<K, V> implements Serializable {
       builder.softValues();
     }
     if (removalListener != null) {
-      builder.removalListener((RemovalListener<Object, Object>) removalListener);
+      builder.removalListener(removalListener);
     }
-    if ((writer != null) && (writer != CacheWriter.disabledWriter())) {
-      builder.writer((CacheWriter<Object, Object>) writer);
+    if (evictionListener != null) {
+      builder.evictionListener(evictionListener);
     }
     return builder;
   }

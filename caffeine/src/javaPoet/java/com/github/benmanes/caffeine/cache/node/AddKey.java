@@ -16,10 +16,10 @@
 package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
 
 import javax.lang.model.element.Modifier;
 
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 
 /**
@@ -38,10 +38,12 @@ public final class AddKey extends NodeRule {
   @Override
   protected void execute() {
     context.nodeSubtype
-        .addField(newFieldOffset(context.className, "key"))
         .addField(newKeyField())
-        .addMethod(newGetter(keyStrength(), kTypeVar, "key", Visibility.LAZY))
+        .addMethod(newGetter(keyStrength(), kTypeVar, "key", Visibility.PLAIN))
         .addMethod(newGetRef("key"));
+    addVarHandle("key", isStrongKeys()
+        ? ClassName.get(Object.class)
+        : keyReferenceType().rawType);
   }
 
   private FieldSpec newKeyField() {

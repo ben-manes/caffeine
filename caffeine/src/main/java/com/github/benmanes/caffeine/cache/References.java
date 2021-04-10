@@ -21,7 +21,6 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -54,7 +53,6 @@ final class References {
      *
      * @return the key that is associated to the cached entry
      */
-    @NonNull
     Object getKeyReference();
 
     /**
@@ -84,7 +82,7 @@ final class References {
     private final int hashCode;
     private final E e;
 
-    public LookupKeyReference(@NonNull E e) {
+    public LookupKeyReference(E e) {
       this.hashCode = System.identityHashCode(e);
       this.e = requireNonNull(e);
     }
@@ -148,7 +146,7 @@ final class References {
       implements InternalReference<V> {
     private final Object keyReference;
 
-    public WeakValueReference(@NonNull Object keyReference,
+    public WeakValueReference(Object keyReference,
         @Nullable V value, @Nullable ReferenceQueue<V> queue) {
       super(value, queue);
       this.keyReference = keyReference;
@@ -180,7 +178,7 @@ final class References {
       implements InternalReference<V> {
     private final Object keyReference;
 
-    public SoftValueReference(@NonNull Object keyReference,
+    public SoftValueReference(Object keyReference,
         @Nullable V value, @Nullable ReferenceQueue<V> queue) {
       super(value, queue);
       this.keyReference = keyReference;

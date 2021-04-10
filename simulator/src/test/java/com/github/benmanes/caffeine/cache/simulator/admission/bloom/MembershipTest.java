@@ -16,19 +16,25 @@
 package com.github.benmanes.caffeine.cache.simulator.admission.bloom;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.either;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.IntStream;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
+import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;
@@ -39,7 +45,7 @@ import com.typesafe.config.ConfigFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class MembershipTest {
-  static final String[] HEADERS = { "Type", "Insertions", "False Positives" };
+  static final String[] HEADERS = { "Type", "Capacity", "Insertions", "False Positives" };
   static final double EXPECTED_INSERTIONS_MULTIPLIER = 0.5;
   static final double FPP = 0.03;
 
@@ -47,7 +53,12 @@ public class MembershipTest {
 
   @Test(dataProvider = "filterTypes")
   public void bloomFilterTest(FilterType filterType) {
+    List<Integer> capacities = new ArrayList<>(ImmutableList.of(0, 1));
     for (int capacity = 2 << 10; capacity < (2 << 22); capacity = capacity << 2) {
+      capacities.add(capacity);
+    }
+
+    for (int capacity : capacities) {
       long[] input = new Random().longs(capacity).distinct().toArray();
       Config config = getConfig(filterType, capacity);
       List<String[]> rows = new ArrayList<>();
@@ -56,13 +67,26 @@ public class MembershipTest {
       int falsePositives = falsePositives(filter, input);
       int expectedInsertions = (int) (capacity * EXPECTED_INSERTIONS_MULTIPLIER);
       double falsePositiveRate = ((double) falsePositives / expectedInsertions);
-      assertThat(filterType.toString(), falsePositiveRate, is(lessThan(FPP + 0.2)));
-      rows.add(row(filterType, expectedInsertions, falsePositives, falsePositiveRate));
+      assertThat(filterType.toString(), falsePositiveRate,
+          is(either(equalTo(Double.NaN)).or(lessThan(FPP + 0.2))));
+      rows.add(row(filterType, capacity, expectedInsertions, falsePositives, falsePositiveRate));
 
       if (display) {
         printTable(rows);
       }
     }
+  }
+
+  @Test(dataProvider = "ensureCapacity")
+  public void caffeine_ensureCapacity(int expectedInsertions, double fpp) {
+    BloomFilter filter = new BloomFilter();
+    filter.ensureCapacity(expectedInsertions, fpp);
+    filter.put(-1);
+  }
+
+  @DataProvider(name = "ensureCapacity")
+  public Iterator<Object[]> providesExpectedInsertions() {
+    return IntStream.range(0,  25).boxed().map(i -> new Object[] { i, FPP }).iterator();
   }
 
   @DataProvider(name = "filterTypes")
@@ -105,10 +129,11 @@ public class MembershipTest {
   }
 
   /** Returns a table row for printing the false positive rates of an implementation. */
-  private static String[] row(FilterType filterType, int expectedInsertions,
-      int falsePositives, double falsePositiveRate) {
+  private static String[] row(FilterType filterType, int capacity,
+      int expectedInsertions, int falsePositives, double falsePositiveRate) {
     return new String[] {
         filterType.toString(),
+        String.format("%,d", capacity),
         String.format("%,d", expectedInsertions),
         String.format("%,d (%.2f %%)", falsePositives, 100 * falsePositiveRate),
     };

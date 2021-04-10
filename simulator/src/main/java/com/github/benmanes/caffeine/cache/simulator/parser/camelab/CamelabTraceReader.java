@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.camelab;
 
-import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -28,14 +27,14 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTr
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CamelabTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
-  static final int BLOCK_SIZE = 512;
+  static final long BLOCK_SIZE = 512;
 
   public CamelabTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines().flatMapToLong(line -> {
       String[] array = line.split(" ", 5);
       char readWrite = Character.toLowerCase(array[1].charAt(0));

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -25,7 +26,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
@@ -98,7 +98,7 @@ public final class MpscGrowableArrayQueueTest {
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      Awaits.await().untilAtomic(started, is(2));
+      await().untilAtomic(started, is(2));
       for (int i = 0; i < PRODUCE; i++) {
         while (!buffer.offer(i)) {}
       }
@@ -106,14 +106,14 @@ public final class MpscGrowableArrayQueueTest {
     });
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      Awaits.await().untilAtomic(started, is(2));
+      await().untilAtomic(started, is(2));
       for (int i = 0; i < PRODUCE; i++) {
         while (buffer.poll() == null) {}
       }
       finished.incrementAndGet();
     });
 
-    Awaits.await().untilAtomic(finished, is(2));
+    await().untilAtomic(finished, is(2));
     assertThat(buffer.size(), is(0));
   }
 
@@ -137,7 +137,7 @@ public final class MpscGrowableArrayQueueTest {
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
+      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < (NUM_PRODUCERS * PRODUCE); i++) {
         while (buffer.poll() == null) {}
       }
@@ -146,14 +146,14 @@ public final class MpscGrowableArrayQueueTest {
 
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       started.incrementAndGet();
-      Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
+      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < PRODUCE; i++) {
         while (!buffer.offer(i)) {}
       }
       finished.incrementAndGet();
     });
 
-    Awaits.await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
+    await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
     assertThat(buffer.size(), is(0));
   }
 

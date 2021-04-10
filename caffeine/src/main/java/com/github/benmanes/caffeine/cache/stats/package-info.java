@@ -19,4 +19,11 @@
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@DefaultQualifier(value = NonNull.class, locations = TypeUseLocation.FIELD)
+@DefaultQualifier(value = NonNull.class, locations = TypeUseLocation.PARAMETER)
+@DefaultQualifier(value = NonNull.class, locations = TypeUseLocation.RETURN)
 package com.github.benmanes.caffeine.cache.stats;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.framework.qual.DefaultQualifier;
+import org.checkerframework.framework.qual.TypeUseLocation;

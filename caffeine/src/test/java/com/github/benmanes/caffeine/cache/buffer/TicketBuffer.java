@@ -86,13 +86,13 @@ final class TicketBuffer<E> extends ReadBuffer<E> {
   }
 
   @Override
-  public int reads() {
-    return (int) readCounter;
+  public long reads() {
+    return readCounter;
   }
 
   @Override
-  public int writes() {
-    return writeCounter.intValue();
+  public long writes() {
+    return writeCounter.get();
   }
 
   static final class Turn {

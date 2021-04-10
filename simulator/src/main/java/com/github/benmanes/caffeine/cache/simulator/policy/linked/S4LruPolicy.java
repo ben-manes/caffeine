@@ -26,8 +26,10 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -45,6 +47,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "linked.S4Lru")
 public final class S4LruPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -55,11 +58,11 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   private final int levels;
 
   public S4LruPolicy(Admission admission, Config config) {
-    this.policyStats = new PolicyStats(admission.format("linked.S4Lru"));
-    this.admittor = admission.from(config, policyStats);
     S4LruSettings settings = new S4LruSettings(config);
+    this.policyStats = new PolicyStats(admission.format(name()));
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.admittor = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
     this.levels = settings.levels();
     this.headQ = new Node[levels];
     this.sizeQ = new int[levels];

@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache.stats;
 import java.util.Objects;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -53,12 +53,16 @@ import com.google.errorprone.annotations.Immutable;
  * A lookup is specifically defined as an invocation of one of the methods
  * {@link LoadingCache#get(Object)}, {@link Cache#get(Object, java.util.function.Function)}, or
  * {@link LoadingCache#getAll(Iterable)}.
+ * <p>
+ * This is a <em>value-based</em> class; use of identity-sensitive operations (including reference
+ * equality ({@code ==}), identity hash code, or synchronization) on instances of {@code CacheStats}
+ * may have unpredictable results and should be avoided.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Immutable
 public final class CacheStats {
-  private static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0, 0);
+  private static final CacheStats EMPTY_STATS = CacheStats.of(0L, 0L, 0L, 0L, 0L, 0L, 0L);
 
   private final long hitCount;
   private final long missCount;
@@ -68,39 +72,7 @@ public final class CacheStats {
   private final long evictionCount;
   private final long evictionWeight;
 
-  /**
-   * Constructs a new {@code CacheStats} instance.
-   *
-   * @param hitCount the number of cache hits
-   * @param missCount the number of cache misses
-   * @param loadSuccessCount the number of successful cache loads
-   * @param loadFailureCount the number of failed cache loads
-   * @param totalLoadTime the total load time (success and failure)
-   * @param evictionCount the number of entries evicted from the cache
-   * @deprecated This constructor is scheduled for removal in version 3.0.0.
-   */
-  @Deprecated
-  public CacheStats(@NonNegative long hitCount, @NonNegative long missCount,
-      @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
-      @NonNegative long totalLoadTime, @NonNegative long evictionCount) {
-    this(hitCount, missCount, loadSuccessCount, loadFailureCount, totalLoadTime, evictionCount, 0L);
-  }
-
-  /**
-   * Constructs a new {@code CacheStats} instance.
-   * <p>
-   * Many parameters of the same type in a row is a bad thing, but this class is not constructed
-   * by end users and is too fine-grained for a builder.
-   *
-   * @param hitCount the number of cache hits
-   * @param missCount the number of cache misses
-   * @param loadSuccessCount the number of successful cache loads
-   * @param loadFailureCount the number of failed cache loads
-   * @param totalLoadTime the total load time (success and failure)
-   * @param evictionCount the number of entries evicted from the cache
-   * @param evictionWeight the sum of weights of entries evicted from the cache
-   */
-  public CacheStats(@NonNegative long hitCount, @NonNegative long missCount,
+  private CacheStats(@NonNegative long hitCount, @NonNegative long missCount,
       @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
       @NonNegative long totalLoadTime, @NonNegative long evictionCount,
       @NonNegative long evictionWeight) {
@@ -118,11 +90,32 @@ public final class CacheStats {
   }
 
   /**
+   * Returns a {@code CacheStats} representing the specified statistics.
+   *
+   * @param hitCount the number of cache hits
+   * @param missCount the number of cache misses
+   * @param loadSuccessCount the number of successful cache loads
+   * @param loadFailureCount the number of failed cache loads
+   * @param totalLoadTime the total load time (success and failure)
+   * @param evictionCount the number of entries evicted from the cache
+   * @param evictionWeight the sum of weights of entries evicted from the cache
+   * @return a {@code CacheStats} representing the specified statistics
+   */
+  public static CacheStats of(@NonNegative long hitCount, @NonNegative long missCount,
+      @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
+      @NonNegative long totalLoadTime, @NonNegative long evictionCount,
+      @NonNegative long evictionWeight) {
+    // Many parameters of the same type in a row is a bad thing, but this class is not constructed
+    // by end users and is too fine-grained for a builder.
+    return new CacheStats(hitCount, missCount, loadSuccessCount,
+        loadFailureCount, totalLoadTime, evictionCount, evictionWeight);
+  }
+
+  /**
    * Returns a statistics instance where no cache events have been recorded.
    *
    * @return an empty statistics instance
    */
-  @NonNull
   public static CacheStats empty() {
     return EMPTY_STATS;
   }
@@ -137,8 +130,7 @@ public final class CacheStats {
    *
    * @return the {@code hitCount + missCount}
    */
-  @NonNegative
-  public long requestCount() {
+  public @NonNegative long requestCount() {
     return saturatedAdd(hitCount, missCount);
   }
 
@@ -147,8 +139,7 @@ public final class CacheStats {
    *
    * @return the number of times {@link Cache} lookup methods have returned a cached value
    */
-  @NonNegative
-  public long hitCount() {
+  public @NonNegative long hitCount() {
     return hitCount;
   }
 
@@ -159,8 +150,7 @@ public final class CacheStats {
    *
    * @return the ratio of cache requests which were hits
    */
-  @NonNegative
-  public double hitRate() {
+  public @NonNegative double hitRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
   }
@@ -174,8 +164,7 @@ public final class CacheStats {
    * @return the number of times {@link Cache} lookup methods have returned an uncached (newly
    *         loaded) value, or null
    */
-  @NonNegative
-  public long missCount() {
+  public @NonNegative long missCount() {
     return missCount;
   }
 
@@ -190,8 +179,7 @@ public final class CacheStats {
    *
    * @return the ratio of cache requests which were misses
    */
-  @NonNegative
-  public double missRate() {
+  public @NonNegative double missRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
   }
@@ -207,8 +195,7 @@ public final class CacheStats {
    *
    * @return the {@code loadSuccessCount + loadFailureCount}
    */
-  @NonNegative
-  public long loadCount() {
+  public @NonNegative long loadCount() {
     return saturatedAdd(loadSuccessCount, loadFailureCount);
   }
 
@@ -221,8 +208,7 @@ public final class CacheStats {
    *
    * @return the number of times {@link Cache} lookup methods have successfully loaded a new value
    */
-  @NonNegative
-  public long loadSuccessCount() {
+  public @NonNegative long loadSuccessCount() {
     return loadSuccessCount;
   }
 
@@ -235,8 +221,7 @@ public final class CacheStats {
    *
    * @return the number of times {@link Cache} lookup methods failed to load a new value
    */
-  @NonNegative
-  public long loadFailureCount() {
+  public @NonNegative long loadFailureCount() {
     return loadFailureCount;
   }
 
@@ -251,8 +236,7 @@ public final class CacheStats {
    *
    * @return the ratio of cache loading attempts which threw exceptions
    */
-  @NonNegative
-  public double loadFailureRate() {
+  public @NonNegative double loadFailureRate() {
     long totalLoadCount = saturatedAdd(loadSuccessCount, loadFailureCount);
     return (totalLoadCount == 0) ? 0.0 : (double) loadFailureCount / totalLoadCount;
   }
@@ -264,8 +248,7 @@ public final class CacheStats {
    *
    * @return the total number of nanoseconds the cache has spent loading new values
    */
-  @NonNegative
-  public long totalLoadTime() {
+  public @NonNegative long totalLoadTime() {
     return totalLoadTime;
   }
 
@@ -279,8 +262,7 @@ public final class CacheStats {
    *
    * @return the average time spent loading new values
    */
-  @NonNegative
-  public double averageLoadPenalty() {
+  public @NonNegative double averageLoadPenalty() {
     long totalLoadCount = saturatedAdd(loadSuccessCount, loadFailureCount);
     return (totalLoadCount == 0) ? 0.0 : (double) totalLoadTime / totalLoadCount;
   }
@@ -291,8 +273,7 @@ public final class CacheStats {
    *
    * @return the number of times an entry has been evicted
    */
-  @NonNegative
-  public long evictionCount() {
+  public @NonNegative long evictionCount() {
     return evictionCount;
   }
 
@@ -302,8 +283,7 @@ public final class CacheStats {
    *
    * @return the sum of weights of evicted entities
    */
-  @NonNegative
-  public long evictionWeight() {
+  public @NonNegative long evictionWeight() {
     return evictionWeight;
   }
 
@@ -315,9 +295,8 @@ public final class CacheStats {
    * @param other the statistics to subtract with
    * @return the difference between this instance and {@code other}
    */
-  @NonNull
-  public CacheStats minus(@NonNull CacheStats other) {
-    return new CacheStats(
+  public CacheStats minus(CacheStats other) {
+    return CacheStats.of(
         Math.max(0L, saturatedSubtract(hitCount, other.hitCount)),
         Math.max(0L, saturatedSubtract(missCount, other.missCount)),
         Math.max(0L, saturatedSubtract(loadSuccessCount, other.loadSuccessCount)),
@@ -338,9 +317,8 @@ public final class CacheStats {
    * @param other the statistics to add with
    * @return the sum of the statistics
    */
-  @NonNull
-  public CacheStats plus(@NonNull CacheStats other) {
-    return new CacheStats(
+  public CacheStats plus(CacheStats other) {
+    return CacheStats.of(
         saturatedAdd(hitCount, other.hitCount),
         saturatedAdd(missCount, other.missCount),
         saturatedAdd(loadSuccessCount, other.loadSuccessCount),
@@ -389,7 +367,7 @@ public final class CacheStats {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (o == this) {
       return true;
     } else if (!(o instanceof CacheStats)) {

@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.function.Consumer;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 /**
  * A multiple-producer / single-consumer buffer that rejects new elements if it is full or
  * fails spuriously due to contention. Unlike a queue and stack, a buffer does not guarantee an
@@ -32,9 +30,9 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 interface Buffer<E> {
-  int FULL = 1;
-  int SUCCESS = 0;
-  int FAILED = -1;
+  int FULL = 1;     // if the buffer is full
+  int FAILED = -1;  // if the CAS failed
+  int SUCCESS = 0;  // if added
 
   /** Returns a no-op implementation. */
   @SuppressWarnings("unchecked")
@@ -48,9 +46,9 @@ interface Buffer<E> {
    * threads insert concurrently.
    *
    * @param e the element to add
-   * @return {@code 1} if the buffer is full, {@code -1} if the CAS failed, or {@code 0} if added
+   * @return {@code Buffer.SUCCESS}, {@code Buffer.FAILED}, or {@code Buffer.FULL}
    */
-  int offer(@NonNull E e);
+  int offer(E e);
 
   /**
    * Drains the buffer, sending each element to the consumer for processing. The caller must ensure
@@ -58,14 +56,14 @@ interface Buffer<E> {
    *
    * @param consumer the action to perform on each element
    */
-  void drainTo(@NonNull Consumer<E> consumer);
+  void drainTo(Consumer<E> consumer);
 
   /**
    * Returns the number of elements residing in the buffer.
    *
    * @return the number of elements in this buffer
    */
-  default int size() {
+  default long size() {
     return writes() - reads();
   }
 
@@ -74,14 +72,14 @@ interface Buffer<E> {
    *
    * @return the number of elements read from this buffer
    */
-  int reads();
+  long reads();
 
   /**
    * Returns the number of elements that have been written to the buffer.
    *
    * @return the number of elements written to this buffer
    */
-  int writes();
+  long writes();
 }
 
 enum DisabledBuffer implements Buffer<Object> {
@@ -89,7 +87,7 @@ enum DisabledBuffer implements Buffer<Object> {
 
   @Override public int offer(Object e) { return Buffer.SUCCESS; }
   @Override public void drainTo(Consumer<Object> consumer) {}
-  @Override public int size() { return 0; }
-  @Override public int reads() { return 0; }
-  @Override public int writes() { return 0; }
+  @Override public long size() { return 0; }
+  @Override public long reads() { return 0; }
+  @Override public long writes() { return 0; }
 }

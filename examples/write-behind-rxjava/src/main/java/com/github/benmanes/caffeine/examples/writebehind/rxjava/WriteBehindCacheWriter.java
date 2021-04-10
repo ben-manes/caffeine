@@ -25,15 +25,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 
-import com.github.benmanes.caffeine.cache.CacheWriter;
-import com.github.benmanes.caffeine.cache.RemovalCause;
-
 import io.reactivex.subjects.PublishSubject;
 
 /**
- * This class implements the {@link CacheWriter} interface to allow a cache to have "write-behind"
- * semantics. The passed in writeAction will only be called every 'bufferTime' time with a Map
- * containing the keys and the values that have been updated in the cache each time.
+ * This class allows a cache to have "write-behind" semantics. The passed in writeAction will only
+ * be called every 'bufferTime' time with a Map containing the keys and the values that have been
+ * updated in the cache each time.
  * <p>
  * If a key is updated multiple times during that period then the 'binaryOperator' has to decide
  * which value should be taken.
@@ -46,7 +43,7 @@ import io.reactivex.subjects.PublishSubject;
  * @param <V> the type of the value in the cache
  * @author wim.deblauwe@gmail.com (Wim Deblauwe)
  */
-public final class WriteBehindCacheWriter<K, V> implements CacheWriter<K, V> {
+public final class WriteBehindCacheWriter<K, V> {
   private final PublishSubject<Entry<K, V>> subject;
 
   private WriteBehindCacheWriter(Builder<K, V> builder) {
@@ -57,13 +54,9 @@ public final class WriteBehindCacheWriter<K, V> implements CacheWriter<K, V> {
         .subscribe(builder.writeAction::accept);
   }
 
-  @Override
   public void write(K key, V value) {
     subject.onNext(new SimpleImmutableEntry<>(key, value));
   }
-
-  @Override
-  public void delete(K key, V value, RemovalCause removalCause) {}
 
   public static final class Builder<K, V> {
     private Consumer<Map<K, V>> writeAction;

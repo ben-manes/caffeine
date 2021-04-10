@@ -15,9 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
-import java.util.Set;
+import static com.google.common.base.Preconditions.checkState;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
-import com.google.common.collect.ImmutableSet;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
 /**
  * A cache that implements a page replacement policy.
@@ -25,12 +29,6 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Policy {
-  enum Characteristic {
-    WEIGHTED
-  }
-
-  /** The event features that this policy supports. */
-  Set<Characteristic> characteristics();
 
   /** Records that the entry was accessed. */
   void record(AccessEvent event);
@@ -41,17 +39,36 @@ public interface Policy {
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
 
+  /** The annotated name. */
+  default String name() {
+    PolicySpec policySpec = getClass().getAnnotation(PolicySpec.class);
+    checkState((policySpec != null) && isNotBlank(policySpec.name()),
+        "The @%s name must be specified on %s", PolicySpec.class.getSimpleName(), getClass());
+    return policySpec.name().trim();
+  }
+
+  /** The additional features supported. */
+  enum Characteristic {
+    WEIGHTED
+  }
+
+  /** An optional annotation to declare additional capabilities. */
+  @Retention(RUNTIME)
+  @Target(ElementType.TYPE)
+  @interface PolicySpec {
+
+    /** The policy's unique name. */
+    String name() default "";
+
+    /** The event features that this policy supports. */
+    Characteristic[] characteristics() default {};
+  }
+
   /** A policy that does not exploit external event metadata. */
   interface KeyOnlyPolicy extends Policy {
-
-    @Override default Set<Characteristic> characteristics() {
-      return ImmutableSet.of();
-    }
-
     @Override default void record(AccessEvent event) {
       record(event.key());
     }
-
     void record(long key);
   }
 }

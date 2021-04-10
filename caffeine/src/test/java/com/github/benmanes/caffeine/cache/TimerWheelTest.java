@@ -76,7 +76,7 @@ public final class TimerWheelTest {
     mocks = MockitoAnnotations.openMocks(this);
     timerWheel = new TimerWheel<>(cache);
 
-    RandomSeedEnforcer.setThreadLocalRandom(random.nextInt(), random.nextInt());
+    Reset.setThreadLocalRandom(random.nextInt(), random.nextInt());
   }
 
   @AfterMethod

@@ -15,11 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
-import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
-import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 
@@ -91,14 +89,14 @@ public final class AddConstructors extends NodeRule {
   }
 
   private void assignKeyRefAndValue() {
-    context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
-        UNSAFE_ACCESS, offsetName("key"), "keyReference");
+    context.constructorByKeyRef.addStatement("$L.set(this, $N)",
+        varHandleName("key"), "keyReference");
     if (isStrongValues()) {
-      context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
-          UNSAFE_ACCESS, offsetName("value"), "value");
+      context.constructorByKeyRef.addStatement("$L.set(this, $N)",
+          varHandleName("value"), "value");
     } else {
-      context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, new $T($N, $N, $N))",
-          UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "keyReference",
+      context.constructorByKeyRef.addStatement("$L.set(this, new $T($N, $N, $N))",
+          varHandleName("value"), valueReferenceType(), "keyReference",
           "value", "valueReferenceQueue");
     }
   }

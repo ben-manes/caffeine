@@ -25,6 +25,7 @@ import javax.cache.CacheManager;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.Factory;
+import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 
@@ -32,6 +33,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
+import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
@@ -128,6 +130,7 @@ final class CacheFactory {
     final Ticker ticker;
     final String cacheName;
     final Executor executor;
+    final Scheduler scheduler;
     final CacheManager cacheManager;
     final ExpiryPolicy expiryPolicy;
     final EventDispatcher<K, V> dispatcher;
@@ -143,11 +146,13 @@ final class CacheFactory {
       this.statistics = new JCacheStatisticsMXBean();
       this.ticker = config.getTickerFactory().create();
       this.executor = config.getExecutorFactory().create();
+      this.scheduler = config.getSchedulerFactory().create();
       this.expiryPolicy = config.getExpiryPolicyFactory().create();
       this.dispatcher = new EventDispatcher<>(executor);
 
       caffeine.ticker(ticker);
       caffeine.executor(executor);
+      caffeine.scheduler(scheduler);
       config.getCacheEntryListenerConfigurations().forEach(dispatcher::register);
     }
 
@@ -156,14 +161,23 @@ final class CacheFactory {
       boolean evicts = false;
       evicts |= configureMaximumSize();
       evicts |= configureMaximumWeight();
-      evicts |= configureExpireAfterWrite();
-      evicts |= configureExpireAfterAccess();
-      evicts |= configureExpireVariably();
+
+      boolean expires = false;
+      expires |= configureExpireAfterWrite();
+      expires |= configureExpireAfterAccess();
+      expires |= configureExpireVariably();
+      if (!expires) {
+        expires = configureJCacheExpiry();
+      }
+
+      if (config.isNativeStatisticsEnabled()) {
+        caffeine.recordStats();
+      }
 
       JCacheEvictionListener<K, V> evictionListener = null;
-      if (evicts) {
+      if (evicts || expires) {
         evictionListener = new JCacheEvictionListener<>(dispatcher, statistics);
-        caffeine.writer(evictionListener);
+        caffeine.evictionListener(evictionListener);
       }
 
       CacheProxy<K, V> cache;
@@ -230,8 +244,9 @@ final class CacheFactory {
     private boolean configureExpireAfterWrite() {
       if (config.getExpireAfterWrite().isPresent()) {
         caffeine.expireAfterWrite(config.getExpireAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
+        return true;
       }
-      return config.getExpireAfterWrite().isPresent();
+      return false;
     }
 
     /** Configures the access expiration and returns if set. */
@@ -239,29 +254,26 @@ final class CacheFactory {
     private boolean configureExpireAfterAccess() {
       if (config.getExpireAfterAccess().isPresent()) {
         caffeine.expireAfterAccess(config.getExpireAfterAccess().getAsLong(), TimeUnit.NANOSECONDS);
+        return true;
       }
-      return config.getExpireAfterAccess().isPresent();
+      return false;
     }
 
     /** Configures the custom expiration and returns if set. */
     private boolean configureExpireVariably() {
-      config.getExpiryFactory().ifPresent(factory -> {
-        Expiry<K, V> expiry = factory.create();
-        caffeine.expireAfter(new Expiry<K, Expirable<V>>() {
-          @Override public long expireAfterCreate(K key, Expirable<V> expirable, long currentTime) {
-            return expiry.expireAfterCreate(key, expirable.get(), currentTime);
-          }
-          @Override public long expireAfterUpdate(K key, Expirable<V> expirable,
-              long currentTime, long currentDuration) {
-            return expiry.expireAfterUpdate(key, expirable.get(), currentTime, currentDuration);
-          }
-          @Override public long expireAfterRead(K key, Expirable<V> expirable,
-              long currentTime, long currentDuration) {
-            return expiry.expireAfterRead(key, expirable.get(), currentTime, currentDuration);
-          }
-        });
-      });
-      return config.getExpireAfterWrite().isPresent();
+      if (config.getExpiryFactory().isPresent()) {
+        caffeine.expireAfter(new ExpiryAdapter<>(config.getExpiryFactory().get().create()));
+        return true;
+      }
+      return false;
+    }
+
+    private boolean configureJCacheExpiry() {
+      if (!(expiryPolicy instanceof EternalExpiryPolicy)) {
+        caffeine.expireAfter(new ExpirableToExpiry<>(ticker));
+        return true;
+      }
+      return false;
     }
 
     @SuppressWarnings("PreferJavaTimeOverload")
@@ -269,6 +281,52 @@ final class CacheFactory {
       if (config.getRefreshAfterWrite().isPresent()) {
         caffeine.refreshAfterWrite(config.getRefreshAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
       }
+    }
+  }
+
+  private static final class ExpiryAdapter<K, V> implements Expiry<K, Expirable<V>> {
+    private final Expiry<K, V> expiry;
+
+    public ExpiryAdapter(Expiry<K, V> expiry) {
+      this.expiry = requireNonNull(expiry);
+    }
+    @Override public long expireAfterCreate(K key, Expirable<V> expirable, long currentTime) {
+      return expiry.expireAfterCreate(key, expirable.get(), currentTime);
+    }
+    @Override public long expireAfterUpdate(K key, Expirable<V> expirable,
+        long currentTime, long currentDuration) {
+      return expiry.expireAfterUpdate(key, expirable.get(), currentTime, currentDuration);
+    }
+    @Override public long expireAfterRead(K key, Expirable<V> expirable,
+        long currentTime, long currentDuration) {
+      return expiry.expireAfterRead(key, expirable.get(), currentTime, currentDuration);
+    }
+  }
+
+  private static final class ExpirableToExpiry<K, V> implements Expiry<K, Expirable<V>> {
+    private final Ticker ticker;
+
+    public ExpirableToExpiry(Ticker ticker) {
+      this.ticker = requireNonNull(ticker);
+    }
+    @Override public long expireAfterCreate(K key, Expirable<V> expirable, long currentTime) {
+      return toNanos(expirable);
+    }
+    @Override public long expireAfterUpdate(K key, Expirable<V> expirable,
+        long currentTime, long currentDuration) {
+      return toNanos(expirable);
+    }
+    @Override public long expireAfterRead(K key, Expirable<V> expirable,
+        long currentTime, long currentDuration) {
+      return toNanos(expirable);
+    }
+    private long toNanos(Expirable<V> expirable) {
+      if (expirable.getExpireTimeMS() == 0L) {
+        return -1L;
+      } else if (expirable.isEternal()) {
+        return Long.MAX_VALUE;
+      }
+      return TimeUnit.MILLISECONDS.toNanos(expirable.getExpireTimeMS()) - ticker.read();
     }
   }
 }

@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.kaggle;
 
-import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -36,7 +35,7 @@ public final class OutbrainTraceReader extends TextTraceReader implements KeyOnl
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines().skip(1)
         .map(line -> line.split(","))
         .mapToLong(array -> Long.parseLong(array[1]));

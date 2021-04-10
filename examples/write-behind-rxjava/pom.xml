@@ -9,10 +9,10 @@
   <version>1.0-SNAPSHOT</version>
 
   <properties>
-    <java.version>1.8</java.version>
-    <caffeine.version>2.7.0</caffeine.version>
+    <java.version>11</java.version>
+    <caffeine.version>3.0.1</caffeine.version>
     <rxjava.version>2.1.12</rxjava.version>
-    <junit.version>4.12</junit.version>
+    <junit.version>4.13.1</junit.version>
     <awaitility.version>3.1.0</awaitility.version>
   </properties>
 

@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.stats;
 import java.util.Map;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -76,38 +75,10 @@ public interface StatsCounter {
    * evicted due to the cache's eviction strategy, and not as a result of manual
    * {@link Cache#invalidate invalidations}.
    *
-   * @deprecated Use {@link StatsCounter#recordEviction(int, RemovalCause)} instead. This method is
-   *     scheduled for removal in version 3.0.0.
-   */
-  @Deprecated
-  void recordEviction();
-
-  /**
-   * Records the eviction of an entry from the cache. This should only been called when an entry is
-   * evicted due to the cache's eviction strategy, and not as a result of manual
-   * {@link Cache#invalidate invalidations}.
-   *
-   * @param weight the weight of the evicted entry
-   * @deprecated Use {@link StatsCounter#recordEviction(int, RemovalCause)} instead. This method is
-   *     scheduled for removal in version 3.0.0.
-   */
-  @Deprecated
-  default void recordEviction(@NonNegative int weight) {
-    recordEviction();
-  }
-
-  /**
-   * Records the eviction of an entry from the cache. This should only been called when an entry is
-   * evicted due to the cache's eviction strategy, and not as a result of manual
-   * {@link Cache#invalidate invalidations}.
-   *
    * @param weight the weight of the evicted entry
    * @param cause the reason for which the entry was removed
    */
-  default void recordEviction(@NonNegative int weight, RemovalCause cause) {
-    // This method will be abstract in version 3.0.0
-    recordEviction(weight);
-  }
+  void recordEviction(@NonNegative int weight, RemovalCause cause);
 
   /**
    * Returns a snapshot of this counter's values. Note that this may be an inconsistent view, as it
@@ -119,7 +90,6 @@ public interface StatsCounter {
    *
    * @return a snapshot of this counter's values
    */
-  @NonNull
   CacheStats snapshot();
 
   /**
@@ -127,7 +97,7 @@ public interface StatsCounter {
    *
    * @return an accumulator that does not record metrics
    */
-  static @NonNull StatsCounter disabledStatsCounter() {
+  static StatsCounter disabledStatsCounter() {
     return DisabledStatsCounter.INSTANCE;
   }
 
@@ -138,7 +108,7 @@ public interface StatsCounter {
    * @param statsCounter the accumulator to delegate to
    * @return an accumulator that suppresses and logs any exception thrown by the delegate
    */
-  static @NonNull StatsCounter guardedStatsCounter(@NonNull StatsCounter statsCounter) {
+  static StatsCounter guardedStatsCounter(StatsCounter statsCounter) {
     return (statsCounter instanceof GuardedStatsCounter)
         ? statsCounter
         : new GuardedStatsCounter(statsCounter);

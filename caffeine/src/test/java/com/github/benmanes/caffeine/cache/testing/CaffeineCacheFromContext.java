@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.RandomSeedEnforcer;
+import com.github.benmanes.caffeine.cache.Reset;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
@@ -37,7 +37,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"PreferJavaTimeOverload", "deprecation"})
 public final class CaffeineCacheFromContext {
   interface SerializableTicker extends Ticker, Serializable {}
 
@@ -96,8 +96,8 @@ public final class CaffeineCacheFromContext {
     if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
     }
-    if (context.isStrongKeys() && !context.isAsync()) {
-      builder.writer(context.cacheWriter());
+    if (context.evictionListenerType != Listener.DEFAULT) {
+      builder.evictionListener(context.evictionListener);
     }
     if (context.isAsync()) {
       if (context.loader == null) {
@@ -115,7 +115,7 @@ public final class CaffeineCacheFromContext {
 
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) context.cache;
-    RandomSeedEnforcer.resetThreadLocalRandom();
+    Reset.resetThreadLocalRandom();
     return castedCache;
   }
 }

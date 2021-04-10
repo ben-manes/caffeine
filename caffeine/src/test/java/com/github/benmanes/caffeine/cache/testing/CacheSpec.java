@@ -27,11 +27,11 @@ import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -46,7 +46,6 @@ import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.CacheLoader;
-import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -63,7 +62,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("ImmutableEnumChecker")
+@SuppressWarnings({"ImmutableEnumChecker", "deprecation"})
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
 
@@ -403,6 +402,12 @@ public @interface CacheSpec {
     Listener.DEFAULT,
   };
 
+  /** The eviction listeners, each resulting in a new combination. */
+  Listener[] evictionListener() default {
+    Listener.CONSUMING,
+    Listener.DEFAULT,
+  };
+
   enum Listener {
     /** A flag indicating that no removal listener is configured. */
     DEFAULT {
@@ -423,7 +428,7 @@ public @interface CacheSpec {
       }
     },
     /** A removal listener that records interactions. */
-    MOCK {
+    MOCKITO {
       @SuppressWarnings("unchecked")
       @Override public <K, V> RemovalListener<K, V> create() {
         return Mockito.mock(RemovalListener.class);
@@ -475,7 +480,7 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
         return null;
       }
     },
@@ -483,7 +488,7 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
         Map<Integer, Integer> result = new HashMap<>(Iterables.size(keys));
         for (Integer key : keys) {
           result.put(key, key);
@@ -495,7 +500,7 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
         Map<Integer, Integer> result = new HashMap<>(Iterables.size(keys));
         for (Integer key : keys) {
           result.put(key, interner.get().computeIfAbsent(key, k -> -k));
@@ -508,10 +513,10 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys)
-          throws Exception {
-        List<Integer> moreKeys = new ArrayList<>(Iterables.size(keys) + 10);
-        Iterables.addAll(moreKeys, keys);
+      @Override public Map<? extends Integer, ? extends Integer> loadAll(
+          Set<? extends Integer> keys) throws Exception {
+        Set<Integer> moreKeys = new LinkedHashSet<>(keys.size() + 10);
+        moreKeys.addAll(keys);
         for (int i = 0; i < 10; i++) {
           moreKeys.add(ThreadLocalRandom.current().nextInt());
         }
@@ -523,8 +528,22 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
         throw new IllegalStateException();
+      }
+    },
+    ASYNC_INCOMPLETE {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+        executor.execute(() -> {});
+        return new CompletableFuture<>();
+      }
+      @Override public CompletableFuture<Integer> asyncReload(
+          Integer key, Integer oldValue, Executor executor) {
+        executor.execute(() -> {});
+        return new CompletableFuture<>();
       }
     };
 
@@ -556,7 +575,8 @@ public @interface CacheSpec {
       SeriazableAsyncCacheLoader(Loader loader) {
         this.loader = loader;
       }
-      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+      @Override
+      public CompletableFuture<? extends Integer> asyncLoad(Integer key, Executor executor) {
         return loader.asyncLoad(key, executor);
       }
       private Object readResolve() throws ObjectStreamException {
@@ -573,44 +593,12 @@ public @interface CacheSpec {
       @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
         throw new IllegalStateException();
       }
-      @Override public CompletableFuture<Map<Integer, Integer>> asyncLoadAll(
-          Iterable<? extends Integer> keys, Executor executor) {
+      @Override
+      public CompletableFuture<? extends Map<? extends Integer, ? extends Integer>> asyncLoadAll(
+          Set<? extends Integer> keys, Executor executor) {
         return loader.asyncLoadAll(keys, executor);
       }
     }
-  }
-
-  /* --------------- CacheWriter --------------- */
-
-  /** Ignored if weak keys are configured. */
-  Writer[] writer() default {
-    Writer.MOCKITO,
-  };
-
-  /** The {@link CacheWriter} for the external resource. */
-  enum Writer {
-    /** A writer that does nothing. */
-    DISABLED {
-      @Override public <K, V> CacheWriter<K, V> create() {
-        return CacheWriter.disabledWriter();
-      }
-    },
-    /** A writer that records interactions. */
-    MOCKITO {
-      @Override public <K, V> CacheWriter<K, V> create() {
-        @SuppressWarnings("unchecked")
-        CacheWriter<K, V> mock = Mockito.mock(CacheWriter.class);
-        return mock;
-      }
-    },
-    /** A writer that always throws an exception. */
-    EXCEPTIONAL {
-      @Override public <K, V> CacheWriter<K, V> create() {
-        return new RejectingCacheWriter<K, V>();
-      }
-    };
-
-    public abstract <K, V> CacheWriter<K, V> create();
   }
 
   /* --------------- Executor --------------- */
@@ -675,7 +663,7 @@ public @interface CacheSpec {
     DEFAULT(() -> null), // disabled
     SYSTEM(Scheduler::systemScheduler),
     THREADED(() -> Scheduler.forScheduledExecutorService(scheduledExecutor)),
-    MOCK(() -> Mockito.mock(Scheduler.class));
+    MOCKITO(() -> Mockito.mock(Scheduler.class));
 
     private final Supplier<Scheduler> scheduler;
 

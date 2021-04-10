@@ -15,15 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
@@ -41,6 +39,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.testng.Assert;
 import org.testng.annotations.Listeners;
@@ -59,8 +59,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -79,20 +77,17 @@ public final class AsyncLoadingCacheTest {
   /* --------------- get --------------- */
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_null(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null);
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey()), is(futureOf(context.absentValue())));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   public void get_absent_failure(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -101,7 +96,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL, executor = CacheExecutor.THREADED,
       executorFailure = ExecutorFailure.IGNORED)
@@ -112,29 +106,27 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> valueFuture = cache.get(key);
     valueFuture.whenComplete((r, e) -> done.set(true));
 
-    Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
-    Awaits.await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
-    Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    await().untilTrue(done);
+    await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.getIfPresent(key), is(nullValue()));
+    await().until(() -> cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.firstKey()), futureOf(-context.firstKey()));
     assertThat(cache.get(context.middleKey()), futureOf(-context.middleKey()));
     assertThat(cache.get(context.lastKey()), futureOf(-context.lastKey()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(3).misses(0).success(0).failures(0));
   }
 
   /* --------------- getAll --------------- */
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_iterable_null(
@@ -142,7 +134,7 @@ public final class AsyncLoadingCacheTest {
     cache.getAll(null);
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -151,7 +143,7 @@ public final class AsyncLoadingCacheTest {
     cache.getAll(Collections.singletonList(null));
   }
 
-  @CheckNoWriter @CheckNoStats
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -162,13 +154,11 @@ public final class AsyncLoadingCacheTest {
   }
 
   @CacheSpec
-  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(context.absentKeys()).join().clear();
   }
 
-  @CheckNoWriter
   @CacheSpec(loader = Loader.BULK_NULL)
   @Test(dataProvider = "caches", expectedExceptions = CompletionException.class)
   public void getAll_absent_bulkNull(
@@ -177,14 +167,12 @@ public final class AsyncLoadingCacheTest {
       cache.getAll(context.absentKeys()).join();
     } finally {
       int misses = context.absentKeys().size();
-      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
-
       int loadFailures = context.loader().isBulk() ? 1 : (context.isAsync() ? misses : 1);
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(loadFailures)));
+      verifyStats(context, verifier ->
+          verifier.hits(0).misses(misses).success(0).failures(loadFailures));
     }
   }
 
-  @CheckNoWriter
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   @Test(dataProvider = "caches", expectedExceptions = CompletionException.class)
   public void getAll_absent_failure(
@@ -196,12 +184,11 @@ public final class AsyncLoadingCacheTest {
       int loadFailures = context.loader().isBulk()
           ? 1
           : (context.isAsync() ? misses : 1);
-      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(loadFailures)));
+      verifyStats(context, verifier ->
+          verifier.hits(0).misses(misses).success(0).failures(loadFailures));
     }
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -211,11 +198,9 @@ public final class AsyncLoadingCacheTest {
     int count = context.absentKeys().size();
     int loads = context.loader().isBulk() ? 1 : count;
     assertThat(result.size(), is(count));
-    assertThat(context, both(hasMissCount(count)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(count).success(loads).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -229,11 +214,9 @@ public final class AsyncLoadingCacheTest {
     Map<Integer, Integer> result = cache.getAll(expect.keySet()).join();
 
     assertThat(result, is(equalTo(expect)));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(expect.size())));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -243,12 +226,9 @@ public final class AsyncLoadingCacheTest {
     assertThat(result.keySet(), equalTo(context.absentKeys()));
     assertThat(cache.synchronous().estimatedSize(),
         is(greaterThan(context.initialSize() + context.absentKeys().size())));
-
-    assertThat(context, both(hasMissCount(result.size())).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(result.size()).success(1).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -259,16 +239,13 @@ public final class AsyncLoadingCacheTest {
     Iterable<Integer> keys = Iterables.concat(absentKeys, absentKeys,
         context.original().keySet(), context.original().keySet());
     Map<Integer, Integer> result = cache.getAll(keys).join();
-
-    assertThat(context, hasMissCount(absentKeys.size()));
-    assertThat(context, hasHitCount(context.initialSize()));
     assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
 
     int loads = context.loader().isBulk() ? 1 : absentKeys.size();
-    assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier ->
+        verifier.hits(context.initialSize()).misses(absentKeys.size()).success(loads).failures(0));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -282,7 +259,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL },
@@ -297,7 +273,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_NEGATIVE_EXCEEDS },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -311,7 +286,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -325,7 +299,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(result, is(equalTo(keys)));
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -335,7 +308,7 @@ public final class AsyncLoadingCacheTest {
         throw new IllegalStateException();
       }
       @Override public CompletableFuture<Map<Integer, Integer>> asyncLoadAll(
-          Iterable<? extends Integer> keys, Executor executor) {
+          Set<? extends Integer> keys, Executor executor) {
         throw new LoadAllException();
       }
     };
@@ -365,7 +338,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
 
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* --------------- refresh --------------- */
@@ -411,17 +384,52 @@ public final class AsyncLoadingCacheTest {
   /* --------------- AsyncCacheLoader --------------- */
 
   @Test(expectedExceptions = UnsupportedOperationException.class)
-  public void asyncLoadAll() {
+  public void asyncLoadAll() throws Exception {
     AsyncCacheLoader<Integer, Integer> loader =
         (key, executor) -> CompletableFuture.completedFuture(-key);
-    loader.asyncLoadAll(Collections.emptyList(), Runnable::run).join();
+    loader.asyncLoadAll(Set.of(), Runnable::run).join();
   }
 
   @Test
-  public void asyncReload() {
+  public void asyncReload() throws Exception {
     AsyncCacheLoader<Integer, Integer> loader =
         (key, executor) -> CompletableFuture.completedFuture(-key);
     CompletableFuture<?> future = loader.asyncReload(1, 2, Runnable::run);
     assertThat(future.join(), is(-1));
+  }
+
+  @SuppressWarnings("CheckReturnValue")
+  @Test(expectedExceptions = NullPointerException.class)
+  public void bulk_function_null() {
+    Function<Set<? extends Integer>, Map<Integer, Integer>> f = null;
+    AsyncCacheLoader.bulk(f);
+  }
+
+  @SuppressWarnings("CheckReturnValue")
+  @Test(expectedExceptions = NullPointerException.class)
+  public void bulk_bifunction_null() {
+    BiFunction<Set<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f = null;
+    AsyncCacheLoader.bulk(f);
+  }
+
+  @Test
+  public void bulk_absent() throws Exception {
+    BiFunction<Set<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f =
+        (keys, executor) -> CompletableFuture.completedFuture(Map.of());
+    AsyncCacheLoader<Integer, Integer> loader = AsyncCacheLoader.bulk(f);
+    assertThat(loader.asyncLoadAll(Set.of(), Runnable::run).join(), is(Map.of()));
+    assertThat(loader.asyncLoad(1, Runnable::run).join(), is(nullValue()));
+  }
+
+  @Test
+  public void bulk_present() throws Exception {
+    BiFunction<Set<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f =
+        (keys, executor) -> {
+          Map<Integer, Integer> results = keys.stream().collect(toMap(identity(), identity()));
+          return CompletableFuture.completedFuture(results);
+        };
+    AsyncCacheLoader<Integer, Integer> loader = AsyncCacheLoader.bulk(f);
+    assertThat(loader.asyncLoadAll(Set.of(1, 2), Runnable::run).join(), is(Map.of(1, 1, 2, 2)));
+    assertThat(loader.asyncLoad(1, Runnable::run).join(), is(1));
   }
 }

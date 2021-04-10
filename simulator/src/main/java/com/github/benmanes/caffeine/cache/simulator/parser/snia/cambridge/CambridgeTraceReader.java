@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -44,7 +43,7 @@ public final class CambridgeTraceReader extends TextTraceReader {
   }
 
   @Override
-  public Stream<AccessEvent> events() throws IOException {
+  public Stream<AccessEvent> events() {
     return lines()
         .map(line -> line.split(","))
         .map(array -> AccessEvent.forKeyAndWeight(

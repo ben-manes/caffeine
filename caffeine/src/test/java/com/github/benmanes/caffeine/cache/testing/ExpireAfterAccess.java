@@ -21,10 +21,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import com.github.benmanes.caffeine.cache.Policy.Expiration;
+import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 
 /**
- * An annotation to qualify the parameterized {@link Expiration}.
+ * An annotation to qualify the parameterized {@link FixedExpiration}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

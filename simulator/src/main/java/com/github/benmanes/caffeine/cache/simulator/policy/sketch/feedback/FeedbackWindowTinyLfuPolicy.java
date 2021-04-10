@@ -27,9 +27,11 @@ import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -46,7 +48,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.TooManyFields")
+@PolicySpec(name = "sketch.FeedbackWindowTinyLfu")
 public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -79,15 +81,14 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   boolean trace;
 
   public FeedbackWindowTinyLfuPolicy(double percentMain, FeedbackWindowTinyLfuSettings settings) {
-    this.policyStats = new PolicyStats(String.format(
-        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)));
+    this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     this.admittor = new TinyLfu(settings.config(), policyStats);
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
 
-    int maxMain = (int) (settings.maximumSize() * percentMain);
+    int maxMain = (int) (maximumSize * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
-    this.maxWindow = Math.min(settings.maximumWindowSize(), settings.maximumSize() - maxMain);
+    this.maxWindow = Math.min(settings.maximumWindowSize(), maximumSize - maxMain);
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headWindow = new Node();

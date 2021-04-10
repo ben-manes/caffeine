@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.integration;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -94,7 +95,7 @@ public final class JCacheLoaderAdapter<K, V>
   }
 
   @Override
-  public Map<K, Expirable<V>> loadAll(Iterable<? extends K> keys) {
+  public Map<K, Expirable<V>> loadAll(Set<? extends K> keys) {
     try {
       boolean statsEnabled = statistics.isEnabled();
       long start = statsEnabled ? ticker.read() : 0L;

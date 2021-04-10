@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.address;
 
-import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -34,7 +33,7 @@ public final class AddressTraceReader extends TextTraceReader implements KeyOnly
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines()
         .map(line -> line.split(" ", 3)[1])
         .map(address -> address.substring(2))

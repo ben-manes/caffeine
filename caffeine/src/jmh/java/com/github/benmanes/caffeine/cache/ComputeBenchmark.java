@@ -30,6 +30,7 @@ import org.openjdk.jmh.annotations.Threads;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
+
 import site.ycsb.generator.NumberGenerator;
 import site.ycsb.generator.ScrambledZipfianGenerator;
 
@@ -45,7 +46,7 @@ public class ComputeBenchmark {
   static final Function<Integer, Boolean> mappingFunction = any -> Boolean.TRUE;
   static final CacheLoader<Integer, Boolean> cacheLoader = CacheLoader.from(key -> Boolean.TRUE);
 
-  @Param({"ConcurrentHashMap", "Caffeine", "Guava", "Rapidoid"})
+  @Param({"ConcurrentHashMap", "Caffeine", "Guava"})
   String computeType;
 
   Function<Integer, Boolean> benchmarkFunction;

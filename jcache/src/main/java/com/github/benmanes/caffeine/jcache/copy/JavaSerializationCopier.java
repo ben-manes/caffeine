@@ -63,6 +63,7 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
   }
 
   @Override
+  @SuppressWarnings("BanSerializableRead")
   protected Object deserialize(byte[] data, ClassLoader classLoader) {
     try (InputStream bytes = new ByteArrayInputStream(data);
         ObjectInputStream input = new ClassLoaderAwareObjectInputStream(bytes, classLoader)) {
@@ -89,6 +90,7 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
     }
 
     @Override
+    @SuppressWarnings("BanSerializableRead")
     protected Class<?> resolveClass(ObjectStreamClass desc)
         throws IOException, ClassNotFoundException {
       try {

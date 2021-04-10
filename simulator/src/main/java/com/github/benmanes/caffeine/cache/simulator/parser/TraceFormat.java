@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 import static java.util.Locale.US;
 import static java.util.stream.Collectors.toList;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -33,10 +32,16 @@ import com.github.benmanes.caffeine.cache.simulator.parser.camelab.CamelabTraceR
 import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kaggle.OutbrainTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.lrb.LrbTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.keyvalue.ObjectStoreTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.K5cloudTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentBlockTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentPhotoTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.twitter.TwitterTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
@@ -63,9 +68,15 @@ public enum TraceFormat {
   CORDA(CordaTraceReader::new),
   GRADLE(GradleTraceReader::new),
   LIRS(LirsTraceReader::new),
+  LRB(LrbTraceReader::new),
   OUTBRAIN(OutbrainTraceReader::new),
   SCARAB(ScarabTraceReader::new),
   SNIA_CAMBRIDGE(CambridgeTraceReader::new),
+  SNIA_K5CLOUD(K5cloudTraceReader::new),
+  SNIA_OBJECT_STORE(ObjectStoreTraceReader::new),
+  SNIA_TENCENT_BLOCK(TencentBlockTraceReader::new),
+  SNIA_TENCENT_PHOTO(TencentPhotoTraceReader::new),
+  TWITTER(TwitterTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
   UMASS_YOUTUBE(YoutubeTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new);
@@ -91,12 +102,8 @@ public enum TraceFormat {
             .collect(Sets.toImmutableEnumSet());
       }
 
-      @Override public Stream<AccessEvent> events() throws IOException {
-        Stream<AccessEvent> events = Stream.empty();
-        for (TraceReader reader : readers()) {
-          events = Stream.concat(events, reader.events());
-        }
-        return events;
+      @Override public Stream<AccessEvent> events() {
+        return readers().stream().flatMap(TraceReader::events);
       }
 
       private List<TraceReader> readers() {

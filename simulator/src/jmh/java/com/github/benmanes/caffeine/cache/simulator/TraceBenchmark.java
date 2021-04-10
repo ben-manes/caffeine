@@ -84,11 +84,11 @@ public class TraceBenchmark {
   }
 
   private Stream<AccessEvent> readEventStream(BasicSettings settings) throws IOException {
-    if (settings.isSynthetic()) {
-      return Synthetic.generate(settings).events();
+    if (settings.trace().isSynthetic()) {
+      return Synthetic.generate(settings.trace()).events();
     }
-    List<String> filePaths = settings.traceFiles().paths();
-    TraceFormat format = settings.traceFiles().format();
+    List<String> filePaths = settings.trace().traceFiles().paths();
+    TraceFormat format = settings.trace().traceFiles().format();
     return format.readFiles(filePaths).events();
   }
 }

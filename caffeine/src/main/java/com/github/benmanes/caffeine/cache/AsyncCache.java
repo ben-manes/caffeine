@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -25,7 +26,7 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.google.errorprone.annotations.CompatibleWith;
+import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
  * A semi-persistent mapping from keys to values. Cache entries are manually added using
@@ -39,7 +40,7 @@ import com.google.errorprone.annotations.CompatibleWith;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-public interface AsyncCache<K, V> {
+public interface AsyncCache<K extends @NonNull Object, V extends @NonNull Object> {
 
   /**
    * Returns the future associated with {@code key} in this cache, or {@code null} if there is no
@@ -51,7 +52,7 @@ public interface AsyncCache<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
-  CompletableFuture<V> getIfPresent(@NonNull @CompatibleWith("K") Object key);
+  CompletableFuture<V> getIfPresent(K key);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
@@ -71,9 +72,7 @@ public interface AsyncCache<K, V> {
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key or mappingFunction is null
    */
-  @NonNull
-  CompletableFuture<V> get(@NonNull K key,
-      @NonNull Function<? super K, ? extends V> mappingFunction);
+  CompletableFuture<V> get(K key, Function<? super K, ? extends V> mappingFunction);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
@@ -96,9 +95,8 @@ public interface AsyncCache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
    *         in which case the mapping is left unestablished
    */
-  @NonNull
-  CompletableFuture<V> get(@NonNull K key,
-      @NonNull BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction);
+  CompletableFuture<V> get(K key, BiFunction<? super K, ? super Executor,
+      ? extends CompletableFuture<? extends V>> mappingFunction);
 
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
@@ -123,12 +121,8 @@ public interface AsyncCache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
    *         left unestablished
    */
-  @NonNull
-  default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
-      @NonNull Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction) {
-    // This method was added & implemented in version 2.8.0
-    throw new UnsupportedOperationException();
-  }
+  CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys,
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction);
 
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
@@ -153,12 +147,9 @@ public interface AsyncCache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
    *         left unestablished
    */
-  @NonNull
-  default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
-      @NonNull BiFunction<Iterable<? extends @NonNull K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
-    // This method was added & implemented in version 2.8.0
-    throw new UnsupportedOperationException();
-  }
+  CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys,
+      BiFunction<? super Set<? extends K>, ? super Executor,
+          ? extends CompletableFuture<? extends Map<? extends K, ? extends V>>> mappingFunction);
 
   /**
    * Associates {@code value} with {@code key} in this cache. If the cache previously contained a
@@ -172,7 +163,7 @@ public interface AsyncCache<K, V> {
    * @param valueFuture value to be associated with the specified key
    * @throws NullPointerException if the specified key or value is null
    */
-  void put(@NonNull K key, @NonNull CompletableFuture<V> valueFuture);
+  void put(K key, CompletableFuture<? extends V> valueFuture);
 
   /**
    * Returns a view of the entries stored in this cache as a thread-safe map. Modifications made to
@@ -189,8 +180,8 @@ public interface AsyncCache<K, V> {
    *
    * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
    */
-  @NonNull
-  ConcurrentMap<@NonNull K, @NonNull CompletableFuture<V>> asMap();
+  @CheckReturnValue
+  ConcurrentMap<K, CompletableFuture<V>> asMap();
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link Cache}. A mapping is
@@ -200,6 +191,6 @@ public interface AsyncCache<K, V> {
    *
    * @return a thread-safe synchronous view of this cache
    */
-  @NonNull
+  @CheckReturnValue
   Cache<K, V> synchronous();
 }

@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.arc;
 
-import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -34,7 +33,7 @@ public final class ArcTraceReader extends TextTraceReader implements KeyOnlyTrac
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines().flatMapToLong(line -> {
       String[] array = line.split(" ", 3);
       long startBlock = Long.parseLong(array[0]);

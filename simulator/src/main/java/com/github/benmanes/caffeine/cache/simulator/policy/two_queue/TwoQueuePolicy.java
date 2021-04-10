@@ -17,14 +17,12 @@ package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import java.util.Set;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -43,6 +41,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "two-queue.TwoQueue")
 public final class TwoQueuePolicy implements KeyOnlyPolicy {
   static final Node UNLINKED = new Node();
 
@@ -67,16 +66,11 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     this.headIn = new Node();
     this.headOut = new Node();
     this.headMain = new Node();
-    this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
+    this.policyStats = new PolicyStats(name());
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
     this.maxIn = (int) (maximumSize * settings.percentIn());
-    this.policyStats = new PolicyStats("two-queue.TwoQueue");
     this.maxOut = (int) (maximumSize * settings.percentOut());
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new TwoQueuePolicy(config));
   }
 
   @Override

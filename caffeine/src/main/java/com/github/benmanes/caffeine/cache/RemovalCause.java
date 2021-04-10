@@ -29,6 +29,7 @@ public enum RemovalCause {
    *   <li>{@link Cache#invalidate}</li>
    *   <li>{@link Cache#invalidateAll(Iterable)}</li>
    *   <li>{@link Cache#invalidateAll()}</li>
+   *   <li>{@link LoadingCache#refresh}</li>
    *   <li>{@link java.util.Map#remove}</li>
    *   <li>{@link java.util.Map#computeIfPresent}</li>
    *   <li>{@link java.util.Map#compute}</li>

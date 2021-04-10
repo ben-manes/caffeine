@@ -72,7 +72,7 @@ public final class AddExpireAfterAccess extends LocalCacheRule {
     context.constructor.addStatement("this.expiry = builder.getExpiry(isAsync)");
     context.cache.addField(FieldSpec.builder(EXPIRY, "expiry", Modifier.FINAL).build());
     context.cache.addMethod(MethodSpec.methodBuilder("expiry")
-        .addModifiers(context.protectedFinalModifiers())
+        .addModifiers(context.publicFinalModifiers())
         .addStatement("return expiry")
         .returns(EXPIRY)
         .build());

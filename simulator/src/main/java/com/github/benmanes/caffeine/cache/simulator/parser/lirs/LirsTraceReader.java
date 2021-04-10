@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
 
-import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -33,7 +32,7 @@ public final class LirsTraceReader extends TextTraceReader implements KeyOnlyTra
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines()
         .filter(line -> !line.isEmpty())
         .filter(line -> !line.equals("*"))

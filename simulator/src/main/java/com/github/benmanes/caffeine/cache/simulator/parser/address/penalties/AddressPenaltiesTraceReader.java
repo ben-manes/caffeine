@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.address.penalties;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -63,7 +62,7 @@ public final class AddressPenaltiesTraceReader extends TextTraceReader {
   }
 
   @Override
-  public Stream<AccessEvent> events() throws IOException {
+  public Stream<AccessEvent> events() {
     return lines()
         .map(line -> line.split(" ", 5))
         .map(split -> AccessEvent.forKeyAndPenalties(

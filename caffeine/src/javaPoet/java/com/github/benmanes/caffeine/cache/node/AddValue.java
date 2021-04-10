@@ -15,9 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
-import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
-import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
-import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 
@@ -26,6 +23,7 @@ import java.util.Objects;
 
 import javax.lang.model.element.Modifier;
 
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 
@@ -45,12 +43,14 @@ public final class AddValue extends NodeRule {
   @Override
   protected void execute() {
     context.nodeSubtype
-        .addField(newFieldOffset(context.className, "value"))
         .addField(newValueField())
-        .addMethod(newGetter(valueStrength(), vTypeVar, "value", Visibility.LAZY))
+        .addMethod(newGetter(valueStrength(), vTypeVar, "value", Visibility.PLAIN))
         .addMethod(newGetRef("value"))
         .addMethod(makeSetValue())
         .addMethod(makeContainsValue());
+    addVarHandle("value", isStrongValues()
+        ? ClassName.get(Object.class)
+        : valueReferenceType().rawType);
   }
 
   private FieldSpec newValueField() {
@@ -68,12 +68,11 @@ public final class AddValue extends NodeRule {
         .addParameter(vRefQueueType, "referenceQueue");
 
     if (isStrongValues()) {
-      setter.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
-          UNSAFE_ACCESS, offsetName("value"), "value");
+      setter.addStatement("$L.set(this, $N)", varHandleName("value"), "value");
     } else {
       setter.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
-      setter.addStatement("$T.UNSAFE.putObject(this, $N, new $T($L, $N, referenceQueue))",
-          UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "getKeyReference()", "value");
+      setter.addStatement("$L.set(this, new $T($L, $N, referenceQueue))",
+          varHandleName("value"), valueReferenceType(), "getKeyReference()", "value");
     }
 
     return setter.build();

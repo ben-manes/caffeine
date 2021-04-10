@@ -18,9 +18,8 @@ package com.github.benmanes.caffeine.cache.testing;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -76,20 +75,20 @@ public final class RemovalListeners {
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    private final List<RemovalNotification<K, V>> evicted;
+    private final CopyOnWriteArrayList<RemovalNotification<K, V>> removed;
 
     public ConsumingRemovalListener() {
-      this.evicted = Collections.synchronizedList(new ArrayList<>());
+      this.removed = new CopyOnWriteArrayList<>();
     }
 
     @Override
     public void onRemoval(K key, V value, RemovalCause cause) {
       validate(key, value, cause);
-      evicted.add(new RemovalNotification<>(key, value, cause));
+      removed.add(new RemovalNotification<>(key, value, cause));
     }
 
-    public List<RemovalNotification<K, V>> evicted() {
-      return evicted;
+    public List<RemovalNotification<K, V>> removed() {
+      return removed;
     }
   }
 }

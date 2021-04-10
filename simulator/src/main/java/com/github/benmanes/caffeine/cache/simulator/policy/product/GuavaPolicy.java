@@ -22,11 +22,10 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -34,38 +33,36 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "product.Guava", characteristics = WEIGHTED)
 public final class GuavaPolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
-  public GuavaPolicy(Config config) {
-    policyStats = new PolicyStats("product.Guava");
+  public GuavaPolicy(Config config, Set<Characteristic> characteristics) {
+    policyStats = new PolicyStats(name());
     BasicSettings settings = new BasicSettings(config);
-    cache = CacheBuilder.newBuilder()
-        .maximumWeight(settings.maximumSize())
-        .initialCapacity(settings.maximumSize())
-        .weigher((Long key, AccessEvent value) -> value.weight())
-        .removalListener(notification -> policyStats.recordEviction())
-        .build();
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new GuavaPolicy(config));
-  }
-
-  @Override public Set<Characteristic> characteristics() {
-    return Sets.immutableEnumSet(WEIGHTED);
+    CacheBuilder<Long, AccessEvent> builder = CacheBuilder.newBuilder()
+        .removalListener(notification -> policyStats.recordEviction());
+    if (characteristics.contains(WEIGHTED)) {
+      builder.maximumWeight(settings.maximumSize());
+      builder.weigher((key, value) -> value.weight());
+    } else {
+      builder.maximumSize(settings.maximumSize());
+    }
+    cache = builder.build();
   }
 
   @Override
   public void record(AccessEvent event) {
-    Object value = cache.getIfPresent(event.key());
+    AccessEvent value = cache.getIfPresent(event.key());
     if (value == null) {
       cache.put(event.key(), event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
+      if (event.weight() != value.weight()) {
+        cache.put(event.key(), event);
+      }
     }
   }
 

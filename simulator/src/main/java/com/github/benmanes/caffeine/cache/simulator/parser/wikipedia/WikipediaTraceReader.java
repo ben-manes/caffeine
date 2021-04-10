@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.wikipedia;
 
-import java.io.IOException;
 import java.util.Objects;
 import java.util.stream.LongStream;
 
@@ -45,7 +44,7 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines()
         .map(this::parseRequest)
         .filter(Objects::nonNull)

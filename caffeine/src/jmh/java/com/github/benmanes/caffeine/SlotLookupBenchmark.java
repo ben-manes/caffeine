@@ -15,20 +15,17 @@
  */
 package com.github.benmanes.caffeine;
 
-import java.util.Arrays;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.LongStream;
 
+import org.jctools.util.UnsafeAccess;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
-
-import com.github.benmanes.caffeine.base.UnsafeAccess;
-
-import com.koloboke.collect.impl.hash.LHashSeparateKVLongIntMapFactoryImpl;
-import com.koloboke.collect.map.hash.HashLongIntMap;
-import com.koloboke.collect.map.hash.HashLongIntMapFactory;
 
 /**
  * A comparison of different lookup approaches for indexes for a slot in a fixed-sized shared array.
@@ -52,19 +49,13 @@ import com.koloboke.collect.map.hash.HashLongIntMapFactory;
  */
 @State(Scope.Benchmark)
 public class SlotLookupBenchmark {
-  static final int ARENA_SIZE = 2 << 6;
   static final int SPARSE_SIZE = 2 << 14;
+  static final int ARENA_SIZE = 2 << 6;
+  static final VarHandle PROBE;
 
   ThreadLocal<Integer> threadLocal;
-  long element;
-  long[] array;
-
   long probeOffset;
-
-  long index;
-  HashLongIntMap mapping;
-
-  int[] sparse;
+  long[] array;
 
   @Setup
   public void setupThreadLocal() {
@@ -79,38 +70,12 @@ public class SlotLookupBenchmark {
 
   @Setup
   public void setupBinarySearch() {
-    array = new long[ARENA_SIZE];
-    element = ThreadLocalRandom.current().nextLong(ARENA_SIZE);
-    for (int i = 0; i < ARENA_SIZE; i++) {
-      array[i] = selectSlot(i);
-    }
-    Arrays.sort(array);
+    array = LongStream.range(0, ARENA_SIZE).toArray();
   }
 
   @Setup
   public void setupStriped64() {
-    probeOffset = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
-  }
-
-  @Setup
-  public void setupHashing() {
-    long[] keys = new long[ARENA_SIZE];
-    int[] values = new int[ARENA_SIZE];
-    for (int i = 0; i < ARENA_SIZE; i++) {
-      keys[i] = i;
-      values[i] = selectSlot(i);
-    }
-    HashLongIntMapFactory factory = new LHashSeparateKVLongIntMapFactoryImpl();
-    mapping = factory.newImmutableMap(keys, values);
-    index = ThreadLocalRandom.current().nextInt(ARENA_SIZE);
-  }
-
-  @Setup
-  public void setupSparseArray() {
-    sparse = new int[SPARSE_SIZE];
-    for (int i = 0; i < SPARSE_SIZE; i++) {
-      sparse[i] = selectSlot(i);
-    }
+    probeOffset = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomProbe");
   }
 
   @Benchmark
@@ -120,64 +85,89 @@ public class SlotLookupBenchmark {
   }
 
   @Benchmark
-  public int binarySearch() {
-    // Emulates finding the arena slot by a COW mapping of thread ids
-    return Arrays.binarySearch(array, element);
-  }
-
-  @Benchmark
-  public int hashing() {
-    // Emulates finding the arena slot by a COW mapping the thread id to a slot index
-    return mapping.get(index);
-  }
-
-  @Benchmark
-  public int sparseArray() {
-    // Emulates having a COW sparse array mapping the thread id to a slot location
-    return sparse[(int) Thread.currentThread().getId()];
-  }
-
-  @Benchmark
   public int threadIdHash() {
     // Emulates finding the arena slot by hashing the thread id
-    long id = Thread.currentThread().getId();
-    int hash = (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
-    return selectSlot(hash);
+    long hash = mix64(Thread.currentThread().getId());
+    return selectSlot(Long.hashCode(hash));
+  }
+
+  private static long mix64(long x) {
+    x = (x ^ (x >>> 30)) * 0xbf58476d1ce4e5b9L;
+    x = (x ^ (x >>> 27)) * 0x94d049bb133111ebL;
+    return x ^ (x >>> 31);
   }
 
   @Benchmark
   public int threadHashCode() {
     // Emulates finding the arena slot by the thread's hashCode
-    long id = Thread.currentThread().hashCode();
-    int hash = (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
+    int hash = mix32(Thread.currentThread().hashCode());
     return selectSlot(hash);
   }
 
+  private static int mix32(int x) {
+    x = ((x >>> 16) ^ x) * 0x45d9f3b;
+    x = ((x >>> 16) ^ x) * 0x45d9f3b;
+    return (x >>> 16) ^ x;
+  }
+
   @Benchmark
-  public long striped64(Blackhole blackhole) {
+  public long striped64_unsafe(Blackhole blackhole) {
     // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
-    int hash = getProbe();
+    int hash = getProbe_unsafe();
     if (hash == 0) {
       blackhole.consume(ThreadLocalRandom.current()); // force initialization
-      hash = getProbe();
+      hash = getProbe_unsafe();
     }
-    advanceProbe(hash);
+    advanceProbe_unsafe(hash);
     int index = selectSlot(hash);
     return array[index];
   }
 
-  private int getProbe() {
+  private int getProbe_unsafe() {
     return UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), probeOffset);
   }
 
-  private void advanceProbe(int probe) {
+  private void advanceProbe_unsafe(int probe) {
     probe ^= probe << 13; // xorshift
     probe ^= probe >>> 17;
     probe ^= probe << 5;
     UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), probeOffset, probe);
   }
 
+  @Benchmark
+  public long striped64_varHandle(Blackhole blackhole) {
+    // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
+    int hash = getProbe_varHandle();
+    if (hash == 0) {
+      blackhole.consume(ThreadLocalRandom.current()); // force initialization
+      hash = getProbe_varHandle();
+    }
+    advanceProbe_varHandle(hash);
+    int index = selectSlot(hash);
+    return array[index];
+  }
+
+  private int getProbe_varHandle() {
+    return (int) PROBE.get(Thread.currentThread());
+  }
+
+  private void advanceProbe_varHandle(int probe) {
+    probe ^= probe << 13; // xorshift
+    probe ^= probe >>> 17;
+    probe ^= probe << 5;
+    PROBE.set(Thread.currentThread(), probe);
+  }
+
   private static int selectSlot(int i) {
     return i & (ARENA_SIZE - 1);
+  }
+
+  static {
+    try {
+      PROBE = MethodHandles.privateLookupIn(Thread.class, MethodHandles.lookup())
+          .findVarHandle(Thread.class, "threadLocalRandomProbe", int.class);
+    } catch (ReflectiveOperationException e) {
+      throw new ExceptionInInitializerError(e);
+    }
   }
 }

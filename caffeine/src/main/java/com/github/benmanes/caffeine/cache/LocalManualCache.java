@@ -26,7 +26,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -53,23 +52,24 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
   }
 
   @Override
-  default @Nullable V getIfPresent(Object key) {
+  default @Nullable V getIfPresent(K key) {
     return cache().getIfPresent(key, /* recordStats */ true);
   }
 
   @Override
+  @SuppressWarnings("NullAway")
   default @Nullable V get(K key, Function<? super K, ? extends V> mappingFunction) {
     return cache().computeIfAbsent(key, mappingFunction);
   }
 
   @Override
-  default Map<K, V> getAllPresent(Iterable<?> keys) {
+  default Map<K, V> getAllPresent(Iterable<? extends K> keys) {
     return cache().getAllPresent(keys);
   }
 
   @Override
   default Map<K, V> getAll(Iterable<? extends K> keys,
-      Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);
 
     Set<K> keysToLoad = new LinkedHashSet<>();
@@ -95,13 +95,12 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
    * during the load are replaced when the loaded entries are inserted into the cache.
    */
   default void bulkLoad(Set<K> keysToLoad, Map<K, V> result,
-      Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction) {
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     boolean success = false;
     long startTime = cache().statsTicker().read();
     try {
-      Map<K, V> loaded = mappingFunction.apply(keysToLoad);
-      loaded.forEach((key, value) ->
-          cache().put(key, value, /* notifyWriter */ false));
+      var loaded = mappingFunction.apply(keysToLoad);
+      loaded.forEach(cache()::put);
       for (K key : keysToLoad) {
         V value = loaded.get(key);
         if (value == null) {
@@ -136,12 +135,12 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
   }
 
   @Override
-  default void invalidate(Object key) {
+  default void invalidate(K key) {
     cache().remove(key);
   }
 
   @Override
-  default void invalidateAll(Iterable<?> keys) {
+  default void invalidateAll(Iterable<? extends K> keys) {
     cache().invalidateAll(keys);
   }
 

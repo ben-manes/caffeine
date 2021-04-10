@@ -15,20 +15,39 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.NUMBER;
+import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.OBJECT;
+import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.PERCENT;
 import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.builder.ToStringStyle.MULTI_LINE_STYLE;
 
-import com.google.common.base.MoreObjects;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.DoubleSupplier;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableSet;
+
+import net.autobuilder.AutoBuilder;
 
 /**
- * Statistics gathered by a policy execution.
+ * Statistics gathered by a policy execution. A policy can extend this class as a convenient way to
+ * add custom metrics.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class PolicyStats {
+public class PolicyStats {
+  private final Map<String, Metric> metrics;
   private final Stopwatch stopwatch;
+  private final String name;
 
-  private String name;
   private long hitCount;
   private long missCount;
   private long hitsWeight;
@@ -39,10 +58,63 @@ public final class PolicyStats {
   private long admittedCount;
   private long rejectedCount;
   private long operationCount;
+  private double percentAdaption;
 
-  public PolicyStats(String name) {
-    this.name = requireNonNull(name);
+  @SuppressWarnings("AnnotateFormatMethod")
+  public PolicyStats(String format, Object... args) {
     this.stopwatch = Stopwatch.createUnstarted();
+    this.name = String.format(format, args);
+    this.metrics = new LinkedHashMap<>();
+
+    addMetric(Metric.of("Policy", (Supplier<String>) this::name, OBJECT, true));
+    addMetric(Metric.of("Hit Rate", (DoubleSupplier) this::hitRate, PERCENT, true));
+    addMetric(Metric.of("Hits", (LongSupplier) this::hitCount, NUMBER, true));
+    addMetric(Metric.of("Misses", (LongSupplier) this::missCount, NUMBER, true));
+    addMetric(Metric.of("Requests", (LongSupplier) this::requestCount, NUMBER, true));
+    addMetric(Metric.of("Evictions", (LongSupplier) this::evictionCount, NUMBER, true));
+    addPercentMetric("Admit rate",
+        () -> (admittedCount + rejectedCount) == 0 ? 0 : admissionRate());
+    addMetric(Metric.builder()
+        .value((LongSupplier) this::requestsWeight)
+        .addToCharacteristics(WEIGHTED)
+        .name("Requests Weight")
+        .type(NUMBER)
+        .build());
+    addMetric(Metric.builder()
+        .value((DoubleSupplier) this::weightedHitRate)
+        .addToCharacteristics(WEIGHTED)
+        .name("Weighted Hit Rate")
+        .type(PERCENT)
+        .build());
+    addPercentMetric("Adaption", this::percentAdaption);
+    addMetric("Average Miss Penalty", this::averageMissPenalty);
+    addMetric("Average Penalty", this::avergePenalty);
+    addMetric("Steps", this::operationCount);
+    addMetric("Time", this::stopwatch);
+  }
+
+  public void addMetric(Metric metric) {
+    metrics.put(metric.name(), requireNonNull(metric));
+  }
+
+  public void addMetric(String name, Supplier<?> supplier) {
+    addMetric(Metric.builder().name(name).value(supplier).type(OBJECT).build());
+  }
+
+  public void addMetric(String name, LongSupplier supplier) {
+    addMetric(Metric.builder().name(name).value(supplier).type(NUMBER).build());
+  }
+
+  public void addMetric(String name, DoubleSupplier supplier) {
+    addMetric(Metric.builder().name(name).value(supplier).type(NUMBER).build());
+  }
+
+  public void addPercentMetric(String name, DoubleSupplier supplier) {
+    addMetric(Metric.builder().name(name).value(supplier).type(PERCENT).build());
+  }
+
+  public Map<String, Metric> metrics() {
+    return metrics;
   }
 
   public Stopwatch stopwatch() {
@@ -51,10 +123,6 @@ public final class PolicyStats {
 
   public String name() {
     return name;
-  }
-
-  public void setName(String name) {
-    this.name = requireNonNull(name);
   }
 
   public void recordOperation() {
@@ -84,12 +152,12 @@ public final class PolicyStats {
   public void recordWeightedHit(int weight) {
     hitsWeight += weight;
     recordHit();
-  }  
-  
+  }
+
   public long hitsWeight() {
     return hitsWeight;
   }
-  
+
   public void recordHitPenalty(double penalty) {
     hitPenalty += penalty;
   }
@@ -113,12 +181,12 @@ public final class PolicyStats {
   public void recordWeightedMiss(int weight) {
     missesWeight += weight;
     recordMiss();
-  }  
-  
+  }
+
   public long missesWeight() {
     return missesWeight;
   }
-  
+
   public void recordMissPenalty(double penalty) {
     missPenalty += penalty;
   }
@@ -167,6 +235,14 @@ public final class PolicyStats {
     return hitPenalty + missPenalty;
   }
 
+  public double percentAdaption() {
+    return percentAdaption;
+  }
+
+  public void setPercentAdaption(double percentAdaption) {
+    this.percentAdaption = (Math.floor(100 * percentAdaption) / 100);
+  }
+
   public double hitRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
@@ -212,6 +288,24 @@ public final class PolicyStats {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).addValue(name).toString();
+    return ToStringBuilder.reflectionToString(this, MULTI_LINE_STYLE);
+  }
+
+  @AutoValue @AutoBuilder
+  public static abstract class Metric {
+    public enum MetricType { NUMBER, PERCENT, OBJECT }
+
+    public abstract String name();
+    public abstract Object value();
+    public abstract MetricType type();
+    public abstract boolean required();
+    public abstract ImmutableSet<Characteristic> characteristics();
+
+    public static Metric of(String name, Object value, MetricType type, boolean required) {
+      return builder().name(name).value(value).type(type).required(required).build();
+    }
+    public static PolicyStats_Metric_Builder builder() {
+      return PolicyStats_Metric_Builder.builder();
+    }
   }
 }

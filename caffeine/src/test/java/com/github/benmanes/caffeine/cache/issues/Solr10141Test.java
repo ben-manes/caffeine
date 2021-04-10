@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
-import static org.awaitility.Awaitility.await;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 

@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -65,6 +66,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  */
 @SuppressWarnings("PreferJavaTimeOverload")
 public final class GuavaCacheFromContext {
+  private static final ThreadLocal<Exception> error = new ThreadLocal<>();
 
   private GuavaCacheFromContext() {}
 
@@ -182,13 +184,16 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public Map<K, V> getAllPresent(Iterable<?> keys) {
-      return cache.getAllPresent(ImmutableSet.copyOf(keys));
+    public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
+      for (K key : keys) {
+        requireNonNull(key);
+      }
+      return cache.getAllPresent(keys);
     }
 
     @Override
     public Map<K, V> getAll(Iterable<? extends K> keys,
-        Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
+        Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
       keys.forEach(Objects::requireNonNull);
       requireNonNull(mappingFunction);
 
@@ -200,7 +205,7 @@ public final class GuavaCacheFromContext {
 
       long start = ticker.read();
       try {
-        Map<K, V> loaded = mappingFunction.apply(keysToLoad);
+        var loaded = mappingFunction.apply(keysToLoad);
         loaded.forEach(cache::put);
         long end = ticker.read();
         statsCounter.recordLoadSuccess(end - start);
@@ -236,12 +241,12 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public void invalidate(Object key) {
+    public void invalidate(K key) {
       cache.invalidate(key);
     }
 
     @Override
-    public void invalidateAll(Iterable<?> keys) {
+    public void invalidateAll(Iterable<? extends K> keys) {
       keys.forEach(this::invalidate);
     }
 
@@ -258,7 +263,7 @@ public final class GuavaCacheFromContext {
     @Override
     public CacheStats stats() {
       com.google.common.cache.CacheStats stats = statsCounter.snapshot().plus(cache.stats());
-      return new CacheStats(stats.hitCount(), stats.missCount(), stats.loadSuccessCount(),
+      return CacheStats.of(stats.hitCount(), stats.missCount(), stats.loadSuccessCount(),
           stats.loadExceptionCount(), stats.totalLoadTime(), stats.evictionCount(), 0L);
     }
 
@@ -428,16 +433,25 @@ public final class GuavaCacheFromContext {
         @Override public boolean isRecordingStats() {
           return isRecordingStats;
         }
+        @Override public V getIfPresentQuietly(K key) {
+          return cache.asMap().get(key);
+        }
+        @Override public Map<K, CompletableFuture<V>> refreshes() {
+          return Map.of();
+        }
         @Override public Optional<Eviction<K, V>> eviction() {
           return Optional.empty();
         }
-        @Override public Optional<Expiration<K, V>> expireAfterAccess() {
+        @Override public Optional<FixedExpiration<K, V>> expireAfterAccess() {
           return Optional.empty();
         }
-        @Override public Optional<Expiration<K, V>> expireAfterWrite() {
+        @Override public Optional<FixedExpiration<K, V>> expireAfterWrite() {
           return Optional.empty();
         }
-        @Override public Optional<Expiration<K, V>> refreshAfterWrite() {
+        @Override public Optional<VarExpiration<K, V>> expireVariably() {
+          return Optional.empty();
+        }
+        @Override public Optional<FixedRefresh<K, V>> refreshAfterWrite() {
           return Optional.empty();
         }
       };
@@ -489,8 +503,46 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public void refresh(K key) {
+    public CompletableFuture<V> refresh(K key) {
+      error.set(null);
       cache.refresh(key);
+
+      var e = error.get();
+      if (e == null) {
+        return CompletableFuture.completedFuture(cache.asMap().get(key));
+      } else if (e instanceof CacheMissException) {
+        return CompletableFuture.completedFuture(null);
+      }
+
+      error.remove();
+      return CompletableFuture.failedFuture(e);
+    }
+
+    @Override
+    public CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
+      Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
+      for (K key : keys) {
+        result.computeIfAbsent(key, this::refresh);
+      }
+      return composeResult(result);
+    }
+
+    CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
+      if (futures.isEmpty()) {
+        return CompletableFuture.completedFuture(Collections.emptyMap());
+      }
+      @SuppressWarnings("rawtypes")
+      CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
+      return CompletableFuture.allOf(array).thenApply(ignored -> {
+        Map<K, V> result = new LinkedHashMap<>(futures.size());
+        futures.forEach((key, future) -> {
+          V value = future.getNow(null);
+          if (value != null) {
+            result.put(key, value);
+          }
+        });
+        return Collections.unmodifiableMap(result);
+      });
     }
   }
 
@@ -542,11 +594,17 @@ public final class GuavaCacheFromContext {
 
     @Override
     public V load(K key) throws Exception {
-      V value = delegate.load(key);
-      if (value == null) {
-        throw new CacheMissException();
+      try {
+        error.set(null);
+        V value = delegate.load(key);
+        if (value == null) {
+          throw new CacheMissException();
+        }
+        return value;
+      } catch (Exception e) {
+        error.set(e);
+        throw e;
       }
-      return value;
     }
   }
 
@@ -558,8 +616,12 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Map<K, V> loadAll(Iterable<? extends K> keys) throws Exception {
-      return delegate.loadAll(keys);
+      var keysToLoad = (keys instanceof Set) ? (Set<? extends K>) keys : ImmutableSet.copyOf(keys);
+      @SuppressWarnings("unchecked")
+      var loaded = (Map<K, V>) delegate.loadAll(keysToLoad);
+      return loaded;
     }
   }
 

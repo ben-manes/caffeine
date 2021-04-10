@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser.climb;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.PrimitiveIterator;
 import java.util.Scanner;
@@ -41,7 +40,7 @@ public final class ClimbTraceReader extends TextTraceReader implements KeyOnlyTr
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     TraceIterator iterator = new TraceIterator(readFile());
     return StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
         iterator, Spliterator.ORDERED), /* parallel */ false).onClose(iterator::close);

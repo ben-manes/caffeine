@@ -35,7 +35,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.Threads;
 import com.google.common.base.Preconditions;
@@ -57,7 +56,8 @@ public final class MultiThreadedTest {
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, removalListener = Listener.DEFAULT,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      evictionListener = Listener.DEFAULT)
   public void concurrent_unbounded(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Threads.runTest(cache, operations);
   }
@@ -67,7 +67,8 @@ public final class MultiThreadedTest {
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       removalListener = Listener.DEFAULT, expireAfterWrite = Expire.FOREVER,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      evictionListener = Listener.DEFAULT)
   public void concurrent_bounded(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Threads.runTest(cache, operations);
   }
@@ -77,7 +78,8 @@ public final class MultiThreadedTest {
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, removalListener = Listener.DEFAULT,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      evictionListener = Listener.DEFAULT)
   public void async_concurrent_unbounded(
       AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Threads.runTest(cache, asyncOperations);
@@ -88,14 +90,15 @@ public final class MultiThreadedTest {
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       expireAfterWrite = Expire.FOREVER, removalListener = Listener.DEFAULT,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      evictionListener = Listener.DEFAULT)
   public void async_concurrent_bounded(
       AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Threads.runTest(cache, asyncOperations);
   }
 
-  @SuppressWarnings(
-      {"unchecked", "rawtypes", "ReturnValueIgnored", "SizeGreaterThanOrEqualsZero", "SelfEquals"})
+  @SuppressWarnings({"unchecked", "rawtypes", "ReturnValueIgnored",
+    "FutureReturnValueIgnored", "SizeGreaterThanOrEqualsZero", "SelfEquals"})
   List<BiConsumer<LoadingCache<Integer, Integer>, Integer>> operations = ImmutableList.of(
       // LoadingCache
       (cache, key) -> { cache.get(key); },

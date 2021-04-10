@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -45,7 +44,7 @@ public final class RemovalNotification<K, V> extends SimpleImmutableEntry<K, V> 
    * @param value the value represented by this entry
    * @param cause the reason for which the entry was removed
    */
-  public RemovalNotification(@Nullable K key, @Nullable V value, @NonNull RemovalCause cause) {
+  public RemovalNotification(@Nullable K key, @Nullable V value, RemovalCause cause) {
     super(key, value);
     this.cause = requireNonNull(cause);
   }
@@ -53,7 +52,6 @@ public final class RemovalNotification<K, V> extends SimpleImmutableEntry<K, V> 
   /**
    * @return the cause for which the entry was removed
    */
-  @NonNull
   public RemovalCause getCause() {
     return cause;
   }
@@ -66,5 +64,10 @@ public final class RemovalNotification<K, V> extends SimpleImmutableEntry<K, V> 
    */
   public boolean wasEvicted() {
     return cause.wasEvicted();
+  }
+
+  @Override
+  public String toString() {
+    return getKey() + "=" + getValue() + " [" + cause + "]";
   }
 }

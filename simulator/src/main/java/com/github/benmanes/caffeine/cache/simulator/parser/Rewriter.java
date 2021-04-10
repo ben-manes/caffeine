@@ -22,7 +22,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -62,20 +61,23 @@ public final class Rewriter implements Runnable {
   private OutputFormat outputFormat;
 
   @Override
-  @SuppressWarnings("PMD.ForLoopCanBeForeach")
   public void run() {
-    int tick = 0;
     Stopwatch stopwatch = Stopwatch.createStarted();
     try (OutputStream output = new BufferedOutputStream(Files.newOutputStream(outputFile));
          Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
          TraceWriter writer = outputFormat.writer(output)) {
+      int[] tick = { 0 };
       writer.writeHeader();
-      for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
-        writer.writeEvent(tick, i.next());
-        tick++;
-      }
+      events.forEach(event -> {
+        try {
+          writer.writeEvent(tick[0], event);
+          tick[0]++;
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
+      });
       writer.writeFooter();
-      System.out.printf("Rewrote %,d events in %s%n", tick, stopwatch);
+      System.out.printf("Rewrote %,d events in %s%n", tick[0], stopwatch);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

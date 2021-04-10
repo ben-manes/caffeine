@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -37,7 +38,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
@@ -86,9 +86,9 @@ public final class AsyncTest {
       result.set(1);
       result.set(Async.getWhenSuccessful(future));
     });
-    Awaits.await().untilAtomic(result, is(1));
+    await().untilAtomic(result, is(1));
     future.obtrudeValue(2);
-    Awaits.await().untilAtomic(result, is(2));
+    await().untilAtomic(result, is(2));
   }
 
   @Test(dataProvider = "unsuccessful")
@@ -100,9 +100,9 @@ public final class AsyncTest {
         Object value = Async.getWhenSuccessful(future);
         result.set((value == null) ? 2 : 3);
       });
-      Awaits.await().untilAtomic(result, is(1));
+      await().untilAtomic(result, is(1));
       future.obtrudeException(new IllegalStateException());
-      Awaits.await().untilAtomic(result, is(not(1)));
+      await().untilAtomic(result, is(not(1)));
       assertThat(result.get(), is(2));
     }
     assertThat(Async.getWhenSuccessful(future), is(nullValue()));

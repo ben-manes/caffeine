@@ -39,6 +39,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -66,11 +68,11 @@ import com.github.benmanes.caffeine.cache.node.AddValue;
 import com.github.benmanes.caffeine.cache.node.Finalize;
 import com.github.benmanes.caffeine.cache.node.NodeContext;
 import com.github.benmanes.caffeine.cache.node.NodeRule;
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.io.MoreFiles;
 import com.google.common.io.Resources;
 import com.google.googlejavaformat.java.Formatter;
 import com.google.googlejavaformat.java.FormatterException;
@@ -102,6 +104,15 @@ import com.squareup.javapoet.TypeSpec;
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class NodeFactoryGenerator {
+  static final FieldSpec LOOKUP = FieldSpec.builder(MethodHandles.Lookup.class, "LOOKUP")
+      .initializer("$T.lookup()", MethodHandles.class)
+      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+      .build();
+  static final FieldSpec FACTORY = FieldSpec.builder(MethodType.class, "FACTORY")
+      .initializer("$T.methodType($T.class)", MethodType.class, void.class)
+      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+      .build();
+
   final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
       new AddFactoryMethods(),  new AddHealth(), new Finalize());
@@ -143,10 +154,10 @@ public final class NodeFactoryGenerator {
 
     for (TypeSpec node : nodeTypes) {
       JavaFile.builder(getClass().getPackage().getName(), node)
-              .addFileComment(header, Year.now(timeZone))
-              .indent("  ")
-              .build()
-              .writeTo(directory);
+          .addFileComment(header, Year.now(timeZone))
+          .indent("  ")
+          .build()
+          .writeTo(directory);
     }
   }
 
@@ -157,9 +168,9 @@ public final class NodeFactoryGenerator {
           .collect(toList());
       Formatter formatter = new Formatter();
       for (Path file : files) {
-        String source = MoreFiles.asCharSource(file, UTF_8).read();
+        String source = Files.readString(file);
         String formatted = formatter.formatSourceAndFixImports(source);
-        MoreFiles.asCharSink(file, UTF_8).write(formatted);
+        Files.writeString(file, formatted);
       }
     } catch (FormatterException e) {
       throw new RuntimeException(e);
@@ -173,7 +184,16 @@ public final class NodeFactoryGenerator {
   }
 
   private void addConstants() {
-    Modifier[] modifiers = {Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL};
+    List<String> constants = ImmutableList.of("key", "value", "accessTime", "writeTime");
+    for (String constant : constants) {
+      String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
+      nodeFactory.addField(FieldSpec.builder(String.class, name)
+          .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+          .initializer("$S", constant)
+          .build());
+    }
+
+    Modifier[] modifiers = { Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL };
     nodeFactory.addField(FieldSpec.builder(Object.class, RETIRED_STRONG_KEY, modifiers)
         .initializer("new Object()")
         .build());
@@ -186,6 +206,9 @@ public final class NodeFactoryGenerator {
     nodeFactory.addField(FieldSpec.builder(rawReferenceKeyType, DEAD_WEAK_KEY, modifiers)
         .initializer("new $T(null, null)", rawReferenceKeyType)
         .build());
+
+    nodeFactory.addField(FACTORY);
+    nodeFactory.addField(LOOKUP);
   }
 
   private void addKeyMethods() {
