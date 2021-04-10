@@ -59,7 +59,7 @@ public class GDWheel implements Policy {
         this.NW = settings.numberOfWheels();
         this.NQ = settings.numberOfQueues();
         this.maximumSize = settings.maximumSize();
-        this.policyStats = new PolicyStats("GD-Wheel");
+        this.policyStats = new PolicyStats(admission.format("greedy-dual.GDWheel"));
         this.CH = new int[NW];
         this.wheels = new CostWheel[NW];
         for (int i = 0; i < NW; i++) {
