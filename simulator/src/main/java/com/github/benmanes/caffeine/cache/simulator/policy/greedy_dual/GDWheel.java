@@ -43,8 +43,8 @@ import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Charact
  */
 @Policy.PolicySpec(name = "greedy-dual.GDWheel", characteristics = WEIGHTED)
 public class GDWheel implements Policy {
-    private final int NW;
-    private final int NQ;
+    private final int nW;
+    private final int nQ;
     private final int[] CH;
     private final CostWheel[] wheels;
     final Admittor admittor;
@@ -56,14 +56,14 @@ public class GDWheel implements Policy {
     public GDWheel(Config config, Admission admission) {
         GDWheelSettings settings = new GDWheelSettings(config);
         this.data = new Long2ObjectOpenHashMap<>();
-        this.NW = settings.numberOfWheels();
-        this.NQ = settings.numberOfQueues();
+        this.nW = settings.numberOfWheels();
+        this.nQ = settings.numberOfQueues();
         this.maximumSize = settings.maximumSize();
         this.policyStats = new PolicyStats(admission.format("greedy-dual.GDWheel"));
-        this.CH = new int[NW];
-        this.wheels = new CostWheel[NW];
-        for (int i = 0; i < NW; i++) {
-            wheels[i] = new CostWheel(NQ);
+        this.CH = new int[nW];
+        this.wheels = new CostWheel[nW];
+        for (int i = 0; i < nW; i++) {
+            wheels[i] = new CostWheel(nQ);
         }
         this.currentSize = 0;
         this.admittor = admission.from(config, policyStats);
@@ -94,34 +94,34 @@ public class GDWheel implements Policy {
                     migration(1);
                 }
                 boolean admit = admittor.admit(event, q);
-                if (!admit) {
-                    wheels[0].add(CH[0], q);
-                    break;
-                } else {
+                if (admit) {
                     data.remove(q.key());
                     currentSize -= q.weight();
                     policyStats.recordEviction();
+                } else {
+                    wheels[0].add(CH[0], q);
+                    break;
                 }
             }
             policyStats.recordWeightedMiss(event.weight());
-            for (int i = 0; i < NW; i++) {
-                if (Math.round(event.missPenalty() / Math.pow(NQ, i)) > 0) {
+            for (int i = 0; i < nW; i++) {
+                if (Math.round(event.missPenalty() / Math.pow(nQ, i)) > 0) {
                     w = i;
                 }
             }
-            int q = (int) (Math.round(event.missPenalty() / Math.pow(NQ, w)) + CH[w]) % NQ;
+            int q = (int) (Math.round(event.missPenalty() / Math.pow(nQ, w)) + CH[w]) % nQ;
             wheels[w].add(q, event);
             currentSize += event.weight();
             data.put(key, new Node(event, w, q));
         } else {
             policyStats.recordWeightedHit(event.weight());
             wheels[node.wheel].remove(node.q, node.event);
-            for (int i = 0; i < NW; i++) {
-                if (Math.round(node.event.missPenalty() / Math.pow(NQ, i)) > 0) {
+            for (int i = 0; i < nW; i++) {
+                if (Math.round(node.event.missPenalty() / Math.pow(nQ, i)) > 0) {
                     w = i;
                 }
             }
-            int q = (int) (Math.round(event.missPenalty() / Math.pow(NQ, w)) + CH[w]) % NQ;
+            int q = (int) (Math.round(event.missPenalty() / Math.pow(nQ, w)) + CH[w]) % nQ;
             node.updateLoc(w, q);
             wheels[w].add(q, node.event);
         }
@@ -129,14 +129,14 @@ public class GDWheel implements Policy {
     }
 
     private void migration(int idx) {
-        CH[idx] = (CH[idx] + 1) % NQ;
-        if (CH[idx] == 0 && idx + 1 < NW) {
+        CH[idx] = (CH[idx] + 1) % nQ;
+        if (CH[idx] == 0 && idx + 1 < nW) {
             migration(idx + 1);
         }
         while (wheels[idx].queueNotEmpty(CH[idx])) {
             AccessEvent p = wheels[idx].evict(CH[idx]);
-            int cr = ((int) p.missPenalty()) % ((int) Math.pow(NQ, idx));
-            int q = (int) (Math.round(cr / Math.pow(NQ, idx - 1)) + CH[idx - 1]) % NQ;
+            int cr = ((int) p.missPenalty()) % ((int) Math.pow(nQ, idx));
+            int q = (int) (Math.round(cr / Math.pow(nQ, idx - 1)) + CH[idx - 1]) % nQ;
             wheels[idx - 1].add(q, p);
             Node node = data.get(p.key());
             node.updateLoc(idx - 1, q);
@@ -163,23 +163,23 @@ public class GDWheel implements Policy {
     }
 
     static class CostWheel {
-        ArrayList<PriorityQueue<AccessEvent>> wheel;
+        List<PriorityQueue<AccessEvent>> wheel;
         int current_index;
-        int NQ;
+        int nQ;
 
-        public CostWheel(int NQ) {
+        public CostWheel(int nQ) {
             this.wheel = new ArrayList<>();
             Comparator<AccessEvent> comparator = new EventComparator();
-            for (int i = 0; i < NQ; i++) {
+            for (int i = 0; i < nQ; i++) {
                 this.wheel.add(new PriorityQueue<>(comparator));
             }
             this.current_index = 0;
-            this.NQ = NQ;
+            this.nQ = nQ;
         }
 
         public int getNextIndex() {
-            for (int i = current_index; i < current_index + NQ; i++) {
-                int j = i % NQ;
+            for (int i = current_index; i < current_index + nQ; i++) {
+                int j = i % nQ;
                 if (!wheel.get(j).isEmpty()) {
                     current_index = j;
                     break;
