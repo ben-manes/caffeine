@@ -42,7 +42,7 @@ import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Charact
  * @author himelbrand@gmail.com (Omri Himelbrand)
  */
 @Policy.PolicySpec(name = "greedy-dual.GDWheel", characteristics = WEIGHTED)
-public class GDWheel implements Policy {
+public class GDWheelPolicy implements Policy {
     private final int nW;
     private final int nQ;
     private final int[] CH;
@@ -53,7 +53,7 @@ public class GDWheel implements Policy {
     private final long maximumSize;
     private int currentSize;
 
-    public GDWheel(Config config, Admission admission) {
+    public GDWheelPolicy(Config config, Admission admission) {
         GDWheelSettings settings = new GDWheelSettings(config);
         this.data = new Long2ObjectOpenHashMap<>();
         this.nW = settings.numberOfWheels();
@@ -73,7 +73,7 @@ public class GDWheel implements Policy {
         BasicSettings settings = new BasicSettings(config);
         Set<Policy> policies = new HashSet<>();
         for (Admission admission : settings.admission()) {
-            policies.add(new GDWheel(config, admission));
+            policies.add(new GDWheelPolicy(config, admission));
         }
         return policies;
     }
