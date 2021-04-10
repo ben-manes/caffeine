@@ -16,7 +16,7 @@ import java.util.*;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 
-
+@Policy.PolicySpec(name = "greedy-dual.GDWheel", characteristics = WEIGHTED)
 public class GDWheel implements Policy {
     private final int NW;
     private final int NQ;
@@ -25,7 +25,7 @@ public class GDWheel implements Policy {
     final Admittor admittor;
     final Long2ObjectMap<Node> data;
     private final PolicyStats policyStats;
-    private final int maximumSize;
+    private final long maximumSize;
     private int currentSize;
     public GDWheel(Config config,Admission admission){
         GDWheelSettings settings = new GDWheelSettings(config);
@@ -42,10 +42,6 @@ public class GDWheel implements Policy {
         this.currentSize = 0;
         this.admittor = admission.from(config, policyStats);
 
-    }
-    @Override
-    public Set<Characteristic> characteristics() {
-        return Sets.immutableEnumSet(WEIGHTED);
     }
 
     public static Set<Policy> policies(Config config) {
