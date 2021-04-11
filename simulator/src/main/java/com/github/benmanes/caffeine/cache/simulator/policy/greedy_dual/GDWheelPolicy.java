@@ -169,9 +169,8 @@ public class GDWheelPolicy implements Policy {
 
         public CostWheel(int nQ) {
             this.wheel = new ArrayList<>();
-            Comparator<AccessEvent> comparator = new EventComparator();
             for (int i = 0; i < nQ; i++) {
-                this.wheel.add(new TreeSet<>(comparator));
+                this.wheel.add(new TreeSet<>(Comparator.comparingDouble(AccessEvent::missPenalty)));
             }
             this.current_index = 0;
             this.nQ = nQ;
@@ -206,13 +205,6 @@ public class GDWheelPolicy implements Policy {
         public boolean queueNotEmpty(int i) {
             TreeSet<AccessEvent> queue = wheel.get(i);
             return !queue.isEmpty();
-        }
-    }
-
-    static class EventComparator implements Comparator<AccessEvent> {
-        @Override
-        public int compare(AccessEvent e1, AccessEvent e2) {
-            return Double.compare(e1.missPenalty(),e2.missPenalty());
         }
     }
 
