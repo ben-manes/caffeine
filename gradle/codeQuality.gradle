@@ -148,6 +148,7 @@ tasks.withType(JavaCompile).configureEach {
       annotatedPackages.add('com.github.benmanes.caffeine')
     }
   }
+  modularity.inferModulePath.set(false)
   checkerFramework.skipCheckerFramework = true
 }
 

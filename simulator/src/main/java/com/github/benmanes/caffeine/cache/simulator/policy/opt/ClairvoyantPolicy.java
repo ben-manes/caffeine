@@ -85,7 +85,9 @@ public final class ClairvoyantPolicy implements Policy {
   @Override
   public void finished() {
     policyStats.stopwatch().start();
-    recorder.process();
+    if (recorder != null) {
+      recorder.process();
+    }
     policyStats.stopwatch().stop();
   }
 

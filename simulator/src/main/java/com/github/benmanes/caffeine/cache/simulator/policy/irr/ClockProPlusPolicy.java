@@ -136,6 +136,10 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
 
   @Override
   public void finished() {
+    if (policyStats.requestCount() == 0) {
+      return;
+    }
+
     validateStatus();
     validateClockStructure();
     if (debug) {
