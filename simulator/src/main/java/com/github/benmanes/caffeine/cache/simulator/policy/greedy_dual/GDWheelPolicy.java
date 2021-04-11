@@ -163,7 +163,7 @@ public class GDWheelPolicy implements Policy {
     }
 
     static class CostWheel {
-        List<PriorityQueue<AccessEvent>> wheel;
+        List<TreeSet<AccessEvent>> wheel;
         int current_index;
         int nQ;
 
@@ -171,7 +171,7 @@ public class GDWheelPolicy implements Policy {
             this.wheel = new ArrayList<>();
             Comparator<AccessEvent> comparator = new EventComparator();
             for (int i = 0; i < nQ; i++) {
-                this.wheel.add(new PriorityQueue<>(comparator));
+                this.wheel.add(new TreeSet<>(comparator));
             }
             this.current_index = 0;
             this.nQ = nQ;
@@ -189,22 +189,22 @@ public class GDWheelPolicy implements Policy {
         }
 
         public AccessEvent evict(int i) {
-            PriorityQueue<AccessEvent> queue = wheel.get(i);
-            return Objects.requireNonNull(queue.poll());
+            TreeSet<AccessEvent> queue = wheel.get(i);
+            return Objects.requireNonNull(queue.first());
         }
 
         public void remove(int i, AccessEvent e) {
-            PriorityQueue<AccessEvent> queue = wheel.get(i);
+            TreeSet<AccessEvent> queue = wheel.get(i);
             queue.remove(e);
         }
 
         public void add(int i, AccessEvent e) {
-            PriorityQueue<AccessEvent> queue = wheel.get(i);
+            TreeSet<AccessEvent> queue = wheel.get(i);
             queue.add(e);
         }
 
         public boolean queueNotEmpty(int i) {
-            PriorityQueue<AccessEvent> queue = wheel.get(i);
+            TreeSet<AccessEvent> queue = wheel.get(i);
             return !queue.isEmpty();
         }
     }
