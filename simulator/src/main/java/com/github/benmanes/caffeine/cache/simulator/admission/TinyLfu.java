@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.ClimberResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.IncrementalResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.IndicatorResetCountMin4;
@@ -32,7 +33,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TinyLfu implements Admittor {
+public final class TinyLfu implements KeyOnlyAdmittor {
   private final PolicyStats policyStats;
   private final Frequency sketch;
 

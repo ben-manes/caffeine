@@ -218,7 +218,7 @@ public final class Registry {
 
   private void registerGreedyDual() {
     register(GdsfPolicy.class, GdsfPolicy::new);
-    registerMany(GDWheelPolicy.class, GDWheelPolicy::policies);
+    register(GDWheelPolicy.class, GDWheelPolicy::new);
   }
 
   private void registerProduct() {

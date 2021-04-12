@@ -28,20 +28,12 @@ import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 public interface Admittor {
 
   /** Records the access to the entry. */
-  void record(long key);
+  void record(AccessEvent event);
 
-  /**
-   * Returns if the candidate should be added to the cache and the page replacement policy's chosen
-   * victim should be removed.
-   *
-   * @param candidateKey the key to the newly added entry
-   * @param victimKey the key to the entry the policy recommends removing
-   * @return if the candidate should be added and the victim removed due to eviction
-   */
-  boolean admit(long candidateKey, long victimKey);
-
-  /** Records the access to the entry. (overloading to use events)*/
-  default void record(AccessEvent event) { record(event.key()); }
+  /** Records the access to the entry. */
+  default void record(long key) {
+    record(AccessEvent.forKey(key));
+  }
 
   /**
    * Returns if the candidate should be added to the cache and the page replacement policy's chosen
@@ -51,40 +43,55 @@ public interface Admittor {
    * @param victim the event of the entry the policy recommends removing
    * @return if the candidate should be added and the victim removed due to eviction
    */
-  default boolean admit(AccessEvent candidate, AccessEvent victim) { return admit(candidate.key(),victim.key()); }
+  boolean admit(AccessEvent candidate, AccessEvent victim);
+
+  /**
+   * Returns if the candidate should be added to the cache and the page replacement policy's chosen
+   * victim should be removed.
+   *
+   * @param candidateKey the key to the newly added entry
+   * @param victimKey the key to the entry the policy recommends removing
+   * @return if the candidate should be added and the victim removed due to eviction
+   */
+  default boolean admit(long candidateKey, long victimKey) {
+    return admit(AccessEvent.forKey(candidateKey), AccessEvent.forKey(victimKey));
+  }
 
   /** Returns an admittor that admits every candidate. */
   static Admittor always() {
     return AlwaysAdmit.INSTANCE;
   }
 
-  /** An admission policy for the cache that uses the AccessEvent object as input instead of key,
-   * useful for admission policies that are based on size or penalties.
-   * **/
-  interface EventsAdmittor extends Admittor {
+  /** An admission policy that does not exploit external event metadata. */
+  interface KeyOnlyAdmittor extends Admittor {
 
     @Override
-    void record(AccessEvent event);
+    void record(long key);
 
     @Override
-    boolean admit(AccessEvent candidate, AccessEvent victim);
+    boolean admit(long candidateKey, long victimKey);
 
     @Override
-    default boolean admit(long candidateKey, long victimKey){return false;}
+    default void record(AccessEvent event) {
+      record(event.key());
+    }
 
     @Override
-    default void record(long key){}
+    default boolean admit(AccessEvent candidate, AccessEvent victim) {
+      return admit(candidate.key(), victim.key());
+    }
   }
 }
 
 enum AlwaysAdmit implements Admittor {
   INSTANCE;
 
-  @Override
-  public void record(long key) {}
-
-  @Override
-  public boolean admit(long candidateKey, long victimKey) {
+  @Override public void record(long key) {}
+  @Override public void record(AccessEvent event) {}
+  @Override public boolean admit(long candidateKey, long victimKey) {
+    return true;
+  }
+  @Override public boolean admit(AccessEvent candidate, AccessEvent victim) {
     return true;
   }
 }
