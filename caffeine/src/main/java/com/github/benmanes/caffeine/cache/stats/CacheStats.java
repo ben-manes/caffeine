@@ -35,9 +35,9 @@ import com.google.errorprone.annotations.Immutable;
  *     <li>After successfully loading an entry {@code missCount} and {@code loadSuccessCount} are
  *         incremented, and the total loading time, in nanoseconds, is added to
  *         {@code totalLoadTime}.
- *     <li>When an exception is thrown while loading an entry, {@code missCount} and {@code
- *         loadFailureCount} are incremented, and the total loading time, in nanoseconds, is
- *         added to {@code totalLoadTime}.
+ *     <li>When an exception is thrown while loading an entry or if the loaded value is {code null},
+ *         {@code missCount} and {@code loadFailureCount} are incremented, and the total loading
+ *         time, in nanoseconds, is added to {@code totalLoadTime}.
  *     <li>Cache lookups that encounter a missing cache entry that is still loading will wait
  *         for loading to complete (whether successful or not) and then increment {@code missCount}.
  *   </ul>
@@ -253,14 +253,14 @@ public final class CacheStats {
   }
 
   /**
-   * Returns the average time spent loading new values. This is defined as
+   * Returns the average number of nanoseconds spent loading new values. This is defined as
    * {@code totalLoadTime / (loadSuccessCount + loadFailureCount)}.
    * <p>
    * <b>Note:</b> the values of the metrics are undefined in case of overflow (though it is
    * guaranteed not to throw an exception). If you require specific handling, we recommend
    * implementing your own stats collector.
    *
-   * @return the average time spent loading new values
+   * @return the average number of nanoseconds spent loading new values
    */
   public @NonNegative double averageLoadPenalty() {
     long totalLoadCount = saturatedAdd(loadSuccessCount, loadFailureCount);
