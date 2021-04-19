@@ -22,6 +22,7 @@ dependencies {
   implementation libraries.ehcache3
   implementation libraries.fastutil
   implementation libraries.slf4jNop
+  implementation libraries.commonsIo
   implementation libraries.fastfilter
   implementation libraries.flipTables
   implementation libraries.expiringMap

@@ -24,51 +24,50 @@ import java.util.Random;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-@SuppressWarnings({"PMD.AvoidDollarSigns", "PMD.LocalVariableNamingConventions"})
 public final class TinyCacheSketch {
-  public final long[] chainIndex;
-  public final long[] lastIndex;
-
   private final HashFunctionParser hashFunc;
+  private final TinySetIndexing indexing;
+  private final long[] chainIndex;
+  private final long[] lastIndex;
   private final int itemsPerSet;
   private final byte[] cache;
   private final Random rnd;
 
   public TinyCacheSketch(int nrSets, int itemsPerSet, int randomSeed) {
-    chainIndex = new long[nrSets];
-    lastIndex = new long[nrSets];
+    this.hashFunc = new HashFunctionParser(nrSets);
+    this.cache = new byte[nrSets * itemsPerSet];
+    this.indexing = new TinySetIndexing();
+    this.chainIndex = new long[nrSets];
+    this.lastIndex = new long[nrSets];
+    this.rnd = new Random(randomSeed);
     this.itemsPerSet = itemsPerSet;
-    hashFunc = new HashFunctionParser(nrSets);
-    cache = new byte[nrSets * itemsPerSet];
-    rnd = new Random(randomSeed);
   }
 
   public int countItem(long item) {
     hashFunc.createHash(item);
-    int $ = 0;
-    if (!TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], hashFunc.fpaux.chainId)) {
+    if (!indexing.chainExist(chainIndex[hashFunc.fpaux.set], hashFunc.fpaux.chainId)) {
       return 0;
     }
-    TinySetIndexing.getChain(hashFunc.fpaux, chainIndex, lastIndex);
-    int offset = this.itemsPerSet * hashFunc.fpaux.set;
-    TinySetIndexing.chainStart += offset;
-    TinySetIndexing.chainEnd += offset;
+    indexing.getChain(hashFunc.fpaux, chainIndex, lastIndex);
+    int offset = itemsPerSet * hashFunc.fpaux.set;
+    indexing.chainStart += offset;
+    indexing.chainEnd += offset;
 
     // Gil : I think some of these tests are, I till carefully examine this function when I have
     // time. As far as I understand it is working right now.
-    while (TinySetIndexing.chainStart <= TinySetIndexing.chainEnd) {
+    int count = 0;
+    while (indexing.chainStart <= indexing.chainEnd) {
       try {
-        $ += (cache[TinySetIndexing.chainStart % cache.length] == hashFunc.fpaux.fingerprint)
-            ? 1
-            : 0;
-        TinySetIndexing.chainStart++;
+        if (cache[indexing.chainStart % cache.length] == hashFunc.fpaux.fingerprint) {
+          count++;
+        }
+        indexing.chainStart++;
 
       } catch (Exception e) {
-        System.out.println(" length: " + cache.length + " Access: " + TinySetIndexing.chainStart);
-        // e.printStackTrace();
+        System.out.println("length: " + cache.length + " Access: " + indexing.chainStart);
       }
     }
-    return $;
+    return count;
   }
 
   /**
@@ -79,11 +78,11 @@ public final class TinyCacheSketch {
     byte chainId = fpaux.chainId;
     fpaux.chainId = victim;
 
-    this.cache[bucketStart + removedOffset] = 0;
+    cache[bucketStart + removedOffset] = 0;
 
-    TinySetIndexing.removeItem(fpaux, chainIndex, lastIndex);
+    indexing.removeItem(fpaux, chainIndex, lastIndex);
     fpaux.chainId = chainId;
-    int idxToAdd = TinySetIndexing.addItem(fpaux, chainIndex, lastIndex);
+    int idxToAdd = indexing.addItem(fpaux, chainIndex, lastIndex);
     int delta = (removedOffset < idxToAdd) ? -1 : 1;
 
     replaceItems(idxToAdd, fpaux.fingerprint, bucketStart, delta);
@@ -93,34 +92,34 @@ public final class TinyCacheSketch {
 
   public void addItem(long item) {
     hashFunc.createHash(item);
-    int bucketStart = this.itemsPerSet * hashFunc.fpaux.set;
-    if (cache[bucketStart + this.itemsPerSet - 1] != 0) {
+    int bucketStart = itemsPerSet * hashFunc.fpaux.set;
+    if (cache[bucketStart + itemsPerSet - 1] != 0) {
       selectVictim(bucketStart);
       return;
     }
 
-    int idxToAdd = TinySetIndexing.addItem(hashFunc.fpaux, chainIndex, lastIndex);
-    this.replaceItems(idxToAdd, hashFunc.fpaux.fingerprint, bucketStart, 1);
+    int idxToAdd = indexing.addItem(hashFunc.fpaux, chainIndex, lastIndex);
+    replaceItems(idxToAdd, hashFunc.fpaux.fingerprint, bucketStart, 1);
   }
 
   private void selectVictim(int bucketStart) {
-    byte victimOffset = (byte) rnd.nextInt(this.itemsPerSet);
+    byte victimOffset = (byte) rnd.nextInt(itemsPerSet);
     int victimChain =
-        TinySetIndexing.getChainAtOffset(hashFunc.fpaux, chainIndex, lastIndex, victimOffset);
-    if (TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], victimChain)) {
+        indexing.getChainAtOffset(hashFunc.fpaux, chainIndex, lastIndex, victimOffset);
+    if (indexing.chainExist(chainIndex[hashFunc.fpaux.set], victimChain)) {
       replace(hashFunc.fpaux, (byte) victimChain, bucketStart, victimOffset);
     } else {
       throw new RuntimeException("Failed to replace");
     }
   }
 
-  private void replaceItems(final int idx, byte value, int start, final int delta) {
+  private void replaceItems(int idx, byte value, int start, int delta) {
     start += idx;
-    byte $;
+    byte entry;
     do {
-      $ = this.cache[start];
-      this.cache[start] = value;
-      value = $;
+      entry = cache[start];
+      cache[start] = value;
+      value = entry;
       start += delta;
     } while (value != 0);
   }

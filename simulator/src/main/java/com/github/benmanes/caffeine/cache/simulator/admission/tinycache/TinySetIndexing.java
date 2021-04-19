@@ -30,14 +30,12 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-public final class TinySetIndexing {
+final class TinySetIndexing {
   // for performance - for functions that need to know both the start and the end of the chain.
-  static int chainStart;
-  static int chainEnd;
+  public int chainStart;
+  public int chainEnd;
 
-  private TinySetIndexing() {}
-
-  public static int getChainStart(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
+  public int getChainStart(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
     int currentChainNumber = rank(isLastIndex[fpaux.set], requiredChainNumber);
     int currentOffset = requiredChainNumber;
@@ -50,11 +48,11 @@ public final class TinySetIndexing {
     return currentOffset;
   }
 
-  public static int rank(long index, int bitNum) {
+  public int rank(long index, int bitNum) {
     return Long.bitCount(index & ~(-1L << bitNum));
   }
 
-  public static int getChain(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
+  public int getChain(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
     int currentChainNumber = rank(isLastIndex[fpaux.set], requiredChainNumber);
     int currentOffset = requiredChainNumber;
@@ -65,23 +63,23 @@ public final class TinySetIndexing {
       currentOffset++;
       tempisLastIndex >>>= 1;
     }
-    TinySetIndexing.chainStart = currentOffset;
+    chainStart = currentOffset;
 
     while ((tempisLastIndex & 1L) == 0) {
       currentOffset++;
       tempisLastIndex >>>= 1;
     }
-    TinySetIndexing.chainEnd = currentOffset;
+    chainEnd = currentOffset;
     return currentOffset;
   }
 
   @SuppressWarnings("PMD.AvoidReassigningLoopVariables")
-  public static int getChainAtOffset(HashedItem fpaux,
+  public int getChainAtOffset(HashedItem fpaux,
       long[] chainIndex, long[] isLastIndex, int offset) {
     int nonEmptyChainsToSee = rank(isLastIndex[fpaux.set], offset);
     int nonEmptyChainSeen = rank(chainIndex[fpaux.set], nonEmptyChainsToSee);
     for (int i = nonEmptyChainsToSee; i <= 64;) {
-      if (TinySetIndexing.chainExist(chainIndex[fpaux.set], i)
+      if (chainExist(chainIndex[fpaux.set], i)
           && (nonEmptyChainSeen == nonEmptyChainsToSee)) {
         return i;
       }
@@ -91,11 +89,11 @@ public final class TinySetIndexing {
     throw new RuntimeException("Cannot choose victim!");
   }
 
-  public static boolean chainExist(long chainIndex, int chainId) {
+  public boolean chainExist(long chainIndex, int chainId) {
     return (chainIndex | (1L << chainId)) == chainIndex;
   }
 
-  public static int addItem(HashedItem fpaux, long[] chainIndex, long[] lastIndex) {
+  public int addItem(HashedItem fpaux, long[] chainIndex, long[] lastIndex) {
     int offset = getChainStart(fpaux, chainIndex, lastIndex);
     long mask = 1L << fpaux.chainId;
     lastIndex[fpaux.set] = extendZero(lastIndex[fpaux.set], offset);
@@ -112,7 +110,7 @@ public final class TinySetIndexing {
   }
 
   @SuppressWarnings("UnnecessaryParentheses")
-  private static long extendZero(final long isLastIndex, final int offset) {
+  private long extendZero(long isLastIndex, int offset) {
     long constantPartMask = (1L << offset) - 1;
     return (isLastIndex & constantPartMask)
         | ((isLastIndex << 1L)
@@ -121,12 +119,12 @@ public final class TinySetIndexing {
   }
 
   @SuppressWarnings("UnnecessaryParentheses")
-  private static long shrinkOffset(long isLastIndex, int offset) {
+  private long shrinkOffset(long isLastIndex, int offset) {
     long conMask = ((1L << offset) - 1);
     return (isLastIndex & conMask) | (((~conMask) & isLastIndex) >>> 1);
   }
 
-  public static void removeItem(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
+  public void removeItem(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int chainStart = getChainStart(fpaux, chainIndex, isLastIndex);
     // avoid an if command: either update chainIndex to the new state or keep it the way it is.
     chainIndex[fpaux.set] = (isLastIndex[fpaux.set] & (1L << chainStart)) == 0L

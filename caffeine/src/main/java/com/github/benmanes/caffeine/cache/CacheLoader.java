@@ -24,7 +24,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.google.errorprone.annotations.CheckReturnValue;
@@ -46,8 +45,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
  */
 @FunctionalInterface
 @SuppressWarnings({"PMD.SignatureDeclareThrowsException", "FunctionalInterfaceMethodChanged"})
-public interface CacheLoader<K extends @NonNull Object, V extends @NonNull Object>
-    extends AsyncCacheLoader<K, V> {
+public interface CacheLoader<K extends Object, V extends Object> extends AsyncCacheLoader<K, V> {
 
   /**
    * Computes or retrieves the value corresponding to {@code key}.

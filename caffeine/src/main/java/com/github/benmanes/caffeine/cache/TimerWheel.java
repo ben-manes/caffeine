@@ -79,7 +79,7 @@ final class TimerWheel<K, V> {
   TimerWheel(BoundedLocalCache<K, V> cache) {
     this.cache = requireNonNull(cache);
 
-    wheel = new Node[BUCKETS.length][1];
+    wheel = new Node[BUCKETS.length][];
     for (int i = 0; i < wheel.length; i++) {
       wheel[i] = new Node[BUCKETS[i]];
       for (int j = 0; j < wheel[i].length; j++) {

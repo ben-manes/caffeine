@@ -36,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncEvictionListener;
@@ -137,7 +136,7 @@ import com.google.errorprone.annotations.FormatMethod;
  *     normally {@code Object} unless it is constrained by using a method like {@code
  *     #removalListener}
  */
-public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object> {
+public final class Caffeine<K extends Object, V extends Object> {
   static final Logger logger = System.getLogger(Caffeine.class.getName());
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
 

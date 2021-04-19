@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
@@ -40,7 +39,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-public interface Cache<K extends @NonNull Object, V extends @NonNull Object> {
+public interface Cache<K extends Object, V extends Object> {
 
   /**
    * Returns the value associated with the {@code key} in this cache, or {@code null} if there is no

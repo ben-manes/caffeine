@@ -490,6 +490,9 @@
     <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.18'>
       <sha512>F21E8EBD12D3BAAF1289485AACD4AD9E9965F40EE4D1F21833DAE92277B7DD56FFEB073E187600AB205C42221A3EAD5551A2EAD20F746F9BD497C75E59871603</sha512>
     </dependency>
+    <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.19'>
+      <sha512>12EE6B6DAB34CB3538CC415E46CC5232BD8A7F750DAAD821F25AAEDDB27450FD490DFC52D96DAAF7D7E65FB138E18BD83CF1CB4375DF1680D09B86B4E2950B20</sha512>
+    </dependency>
     <dependency group='org.codehaus.groovy.modules.http-builder' module='http-builder' version='0.7.1'>
       <sha512>BC7BC2A514F8CA104A392ECF8736F4A3D316EE988FA91299D33B0AF46134B38E14E4A5061449D17B2DF7A521643E6C02DFA37CC277ED7CAB7CE83C28C00E9719</sha512>
     </dependency>

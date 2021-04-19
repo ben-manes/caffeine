@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
@@ -33,7 +31,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-public interface AsyncLoadingCache<K extends @NonNull Object, V extends @NonNull Object>
+public interface AsyncLoadingCache<K extends Object, V extends Object>
     extends AsyncCache<K, V> {
 
   /**

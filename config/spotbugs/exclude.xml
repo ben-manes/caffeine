@@ -3,160 +3,86 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://findbugs.sourceforge.net/filter/3.0.0
     https://raw.githubusercontent.com/findbugsproject/findbugs/3.0.1/findbugs/etc/findbugsfilter.xsd">
-  <!-- Caffeine -->
   <Match>
-    <Bug code="Se"/>
+    <Bug pattern="SE_BAD_FIELD, SE_BAD_FIELD_STORE, SE_NO_SUITABLE_CONSTRUCTOR,
+      SE_TRANSIENT_FIELD_NOT_RESTORED, DMI_RANDOM_USED_ONLY_ONCE"/>
   </Match>
+
+  <!-- Caffeine -->
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.CaffeineSpec"/>
     <Or>
       <Method name="parseDuration"/>
       <Method name="parseTimeUnit"/>
     </Or>
-    <Bug code="NP"/>
+    <Bug pattern="NP_NULL_ON_SOME_PATH, NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter$NullMapCompletionException"/>
     <Method name="&lt;init&gt;"/>
-    <Bug code="NP"/>
+    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter"/>
     <Method name="lambda$fillProxies$0"/>
-    <Bug code="RCN"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
-    <Method name="performCleanUp"/>
-    <Bug code="UL"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.WriteThroughEntry"/>
-    <Bug code="Eq"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.GuardedScheduler"/>
-    <Method name="schedule"/>
-    <Bug code="RCN"/>
+    <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
   </Match>
   <Match>
     <Or>
       <Class name="~.*Mpsc.*"/>
       <Class name="~.*Header.*"/>
     </Or>
-    <Bug code="UuF"/>
-  </Match>
-  <Match>
-    <Or>
-      <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"/>
-      <Class name="com.github.benmanes.caffeine.cache.NodeFactoryGenerator"/>
-    </Or>
-    <Bug code="RCN"/>
+    <Bug pattern="UUF_UNUSED_FIELD"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.DelegationBenchmark$DelegateMap"/>
     <Method name="get"/>
-    <Bug code="NP"/>
-  </Match>
-
-  <!-- Guava -->
-  <Match>
-    <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache"/>
-    <Method name="apply"/>
-    <Bug pattern="NP_METHOD_PARAMETER_TIGHTENS_ANNOTATION"/>
+    <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
   </Match>
 
   <!-- JCache -->
   <Match>
-    <Class name="com.github.benmanes.caffeine.jcache.event.EventDispatcher"/>
-    <Method name="register"/>
-    <Bug code="NP"/>
-  </Match>
-  <Match>
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
-    <Method name="copyOf"/>
-    <Bug code="NP"/>
+    <Method name="postProcess"/>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
     <Method name="postProcess"/>
-    <Bug code="NP"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
-    <Method name="postProcess"/>
-    <Bug code="SF"/>
+    <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator$Configurator"/>
     <Method name="addLazyExpiration"/>
-    <Bug code="NP"/>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
   </Match>
 
   <!-- Simulator -->
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.Simulator"/>
-    <Method name="broadcast"/>
-    <Bug code="RCN"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.parser.AbstractTraceReader"/>
-    <Method name="openFile"/>
-    <Bug code="OBL"/>
-  </Match>
-  <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader"/>
     <Method name="lines"/>
-    <Bug code="OS"/>
+    <Bug pattern="OS_OPEN_STREAM"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.parser.AbstractTraceReader"/>
     <Method name="openFile"/>
-    <Bug code="UI"/>
+    <Bug pattern="UI_INHERITANCE_UNSAFE_GETRESOURCE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.policy.Policy"/>
     <Method name="name"/>
-    <Bug code="NP"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.linked.MultiQueuePolicy"/>
-    <Method name="evict"/>
-    <Bug code="NP"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.product.Cache2kPolicy"/>
-    <Bug code="Dm"/>
-  </Match>
-  <Match>
-    <Or>
-      <Class name="com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheWithGhostCache"/>
-      <Class name="com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheSketch"/>
-      <Class name="com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCache"/>
-    </Or>
-    <Bug code="ST"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy"/>
-    <Method name="finished"/>
-    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+    <Bug pattern="NP_NULL_ON_SOME_PATH"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent$PenaltiesAccessEvent"/>
-    <Bug code="Eq"/>
+    <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent$WeightedAccessEvent"/>
-    <Bug code="Eq"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor"/>
-    <Method name="process"/>
-    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.parser.Rewriter"/>
-    <Method name="run"/>
-    <Bug code="RCN"/>
+    <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
   </Match>
 </FindBugsFilter>

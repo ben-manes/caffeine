@@ -25,13 +25,14 @@
  */
 ext {
   versions = [
-    akka: '2.6.13',
+    akka: '2.6.14',
     cache2k: '2.1.2.Alpha',
     checkerFramework: '3.12.0',
     coherence: '20.06',
     commonsCompress: '1.20',
     commonsLang3: '3.12.0',
     commonsMath3: '3.6.1',
+    commonsIo: '2.8.0',
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.1',
     ehcache3: '3.9.2',
@@ -50,9 +51,9 @@ ext {
     javapoet: '1.13.0',
     jcache: '1.1.1',
     jmh: '1.29',
-    joor: '0.9.13',
+    joor: '0.9.14',
     jsr330: '1',
-    nullaway: '0.8.0',
+    nullaway: '0.9.1',
     ohc: '0.6.1',
     osgiComponentAnnotations: '1.4.0',
     picocli: '4.6.1',
@@ -62,17 +63,17 @@ ext {
     univocityParsers: '2.9.1',
     ycsb: '0.17.0',
     xz: '1.9',
-    zstd: '1.4.9-3',
+    zstd: '1.4.9-5',
   ]
   testVersions = [
     awaitility: '4.0.3',
-    easymock: '4.2',
+    easymock: '4.3',
     guice: '5.0.1',
     hamcrest: '2.2',
     jcacheTck: '1.1.1',
     jctools: '3.3.0',
     junit: '4.13.2',
-    mockito: '3.8.0',
+    mockito: '3.9.0',
     paxExam: '4.13.4',
     testng: '7.4.0',
     truth: '1.1.2',
@@ -83,7 +84,7 @@ ext {
   ]
   pluginVersions = [
     bnd: '5.3.0',
-    checkerFramework: '0.5.18',
+    checkerFramework: '0.5.19',
     checkstyle: '8.41.1',
     coveralls: '2.8.4',
     errorprone: '2.0.1',
@@ -96,13 +97,13 @@ ext {
     semanticVersioning: '1.1.0',
     shadow: '6.1.0',
     sonarqube: '3.1.1',
-    spotbugs: '4.2.2',
+    spotbugs: '4.2.3',
     spotbugsPlugin: '4.7.0',
     stats: '0.2.2',
     versions: '0.38.0',
   ]
   annotationProcessorVersions = [
-    autoValue: '1.7.5',
+    autoValue: '1.8',
     autoValueBuilder: '2.9.3',
   ]
 
@@ -114,6 +115,7 @@ ext {
     commonsCompress: "org.apache.commons:commons-compress:${versions.commonsCompress}",
     commonsLang3: "org.apache.commons:commons-lang3:${versions.commonsLang3}",
     commonsMath3: "org.apache.commons:commons-math3:${versions.commonsMath3}",
+    commonsIo: "commons-io:commons-io:${versions.commonsIo}",
     concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${versions.concurrentlinkedhashmap}",
     config: "com.typesafe:config:${versions.config}",
     ehcache3: "org.ehcache:ehcache:${versions.ehcache3}",
