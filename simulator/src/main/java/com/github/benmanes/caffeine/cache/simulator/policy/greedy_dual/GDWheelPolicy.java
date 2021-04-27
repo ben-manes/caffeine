@@ -122,7 +122,7 @@ public final class GDWheelPolicy implements Policy {
     clockHand[level] = hand;
 
     // if C[idx] has advanced a whole round back to 1, call migration(idx+1)
-    if ((hand == 0) && (level < wheel.length)) {
+    if ((hand == 0) && (level + 1 < wheel.length)) {
       migrate(level + 1);
     }
 
