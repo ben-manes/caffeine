@@ -41,7 +41,7 @@ ext {
     elasticSearch: '7.12.0',
     expiringMap: '0.5.9',
     fastfilter: '1.0',
-    fastutil: '8.5.4',
+    fastutil: '8.5.2',
     flipTables: '1.1.0',
     googleJavaFormat: '1.10.0',
     guava: '30.1.1-jre',
@@ -165,10 +165,14 @@ ext {
     jcacheTck: "javax.cache:cache-tests:${testVersions.jcacheTck}",
     jcacheTckTests: "javax.cache:cache-tests:${testVersions.jcacheTck}:tests",
     jctools: "org.jctools:jctools-core:${testVersions.jctools}",
-    junit: "junit:junit:${testVersions.junit}",
+    junit: dependencies.create("junit:junit:${testVersions.junit}") {
+      exclude group: 'org.hamcrest'
+    },
     mockito: "org.mockito:mockito-core:${testVersions.mockito}",
     osgiCompile: [
-      "org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}",
+      dependencies.create("org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}") {
+        exclude group: 'org.hamcrest'
+      },
     ],
     osgiRuntime: [
       "org.apache.felix:org.apache.felix.framework:${testVersions.felix}",
