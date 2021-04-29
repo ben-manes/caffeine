@@ -30,6 +30,10 @@ dependencies {
   doc "${libraries.jcache}:javadoc"
 }
 
+compileJava {
+  modularity.inferModulePath = false
+}
+
 jar.manifest {
   attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.jcache'
   attributes 'Import-Package': [

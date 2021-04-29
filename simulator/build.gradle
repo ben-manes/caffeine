@@ -35,6 +35,10 @@ dependencies {
   testImplementation testLibraries.testng
 }
 
+compileJava {
+  modularity.inferModulePath = false
+}
+
 test {
   useTestNG()
 }
