@@ -567,7 +567,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public long estimatedSize() {
-      return asyncCache().cache().size();
+      return asyncCache().cache().estimatedSize();
     }
 
     @Override

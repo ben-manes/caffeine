@@ -842,7 +842,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Pacer pacer = pacer();
     if (pacer != null) {
       long delay = getExpirationDelay(now);
-      if (delay != Long.MAX_VALUE) {
+      if (delay == Long.MAX_VALUE) {
+        pacer.cancel();
+      } else {
         pacer.schedule(executor, drainBuffersTask, now, delay);
       }
     }
@@ -1881,6 +1883,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       // Discard all entries
       for (var entry : data.entrySet()) {
         removeNode(entry.getValue(), now);
+      }
+
+      // Cancel the scheduled cleanup
+      Pacer pacer = pacer();
+      if (pacer != null) {
+        pacer.cancel();
       }
 
       // Discard all pending reads

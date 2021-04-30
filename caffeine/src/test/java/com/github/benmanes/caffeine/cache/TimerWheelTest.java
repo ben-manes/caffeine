@@ -54,6 +54,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Longs;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 
@@ -64,7 +65,8 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 @SuppressWarnings("GuardedBy")
 public final class TimerWheelTest {
   private static final Random random = new Random();
-  private static final long NOW = random.nextLong();
+  private static final long[] CLOCKS = { -SPANS[0] + 1, 0L, 0xfffffffc0000000L,
+      Long.MAX_VALUE - SPANS[0] + 1, random.nextLong() };
 
   @Captor ArgumentCaptor<Node<Long, Long>> captor;
   @Mock BoundedLocalCache<Long, Long> cache;
@@ -85,93 +87,96 @@ public final class TimerWheelTest {
   }
 
   @Test(dataProvider = "schedule")
-  public void schedule(long nanos, int expired) {
+  public void schedule(long clock, long duration, int expired) {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
 
-    timerWheel.nanos = NOW;
+    timerWheel.nanos = clock;
     for (int timeout : new int[] { 25, 90, 240 }) {
-      timerWheel.schedule(new Timer(NOW + TimeUnit.SECONDS.toNanos(timeout)));
+      timerWheel.schedule(new Timer(clock + TimeUnit.SECONDS.toNanos(timeout)));
     }
-    timerWheel.advance(NOW + nanos);
+    timerWheel.advance(clock + duration);
     verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
 
     for (Node<?, ?> node : captor.getAllValues()) {
-      assertThat(node.getVariableTime(), is(lessThan(NOW + nanos)));
+      assertThat(node.getVariableTime(), is(lessThan(clock + duration)));
     }
   }
 
-  @DataProvider(name = "schedule")
-  public Object[][] providesSchedule() {
-    return new Object[][] {
-      { TimeUnit.SECONDS.toNanos(10), 0 },
-      { TimeUnit.MINUTES.toNanos(3),  2 },
-      { TimeUnit.MINUTES.toNanos(10), 3 }
-    };
-  }
-
   @Test(dataProvider = "fuzzySchedule")
-  public void schedule_fuzzy(long clock, long nanos, long[] times) {
+  public void schedule_fuzzy(long clock, long duration, long[] times) {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
     int expired = 0;
     for (long timeout : times) {
-      if (timeout <= nanos) {
+      if (timeout <= duration) {
         expired++;
       }
       timerWheel.schedule(new Timer(timeout));
     }
-    timerWheel.advance(nanos);
+    timerWheel.advance(duration);
     verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
 
     for (Node<?, ?> node : captor.getAllValues()) {
-      assertThat(node.getVariableTime(), is(lessThan(nanos)));
+      assertThat(node.getVariableTime(), is(lessThan(duration)));
     }
-    checkTimerWheel(nanos);
+    checkTimerWheel(duration);
   }
 
-  @Test
-  public void getExpirationDelay_empty() {
+
+  @Test(dataProvider = "clock")
+  public void advance(long clock) {
+    when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
+
+    timerWheel.nanos = clock;
+    timerWheel.schedule(new Timer(timerWheel.nanos + SPANS[0]));
+
+    timerWheel.advance(clock + 13 * SPANS[0]);
+    verify(cache).evictEntry(any(), any(), anyLong());
+  }
+
+  @Test(dataProvider = "clock")
+  public void getExpirationDelay_empty(long clock) {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
-    timerWheel.nanos = NOW;
+    timerWheel.nanos = clock;
 
     assertThat(timerWheel.getExpirationDelay(), is(Long.MAX_VALUE));
   }
 
-  @Test
-  public void getExpirationDelay_firstWheel() {
+  @Test(dataProvider = "clock")
+  public void getExpirationDelay_firstWheel(long clock) {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
-    timerWheel.nanos = NOW;
+    timerWheel.nanos = clock;
 
     long delay = Duration.ofSeconds(1).toNanos();
-    timerWheel.schedule(new Timer(NOW + delay));
+    timerWheel.schedule(new Timer(clock + delay));
     assertThat(timerWheel.getExpirationDelay(), is(lessThanOrEqualTo(SPANS[0])));
   }
 
-  @Test
-  public void getExpirationDelay_lastWheel() {
+  @Test(dataProvider = "clock")
+  public void getExpirationDelay_lastWheel(long clock) {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
-    timerWheel.nanos = NOW;
+    timerWheel.nanos = clock;
 
     long delay = Duration.ofDays(14).toNanos();
-    timerWheel.schedule(new Timer(NOW + delay));
+    timerWheel.schedule(new Timer(clock + delay));
     assertThat(timerWheel.getExpirationDelay(), is(lessThanOrEqualTo(delay)));
   }
 
-  @Test
-  public void getExpirationDelay_hierarchy() {
+  @Test(dataProvider = "clock")
+  public void getExpirationDelay_hierarchy(long clock) {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
-    timerWheel.nanos = NOW;
+    timerWheel.nanos = clock;
 
-    long t15 = NOW + Duration.ofSeconds(15).toNanos(); // in wheel[0]
-    long t80 = NOW + Duration.ofSeconds(80).toNanos(); // in wheel[1]
+    long t15 = clock + Duration.ofSeconds(15).toNanos(); // in wheel[0]
+    long t80 = clock + Duration.ofSeconds(80).toNanos(); // in wheel[1]
     timerWheel.schedule(new Timer(t15));
     timerWheel.schedule(new Timer(t80));
 
-    long t45 = NOW + Duration.ofSeconds(45).toNanos(); // discard T15, T80 in wheel[1]
+    long t45 = clock + Duration.ofSeconds(45).toNanos(); // discard T15, T80 in wheel[1]
     timerWheel.advance(t45);
 
-    long t95 = NOW + Duration.ofSeconds(95).toNanos(); // in wheel[0], but expires after T80
+    long t95 = clock + Duration.ofSeconds(95).toNanos(); // in wheel[0], but expires after T80
     timerWheel.schedule(new Timer(t95));
 
     long expectedDelay = (t80 - t45);
@@ -180,13 +185,13 @@ public final class TimerWheelTest {
   }
 
   @Test(dataProvider = "fuzzySchedule", invocationCount = 25)
-  public void getExpirationDelay_fuzzy(long clock, long nanos, long[] times) {
+  public void getExpirationDelay_fuzzy(long clock, long duration, long[] times) {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
     for (long timeout : times) {
       timerWheel.schedule(new Timer(timeout));
     }
-    timerWheel.advance(nanos);
+    timerWheel.advance(duration);
 
     long minDelay = Long.MAX_VALUE;
     int minSpan = Integer.MAX_VALUE;
@@ -219,6 +224,22 @@ public final class TimerWheelTest {
     }
   }
 
+  @DataProvider(name = "clock")
+  public Iterator<Object> providesClock() {
+    return Longs.asList(CLOCKS).stream().map(o -> (Object) o).iterator();
+  }
+
+  @DataProvider(name = "schedule")
+  public Iterator<Object[]> providesSchedule() {
+    var args = new ArrayList<Object[]>();
+    for (var clock : CLOCKS) {
+      args.add(new Object[] { clock, TimeUnit.SECONDS.toNanos(10), 0 });
+      args.add(new Object[] { clock, TimeUnit.MINUTES.toNanos(3),  2 });
+      args.add(new Object[] { clock, TimeUnit.MINUTES.toNanos(10), 3 });
+    }
+    return args.iterator();
+  }
+
   @DataProvider(name = "fuzzySchedule")
   public Object[][] providesFuzzySchedule() {
     long[] times = new long[5_000];
@@ -227,17 +248,17 @@ public final class TimerWheelTest {
     for (int i = 0; i < times.length; i++) {
       times[i] = ThreadLocalRandom.current().nextLong(clock + 1, bound);
     }
-    long nanos = ThreadLocalRandom.current().nextLong(clock + 1, bound);
-    return new Object[][] {{ clock, nanos, times }};
+    long duration = ThreadLocalRandom.current().nextLong(clock + 1, bound);
+    return new Object[][] {{ clock, duration, times }};
   }
 
-  private void checkTimerWheel(long nanos) {
+  private void checkTimerWheel(long duration) {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         for (long timer : getTimers(timerWheel.wheel[i][j])) {
-          if (timer <= nanos) {
+          if (timer <= duration) {
             throw new AssertionError(String.format("wheel[%s][%d] by %ss", i, j,
-                TimeUnit.NANOSECONDS.toSeconds(nanos - timer)));
+                TimeUnit.NANOSECONDS.toSeconds(duration - timer)));
           }
         }
       }
@@ -253,20 +274,20 @@ public final class TimerWheelTest {
     return timers;
   }
 
-  @Test
-  public void reschedule() {
+  @Test(dataProvider = "clock")
+  public void reschedule(long clock) {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
-    timerWheel.nanos = NOW;
+    timerWheel.nanos = clock;
 
-    Timer timer = new Timer(NOW + TimeUnit.MINUTES.toNanos(15));
+    Timer timer = new Timer(clock + TimeUnit.MINUTES.toNanos(15));
     timerWheel.schedule(timer);
     Node<?, ?> startBucket = timer.getNextInVariableOrder();
 
-    timer.setVariableTime(NOW + TimeUnit.HOURS.toNanos(2));
+    timer.setVariableTime(clock + TimeUnit.HOURS.toNanos(2));
     timerWheel.reschedule(timer);
     assertThat(timer.getNextInVariableOrder(), is(not(startBucket)));
 
-    timerWheel.advance(NOW + TimeUnit.DAYS.toNanos(1));
+    timerWheel.advance(clock + TimeUnit.DAYS.toNanos(1));
     checkEmpty();
   }
 
@@ -280,20 +301,20 @@ public final class TimerWheelTest {
     }
   }
 
-  @Test
-  public void deschedule() {
-    Timer timer = new Timer(NOW + 100);
-    timerWheel.nanos = NOW;
+  @Test(dataProvider = "clock")
+  public void deschedule(long clock) {
+    Timer timer = new Timer(clock + 100);
+    timerWheel.nanos = clock;
     timerWheel.schedule(timer);
     timerWheel.deschedule(timer);
     assertThat(timer.getNextInVariableOrder(), is(nullValue()));
     assertThat(timer.getPreviousInVariableOrder(), is(nullValue()));
   }
 
-  @Test
-  public void deschedule_notScheduled() {
-    timerWheel.nanos = NOW;
-    timerWheel.deschedule(new Timer(NOW + 100));
+  @Test(dataProvider = "clock")
+  public void deschedule_notScheduled(long clock) {
+    timerWheel.nanos = clock;
+    timerWheel.deschedule(new Timer(clock + 100));
   }
 
   @Test(dataProvider = "fuzzySchedule")
@@ -312,17 +333,17 @@ public final class TimerWheelTest {
     checkTimerWheel(nanos);
   }
 
-  @Test
-  public void expire_reschedule() {
+  @Test(dataProvider = "clock")
+  public void expire_reschedule(long clock) {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenAnswer(invocation -> {
       Timer timer = (Timer) invocation.getArgument(0);
       timer.setVariableTime(timerWheel.nanos + 100);
       return false;
     });
 
-    timerWheel.nanos = NOW;
-    timerWheel.schedule(new Timer(NOW + 100));
-    timerWheel.advance(NOW + TimerWheel.SPANS[0]);
+    timerWheel.nanos = clock;
+    timerWheel.schedule(new Timer(clock + 100));
+    timerWheel.advance(clock + SPANS[0]);
 
     verify(cache).evictEntry(any(), any(), anyLong());
     assertThat(captor.getValue().getNextInVariableOrder(), is(not(nullValue())));
@@ -330,10 +351,10 @@ public final class TimerWheelTest {
   }
 
   @Test(dataProvider = "cascade")
-  public void cascade(long nanos, long timeout, int span) {
-    timerWheel.nanos = NOW;
-    timerWheel.schedule(new Timer(NOW + timeout));
-    timerWheel.advance(NOW + nanos);
+  public void cascade(long clock, long duration, long timeout, int span) {
+    timerWheel.nanos = clock;
+    timerWheel.schedule(new Timer(clock + timeout));
+    timerWheel.advance(clock + duration);
 
     int count = 0;
     for (int i = 0; i <= span; i++) {
@@ -347,11 +368,13 @@ public final class TimerWheelTest {
   @DataProvider(name = "cascade")
   public Iterator<Object[]> providesCascade() {
     List<Object[]> args = new ArrayList<>();
-    for (int i = 1; i < TimerWheel.SPANS.length - 1; i++) {
-      long duration = TimerWheel.SPANS[i];
-      long timeout = ThreadLocalRandom.current().nextLong(duration + 1, 2 * duration);
-      long nanos = ThreadLocalRandom.current().nextLong(duration + 1, timeout - 1);
-      args.add(new Object[] { nanos, timeout, i});
+    for (int i = 1; i < SPANS.length - 1; i++) {
+      long span = SPANS[i];
+      long timeout = ThreadLocalRandom.current().nextLong(span + 1, 2 * span);
+      long duration = ThreadLocalRandom.current().nextLong(span + 1, timeout - 1);
+      for (long clock : CLOCKS) {
+        args.add(new Object[] { clock, duration, timeout, i});
+      }
     }
     return args.iterator();
   }
@@ -380,7 +403,7 @@ public final class TimerWheelTest {
   @DataProvider(name="snapshot")
   public Iterator<Object[]> providesSnaphot() {
     List<Object[]> scenarios = new ArrayList<>();
-    for (long clock : new long[] {0L, NOW }) {
+    for (long clock : CLOCKS) {
       for (int limit : new int[] { 10, 100 }) {
         scenarios.addAll(Arrays.asList(
             new Object[] { /* ascending */ true, limit, clock, Mockito.mock(Function.class) },

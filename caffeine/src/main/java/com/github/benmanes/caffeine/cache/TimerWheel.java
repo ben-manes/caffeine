@@ -97,6 +97,13 @@ final class TimerWheel<K, V> {
     long previousTimeNanos = nanos;
     try {
       nanos = currentTimeNanos;
+
+      // If wrapping, temporarily shift the clock for a positive comparison
+      if ((previousTimeNanos < 0) && (currentTimeNanos > 0)) {
+        previousTimeNanos += Long.MAX_VALUE;
+        currentTimeNanos += Long.MAX_VALUE;
+      }
+
       for (int i = 0; i < SHIFT.length; i++) {
         long previousTicks = (previousTimeNanos >>> SHIFT[i]);
         long currentTicks = (currentTimeNanos >>> SHIFT[i]);
@@ -120,20 +127,14 @@ final class TimerWheel<K, V> {
    */
   void expire(int index, long previousTicks, long currentTicks) {
     Node<K, V>[] timerWheel = wheel[index];
-
-    int start, end;
-    if ((currentTicks - previousTicks) >= timerWheel.length) {
-      end = timerWheel.length;
-      start = 0;
-    } else {
-      long mask = SPANS[index] - 1;
-      start = (int) (previousTicks & mask);
-      end = 1 + (int) (currentTicks & mask);
-    }
-
     int mask = timerWheel.length - 1;
+
+    int steps = Math.min(1 + Math.abs((int) (currentTicks - previousTicks)), timerWheel.length);
+    int start = (int) (previousTicks & mask);
+    int end = start + steps;
+
     for (int i = start; i < end; i++) {
-      Node<K, V> sentinel = timerWheel[(i & mask)];
+      Node<K, V> sentinel = timerWheel[i & mask];
       Node<K, V> prev = sentinel.getPreviousInVariableOrder();
       Node<K, V> node = sentinel.getNextInVariableOrder();
       sentinel.setPreviousInVariableOrder(sentinel);

@@ -49,10 +49,10 @@ final class Pacer {
 
     if (future == null) {
       // short-circuit an immediate scheduler causing an infinite loop during initialization
-      if (nextFireTime != 0) {
+      if (nextFireTime != 0L) {
         return;
       }
-    } else if ((nextFireTime - now) > 0) {
+    } else if ((nextFireTime - now) > 0L) {
       // Determine whether to reschedule
       if (maySkip(scheduleAt)) {
         return;
@@ -63,12 +63,21 @@ final class Pacer {
     future = scheduler.schedule(executor, command, actualDelay, TimeUnit.NANOSECONDS);
   }
 
+  /** Attempts to cancel execution of the scheduled task, if present. */
+  public void cancel() {
+    if (future != null) {
+      future.cancel(/* mayInterruptIfRunning */ false);
+      nextFireTime = 0L;
+      future = null;
+    }
+  }
+
   /**
    * Returns if the current fire time is sooner, or if it is later and within the tolerance limit.
    */
   boolean maySkip(long scheduleAt) {
     long delta = (scheduleAt - nextFireTime);
-    return (delta >= 0) || (-delta <= TOLERANCE);
+    return (delta >= 0L) || (-delta <= TOLERANCE);
   }
 
   /** Returns the delay and sets the next fire time. */
