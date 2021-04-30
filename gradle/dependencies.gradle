@@ -85,7 +85,7 @@ ext {
     bnd: '5.3.0',
     checkerFramework: '0.5.19',
     checkstyle: '8.42',
-    coveralls: '2.8.4',
+    coveralls: '2.12.0',
     errorprone: '2.0.1',
     jacoco: '0.8.6',
     jmh: '0.5.3',
@@ -196,7 +196,7 @@ ext {
     checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${pluginVersions.checkstyle}") {
       transitive = false
     },
-    coveralls: "gradle.plugin.com.github.kt3k.coveralls:coveralls-gradle-plugin:${pluginVersions.coveralls}",
+    coveralls: "gradle.plugin.org.kt3k.gradle.plugin:coveralls-gradle-plugin:${pluginVersions.coveralls}",
     errorprone: "net.ltgt.gradle:gradle-errorprone-plugin:${pluginVersions.errorprone}",
     jmh: [
       "me.champeau.gradle.jmh:me.champeau.gradle.jmh.gradle.plugin:${pluginVersions.jmh}",
