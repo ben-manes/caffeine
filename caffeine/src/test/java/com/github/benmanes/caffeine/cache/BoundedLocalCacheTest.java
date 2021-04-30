@@ -21,6 +21,9 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCES
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
@@ -38,11 +41,14 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,6 +66,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
@@ -853,5 +860,55 @@ public final class BoundedLocalCacheTest {
     assertThat(localCache.readBuffer.reads(), is(1));
     assertThat(localCache.readBuffer.writes(), is(1));
     assertThat(localCache.writeBuffer().producerIndex, is(8L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
+  public void unschedule_cleanUp(Cache<Integer, Integer> cache, CacheContext context) {
+    Future<?> future = Mockito.mock(Future.class);
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    doReturn(future).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
+
+    for (int i = 0; i < 10; i++) {
+      cache.put(i, -i);
+    }
+    assertThat(localCache.pacer().nextFireTime, is(not(0L)));
+    assertThat(localCache.pacer().future, is(not(nullValue())));
+
+    context.ticker().advance(1, TimeUnit.HOURS);
+    cache.cleanUp();
+
+    verify(future).cancel(false);
+    assertThat(localCache.pacer().nextFireTime, is(0L));
+    assertThat(localCache.pacer().future, is(nullValue()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
+  public void unschedule_invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
+    Future<?> future = Mockito.mock(Future.class);
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    doReturn(future).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
+
+    for (int i = 0; i < 10; i++) {
+      cache.put(i, -i);
+    }
+    assertThat(localCache.pacer().nextFireTime, is(not(0L)));
+    assertThat(localCache.pacer().future, is(not(nullValue())));
+
+    cache.invalidateAll();
+    verify(future).cancel(false);
+    assertThat(localCache.pacer().nextFireTime, is(0L));
+    assertThat(localCache.pacer().future, is(nullValue()));
   }
 }

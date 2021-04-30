@@ -17,7 +17,9 @@ package com.github.benmanes.caffeine.cache;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -65,7 +67,54 @@ public final class PacerTest {
   }
 
   @Test
-  public void scheduledAfterNextFireTime_skip() {
+  public void schedule_initialize() {
+    long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
+    doReturn(DisabledFuture.INSTANCE)
+        .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+    pacer.schedule(executor, command, NOW, delay);
+
+    assertThat(pacer.future, is(DisabledFuture.INSTANCE));
+    assertThat(pacer.nextFireTime, is(NOW + Pacer.TOLERANCE));
+  }
+
+  @Test
+  public void schedule_initialize_recurse() {
+    long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
+    doAnswer(invocation -> {
+      assertThat(pacer.future, is(nullValue()));
+      assertThat(pacer.nextFireTime, is(not(0L)));
+      pacer.schedule(executor, command, NOW, delay);
+      return DisabledFuture.INSTANCE;
+    }).when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+
+    pacer.schedule(executor, command, NOW, delay);
+    assertThat(pacer.future, is(DisabledFuture.INSTANCE));
+    assertThat(pacer.nextFireTime, is(NOW + Pacer.TOLERANCE));
+  }
+
+  @Test
+  public void schedule_cancel_schedule() {
+    long fireTime = NOW + Pacer.TOLERANCE;
+    long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
+    doReturn(future)
+        .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+
+    pacer.schedule(executor, command, NOW, delay);
+    assertThat(pacer.nextFireTime, is(fireTime));
+    assertThat(pacer.future, is(future));
+
+    pacer.cancel();
+    verify(future).cancel(false);
+    assertThat(pacer.nextFireTime, is(0L));
+    assertThat(pacer.future, is(nullValue()));
+
+    pacer.schedule(executor, command, NOW, delay);
+    assertThat(pacer.nextFireTime, is(fireTime));
+    assertThat(pacer.future, is(future));
+  }
+
+  @Test
+  public void scheduled_afterNextFireTime_skip() {
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
@@ -78,7 +127,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void scheduledBeforeNextFireTime_skip() {
+  public void schedule_beforeNextFireTime_skip() {
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
@@ -93,7 +142,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void scheduledBeforeNextFireTime_minimumDelay() {
+  public void schedule_beforeNextFireTime_minimumDelay() {
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
@@ -105,7 +154,7 @@ public final class PacerTest {
     assertThat(pacer.future, is(DisabledFuture.INSTANCE));
     assertThat(pacer.nextFireTime, is(NOW + Pacer.TOLERANCE));
 
-    verify(future).cancel(anyBoolean());
+    verify(future).cancel(false);
     verify(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
 
     verifyNoInteractions(executor, command);
@@ -113,7 +162,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void scheduledBeforeNextFireTime_customDelay() {
+  public void schedule_beforeNextFireTime_customDelay() {
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
@@ -125,10 +174,28 @@ public final class PacerTest {
     assertThat(pacer.future, is(DisabledFuture.INSTANCE));
     assertThat(pacer.nextFireTime, is(NOW + delay));
 
-    verify(future).cancel(anyBoolean());
+    verify(future).cancel(false);
     verify(scheduler).schedule(executor, command, delay, TimeUnit.NANOSECONDS);
 
     verifyNoInteractions(executor, command);
     verifyNoMoreInteractions(scheduler, future);
+  }
+
+  @Test
+  public void cancel_initialize() {
+    pacer.cancel();
+    assertThat(pacer.nextFireTime, is(0L));
+    assertThat(pacer.future, is(nullValue()));
+  }
+
+  @Test
+  public void cancel_scheduled() {
+    pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
+    pacer.future = future;
+
+    pacer.cancel();
+    verify(future).cancel(false);
+    assertThat(pacer.nextFireTime, is(0L));
+    assertThat(pacer.future, is(nullValue()));
   }
 }
