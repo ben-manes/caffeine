@@ -42,7 +42,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * total cache size and items are evicted from the tail of a queue to the head of the next lower
  * queue to maintain the size invariants. Items evicted from queue 0 are evicted from the cache."
  *
- * For more details, see <a href="http://www.cs.cornell.edu/~qhuang/papers/sosp_fbanalysis.pdf"An
+ * For more details, see <a href="http://www.cs.cornell.edu/~qhuang/papers/sosp_fbanalysis.pdf">An
  * Analysis of Facebook Photo Caching</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)

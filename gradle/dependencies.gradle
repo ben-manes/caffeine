@@ -35,13 +35,13 @@ ext {
     commonsIo: '2.8.0',
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.1',
-    ehcache3: '3.9.2',
+    ehcache3: '3.9.3',
     errorprone: '2.6.0',
     errorproneJavac: '9+181-r4173-1',
-    elasticSearch: '7.12.0',
+    elasticSearch: '7.12.1',
     expiringMap: '0.5.9',
     fastfilter: '1.0',
-    fastutil: '8.5.2',
+    fastutil: '8.5.4',
     flipTables: '1.1.0',
     googleJavaFormat: '1.10.0',
     guava: '30.1.1-jre',
@@ -67,7 +67,6 @@ ext {
   ]
   testVersions = [
     awaitility: '4.0.3',
-    easymock: '4.3',
     guice: '5.0.1',
     hamcrest: '2.2',
     jcacheTck: '1.1.1',
@@ -85,25 +84,25 @@ ext {
   pluginVersions = [
     bnd: '5.3.0',
     checkerFramework: '0.5.19',
-    checkstyle: '8.41.1',
+    checkstyle: '8.42',
     coveralls: '2.8.4',
     errorprone: '2.0.1',
     jacoco: '0.8.6',
     jmh: '0.5.3',
     jmhReport: '0.9.0',
-    nexusPublish: '1.0.0',
+    nexusPublish: '1.1.0',
     nullaway: '1.1.0',
-    pmd: '6.33.0',
+    pmd: '6.34.0',
     semanticVersioning: '1.1.0',
     shadow: '6.1.0',
-    sonarqube: '3.1.1',
+    sonarqube: '3.2.0',
     spotbugs: '4.2.3',
-    spotbugsPlugin: '4.7.0',
+    spotbugsPlugin: '4.7.1',
     stats: '0.2.2',
     versions: '0.38.0',
   ]
   annotationProcessorVersions = [
-    autoValue: '1.8',
+    autoValue: '1.8.1',
     autoValueBuilder: '2.9.3',
   ]
 
@@ -155,7 +154,6 @@ ext {
   ]
   testLibraries = [
     awaitility: "org.awaitility:awaitility:${testVersions.awaitility}",
-    easymock: "org.easymock:easymock:${testVersions.easymock}",
     guavaTestLib: dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
       exclude group: 'com.google.truth'
       exclude group: 'junit'

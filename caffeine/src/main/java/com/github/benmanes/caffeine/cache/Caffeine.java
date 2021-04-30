@@ -571,7 +571,7 @@ public final class Caffeine<K extends Object, V extends Object> {
    *        removed
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
-   * @throws IllegalStateException if the time to live or time to idle was already set
+   * @throws IllegalStateException if the time to live or variable expiration was already set
    * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
   public Caffeine<K, V> expireAfterWrite(Duration duration) {
@@ -630,7 +630,7 @@ public final class Caffeine<K extends Object, V extends Object> {
    *        automatically removed
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
-   * @throws IllegalStateException if the time to idle or time to live was already set
+   * @throws IllegalStateException if the time to idle or variable expiration was already set
    * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
   public Caffeine<K, V> expireAfterAccess(Duration duration) {

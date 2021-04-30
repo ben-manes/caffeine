@@ -65,7 +65,7 @@ public final class BloomFilter implements Membership {
    * number of insertions. This operation forgets all previous memberships when resizing.
    *
    * @param expectedInsertions the number of expected insertions
-   * @param fpp the false positive probability, where 0.0 > fpp < 1.0
+   * @param fpp the false positive probability, where {@literal 0.0 > fpp < 1.0}
    */
   public void ensureCapacity(@NonNegative long expectedInsertions, @NonNegative double fpp) {
     checkArgument(expectedInsertions >= 0);

@@ -217,6 +217,7 @@
     <trusted-key id='c03ef1d7d692bcff' group='org.scala-lang' />
     <trusted-key id='64163449a529ab1e' group='org.scala-lang.modules' />
     <trusted-key id='2c7b12f2a511e325' group='org.slf4j' />
+    <trusted-key id='2161d72e7dcd4258' group='org.sonarsource.scanner.api' />
     <trusted-key id='cfca4a29d26468de' group='org.sonarsource.scanner.api' />
     <trusted-key id='cfca4a29d26468de' group='org.sonarsource.scanner.gradle' />
     <trusted-key id='9440c8d6decafa12' group='org.testng' />
@@ -391,6 +392,9 @@
     <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.0'>
       <sha512>4D2D1FBDC1C8EBF905F8BCE824B3B87DEF250BFE77465D68A24A5FB348B40AED821AFD24060132A7320920F7C87B3A4B8373ECFD033C08D4660A625C6CD8B5C5</sha512>
     </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.1'>
+      <sha512>8138BCC41F3573FABC75DAB54D73303408301880ABD63838E0CFB2E6C9405CF54DB623684536209035FA31ADE4E6D627A4C11460C98FF29EFC0A372B40375F93</sha512>
+    </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>
     </dependency>
@@ -405,6 +409,9 @@
     </dependency>
     <dependency group='io.github.gradle-nexus' module='publish-plugin' version='1.0.0'>
       <sha512>B57469B9FA2C5D598688FF9C6A3B3283496921B91E269EA6D5A1DA6511125BD2545E2CFA8D3736739787B0BACF69C0AF5C5ECDEA474CB9FD56C96495E654682B</sha512>
+    </dependency>
+    <dependency group='io.github.gradle-nexus' module='publish-plugin' version='1.1.0'>
+      <sha512>8D72884FB1D818ACB2732128FD96C1C3AAF7F89670EE505BEA419621B287D028AD61CFAEDB71B23BCB80491500BD7A30D5450F1CF6C326013310F6053479911A</sha512>
     </dependency>
     <dependency group='javax.inject' module='javax.inject' version='1'>
       <sha512>E126B7CCF3E42FD1984A0BEEF1004A7269A337C202E59E04E8E2AF714280D2F2D8D2BA5E6F59481B8DCD34AAF35C966A688D0B48EC7E96F102C274DC0D3B381E</sha512>
@@ -572,6 +579,9 @@
     </dependency>
     <dependency group='org.sonarsource.scanner.gradle' module='sonarqube-gradle-plugin' version='3.1'>
       <sha512>EB7805D2B2321B4C0537C4BC228E2485EF374ED22F37001AAAA4790A983B6DE3642E19DFDF3ADECFC5921BAEA0FFBD092901955D8184AA67969C5B32A912108E</sha512>
+    </dependency>
+    <dependency group='org.sonarsource.scanner.gradle' module='sonarqube-gradle-plugin' version='3.2.0'>
+      <sha512>7B0855B530B6AB5271CE774876DEB2CF98FED7BDC2A15989FD80B524C3CAD650EE40EC32DEE5476D08B7981FBF20FF7D860F3084A834D39289E688BA15907230</sha512>
     </dependency>
     <dependency group='org.testng' module='testng' version='7.0.0'>
       <sha512>D31295F9998A446F62AE7BA9B7EE39A0F898D9B185047800920B72EE53632EC54A7BDD9E5BE4BB41EFAFE9D4C209DC4227CE6C9CC230301FE762875EFBC3F7C9</sha512>

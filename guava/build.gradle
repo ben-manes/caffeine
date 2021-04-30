@@ -10,7 +10,6 @@ dependencies {
   testImplementation testLibraries.junit
   testImplementation testLibraries.truth
   testImplementation testLibraries.jctools
-  testImplementation testLibraries.easymock
   testImplementation testLibraries.guavaTestLib
 }
 
@@ -39,7 +38,6 @@ test {
 }
 
 task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tests') {
-  enabled = !JavaVersion.current().isJava9Compatible()
   tasks.test.dependsOn(it)
 
   useJUnit {

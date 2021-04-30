@@ -71,8 +71,6 @@ tasks.withType(JavaCompile) {
 
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
-  // https://github.com/akka/akka/issues/21165
-  enabled = !JavaVersion.current().isJava9Compatible()
 }
 
 run {

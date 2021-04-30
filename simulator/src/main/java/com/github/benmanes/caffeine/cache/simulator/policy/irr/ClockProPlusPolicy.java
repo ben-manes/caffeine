@@ -37,6 +37,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * Implementation here differs from ClockProPolicy only in adjusting coldTarget and tracking for
  * demoted status part. Below is a summarize of coldTarget adjusting differences between ClockPro
  * and ClockPro+.
+ * <pre>
+ * {@literal
  * +-----------------------------------------------------------------------------------+
  * |                  ClockPro ColdTarget Adaption Algorithm Summary                   |
  * +------+----------+-----------------------------------------------------------------+
@@ -55,7 +57,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * | Size | increase |         d = (demoted size / non-resident size); d < 1 ? +1 : +d |
  * |      | decrease |         d = (non-resident size / demoted size); d < 1 ? -1 : -d |
  * +------+----------+-----------------------------------------------------------------+
- *
+ * }
+ * </pre>
  * This algorithm uses non-resident cold entries size to calculate adaption size so changing
  * non-resident-multiplier may affect the adaption algorithm. In the author's research code
  * percent-max-resident-cold was set to 0.5x.

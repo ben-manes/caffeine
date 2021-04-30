@@ -150,7 +150,7 @@ tasks.coveralls {
   description = 'Uploads the aggregated coverage report to Coveralls'
 
   dependsOn jacocoRootReport
-  onlyIf { System.env.'CI' && !JavaVersion.current().isJava9Compatible() }
+  onlyIf { System.env.'CI' }
 }
 
 def isNonStable = { String version ->
