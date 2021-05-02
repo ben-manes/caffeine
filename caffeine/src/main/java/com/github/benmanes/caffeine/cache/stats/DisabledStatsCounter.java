@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
+import static java.util.Objects.requireNonNull;
+
 import org.checkerframework.checker.index.qual.NonNegative;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -40,7 +42,9 @@ enum DisabledStatsCounter implements StatsCounter {
   public void recordLoadFailure(long loadTime) {}
 
   @Override
-  public void recordEviction(@NonNegative int weight, RemovalCause cause) {}
+  public void recordEviction(@NonNegative int weight, RemovalCause cause) {
+    requireNonNull(cause);
+  }
 
   @Override
   public CacheStats snapshot() {

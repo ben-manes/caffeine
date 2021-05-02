@@ -14,7 +14,7 @@ dependencies {
 }
 
 compileJava {
-  modularity.inferModulePath = false
+  modularity.inferModulePath = true
 }
 
 jar.manifest {

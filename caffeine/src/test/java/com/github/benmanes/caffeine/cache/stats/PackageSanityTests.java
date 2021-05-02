@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.guava;
+package com.github.benmanes.caffeine.cache.stats;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.testing.AbstractPackageSanityTests;
 
 /**
@@ -27,19 +25,6 @@ import com.google.common.testing.AbstractPackageSanityTests;
 public final class PackageSanityTests extends AbstractPackageSanityTests {
 
   public PackageSanityTests() {
-    publicApiOnly();
-    setDefault(CacheLoader.class, key -> key);
-    setDefault(Caffeine.class, Caffeine.newBuilder());
-    setDefault(com.google.common.cache.CacheLoader.class,
-        new com.google.common.cache.CacheLoader<Object, Object>() {
-          @Override public Object load(Object key) {
-            return key;
-          }
-        });
-    ignoreClasses(clazz ->
-        clazz.getSimpleName().contains("Test") ||
-        clazz.getSimpleName().contains("Stresser") ||
-        clazz.getSimpleName().contains("Generator") ||
-        clazz.getSimpleName().contains("Benchmark"));
+    ignoreClasses(clazz -> clazz.getSimpleName().endsWith("Test"));
   }
 }

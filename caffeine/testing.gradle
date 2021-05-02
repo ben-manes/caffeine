@@ -58,7 +58,7 @@ task isolatedTests(type: Test, group: 'Cache tests') {
   it.onlyIf { !System.env.'CI' }
 }
 
-task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tests') {
+task junitTests(type: Test, group: 'Cache tests', description: 'JUnit tests') {
   useJUnit()
   tasks.test.dependsOn(it)
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path

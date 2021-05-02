@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.atomic.LongAdder;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -71,6 +73,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
 
   @Override
   public void recordEviction(int weight, RemovalCause cause) {
+    requireNonNull(cause);
     evictionCount.increment();
     evictionWeight.add(weight);
   }

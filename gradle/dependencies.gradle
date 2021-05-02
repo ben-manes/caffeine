@@ -127,7 +127,7 @@ ext {
     },
     expiringMap: "net.jodah:expiringmap:${versions.expiringMap}",
     fastfilter: "com.github.FastFilter:fastfilter_java:${versions.fastfilter}",
-    fastutil: "it.unimi.dsi:fastutil:${versions.fastutil}",
+    fastutil: "it.unimi.dsi:fastutil-core:${versions.fastutil}",
     flipTables: "com.jakewharton.fliptables:fliptables:${versions.flipTables}",
     googleJavaFormat: "com.google.googlejavaformat:google-java-format:${versions.googleJavaFormat}",
     guava: "com.google.guava:guava:${versions.guava}",

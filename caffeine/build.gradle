@@ -24,12 +24,7 @@ idea.module {
 }
 
 eclipse.classpath.file.whenMerged {
-  entries.findAll {
-    it instanceof SourceFolder && it.output == 'bin/codeGen'
-  }*.output = 'bin/main'
-  // Exclude module-info when compiling through Eclipse
-  def main = entries.find { it instanceof SourceFolder && it.path == 'src/main/java' }
-  main.excludes.add('module-info.java')
+  entries.findAll { it instanceof SourceFolder && it.output == 'bin/codeGen' }*.output = 'bin/main'
 }
 
 plugins.withType(EclipsePlugin) {

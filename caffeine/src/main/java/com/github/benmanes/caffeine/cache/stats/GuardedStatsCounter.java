@@ -76,6 +76,7 @@ final class GuardedStatsCounter implements StatsCounter {
 
   @Override
   public void recordEviction(int weight, RemovalCause cause) {
+    requireNonNull(cause);
     try {
       delegate.recordEviction(weight, cause);
     } catch (Throwable t) {

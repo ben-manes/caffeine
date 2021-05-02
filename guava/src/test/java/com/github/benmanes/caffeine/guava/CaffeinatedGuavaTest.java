@@ -19,9 +19,9 @@ import java.lang.reflect.Constructor;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache.CacheLoaderException;
+import com.github.benmanes.caffeine.guava.compatability.TestingCacheLoaders;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.cache.TestingCacheLoaders;
 import com.google.common.testing.SerializableTester;
 import com.google.common.util.concurrent.MoreExecutors;
 
