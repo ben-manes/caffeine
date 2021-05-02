@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.testing.TestingExecutors.sameThr
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -44,6 +45,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.NullPointerTester;
+import com.google.common.util.concurrent.Futures;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -91,6 +93,16 @@ public final class SchedulerTest {
   }
 
   @Test
+  public void disabledFuture() throws Exception {
+    assertThat(DisabledFuture.INSTANCE.isDone(), is(true));
+    assertThat(DisabledFuture.INSTANCE.isCancelled(), is(false));
+    assertThat(DisabledFuture.INSTANCE.cancel(false), is(false));
+    assertThat(DisabledFuture.INSTANCE.cancel(true), is(false));
+    assertThat(DisabledFuture.INSTANCE.get(), is(nullValue()));
+    assertThat(DisabledFuture.INSTANCE.get(0, TimeUnit.SECONDS), is(nullValue()));
+  }
+
+  @Test
   public void disabledFuture_null() {
     npeTester.testAllPublicInstanceMethods(DisabledFuture.INSTANCE);
   }
@@ -117,7 +129,14 @@ public final class SchedulerTest {
 
   @Test
   public void guardedScheduler() {
-    Future<?> future = Scheduler.guardedScheduler(Scheduler.disabledScheduler())
+    Future<?> future = Scheduler.guardedScheduler((r, e, d, u) -> Futures.immediateVoidFuture())
+        .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
+    assertThat(future, is(Futures.immediateVoidFuture()));
+  }
+
+  @Test
+  public void guardedScheduler_exception() {
+    Future<?> future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new RuntimeException(); })
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future, is(DisabledFuture.INSTANCE));
   }

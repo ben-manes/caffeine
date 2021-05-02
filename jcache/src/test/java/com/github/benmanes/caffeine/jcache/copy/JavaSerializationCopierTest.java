@@ -27,76 +27,98 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JavaSerializationCopierTest {
-  final Copier copier = new JavaSerializationCopier();
 
-  @Test(expectedExceptions = NullPointerException.class)
-  public void null_object() {
-    copy(null);
+  @Test(dataProvider = "nullArgs", expectedExceptions = NullPointerException.class)
+  public void constructor_null(Set<Class<?>> immutableClasses,
+      Map<Class<?>, Function<Object, Object>> deepCopyStrategies) {
+    new JavaSerializationCopier(immutableClasses, deepCopyStrategies);
   }
 
-  @Test(expectedExceptions = NullPointerException.class)
-  public void null_classLoader() {
+  @Test(dataProvider = "copier", expectedExceptions = NullPointerException.class)
+  public void null_object(Copier copier) {
+    copy(copier, null);
+  }
+
+  @Test(dataProvider = "copier", expectedExceptions = NullPointerException.class)
+  public void null_classLoader(Copier copier) {
     copier.copy(1, null);
   }
 
-  @Test(expectedExceptions = UncheckedIOException.class)
-  public void notSerializable() {
-    copy(new ByteArrayInputStream(new byte[0]));
+  @Test(dataProvider = "copier", expectedExceptions = UncheckedIOException.class)
+  public void notSerializable(Copier copier) {
+    copy(copier, new ByteArrayInputStream(new byte[0]));
   }
 
-  @Test
-  public void mutable() {
+  @Test(dataProvider = "copier")
+  public void mutable(Copier copier) {
     List<Integer> ints = new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4));
-    assertThat(copy(ints), is(equalTo(ints)));
+    assertThat(copy(copier, ints), is(equalTo(ints)));
   }
 
   @Test
   public void immutable() {
     String text = "test";
-    assertThat(copy(text), is(sameInstance(text)));
+    assertThat(copy(new JavaSerializationCopier(), text), is(sameInstance(text)));
   }
 
-  @Test
+  @Test(dataProvider = "copier")
   @SuppressWarnings({"JdkObsolete", "JavaUtilDate"})
-  public void deepCopy_date() {
+  public void deepCopy_date(Copier copier) {
     Date date = new Date();
-    assertThat(copy(date), is(equalTo(date)));
+    assertThat(copy(copier, date), is(equalTo(date)));
   }
 
-  @Test
+  @Test(dataProvider = "copier")
   @SuppressWarnings({"JdkObsolete", "JavaUtilDate"})
-  public void deepCopy_calendar() {
+  public void deepCopy_calendar(Copier copier) {
     Calendar calendar = Calendar.getInstance();
     calendar.setTime(new Date());
-    assertThat(copy(calendar), is(equalTo(calendar)));
+    assertThat(copy(copier, calendar), is(equalTo(calendar)));
   }
 
-  @Test
-  public void array_primitive() {
+  @Test(dataProvider = "copier")
+  public void array_primitive(Copier copier) {
     int[] ints = { 0, 1, 2, 3, 4 };
-    assertThat(copy(ints), is(equalTo(ints)));
+    assertThat(copy(copier, ints), is(equalTo(ints)));
   }
 
-  @Test
-  public void array_immutable() {
+  @Test(dataProvider = "copier")
+  public void array_immutable(Copier copier) {
     Integer[] ints = { 0, 1, 2, 3, 4 };
-    assertThat(copy(ints), is(equalTo(ints)));
+    assertThat(copy(copier, ints), is(equalTo(ints)));
   }
 
-  @Test
-  public void array_mutable() {
+  @Test(dataProvider = "copier")
+  public void array_mutable(Copier copier) {
     Object array = new Object[] { new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4)) };
-    assertThat(copy(array), is(equalTo(array)));
+    assertThat(copy(copier, array), is(equalTo(array)));
   }
 
-  private <T> T copy(T object) {
+  private <T> T copy(Copier copier, T object) {
     return copier.copy(object, Thread.currentThread().getContextClassLoader());
+  }
+
+  @DataProvider(name = "copier")
+  public Object[] providesCopiers() {
+    return new Object[] {
+        new JavaSerializationCopier(),
+        new JavaSerializationCopier(Set.of(), Map.of())
+    };
+  }
+
+  @DataProvider(name = "nullArgs")
+  public Object[][] providesNullArgs() {
+    return new Object[][] { { null, null }, { null, Map.of() }, { Set.of(), null } };
   }
 }

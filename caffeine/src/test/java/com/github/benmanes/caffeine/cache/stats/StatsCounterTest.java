@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -94,6 +95,12 @@ public final class StatsCounterTest {
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));
+  }
+
+  @Test
+  public void guarded_sameInstance() {
+    StatsCounter counter = StatsCounter.guardedStatsCounter(new ConcurrentStatsCounter());
+    assertThat(StatsCounter.guardedStatsCounter(counter), is(sameInstance(counter)));
   }
 
   @Test

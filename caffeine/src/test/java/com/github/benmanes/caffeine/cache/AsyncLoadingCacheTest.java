@@ -405,6 +405,22 @@ public final class AsyncLoadingCacheTest {
     AsyncCacheLoader.bulk(f);
   }
 
+  @Test
+  public void bulk_function_absent() throws Exception {
+    AsyncCacheLoader<Integer, Integer> loader = AsyncCacheLoader.bulk(keys -> Map.of());
+    assertThat(loader.asyncLoadAll(Set.of(), Runnable::run).join(), is(Map.of()));
+    assertThat(loader.asyncLoad(1, Runnable::run).join(), is(nullValue()));
+  }
+
+  @Test
+  public void bulk_function_present() throws Exception {
+    AsyncCacheLoader<Integer, Integer> loader = AsyncCacheLoader.bulk(keys -> {
+      return keys.stream().collect(toMap(identity(), identity()));
+    });
+    assertThat(loader.asyncLoadAll(Set.of(1, 2), Runnable::run).join(), is(Map.of(1, 1, 2, 2)));
+    assertThat(loader.asyncLoad(1, Runnable::run).join(), is(1));
+  }
+
   @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void bulk_bifunction_null() {

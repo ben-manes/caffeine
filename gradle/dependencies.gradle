@@ -179,7 +179,7 @@ ext {
       "org.osgi:org.osgi.util.promise:${testVersions.osgiUtilPromise}",
       "org.ops4j.pax.exam:pax-exam-container-native:${testVersions.paxExam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${testVersions.paxExam}",
-      "org.ops4j.pax.url:pax-url-aether:2.6.5",
+      "org.ops4j.pax.url:pax-url-aether:2.6.7",
     ],
     testng: [
       dependencies.create("org.testng:testng:${testVersions.testng}") {

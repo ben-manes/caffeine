@@ -57,6 +57,21 @@ import com.google.common.base.Joiner;
 public final class CaffeineSpecTest {
   static final long UNSET_LONG = UNSET_INT;
 
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void parseInt_exception() {
+    CaffeineSpec.parseInt("key", "value");
+  }
+
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void parseLong_exception() {
+    CaffeineSpec.parseLong("key", "value");
+  }
+
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void parseTimeUnit_exception() {
+    CaffeineSpec.parseTimeUnit("key", "value");
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
       population = Population.EMPTY, compute = Compute.SYNC,

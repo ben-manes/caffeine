@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
@@ -48,6 +49,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -133,6 +135,23 @@ public final class TimerWheelTest {
 
     timerWheel.advance(clock + 13 * SPANS[0]);
     verify(cache).evictEntry(any(), any(), anyLong());
+  }
+
+  @Test
+  public void advance_exception() {
+    Mockito.doThrow(new IllegalStateException())
+        .when(cache).evictEntry(captor.capture(), any(), anyLong());
+    var timer = new Timer(timerWheel.nanos + SPANS[1]);
+
+    timerWheel.nanos = 0L;
+    timerWheel.schedule(timer);
+    try {
+      timerWheel.advance(Long.MAX_VALUE);
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(timerWheel.nanos, is(0L));
+      assertThat(timerWheel.wheel[1][1].getNextInVariableOrder(), is(sameInstance(timer)));
+    }
   }
 
   @Test(dataProvider = "clock")
@@ -232,7 +251,7 @@ public final class TimerWheelTest {
   @DataProvider(name = "schedule")
   public Iterator<Object[]> providesSchedule() {
     var args = new ArrayList<Object[]>();
-    for (var clock : CLOCKS) {
+    for (long clock : CLOCKS) {
       args.add(new Object[] { clock, TimeUnit.SECONDS.toNanos(10), 0 });
       args.add(new Object[] { clock, TimeUnit.MINUTES.toNanos(3),  2 });
       args.add(new Object[] { clock, TimeUnit.MINUTES.toNanos(10), 3 });
@@ -268,7 +287,7 @@ public final class TimerWheelTest {
   private LongArrayList getTimers(Node<?, ?> sentinel) {
     LongArrayList timers = new LongArrayList();
     for (Node<?, ?> node = sentinel.getNextInVariableOrder();
-        node != sentinel; node = node.getNextInVariableOrder()) {
+         node != sentinel; node = node.getNextInVariableOrder()) {
       timers.add(node.getVariableTime());
     }
     return timers;

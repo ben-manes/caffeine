@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -397,16 +398,27 @@ public final class RefreshAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void getExpiresAfter(CacheContext context,
+  public void getRefreshesAfter(CacheContext context,
       @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
+    assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes(), is(1L));
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES), is(1L));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setExpiresAfter(CacheContext context,
+  public void setRefreshesAfter(CacheContext context,
       @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(2, TimeUnit.MINUTES);
+    assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes(), is(2L));
+    assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES), is(2L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void setRefreshesAfter_duration(CacheContext context,
+      @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
+    refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(2));
+    assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes(), is(2L));
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES), is(2L));
   }
 

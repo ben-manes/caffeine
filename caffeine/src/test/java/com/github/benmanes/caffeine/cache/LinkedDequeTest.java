@@ -738,6 +738,14 @@ public final class LinkedDequeTest {
     assertThat(deque, hasSize(SIZE - 1));
   }
 
+  @Test(dataProvider = "full", expectedExceptions = IllegalStateException.class)
+  public void iterator_removal_exception(LinkedDeque<LinkedValue> deque) {
+    PeekingIterator<LinkedValue> iterator = deque.iterator();
+    iterator.next();
+    iterator.remove();
+    iterator.remove();
+  }
+
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
   public void descendingIterator_noMoreElements(LinkedDeque<LinkedValue> deque) {
     deque.descendingIterator().next();

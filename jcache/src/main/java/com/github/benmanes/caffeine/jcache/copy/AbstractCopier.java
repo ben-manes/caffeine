@@ -30,12 +30,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -55,16 +51,13 @@ public abstract class AbstractCopier<A> implements Copier {
   private static final Set<Class<?>> JAVA_IMMUTABLE;
 
   static {
-    JAVA_IMMUTABLE = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(Boolean.class,
-        Byte.class, Character.class, Double.class, Float.class, Short.class, Integer.class,
-        Long.class, BigInteger.class, BigDecimal.class, String.class, Class.class, UUID.class,
-        URL.class, URI.class, Pattern.class, Inet4Address.class, Inet6Address.class,
-        InetSocketAddress.class, LocalDate.class, LocalTime.class, LocalDateTime.class,
-        Instant.class, Duration.class)));
-    Map<Class<?>, Function<Object, Object>> strategies = new HashMap<>();
-    strategies.put(Calendar.class, o -> ((Calendar) o).clone());
-    strategies.put(Date.class, o -> ((Date) o).clone());
-    JAVA_DEEP_COPY = Collections.unmodifiableMap(strategies);
+    JAVA_IMMUTABLE = Set.of(Boolean.class, Byte.class, Character.class, Double.class, Float.class,
+        Short.class, Integer.class, Long.class, BigInteger.class, BigDecimal.class, String.class,
+        Class.class, UUID.class, URL.class, URI.class, Pattern.class, Inet4Address.class,
+        Inet6Address.class, InetSocketAddress.class, LocalDate.class, LocalTime.class,
+        LocalDateTime.class, Instant.class, Duration.class);
+    JAVA_DEEP_COPY = Map.of(Date.class, o -> ((Date) o).clone(),
+        Calendar.class, o -> ((Calendar) o).clone());
   }
 
   private final Set<Class<?>> immutableClasses;
