@@ -66,9 +66,12 @@ publishing {
 signing {
   // https://github.com/gradle/gradle/issues/11387
   required { false }
-  if (version.releaseBuild) {
-    sign publishing.publications.mavenJava
-  }
+
+  def signingKey = findProperty("signingKey")
+  def signingKeyId = findProperty("signingKeyId")
+  def signingPassword = findProperty("signingPassword")
+  useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+  sign publishing.publications.mavenJava
 }
 
 javadoc {
