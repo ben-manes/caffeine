@@ -123,6 +123,8 @@ public interface CacheLoader<K extends Object, V extends Object> extends AsyncCa
    * This method should be overridden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link AsyncLoadingCache#getAll} will defer to individual calls
    * to {@link AsyncLoadingCache#get} if this method is not overridden.
+   * <p>
+   * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly.
    *
    * @param keys the unique, non-null keys whose values should be loaded
    * @param executor the executor that with asynchronously loads the entries
@@ -151,6 +153,9 @@ public interface CacheLoader<K extends Object, V extends Object> extends AsyncCa
    * returned. This method is called when an existing cache entry is refreshed by
    * {@link Caffeine#refreshAfterWrite}, or through a call to {@link LoadingCache#refresh}.
    * <p>
+   * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly
+   * or block waiting for other cache operations to complete.
+   * <p>
    * <b>Note:</b> <i>all exceptions thrown by this method will be logged and then swallowed</i>.
    *
    * @param key the non-null key whose value should be loaded
@@ -171,6 +176,9 @@ public interface CacheLoader<K extends Object, V extends Object> extends AsyncCa
    * {@code key}. If the replacement value is not found then the mapping will be removed if
    * {@code null} is computed. This method is called when an existing cache entry is refreshed by
    * {@link Caffeine#refreshAfterWrite}, or through a call to {@link LoadingCache#refresh}.
+   * <p>
+   * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly
+   * or block waiting for other cache operations to complete.
    * <p>
    * <b>Note:</b> <i>all exceptions thrown by this method will be logged and then swallowed</i>.
    *

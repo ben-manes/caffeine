@@ -223,6 +223,9 @@ public interface Cache<K extends Object, V extends Object> {
    * Returns access to inspect and perform low-level operations on this cache based on its runtime
    * characteristics. These operations are optional and dependent on how the cache was constructed
    * and what abilities the implementation exposes.
+   * <p>
+   * <b>Warning:</b> policy operations <b>must not</b> be performed from within an atomic scope of
+   * another cache operation.
    *
    * @return access to inspect and perform advanced operations based on the cache's characteristics
    */
