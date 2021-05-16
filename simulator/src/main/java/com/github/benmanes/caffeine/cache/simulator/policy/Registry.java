@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual.GDWheelPo
 import com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual.GdsfPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPlusPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProSimplePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.DClockPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.FrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.HillClimberFrdPolicy;
@@ -206,6 +207,7 @@ public final class Registry {
     register(LirsPolicy.class, LirsPolicy::new);
     register(ClockProPolicy.class, ClockProPolicy::new);
     register(ClockProPlusPolicy.class, ClockProPlusPolicy::new);
+    register(ClockProSimplePolicy.class, ClockProSimplePolicy::new);
 
     registerMany(DClockPolicy.class, DClockPolicy::policies);
   }
