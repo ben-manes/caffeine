@@ -39,8 +39,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -52,6 +50,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.lang.model.element.Modifier;
@@ -104,14 +103,6 @@ import com.squareup.javapoet.TypeSpec;
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class NodeFactoryGenerator {
-  static final FieldSpec LOOKUP = FieldSpec.builder(MethodHandles.Lookup.class, "LOOKUP")
-      .initializer("$T.lookup()", MethodHandles.class)
-      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-      .build();
-  static final FieldSpec FACTORY = FieldSpec.builder(MethodType.class, "FACTORY")
-      .initializer("$T.methodType($T.class)", MethodType.class, void.class)
-      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-      .build();
 
   final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
@@ -206,9 +197,6 @@ public final class NodeFactoryGenerator {
     nodeFactory.addField(FieldSpec.builder(rawReferenceKeyType, DEAD_WEAK_KEY, modifiers)
         .initializer("new $T(null, null)", rawReferenceKeyType)
         .build());
-
-    nodeFactory.addField(FACTORY);
-    nodeFactory.addField(LOOKUP);
   }
 
   private void addKeyMethods() {
@@ -265,7 +253,7 @@ public final class NodeFactoryGenerator {
         .addTypeVariable(vTypeVar)
         .addParameter(BUILDER_PARAM)
         .addParameter(boolean.class, "isAsync")
-        .addCode(NodeSelectorCode.get())
+        .addCode(NodeSelectorCode.get(nodeTypes.stream().map(type -> type.name).collect(Collectors.toList())))
         .returns(NODE_FACTORY)
         .build());
     nodeFactory.addMethod(MethodSpec.methodBuilder("weakValues")

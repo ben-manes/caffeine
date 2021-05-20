@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.lang.ref.ReferenceQueue;
 
 import com.squareup.javapoet.ClassName;
@@ -63,7 +62,6 @@ public final class Specifications {
 
   public static final TypeName METHOD_HANDLES = ClassName.get(MethodHandles.class);
   public static final TypeName LOOKUP = ClassName.get(MethodHandles.Lookup.class);
-  public static final TypeName VAR_HANDLE = ClassName.get(VarHandle.class);
 
   public static final ClassName LOCAL_CACHE_FACTORY =
       ClassName.get(PACKAGE_NAME, "LocalCacheFactory");

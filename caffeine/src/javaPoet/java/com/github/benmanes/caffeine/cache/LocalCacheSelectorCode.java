@@ -15,13 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.FACTORY;
-import static com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.LOOKUP;
-import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
 
-import java.lang.invoke.MethodHandle;
-
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 
 /**
@@ -33,8 +29,7 @@ public final class LocalCacheSelectorCode {
 
   private LocalCacheSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$1T sb = new $1T(\"$2N.\")",
-            StringBuilder.class, LOCAL_CACHE_FACTORY.packageName());
+        .addStatement("$1T sb = new $1T()", StringBuilder.class);
   }
 
   private LocalCacheSelectorCode keys() {
@@ -94,19 +89,18 @@ public final class LocalCacheSelectorCode {
     return this;
   }
 
-  private LocalCacheSelectorCode selector() {
+  private LocalCacheSelectorCode selector(Iterable<String> simpleNames) {
     block
-        .beginControlFlow("try")
-            .addStatement("Class<?> clazz = Class.forName(sb.toString())")
-            .addStatement("$T handle = $N.findConstructor(clazz, $N)",
-                MethodHandle.class, LOOKUP, FACTORY)
-            .addStatement("return ($T) handle.invoke(builder, cacheLoader, async)",
-                BOUNDED_LOCAL_CACHE)
-        .nextControlFlow("catch ($T | $T e)", RuntimeException.class, Error.class)
-            .addStatement("throw e")
-        .nextControlFlow("catch ($T t)", Throwable.class)
-            .addStatement("throw new $T(sb.toString(), t)", IllegalStateException.class)
-        .endControlFlow();
+            .addStatement("String name = sb.toString()")
+            .beginControlFlow("switch (name)");
+    String packageName = LOCAL_CACHE_FACTORY.packageName();
+    for (String name : simpleNames) {
+      block.add("case $S:", name)
+              .addStatement("return new $T<>(builder, cacheLoader, async)", ClassName.get(packageName, name));
+    }
+    block.add("default:")
+            .addStatement("throw new $T($S + name)", IllegalStateException.class, "Unknown type: ")
+            .endControlFlow();
     return this;
   }
 
@@ -114,7 +108,7 @@ public final class LocalCacheSelectorCode {
     return block.build();
   }
 
-  public static CodeBlock get() {
+  public static CodeBlock get(Iterable<String> simpleNames) {
     return new LocalCacheSelectorCode()
         .keys()
         .values()
@@ -122,7 +116,7 @@ public final class LocalCacheSelectorCode {
         .stats()
         .maximum()
         .expires()
-        .selector()
+        .selector(simpleNames)
         .build();
   }
 }

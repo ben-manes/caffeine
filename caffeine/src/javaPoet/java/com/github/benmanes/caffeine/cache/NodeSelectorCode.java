@@ -15,12 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.NodeFactoryGenerator.FACTORY;
-import static com.github.benmanes.caffeine.cache.NodeFactoryGenerator.LOOKUP;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 
-import java.lang.invoke.MethodHandle;
-
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 
 /**
@@ -32,8 +29,7 @@ public final class NodeSelectorCode {
 
   private NodeSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$1T sb = new $1T(\"$2N.\")",
-            StringBuilder.class, NODE_FACTORY.rawType.packageName());
+        .addStatement("$1T sb = new $1T()", StringBuilder.class);
   }
 
   private NodeSelectorCode keys() {
@@ -95,18 +91,18 @@ public final class NodeSelectorCode {
     return this;
   }
 
-  private NodeSelectorCode selector() {
+  private NodeSelectorCode selector(Iterable<String> simpleNames) {
     block
-        .beginControlFlow("try")
-            .addStatement("Class<?> clazz = Class.forName(sb.toString())")
-            .addStatement("$T handle = $N.findConstructor(clazz, $N)",
-                MethodHandle.class, LOOKUP, FACTORY)
-            .addStatement("return ($T) handle.invoke()", NODE_FACTORY)
-        .nextControlFlow("catch ($T | $T e)", RuntimeException.class, Error.class)
-            .addStatement("throw e")
-        .nextControlFlow("catch ($T t)", Throwable.class)
-            .addStatement("throw new $T(sb.toString(), t)", IllegalStateException.class)
-        .endControlFlow();
+            .addStatement("String name = sb.toString()")
+            .beginControlFlow("switch (name)");
+    String packageName = NODE_FACTORY.rawType.packageName();
+    for (String name : simpleNames) {
+      block.add("case $S:", name)
+              .addStatement("return new $T<>()", ClassName.get(packageName, name));
+    }
+    block.add("default:")
+            .addStatement("throw new $T($S + name)", IllegalStateException.class, "Unknown type: ")
+            .endControlFlow();
     return this;
   }
 
@@ -114,13 +110,13 @@ public final class NodeSelectorCode {
     return block.build();
   }
 
-  public static CodeBlock get() {
+  public static CodeBlock get(Iterable<String> simpleNames) {
     return new NodeSelectorCode()
         .keys()
         .values()
         .expires()
         .maximum()
-        .selector()
+        .selector(simpleNames)
         .build();
   }
 }
