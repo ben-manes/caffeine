@@ -194,6 +194,7 @@
     <trusted-key id='0315bfb7970a144f' group='org.jvnet.staxex' />
     <trusted-key id='f1f286fc184b6bda' group='org.kordamp.gradle' />
     <trusted-key id='58f016eea73b6ca2' group='org.kt3k.gradle.plugin' />
+    <trusted-key id='689cbe64f4bc997f' group='org.mockito' />
     <trusted-key id='a1b4460d8ba7b9af' group='org.mockito' />
     <trusted-key id='7c7d8456294423ba' group='org.objenesis' />
     <trusted-key id='0d3b328562a119a7' group='org.openjdk.jmh' />
@@ -410,6 +411,9 @@
     <dependency group='io.freefair.gradle' module='lombok-plugin' version='5.3.0'>
       <sha512>4C8808B0607564006379FBEB63BCEFC03A0F5FE83F307E455EE66B0B40AC238D14388CEA3C1D883835AF089238F824037A423124348571085C6D5415AB3981CF</sha512>
     </dependency>
+    <dependency group='io.freefair.gradle' module='lombok-plugin' version='5.3.3.3'>
+      <sha512>750C97C7BE33EEF83B43A94E4342F978F5FDB0E4A523ABB408CC1E2111CE214CEC3A6177265618A8429FFB6C09A0E47070C68F2F046F3A6CCC0F5DD77D2E2ED0</sha512>
+    </dependency>
     <dependency group='io.github.gradle-nexus' module='publish-plugin' version='1.0.0'>
       <sha512>B57469B9FA2C5D598688FF9C6A3B3283496921B91E269EA6D5A1DA6511125BD2545E2CFA8D3736739787B0BACF69C0AF5C5ECDEA474CB9FD56C96495E654682B</sha512>
     </dependency>
@@ -502,6 +506,9 @@
     </dependency>
     <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.19'>
       <sha512>12EE6B6DAB34CB3538CC415E46CC5232BD8A7F750DAAD821F25AAEDDB27450FD490DFC52D96DAAF7D7E65FB138E18BD83CF1CB4375DF1680D09B86B4E2950B20</sha512>
+    </dependency>
+    <dependency group='org.checkerframework' module='checkerframework-gradle-plugin' version='0.5.20'>
+      <sha512>2840F74F04FACB68B2D90FBEA28A184119BFD4A2133B54DAE8B07289EEF7572C97CD01C97AC70269A5D72E0E1F43EB92F564970D53F45FCA41FA84272BFABD9E</sha512>
     </dependency>
     <dependency group='org.codehaus.groovy.modules.http-builder' module='http-builder' version='0.7.1'>
       <sha512>BC7BC2A514F8CA104A392ECF8736F4A3D316EE988FA91299D33B0AF46134B38E14E4A5061449D17B2DF7A521643E6C02DFA37CC277ED7CAB7CE83C28C00E9719</sha512>

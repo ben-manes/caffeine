@@ -76,6 +76,7 @@ Powering infrastructure near you:
  * Caffeine is presented as part of research papers evaluating its novel eviction policy.
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
    * [Adaptive Software Cache Management][adaptive-tinylfu] by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
+   * [Lightweight Robust Size Aware Cache Management][size-tinylfu] by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
 
 ### Download
 
@@ -116,6 +117,7 @@ Snapshots of the development version are available in
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
 [tinylfu]: https://dl.acm.org/authorize?N41277
 [adaptive-tinylfu]: https://dl.acm.org/authorize?N675830
+[size-tinylfu]: https://arxiv.org/abs/2105.08770
 [modern-cache-1]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
 [modern-cache-2]: http://highscalability.com/blog/2019/2/25/design-of-a-modern-cachepart-deux.html
 [modern-cache-slides]: https://docs.google.com/presentation/d/1NlDxyXsUG1qlVHMl4vsUUBQfAJ2c2NsFPNPr2qymIBs
@@ -125,7 +127,7 @@ Snapshots of the development version are available in
 [scaffeine]: https://github.com/blemale/scaffeine
 [hbase]: https://hbase.apache.org
 [cassandra]: http://cassandra.apache.org
-[solr]: https://lucene.apache.org/solr
+[solr]: https://solr.apache.org/
 [infinispan]: https://infinispan.org
 [neo4j]: https://github.com/neo4j/neo4j
 [finagle]: https://github.com/twitter/finagle
