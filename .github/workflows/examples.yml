@@ -20,7 +20,7 @@ jobs:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
       - name: Cache Gradle packages
-        uses: actions/cache@v2.1.5
+        uses: actions/cache@v2.1.6
         with:
           path: |
             ~/.gradle/wrapper
