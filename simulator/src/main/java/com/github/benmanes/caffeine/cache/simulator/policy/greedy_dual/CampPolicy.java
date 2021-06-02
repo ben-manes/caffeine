@@ -36,7 +36,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * CAMP algorithm. Greedy Dual Wheel (GD-Wheel) algorithm.
+ * CAMP algorithm.
  * <p>
  * The algorithm is explained by the authors in
  * <a href="https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.466.393&rep=rep1&type=pdf">CAMP:
@@ -55,7 +55,7 @@ public final class CampPolicy implements Policy {
   private final Int2ObjectMap<Sentinel> sentinelMapping;
   private final PolicyStats policyStats;
   private final long maximumSize;
-  private final int p;
+  private final int precision;
   private final int bitMask;
 
   private long requestCount;
@@ -68,8 +68,8 @@ public final class CampPolicy implements Policy {
     this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
     this.sentinelMapping = new Int2ObjectOpenHashMap<>();
-    this.p = settings.p();
-    this.bitMask = Integer.MAX_VALUE >> (Integer.SIZE - 1 - p);
+    this.precision = settings.precision();
+    this.bitMask = Integer.MAX_VALUE >> (Integer.SIZE - 1 - precision);
     this.requestCount = 0;
   }
 
@@ -83,7 +83,6 @@ public final class CampPolicy implements Policy {
     } else {
       policyStats.recordWeightedHit(event.weight());
       onHit(node);
-
       size += (event.weight() - node.weight);
       node.weight = event.weight();
       if (size > maximumSize) {
@@ -95,18 +94,18 @@ public final class CampPolicy implements Policy {
   private void onHit(Node node) {
     Sentinel sentinel = sentinelMapping.get(node.cost);
     node.moveToTail();
-    if (priorityQueue.size() > 1) {
+    if (priorityQueue.size() > 1) { // updates priorityQueue of sentinels by remove, update, and add
       checkState(priorityQueue.remove(sentinel), "cost %s not found in priority queue", sentinel);
-      sentinel.priority = priorityQueue.first().priority + sentinel.cost;
-      sentinel.lastRequest = requestCount;
+      sentinel.priority = priorityQueue.first().priority + sentinel.cost; // update LRU sentinel's priority
+      sentinel.lastRequest = requestCount; // this field is used to break ties in priority queue
       priorityQueue.add(sentinel);
     }
   }
 
   private int roundedCost(AccessEvent event) {
-    int cost = (int) (event.isPenaltyAware() ? event.missPenalty() : 1) / event.weight();
-    int msbIndex = (int) (Math.log(Integer.highestOneBit(cost)) / Math.log(2));
-    int roundMask = msbIndex < p ? Integer.MAX_VALUE : bitMask << (msbIndex - p + 1);
+    int cost = (int) (event.isPenaltyAware() ? event.missPenalty() : 1) / event.weight(); // compute integer cost
+    int msbIndex = (int) (Math.log(Integer.highestOneBit(cost)) / Math.log(2)); // find first "on" bit for rounding
+    int roundMask = msbIndex < precision ? Integer.MAX_VALUE : bitMask << (msbIndex - precision + 1); // mask for rounding
     return cost & roundMask;
   }
 
@@ -116,9 +115,9 @@ public final class CampPolicy implements Policy {
       evict();
     }
     int roundCost = roundedCost(event);
-    int priority = priorityQueue.isEmpty() ? roundCost : priorityQueue.first().priority + roundCost;
+    int priority = priorityQueue.isEmpty() ? roundCost : priorityQueue.first().priority + roundCost;// update priority
     Sentinel sentinel = sentinelMapping.get(roundCost);
-    if (sentinel == null) {
+    if (sentinel == null) { // checks if new LRU list needs to be created for the rounded cost
       sentinel = new Sentinel(roundCost);
       sentinel.priority = priority;
       sentinel.lastRequest = requestCount;
@@ -126,7 +125,7 @@ public final class CampPolicy implements Policy {
       priorityQueue.add(sentinelMapping.get(roundCost));
     }
     Node node = new Node(event.key(), event.weight(), sentinel);
-    node.cost = roundCost;
+    node.cost = roundCost; // cost of entry might be used later to find sentinel in case of hit
     sentinel.appendToTail(node);
     data.put(node.key, node);
   }
@@ -273,8 +272,8 @@ public final class CampPolicy implements Policy {
       super(config);
     }
 
-    public int p() {
-      return config().getInt("camp.p");
+    public int precision() {
+      return config().getInt("camp.precision");
     }
   }
 }
