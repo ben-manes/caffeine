@@ -269,5 +269,4 @@ public final class CaffeineCachingProvider implements CachingProvider {
   public boolean isOsgiComponent() {
     return isOsgiComponent;
   }
-
 }

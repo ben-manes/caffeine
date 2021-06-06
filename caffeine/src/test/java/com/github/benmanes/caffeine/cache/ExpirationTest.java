@@ -73,7 +73,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.google.common.base.Functions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
@@ -921,11 +920,11 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    cache.put(1, ImmutableList.of(1));
+    cache.put(context.absentKey(), List.of(context.absentValue()));
     context.ticker().advance(1, TimeUnit.MINUTES);
-    cache.asMap().putIfAbsent(1, ImmutableList.of(1, 2, 3));
-
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+    cache.asMap().putIfAbsent(context.absentKey(), List.copyOf(context.absent().values()));
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
+        is((long) context.absent().size()));
   }
 
   @Test(dataProvider = "caches")
@@ -936,11 +935,15 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    cache.put(1, ImmutableList.of(1));
-    context.ticker().advance(1, TimeUnit.MINUTES);
-    cache.put(1, ImmutableList.of(1, 2, 3));
+    cache.put(context.absentKey(), List.of(context.absentValue()));
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(1L));
 
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(1L));
+
+    cache.put(context.absentKey(), List.copyOf(context.absent().values()));
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
+        is((long) context.absent().size()));
   }
 
   @Test(dataProvider = "caches")
@@ -951,11 +954,12 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void computeIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    cache.put(1, ImmutableList.of(1));
+    cache.put(context.absentKey(), List.of(context.absentValue()));
     context.ticker().advance(1, TimeUnit.MINUTES);
-    cache.asMap().computeIfAbsent(1, k -> ImmutableList.of(1, 2, 3));
+    cache.asMap().computeIfAbsent(context.absentKey(), k -> List.copyOf(context.absent().values()));
 
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
+        is((long) context.absent().size()));
   }
 
   @Test(dataProvider = "caches")
@@ -966,11 +970,12 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void compute_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    cache.put(1, ImmutableList.of(1));
+    cache.put(context.absentKey(), List.of(context.absentValue()));
     context.ticker().advance(1, TimeUnit.MINUTES);
-    cache.asMap().compute(1, (k, v) -> ImmutableList.of(1, 2, 3));
+    cache.asMap().compute(context.absentKey(), (k, v) -> List.copyOf(context.absent().values()));
 
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
+        is((long) context.absent().size()));
   }
 
   @Test(dataProvider = "caches")
@@ -981,13 +986,13 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void merge_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    cache.put(1, ImmutableList.of(1));
+    cache.put(context.absentKey(), List.of(context.absentValue()));
     context.ticker().advance(1, TimeUnit.MINUTES);
-    cache.asMap().merge(1, ImmutableList.of(1, 2, 3), (oldValue, v) -> {
-      throw new AssertionError("Should never be called");
-    });
+    cache.asMap().merge(context.absentKey(), List.copyOf(context.absent().values()),
+        (oldValue, v) -> { throw new AssertionError("Should never be called"); });
 
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
+        is((long) context.absent().size()));
   }
 
   @Test(dataProvider = "caches")

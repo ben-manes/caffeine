@@ -101,7 +101,7 @@ public final class Registry {
    */
   public Set<Policy> policies() {
     return settings.policies().stream()
-        .map(name -> factories.get(name.toLowerCase(US)))
+        .map(name -> checkNotNull(factories.get(name.toLowerCase(US)), "%s not found", name))
         .filter(factory -> factory.characteristics().containsAll(characteristics))
         .flatMap(factory -> factory.creator().apply(settings.config()).stream())
         .collect(toSet());
@@ -109,7 +109,7 @@ public final class Registry {
 
   /** Returns all of the policy variations that have been configured. */
   public Set<Policy> policy(String name) {
-    Factory factory = factories.get(name.toLowerCase(US));
+    var factory = factories.get(name.toLowerCase(US));
     checkNotNull(factory, "%s not found", name);
     return factory.creator().apply(settings.config());
   }
@@ -220,9 +220,9 @@ public final class Registry {
   }
 
   private void registerGreedyDual() {
+    register(CampPolicy.class, CampPolicy::new);
     register(GdsfPolicy.class, GdsfPolicy::new);
     register(GDWheelPolicy.class, GDWheelPolicy::new);
-    register(CampPolicy.class, CampPolicy::new);
   }
 
   private void registerProduct() {
@@ -242,7 +242,7 @@ public final class Registry {
     abstract Function<Config, Set<Policy>> creator();
 
     Set<Characteristic> characteristics() {
-      PolicySpec policySpec = policyClass().getAnnotation(PolicySpec.class);
+      var policySpec = policyClass().getAnnotation(PolicySpec.class);
       return (policySpec == null)
           ? ImmutableSet.of()
           : ImmutableSet.copyOf(policySpec.characteristics());

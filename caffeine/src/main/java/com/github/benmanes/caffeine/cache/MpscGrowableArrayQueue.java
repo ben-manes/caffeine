@@ -336,8 +336,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     if (e == null) {
       if (index != lvProducerIndex(this)) {
         // poll() == null iff queue is empty, null element is not strong enough indicator, so we
-        // must
-        // check the producer index. If the queue is indeed not empty we spin until element is
+        // must check the producer index. If the queue is indeed not empty we spin until element is
         // visible.
         do {
           e = lvElement(buffer, offset);

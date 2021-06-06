@@ -2,8 +2,8 @@
  * Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin
  */
 apply plugin: 'com.github.johnrengelman.shadow'
-apply plugin: 'me.champeau.gradle.jmh'
 apply plugin: 'io.morethan.jmhreport'
+apply plugin: 'me.champeau.jmh'
 
 idea.module {
   scopes.PROVIDED.plus += [ configurations.jmh ]
@@ -52,7 +52,7 @@ jmh {
   resultFormat = 'json'
   resultsFile = file("${buildDir}/reports/jmh/results.json")
 
-  jvmArgs = '-server -Xmx2G -XX:+UseG1GC -XX:-UseBiasedLocking'
+  jvmArgs = [ '-Xmx2G' ]
   warmupIterations = 3
   failOnError = true
   iterations = 3

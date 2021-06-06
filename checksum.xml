@@ -98,6 +98,7 @@
     <trusted-key id='379ce192d401ab61' group='info.picocli' />
     <trusted-key id='0d9cb5ee96b7bc22' group='io.airlift' />
     <trusted-key id='a6ea2e2bf22e0543' group='io.github.java-diff-utils' />
+    <trusted-key id='602ec18d20c4661c' group='io.github.x-stream' />
     <trusted-key id='94b291aef984a085' group='io.reactivex.rxjava3' />
     <trusted-key id='5e2f2b3d474efe6b' group='it.unimi.dsi' />
     <trusted-key id='823dba283a93ee3c' group='it.unimi.dsi' />
@@ -122,6 +123,7 @@
     <trusted-key id='72385ff0af338d52' group='joda-time' />
     <trusted-key id='85911f425ec61b51' group='junit' />
     <trusted-key id='efe8086f9e93774e' group='junit' />
+    <trusted-key id='b5ad94bdd6bdb924' group='me.champeau.jmh' />
     <trusted-key id='7999befba1039e8b' group='net.bytebuddy' />
     <trusted-key id='bb2914c1fa0811c3' group='net.bytebuddy' />
     <trusted-key id='75bf031b7c94e183' group='net.java.dev.jna' />
@@ -149,8 +151,10 @@
     <trusted-key id='7c25280eae63ebe5' group='org.apache.httpcomponents' />
     <trusted-key id='11b1a21ad89afded' group='org.apache.jackrabbit' />
     <trusted-key id='1de461528f1f1b2a' group='org.apache.jackrabbit' />
+    <trusted-key id='bb2eab31a732f339' group='org.apache.jackrabbit' />
     <trusted-key id='d108ff879aa63950' group='org.apache.jackrabbit' />
     <trusted-key id='3595395eb3d8e1ba' group='org.apache.logging.log4j' />
+    <trusted-key id='873a8e86b4372146' group='org.apache.maven' />
     <trusted-key id='ae5a7fb608a0221c' group='org.apache.maven' />
     <trusted-key id='bf1518e0160788a2' group='org.apache.maven.resolver' />
     <trusted-key id='368557390486f2c5' group='org.awaitility' />
@@ -161,6 +165,7 @@
     <trusted-key id='41321490758aad6f' group='org.codehaus.groovy' />
     <trusted-key id='873a8e86b4372146' group='org.codehaus.mojo' />
     <trusted-key id='9b7d32f2d50582e6' group='org.codehaus.mojo' />
+    <trusted-key id='012579464d01c06a' group='org.codehaus.plexus' />
     <trusted-key id='105de36038d8c6c5' group='org.codehaus.plexus' />
     <trusted-key id='8b0378a57cd8e243' group='org.codehaus.plexus' />
     <trusted-key id='ae5a7fb608a0221c' group='org.codehaus.plexus' />
@@ -226,6 +231,7 @@
     <trusted-key id='72385ff0af338d52' group='org.threeten' />
     <trusted-key id='38ee757d69184620' group='org.tukaani' />
     <trusted-key id='04633a577c200941' group='org.vafer' />
+    <trusted-key id='09a79e1e15a04694' group='org.vafer' />
     <trusted-key id='e0130a3ed5a2079e' group='org.webjars' />
     <trusted-key id='55c7e5e701832382' group='org.yaml' />
     <trusted-key id='e65e11d40d80db7c' group='site.ycsb' />
@@ -312,6 +318,9 @@
     <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.38.0'>
       <sha512>C1AB30AA9984AAF40E0DEF6474F535875ABCCA1568E6D495317D1092B782AC39D13505BBBD50877589610A59273AC89ADE0B68EEE0501961C1AF17CA5D509178</sha512>
     </dependency>
+    <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.39.0'>
+      <sha512>9D2B8E7F26D347B6C7EA42BC50E42BCDCA1CFA3388E160FAB5A0E1A5B6F7C4CAD1920F91A384C0B6145C0FE4B03ADE39C9CDF28145D709CCE763E3BE8188818</sha512>
+    </dependency>
     <dependency group='com.github.brianfrankcooper.YCSB' module='core' version='0.15.0'>
       <sha512>DF5BFED7DFC327166FE0CB81BD6A9655F44CCB268E7E69204BD09955147CE9A97EBBCC28F9ACF315DBAF49E850A43CE8744F44E68D7BE816EACCAF0BEE41B203</sha512>
     </dependency>
@@ -336,6 +345,9 @@
     <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='3.0.0'>
       <sha512>5E0AAF09AE8E6BA8C6653E79C098520B5CC82B7953E5902528C638097A25EE6020C160A63D4D45EE4A367C66B50128A8D8A19B992B54C5A948FB44A1E7567C11</sha512>
     </dependency>
+    <dependency group='com.gradle.publish' module='plugin-publish-plugin' version='0.14.0'>
+      <sha512>50C3BCDCB19435BDA4B65CA781019895D44B1778DAF304728D4A8981581AFD0A339740B48452611C09D2183605B02E95F7E55C184211001B6A8534FB6C1F2B74</sha512>
+    </dependency>
     <dependency group='com.gradle' module='build-scan-plugin' version='2.4.1'>
       <sha512>347F865BD5B9310D6972BDA95AB089D2BA911C4EA897A1E4E316465077A0153609E31DFFD3C2D61DEEA7E54C07D7D36D5807F9B24F3111A97553DFD260A205F1</sha512>
     </dependency>
@@ -347,6 +359,9 @@
     </dependency>
     <dependency group='commons-io' module='commons-io' version='2.6'>
       <sha512>4DE22E2A50711F756A5542474395D8619DCA0A8BE0407B722605005A1167F8C306BC5EEF7F0B8252F5508C817C1CEB759171E4E18D4EB9697DFDD809AC39673F</sha512>
+    </dependency>
+    <dependency group='gradle.plugin.com.github.jengelman.gradle.plugins' module='shadow' version='7.0.0'>
+      <sha512>826D35C2E981DDBBF010AB2A6074D46D0E307C77FB4AD63F3920E983554BF138E95F4E7242629D1752B434A59353C75B7D4172DAA0C0C54DFD8A19FF5574C239</sha512>
     </dependency>
     <dependency group='gradle.plugin.com.github.kt3k.coveralls' module='coveralls-gradle-plugin' version='2.8.4'>
       <sha512>CEAA0F67FB9D04CDC125BC25694B4C412BFC0AFFC6ACC641C8E24E9E276E1990FF995B6A2A64DB896E4CF7E1BAD96682FBFC97DE95587C4313D6D8A958035E3C</sha512>

@@ -92,7 +92,7 @@ subprojects {
     // ensure tasks don't overwrite the default report directories used by the 'test' task
     reports.html.destination = file("${buildDir}/reports/${name}")
     reports.junitXml.destination = file("${buildDir}/reports/${name}/results")
-    binResultsDir = file("${buildDir}/reports/${name}/results/binary/${name}")
+    binaryResultsDirectory = file("${buildDir}/reports/${name}/results/binary/${name}")
   }
 
   if (project != project(':caffeine')) {
@@ -135,8 +135,8 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
   executionData jacocoMerge.destinationFile
 
   reports {
-    html.enabled = true // human readable
-    xml.enabled = true // required by coveralls
+    html.required = true // human readable
+    xml.required = true // required by coveralls
   }
 }
 

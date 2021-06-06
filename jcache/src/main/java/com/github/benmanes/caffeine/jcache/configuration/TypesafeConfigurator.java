@@ -51,7 +51,7 @@ import com.typesafe.config.ConfigFactory;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.MutableStaticState"})
 public final class TypesafeConfigurator {
   static final Logger logger = Logger.getLogger(TypesafeConfigurator.class.getName());
 

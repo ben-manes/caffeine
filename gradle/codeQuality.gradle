@@ -4,7 +4,6 @@
 import static org.gradle.util.GradleVersion.version
 
 apply plugin: 'org.kordamp.gradle.stats'
-apply plugin: 'org.checkerframework'
 apply plugin: 'com.github.spotbugs'
 apply plugin: 'net.ltgt.errorprone'
 apply plugin: 'net.ltgt.nullaway'
@@ -18,26 +17,21 @@ configurations {
   checkstyleConfig
 }
 
-repositories {
-  flatDir {
-    dirs "${rootDir}/build/libs"
-  }
-}
-
 dependencies {
-  checkerFramework libraries.checkerFramework
   checkstyleConfig gradlePlugins.checkstyle
   errorproneJavac libraries.errorproneJavac
   errorprone libraries.errorproneCore
   errorprone libraries.nullaway
-  errorprone name: 'caffeine_local'
+  errorprone files("${rootDir}/build/libs/caffeine_local.jar")
 }
 
 // Gradle rewrites the compiler's dependency on Caffeine to a project dependency, which fails
 // Instead we have to download and trick the build to put the jar on the compiler's classpath
 // See the downloadCaffeineLocal() task and https://github.com/gradle/gradle/issues/11625
 task downloadCaffeineLocal() {
-  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.9.0/caffeine-2.9.0.jar'
+  def version = '3.0.2'
+  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/' +
+    "${version}/caffeine-${version}.jar"
   def local = file("${rootDir}/build/libs/caffeine_local.jar")
   if (!local.exists()) {
     local.parentFile.mkdirs()
@@ -56,14 +50,6 @@ jar {
   metaInf {
     from "${rootDir}/LICENSE"
   }
-}
-
-checkerFramework {
-  checkers = [
-    'org.checkerframework.checker.nullness.NullnessChecker',
-  ]
-  extraJavacArgs = [ '-Werror' ]
-  excludeTests = true
 }
 
 checkstyle {
@@ -93,8 +79,8 @@ jacocoTestReport {
   description = 'Generates a test coverage report for a project'
 
   reports {
-    xml.enabled = true
-    html.enabled = true
+    xml.required = true
+    html.required = true
   }
 }
 
@@ -119,7 +105,10 @@ tasks.withType(JavaExec) {
 
 tasks.withType(JavaCompile).configureEach {
   dependsOn downloadCaffeineLocal
-  options.compilerArgs << '-Xlint:all,-auxiliaryclass'
+  options.compilerArgs << [
+    '-Xlint:all,-exports', '-auxiliaryclass',
+    '-requires-automatic', '-requires-transitive-automatic',
+  ].join(',')
   options.encoding = 'UTF-8'
   options.errorprone {
     option('ClassName')
@@ -148,7 +137,6 @@ tasks.withType(JavaCompile).configureEach {
       annotatedPackages.add('com.github.benmanes.caffeine')
     }
   }
-  checkerFramework.skipCheckerFramework = true
 }
 
 tasks.named('compileTestJava').configure {
@@ -163,7 +151,7 @@ tasks.withType(Test) {
     jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=0'
   }
   if (System.env.'CI') {
-    reports.html.enabled = false
+    reports.html.required = false
   }
   testLogging {
     events 'skipped', 'failed'
@@ -178,8 +166,8 @@ tasks.withType(Checkstyle) {
   enabled = System.properties.containsKey('checkstyle')
   group = 'Checkstyle'
   reports {
-    xml.enabled = false
-    html.enabled = true
+    xml.required = false
+    html.required = true
   }
 }
 
@@ -188,7 +176,7 @@ afterEvaluate {
     it.enabled = System.properties.containsKey('spotbugs')
     it.group = 'SpotBugs'
     it.reports {
-      html.enabled = true
+      html.required = true
     }
   }
 }
@@ -197,7 +185,7 @@ tasks.withType(Pmd) {
   enabled = System.properties.containsKey('pmd')
   group = 'PMD'
   reports {
-    xml.enabled = false
-    html.enabled = true
+    xml.required = false
+    html.required = true
   }
 }

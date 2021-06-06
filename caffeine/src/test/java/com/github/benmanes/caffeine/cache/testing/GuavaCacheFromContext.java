@@ -75,7 +75,7 @@ public final class GuavaCacheFromContext {
   public static <K, V> Cache<K, V> newGuavaCache(CacheContext context) {
     checkState(!context.isAsync(), "Guava caches are synchronous only");
 
-    CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
+    var builder = CacheBuilder.newBuilder();
     context.guava = builder;
 
     builder.concurrencyLevel(1);
@@ -146,7 +146,9 @@ public final class GuavaCacheFromContext {
     private final boolean isRecordingStats;
     private final Ticker ticker;
 
+    transient ConcurrentMap<K, V> mapView;
     transient StatsCounter statsCounter;
+    transient Policy<K, V> policy;
 
     GuavaCache(com.google.common.cache.Cache<K, V> cache, Ticker ticker, boolean isRecordingStats) {
       this.statsCounter = new SimpleStatsCounter();
@@ -192,8 +194,8 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public Map<K, V> getAll(Iterable<? extends K> keys,
-        Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
+    public Map<K, V> getAll(Iterable<? extends K> keys, Function<? super Set<? extends K>,
+        ? extends Map<? extends K, ? extends V>> mappingFunction) {
       keys.forEach(Objects::requireNonNull);
       requireNonNull(mappingFunction);
 
@@ -262,164 +264,14 @@ public final class GuavaCacheFromContext {
 
     @Override
     public CacheStats stats() {
-      com.google.common.cache.CacheStats stats = statsCounter.snapshot().plus(cache.stats());
+      var stats = statsCounter.snapshot().plus(cache.stats());
       return CacheStats.of(stats.hitCount(), stats.missCount(), stats.loadSuccessCount(),
           stats.loadExceptionCount(), stats.totalLoadTime(), stats.evictionCount(), 0L);
     }
 
     @Override
     public ConcurrentMap<K, V> asMap() {
-      return new ForwardingConcurrentMap<K, V>() {
-        @Override
-        public boolean containsKey(Object key) {
-          requireNonNull(key);
-          return delegate().containsKey(key);
-        }
-        @Override
-        public boolean containsValue(Object value) {
-          requireNonNull(value);
-          return delegate().containsValue(value);
-        }
-        @Override
-        public V get(Object key) {
-          requireNonNull(key);
-          return delegate().get(key);
-        }
-        @Override
-        public V remove(Object key) {
-          requireNonNull(key);
-          return delegate().remove(key);
-        }
-        @Override
-        public boolean remove(Object key, Object value) {
-          requireNonNull(key);
-          return delegate().remove(key, value);
-        }
-        @Override
-        public boolean replace(K key, V oldValue, V newValue) {
-          requireNonNull(oldValue);
-          return delegate().replace(key, oldValue, newValue);
-        }
-        @Override
-        public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-          requireNonNull(mappingFunction);
-          V value = getIfPresent(key);
-          if (value != null) {
-            return value;
-          }
-          long now = ticker.read();
-          try {
-            value = mappingFunction.apply(key);
-            long loadTime = (ticker.read() - now);
-            if (value == null) {
-              statsCounter.recordLoadException(loadTime);
-              return null;
-            } else {
-              statsCounter.recordLoadSuccess(loadTime);
-              V v = delegate().putIfAbsent(key, value);
-              return (v == null) ? value : v;
-            }
-          } catch (RuntimeException | Error e) {
-            statsCounter.recordLoadException((ticker.read() - now));
-            throw e;
-          }
-        }
-        @Override
-        public V computeIfPresent(K key,
-            BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-          requireNonNull(remappingFunction);
-          V oldValue;
-          long now = ticker.read();
-          if ((oldValue = get(key)) != null) {
-            try {
-              V newValue = remappingFunction.apply(key, oldValue);
-              long loadTime = ticker.read() - now;
-              if (newValue == null) {
-                statsCounter.recordLoadException(loadTime);
-                remove(key);
-                return null;
-              } else {
-                statsCounter.recordLoadSuccess(loadTime);
-                put(key, newValue);
-                return newValue;
-              }
-            } catch (RuntimeException | Error e) {
-              statsCounter.recordLoadException(ticker.read() - now);
-              throw e;
-            }
-          } else {
-            return null;
-          }
-        }
-        @Override
-        public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-          requireNonNull(remappingFunction);
-          V oldValue = get(key);
-
-          long now = ticker.read();
-          try {
-            V newValue = remappingFunction.apply(key, oldValue);
-            if (newValue == null) {
-              if (oldValue != null || containsKey(key)) {
-                remove(key);
-                statsCounter.recordLoadException(ticker.read() - now);
-                return null;
-              } else {
-                statsCounter.recordLoadException(ticker.read() - now);
-                return null;
-              }
-            } else {
-              statsCounter.recordLoadSuccess(ticker.read() - now);
-              put(key, newValue);
-              return newValue;
-            }
-          } catch (RuntimeException | Error e) {
-            statsCounter.recordLoadException(ticker.read() - now);
-            throw e;
-          }
-        }
-        @Override
-        public V merge(K key, V value,
-            BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-          requireNonNull(remappingFunction);
-          requireNonNull(value);
-          V oldValue = get(key);
-          for (;;) {
-            if (oldValue != null) {
-              long now = ticker.read();
-              try {
-                V newValue = remappingFunction.apply(oldValue, value);
-                if (newValue != null) {
-                  if (replace(key, oldValue, newValue)) {
-                    statsCounter.recordLoadSuccess(ticker.read() - now);
-                    return newValue;
-                  }
-                } else if (remove(key, oldValue)) {
-                  statsCounter.recordLoadException(ticker.read() - now);
-                  return null;
-                }
-              } catch (RuntimeException | Error e) {
-                statsCounter.recordLoadException(ticker.read() - now);
-                throw e;
-              }
-              oldValue = get(key);
-            } else {
-              if ((oldValue = putIfAbsent(key, value)) == null) {
-                return value;
-              }
-            }
-          }
-        }
-        @Override
-        protected ConcurrentMap<K, V> delegate() {
-          return cache.asMap();
-        }
-
-        @SuppressWarnings({"UnusedVariable", "UnusedMethod"})
-        private void readObject(ObjectInputStream stream) throws InvalidObjectException {
-          statsCounter = new SimpleStatsCounter();
-        }
-      };
+      return (mapView == null) ? (mapView = new AsMapView()) : mapView;
     }
 
     @Override
@@ -429,32 +281,186 @@ public final class GuavaCacheFromContext {
 
     @Override
     public Policy<K, V> policy() {
-      return new Policy<K, V>() {
-        @Override public boolean isRecordingStats() {
-          return isRecordingStats;
+      return (policy == null) ? (policy = new GuavaPolicy()) : policy;
+    }
+
+    final class AsMapView extends ForwardingConcurrentMap<K, V> {
+      @Override
+      public boolean containsKey(Object key) {
+        requireNonNull(key);
+        return delegate().containsKey(key);
+      }
+      @Override
+      public boolean containsValue(Object value) {
+        requireNonNull(value);
+        return delegate().containsValue(value);
+      }
+      @Override
+      public V get(Object key) {
+        requireNonNull(key);
+        return delegate().get(key);
+      }
+      @Override
+      public V remove(Object key) {
+        requireNonNull(key);
+        return delegate().remove(key);
+      }
+      @Override
+      public boolean remove(Object key, Object value) {
+        requireNonNull(key);
+        return delegate().remove(key, value);
+      }
+      @Override
+      public boolean replace(K key, V oldValue, V newValue) {
+        requireNonNull(oldValue);
+        return delegate().replace(key, oldValue, newValue);
+      }
+      @Override
+      public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+        requireNonNull(mappingFunction);
+        V value = getIfPresent(key);
+        if (value != null) {
+          return value;
         }
-        @Override public V getIfPresentQuietly(K key) {
-          return cache.asMap().get(key);
+        long now = ticker.read();
+        try {
+          value = mappingFunction.apply(key);
+          long loadTime = (ticker.read() - now);
+          if (value == null) {
+            statsCounter.recordLoadException(loadTime);
+            return null;
+          } else {
+            statsCounter.recordLoadSuccess(loadTime);
+            V v = delegate().putIfAbsent(key, value);
+            return (v == null) ? value : v;
+          }
+        } catch (RuntimeException | Error e) {
+          statsCounter.recordLoadException((ticker.read() - now));
+          throw e;
         }
-        @Override public Map<K, CompletableFuture<V>> refreshes() {
-          return Map.of();
+      }
+      @Override
+      public V computeIfPresent(K key,
+          BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        requireNonNull(remappingFunction);
+        V oldValue;
+        long now = ticker.read();
+        if ((oldValue = get(key)) != null) {
+          try {
+            V newValue = remappingFunction.apply(key, oldValue);
+            long loadTime = ticker.read() - now;
+            if (newValue == null) {
+              statsCounter.recordLoadException(loadTime);
+              remove(key);
+              return null;
+            } else {
+              statsCounter.recordLoadSuccess(loadTime);
+              put(key, newValue);
+              return newValue;
+            }
+          } catch (RuntimeException | Error e) {
+            statsCounter.recordLoadException(ticker.read() - now);
+            throw e;
+          }
+        } else {
+          return null;
         }
-        @Override public Optional<Eviction<K, V>> eviction() {
-          return Optional.empty();
+      }
+      @Override
+      public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        requireNonNull(remappingFunction);
+        V oldValue = get(key);
+
+        long now = ticker.read();
+        try {
+          V newValue = remappingFunction.apply(key, oldValue);
+          if (newValue == null) {
+            if (oldValue != null || containsKey(key)) {
+              remove(key);
+              statsCounter.recordLoadException(ticker.read() - now);
+              return null;
+            } else {
+              statsCounter.recordLoadException(ticker.read() - now);
+              return null;
+            }
+          } else {
+            statsCounter.recordLoadSuccess(ticker.read() - now);
+            put(key, newValue);
+            return newValue;
+          }
+        } catch (RuntimeException | Error e) {
+          statsCounter.recordLoadException(ticker.read() - now);
+          throw e;
         }
-        @Override public Optional<FixedExpiration<K, V>> expireAfterAccess() {
-          return Optional.empty();
+      }
+      @Override
+      public V merge(K key, V value,
+          BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+        requireNonNull(remappingFunction);
+        requireNonNull(value);
+        V oldValue = get(key);
+        for (;;) {
+          if (oldValue != null) {
+            long now = ticker.read();
+            try {
+              V newValue = remappingFunction.apply(oldValue, value);
+              if (newValue != null) {
+                if (replace(key, oldValue, newValue)) {
+                  statsCounter.recordLoadSuccess(ticker.read() - now);
+                  return newValue;
+                }
+              } else if (remove(key, oldValue)) {
+                statsCounter.recordLoadException(ticker.read() - now);
+                return null;
+              }
+            } catch (RuntimeException | Error e) {
+              statsCounter.recordLoadException(ticker.read() - now);
+              throw e;
+            }
+            oldValue = get(key);
+          } else {
+            if ((oldValue = putIfAbsent(key, value)) == null) {
+              return value;
+            }
+          }
         }
-        @Override public Optional<FixedExpiration<K, V>> expireAfterWrite() {
-          return Optional.empty();
-        }
-        @Override public Optional<VarExpiration<K, V>> expireVariably() {
-          return Optional.empty();
-        }
-        @Override public Optional<FixedRefresh<K, V>> refreshAfterWrite() {
-          return Optional.empty();
-        }
-      };
+      }
+      @Override
+      protected ConcurrentMap<K, V> delegate() {
+        return cache.asMap();
+      }
+
+      @SuppressWarnings({"UnusedVariable", "UnusedMethod"})
+      private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+        statsCounter = new SimpleStatsCounter();
+      }
+    }
+
+    final class GuavaPolicy implements Policy<K, V> {
+      @Override public boolean isRecordingStats() {
+        return isRecordingStats;
+      }
+      @Override public V getIfPresentQuietly(K key) {
+        return cache.asMap().get(key);
+      }
+      @Override public Map<K, CompletableFuture<V>> refreshes() {
+        return Map.of();
+      }
+      @Override public Optional<Eviction<K, V>> eviction() {
+        return Optional.empty();
+      }
+      @Override public Optional<FixedExpiration<K, V>> expireAfterAccess() {
+        return Optional.empty();
+      }
+      @Override public Optional<FixedExpiration<K, V>> expireAfterWrite() {
+        return Optional.empty();
+      }
+      @Override public Optional<VarExpiration<K, V>> expireVariably() {
+        return Optional.empty();
+      }
+      @Override public Optional<FixedRefresh<K, V>> refreshAfterWrite() {
+        return Optional.empty();
+      }
     }
   }
 

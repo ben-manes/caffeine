@@ -126,7 +126,7 @@ public abstract class AbstractTraceReader implements TraceReader {
           try {
             return (archive.getNextEntry() == null)
                 ? endOfData()
-                : readInput(new CloseShieldInputStream(archive));
+                : readInput(CloseShieldInputStream.wrap(archive));
           } catch (IOException e) {
             throw new UncheckedIOException(e);
           }

@@ -18,7 +18,7 @@ task internals(type: JavaExec, description: 'Show the field layout, default cont
 task packing(type: JavaExec, group: 'Object Layout',
     description: 'Compute the object footprint under different field layout strategies') {
   it.dependsOn(jar)
-  main 'org.openjdk.jol.Main'
+  mainClass = 'org.openjdk.jol.Main'
   args it.name, jar.archivePath
   it.classpath configurations.objectLayout
 }
@@ -26,7 +26,7 @@ task packing(type: JavaExec, group: 'Object Layout',
 [footprint, externals, estimates, internals]*.with {
   group 'Object Layout'
   dependsOn(compileJava)
-  main 'org.openjdk.jol.Main'
+  mainClass = 'org.openjdk.jol.Main'
   classpath configurations.objectLayout, sourceSets.main.runtimeClasspath
   doFirst {
     if (!project.hasProperty('className')) {

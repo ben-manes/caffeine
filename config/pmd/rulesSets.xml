@@ -58,6 +58,7 @@
     <exclude name="TooManyMethods"/>
     <exclude name="NPathComplexity"/>
     <exclude name="ExcessiveImports"/>
+    <exclude name="CognitiveComplexity"/>
     <exclude name="CyclomaticComplexity"/>
     <exclude name="ExcessiveClassLength"/>
     <exclude name="ExcessivePublicCount"/>

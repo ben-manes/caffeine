@@ -346,8 +346,8 @@ public final class LoadingCacheTest {
     var future2 = cache.refresh(key);
     assertThat(future1, is(sameInstance(future2)));
 
-    future1.complete(-key);
-    assertThat(cache.getIfPresent(key), is(-key));
+    future1.complete(context.absentValue());
+    assertThat(cache.getIfPresent(key), is(context.absentValue()));
   }
 
   @Test(dataProvider = "caches")
