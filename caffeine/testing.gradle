@@ -5,6 +5,7 @@ test {
   useTestNG()
   exclude 'com/github/benmanes/caffeine/cache/**'
 }
+compileTestJava.dependsOn(jar)
 
 def implementations = ['Caffeine', 'Guava']
 def testNames = [
@@ -58,7 +59,7 @@ task isolatedTests(type: Test, group: 'Cache tests') {
   it.onlyIf { !System.env.'CI' }
 }
 
-task junitTests(type: Test, group: 'Cache tests', description: 'JUnit tests') {
+task junitTests(type: Test, group: 'Cache tests', description: 'JUnit tests', dependsOn: jar) {
   useJUnit()
   tasks.test.dependsOn(it)
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path

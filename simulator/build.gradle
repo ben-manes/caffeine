@@ -81,7 +81,7 @@ run {
 }
 
 task rewrite(type: JavaExec) {
-  main = 'com.github.benmanes.caffeine.cache.simulator.parser.Rewriter'
+  mainClass = 'com.github.benmanes.caffeine.cache.simulator.parser.Rewriter'
   classpath = sourceSets.main.runtimeClasspath
 
   def arguments = ['inputFormat', 'inputFiles', 'outputFile', 'outputFormat']

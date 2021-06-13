@@ -1,0 +1,50 @@
+name: Qodana
+on: [ push, pull_request ]
+
+env:
+  ORG_GRADLE_PROJECT_checksumFailOn: build_finish
+  ORG_GRADLE_PROJECT_checksumIgnore: false
+  ORG_GRADLE_PROJECT_checksumPrint: true
+
+jobs:
+  qodana:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ 11, 16 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache Gradle packages
+        uses: actions/cache@v2.1.6
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/caches
+            ~/.sonar/cache
+          key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+      - name: Build
+        run: ./gradlew build -x test
+      - name: Cache Qodana dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/work/_temp/_github_home/qodana-cache
+          key: ${{ runner.os }}-qodana-${{ matrix.java }}-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-qodana-${{ github.ref }}
+            ${{ runner.os }}-qodana-
+      - name: Qodana - Code Inspection
+        uses: JetBrains/qodana-action@v2.0-eap
+      - uses: actions/upload-artifact@v2
+        with:
+          name: qodana-${{ matrix.java }}
+          path: ${{ github.workspace }}/qodana
+      - name: View Instructions
+        run: |
+          echo "Download and extract the report artifact"
+          echo "Start an http server"
+          echo "... python2 -m SimpleHTTPServer"
+          echo "... python3 -m http.server"
+          echo "The report is available at http://localhost:8000"
+          echo "For more details see https://www.jetbrains.com/help/qodana"

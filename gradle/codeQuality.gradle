@@ -128,10 +128,10 @@ tasks.withType(JavaCompile).configureEach {
     option('TimeUnitMismatch')
     option('UnlockMethod')
     option('UnnecessaryDefaultInEnumSwitch')
+    disable('AutoValueSubclassLeaked')
     disable('EmptyCatch')
     disable('MissingSummary')
     error('NullAway')
-    excludedPaths = '.*/generated-sources/.*'
 
     nullaway {
       annotatedPackages.add('com.github.benmanes.caffeine')
