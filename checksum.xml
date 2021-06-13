@@ -79,6 +79,7 @@
     <trusted-key id='e735df276c508071' group='com.typesafe' />
     <trusted-key id='0753c4188493fd20' group='com.typesafe.akka' />
     <trusted-key id='2b183b279dfd639e' group='com.typesafe.akka' />
+    <trusted-key id='397618683a7cdc70' group='com.typesafe.akka' />
     <trusted-key id='6ff60b55630dc90e' group='com.typesafe.akka' />
     <trusted-key id='c7d0ad0d36477196' group='com.typesafe.akka' />
     <trusted-key id='eb9d04a9a679fe18' group='com.uber.nullaway' />
@@ -607,6 +608,9 @@
     </dependency>
     <dependency group='org.sonarsource.scanner.gradle' module='sonarqube-gradle-plugin' version='3.2.0'>
       <sha512>7B0855B530B6AB5271CE774876DEB2CF98FED7BDC2A15989FD80B524C3CAD650EE40EC32DEE5476D08B7981FBF20FF7D860F3084A834D39289E688BA15907230</sha512>
+    </dependency>
+    <dependency group='org.sonarsource.scanner.gradle' module='sonarqube-gradle-plugin' version='3.3'>
+      <sha512>B5DB61917A9D04FCDD7C7334A86E7F9CF299302CA8DB9BC1DA78452A62433226E59D1EFD8627D72B7A09CB758A4D9A6745D3D7E73F722ED24D288B9B54D652F6</sha512>
     </dependency>
     <dependency group='org.testng' module='testng' version='7.0.0'>
       <sha512>D31295F9998A446F62AE7BA9B7EE39A0F898D9B185047800920B72EE53632EC54A7BDD9E5BE4BB41EFAFE9D4C209DC4227CE6C9CC230301FE762875EFBC3F7C9</sha512>
