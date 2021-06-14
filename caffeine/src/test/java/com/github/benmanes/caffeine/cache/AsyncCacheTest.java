@@ -518,18 +518,16 @@ AsyncCache<Int, Int> cache, CacheContext context) {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_nullKeys_nullBifunction(
       AsyncCache<Int, Int> cache, CacheContext context) {
-    @SuppressWarnings("unused")
-    BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f;
-    cache.getAll(null, (f = null));
+    BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;
+    cache.getAll(null, f);
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_nullBifunction(AsyncCache<Int, Int> cache, CacheContext context) {
-    @SuppressWarnings("unused")
-    BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f;
-    cache.getAll(context.original().keySet(), (f = null));
+    BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;
+    cache.getAll(context.original().keySet(), f);
   }
 
   @CheckNoStats
@@ -868,5 +866,5 @@ AsyncCache<Int, Int> cache, CacheContext context) {
   }
 
   @SuppressWarnings("serial")
-  private static final class LoadAllException extends RuntimeException {};
+  private static final class LoadAllException extends RuntimeException {}
 }

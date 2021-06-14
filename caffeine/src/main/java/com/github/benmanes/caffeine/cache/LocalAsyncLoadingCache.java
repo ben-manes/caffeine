@@ -224,7 +224,7 @@ abstract class LocalAsyncLoadingCache<K, V>
       if ((oldValueFuture == null)
           || (oldValueFuture.isDone() && oldValueFuture.isCompletedExceptionally())) {
         if (oldValueFuture != null) {
-          asyncCache.cache().remove(key, asyncCache);
+          asyncCache.cache().remove(key, oldValueFuture);
         }
         var future = asyncCache.get(key, asyncCache.mappingFunction, /* recordStats */ false);
         @SuppressWarnings("unchecked")

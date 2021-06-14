@@ -377,12 +377,9 @@ public final class GuavaCacheFromContext {
           if (newValue == null) {
             if (oldValue != null || containsKey(key)) {
               remove(key);
-              statsCounter.recordLoadException(ticker.read() - now);
-              return null;
-            } else {
-              statsCounter.recordLoadException(ticker.read() - now);
-              return null;
             }
+            statsCounter.recordLoadException(ticker.read() - now);
+            return null;
           } else {
             statsCounter.recordLoadSuccess(ticker.read() - now);
             put(key, newValue);

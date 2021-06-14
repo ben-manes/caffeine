@@ -112,6 +112,6 @@ public enum Feature {
   public static boolean usesFastPath(Set<Feature> features) {
     Set<Feature> incompatible = Sets.immutableEnumSet(Feature.EXPIRE_ACCESS,
         Feature.WEAK_KEYS, Feature.INFIRM_VALUES, Feature.WEAK_VALUES, Feature.SOFT_VALUES);
-    return !features.stream().anyMatch(incompatible::contains) && usesMaximum(features);
+    return features.stream().noneMatch(incompatible::contains) && usesMaximum(features);
   }
 }

@@ -640,7 +640,7 @@ public final class ExpireAfterVarTest {
   @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void youngest_unmodifiable(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.youngest(Integer.MAX_VALUE).clear();;
+    expireAfterVar.youngest(Integer.MAX_VALUE).clear();
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)

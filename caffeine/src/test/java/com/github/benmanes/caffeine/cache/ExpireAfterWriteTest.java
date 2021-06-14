@@ -47,10 +47,10 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.testing.Int;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.ExpireAfterWrite;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -335,7 +335,7 @@ public final class ExpireAfterWriteTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void youngest_unmodifiable(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.youngest(Integer.MAX_VALUE).clear();;
+    expireAfterWrite.youngest(Integer.MAX_VALUE).clear();
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)

@@ -535,14 +535,14 @@ public final class AsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_nullKey(Map<Int, Int> map, CacheContext context) {
-    map.remove(null, 1);
+    map.remove(null, context.absentValue());
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_nullValue(Map<Int, Int> map, CacheContext context) {
-    assertThat(map.remove(1, null), is(false)); // see ConcurrentHashMap
+    assertThat(map.remove(context.absentKey(), null), is(false)); // see ConcurrentHashMap
   }
 
   @CheckNoStats
@@ -934,7 +934,7 @@ public final class AsMapTest {
   public void computeIfAbsent_error(Map<Int, Int> map, CacheContext context) {
     try {
       map.computeIfAbsent(context.absentKey(), key -> { throw new Error(); });
-    } catch (Error e) {}
+    } catch (Error expected) {}
     assertThat(map, is(equalTo(context.original())));
     verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
     assertThat(map.computeIfAbsent(context.absentKey(), key -> key), is(context.absentKey()));
@@ -1063,7 +1063,7 @@ public final class AsMapTest {
   public void computeIfPresent_error(Map<Int, Int> map, CacheContext context) {
     try {
       map.computeIfPresent(context.firstKey(), (key, value) -> { throw new Error(); });
-    } catch (Error e) {}
+    } catch (Error expected) {}
     assertThat(map, is(equalTo(context.original())));
     verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(1));
     assertThat(map.computeIfPresent(context.firstKey(), (k, v) -> k.negate()),
@@ -1355,7 +1355,7 @@ public final class AsMapTest {
     try {
       map.merge(context.firstKey(), context.original().get(context.firstKey()),
           (oldValue, value) -> { throw new Error(); });
-    } catch (Error e) {}
+    } catch (Error expected) {}
     assertThat(map, is(equalTo(context.original())));
     verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(1));
   }

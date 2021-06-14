@@ -116,7 +116,7 @@ public @interface CacheSpec {
 
     private final int size;
 
-    private InitialCapacity(int size) {
+    InitialCapacity(int size) {
       this.size = size;
     }
 
@@ -163,7 +163,7 @@ public @interface CacheSpec {
 
     private final long max;
 
-    private Maximum(long max) {
+    Maximum(long max) {
       this.max = max;
     }
 
@@ -217,7 +217,7 @@ public @interface CacheSpec {
 
     private final int units;
 
-    private CacheWeigher(int multiplier) {
+    CacheWeigher(int multiplier) {
       this.units = multiplier;
     }
 
@@ -336,7 +336,7 @@ public @interface CacheSpec {
 
     private final long timeNanos;
 
-    private Expire(long timeNanos) {
+    Expire(long timeNanos) {
       this.timeNanos = timeNanos;
     }
 
@@ -352,7 +352,7 @@ public @interface CacheSpec {
 
     private final long timeNanos;
 
-    private Advance(long timeNanos) {
+    Advance(long timeNanos) {
       this.timeNanos = timeNanos;
     }
 
@@ -548,7 +548,7 @@ public @interface CacheSpec {
     private final boolean bulk;
     private final AsyncCacheLoader<Int, Int> asyncLoader;
 
-    private Loader() {
+    Loader() {
       bulk = name().startsWith("BULK");
       asyncLoader = bulk
           ? new BulkSeriazableAsyncCacheLoader(this)
@@ -665,7 +665,7 @@ public @interface CacheSpec {
 
     private final Supplier<Scheduler> scheduler;
 
-    private CacheScheduler(Supplier<Scheduler> scheduler) {
+    CacheScheduler(Supplier<Scheduler> scheduler) {
       this.scheduler = requireNonNull(scheduler);
     }
 
@@ -698,7 +698,7 @@ public @interface CacheSpec {
 
     private final long size;
 
-    private Population(long size) {
+    Population(long size) {
       this.size = size;
     }
 

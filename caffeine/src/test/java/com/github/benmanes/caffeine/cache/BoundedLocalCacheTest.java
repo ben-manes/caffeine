@@ -726,8 +726,8 @@ public final class BoundedLocalCacheTest {
     // Fill window and main spaces
     cache.invalidateAll();
     cache.asMap().putAll(context.original());
-    cache.asMap().keySet().stream().forEach(cache::getIfPresent);
-    cache.asMap().keySet().stream().forEach(cache::getIfPresent);
+    cache.asMap().keySet().forEach(cache::getIfPresent);
+    cache.asMap().keySet().forEach(cache::getIfPresent);
     return localCache;
   }
 
@@ -739,7 +739,7 @@ public final class BoundedLocalCacheTest {
     localCache.climb();
 
     // Fill main protected space
-    cache.asMap().keySet().stream().forEach(cache::getIfPresent);
+    cache.asMap().keySet().forEach(cache::getIfPresent);
   }
 
   /* --------------- Expiration --------------- */

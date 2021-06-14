@@ -29,12 +29,14 @@ import com.github.benmanes.caffeine.cache.Expiry;
 public final class ExpiryBuilder {
   static final int UNSET = -1;
 
-  private long createNanos = UNSET;
-  private long updateNanos = UNSET;
-  private long readNanos = UNSET;
+  private long createNanos;
+  private long updateNanos;
+  private long readNanos;
 
   private ExpiryBuilder(long createNanos) {
     this.createNanos = createNanos;
+    this.updateNanos = UNSET;
+    this.readNanos = UNSET;
   }
 
   /** Sets the fixed creation expiration time. */

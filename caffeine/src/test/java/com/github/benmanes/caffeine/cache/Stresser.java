@@ -59,7 +59,7 @@ public final class Stresser {
     private final int maxThreads;
     private final int maxEntries;
 
-    private Operation(int maxThreads, int maxEntries) {
+    Operation(int maxThreads, int maxEntries) {
       this.maxThreads = maxThreads;
       this.maxEntries = maxEntries;
     }

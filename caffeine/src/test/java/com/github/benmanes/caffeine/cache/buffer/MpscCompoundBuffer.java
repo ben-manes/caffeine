@@ -39,7 +39,7 @@ final class MpscCompoundBuffer<E> extends ReadBuffer<E> {
 
   @Override
   public void drainTo(Consumer<E> consumer) {
-    E e = null;
+    E e;
     while ((e = queue.poll()) != null) {
       consumer.accept(e);
       drained++;

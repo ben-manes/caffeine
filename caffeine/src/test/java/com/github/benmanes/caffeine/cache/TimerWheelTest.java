@@ -404,7 +404,7 @@ public final class TimerWheelTest {
     int expected = Math.min(limit, count);
     Comparator<Long> order = ascending ? Comparator.naturalOrder() : Comparator.reverseOrder();
     var times = IntStream.range(0, count).mapToLong(i -> {
-      long time = clock + TimeUnit.SECONDS.toNanos(2 << i);
+      long time = clock + TimeUnit.SECONDS.toNanos(2L << i);
       timerWheel.schedule(new Timer(time));
       return time;
     }).boxed().sorted(order).collect(toList()).subList(0, expected);

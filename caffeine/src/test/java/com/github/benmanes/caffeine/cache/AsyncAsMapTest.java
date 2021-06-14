@@ -450,14 +450,14 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().remove(null, 1);
+    cache.asMap().remove(null, context.absentValue().asFuture());
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.asMap().remove(1, null), is(false)); // see ConcurrentHashMap
+    assertThat(cache.asMap().remove(context.absentKey(), null), is(false)); // see ConcurrentHashMap
   }
 
   @CheckNoStats
@@ -767,7 +767,7 @@ public final class AsyncAsMapTest {
       cache.asMap().computeIfAbsent(context.absentKey(),
           key -> { throw new IllegalStateException(); });
       Assert.fail();
-    } catch (IllegalStateException e) {}
+    } catch (IllegalStateException expected) {}
 
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
     verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
@@ -878,7 +878,7 @@ public final class AsyncAsMapTest {
       cache.asMap().computeIfPresent(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); });
       Assert.fail();
-    } catch (IllegalStateException e) {}
+    } catch (IllegalStateException expected) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
     verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 
@@ -979,7 +979,7 @@ public final class AsyncAsMapTest {
       cache.asMap().compute(context.absentKey(),
           (key, value) -> { throw new IllegalStateException(); });
       Assert.fail();
-    } catch (IllegalStateException e) {}
+    } catch (IllegalStateException expected) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
     verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 
@@ -1055,7 +1055,7 @@ public final class AsyncAsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void merge_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().merge(Int.valueOf(1), null, (oldValue, value) -> value);
+    cache.asMap().merge(Int.valueOf(1), null, (oldValue, value) -> null);
   }
 
   @CheckNoStats
@@ -1125,7 +1125,7 @@ public final class AsyncAsMapTest {
       cache.asMap().merge(context.firstKey(), cache.asMap().get(context.firstKey()),
           (oldValue, value) -> { throw new IllegalStateException(); });
       Assert.fail();
-    } catch (IllegalStateException e) {}
+    } catch (IllegalStateException expected) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
     verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 

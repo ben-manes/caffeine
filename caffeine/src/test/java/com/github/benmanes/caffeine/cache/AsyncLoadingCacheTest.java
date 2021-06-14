@@ -317,7 +317,7 @@ AsyncLoadingCache<Int, Int> cache, CacheContext context) {
   }
 
   @SuppressWarnings("serial")
-  private static final class LoadAllException extends RuntimeException {};
+  private static final class LoadAllException extends RuntimeException {}
 
   /* --------------- put --------------- */
 

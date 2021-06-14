@@ -177,7 +177,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   }
 
   protected enum Strength {
-    STRONG, WEAK, SOFT;
+    STRONG, WEAK, SOFT
   }
 
   protected enum Visibility {

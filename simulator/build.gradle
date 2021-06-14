@@ -62,6 +62,7 @@ jar.manifest {
   attributes 'Bundle-SymbolicName': 'com.github.benmanes.caffeine.simulator'
   attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.simulator'
 }
+sourcesJar.dependsOn(compileJava)
 
 tasks.withType(JavaCompile) {
   options.errorprone.nullaway {

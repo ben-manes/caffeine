@@ -58,8 +58,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
-import com.github.benmanes.caffeine.testing.Int;
 import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -599,7 +599,7 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void coldest_unmodifiable(CacheContext context, Eviction<Int, Int> eviction) {
-    eviction.coldest(Integer.MAX_VALUE).clear();;
+    eviction.coldest(Integer.MAX_VALUE).clear();
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)

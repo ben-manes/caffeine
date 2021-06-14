@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -145,14 +146,13 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       @SuppressWarnings("PMD.AvoidReassigningLoopVariables")
       @Override public <E> List<E> sample(E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
-        List<E> sample = new ArrayList<>(sampleSize);
+        var sample = new ArrayList<E>(sampleSize);
         policyStats.addOperations(sampleSize);
-        for (int i = 0; i < sampleSize; i++) {
+        while (sample.size() < sampleSize) {
           int index = random.nextInt(elements.length);
-          if (elements[index] == candidate) {
-            i--; // try again
+          if (elements[index] != candidate) {
+            sample.add(elements[index]);
           }
-          sample.add(elements[index]);
         }
         return sample;
       }
@@ -201,24 +201,21 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     /** Evicts entries based on insertion order. */
     FIFO {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min((first, second) ->
-            Long.compare(first.insertionTime, second.insertionTime)).get();
+        return sample.stream().min(Comparator.comparingLong(node -> node.insertionTime)).get();
       }
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     LRU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min((first, second) ->
-            Long.compare(first.accessTime, second.accessTime)).get();
+        return sample.stream().min(Comparator.comparingLong(node -> node.accessTime)).get();
       }
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     MRU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().max((first, second) ->
-            Long.compare(first.accessTime, second.accessTime)).get();
+        return sample.stream().max(Comparator.comparingLong(node -> node.accessTime)).get();
       }
     },
 
@@ -227,8 +224,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      */
     LFU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min((first, second) ->
-            Long.compare(first.frequency, second.frequency)).get();
+        return sample.stream().min(Comparator.comparingLong(node -> node.frequency)).get();
       }
     },
 
@@ -237,8 +233,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      */
     MFU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().max((first, second) ->
-            Long.compare(first.frequency, second.frequency)).get();
+        return sample.stream().max(Comparator.comparingLong(node -> node.frequency)).get();
       }
     },
 
@@ -253,8 +248,8 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     /** Evicts entries based on how frequently they are used divided by their age. */
     HYPERBOLIC {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min((first, second) ->
-            Double.compare(hyperbolic(first, tick), hyperbolic(second, tick))).get();
+        return sample.stream().min(Comparator.comparingDouble(
+            node -> hyperbolic(node, tick))).get();
       }
       double hyperbolic(Node node, long tick) {
         return node.frequency / (double) (tick - node.insertionTime);

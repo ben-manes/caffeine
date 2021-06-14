@@ -598,7 +598,7 @@ public class CacheBuilderTest extends TestCase {
           for (int j = 0; j < getsPerTask; j++) {
             try {
               cache.getUnchecked("key" + random.nextInt(nUniqueKeys));
-            } catch (RuntimeException e) {
+            } catch (RuntimeException expected) {
             }
           }
         }

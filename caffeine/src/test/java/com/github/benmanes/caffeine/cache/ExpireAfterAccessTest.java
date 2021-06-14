@@ -49,10 +49,10 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.testing.Int;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.ExpireAfterAccess;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -292,7 +292,7 @@ public final class ExpireAfterAccessTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void oldest_unmodifiable(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    expireAfterAccess.oldest(Integer.MAX_VALUE).clear();;
+    expireAfterAccess.oldest(Integer.MAX_VALUE).clear();
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
@@ -343,7 +343,7 @@ public final class ExpireAfterAccessTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void youngest_unmodifiable(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    expireAfterAccess.youngest(Integer.MAX_VALUE).clear();;
+    expireAfterAccess.youngest(Integer.MAX_VALUE).clear();
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)

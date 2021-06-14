@@ -22,7 +22,7 @@ import static java.util.stream.Collectors.toSet;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Set;
 
 import org.caffinitas.ohc.CacheSerializer;
@@ -105,9 +105,9 @@ public final class OhcPolicy implements KeyOnlyPolicy {
       return config().getDouble("ohc.percent-eden");
     }
     public Set<Eviction> policy() {
-      Set<Eviction> policies = new HashSet<>();
-      for (String policy : config().getStringList("ohc.policy")) {
-        String name = policy.toLowerCase(US).replaceAll("[^a-z]", "");
+      var policies = EnumSet.noneOf(Eviction.class);
+      for (var policy : config().getStringList("ohc.policy")) {
+        var name = policy.toLowerCase(US).replaceAll("[^a-z]", "");
         if (name.equals("lru")) {
           policies.add(Eviction.LRU);
         } else if (name.equals("wtinylfu")) {

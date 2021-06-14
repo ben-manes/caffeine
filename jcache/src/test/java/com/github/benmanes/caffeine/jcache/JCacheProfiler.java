@@ -60,7 +60,7 @@ public final class JCacheProfiler {
   }
 
   public void start() {
-    for (Integer i = 0; i < KEYS; i++) {
+    for (int i = 0; i < KEYS; i++) {
       cache.put(i, Boolean.TRUE);
     }
     Runnable task = () -> {

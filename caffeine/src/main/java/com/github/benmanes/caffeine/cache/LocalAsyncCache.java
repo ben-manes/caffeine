@@ -202,9 +202,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
         cache().remove(key, valueFuture);
         cache().statsCounter().recordLoadFailure(loadTime);
-        if (recordMiss) {
-          cache().statsCounter().recordMisses(1);
-        }
       } else {
         @SuppressWarnings("unchecked")
         var castedFuture = (CompletableFuture<V>) valueFuture;
@@ -212,9 +209,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         // update the weight and expiration timestamps
         cache().replace(key, castedFuture, castedFuture);
         cache().statsCounter().recordLoadSuccess(loadTime);
-        if (recordMiss) {
-          cache().statsCounter().recordMisses(1);
-        }
+      }
+      if (recordMiss) {
+        cache().statsCounter().recordMisses(1);
       }
     });
   }

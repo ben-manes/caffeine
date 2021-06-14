@@ -186,7 +186,7 @@ final class CacheGenerator {
             || (context.expireAfterAccess() != Expire.DISABLED)
             || (context.expireAfterWrite() != Expire.DISABLED));
     boolean expirationIncompatible = (cacheSpec.mustExpireWithAnyOf().length > 0)
-        && !Arrays.stream(cacheSpec.mustExpireWithAnyOf()).anyMatch(context::expires);
+        && Arrays.stream(cacheSpec.mustExpireWithAnyOf()).noneMatch(context::expires);
     boolean schedulerIgnored = (context.cacheScheduler != CacheScheduler.DEFAULT)
         && !context.expires();
     boolean evictionListenerIncompatible = (context.evictionListenerType() != Listener.DEFAULT)

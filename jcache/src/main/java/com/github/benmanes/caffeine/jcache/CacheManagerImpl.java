@@ -47,6 +47,7 @@ public final class CacheManagerImpl implements CacheManager {
   private final CachingProvider cacheProvider;
   private final Properties properties;
   private final URI uri;
+
   private final boolean runsAsAnOsgiBundle;
 
   private volatile boolean closed;

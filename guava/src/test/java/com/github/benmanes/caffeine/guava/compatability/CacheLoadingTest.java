@@ -67,7 +67,9 @@ import junit.framework.TestCase;
  */
 @SuppressWarnings({"CacheLoaderNull", "PreferJavaTimeOverload", "ThreadPriorityCheck"})
 public class CacheLoadingTest extends TestCase {
-  Logger logger = Logger.getLogger("com.github.benmanes.caffeine.cache.BoundedLocalCache");
+  static final Logger logger = Logger.getLogger(
+      "com.github.benmanes.caffeine.cache.BoundedLocalCache");
+
   TestLogHandler logHandler;
 
   @Override
@@ -79,10 +81,14 @@ public class CacheLoadingTest extends TestCase {
 
   @Override
   public void tearDown() throws Exception {
-    super.tearDown();
-    // TODO(cpovirk): run tests in other thread instead of messing with main thread interrupt status
-    Thread.interrupted();
-    logger.removeHandler(logHandler);
+    try {
+      super.tearDown();
+    } finally {
+      // TODO(cpovirk): run tests in other thread instead of messing with main thread interrupt
+      // status
+      Thread.interrupted();
+      logger.removeHandler(logHandler);
+    }
   }
 
   private void checkNothingLogged() {

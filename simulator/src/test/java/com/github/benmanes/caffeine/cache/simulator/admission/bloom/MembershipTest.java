@@ -54,7 +54,7 @@ public class MembershipTest {
   @Test(dataProvider = "filterTypes")
   public void bloomFilterTest(FilterType filterType) {
     List<Integer> capacities = new ArrayList<>(ImmutableList.of(0, 1));
-    for (int capacity = 2 << 10; capacity < (2 << 22); capacity = capacity << 2) {
+    for (int capacity = 2 << 10; capacity < (2 << 22); capacity <<= 2) {
       capacities.add(capacity);
     }
 

@@ -3737,7 +3737,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
         if (!onlyIfAbsent) {
           var oldValueFuture = (CompletableFuture<V>) cache.put(
-              key, asyncValue, expiry, onlyIfAbsent);
+              key, asyncValue, expiry, /* onlyIfAbsent */ false);
           return Async.getWhenSuccessful(oldValueFuture);
         }
 

@@ -109,8 +109,8 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkCache(BoundedLocalCache<K, V> cache) {
+    long remainingNanos = TimeUnit.SECONDS.toNanos(5);
     for (;;) {
-      long remainingNanos = TimeUnit.SECONDS.toNanos(5);
       long end = System.nanoTime() + remainingNanos;
       try {
         if (cache.evictionLock.tryLock(remainingNanos, TimeUnit.NANOSECONDS)) {

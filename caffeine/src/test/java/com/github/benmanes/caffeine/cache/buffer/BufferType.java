@@ -36,7 +36,7 @@ public enum BufferType {
 
   private final Supplier<ReadBuffer<Boolean>> factory;
 
-  private BufferType(Supplier<ReadBuffer<Boolean>> factory) {
+  BufferType(Supplier<ReadBuffer<Boolean>> factory) {
     this.factory = factory;
   }
 

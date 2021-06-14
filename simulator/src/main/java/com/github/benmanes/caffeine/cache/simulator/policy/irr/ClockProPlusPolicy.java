@@ -449,7 +449,7 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
       delta = 1;
     }
     if (!increase) {
-      delta = delta * -1;
+      delta *= -1;
     }
     coldTargetAdjust(delta);
   }
