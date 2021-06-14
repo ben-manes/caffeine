@@ -38,7 +38,7 @@ public final class CacheStatsTest {
 
   @Test
   public void empty() {
-    CacheStats stats = CacheStats.of(0, 0, 0, 0, 0, 0, 0);
+    var stats = CacheStats.of(0, 0, 0, 0, 0, 0, 0);
     checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0, 0);
 
     assertThat(stats, is(equalTo(CacheStats.empty())));
@@ -51,7 +51,7 @@ public final class CacheStatsTest {
 
   @Test
   public void populated() {
-    CacheStats stats = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
+    var stats = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
     checkStats(stats, 24, 11, 11.0/24, 13, 13.0/24,
         17, 19, 19.0/36, 17 + 19, 23, 23.0/(17 + 19), 27, 54);
 
@@ -60,7 +60,7 @@ public final class CacheStatsTest {
     assertThat(stats.hashCode(), is(not(CacheStats.empty().hashCode())));
     assertThat(stats, hasToString(not(CacheStats.empty().toString())));
 
-    CacheStats expected = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
+    var expected = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
     assertThat(stats, is(equalTo(expected)));
     assertThat(stats.hashCode(), is(expected.hashCode()));
     assertThat(stats, hasToString(expected.toString()));
@@ -68,10 +68,10 @@ public final class CacheStatsTest {
 
   @Test
   public void minus() {
-    CacheStats one = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
-    CacheStats two = CacheStats.of(53, 47, 43, 41, 37, 31, 62);
+    var one = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
+    var two = CacheStats.of(53, 47, 43, 41, 37, 31, 62);
 
-    CacheStats diff = two.minus(one);
+    var diff = two.minus(one);
     checkStats(diff, 76, 42, 42.0 / 76, 34, 34.0 / 76,
         26, 22, 22.0 / 48, 26 + 22, 14, 14.0 / (26 + 22), 4, 8);
     assertThat(one.minus(two), is(CacheStats.empty()));
@@ -79,10 +79,10 @@ public final class CacheStatsTest {
 
   @Test
   public void plus() {
-    CacheStats one = CacheStats.of(11, 13, 15, 13, 11, 9, 18);
-    CacheStats two = CacheStats.of(53, 47, 41, 39, 37, 35, 70);
+    var one = CacheStats.of(11, 13, 15, 13, 11, 9, 18);
+    var two = CacheStats.of(53, 47, 41, 39, 37, 35, 70);
 
-    CacheStats sum = two.plus(one);
+    var sum = two.plus(one);
     checkStats(sum, 124, 64, 64.0 / 124, 60, 60.0 / 124,
         56, 52, 52.0 / 108, 56 + 52, 48, 48.0 / (56 + 52), 44, 88);
 
@@ -91,7 +91,7 @@ public final class CacheStatsTest {
 
   @Test
   public void overflow() {
-    CacheStats max = CacheStats.of(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE,
+    var max = CacheStats.of(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE,
         Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
     checkStats(max.plus(max), Long.MAX_VALUE, Long.MAX_VALUE, 1.0, Long.MAX_VALUE, 1.0,
         Long.MAX_VALUE, Long.MAX_VALUE, 1.0, Long.MAX_VALUE, Long.MAX_VALUE, 1.0,

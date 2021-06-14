@@ -236,7 +236,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
     stringifyParams(testResult, briefParams);
     dedupTestName(testResult, briefParams);
-    CacheSpec.interner.get().clear();
+    CacheContext.interner().clear();
   }
 
   private void dedupTestName(ITestResult testResult, boolean briefParams) {

@@ -80,8 +80,8 @@ public final class AsyncTest {
 
   @Test
   public void getWhenSuccessful_success_async() {
-    CompletableFuture<Integer> future = new CompletableFuture<Integer>();
-    AtomicInteger result = new AtomicInteger();
+    var future = new CompletableFuture<Integer>();
+    var result = new AtomicInteger();
     ConcurrentTestHarness.execute(() -> {
       result.set(1);
       result.set(Async.getWhenSuccessful(future));
@@ -94,7 +94,7 @@ public final class AsyncTest {
   @Test(dataProvider = "unsuccessful")
   public void getWhenSuccessful_fails(CompletableFuture<?> future) {
     if ((future != null) && !future.isDone()) {
-      AtomicInteger result = new AtomicInteger();
+      var result = new AtomicInteger();
       ConcurrentTestHarness.execute(() -> {
         result.set(1);
         Object value = Async.getWhenSuccessful(future);
@@ -110,8 +110,8 @@ public final class AsyncTest {
 
   @Test
   public void asyncExpiry_pending() {
-    AsyncExpiry<Integer, Integer> expiry = makeAsyncExpiry(ONE_MINUTE, ONE_MINUTE, ONE_MINUTE);
-    CompletableFuture<Integer> future = new CompletableFuture<Integer>();
+    var expiry = makeAsyncExpiry(ONE_MINUTE, ONE_MINUTE, ONE_MINUTE);
+    var future = new CompletableFuture<Integer>();
 
     assertThat(expiry.expireAfterCreate(0, future, 1L), is(ASYNC_EXPIRY));
     verify(expiry.delegate, never()).expireAfterCreate(any(), any(), anyLong());
@@ -125,9 +125,8 @@ public final class AsyncTest {
 
   @Test
   public void asyncExpiry_completed() {
-    AsyncExpiry<Integer, Integer> expiry = makeAsyncExpiry(
-        ONE_MINUTE, 2 * ONE_MINUTE, 3 * ONE_MINUTE);
-    CompletableFuture<Integer> future = CompletableFuture.completedFuture(100);
+    var expiry = makeAsyncExpiry(ONE_MINUTE, 2 * ONE_MINUTE, 3 * ONE_MINUTE);
+    var future = CompletableFuture.completedFuture(100);
 
     assertThat(expiry.expireAfterCreate(0, future, 1L), is(ONE_MINUTE));
     verify(expiry.delegate).expireAfterCreate(0, 100, 1L);
@@ -141,9 +140,8 @@ public final class AsyncTest {
 
   @Test
   public void asyncExpiry_bounded() {
-    AsyncExpiry<Integer, Integer> expiry = makeAsyncExpiry(
-        Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
-    CompletableFuture<Integer> future = CompletableFuture.completedFuture(100);
+    var expiry = makeAsyncExpiry(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
+    var future = CompletableFuture.completedFuture(100);
 
     assertThat(expiry.expireAfterCreate(0, future, 1L), is(MAXIMUM_EXPIRY));
     assertThat(expiry.expireAfterUpdate(0, future, 1L, 2L), is(MAXIMUM_EXPIRY));
@@ -166,9 +164,10 @@ public final class AsyncTest {
     };
   }
 
-  private static <K, V> AsyncExpiry<K, V> makeAsyncExpiry(long create, long update, long read) {
+  private static AsyncExpiry<Integer, Integer> makeAsyncExpiry(
+      long create, long update, long read) {
     @SuppressWarnings("unchecked")
-    Expiry<K, V> mock = Mockito.mock(Expiry.class);
+    Expiry<Integer, Integer> mock = Mockito.mock(Expiry.class);
     when(mock.expireAfterCreate(any(), any(), anyLong())).thenReturn(create);
     when(mock.expireAfterUpdate(any(), any(), anyLong(), anyLong())).thenReturn(update);
     when(mock.expireAfterRead(any(), any(), anyLong(), anyLong())).thenReturn(read);
@@ -176,7 +175,7 @@ public final class AsyncTest {
   }
 
   private static CompletableFuture<Integer> newFailedFuture(Exception e) {
-    CompletableFuture<Integer> future = new CompletableFuture<Integer>();
+    var future = new CompletableFuture<Integer>();
     future.completeExceptionally(e);
     return future;
   }

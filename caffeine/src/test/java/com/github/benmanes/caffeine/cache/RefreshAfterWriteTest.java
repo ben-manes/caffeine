@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
+import static com.github.benmanes.caffeine.testing.IsInt.isInt;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.aMapWithSize;
@@ -31,7 +32,7 @@ import static org.hamcrest.Matchers.sameInstance;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -55,8 +56,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
 import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
 import com.github.benmanes.caffeine.cache.testing.TrackingExecutor;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.github.benmanes.caffeine.testing.Int;
 
 /**
  * The test cases for caches that support the refresh after write policy.
@@ -73,11 +73,11 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NEGATIVE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getIfPresent(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void getIfPresent(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.middleKey()), is(-context.middleKey()));
+    assertThat(cache.getIfPresent(context.middleKey()), is(context.middleKey().negate()));
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.middleKey()), is(-context.middleKey()));
+    assertThat(cache.getIfPresent(context.middleKey()), is(context.middleKey().negate()));
 
     assertThat(cache.estimatedSize(), is(context.initialSize()));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
@@ -86,11 +86,11 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NEGATIVE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getIfPresent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void getIfPresent(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.middleKey()), is(futureOf(-context.middleKey())));
+    assertThat(cache.getIfPresent(context.middleKey()), is(futureOf(context.middleKey().negate())));
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.middleKey()), is(futureOf(-context.middleKey())));
+    assertThat(cache.getIfPresent(context.middleKey()), is(futureOf(context.middleKey().negate())));
 
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
@@ -101,7 +101,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
-  public void getAllPresent(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void getAllPresent(LoadingCache<Int, Int> cache, CacheContext context) {
     int count = context.firstMiddleLastKeys().size();
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.getAllPresent(context.firstMiddleLastKeys());
@@ -117,8 +117,8 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
-  public void getFunc(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    Function<Integer, Integer> mappingFunction = context.original()::get;
+  public void getFunc(LoadingCache<Int, Int> cache, CacheContext context) {
+    Function<Int, Int> mappingFunction = context.original()::get;
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.get(context.firstKey(), mappingFunction);
     context.ticker().advance(45, TimeUnit.SECONDS);
@@ -132,8 +132,8 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void getFunc(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    Function<Integer, Integer> mappingFunction = context.original()::get;
+  public void getFunc(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    Function<Int, Int> mappingFunction = context.original()::get;
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.get(context.firstKey(), mappingFunction);
     context.ticker().advance(45, TimeUnit.SECONDS);
@@ -148,13 +148,13 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
-  public void get(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void get(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.get(context.firstKey());
     cache.get(context.absentKey());
     context.ticker().advance(45, TimeUnit.SECONDS);
 
-    assertThat(cache.getIfPresent(context.firstKey()), is(-context.firstKey()));
+    assertThat(cache.getIfPresent(context.firstKey()), is(context.firstKey().negate()));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
@@ -162,13 +162,13 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void get(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void get(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.get(context.firstKey());
     cache.get(context.absentKey());
     context.ticker().advance(45, TimeUnit.SECONDS);
 
-    assertThat(cache.getIfPresent(context.firstKey()), is(futureOf(-context.firstKey())));
+    assertThat(cache.getIfPresent(context.firstKey()), is(futureOf(context.firstKey().negate())));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
@@ -177,34 +177,34 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
       compute = Compute.ASYNC, values = ReferenceType.STRONG)
   public void get_sameFuture(CacheContext context) {
-    AtomicBoolean done = new AtomicBoolean();
-    AsyncLoadingCache<Integer, Integer> cache = context.buildAsync(key -> {
+    var done = new AtomicBoolean();
+    var cache = context.buildAsync((Int key) -> {
       await().untilTrue(done);
-      return -key;
+      return key.negate();
     });
 
-    Integer key = 1;
+    Int key = Int.valueOf(1);
     cache.synchronous().put(key, key);
-    CompletableFuture<Integer> original = cache.get(key);
+    var original = cache.get(key);
     for (int i = 0; i < 10; i++) {
       context.ticker().advance(1, TimeUnit.MINUTES);
-      CompletableFuture<Integer> next = cache.get(key);
+      var next = cache.get(key);
       assertThat(next, is(sameInstance(original)));
     }
     done.set(true);
-    await().until(() -> cache.synchronous().getIfPresent(key), is(-key));
+    await().until(() -> cache.synchronous().getIfPresent(key), is(key.negate()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
   public void get_slowRefresh(CacheContext context) {
-    Integer key = context.absentKey();
-    Integer originalValue = context.absentValue();
-    Integer refreshedValue = originalValue + 1;
-    AtomicBoolean started = new AtomicBoolean();
-    AtomicBoolean done = new AtomicBoolean();
-    LoadingCache<Integer, Integer> cache = context.build(k -> {
+    Int key = context.absentKey();
+    Int originalValue = context.absentValue();
+    Int refreshedValue = originalValue.add(1);
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var cache = context.build((Int k) -> {
       started.set(true);
       await().untilTrue(done);
       return refreshedValue;
@@ -227,8 +227,8 @@ public final class RefreshAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NULL)
-  public void get_null(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    Integer key = 1;
+  public void get_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    Int key = Int.valueOf(1);
     cache.synchronous().put(key, key);
     context.ticker().advance(2, TimeUnit.MINUTES);
     await().until(() -> cache.synchronous().getIfPresent(key), is(nullValue()));
@@ -239,10 +239,11 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
-  public void getAll(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    List<Integer> keys = ImmutableList.of(context.firstKey(), context.absentKey());
+  public void getAll(LoadingCache<Int, Int> cache, CacheContext context) {
+    var keys = List.of(context.firstKey(), context.absentKey());
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(cache.getAll(keys), is(ImmutableMap.of(context.firstKey(), -context.firstKey(),
+    assertThat(cache.getAll(keys), is(Map.of(
+        context.firstKey(), context.firstKey().negate(),
         context.absentKey(), context.absentKey())));
 
     // Trigger a refresh, may return old values
@@ -250,7 +251,7 @@ public final class RefreshAfterWriteTest {
     cache.getAll(keys);
 
     // Ensure new values are present
-    assertThat(cache.getAll(keys), is(ImmutableMap.of(context.firstKey(), context.firstKey(),
+    assertThat(cache.getAll(keys), is(Map.of(context.firstKey(), context.firstKey(),
         context.absentKey(), context.absentKey())));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
@@ -259,18 +260,19 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void getAll(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    List<Integer> keys = ImmutableList.of(context.firstKey(), context.absentKey());
+  public void getAll(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var keys = List.of(context.firstKey(), context.absentKey());
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(cache.getAll(keys), is(futureOf(ImmutableMap.of(context.firstKey(),
-        -context.firstKey(), context.absentKey(), context.absentKey()))));
+    assertThat(cache.getAll(keys), is(futureOf(Map.of(
+        context.firstKey(), context.firstKey().negate(),
+        context.absentKey(), context.absentKey()))));
 
     // Trigger a refresh, may return old values
     context.ticker().advance(45, TimeUnit.SECONDS);
     cache.getAll(keys);
 
     // Ensure new values are present
-    assertThat(cache.getAll(keys), is(futureOf(ImmutableMap.of(context.firstKey(),
+    assertThat(cache.getAll(keys), is(futureOf(Map.of(context.firstKey(),
         context.firstKey(), context.absentKey(), context.absentKey()))));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
@@ -281,12 +283,12 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
       executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
   public void put(CacheContext context) {
-    AtomicBoolean refresh = new AtomicBoolean();
-    Integer key = context.absentKey();
-    Integer original = 1;
-    Integer updated = 2;
-    Integer refreshed = 3;
-    LoadingCache<Integer, Integer> cache = context.build(k -> {
+    var refresh = new AtomicBoolean();
+    Int key = context.absentKey();
+    Int original = Int.valueOf(1);
+    Int updated = Int.valueOf(2);
+    Int refreshed = Int.valueOf(3);
+    var cache = context.build((Int k) -> {
       await().untilTrue(refresh);
       return refreshed;
     });
@@ -299,7 +301,7 @@ public final class RefreshAfterWriteTest {
     refresh.set(true);
 
     await().until(() -> context.removalNotifications().size(), is(2));
-    List<Integer> removed = context.removalNotifications().stream()
+    var removed = context.removalNotifications().stream()
         .map(RemovalNotification::getValue).collect(toList());
 
     assertThat(cache.getIfPresent(key), is(updated));
@@ -314,11 +316,11 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
       executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
   public void invalidate(CacheContext context) {
-    AtomicBoolean refresh = new AtomicBoolean();
-    Integer key = context.absentKey();
-    Integer original = 1;
-    Integer refreshed = 2;
-    LoadingCache<Integer, Integer> cache = context.build(k -> {
+    var refresh = new AtomicBoolean();
+    Int key = context.absentKey();
+    Int original = Int.valueOf(1);
+    Int refreshed = Int.valueOf(2);
+    var cache = context.build((Int k) -> {
       await().untilTrue(refresh);
       return refreshed;
     });
@@ -349,7 +351,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       loader = Loader.ASYNC_INCOMPLETE, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void refresh(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
     var executor = (TrackingExecutor) context.executor();
     int submitted;
@@ -363,7 +365,7 @@ public final class RefreshAfterWriteTest {
     // return in-flight future
     var future1 = cache.refresh(context.absentKey());
     assertThat(executor.submitted(), is(submitted + 1));
-    future1.complete(-context.absentValue());
+    future1.complete(context.absentValue().negate());
 
     // trigger a new automatic refresh
     submitted = executor.submitted();
@@ -381,7 +383,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.ASYNC_INCOMPLETE, implementation = Implementation.Caffeine,
       refreshAfterWrite = Expire.ONE_MINUTE, population = Population.FULL)
-  public void refreshes(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void refreshes(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.getIfPresent(context.firstKey());
     assertThat(cache.policy().refreshes(), is(aMapWithSize(1)));
@@ -389,9 +391,9 @@ public final class RefreshAfterWriteTest {
     var future = cache.policy().refreshes().get(context.firstKey());
     assertThat(future, is(not(nullValue())));
 
-    future.complete(Integer.MAX_VALUE);
+    future.complete(Int.valueOf(Integer.MAX_VALUE));
     assertThat(cache.policy().refreshes(), is(anEmptyMap()));
-    assertThat(cache.getIfPresent(context.firstKey()), is(Integer.MAX_VALUE));
+    assertThat(cache.getIfPresent(context.firstKey()), isInt(Integer.MAX_VALUE));
   }
 
   /* --------------- Policy: refreshAfterWrite --------------- */
@@ -399,7 +401,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
   public void getRefreshesAfter(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
+      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes(), is(1L));
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES), is(1L));
   }
@@ -407,7 +409,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
   public void setRefreshesAfter(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
+      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(2, TimeUnit.MINUTES);
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes(), is(2L));
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES), is(2L));
@@ -416,7 +418,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
   public void setRefreshesAfter_duration(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
+      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(2));
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes(), is(2L));
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES), is(2L));
@@ -426,7 +428,7 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void ageOf(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
+      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(0L));
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(30L));

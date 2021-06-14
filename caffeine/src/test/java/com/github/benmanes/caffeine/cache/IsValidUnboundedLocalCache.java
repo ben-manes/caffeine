@@ -61,7 +61,7 @@ public final class IsValidUnboundedLocalCache<K, V>
       desc.expectThat("non null value", value, is(not(nullValue())));
 
       if (value instanceof CompletableFuture<?>) {
-        CompletableFuture<?> future = (CompletableFuture<?>) value;
+        var future = (CompletableFuture<?>) value;
         boolean success = future.isDone() && !future.isCompletedExceptionally();
         desc.expectThat("future is done", success, is(true));
         desc.expectThat("not null value", future.getNow(null), is(not(nullValue())));

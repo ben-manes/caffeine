@@ -45,7 +45,7 @@ public final class IsValidLinkedDeque<E> extends TypeSafeDiagnosingMatcher<Linke
 
   @Override
   protected boolean matchesSafely(LinkedDeque<E> deque, Description description) {
-    DescriptionBuilder desc = new DescriptionBuilder(description);
+    var desc = new DescriptionBuilder(description);
 
     if (deque.isEmpty()) {
       checkEmpty(deque, desc);

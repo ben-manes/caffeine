@@ -45,7 +45,6 @@ import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table.Cell;
 
 /**
  * A matcher that evaluates a {@link BoundedLocalCache} to determine if it is in a valid state.
@@ -105,7 +104,7 @@ public final class IsValidBoundedLocalCache<K, V>
 
   private Boolean tryDrainBuffers(BoundedLocalCache<K, V> cache) {
     cache.cleanUp();
-    Buffer<?> buffer = cache.readBuffer;
+    var buffer = cache.readBuffer;
     return (buffer.size() == 0L) && (buffer.reads() == buffer.writes());
   }
 
@@ -144,7 +143,7 @@ public final class IsValidBoundedLocalCache<K, V>
       desc.expectThat("empty map", cache, emptyMap());
     }
 
-    for (Node<K, V> node : cache.data.values()) {
+    for (var node : cache.data.values()) {
       checkNode(cache, node, desc);
     }
   }
@@ -159,17 +158,17 @@ public final class IsValidBoundedLocalCache<K, V>
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
     for (int i = 0; i < cache.timerWheel().wheel.length; i++) {
       for (int j = 0; j < cache.timerWheel().wheel[i].length; j++) {
-        Node<K, V> sentinel = cache.timerWheel().wheel[i][j];
+        var sentinel = cache.timerWheel().wheel[i][j];
         desc.expectThat("Wrong sentinel prev",
             sentinel.getPreviousInVariableOrder().getNextInVariableOrder(), sameInstance(sentinel));
         desc.expectThat("Wrong sentinel next",
             sentinel.getNextInVariableOrder().getPreviousInVariableOrder(), sameInstance(sentinel));
         desc.expectThat("Sentinel must be first element", sentinel, instanceOf(Sentinel.class));
 
-        for (Node<K, V> node = sentinel.getNextInVariableOrder();
-            node != sentinel; node = node.getNextInVariableOrder()) {
-          Node<K, V> next = node.getNextInVariableOrder();
-          Node<K, V> prev = node.getPreviousInVariableOrder();
+        for (var node = sentinel.getNextInVariableOrder();
+             node != sentinel; node = node.getNextInVariableOrder()) {
+          var next = node.getNextInVariableOrder();
+          var prev = node.getPreviousInVariableOrder();
           long duration = node.getVariableTime() - cache.timerWheel().nanos;
           desc.expectThat("Expired", duration, greaterThan(0L));
           desc.expectThat("Loop detected", seen.add(node), is(true));
@@ -187,10 +186,10 @@ public final class IsValidBoundedLocalCache<K, V>
       Set<Node<K, V>> seen = Sets.newIdentityHashSet();
       for (int i = 0; i < cache.timerWheel().wheel.length; i++) {
         for (int j = 0; j < cache.timerWheel().wheel[i].length; j++) {
-          Node<K, V> sentinel = cache.timerWheel().wheel[i][j];
+          var sentinel = cache.timerWheel().wheel[i][j];
 
-          for (Node<K, V> node = sentinel.getNextInVariableOrder();
-              node != sentinel; node = node.getNextInVariableOrder()) {
+          for (var node = sentinel.getNextInVariableOrder();
+               node != sentinel; node = node.getNextInVariableOrder()) {
             if (!seen.add(node)) {
               return false;
             }
@@ -207,12 +206,11 @@ public final class IsValidBoundedLocalCache<K, V>
     if (cache.evicts()) {
       long mainProbation = cache.weightedSize()
           - cache.windowWeightedSize() - cache.mainProtectedWeightedSize();
-      ImmutableTable<String, Long, LinkedDeque<Node<K, V>>> deques =
-          new ImmutableTable.Builder<String, Long, LinkedDeque<Node<K, V>>>()
-            .put("window", cache.windowWeightedSize(), cache.accessOrderWindowDeque())
-            .put("probation", mainProbation, cache.accessOrderProbationDeque())
-            .put("protected", cache.mainProtectedWeightedSize(), cache.accessOrderProtectedDeque())
-            .build();
+      var deques = new ImmutableTable.Builder<String, Long, LinkedDeque<Node<K, V>>>()
+          .put("window", cache.windowWeightedSize(), cache.accessOrderWindowDeque())
+          .put("probation", mainProbation, cache.accessOrderProbationDeque())
+          .put("protected", cache.mainProtectedWeightedSize(), cache.accessOrderProtectedDeque())
+          .build();
       checkLinks(cache, deques, desc);
       checkDeque(cache.accessOrderWindowDeque(), desc);
       checkDeque(cache.accessOrderProbationDeque(), desc);
@@ -243,7 +241,7 @@ public final class IsValidBoundedLocalCache<K, V>
     int totalSize = 0;
     long totalWeightedSize = 0;
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
-    for (Cell<String, Long, LinkedDeque<Node<K, V>>> cell : deques.cellSet()) {
+    for (var cell : deques.cellSet()) {
       long weightedSize = scanLinks(cache, seen, cell.getValue(), desc);
       desc.expectThat(cell.getRowKey(), weightedSize, is(equalTo(cell.getColumnKey())));
       totalSize += cell.getValue().size();
@@ -274,7 +272,7 @@ public final class IsValidBoundedLocalCache<K, V>
     cache.evictionLock.lock();
     try {
       Set<Node<K, V>> seen = Sets.newIdentityHashSet();
-      for (LinkedDeque<Node<K, V>> deque : deques) {
+      for (var deque : deques) {
         scanLinks(cache, seen, deque, desc);
       }
       return cache.size() == seen.size();
@@ -287,7 +285,7 @@ public final class IsValidBoundedLocalCache<K, V>
       LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
     long weightedSize = 0;
     Node<?, ?> prev = null;
-    for (Node<K, V> node : deque) {
+    for (var node : deque) {
       Supplier<String> errorMsg = () -> String.format(
           "Loop detected: %s, saw %s in %s", node, seen, cache);
       desc.expectThat(errorMsg, seen.add(node), is(true));
@@ -300,7 +298,7 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkNode(BoundedLocalCache<K, V> cache, Node<K, V> node, DescriptionBuilder desc) {
-    Weigher<? super K, ? super V> weigher = cache.weigher;
+    var weigher = cache.weigher;
     V value = node.getValue();
     K key = node.getKey();
 
@@ -338,7 +336,7 @@ public final class IsValidBoundedLocalCache<K, V>
     }
 
     if (value instanceof CompletableFuture<?>) {
-      CompletableFuture<?> future = (CompletableFuture<?>) value;
+      var future = (CompletableFuture<?>) value;
       boolean success = future.isDone() && !future.isCompletedExceptionally();
       desc.expectThat("future is done", success, is(true));
       desc.expectThat("not null value", future.getNow(null), is(not(nullValue())));

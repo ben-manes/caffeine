@@ -63,15 +63,15 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
 
     if (original instanceof AsyncLoadingCache<?, ?>) {
       @SuppressWarnings("unchecked")
-      AsyncLoadingCache<Object, Object> asyncCache = (AsyncLoadingCache<Object, Object>) original;
+      var asyncCache = (AsyncLoadingCache<Object, Object>) original;
       @SuppressWarnings("unchecked")
-      AsyncLoadingCache<Object, Object> asyncCopy = (AsyncLoadingCache<Object, Object>) copy;
+      var asyncCopy = (AsyncLoadingCache<Object, Object>) copy;
       checkAsynchronousCache(asyncCache, asyncCopy, desc);
     } else if (original instanceof Cache<?, ?>) {
       @SuppressWarnings("unchecked")
-      Cache<Object, Object> syncCache = (Cache<Object, Object>) original;
+      var syncCache = (Cache<Object, Object>) original;
       @SuppressWarnings("unchecked")
-      Cache<Object, Object> syncCopy = (Cache<Object, Object>) copy;
+      var syncCopy = (Cache<Object, Object>) copy;
       checkSynchronousCache(syncCache, syncCopy, desc);
     } else {
       throw new UnsupportedOperationException();
@@ -122,8 +122,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
           (UnboundedLocalLoadingCache<K, V>) copy, desc);
     }
     if (original instanceof LoadingCacheView<?, ?>) {
-      LocalAsyncLoadingCache<?, ?> originalAsync = ((LoadingCacheView<?, ?>) original).asyncCache();
-      LocalAsyncLoadingCache<?, ?> copyAsync = ((LoadingCacheView<?, ?>) copy).asyncCache();
+      var originalAsync = ((LoadingCacheView<?, ?>) original).asyncCache();
+      var copyAsync = ((LoadingCacheView<?, ?>) copy).asyncCache();
       if (originalAsync instanceof UnboundedLocalAsyncLoadingCache<?, ?>) {
         checkUnboundedAsyncLocalLoadingCache(
             (UnboundedLocalAsyncLoadingCache<K, V>) originalAsync,
@@ -183,8 +183,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
           (BoundedLocalLoadingCache<K, V>) copy, desc);
     }
     if (original instanceof LoadingCacheView) {
-      LocalAsyncLoadingCache<?, ?> originalAsync = ((LoadingCacheView<K, V>) original).asyncCache();
-      LocalAsyncLoadingCache<?, ?> copyAsync = ((LoadingCacheView<K, V>) copy).asyncCache();
+      var originalAsync = ((LoadingCacheView<K, V>) original).asyncCache();
+      var copyAsync = ((LoadingCacheView<K, V>) copy).asyncCache();
       if (originalAsync instanceof BoundedLocalAsyncLoadingCache<?, ?>) {
         checkBoundedAsyncLocalLoadingCache(
             (BoundedLocalAsyncLoadingCache<K, V>) originalAsync,

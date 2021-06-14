@@ -25,8 +25,6 @@ import java.util.Map;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.google.common.collect.ImmutableMap;
-
 /**
  * A matcher that performs an exhaustive empty check throughout the {@link Map} contract.
  *
@@ -50,8 +48,8 @@ public final class IsEmptyMap<K, V>
     desc.expectThat("empty map", map, is(Collections.EMPTY_MAP));
     desc.expectThat("Size != 0", map.size(), is(0));
     desc.expectThat("Not empty", map.isEmpty(), is(true));
-    desc.expectThat("hashcode", map.hashCode(), is(ImmutableMap.of().hashCode()));
-    desc.expectThat("toString", map, hasToString(ImmutableMap.of().toString()));
+    desc.expectThat("hashcode", map.hashCode(), is(Map.of().hashCode()));
+    desc.expectThat("toString", map, hasToString(Map.of().toString()));
     return desc.matches();
   }
 

@@ -20,7 +20,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.testng.annotations.DataProvider;
@@ -66,8 +65,8 @@ public final class BoundedBufferTest {
   @Test(dataProvider = "buffer")
   @SuppressWarnings("ThreadPriorityCheck")
   public void offerAndDrain(BoundedBuffer<String> buffer) {
-    Lock lock = new ReentrantLock();
-    AtomicInteger reads = new AtomicInteger();
+    var lock = new ReentrantLock();
+    var reads = new AtomicInteger();
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 1000; i++) {
         boolean shouldDrain = (buffer.offer(DUMMY) == Buffer.FULL);

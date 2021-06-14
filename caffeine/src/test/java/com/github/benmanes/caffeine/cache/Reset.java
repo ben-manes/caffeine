@@ -44,18 +44,18 @@ public final class Reset {
 
   /** Clears the internal state of the cache and becomes unusable. */
   public static void destroy(Cache<?, ?> cache) {
-    LocalCache<?, ?> local = (cache instanceof AbstractCacheView<?, ?>)
+    var local = (cache instanceof AbstractCacheView<?, ?>)
         ? ((AbstractCacheView<?, ?>) cache).asyncCache().cache()
         : (LocalCache<?, ?>) cache.asMap();
     if (local instanceof UnboundedLocalCache) {
-      UnboundedLocalCache<?, ?> unbounded = (UnboundedLocalCache<?, ?>) local;
+      var unbounded = (UnboundedLocalCache<?, ?>) local;
       unbounded.data.clear();
     } else if (local instanceof BoundedLocalCache) {
       @SuppressWarnings("unchecked")
-      BoundedLocalCache<Object, Object> bounded = (BoundedLocalCache<Object, Object>) local;
+      var bounded = (BoundedLocalCache<Object, Object>) local;
       bounded.evictionLock.lock();
       try {
-        for (Node<?, ?> node : bounded.data.values()) {
+        for (var node : bounded.data.values()) {
           destroyNode(bounded, node);
         }
         if (bounded.expiresVariable()) {
@@ -87,7 +87,7 @@ public final class Reset {
 
   private static void destroyTimerWheel(BoundedLocalCache<Object, Object> bounded) {
     for (int i = 0; i < bounded.timerWheel().wheel.length; i++) {
-      for (Node<Object, Object> sentinel : bounded.timerWheel().wheel[i]) {
+      for (var sentinel : bounded.timerWheel().wheel[i]) {
         sentinel.setPreviousInVariableOrder(sentinel);
         sentinel.setNextInVariableOrder(sentinel);
       }

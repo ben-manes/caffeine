@@ -60,7 +60,7 @@ public final class Threads {
 
   private Threads() {}
 
-  public static <A> void runTest(A collection, List<BiConsumer<A, Integer>> operations) {
+  public static <A> void runTest(A collection, List<BiConsumer<A, Int>> operations) {
     Queue<String> failures = new ConcurrentLinkedQueue<>();
     Runnable thrasher = new Thrasher<A>(collection, failures, operations);
     Threads.executeWithTimeOut(failures, () ->
@@ -100,9 +100,10 @@ public final class Threads {
     fail("Spun forever", e);
   }
 
-  public static List<List<Integer>> workingSets(int nThreads, int iterations) {
-    List<Integer> keys = IntStream.range(0, iterations).boxed()
+  public static List<List<Int>> workingSets(int nThreads, int iterations) {
+    List<Int> keys = IntStream.range(0, iterations)
         .map(i -> ThreadLocalRandom.current().nextInt(iterations / 100))
+        .mapToObj(Int::valueOf)
         .collect(Collectors.toList());
     return shuffle(nThreads, keys);
   }
@@ -125,13 +126,13 @@ public final class Threads {
 
   /** Executes operations against the cache to simulate random load. */
   public static final class Thrasher<A> implements Runnable {
-    private final List<BiConsumer<A, Integer>> operations;
-    private final List<List<Integer>> sets;
+    private final List<BiConsumer<A, Int>> operations;
+    private final List<List<Int>> sets;
     private final Queue<String> failures;
     private final AtomicInteger index;
     private final A collection;
 
-    public Thrasher(A collection, Queue<String> failures, List<BiConsumer<A, Integer>> operations) {
+    public Thrasher(A collection, Queue<String> failures, List<BiConsumer<A, Int>> operations) {
       this.sets = workingSets(Threads.NTHREADS, Threads.ITERATIONS);
       this.index = new AtomicInteger();
       this.operations = operations;
@@ -142,8 +143,8 @@ public final class Threads {
     @Override
     public void run() {
       int id = index.getAndIncrement();
-      for (Integer e : sets.get(id)) {
-        BiConsumer<A, Integer> operation = operations.get(
+      for (Int e : sets.get(id)) {
+        BiConsumer<A, Int> operation = operations.get(
             ThreadLocalRandom.current().nextInt(operations.size()));
         try {
           operation.accept(collection, e);

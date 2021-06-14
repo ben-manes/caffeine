@@ -93,8 +93,8 @@ public final class MpscGrowableArrayQueueTest {
 
   @Test(dataProvider = "empty")
   public void oneProducer_oneConsumer(MpscGrowableArrayQueue<Integer> buffer) {
-    AtomicInteger started = new AtomicInteger();
-    AtomicInteger finished = new AtomicInteger();
+    var started = new AtomicInteger();
+    var finished = new AtomicInteger();
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
@@ -119,7 +119,7 @@ public final class MpscGrowableArrayQueueTest {
 
   @Test(dataProvider = "empty")
   public void manyProducers_noConsumer(MpscGrowableArrayQueue<Integer> buffer) {
-    AtomicInteger count = new AtomicInteger();
+    var count = new AtomicInteger();
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       for (int i = 0; i < PRODUCE; i++) {
         if (buffer.offer(i)) {
@@ -132,8 +132,8 @@ public final class MpscGrowableArrayQueueTest {
 
   @Test(dataProvider = "empty")
   public void manyProducers_oneConsumer(MpscGrowableArrayQueue<Integer> buffer) {
-    AtomicInteger started = new AtomicInteger();
-    AtomicInteger finished = new AtomicInteger();
+    var started = new AtomicInteger();
+    var finished = new AtomicInteger();
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
@@ -175,7 +175,7 @@ public final class MpscGrowableArrayQueueTest {
   }
 
   static MpscGrowableArrayQueue<Integer> makePopulated(int items) {
-    MpscGrowableArrayQueue<Integer> buffer = new MpscGrowableArrayQueue<>(4, FULL_SIZE);
+    var buffer = new MpscGrowableArrayQueue<Integer>(4, FULL_SIZE);
     for (int i = 0; i < items; i++) {
       buffer.offer(i);
     }

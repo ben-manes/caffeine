@@ -15,7 +15,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Queue;
 
 import org.junit.runner.RunWith;
@@ -35,7 +34,7 @@ public final class MpscGrowableQueueSanityTest extends QueueSanityTest {
 
   @Parameterized.Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> list = new ArrayList<Object[]>();
+    var list = new ArrayList<Object[]>();
     // MPSC size 1
     list.add(makeQueue(0, 1, 4, org.jctools.queues.spec.Ordering.FIFO,
         new MpscGrowableArrayQueue<>(2, 4)));

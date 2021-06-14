@@ -46,6 +46,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Ticker;
 import com.google.common.cache.AbstractCache.SimpleStatsCounter;
 import com.google.common.cache.AbstractCache.StatsCounter;
@@ -55,7 +56,6 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ForwardingConcurrentMap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ExecutionError;
@@ -123,15 +123,15 @@ public final class GuavaCacheFromContext {
     }
     Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker();
     if (context.loader == null) {
-      context.cache = new GuavaCache<>(builder.<Integer, Integer>build(),
+      context.cache = new GuavaCache<>(builder.<Int, Int>build(),
           ticker, context.isRecordingStats());
     } else if (context.loader().isBulk()) {
       context.cache = new GuavaLoadingCache<>(builder.build(
-          new BulkLoader<Integer, Integer>(context.loader())),
+          new BulkLoader<Int, Int>(context.loader())),
           ticker, context.isRecordingStats());
     } else {
       context.cache = new GuavaLoadingCache<>(builder.build(
-          new SingleLoader<Integer, Integer>(context.loader())),
+          new SingleLoader<Int, Int>(context.loader())),
           ticker, context.isRecordingStats());
     }
     @SuppressWarnings("unchecked")
@@ -498,7 +498,7 @@ public final class GuavaCacheFromContext {
         return cache.getAll(keys);
       } catch (UncheckedExecutionException e) {
         if (e.getCause() instanceof CacheMissException) {
-          return ImmutableMap.of();
+          return Map.of();
         }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {

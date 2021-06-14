@@ -30,8 +30,8 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,7 +43,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.Futures;
 
@@ -66,7 +65,7 @@ public final class SchedulerTest {
 
   @Test(dataProvider = "runnableSchedulers")
   public void scheduler_exception(Scheduler scheduler) {
-    AtomicBoolean executed = new AtomicBoolean();
+    var executed = new AtomicBoolean();
     Executor executor = task -> {
       executed.set(true);
       throw new IllegalStateException();
@@ -77,7 +76,7 @@ public final class SchedulerTest {
 
   @Test(dataProvider = "runnableSchedulers")
   public void scheduler(Scheduler scheduler) {
-    AtomicBoolean executed = new AtomicBoolean();
+    var executed = new AtomicBoolean();
     Runnable task = () -> executed.set(true);
     scheduler.schedule(ConcurrentTestHarness.executor, task, 1L, TimeUnit.NANOSECONDS);
     await().untilTrue(executed);
@@ -87,7 +86,7 @@ public final class SchedulerTest {
 
   @Test
   public void disabledScheduler() {
-    Future<?> future = Scheduler.disabledScheduler()
+    var future = Scheduler.disabledScheduler()
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future, is(DisabledFuture.INSTANCE));
   }
@@ -116,12 +115,12 @@ public final class SchedulerTest {
 
   @Test
   public void guardedScheduler_nullFuture() {
-    ScheduledExecutorService scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
-    Scheduler scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
-    Executor executor = Mockito.mock(Executor.class);
+    var scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
+    var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
+    var executor = Mockito.mock(Executor.class);
     Runnable command = () -> {};
 
-    Future<?> future = Scheduler.guardedScheduler(scheduler)
+    var future = Scheduler.guardedScheduler(scheduler)
         .schedule(executor, command, 1L, TimeUnit.MINUTES);
     verify(scheduledExecutor).schedule(any(Runnable.class), eq(1L), eq(TimeUnit.MINUTES));
     assertThat(future, is(DisabledFuture.INSTANCE));
@@ -129,14 +128,14 @@ public final class SchedulerTest {
 
   @Test
   public void guardedScheduler() {
-    Future<?> future = Scheduler.guardedScheduler((r, e, d, u) -> Futures.immediateVoidFuture())
+    var future = Scheduler.guardedScheduler((r, e, d, u) -> Futures.immediateVoidFuture())
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future, is(Futures.immediateVoidFuture()));
   }
 
   @Test
   public void guardedScheduler_exception() {
-    Future<?> future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new RuntimeException(); })
+    var future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new RuntimeException(); })
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future, is(DisabledFuture.INSTANCE));
   }
@@ -150,13 +149,13 @@ public final class SchedulerTest {
 
   @Test
   public void scheduledExecutorService_schedule() {
-    ScheduledExecutorService scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
-    ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
-    Executor executor = Mockito.mock(Executor.class);
+    var scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
+    var task = ArgumentCaptor.forClass(Runnable.class);
+    var executor = Mockito.mock(Executor.class);
     Runnable command = () -> {};
 
-    Scheduler scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
-    Future<?> future = scheduler.schedule(executor, command, 1L, TimeUnit.MINUTES);
+    var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
+    var future = scheduler.schedule(executor, command, 1L, TimeUnit.MINUTES);
     assertThat(future, is(not(DisabledFuture.INSTANCE)));
 
     verify(scheduledExecutor).isShutdown();
@@ -170,12 +169,12 @@ public final class SchedulerTest {
 
   @Test
   public void scheduledExecutorService_shutdown() {
-    ScheduledExecutorService scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
-    Executor executor = Mockito.mock(Executor.class);
+    var scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
+    var executor = Mockito.mock(Executor.class);
 
     when(scheduledExecutor.isShutdown()).thenReturn(true);
-    Scheduler scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
-    Future<?> future = scheduler.schedule(executor, () -> {}, 1L, TimeUnit.MINUTES);
+    var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
+    var future = scheduler.schedule(executor, () -> {}, 1L, TimeUnit.MINUTES);
     assertThat(future, is(DisabledFuture.INSTANCE));
 
     verify(scheduledExecutor).isShutdown();
@@ -187,7 +186,7 @@ public final class SchedulerTest {
 
   @DataProvider(name = "schedulers")
   public Iterator<Scheduler> providesSchedulers() {
-    ImmutableSet<Scheduler> schedulers = ImmutableSet.of(
+    var schedulers = Set.of(
         Scheduler.forScheduledExecutorService(sameThreadScheduledExecutor()),
         Scheduler.forScheduledExecutorService(scheduledExecutor),
         Scheduler.disabledScheduler(),
@@ -197,7 +196,7 @@ public final class SchedulerTest {
 
   @DataProvider(name = "runnableSchedulers")
   public Iterator<Scheduler> providesRunnableSchedulers() {
-    ImmutableSet<Scheduler> schedulers = ImmutableSet.of(
+    var schedulers = Set.of(
         Scheduler.forScheduledExecutorService(sameThreadScheduledExecutor()),
         Scheduler.forScheduledExecutorService(scheduledExecutor),
         Scheduler.systemScheduler());

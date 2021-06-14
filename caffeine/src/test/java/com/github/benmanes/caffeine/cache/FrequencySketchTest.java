@@ -22,7 +22,6 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.testng.annotations.DataProvider;
@@ -36,7 +35,7 @@ public final class FrequencySketchTest {
 
   @Test
   public void construct() {
-    FrequencySketch<Integer> sketch = new FrequencySketch<>();
+    var sketch = new FrequencySketch<Integer>();
     assertThat(sketch.table, is(nullValue()));
   }
 
@@ -88,7 +87,7 @@ public final class FrequencySketchTest {
 
   @Test(dataProvider = "sketch")
   public void indexOf_aroundZero(FrequencySketch<Integer> sketch) {
-    Set<Integer> indexes = new HashSet<>(16);
+    var indexes = new HashSet<Integer>(16);
     int[] hashes = { -1, 0, 1 };
     for (int hash : hashes) {
       for (int i = 0; i < 4; i++) {
@@ -101,7 +100,7 @@ public final class FrequencySketchTest {
   @Test
   public void reset() {
     boolean reset = false;
-    FrequencySketch<Integer> sketch = new FrequencySketch<>();
+    var sketch = new FrequencySketch<Integer>();
     sketch.ensureCapacity(64);
 
     for (int i = 1; i < 20 * sketch.table.length; i++) {

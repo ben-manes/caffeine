@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -64,6 +66,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext.GuavaLoadingCache;
 import com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext.SingleLoader;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.MoreObjects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
@@ -76,11 +79,12 @@ import com.google.common.testing.FakeTicker;
  */
 @SuppressWarnings("deprecation")
 public final class CacheContext {
-  final RemovalListener<Integer, Integer> evictionListener;
-  final RemovalListener<Integer, Integer> removalListener;
+  private static final ThreadLocal<Map<Object, Object>> interner =
+      ThreadLocal.withInitial(HashMap::new);
+
+  final RemovalListener<Int, Int> evictionListener;
+  final RemovalListener<Int, Int> removalListener;
   final InitialCapacity initialCapacity;
-  final Expiry<Integer, Integer> expiry;
-  final Map<Integer, Integer> original;
   final Implementation implementation;
   final CacheScheduler cacheScheduler;
   final Listener evictionListenerType;
@@ -88,6 +92,8 @@ public final class CacheContext {
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
   final ReferenceType keyStrength;
+  final Expiry<Int, Int> expiry;
+  final Map<Int, Int> original;
   final CacheExpiry expiryType;
   final Population population;
   final CacheWeigher weigher;
@@ -111,16 +117,16 @@ public final class CacheContext {
   Caffeine<Object, Object> caffeine;
   CacheBuilder<Object, Object> guava;
 
-  @Nullable Integer firstKey;
-  @Nullable Integer middleKey;
-  @Nullable Integer lastKey;
+  @Nullable Int firstKey;
+  @Nullable Int middleKey;
+  @Nullable Int lastKey;
   long initialSize;
 
   // Generated on-demand
-  Integer absentKey;
-  Integer absentValue;
+  Int absentKey;
+  Int absentValue;
 
-  Map<Integer, Integer> absent;
+  Map<Int, Int> absent;
 
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
@@ -160,6 +166,23 @@ public final class CacheContext {
     this.expiry = expiryType.createExpiry(expiryTime);
   }
 
+  /** Returns a thread local interner for explicit caching. */
+  public static Map<Object, Object> interner() {
+    return interner.get();
+  }
+
+  /** Returns a thread local interned value. */
+  @SuppressWarnings("unchecked")
+  public static <T> T intern(T o) {
+    return (T) interner.get().computeIfAbsent(o, key -> o);
+  }
+
+  /** Returns a thread local interned value. */
+  @SuppressWarnings("unchecked")
+  public static <K, V> V intern(K key, Function<K, V> mappingFunction) {
+    return (V) interner.get().computeIfAbsent(key, k -> mappingFunction.apply((K) k));
+  }
+
   public InitialCapacity initialCapacity() {
     return initialCapacity;
   }
@@ -172,22 +195,22 @@ public final class CacheContext {
     return population;
   }
 
-  public Integer firstKey() {
+  public Int firstKey() {
     assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
     return firstKey;
   }
 
-  public Integer middleKey() {
+  public Int middleKey() {
     assertThat("Invalid usage of context", middleKey, is(not(nullValue())));
     return middleKey;
   }
 
-  public Integer lastKey() {
+  public Int lastKey() {
     assertThat("Invalid usage of context", lastKey, is(not(nullValue())));
     return lastKey;
   }
 
-  public Set<Integer> firstMiddleLastKeys() {
+  public Set<Int> firstMiddleLastKeys() {
     return ImmutableSet.of(firstKey(), middleKey(), lastKey());
   }
 
@@ -196,7 +219,7 @@ public final class CacheContext {
   }
 
   public void clear() {
-    CacheSpec.interner.get().clear();
+    interner().clear();
     initialSize();
     original.clear();
     absent = null;
@@ -207,32 +230,33 @@ public final class CacheContext {
     lastKey = null;
   }
 
-  public Integer absentKey() {
+  public Int absentKey() {
     return (absentKey == null) ? (absentKey = nextAbsentKey()) : absentKey;
   }
 
-  public Integer absentValue() {
-    return (absentValue == null) ? (absentValue = -absentKey()) : absentValue;
+  public Int absentValue() {
+    return (absentValue == null) ? (absentValue = absentKey().negate()) : absentValue;
   }
 
-  public Map<Integer, Integer> absent() {
+  public Map<Int, Int> absent() {
     if (absent != null) {
       return absent;
     }
     absent = new LinkedHashMap<>();
     do {
-      Integer key = nextAbsentKey();
-      absent.put(key, -key);
+      Int key = nextAbsentKey();
+      absent.put(key, key.negate());
     } while (absent.size() < 10);
     return absent;
   }
 
-  public Set<Integer> absentKeys() {
+  public Set<Int> absentKeys() {
     return absent().keySet();
   }
 
-  private Integer nextAbsentKey() {
-    return ThreadLocalRandom.current().nextInt((Integer.MAX_VALUE / 2), Integer.MAX_VALUE);
+  private Int nextAbsentKey() {
+    return Int.valueOf(ThreadLocalRandom.current().nextInt(
+        (Integer.MAX_VALUE / 2), Integer.MAX_VALUE));
   }
 
   public long initialSize() {
@@ -282,7 +306,7 @@ public final class CacheContext {
   }
 
   /** The initial entries in the cache, iterable in insertion order. */
-  public Map<Integer, Integer> original() {
+  public Map<Int, Int> original() {
     initialSize(); // lazy initialize
     return original;
   }
@@ -323,13 +347,13 @@ public final class CacheContext {
     return removalListenerType;
   }
 
-  public RemovalListener<Integer, Integer> removalListener() {
+  public RemovalListener<Int, Int> removalListener() {
     return requireNonNull(removalListener);
   }
 
-  public List<RemovalNotification<Integer, Integer>> removalNotifications() {
+  public List<RemovalNotification<Int, Int>> removalNotifications() {
     return (removalListenerType() == Listener.CONSUMING)
-        ? ((ConsumingRemovalListener<Integer, Integer>) removalListener).removed()
+        ? ((ConsumingRemovalListener<Int, Int>) removalListener).removed()
         : Collections.emptyList();
   }
 
@@ -337,13 +361,13 @@ public final class CacheContext {
     return evictionListenerType;
   }
 
-  public RemovalListener<Integer, Integer> evictionListener() {
+  public RemovalListener<Int, Int> evictionListener() {
     return requireNonNull(evictionListener);
   }
 
-  public List<RemovalNotification<Integer, Integer>> evictionNotifications() {
+  public List<RemovalNotification<Int, Int>> evictionNotifications() {
     return (evictionListenerType() == Listener.CONSUMING)
-        ? ((ConsumingRemovalListener<Integer, Integer>) evictionListener).removed()
+        ? ((ConsumingRemovalListener<Int, Int>) evictionListener).removed()
         : Collections.emptyList();
   }
 
@@ -381,7 +405,7 @@ public final class CacheContext {
     return (expiryType != CacheExpiry.DISABLED);
   }
 
-  public Expiry<Integer, Integer> expiry() {
+  public Expiry<Int, Int> expiry() {
     return expiry;
   }
 

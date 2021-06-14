@@ -36,6 +36,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.testing.Int;
 import com.github.benmanes.caffeine.testing.Threads;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -58,7 +59,7 @@ public final class MultiThreadedTest {
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
       evictionListener = Listener.DEFAULT)
-  public void concurrent_unbounded(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void concurrent_unbounded(LoadingCache<Int, Int> cache, CacheContext context) {
     Threads.runTest(cache, operations);
   }
 
@@ -69,7 +70,7 @@ public final class MultiThreadedTest {
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
       evictionListener = Listener.DEFAULT)
-  public void concurrent_bounded(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void concurrent_bounded(LoadingCache<Int, Int> cache, CacheContext context) {
     Threads.runTest(cache, operations);
   }
 
@@ -81,7 +82,7 @@ public final class MultiThreadedTest {
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
       evictionListener = Listener.DEFAULT)
   public void async_concurrent_unbounded(
-      AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     Threads.runTest(cache, asyncOperations);
   }
 
@@ -93,13 +94,13 @@ public final class MultiThreadedTest {
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
       evictionListener = Listener.DEFAULT)
   public void async_concurrent_bounded(
-      AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     Threads.runTest(cache, asyncOperations);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes", "ReturnValueIgnored",
     "FutureReturnValueIgnored", "SizeGreaterThanOrEqualsZero", "SelfEquals"})
-  List<BiConsumer<LoadingCache<Integer, Integer>, Integer>> operations = ImmutableList.of(
+  List<BiConsumer<LoadingCache<Int, Int>, Int>> operations = List.of(
       // LoadingCache
       (cache, key) -> { cache.get(key); },
       (cache, key) -> { cache.getAll(ImmutableList.of(key)); },
@@ -160,7 +161,7 @@ public final class MultiThreadedTest {
 
 
   @SuppressWarnings({"unchecked", "rawtypes", "FutureReturnValueIgnored"})
-  List<BiConsumer<AsyncLoadingCache<Integer, Integer>, Integer>> asyncOperations = ImmutableList.of(
+  List<BiConsumer<AsyncLoadingCache<Int, Int>, Int>> asyncOperations = List.of(
       (cache, key) -> { cache.getIfPresent(key); },
       (cache, key) -> { cache.get(key, k -> key); },
       (cache, key) -> { cache.get(key, (k, e) -> CompletableFuture.completedFuture(key)); },

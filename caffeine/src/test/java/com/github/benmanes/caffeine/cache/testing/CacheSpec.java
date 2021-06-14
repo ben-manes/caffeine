@@ -52,7 +52,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
-import com.google.common.collect.Iterables;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -196,7 +196,7 @@ public @interface CacheSpec {
     VALUE(1) {
       @Override public int weigh(Object key, Object value) {
         requireNonNull(key);
-        return ((Integer) value).intValue();
+        return ((Int) value).intValue();
       }
     },
     /** A flag indicating that the entry is weighted by the value's collection size. */
@@ -440,115 +440,113 @@ public @interface CacheSpec {
 
   /* --------------- CacheLoader --------------- */
 
-  // FIXME: A hack to allow the NEGATIVE loader's return value to be retained on refresh
-  static final ThreadLocal<Map<Integer, Integer>> interner = ThreadLocal.withInitial(HashMap::new);
-
   Loader[] loader() default {
     Loader.NEGATIVE,
   };
 
   /** The {@link CacheLoader} for constructing the {@link LoadingCache}. */
-  enum Loader implements CacheLoader<Integer, Integer> {
+  enum Loader implements CacheLoader<Int, Int> {
     /** A loader that always returns null (no mapping). */
     NULL {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         return null;
       }
     },
     /** A loader that returns the key. */
     IDENTITY {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         requireNonNull(key);
         return key;
       }
     },
     /** A loader that returns the key's negation. */
     NEGATIVE {
-      @Override public Integer load(Integer key) {
-        return interner.get().computeIfAbsent(key, k -> -k);
+      @Override public Int load(Int key) {
+        // Intern the loader's return value so that it is retained on a refresh
+        return CacheContext.intern(key, k -> new Int(-k.intValue()));
       }
     },
     /** A loader that always throws an exception. */
     EXCEPTIONAL {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
     },
 
     /** A loader that always returns null (no mapping). */
     BULK_NULL {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
         return null;
       }
     },
     BULK_IDENTITY {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
-        Map<Integer, Integer> result = new HashMap<>(Iterables.size(keys));
-        for (Integer key : keys) {
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
+        var result = new HashMap<Int, Int>(keys.size());
+        for (Int key : keys) {
           result.put(key, key);
         }
         return result;
       }
     },
     BULK_NEGATIVE {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
-        Map<Integer, Integer> result = new HashMap<>(Iterables.size(keys));
-        for (Integer key : keys) {
-          result.put(key, interner.get().computeIfAbsent(key, k -> -k));
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws Exception {
+        var result = new HashMap<Int, Int>(keys.size());
+        for (Int key : keys) {
+          result.put(key, NEGATIVE.load(key));
         }
         return result;
       }
     },
     /** A bulk-only loader that loads more than requested. */
     BULK_NEGATIVE_EXCEEDS {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<? extends Integer, ? extends Integer> loadAll(
-          Set<? extends Integer> keys) throws Exception {
-        Set<Integer> moreKeys = new LinkedHashSet<>(keys.size() + 10);
+      @Override public Map<? extends Int, ? extends Int> loadAll(
+          Set<? extends Int> keys) throws Exception {
+        var moreKeys = new LinkedHashSet<Int>(keys.size() + 10);
         moreKeys.addAll(keys);
         for (int i = 0; i < 10; i++) {
-          moreKeys.add(ThreadLocalRandom.current().nextInt());
+          moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
         }
         return BULK_NEGATIVE.loadAll(moreKeys);
       }
     },
     /** A bulk-only loader that always throws an exception. */
     BULK_EXCEPTIONAL {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
         throw new IllegalStateException();
       }
     },
     ASYNC_INCOMPLETE {
-      @Override public Integer load(Integer key) {
+      @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         executor.execute(() -> {});
         return new CompletableFuture<>();
       }
-      @Override public CompletableFuture<Integer> asyncReload(
-          Integer key, Integer oldValue, Executor executor) {
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
         executor.execute(() -> {});
         return new CompletableFuture<>();
       }
     };
 
     private final boolean bulk;
-    private final AsyncCacheLoader<Integer, Integer> asyncLoader;
+    private final AsyncCacheLoader<Int, Int> asyncLoader;
 
     private Loader() {
       bulk = name().startsWith("BULK");
@@ -562,12 +560,12 @@ public @interface CacheSpec {
     }
 
     /** Returns a serializable view restricted to the {@link AsyncCacheLoader} interface. */
-    public AsyncCacheLoader<Integer, Integer> async() {
+    public AsyncCacheLoader<Int, Int> async() {
       return asyncLoader;
     }
 
     private static class SeriazableAsyncCacheLoader
-        implements AsyncCacheLoader<Integer, Integer>, Serializable {
+        implements AsyncCacheLoader<Int, Int>, Serializable {
       private static final long serialVersionUID = 1L;
 
       final Loader loader;
@@ -576,7 +574,7 @@ public @interface CacheSpec {
         this.loader = loader;
       }
       @Override
-      public CompletableFuture<? extends Integer> asyncLoad(Integer key, Executor executor) {
+      public CompletableFuture<? extends Int> asyncLoad(Int key, Executor executor) {
         return loader.asyncLoad(key, executor);
       }
       private Object readResolve() throws ObjectStreamException {
@@ -590,12 +588,12 @@ public @interface CacheSpec {
       BulkSeriazableAsyncCacheLoader(Loader loader) {
         super(loader);
       }
-      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         throw new IllegalStateException();
       }
       @Override
-      public CompletableFuture<? extends Map<? extends Integer, ? extends Integer>> asyncLoadAll(
-          Set<? extends Integer> keys, Executor executor) {
+      public CompletableFuture<? extends Map<? extends Int, ? extends Int>> asyncLoadAll(
+          Set<? extends Int> keys, Executor executor) {
         return loader.asyncLoadAll(keys, executor);
       }
     }

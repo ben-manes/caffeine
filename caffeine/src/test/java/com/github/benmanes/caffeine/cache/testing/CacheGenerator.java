@@ -39,6 +39,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -49,11 +50,8 @@ import com.google.common.collect.Sets;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PreferJavaTimeOverload")
 final class CacheGenerator {
-  // Integer caches the object identity semantics of autoboxing for values between
-  // -128 and 127 (inclusive) as required by JLS (assuming default setting)
-  private static final List<Map.Entry<Integer, Integer>> INTS = makeInts();
+  private static final List<Map.Entry<Int, Int>> INTS = makeInts();
   private static final int BASE = 1_000;
 
   private final Options options;
@@ -70,12 +68,12 @@ final class CacheGenerator {
   }
 
   /** Returns a lazy stream so that the test case is GC-able after use. */
-  public Stream<Map.Entry<CacheContext, Cache<Integer, Integer>>> generate() {
+  public Stream<Map.Entry<CacheContext, Cache<Int, Int>>> generate() {
     return combinations().stream()
         .map(this::newCacheContext)
         .filter(this::isCompatible)
         .map(context -> {
-          Cache<Integer, Integer> cache = newCache(context);
+          Cache<Int, Int> cache = newCache(context);
           populate(context, cache);
           return Maps.immutableEntry(context, cache);
         });
@@ -213,8 +211,8 @@ final class CacheGenerator {
   }
 
   /** Fills the cache up to the population size. */
-  @SuppressWarnings({"deprecation", "unchecked", "BoxedPrimitiveConstructor"})
-  private void populate(CacheContext context, Cache<Integer, Integer> cache) {
+  @SuppressWarnings("PreferJavaTimeOverload")
+  private void populate(CacheContext context, Cache<Int, Int> cache) {
     if (context.population.size() == 0) {
       return;
     }
@@ -225,19 +223,19 @@ final class CacheGenerator {
     int middle = Math.max(first, BASE + ((last - first) / 2));
 
     for (int i = 0; i < maximum; i++) {
-      Map.Entry<Integer, Integer> entry = INTS.get(i);
+      Map.Entry<Int, Int> entry = INTS.get(i);
 
       // Reference caching (weak, soft) require unique instances for identity comparison
-      Integer key = context.isStrongKeys() ? entry.getKey() : new Integer(BASE + i);
-      Integer value = context.isStrongValues() ? entry.getValue() : new Integer(-key);
+      var key = context.isStrongKeys() ? entry.getKey() : new Int(BASE + i);
+      var value = context.isStrongValues() ? entry.getValue() : new Int(-key.intValue());
 
-      if (key == first) {
+      if (key.intValue() == first) {
         context.firstKey = key;
       }
-      if (key == middle) {
+      if (key.intValue() == middle) {
         context.middleKey = key;
       }
-      if (key == last) {
+      if (key.intValue() == last) {
         context.lastKey = key;
       }
       cache.put(key, value);
@@ -247,15 +245,14 @@ final class CacheGenerator {
   }
 
   /** Returns a cache of integers and their negation. */
-  @SuppressWarnings({"BoxedPrimitiveConstructor", "deprecation"})
-  private static List<Map.Entry<Integer, Integer>> makeInts() {
+  private static List<Map.Entry<Int, Int>> makeInts() {
     int size = Stream.of(CacheSpec.Population.values())
         .mapToInt(population -> Math.toIntExact(population.size()))
         .max().getAsInt();
-    ImmutableList.Builder<Map.Entry<Integer, Integer>> builder = ImmutableList.builder();
+    var builder = new ImmutableList.Builder<Map.Entry<Int, Int>>();
     for (int i = 0; i < size; i++) {
-      int value = BASE + i;
-      builder.add(Maps.immutableEntry(new Integer(value), new Integer(-value)));
+      Int value = Int.valueOf(BASE + i);
+      builder.add(Maps.immutableEntry(value, value.negate()));
     }
     return builder.build();
   }

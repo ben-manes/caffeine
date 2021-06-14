@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Ben Manes. All Rights Reserved.
+ * Copyright 2021 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,20 @@
  */
 package com.github.benmanes.caffeine.testing;
 
-import java.util.concurrent.Future;
-
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.hamcrest.core.Is;
 
-import com.google.common.util.concurrent.Futures;
-
 /**
- * A matcher that unwraps a future and forwards evaluation to another matcher.
+ * A matcher that compares an {@link Int} to an {@link Integer}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class IsFutureValue<V> extends TypeSafeDiagnosingMatcher<Future<V>> {
-  final Matcher<V> matcher;
+public final class IsInt extends TypeSafeDiagnosingMatcher<Int> {
+  final Matcher<Int> matcher;
 
-  IsFutureValue(Matcher<V> matcher) {
+  IsInt(Matcher<Int> matcher) {
     this.matcher = matcher;
   }
 
@@ -42,11 +38,11 @@ public final class IsFutureValue<V> extends TypeSafeDiagnosingMatcher<Future<V>>
   }
 
   @Override
-  protected boolean matchesSafely(Future<V> future, Description description) {
-    return matcher.matches(Futures.getUnchecked(future));
+  protected boolean matchesSafely(Int value, Description description) {
+    return matcher.matches(value);
   }
 
-  public static <V> IsFutureValue<V> futureOf(V value) {
-    return new IsFutureValue<>(Is.is(value));
+  public static IsInt isInt(int value) {
+    return new IsInt(Is.is(Int.valueOf(value)));
   }
 }

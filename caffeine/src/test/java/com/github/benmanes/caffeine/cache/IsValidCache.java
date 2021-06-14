@@ -31,8 +31,7 @@ import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalManu
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class IsValidCache<K, V>
-    extends TypeSafeDiagnosingMatcher<Cache<K, V>> {
+public final class IsValidCache<K, V> extends TypeSafeDiagnosingMatcher<Cache<K, V>> {
   Description description;
 
   @Override
@@ -49,10 +48,10 @@ public final class IsValidCache<K, V>
     this.description = description;
 
     if (cache instanceof BoundedLocalManualCache<?, ?>) {
-      BoundedLocalManualCache<K, V> local = (BoundedLocalManualCache<K, V>) cache;
+      var local = (BoundedLocalManualCache<K, V>) cache;
       return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
     } else if (cache instanceof LoadingCacheView) {
-      LocalAsyncLoadingCache<?, ?> async = ((LoadingCacheView<K, V>) cache).asyncCache();
+      var async = ((LoadingCacheView<K, V>) cache).asyncCache();
       if (async instanceof BoundedLocalAsyncLoadingCache<?, ?>) {
         return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
             ((BoundedLocalAsyncLoadingCache<K, V>) async).cache, description);
@@ -60,18 +59,17 @@ public final class IsValidCache<K, V>
     }
 
     if (cache instanceof UnboundedLocalManualCache<?, ?>) {
-      UnboundedLocalManualCache<K, V> local = (UnboundedLocalManualCache<K, V>) cache;
+      var local = (UnboundedLocalManualCache<K, V>) cache;
       return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
     } else if (cache instanceof LoadingCacheView) {
-      LocalAsyncLoadingCache<?, ?> async = ((LoadingCacheView<?, ?>) cache).asyncCache();
+      var async = ((LoadingCacheView<?, ?>) cache).asyncCache();
       if (async instanceof UnboundedLocalAsyncLoadingCache<?, ?>) {
         return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
             ((UnboundedLocalAsyncLoadingCache<K, V>) async).cache, description);
       }
 
-      LoadingCacheView<K, V> view = (LoadingCacheView<K, V>) cache;
-      UnboundedLocalCache<K, CompletableFuture<V>> asyncCache =
-          (UnboundedLocalCache<K, CompletableFuture<V>>) view.asyncCache().cache();
+      var view = (LoadingCacheView<K, V>) cache;
+      var asyncCache = (UnboundedLocalCache<K, CompletableFuture<V>>) view.asyncCache().cache();
       return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid()
           .matchesSafely(asyncCache, description);
     }

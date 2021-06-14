@@ -75,9 +75,9 @@ public final class ConcurrentTestHarness {
    * @return the result of each task and the full execution time, in nanoseconds
    */
   public static <T> TestResult<T> timeTasks(int nThreads, Callable<T> task) {
-    CountDownLatch startGate = new CountDownLatch(1);
-    CountDownLatch endGate = new CountDownLatch(nThreads);
-    AtomicReferenceArray<T> results = new AtomicReferenceArray<T>(nThreads);
+    var startGate = new CountDownLatch(1);
+    var endGate = new CountDownLatch(nThreads);
+    var results = new AtomicReferenceArray<T>(nThreads);
 
     for (int i = 0; i < nThreads; i++) {
       final int index = i;
@@ -110,7 +110,7 @@ public final class ConcurrentTestHarness {
    * @return the per-thread results as a standard collection
    */
   private static <T> List<T> toList(AtomicReferenceArray<T> data) {
-    List<T> list = new ArrayList<>(data.length());
+    var list = new ArrayList<T>(data.length());
     for (int i = 0; i < data.length(); i++) {
       list.add(data.get(i));
     }

@@ -36,7 +36,6 @@ import static org.mockito.Mockito.verify;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
@@ -55,9 +54,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.testing.GcFinalization;
@@ -68,7 +65,6 @@ import com.google.common.testing.GcFinalization;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Listeners(CacheValidationListener.class)
-@SuppressWarnings("BoxedPrimitiveConstructor")
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
 
@@ -77,24 +73,22 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL)
-  public void identity_keys(Cache<Integer, Integer> cache, CacheContext context) {
-    @SuppressWarnings("deprecation")
-    Integer key = new Integer(context.firstKey());
+  public void identity_keys(Cache<Int, Int> cache, CacheContext context) {
+    Int key = new Int(context.firstKey());
     assertThat(cache.getIfPresent(key), is(nullValue()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(values = {ReferenceType.WEAK, ReferenceType.SOFT}, population = Population.FULL)
-  public void identity_values(Cache<Integer, Integer> cache, CacheContext context) {
-    @SuppressWarnings("deprecation")
-    Integer value = new Integer(context.original().get(context.firstKey()));
+  public void identity_values(Cache<Int, Int> cache, CacheContext context) {
+    Int value = new Int(context.original().get(context.firstKey()));
     assertThat(cache.asMap().containsValue(value), is(false));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(requiresWeakOrSoft = true,
       population = Population.FULL, evictionListener = Listener.MOCKITO)
-  public void collect_evictionListenerFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void collect_evictionListenerFails(Cache<Int, Int> cache, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
 
@@ -112,8 +106,8 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void getIfPresent(Cache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.firstKey();
+  public void getIfPresent(Cache<Int, Int> cache, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(cache.getIfPresent(key), is(nullValue()));
@@ -124,8 +118,8 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void get(Cache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.firstKey();
+  public void get(Cache<Int, Int> cache, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(cache.get(key, k -> context.absentValue()), is(context.absentValue()));
@@ -142,8 +136,8 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void getAllPresent(Cache<Integer, Integer> cache, CacheContext context) {
-    Set<Integer> keys = context.firstMiddleLastKeys();
+  public void getAllPresent(Cache<Int, Int> cache, CacheContext context) {
+    var keys = context.firstMiddleLastKeys();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(cache.getAllPresent(keys), is(emptyMap()));
@@ -154,7 +148,7 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void put(Cache<Integer, Integer> cache, CacheContext context) {
+  public void put(Cache<Int, Int> cache, CacheContext context) {
     cache.put(context.firstKey(), context.absentValue());
     cache.put(context.absentKey(), context.absentValue());
     context.removalNotifications().clear();
@@ -174,8 +168,8 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void putAll(Cache<Integer, Integer> cache, CacheContext context) {
-    Map<Integer, Integer> entries = ImmutableMap.of(context.firstKey(), context.absentValue(),
+  public void putAll(Cache<Int, Int> cache, CacheContext context) {
+    var entries = Map.of(context.firstKey(), context.absentValue(),
         context.middleKey(), context.absentValue(), context.absentKey(), context.absentValue());
     cache.putAll(entries);
     context.clear();
@@ -193,9 +187,9 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void invalidate(Cache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.firstKey();
-    Integer value = cache.getIfPresent(key);
+  public void invalidate(Cache<Int, Int> cache, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = cache.getIfPresent(key);
     context.clear();
 
     GcFinalization.awaitFullGc();
@@ -215,8 +209,8 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
-    Set<Integer> keys = context.firstMiddleLastKeys();
+  public void invalidateAll(Cache<Int, Int> cache, CacheContext context) {
+    var keys = context.firstMiddleLastKeys();
     context.clear();
 
     GcFinalization.awaitFullGc();
@@ -233,7 +227,7 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void invalidateAll_full(Cache<Integer, Integer> cache, CacheContext context) {
+  public void invalidateAll_full(Cache<Int, Int> cache, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
 
@@ -249,7 +243,7 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void cleanUp(Cache<Integer, Integer> cache, CacheContext context) {
+  public void cleanUp(Cache<Int, Int> cache, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
 
@@ -267,9 +261,9 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       population = Population.FULL, weigher = CacheWeigher.DEFAULT, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void get(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.firstKey();
-    Integer value = context.original().get(key);
+  public void get(LoadingCache<Int, Int> cache, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = context.original().get(key);
     context.clear();
 
     GcFinalization.awaitFullGc();
@@ -285,14 +279,14 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE}, removalListener = Listener.CONSUMING)
-  public void getAll(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    Set<Integer> keys = context.firstMiddleLastKeys();
+  public void getAll(LoadingCache<Int, Int> cache, CacheContext context) {
+    var keys = context.firstMiddleLastKeys();
     context.clear();
 
     GcFinalization.awaitFullGc();
     awaitFullCleanup(cache);
 
-    assertThat(cache.getAll(keys), is(Maps.toMap(keys, key -> -key)));
+    assertThat(cache.getAll(keys), is(Maps.toMap(keys, key -> key.negate())));
     long count = context.initialSize() - (context.isStrongValues() ? keys.size() : 0);
 
     assertThat(cache.estimatedSize(), is((long) keys.size()));
@@ -304,9 +298,9 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       loader = Loader.IDENTITY, removalListener = Listener.CONSUMING)
-  public void refresh(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.firstKey();
-    Integer value = context.original().get(key);
+  public void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = context.original().get(key);
     context.clear();
 
     GcFinalization.awaitFullGc();
@@ -327,9 +321,9 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void getIfPresent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.firstKey();
-    Integer value = context.original().get(key);
+  public void getIfPresent(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = context.original().get(key);
     context.clear();
 
     GcFinalization.awaitFullGc();
@@ -343,7 +337,7 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, loader = Loader.IDENTITY,
       removalListener = Listener.CONSUMING)
-  public void get(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void get(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     context.clear();
 
     GcFinalization.awaitFullGc();
@@ -359,12 +353,12 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED,
       loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE}, removalListener = Listener.CONSUMING)
-  public void getAll(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    Set<Integer> keys = ImmutableSet.of(context.firstKey(), context.lastKey(), context.absentKey());
+  public void getAll(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var keys = Set.of(context.firstKey(), context.lastKey(), context.absentKey());
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(cache.getAll(keys).join(),
-        is(keys.stream().collect(toMap(Function.identity(), key -> -key))));
+        is(keys.stream().collect(toMap(Function.identity(), Int::negate))));
 
     long count = context.initialSize() - cache.synchronous().estimatedSize() + 1;
 
@@ -377,11 +371,11 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED,  removalListener = Listener.CONSUMING)
-  public void put(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.absentKey();
+  public void put(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    Int key = context.absentKey();
     context.clear();
     GcFinalization.awaitFullGc();
-    cache.put(key, CompletableFuture.completedFuture(context.absentValue()));
+    cache.put(key, context.absentValue().asFuture());
 
     long count = context.initialSize();
     assertThat(cache.synchronous().estimatedSize(), is(1L));
@@ -395,7 +389,7 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void isEmpty(Map<Integer, Integer> map, CacheContext context) {
+  public void isEmpty(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.isEmpty(), is(false));
@@ -409,7 +403,7 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void size(Map<Integer, Integer> map, CacheContext context) {
+  public void size(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.size(), is((int) context.initialSize()));
@@ -423,8 +417,8 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void containsKey(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void containsKey(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.containsKey(key), is(context.isStrongValues()));
@@ -436,9 +430,9 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void containsValue(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
-    Integer value = context.original().get(key);
+  public void containsValue(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = context.original().get(key);
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.containsValue(value), is(true));
@@ -453,7 +447,7 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void clear(Map<Integer, Integer> map, CacheContext context) {
+  public void clear(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     awaitFullCleanup(context.cache());
@@ -467,8 +461,8 @@ public final class ReferenceTest {
   @CacheSpec(requiresWeakOrSoft = true, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT, population = Population.FULL,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void putIfAbsent(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void putIfAbsent(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
 
     GcFinalization.awaitFullGc();
@@ -488,8 +482,8 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void put(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void put(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.put(key, context.absentValue()),
@@ -508,8 +502,8 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void replace(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void replace(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
 
@@ -522,9 +516,9 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void replaceConditionally(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
-    Integer value = context.original().get(key);
+  public void replaceConditionally(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = context.original().get(key);
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -536,8 +530,8 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void remove(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void remove(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.remove(key), is(context.isStrongValues() ? notNullValue() : nullValue()));
@@ -554,9 +548,9 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void removeConditionally(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
-    Integer value = context.original().get(key);
+  public void removeConditionally(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = context.original().get(key);
     context.clear();
 
     GcFinalization.awaitFullGc();
@@ -574,8 +568,8 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void computeIfAbsent(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void computeIfAbsent(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.computeIfAbsent(key, k -> context.absentValue()),
@@ -593,8 +587,8 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void computeIfPresent(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void computeIfPresent(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.computeIfPresent(key, (k, v) -> context.absentValue()),
@@ -612,8 +606,8 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void compute(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void compute(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
 
@@ -634,8 +628,8 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
-  public void merge(Map<Integer, Integer> map, CacheContext context) {
-    Integer key = context.firstKey();
+  public void merge(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.merge(key, context.absentValue(), (oldValue, v) -> {
@@ -654,7 +648,7 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(requiresWeakOrSoft = true)
-  public void iterators(Map<Integer, Integer> map, CacheContext context) {
+  public void iterators(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(Iterators.size(map.keySet().iterator()), is(0));
@@ -669,13 +663,13 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
       population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    Integer key = context.absentKey();
-    cache.put(key, ImmutableList.of(1));
+  public void putIfAbsent_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, Int.listOf(1));
     GcFinalization.awaitFullGc();
 
-    assertThat(cache.asMap().putIfAbsent(key, ImmutableList.of(1, 2, 3)),
-        context.isStrongValues() ? is(ImmutableList.of(1)) : nullValue());
+    assertThat(cache.asMap().putIfAbsent(key, Int.listOf(1, 2, 3)),
+        context.isStrongValues() ? is(Int.listOf(1)) : nullValue());
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
         is(context.isStrongValues() ? 1L : 3L));
   }
@@ -685,13 +679,13 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
       population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    Integer key = context.absentKey();
-    cache.put(key, ImmutableList.of(1));
+  public void put_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, Int.listOf(1));
     GcFinalization.awaitFullGc();
 
-    assertThat(cache.asMap().put(key, ImmutableList.of(1, 2, 3)),
-        context.isStrongValues() ? is(ImmutableList.of(1)) : nullValue());
+    assertThat(cache.asMap().put(key, Int.listOf(1, 2, 3)),
+        context.isStrongValues() ? is(Int.listOf(1)) : nullValue());
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
   }
 
@@ -700,27 +694,27 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
       population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void computeIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    Integer key = context.absentKey();
-    cache.put(key, ImmutableList.of(1));
+  public void computeIfAbsent_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, Int.listOf(1));
     GcFinalization.awaitFullGc();
 
-    cache.asMap().computeIfAbsent(key, k -> ImmutableList.of(1, 2, 3));
+    cache.asMap().computeIfAbsent(key, k -> Int.listOf(1, 2, 3));
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
         is(context.isStrongValues() ? 1L : 3L));
-    }
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
       population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void compute_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    Integer key = context.absentKey();
-    cache.put(key, ImmutableList.of(1));
+  public void compute_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, Int.listOf(1));
     GcFinalization.awaitFullGc();
 
-    cache.asMap().compute(key, (k, v) -> ImmutableList.of(1, 2, 3));
+    cache.asMap().compute(key, (k, v) -> Int.listOf(1, 2, 3));
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
   }
 
@@ -729,12 +723,12 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
       population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void merge_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
-    Integer key = context.absentKey();
-    cache.put(key, ImmutableList.of(1));
+  public void merge_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, Int.listOf(1));
     GcFinalization.awaitFullGc();
 
-    cache.asMap().merge(key, ImmutableList.of(1, 2, 3), (oldValue, v) -> {
+    cache.asMap().merge(key, Int.listOf(1, 2, 3), (oldValue, v) -> {
       if (context.isWeakKeys() && !context.isStrongValues()) {
         throw new AssertionError("Should never be called");
       }
@@ -749,11 +743,11 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void keySetToArray(Map<Integer, Integer> map, CacheContext context) {
+  public void keySetToArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.keySet().toArray(), arrayWithSize(0));
-    assertThat(map.keySet().toArray(new Integer[0]), arrayWithSize(0));
+    assertThat(map.keySet().toArray(Int[]::new), arrayWithSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -761,11 +755,11 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void valuesToArray(Map<Integer, Integer> map, CacheContext context) {
+  public void valuesToArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.values().toArray(), arrayWithSize(0));
-    assertThat(map.values().toArray(new Integer[0]), arrayWithSize(0));
+    assertThat(map.values().toArray(Int[]::new), arrayWithSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -773,11 +767,11 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void entrySetToArray(Map<Integer, Integer> map, CacheContext context) {
+  public void entrySetToArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.entrySet().toArray(), arrayWithSize(0));
-    assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0]), arrayWithSize(0));
+    assertThat(map.entrySet().toArray(Map.Entry<?, ?>[]::new), arrayWithSize(0));
   }
 
   /** Ensures that that all the pending work is performed (Guava limits work per cycle). */

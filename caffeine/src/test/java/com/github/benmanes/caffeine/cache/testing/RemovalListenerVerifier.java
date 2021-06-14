@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.primitives.Ints;
 
 /**
@@ -40,11 +41,11 @@ import com.google.common.primitives.Ints;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class RemovalListenerVerifier {
-  private final ConsumingRemovalListener<Integer, Integer> listener;
+  private final ConsumingRemovalListener<Int, Int> listener;
   private final CacheContext context;
 
   private RemovalListenerVerifier(CacheContext context,
-      ConsumingRemovalListener<Integer, Integer> listener) {
+      ConsumingRemovalListener<Int, Int> listener) {
     this.listener = requireNonNull(listener);
     this.context = requireNonNull(context);
   }
@@ -89,7 +90,7 @@ public final class RemovalListenerVerifier {
       Consumer<RemovalListenerVerifier> consumer) {
     if (context.removalListenerType == Listener.CONSUMING) {
       RemovalListenerVerifier verifier = new RemovalListenerVerifier(context,
-          (ConsumingRemovalListener<Integer, Integer>) context.removalListener());
+          (ConsumingRemovalListener<Int, Int>) context.removalListener());
       consumer.accept(verifier);
     }
   }
@@ -99,7 +100,7 @@ public final class RemovalListenerVerifier {
       Consumer<RemovalListenerVerifier> consumer) {
     if (context.evictionListenerType == Listener.CONSUMING) {
       RemovalListenerVerifier verifier = new RemovalListenerVerifier(context,
-          (ConsumingRemovalListener<Integer, Integer>) context.evictionListener());
+          (ConsumingRemovalListener<Int, Int>) context.evictionListener());
       consumer.accept(verifier);
     }
   }

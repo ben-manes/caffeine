@@ -37,6 +37,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
+import com.github.benmanes.caffeine.testing.Int;
 
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
@@ -81,12 +82,12 @@ public final class CacheProvider {
    * {@link Policy.Eviction}, and {@link Policy.FixedExpiration}.
    */
   private static Iterator<Object[]> asTestCases(Method testMethod,
-      Stream<Map.Entry<CacheContext, Cache<Integer, Integer>>> scenarios) {
+      Stream<Map.Entry<CacheContext, Cache<Int, Int>>> scenarios) {
     Parameter[] parameters = testMethod.getParameters();
     CacheContext[] stashed = new CacheContext[1];
     return scenarios.map(entry -> {
       CacheContext context = entry.getKey();
-      Cache<Integer, Integer> cache = entry.getValue();
+      Cache<Int, Int> cache = entry.getValue();
 
       // Retain a strong reference to the context throughout the test execution so that the
       // cache entries are not collected due to the test not accepting the context parameter
@@ -124,8 +125,8 @@ public final class CacheProvider {
   }
 
   /** Returns the fixed expiration policy for the given parameter. */
-  private static Policy.FixedExpiration<Integer, Integer> expirationPolicy(
-      Parameter parameter, Cache<Integer, Integer> cache) {
+  private static Policy.FixedExpiration<Int, Int> expirationPolicy(
+      Parameter parameter, Cache<Int, Int> cache) {
     if (parameter.isAnnotationPresent(ExpireAfterAccess.class)) {
       return cache.policy().expireAfterAccess().get();
     } else if (parameter.isAnnotationPresent(ExpireAfterWrite.class)) {
@@ -135,8 +136,8 @@ public final class CacheProvider {
   }
 
   /** Returns the fixed expiration policy for the given parameter. */
-  private static Policy.FixedRefresh<Integer, Integer> refreshPolicy(
-      Parameter parameter, Cache<Integer, Integer> cache) {
+  private static Policy.FixedRefresh<Int, Int> refreshPolicy(
+      Parameter parameter, Cache<Int, Int> cache) {
     if (parameter.isAnnotationPresent(RefreshAfterWrite.class)) {
       return cache.policy().refreshAfterWrite().get();
     }

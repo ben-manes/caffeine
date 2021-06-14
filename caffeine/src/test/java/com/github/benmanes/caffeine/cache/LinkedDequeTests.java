@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
@@ -50,10 +49,10 @@ public final class LinkedDequeTests extends TestCase {
 
   // Due to stateful elements, tests calling resetCollection() for an comparable iterator will
   // cause unexpected mutations. Instead a different collection type should be used for comparison
-  static boolean useTarget;
+  static final ThreadLocal<Boolean> useTarget = ThreadLocal.withInitial(() -> false);
 
   public static Test suite() throws Exception {
-    TestSuite suite = new TestSuite();
+    var suite = new TestSuite();
     suite.addTest(suite("AccessOrderDeque", AccessOrderDeque::new));
     suite.addTest(suite("WriteOrderDeque", WriteOrderDeque::new));
     return suite;
@@ -63,9 +62,9 @@ public final class LinkedDequeTests extends TestCase {
     return QueueTestSuiteBuilder
         .using(new TestLinkedValueGenerator() {
           @Override public Queue<LinkedValue> create(LinkedValue[] elements) {
-            Deque<LinkedValue> deque = useTarget ? supplier.get() : new ArrayDeque<>();
+            var deque = useTarget.get() ? supplier.get() : new ArrayDeque<LinkedValue>();
             deque.addAll(MinimalCollection.of(elements));
-            useTarget = false;
+            useTarget.set(false);
             return deque;
           }
         })
@@ -75,7 +74,7 @@ public final class LinkedDequeTests extends TestCase {
             CollectionFeature.GENERAL_PURPOSE,
             CollectionFeature.KNOWN_ORDER,
             CollectionSize.ANY)
-        .withSetUp(() -> useTarget = true)
+        .withSetUp(() -> useTarget.set(true))
         .withTearDown(() -> {
           Arrays.asList(a, b, c, d, e).forEach(value -> {
             value.setNextInAccessOrder(null);
@@ -95,7 +94,7 @@ public final class LinkedDequeTests extends TestCase {
 
     @Override
     public Queue<LinkedValue> create(Object... elements) {
-      LinkedValue[] array = new LinkedValue[elements.length];
+      var array = new LinkedValue[elements.length];
       int i = 0;
       for (Object e : elements) {
         array[i++] = (LinkedValue) e;
