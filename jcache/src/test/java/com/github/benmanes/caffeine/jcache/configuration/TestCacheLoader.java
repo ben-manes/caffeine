@@ -26,6 +26,7 @@ public final class TestCacheLoader implements CacheLoader<Integer, Integer> {
   @Override public Integer load(Integer key) {
     return null;
   }
+  @SuppressWarnings("ReturnsNullCollection")
   @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
     return null;
   }

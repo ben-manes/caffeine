@@ -350,6 +350,7 @@ public class CacheEvictionTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("HashCodeToString")
   private Object objectWithHash(final int hash) {
     return new Object() {
       @Override public int hashCode() {

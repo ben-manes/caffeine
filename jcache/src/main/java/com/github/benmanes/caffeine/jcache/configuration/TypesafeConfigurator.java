@@ -19,14 +19,14 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
@@ -53,7 +53,7 @@ import com.typesafe.config.ConfigFactory;
  */
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.MutableStaticState"})
 public final class TypesafeConfigurator {
-  static final Logger logger = Logger.getLogger(TypesafeConfigurator.class.getName());
+  static final Logger logger = System.getLogger(TypesafeConfigurator.class.getName());
 
   static FactoryCreator factoryCreator = FactoryBuilder::factoryOf;
   static Supplier<Config> configSource = ConfigFactory::load;
@@ -112,6 +112,7 @@ public final class TypesafeConfigurator {
    * @param factoryCreator the strategy for creating a factory
    */
   @Inject
+  @SuppressWarnings("UnnecessarilyVisible")
   public static void setFactoryCreator(FactoryCreator factoryCreator) {
     TypesafeConfigurator.factoryCreator = requireNonNull(factoryCreator);
   }

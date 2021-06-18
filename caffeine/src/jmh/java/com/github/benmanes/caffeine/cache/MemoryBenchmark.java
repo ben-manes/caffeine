@@ -58,7 +58,7 @@ public final class MemoryBenchmark {
       .ignoreKnownSingletons();
   final PrintStream out = System.out;
 
-  public void run() throws Exception {
+  public void run() {
     if (!MemoryMeter.hasInstrumentation()) {
       out.println("WARNING: Java agent not installed - guessing instead");
     }
@@ -239,7 +239,7 @@ public final class MemoryBenchmark {
     };
   }
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     new MemoryBenchmark().run();
   }
 }

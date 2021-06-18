@@ -53,7 +53,7 @@ public class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
   private static final long ONE_MINUTE = TimeUnit.MINUTES.toNanos(1);
   private static final int MAXIMUM = 10;
 
-  private Expiry<Integer, Integer> expiry = Mockito.mock(Expiry.class);
+  private final Expiry<Integer, Integer> expiry = Mockito.mock(Expiry.class);
   private final AtomicInteger removed = new AtomicInteger();
 
   @BeforeMethod

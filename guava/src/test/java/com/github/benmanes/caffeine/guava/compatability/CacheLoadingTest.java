@@ -839,6 +839,7 @@ public class CacheLoadingTest extends TestCase {
           }
 
           @Override
+          @SuppressWarnings("ReturnsNullCollection")
           public Map<Object, Object> loadAll(Iterable<? extends Object> keys) {
             return null;
           }

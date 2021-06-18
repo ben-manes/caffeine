@@ -478,6 +478,7 @@ public @interface CacheSpec {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
+      @SuppressWarnings("ReturnsNullCollection")
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
         return null;
       }

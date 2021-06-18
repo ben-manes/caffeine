@@ -27,9 +27,9 @@ import com.github.benmanes.caffeine.cache.Expiry;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ExpiryBuilder {
-  static final int UNSET = -1;
+  private static final int UNSET = -1;
 
-  private long createNanos;
+  private final long createNanos;
   private long updateNanos;
   private long readNanos;
 

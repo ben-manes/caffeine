@@ -65,7 +65,7 @@ public final class TinyCacheWithGhostCache {
           return true;
         }
         indexing.chainStart++;
-      } catch (Exception e) {
+      } catch (RuntimeException e) {
         System.out.println("length: " + cache.length + " Access: " + indexing.chainStart);
       }
     }

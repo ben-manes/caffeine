@@ -66,7 +66,7 @@ public final class SimpleClimber extends AbstractClimber {
     super.resetSample(hitRate);
 
     stepSize *= stepDecayRate;
-    sampleSize *= (int) (sampleSize * sampleDecayRate);
+    sampleSize = (int) (sampleSize * sampleDecayRate);
     if ((stepSize <= 0.01) || (sampleSize <= 1)) {
       sampleSize = Integer.MAX_VALUE;
     }

@@ -222,6 +222,7 @@ public interface CacheLoader<K extends Object, V extends Object> extends AsyncCa
    * @throws NullPointerException if the mappingFunction is null
    */
   @CheckReturnValue
+  @SuppressWarnings("FunctionalInterfaceClash")
   static <K extends Object, V extends Object> CacheLoader<K, V> bulk(
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);

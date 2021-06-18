@@ -61,7 +61,7 @@ public final class PolicyActor extends AbstractActor
           policy.stats().recordMissPenalty(event.missPenalty());
         }
       }
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       sender().tell(ERROR, self());
       context().system().stop(self());
       context().system().log().error(e, "");
@@ -74,7 +74,7 @@ public final class PolicyActor extends AbstractActor
     try {
       policy.finished();
       sender().tell(policy.stats(), self());
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       sender().tell(ERROR, self());
       context().system().stop(self());
       context().system().log().error(e, "");

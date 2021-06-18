@@ -42,7 +42,7 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 public final class JCacheExpiryTest extends AbstractJCacheTest {
   private static final long ONE_MINUTE = TimeUnit.MINUTES.toNanos(1);
 
-  private Expiry<Integer, Integer> expiry = Mockito.mock(Expiry.class);
+  private final Expiry<Integer, Integer> expiry = Mockito.mock(Expiry.class);
 
   @BeforeMethod
   public void setup() {

@@ -106,6 +106,11 @@ final class References {
     public int hashCode() {
       return hashCode;
     }
+
+    @Override
+    public String toString() {
+      return String.format("%s{e=%s, hashCode=%d}", getClass().getSimpleName(), e, hashCode);
+    }
   }
 
   /**
@@ -134,6 +139,11 @@ final class References {
     @Override
     public int hashCode() {
       return hashCode;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%s{hashCode=%d}", getClass().getSimpleName(), hashCode);
     }
   }
 

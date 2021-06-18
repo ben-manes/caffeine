@@ -41,12 +41,12 @@ public final class MiniSimClimber implements HillClimber {
   private static final HashFunction hasher = Hashing.murmur3_32(0x7f3a2142);
 
   private final WindowTinyLfuPolicy[] minis;
+  private final long[] prevMisses;
   private final int cacheSize;
   private final int period;
   private final int R;
 
   private int sample;
-  private long[] prevMisses;
   private double prevPercent;
 
   public MiniSimClimber(Config config) {

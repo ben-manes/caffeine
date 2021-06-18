@@ -60,14 +60,14 @@ checkstyle {
 
 spotbugs {
   effort = 'max'
+  toolVersion = pluginVersions.spotbugs
   excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
-  toolVersion = [version(pluginVersions.spotbugs), version(toolVersion.get())].max().version
 }
 
 pmd {
   ruleSets = []
+  toolVersion = pluginVersions.pmd
   ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
-  toolVersion = [version(pluginVersions.pmd), version(toolVersion)].max().version
 }
 
 jacoco {
@@ -111,27 +111,24 @@ tasks.withType(JavaCompile).configureEach {
   ].join(',')
   options.encoding = 'UTF-8'
   options.errorprone {
-    option('ClassName')
-    option('ComparisonContractViolated')
-    option('DepAnn')
-    option('DivZero')
-    option('EqualsBrokenForNull')
-    option('FunctionalInterfaceClash')
-    option('LockMethodChecker')
-    option('LongLiteralLowerCaseSuffix')
-    option('MissingDefault')
-    option('MixedArrayDimensions')
-    option('NoAllocation')
-    option('NumericEquality')
-    option('RedundantThrows')
-    option('RemoveUnusedImports')
-    option('TimeUnitMismatch')
-    option('UnlockMethod')
-    option('UnnecessaryDefaultInEnumSwitch')
-    disable('AutoValueSubclassLeaked')
-    disable('EmptyCatch')
-    disable('MissingSummary')
-    error('NullAway')
+    def enabledChecks = [
+      'AssertFalse', 'CatchingUnchecked', 'CheckedExceptionNotThrown', 'ClassName',
+      'ComparisonContractViolated', 'DepAnn', 'DivZero', 'EmptyIf', 'EqualsBrokenForNull',
+      'FieldCanBeFinal', 'FieldCanBeLocal', 'FieldCanBeStatic', 'ForEachIterable',
+      'FuzzyEqualsShouldNotBeUsedInEqualsMethod', 'FunctionalInterfaceClash', 'HashCodeToString',
+      'IterablePathParameter', 'LockMethodChecker', 'LongLiteralLowerCaseSuffix', 'MissingBraces',
+      'MissingDefault', 'MixedArrayDimensions', 'MissingDefault', 'NoAllocation', 'NumericEquality',
+      'PackageLocation', 'RedundantThrows', 'RemoveUnusedImports', 'ReturnsNullCollection',
+      'StringEquality', 'StronglyTypeTime', 'SwitchDefault', 'TimeUnitMismatch', 'TransientMisuse',
+      'UnlockMethod', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass', 'UnnecessaryOptionalGet',
+      'UnsafeLocaleUsage', ]
+    enabledChecks.each { enable(it) }
+
+    def disabledChecks = [ 'AutoValueSubclassLeaked', 'EmptyCatch', 'MissingSummary' ]
+    disabledChecks.each { disable(it) }
+
+    def errorChecks = [ 'NullAway' ]
+    errorChecks.each { error(it) }
 
     nullaway {
       annotatedPackages.add('com.github.benmanes.caffeine')

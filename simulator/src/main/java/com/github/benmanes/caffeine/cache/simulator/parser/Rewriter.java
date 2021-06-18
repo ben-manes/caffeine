@@ -47,7 +47,7 @@ import picocli.CommandLine.Option;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.ImmutableField")
+@SuppressWarnings({"PMD.ImmutableField", "FieldCanBeFinal"})
 public final class Rewriter implements Runnable {
   @Option(names = "--inputFiles", required = true, description = "The trace input files. To use "
       + "a mix of formats, specify the entry as format:path, e.g. lirs:loop.trace.gz")
@@ -83,7 +83,7 @@ public final class Rewriter implements Runnable {
     }
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     new CommandLine(Rewriter.class)
         .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
         .setCommandName(Rewriter.class.getSimpleName())

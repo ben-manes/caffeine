@@ -20,6 +20,8 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 import java.io.Closeable;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,8 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -74,7 +74,7 @@ import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class CacheProxy<K, V> implements Cache<K, V> {
-  private static final Logger logger = Logger.getLogger(CacheProxy.class.getName());
+  private static final Logger logger = System.getLogger(CacheProxy.class.getName());
 
   final com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache;
   final CaffeineConfiguration<K, V> configuration;
@@ -237,6 +237,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("CatchingUnchecked")
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();
@@ -245,7 +246,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         ? NullCompletionListener.INSTANCE
         : completionListener;
 
-    if (!cacheLoader.isPresent()) {
+    if (cacheLoader.isEmpty()) {
       listener.onCompletion();
       return;
     }
@@ -1117,6 +1118,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param expirable the entry that was operated on
    * @param currentTimeMS the current time, or 0 if not read yet
    */
+  @SuppressWarnings("CatchingUnchecked")
   protected final void setAccessExpirationTime(K key, Expirable<?> expirable, long currentTimeMS) {
     try {
       Duration duration = expiry.getExpiryForAccess();
@@ -1148,6 +1150,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return the time when the entry will expire, zero if it should expire immediately,
    *         Long.MIN_VALUE if it should not be changed, or Long.MAX_VALUE if eternal
    */
+  @SuppressWarnings("CatchingUnchecked")
   protected final long getWriteExpireTimeMS(boolean created) {
     try {
       Duration duration = created ? expiry.getExpiryForCreation() : expiry.getExpiryForUpdate();

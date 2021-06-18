@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,8 +28,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.cache.Cache;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -54,7 +54,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EventDispatcher<K, V> {
-  static final Logger logger = Logger.getLogger(EventDispatcher.class.getName());
+  static final Logger logger = System.getLogger(EventDispatcher.class.getName());
   static final ThreadLocal<List<CompletableFuture<Void>>> pending =
       ThreadLocal.withInitial(ArrayList::new);
 
@@ -192,7 +192,7 @@ public final class EventDispatcher<K, V> {
     try {
       CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();
     } catch (CompletionException e) {
-      logger.log(Level.WARNING, null, e);
+      logger.log(Level.WARNING, "", e);
     } finally {
       futures.clear();
     }

@@ -150,6 +150,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   @Override
+  @SuppressWarnings("CatchingUnchecked")
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();

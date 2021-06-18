@@ -19,8 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
@@ -38,7 +38,7 @@ import javax.cache.event.EventType;
 final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K, V>,
     CacheEntryUpdatedListener<K, V>, CacheEntryRemovedListener<K, V>,
     CacheEntryExpiredListener<K, V>, Closeable {
-  static final Logger logger = Logger.getLogger(EventTypeAwareListener.class.getName());
+  static final Logger logger = System.getLogger(EventTypeAwareListener.class.getName());
 
   final CacheEntryListener<? super K, ? super V> listener;
 
@@ -63,7 +63,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   }
 
   /** Processes the event and logs if an exception is thrown. */
-  @SuppressWarnings("PMD.SwitchStmtsShouldHaveDefault")
+  @SuppressWarnings({"PMD.SwitchStmtsShouldHaveDefault", "CatchingUnchecked"})
   public void dispatch(JCacheEntryEvent<K, V> event) {
     try {
       if (event.getSource().isClosed()) {
@@ -85,9 +85,9 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
       }
       throw new IllegalStateException("Unknown event type: " + event.getEventType());
     } catch (Exception e) {
-      logger.log(Level.WARNING, null, e);
+      logger.log(Level.WARNING, "", e);
     } catch (Throwable t) {
-      logger.log(Level.SEVERE, null, t);
+      logger.log(Level.ERROR, "", t);
     }
   }
 

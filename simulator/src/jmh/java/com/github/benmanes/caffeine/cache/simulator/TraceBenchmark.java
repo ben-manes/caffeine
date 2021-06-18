@@ -83,7 +83,7 @@ public class TraceBenchmark {
     return policies.iterator().next();
   }
 
-  private Stream<AccessEvent> readEventStream(BasicSettings settings) throws IOException {
+  private Stream<AccessEvent> readEventStream(BasicSettings settings) {
     if (settings.trace().isSynthetic()) {
       return Synthetic.generate(settings.trace()).events();
     }

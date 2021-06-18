@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.jcache.integration;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +44,8 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
  */
 public final class JCacheLoaderAdapter<K, V>
     implements com.github.benmanes.caffeine.cache.CacheLoader<K, Expirable<V>> {
+  private static final Logger logger = System.getLogger(JCacheLoaderAdapter.class.getName());
+
   private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
   private final CacheLoader<K, V> delegate;
@@ -120,6 +124,7 @@ public final class JCacheLoaderAdapter<K, V>
     }
   }
 
+  @SuppressWarnings("CatchingUnchecked")
   private long expireTimeMS() {
     try {
       Duration duration = expiry.getExpiryForCreation();
@@ -131,7 +136,8 @@ public final class JCacheLoaderAdapter<K, V>
       long millis = TimeUnit.NANOSECONDS.toMillis(ticker.read());
       return duration.getAdjustedTime(millis);
     } catch (Exception e) {
-      return Long.MAX_VALUE;
+      logger.log(Level.WARNING, "Exception thrown by expiry policy", e);
+      throw e;
     }
   }
 }
