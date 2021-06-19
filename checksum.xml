@@ -56,6 +56,7 @@
     <trusted-key id='3c0a8f4744f37328' group='com.googlecode.concurrentlinkedhashmap' />
     <trusted-key id='476634a4694e716a' group='com.googlecode.java-diff-utils' />
     <trusted-key id='72475fd306b9cab7' group='com.googlecode.javaewah' />
+    <trusted-key id='4ece492b63e38acf' group='com.h3xstream.findsecbugs' />
     <trusted-key id='80c08b1c29100955' group='com.jakewharton.fliptables' />
     <trusted-key id='e0cb7823cfd00fbf' group='com.jakewharton.fliptables' />
     <trusted-key id='e0cb7823cfd00fbf' group='com.jakewharton.picnic' />

@@ -27,7 +27,7 @@ ext {
   versions = [
     akka: '2.6.15',
     cache2k: '2.1.2.Alpha',
-    checkerFramework: '3.14.0',
+    checkerFramework: '3.15.0',
     coherence: '20.06',
     commonsCompress: '1.20',
     commonsLang3: '3.12.0',
@@ -57,7 +57,7 @@ ext {
     ohc: '0.6.1',
     osgiComponentAnnotations: '1.4.0',
     picocli: '4.6.1',
-    slf4j: '1.7.30',
+    slf4j: '1.7.31',
     tcache: '2.0.1',
     stream: '2.9.8',
     univocityParsers: '2.9.1',
@@ -86,6 +86,7 @@ ext {
     checkstyle: '8.43',
     coveralls: '2.12.0',
     errorprone: '2.0.1',
+    findsecbugs: '1.11.0',
     jacoco: '0.8.6',
     jmh: '0.6.5',
     jmhReport: '0.9.0',
@@ -196,6 +197,7 @@ ext {
     },
     coveralls: "gradle.plugin.org.kt3k.gradle.plugin:coveralls-gradle-plugin:${pluginVersions.coveralls}",
     errorprone: "net.ltgt.gradle:gradle-errorprone-plugin:${pluginVersions.errorprone}",
+    findsecbugs: "com.h3xstream.findsecbugs:findsecbugs-plugin:${pluginVersions.findsecbugs}",
     jmh: [
       "me.champeau.jmh:jmh-gradle-plugin:${pluginVersions.jmh}",
       "org.openjdk.jmh:jmh-core:${versions.jmh}",

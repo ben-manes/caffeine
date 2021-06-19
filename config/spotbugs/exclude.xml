@@ -10,6 +10,11 @@
 
   <!-- Caffeine -->
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
+    <Method name="admit"/>
+    <Bug pattern="PREDICTABLE_RANDOM"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.CaffeineSpec"/>
     <Or>
       <Method name="parseDuration"/>
@@ -39,6 +44,28 @@
     <Bug pattern="UUF_UNUSED_FIELD"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"/>
+    <Method name="main"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.NodeFactoryGenerator"/>
+    <Method name="main"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="~com.github.benmanes.caffeine.*Benchmark.*"/>
+    <Bug pattern="PREDICTABLE_RANDOM"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7"/>
+    <Bug pattern="PREDICTABLE_RANDOM"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.profiler.CacheProfiler"/>
+    <Bug pattern="PREDICTABLE_RANDOM"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.DelegationBenchmark$DelegateMap"/>
     <Method name="get"/>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
@@ -56,12 +83,21 @@
     <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier"/>
+    <Method name="deserialize"/>
+    <Bug pattern="OBJECT_DESERIALIZATION"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator$Configurator"/>
     <Method name="addLazyExpiration"/>
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
   </Match>
 
   <!-- Simulator -->
+  <Match>
+    <Package name="~com.github.benmanes.caffeine.cache.simulator.*"/>
+    <Bug pattern="PATH_TRAVERSAL_IN, PREDICTABLE_RANDOM"/>
+  </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader"/>
     <Method name="lines"/>
