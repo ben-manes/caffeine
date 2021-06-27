@@ -29,7 +29,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.address.penalties.Add
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.camelab.CamelabTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.cloud_physics.CloudPhysicsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kaggle.OutbrainTraceReader;
@@ -65,7 +65,7 @@ public enum TraceFormat {
   ARC(ArcTraceReader::new),
   CACHE2K(Cache2kTraceReader::new),
   CAMELAB(CamelabTraceReader::new),
-  CLIMB(ClimbTraceReader::new),
+  CLOUD_PHYSICS(CloudPhysicsTraceReader::new),
   CORDA(CordaTraceReader::new),
   GRADLE(GradleTraceReader::new),
   LIRS(LirsTraceReader::new),

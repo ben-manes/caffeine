@@ -99,6 +99,7 @@
     <trusted-key id='a41f13c999945293' group='commons-logging' />
     <trusted-key id='379ce192d401ab61' group='info.picocli' />
     <trusted-key id='0d9cb5ee96b7bc22' group='io.airlift' />
+    <trusted-key id='32bbf14af07ca77b' group='io.github.fastfilter' />
     <trusted-key id='a6ea2e2bf22e0543' group='io.github.java-diff-utils' />
     <trusted-key id='602ec18d20c4661c' group='io.github.x-stream' />
     <trusted-key id='94b291aef984a085' group='io.reactivex.rxjava3' />

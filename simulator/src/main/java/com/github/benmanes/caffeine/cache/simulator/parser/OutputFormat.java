@@ -20,7 +20,8 @@ import java.io.OutputStream;
 import java.util.function.Function;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.adapt_size.AdaptSizeTraceWriter;
-import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceWriter;
+import com.github.benmanes.caffeine.cache.simulator.parser.cloud_physics.CloudPhysicsTraceWriter;
+import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceWriter;
 
 /**
  * The trace output format.
@@ -30,7 +31,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceWrite
 @SuppressWarnings("ImmutableEnumChecker")
 public enum OutputFormat {
   ADAPT_SIZE(AdaptSizeTraceWriter::new),
-  CLIMB(ClimbTraceWriter::new);
+  CLOUD_PHYSICS(CloudPhysicsTraceWriter::new),
+  LIRS(LirsTraceWriter::new);
 
   private final Function<OutputStream, TraceWriter> factory;
 

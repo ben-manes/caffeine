@@ -107,7 +107,7 @@ tasks.withType(JavaExec) {
 tasks.withType(JavaCompile).configureEach {
   dependsOn downloadCaffeineLocal
   options.compilerArgs << [
-    '-Xlint:all,-exports', '-auxiliaryclass',
+    '-Xlint:all,-processing,-exports', '-auxiliaryclass',
     '-requires-automatic', '-requires-transitive-automatic',
   ].join(',')
   options.encoding = 'UTF-8'

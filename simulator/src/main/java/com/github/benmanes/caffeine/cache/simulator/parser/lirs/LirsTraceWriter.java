@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.parser.climb;
+package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -22,13 +22,13 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceWriter;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 
 /**
- * A writer for the trace format used by the authors of the AdaptiveClimb simulator.
+ * A writer for the trace format used by the authors of the LIRS algorithm.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ClimbTraceWriter extends TextTraceWriter {
+public final class LirsTraceWriter extends TextTraceWriter {
 
-  public ClimbTraceWriter(OutputStream output) {
+  public LirsTraceWriter(OutputStream output) {
     super(output);
   }
 

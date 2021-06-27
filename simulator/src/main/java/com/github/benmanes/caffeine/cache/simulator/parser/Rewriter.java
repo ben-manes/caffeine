@@ -17,15 +17,11 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.base.Stopwatch;
 
 import picocli.CommandLine;
@@ -38,7 +34,7 @@ import picocli.CommandLine.Option;
  * into Java.
  * <p>
  * <pre>{@code
- *   ./gradlew :simulator:rewrite \
+ *   ./gradlew :simulator:rewrite -q \
  *      -PinputFormat=? \
  *      -PinputFiles=? \
  *      -PoutputFile=? \
@@ -47,11 +43,10 @@ import picocli.CommandLine.Option;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"PMD.ImmutableField", "FieldCanBeFinal"})
 public final class Rewriter implements Runnable {
-  @Option(names = "--inputFiles", required = true, description = "The trace input files. To use "
-      + "a mix of formats, specify the entry as format:path, e.g. lirs:loop.trace.gz")
-  private List<String> inputFiles = new ArrayList<>();
+  @Option(names = "--inputFiles", required = true, split = ",", description = "The trace input "
+      + "files. To use a mix of formats, specify the entry as format:path, e.g. lirs:loop.trace.gz")
+  private List<String> inputFiles;
   @Option(names = "--inputFormat", required = true, description = "The default trace input format")
   private TraceFormat inputFormat;
 
@@ -62,10 +57,10 @@ public final class Rewriter implements Runnable {
 
   @Override
   public void run() {
-    Stopwatch stopwatch = Stopwatch.createStarted();
-    try (OutputStream output = new BufferedOutputStream(Files.newOutputStream(outputFile));
-         Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
-         TraceWriter writer = outputFormat.writer(output)) {
+    var stopwatch = Stopwatch.createStarted();
+    try (var output = new BufferedOutputStream(Files.newOutputStream(outputFile));
+         var events = inputFormat.readFiles(inputFiles).events();
+         var writer = outputFormat.writer(output)) {
       int[] tick = { 0 };
       writer.writeHeader();
       events.forEach(event -> {
@@ -77,7 +72,8 @@ public final class Rewriter implements Runnable {
         }
       });
       writer.writeFooter();
-      System.out.printf("Rewrote %,d events in %s%n", tick[0], stopwatch);
+      System.out.printf("Rewrote %,d events from %,d inputs in %s%n",
+          tick[0], inputFiles.size(), stopwatch);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
