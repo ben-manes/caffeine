@@ -26,6 +26,7 @@ import java.util.Objects;
 
 import javax.lang.model.element.Modifier;
 
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 
@@ -47,7 +48,7 @@ public final class AddValue extends NodeRule {
     context.nodeSubtype
         .addField(newFieldOffset(context.className, "value"))
         .addField(newValueField())
-        .addMethod(newGetter(valueStrength(), vTypeVar, "value", Visibility.LAZY))
+        .addMethod(makeGetValue())
         .addMethod(newGetRef("value"))
         .addMethod(makeSetValue())
         .addMethod(makeContainsValue());
@@ -58,6 +59,29 @@ public final class AddValue extends NodeRule {
         ? FieldSpec.builder(vTypeVar, "value", Modifier.VOLATILE)
         : FieldSpec.builder(valueReferenceType(), "value", Modifier.VOLATILE);
     return fieldSpec.build();
+  }
+
+  /** Creates the getValue method. */
+  private MethodSpec makeGetValue() {
+    MethodSpec.Builder getter = MethodSpec.methodBuilder("getValue")
+        .addModifiers(context.publicFinalModifiers())
+        .returns(vTypeVar);
+    if (valueStrength() == Strength.STRONG) {
+      getter.addStatement("return value");
+      return getter.build();
+    }
+
+    CodeBlock code = CodeBlock.builder()
+        .beginControlFlow("for (;;)")
+            .addStatement("$1T<V> ref = ($1T<V>) $2T.UNSAFE.getObject(this, $3N)",
+                Reference.class, UNSAFE_ACCESS, offsetName("value"))
+            .addStatement("V referent = ref.get()")
+            .beginControlFlow("if ((referent != null) || (ref == value))")
+                .addStatement("return referent")
+            .endControlFlow()
+        .endControlFlow()
+        .build();
+    return getter.addCode(code).build();
   }
 
   /** Creates the setValue method. */
@@ -71,9 +95,10 @@ public final class AddValue extends NodeRule {
       setter.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
-      setter.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
+      setter.addStatement("$1T<V> ref = ($1T<V>) getValueReference()", Reference.class);
       setter.addStatement("$T.UNSAFE.putObject(this, $N, new $T($L, $N, referenceQueue))",
           UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "getKeyReference()", "value");
+      setter.addStatement("ref.clear()");
     }
 
     return setter.build();

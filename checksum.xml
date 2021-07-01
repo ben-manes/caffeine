@@ -8,6 +8,7 @@
   <trusted-keys>
     <trusted-key id='36feecf06c2da10b' group='biz.aQute.bnd' />
     <trusted-key id='52e6585e0102b84d' group='biz.aQute.bnd' />
+    <trusted-key id='c5cc0278b1ee1c33' group='biz.aQute.bnd' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools.build' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools.ddms' />
@@ -361,6 +362,9 @@
     <dependency group='gradle.plugin.io.morethan.jmhreport' module='gradle-jmh-report' version='0.9.0'>
       <sha512>3C76A1066218F9C54B83D167E34B563C09BA2F72DB330F5843B2324DD2E40EE1F7E7887416B9C7A8DC03C07223E42216B76569F5D3962B911F922A6963C0C917</sha512>
     </dependency>
+    <dependency group='gradle.plugin.org.kt3k.gradle.plugin' module='coveralls-gradle-plugin' version='2.12.0'>
+      <sha512>9AEC8CAD28C018AEA65F3C2C57FD0D4B82C00A8F6C778F6DBAA61C961AF3A7C369655F5A5E93B360FAE297ADFA3205BC40EAF16847B6EDB56F01DF9AD655A18C</sha512>
+    </dependency>
     <dependency group='io.ehdev' module='gradle-semantic-versioning' version='1.1.0'>
       <sha512>1A47AAF2442159C1CBD22521F31C74B4C71C4168AF5B22D04B4691FDD286E90F02B2792DEDAD3EEEC12B5034ADA1A9EE751C975B5A169AE0B33EE800A8D96E7F</sha512>
     </dependency>
@@ -405,6 +409,15 @@
     </dependency>
     <dependency group='net.ltgt.gradle' module='gradle-errorprone-plugin' version='1.3.0'>
       <sha512>7245456641F2BF87960CF859D31827EBF937739932C59E135635579199122A5763F437A19DED6B9CCAAF9E84FD698A675F60427138EF35C10BF40BBC3E7B68DA</sha512>
+    </dependency>
+    <dependency group='net.ltgt.gradle' module='gradle-errorprone-plugin' version='2.0.0'>
+      <sha512>A4C943D4945189F4EB883D764E63CF5C5F8F2A17EA1BBFE6C3F05A4B28E1E011D0358246618A39EC705E7CEE60D30ABFDD82A36A621BC7A3F5455E47D0EDAF2B</sha512>
+    </dependency>
+    <dependency group='net.ltgt.gradle' module='gradle-errorprone-plugin' version='2.0.1'>
+      <sha512>7F18348A8EDC88BB4B0D6EB5412BC4F6D79D1E5843F28CA72F717BE50BF0BF6A19AE1C3416E5EAB40CC1FD27C697CB0F9B5E10A51CFA574093EF0A4F57CB93CF</sha512>
+    </dependency>
+    <dependency group='net.ltgt.gradle' module='gradle-errorprone-plugin' version='2.0.2'>
+      <sha512>5EA9CA94A3682E090E28895ECAAE1E020C48DD249EE5040FB6EBE4B01DA027B86F94450E30692253DFA787371D4B4286FE257CEBF02E184AC149A746952D669C</sha512>
     </dependency>
     <dependency group='net.ltgt.gradle' module='gradle-nullaway-plugin' version='0.3'>
       <sha512>779F0D784A11834392C65DA375CF5F9612FD89B0540C665BCE1009EFAA7C35642E38D381AF7362703378306C95D24669B02CA27A2CCAFB574173BF9FA273F625</sha512>
