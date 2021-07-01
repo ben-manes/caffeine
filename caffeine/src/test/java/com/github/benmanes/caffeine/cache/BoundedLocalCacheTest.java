@@ -44,6 +44,10 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.Thread.State;
+import java.lang.ref.Reference;
+import java.time.Duration;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -407,6 +411,233 @@ public final class BoundedLocalCacheTest {
     assertThat(localCache.weightedSize(), is(lessThanOrEqualTo(context.maximumSize())));
     assertThat(context.removalNotifications(), hasItem(new RemovalNotification<>(
         Int.valueOf(1), Int.valueOf(20), RemovalCause.SIZE)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      removalListener = Listener.CONSUMING)
+  public void evict_resurrect_collected(Cache<Int, Int> cache, CacheContext context) {
+    Int key = Int.valueOf(1);
+    Int oldValue = Int.valueOf(2);
+    Int newValue = Int.valueOf(3);
+    var localCache = asBoundedLocalCache(cache);
+
+    cache.put(key, oldValue);
+    var node = localCache.data.get(localCache.referenceKey(key));
+    @SuppressWarnings("unchecked")
+    var ref = (Reference<Int>) node.getValueReference();
+    ref.enqueue();
+
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var evictor = new AtomicReference<Thread>();
+    cache.asMap().compute(key, (k, v) -> {
+      assertThat(v, is(nullValue()));
+      ConcurrentTestHarness.execute(() -> {
+        evictor.set(Thread.currentThread());
+        started.set(true);
+        cache.cleanUp();
+        done.set(true);
+      });
+      await().untilTrue(started);
+      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      await().until(() -> threadState.contains(evictor.get().getState()));
+
+      return newValue;
+    });
+    await().untilTrue(done);
+
+    assertThat(node.getValue(), is(newValue));
+    assertThat(context.removalNotifications(), is(equalTo(List.of(
+        new RemovalNotification<>(key, null, RemovalCause.COLLECTED)))));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, maximumSize = Maximum.UNREACHABLE,
+      weigher = CacheWeigher.COLLECTION)
+  public void evict_resurrect_weight(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = Int.valueOf(1);
+    cache.put(key, List.of(key));
+
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var evictor = new AtomicReference<Thread>();
+    cache.asMap().compute(key, (k, v) -> {
+      ConcurrentTestHarness.execute(() -> {
+        evictor.set(Thread.currentThread());
+        started.set(true);
+        cache.policy().eviction().get().setMaximum(0);
+        done.set(true);
+      });
+
+      await().untilTrue(started);
+      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      await().until(() -> threadState.contains(evictor.get().getState()));
+
+      return List.of();
+    });
+    await().untilTrue(done);
+
+    assertThat(cache.getIfPresent(key), is(List.of()));
+    verifyRemovalListener(context, verifier -> verifier.hasCount(0, RemovalCause.SIZE));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void evict_resurrect_expireAfter(Cache<Int, Int> cache, CacheContext context) {
+    Int key = Int.valueOf(1);
+    cache.put(key, key);
+
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var evictor = new AtomicReference<Thread>();
+    context.ticker().advance(Duration.ofHours(1));
+    cache.asMap().compute(key, (k, v) -> {
+      ConcurrentTestHarness.execute(() -> {
+        evictor.set(Thread.currentThread());
+        started.set(true);
+        cache.cleanUp();
+        done.set(true);
+      });
+
+      await().untilTrue(started);
+      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      await().until(() -> threadState.contains(evictor.get().getState()));
+      return key.negate();
+    });
+    await().untilTrue(done);
+
+    assertThat(cache.getIfPresent(key), is(key.negate()));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, expireAfterAccess = Expire.FOREVER)
+  public void evict_resurrect_expireAfterAccess(Cache<Int, Int> cache, CacheContext context) {
+    Int key = Int.valueOf(1);
+    cache.put(key, key);
+
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var evictor = new AtomicReference<Thread>();
+    context.ticker().advance(Duration.ofMinutes(1));
+    cache.asMap().compute(key, (k, v) -> {
+      ConcurrentTestHarness.execute(() -> {
+        evictor.set(Thread.currentThread());
+        started.set(true);
+        cache.policy().expireAfterAccess().get().setExpiresAfter(Duration.ZERO);
+        done.set(true);
+      });
+
+      await().untilTrue(started);
+      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      await().until(() -> threadState.contains(evictor.get().getState()));
+      cache.policy().expireAfterAccess().get().setExpiresAfter(Duration.ofHours(1));
+      return v;
+    });
+    await().untilTrue(done);
+
+    assertThat(cache.getIfPresent(key), is(key));
+    verifyRemovalListener(context, verifier -> verifier.noInteractions());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, expireAfterWrite = Expire.FOREVER)
+  public void evict_resurrect_expireAfterWrite(Cache<Int, Int> cache, CacheContext context) {
+    Int key = Int.valueOf(1);
+    cache.put(key, key);
+
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var evictor = new AtomicReference<Thread>();
+    context.ticker().advance(Duration.ofMinutes(1));
+    cache.asMap().compute(key, (k, v) -> {
+      ConcurrentTestHarness.execute(() -> {
+        evictor.set(Thread.currentThread());
+        started.set(true);
+        cache.policy().expireAfterWrite().get().setExpiresAfter(Duration.ZERO);
+        done.set(true);
+      });
+
+      await().untilTrue(started);
+      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      await().until(() -> threadState.contains(evictor.get().getState()));
+      cache.policy().expireAfterWrite().get().setExpiresAfter(Duration.ofHours(1));
+      return v;
+    });
+    await().untilTrue(done);
+
+    assertThat(cache.getIfPresent(key), is(key));
+    verifyRemovalListener(context, verifier -> verifier.noInteractions());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE)
+  public void evict_resurrect_expireAfterWrite_entry(Cache<Int, Int> cache, CacheContext context) {
+    Int key = Int.valueOf(1);
+    cache.put(key, key);
+
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var evictor = new AtomicReference<Thread>();
+    context.ticker().advance(Duration.ofHours(1));
+    cache.asMap().compute(key, (k, v) -> {
+      ConcurrentTestHarness.execute(() -> {
+        evictor.set(Thread.currentThread());
+        started.set(true);
+        cache.cleanUp();
+        done.set(true);
+      });
+
+      await().untilTrue(started);
+      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      await().until(() -> threadState.contains(evictor.get().getState()));
+      return key.negate();
+    });
+    await().untilTrue(done);
+
+    assertThat(cache.getIfPresent(key), is(key.negate()));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, expiry = CacheExpiry.CREATE, expiryTime = Expire.ONE_MINUTE)
+  public void evict_resurrect_expireAfterVar(Cache<Int, Int> cache, CacheContext context) {
+    var localCache = asBoundedLocalCache(cache);
+    Int key = Int.valueOf(1);
+    cache.put(key, key);
+    var node = localCache.data.get(localCache.referenceKey(key));
+
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var evictor = new AtomicReference<Thread>();
+    synchronized (node) {
+      context.ticker().advance(Duration.ofHours(1));
+      ConcurrentTestHarness.execute(() -> {
+        evictor.set(Thread.currentThread());
+        started.set(true);
+        cache.cleanUp();
+        done.set(true);
+      });
+
+      await().untilTrue(started);
+      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      await().until(() -> threadState.contains(evictor.get().getState()));
+      cache.policy().expireVariably().get().setExpiresAfter(key, Duration.ofDays(1));
+    }
+    await().untilTrue(done);
+
+    assertThat(cache.getIfPresent(key), is(key));
+    verifyRemovalListener(context, verifier -> verifier.noInteractions());
   }
 
   @Test(dataProvider = "caches")

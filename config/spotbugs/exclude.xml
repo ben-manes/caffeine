@@ -4,8 +4,8 @@
     xsi:schemaLocation="http://findbugs.sourceforge.net/filter/3.0.0
     https://raw.githubusercontent.com/findbugsproject/findbugs/3.0.1/findbugs/etc/findbugsfilter.xsd">
   <Match>
-    <Bug pattern="SE_BAD_FIELD, SE_BAD_FIELD_STORE, SE_NO_SUITABLE_CONSTRUCTOR,
-      SE_TRANSIENT_FIELD_NOT_RESTORED, DMI_RANDOM_USED_ONLY_ONCE"/>
+    <Bug pattern="EI_EXPOSE_REP, EI_EXPOSE_REP2, SE_BAD_FIELD, SE_BAD_FIELD_STORE,
+      SE_NO_SUITABLE_CONSTRUCTOR, SE_TRANSIENT_FIELD_NOT_RESTORED, DMI_RANDOM_USED_ONLY_ONCE"/>
   </Match>
 
   <!-- Caffeine -->
@@ -81,6 +81,10 @@
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
     <Method name="postProcess"/>
     <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.copy.AbstractCopier"/>
+    <Bug pattern="MS_EXPOSE_REP"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier"/>

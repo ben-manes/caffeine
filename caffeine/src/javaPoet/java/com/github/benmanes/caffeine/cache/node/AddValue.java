@@ -24,6 +24,7 @@ import java.util.Objects;
 import javax.lang.model.element.Modifier;
 
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 
@@ -44,7 +45,7 @@ public final class AddValue extends NodeRule {
   protected void execute() {
     context.nodeSubtype
         .addField(newValueField())
-        .addMethod(newGetter(valueStrength(), vTypeVar, "value", Visibility.PLAIN))
+        .addMethod(makeGetValue())
         .addMethod(newGetRef("value"))
         .addMethod(makeSetValue())
         .addMethod(makeContainsValue());
@@ -60,6 +61,29 @@ public final class AddValue extends NodeRule {
     return fieldSpec.build();
   }
 
+  /** Creates the getValue method. */
+  private MethodSpec makeGetValue() {
+    MethodSpec.Builder getter = MethodSpec.methodBuilder("getValue")
+        .addModifiers(context.publicFinalModifiers())
+        .returns(vTypeVar);
+    if (valueStrength() == Strength.STRONG) {
+      getter.addStatement("return ($T) $L.get(this)", vTypeVar, varHandleName("value"));
+      return getter.build();
+    }
+
+    CodeBlock code = CodeBlock.builder()
+        .beginControlFlow("for (;;)")
+            .addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)",
+                Reference.class, varHandleName("value"))
+            .addStatement("V referent = ref.get()")
+            .beginControlFlow("if ((referent != null) || (ref == value))")
+                .addStatement("return referent")
+            .endControlFlow()
+        .endControlFlow()
+        .build();
+    return getter.addCode(code).build();
+  }
+
   /** Creates the setValue method. */
   private MethodSpec makeSetValue() {
     MethodSpec.Builder setter = MethodSpec.methodBuilder("setValue")
@@ -70,9 +94,10 @@ public final class AddValue extends NodeRule {
     if (isStrongValues()) {
       setter.addStatement("$L.set(this, $N)", varHandleName("value"), "value");
     } else {
-      setter.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
+      setter.addStatement("$1T<V> ref = ($1T<V>) getValueReference()", Reference.class);
       setter.addStatement("$L.set(this, new $T($L, $N, referenceQueue))",
           varHandleName("value"), valueReferenceType(), "getKeyReference()", "value");
+      setter.addStatement("ref.clear()");
     }
 
     return setter.build();

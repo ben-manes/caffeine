@@ -870,10 +870,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     long duration = expiresAfterAccessNanos();
     for (;;) {
       Node<K, V> node = accessOrderDeque.peekFirst();
-      if ((node == null) || ((now - node.getAccessTime()) < duration)) {
+      if ((node == null) || ((now - node.getAccessTime()) < duration)
+          || !evictEntry(node, RemovalCause.EXPIRED, now)) {
         return;
       }
-      evictEntry(node, RemovalCause.EXPIRED, now);
     }
   }
 
@@ -885,11 +885,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
     long duration = expiresAfterWriteNanos();
     for (;;) {
-      final Node<K, V> node = writeOrderDeque().peekFirst();
-      if ((node == null) || ((now - node.getWriteTime()) < duration)) {
+      Node<K, V> node = writeOrderDeque().peekFirst();
+      if ((node == null) || ((now - node.getWriteTime()) < duration)
+          || !evictEntry(node, RemovalCause.EXPIRED, now)) {
         break;
       }
-      evictEntry(node, RemovalCause.EXPIRED, now);
     }
   }
 
@@ -942,8 +942,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
-   * Attempts to evict the entry based on the given removal cause. A removal due to expiration or
-   * size may be ignored if the entry was updated and is no longer eligible for eviction.
+   * Attempts to evict the entry based on the given removal cause. A removal due to may be ignored
+   * if the entry was updated and is no longer eligible for eviction.
    *
    * @param node the entry to evict
    * @param cause the reason to evict
@@ -958,8 +958,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     V[] value = (V[]) new Object[1];
     boolean[] removed = new boolean[1];
     boolean[] resurrect = new boolean[1];
-    RemovalCause[] actualCause = new RemovalCause[1];
     Object keyReference = node.getKeyReference();
+    RemovalCause[] actualCause = new RemovalCause[1];
 
     data.computeIfPresent(keyReference, (k, n) -> {
       if (n != node) {
@@ -968,7 +968,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       synchronized (n) {
         value[0] = n.getValue();
 
-        actualCause[0] = (key == null) || (value[0] == null) ? RemovalCause.COLLECTED : cause;
+        if ((key == null) || (value[0] == null)) {
+          actualCause[0] = RemovalCause.COLLECTED;
+        } else if (cause == RemovalCause.COLLECTED) {
+          resurrect[0] = true;
+          return n;
+        } else {
+          actualCause[0] = cause;
+        }
+
         if (actualCause[0] == RemovalCause.EXPIRED) {
           boolean expired = false;
           if (expiresAfterAccess()) {

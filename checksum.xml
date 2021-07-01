@@ -40,6 +40,7 @@
     <trusted-key id='353a436e043e3145' group='com.google.code.findbugs' />
     <trusted-key id='59a252fb1199d873' group='com.google.code.findbugs' />
     <trusted-key id='7a01b0f236e5430f' group='com.google.code.gson' />
+    <trusted-key id='b0f3710fa64900e7' group='com.google.code.gson' />
     <trusted-key id='1669c4bb543e0445' group='com.google.errorprone' />
     <trusted-key id='912d2c0eccda55c0' group='com.google.errorprone' />
     <trusted-key id='9a259c7ee636c5ed' group='com.google.errorprone' />
@@ -482,6 +483,9 @@
     </dependency>
     <dependency group='net.ltgt.gradle' module='gradle-errorprone-plugin' version='2.0.1'>
       <sha512>7F18348A8EDC88BB4B0D6EB5412BC4F6D79D1E5843F28CA72F717BE50BF0BF6A19AE1C3416E5EAB40CC1FD27C697CB0F9B5E10A51CFA574093EF0A4F57CB93CF</sha512>
+    </dependency>
+    <dependency group='net.ltgt.gradle' module='gradle-errorprone-plugin' version='2.0.2'>
+      <sha512>5EA9CA94A3682E090E28895ECAAE1E020C48DD249EE5040FB6EBE4B01DA027B86F94450E30692253DFA787371D4B4286FE257CEBF02E184AC149A746952D669C</sha512>
     </dependency>
     <dependency group='net.ltgt.gradle' module='gradle-nullaway-plugin' version='0.3'>
       <sha512>779F0D784A11834392C65DA375CF5F9612FD89B0540C665BCE1009EFAA7C35642E38D381AF7362703378306C95D24669B02CA27A2CCAFB574173BF9FA273F625</sha512>
