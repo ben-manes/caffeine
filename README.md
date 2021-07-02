@@ -82,11 +82,11 @@ Powering infrastructure near you:
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-implementation 'com.github.ben-manes.caffeine:caffeine:2.9.1'
+implementation 'com.github.ben-manes.caffeine:caffeine:2.9.2'
 
 // Optional extensions
-implementation 'com.github.ben-manes.caffeine:guava:2.9.1'
-implementation 'com.github.ben-manes.caffeine:jcache:2.9.1'
+implementation 'com.github.ben-manes.caffeine:guava:2.9.2'
+implementation 'com.github.ben-manes.caffeine:jcache:2.9.2'
 ```
 
 See the [release notes][releases] for details of the changes.
