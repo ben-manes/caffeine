@@ -20,8 +20,8 @@ experience designing [Guava's cache][guava-cache] and [ConcurrentLinkedHashMap][
 ```java
 LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
     .maximumSize(10_000)
-    .expireAfterWrite(5, TimeUnit.MINUTES)
-    .refreshAfterWrite(1, TimeUnit.MINUTES)
+    .expireAfterWrite(Duration.ofMinutes(5))
+    .refreshAfterWrite(Duration.ofMinutes(1))
     .build(key -> createExpensiveGraph(key));
 ```
 
