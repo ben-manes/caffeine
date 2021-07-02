@@ -3,6 +3,7 @@
   <trust-requirement pgp='GROUP' checksum='NONE' />
   <ignored-keys>
     <ignored-key id='44ce7bf2825ea2cd' />
+    <ignored-key id='8e1ad594207b7fb2' />
     <ignored-key id='ac5ec74981f9cda6' />
   </ignored-keys>
   <trusted-keys>
@@ -603,6 +604,9 @@
     </dependency>
     <dependency group='org.ow2.asm' module='asm' version='7.1'>
       <sha512>7EBA7097109389F48FA9142BF22D225F5D3104D68013D3B8E0A6D4054A8CD0EF64614372BDCB38987D68ADB6D33A3804E98DDF112BA84DBB09D448CE702DACC4</sha512>
+    </dependency>
+    <dependency group='org.reflections' module='reflections' version='0.9.12'>
+      <sha512>59A1682A1EFC5DA51128C9F184EC9278075208F29725FD596B18BAEDCD0C54090056009CDDF77E532DDF892BA2B41D9B0FF66F131B69E83CFB8585918FEB0EBE</sha512>
     </dependency>
     <dependency group='org.sonarsource.scanner.gradle' module='sonarqube-gradle-plugin' version='3.0'>
       <sha512>18519D5F13C5FEF9AE97F388362B3F62798F268D07B37FC5DF3F01741C259B8D91D33E477718D0C9D2D204069D9E9C0B5806E48C392314ED2AA8D71DE6D15A44</sha512>

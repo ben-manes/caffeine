@@ -83,11 +83,11 @@ Powering infrastructure near you:
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-implementation 'com.github.ben-manes.caffeine:caffeine:3.0.2'
+implementation 'com.github.ben-manes.caffeine:caffeine:3.0.3'
 
 // Optional extensions
-implementation 'com.github.ben-manes.caffeine:guava:3.0.2'
-implementation 'com.github.ben-manes.caffeine:jcache:3.0.2'
+implementation 'com.github.ben-manes.caffeine:guava:3.0.3'
+implementation 'com.github.ben-manes.caffeine:jcache:3.0.3'
 ```
 
 See the [release notes][releases] for details of the changes.
