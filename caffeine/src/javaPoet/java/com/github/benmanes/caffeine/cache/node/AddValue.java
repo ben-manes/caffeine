@@ -95,8 +95,9 @@ public final class AddValue extends NodeRule {
       setter.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
-      setter.addStatement("$1T<V> ref = ($1T<V>) getValueReference()", Reference.class);
-      setter.addStatement("$T.UNSAFE.putObject(this, $N, new $T($L, $N, referenceQueue))",
+      setter.addStatement("$1T<V> ref = ($1T<V>) $2T.UNSAFE.getObject(this, $3N)",
+          Reference.class, UNSAFE_ACCESS, offsetName("value"));
+      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($L, $N, referenceQueue))",
           UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "getKeyReference()", "value");
       setter.addStatement("ref.clear()");
     }
