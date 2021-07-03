@@ -77,7 +77,7 @@ ext {
     testng: '7.4.0',
     truth: '1.1.3',
     felix: '7.0.1',
-    felixScr: '2.1.26',
+    felixScr: '2.1.28',
     osgiUtilFunction: '1.1.0',
     osgiUtilPromise: '1.1.1',
   ]

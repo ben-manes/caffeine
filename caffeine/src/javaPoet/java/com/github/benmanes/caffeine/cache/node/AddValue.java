@@ -66,17 +66,17 @@ public final class AddValue extends NodeRule {
     MethodSpec.Builder getter = MethodSpec.methodBuilder("getValue")
         .addModifiers(context.publicFinalModifiers())
         .returns(vTypeVar);
+    String handle = varHandleName("value");
     if (valueStrength() == Strength.STRONG) {
-      getter.addStatement("return ($T) $L.get(this)", vTypeVar, varHandleName("value"));
+      getter.addStatement("return ($T) $L.get(this)", vTypeVar, handle);
       return getter.build();
     }
 
     CodeBlock code = CodeBlock.builder()
         .beginControlFlow("for (;;)")
-            .addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)",
-                Reference.class, varHandleName("value"))
+            .addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)", Reference.class, handle)
             .addStatement("V referent = ref.get()")
-            .beginControlFlow("if ((referent != null) || (ref == value))")
+            .beginControlFlow("if ((referent != null) || (ref == $L.getAcquire(this)))", handle)
                 .addStatement("return referent")
             .endControlFlow()
         .endControlFlow()
@@ -94,8 +94,9 @@ public final class AddValue extends NodeRule {
     if (isStrongValues()) {
       setter.addStatement("$L.set(this, $N)", varHandleName("value"), "value");
     } else {
-      setter.addStatement("$1T<V> ref = ($1T<V>) getValueReference()", Reference.class);
-      setter.addStatement("$L.set(this, new $T($L, $N, referenceQueue))",
+      setter.addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)",
+          Reference.class, varHandleName("value"));
+      setter.addStatement("$L.setRelease(this, new $T($L, $N, referenceQueue))",
           varHandleName("value"), valueReferenceType(), "getKeyReference()", "value");
       setter.addStatement("ref.clear()");
     }
