@@ -53,9 +53,7 @@ testNames.each { testName ->
 
 task isolatedTests(type: Test, group: 'Cache tests') {
   description = 'Tests that must be run in isolation'
-
   useTestNG()
-  it.onlyIf { !System.env.'CI' }
 }
 
 task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tests') {

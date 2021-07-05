@@ -7,5 +7,6 @@ run() {
 }
 
 run "./gradlew check"
+run "./gradlew :caffeine:isolatedTests"
 run "./gradlew :caffeine:slowGuavaTest"
 run "./gradlew :caffeine:slowCaffeineTest"
