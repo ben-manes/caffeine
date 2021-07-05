@@ -54,9 +54,7 @@ testNames.each { testName ->
 
 task isolatedTests(type: Test, group: 'Cache tests') {
   description = 'Tests that must be run in isolation'
-
   useTestNG()
-  it.onlyIf { !System.env.'CI' }
 }
 
 task junitTests(type: Test, group: 'Cache tests', description: 'JUnit tests', dependsOn: jar) {

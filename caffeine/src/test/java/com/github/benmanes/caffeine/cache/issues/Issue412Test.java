@@ -17,17 +17,16 @@ package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.DAEMON_FACTORY;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.timeTasks;
-import static com.google.common.collect.ImmutableMultiset.toImmutableMultiset;
 import static com.google.common.util.concurrent.MoreExecutors.shutdownAndAwaitTermination;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.is;
 
 import java.time.Duration;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -35,10 +34,6 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
-import com.github.benmanes.caffeine.cache.testing.RemovalListeners;
-import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
-import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
-import com.google.common.collect.Multiset;
 
 import site.ycsb.generator.NumberGenerator;
 import site.ycsb.generator.ScrambledZipfianGenerator;
@@ -52,19 +47,23 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
 public final class Issue412Test {
   private static final int NUM_THREADS = 5;
 
-  private ConsumingRemovalListener<Integer, Boolean> listener;
   private Cache<Integer, Boolean> cache;
   private ExecutorService executor;
+  private AtomicBoolean collected;
   private Integer[] ints;
   private Random random;
 
   @BeforeMethod
   public void before() {
     executor = Executors.newCachedThreadPool(DAEMON_FACTORY);
-    listener = RemovalListeners.consuming();
+    collected = new AtomicBoolean();
     cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofNanos(10))
-        .removalListener(listener)
+        .removalListener((k, v, cause) -> {
+          if (cause == RemovalCause.COLLECTED) {
+            collected.set(true);
+          }
+        })
         .executor(executor)
         .build();
     ints = generateSequence();
@@ -75,11 +74,7 @@ public final class Issue412Test {
   public void expire_remove() {
     timeTasks(NUM_THREADS, this::addRemoveAndExpire);
     shutdownAndAwaitTermination(executor, 1, TimeUnit.MINUTES);
-
-    Multiset<RemovalCause> causes = listener.removed().stream()
-        .map(RemovalNotification::getCause)
-        .collect(toImmutableMultiset());
-    assertThat(causes, not(hasItem(RemovalCause.COLLECTED)));
+    assertThat(collected.get(), is(false));
   }
 
   private void addRemoveAndExpire() {
