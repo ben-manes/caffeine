@@ -1,12 +1,7 @@
 #!/bin/bash
-set -eu
+set -eux
 
-run() {
-  echo $1
-  eval $1
-}
-
-run "./gradlew check"
-run "./gradlew :caffeine:isolatedTests"
-run "./gradlew :caffeine:slowGuavaTest"
-run "./gradlew :caffeine:slowCaffeineTest"
+./gradlew check
+./gradlew :caffeine:isolatedTests
+./gradlew :caffeine:slowGuavaTest
+./gradlew :caffeine:slowCaffeineTest

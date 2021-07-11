@@ -159,6 +159,7 @@
     <trusted-key id='bb2eab31a732f339' group='org.apache.jackrabbit' />
     <trusted-key id='d108ff879aa63950' group='org.apache.jackrabbit' />
     <trusted-key id='3595395eb3d8e1ba' group='org.apache.logging.log4j' />
+    <trusted-key id='3e48c0c6ef362b9e' group='org.apache.lucene' />
     <trusted-key id='873a8e86b4372146' group='org.apache.maven' />
     <trusted-key id='ae5a7fb608a0221c' group='org.apache.maven' />
     <trusted-key id='bf1518e0160788a2' group='org.apache.maven.resolver' />
@@ -415,6 +416,9 @@
     </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.1'>
       <sha512>8138BCC41F3573FABC75DAB54D73303408301880ABD63838E0CFB2E6C9405CF54DB623684536209035FA31ADE4E6D627A4C11460C98FF29EFC0A372B40375F93</sha512>
+    </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.2'>
+      <sha512>44C956BA53F81CEF4BC36EC4FC11A7862922524C970BCA4116790615A335795B28B0717F9F105C89949727DC77D97F5D4CE830438510776C52F69D968FCE14D6</sha512>
     </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>

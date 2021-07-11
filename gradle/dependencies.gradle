@@ -38,7 +38,7 @@ ext {
     ehcache3: '3.9.4',
     errorprone: '2.7.1',
     errorproneJavac: '9+181-r4173-1',
-    elasticSearch: '7.13.2',
+    elasticSearch: '7.13.3',
     expiringMap: '0.5.9',
     fastfilter: '1.0.2',
     fastutil: '8.5.4',
@@ -97,7 +97,7 @@ ext {
     shadow: '7.0.0',
     sonarqube: '3.3',
     spotbugs: '4.3.0',
-    spotbugsPlugin: '4.7.1',
+    spotbugsPlugin: '4.7.2',
     stats: '0.2.2',
     versions: '0.39.0',
   ]

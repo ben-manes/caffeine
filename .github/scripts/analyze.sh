@@ -1,10 +1,5 @@
 #!/bin/bash
-set -eu
+set -eux
 
-run() {
-  echo $1
-  eval $1
-}
-
-run "./gradlew pmdJavaPoet pmdMain -Dpmd"
-run "./gradlew spotbugsJavaPoet spotbugsMain spotbugsJmh -Dspotbugs"
+./gradlew pmdJavaPoet pmdMain -Dpmd
+./gradlew spotbugsJavaPoet spotbugsMain spotbugsJmh -Dspotbugs
