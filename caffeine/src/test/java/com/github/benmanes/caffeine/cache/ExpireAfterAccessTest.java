@@ -286,6 +286,26 @@ public final class ExpireAfterAccessTest {
     assertThat(expireAfterAccess.ageOf(context.firstKey()), is(Optional.empty()));
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  public void ageOf_absent(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    assertThat(expireAfterAccess.ageOf(
+        context.absentKey(), TimeUnit.SECONDS).isPresent(), is(false));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = Expire.ONE_MINUTE, population = Population.EMPTY)
+  public void ageOf_expired(Cache<Int, Int> cache, CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    assertThat(expireAfterAccess.ageOf(
+        context.absentKey(), TimeUnit.SECONDS).isPresent(), is(false));
+  }
+
   /* --------------- Policy: oldest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)

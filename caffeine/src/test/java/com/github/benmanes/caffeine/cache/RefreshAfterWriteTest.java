@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
@@ -33,8 +36,11 @@ import static org.hamcrest.Matchers.sameInstance;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
@@ -45,6 +51,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
@@ -56,6 +63,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
 import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
 import com.github.benmanes.caffeine.cache.testing.TrackingExecutor;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 
 /**
@@ -67,6 +75,73 @@ import com.github.benmanes.caffeine.testing.Int;
 @SuppressWarnings("PreferJavaTimeOverload")
 @Test(dataProviderClass = CacheProvider.class)
 public final class RefreshAfterWriteTest {
+
+  /* --------------- refreshIfNeeded --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
+  public void refreshIfNeeded_nonblocking(CacheContext context) {
+    Int key = context.absentKey();
+    Int original = Int.valueOf(1);
+    Int refresh1 = original.add(1);
+    Int refresh2 = refresh1.add(1);
+    var duration = Duration.ofMinutes(2);
+
+    var refresh = new AtomicBoolean();
+    var reloads = new AtomicInteger();
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override
+      public CompletableFuture<Int> asyncReload(Int key, Int oldValue, Executor executor) {
+        reloads.incrementAndGet();
+        await().untilTrue(refresh);
+        return CompletableFuture.completedFuture(oldValue.add(1));
+      }
+    });
+    cache.put(key, original);
+    context.ticker().advance(duration);
+    ConcurrentTestHarness.execute(() -> cache.get(key));
+    await().untilAtomic(reloads, is(1));
+
+    assertThat(cache.get(key), is(original));
+    refresh.set(true);
+
+    await().until(() -> cache.get(key), is(refresh1));
+    assertThat(reloads.get(), is(1));
+
+    context.ticker().advance(duration);
+    assertThat(cache.get(key), is(refresh1));
+    await().untilAtomic(reloads, is(2));
+    await().until(() -> cache.get(key), is(refresh2));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
+  public void refreshIfNeeded_failure(CacheContext context) {
+    Int key = context.absentKey();
+    var reloads = new AtomicInteger();
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override
+      public CompletableFuture<Int> asyncReload(Int key, Int oldValue, Executor executor) {
+        reloads.incrementAndGet();
+        throw new IllegalStateException();
+      }
+    });
+    cache.put(key, key);
+
+    for (int i = 0; i < 5; i++) {
+      context.ticker().advance(2, TimeUnit.MINUTES);
+      cache.get(key);
+      await().untilAtomic(reloads, is(i + 1));
+    }
+  }
 
   /* --------------- getIfPresent --------------- */
 
@@ -433,7 +508,40 @@ public final class RefreshAfterWriteTest {
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(75L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void ageOf_duration(CacheContext context,
+      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+    assertThat(refreshAfterWrite.ageOf(context.firstKey()).get().toSeconds(), is(0L));
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    assertThat(refreshAfterWrite.ageOf(context.firstKey()).get().toSeconds(), is(30L));
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(refreshAfterWrite.ageOf(context.firstKey()).get().toSeconds(), is(75L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void ageOf_absent(CacheContext context,
+      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(
-        context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
+        context.absentKey(), TimeUnit.SECONDS).isPresent(), is(false));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, population = Population.EMPTY)
+  public void ageOf_expired(Cache<Int, Int> cache, CacheContext context,
+      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    assertThat(refreshAfterWrite.ageOf(
+        context.absentKey(), TimeUnit.SECONDS).isPresent(), is(false));
   }
 }

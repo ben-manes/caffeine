@@ -632,7 +632,7 @@ public final class BoundedLocalCacheTest {
       await().untilTrue(started);
       var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
-      cache.policy().expireVariably().get().setExpiresAfter(key, Duration.ofDays(1));
+      node.setVariableTime(context.ticker().read() + TimeUnit.DAYS.toNanos(1));
     }
     await().untilTrue(done);
 

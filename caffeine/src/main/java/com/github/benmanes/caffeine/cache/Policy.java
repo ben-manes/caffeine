@@ -219,8 +219,6 @@ public interface Policy<K extends Object, V extends Object> {
      * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
      * where {@code freshnessLifetime = expires - currentTime}.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param key the key for the entry being queried
      * @param unit the unit that {@code age} is expressed in
@@ -251,8 +249,6 @@ public interface Policy<K extends Object, V extends Object> {
      * to elapsing this time bound. An entry is considered fresh if its age is less than this
      * duration, and stale otherwise. The expiration policy determines when the entry's age is
      * reset.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param unit the unit that duration is expressed in
      * @return the length of time after which an entry should be automatically removed
@@ -275,8 +271,6 @@ public interface Policy<K extends Object, V extends Object> {
     /**
      * Specifies that each entry should be automatically removed from the cache once a fixed
      * duration has elapsed. The expiration policy determines when the entry's age is reset.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param duration the length of time after which an entry should be automatically removed
      * @param unit the unit that {@code duration} is expressed in
@@ -334,8 +328,6 @@ public interface Policy<K extends Object, V extends Object> {
     /**
      * Returns the duration until the entry should be automatically removed. The expiration policy
      * determines when the entry's duration is reset.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param key the key for the entry being queried
      * @param unit the unit that {@code age} is expressed in
@@ -386,8 +378,6 @@ public interface Policy<K extends Object, V extends Object> {
      * already associated with a value. This method differs from {@link Map#putIfAbsent} by
      * substituting the configured {@link Expiry} with the specified write duration, has no effect
      * on the duration if the entry was present, and returns the success rather than a value.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
@@ -421,8 +411,6 @@ public interface Policy<K extends Object, V extends Object> {
      * contained a value associated with the {@code key}, the old value is replaced by the new
      * {@code value}. This method differs from {@link Cache#put} by substituting the configured
      * {@link Expiry} with the specified write duration.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
@@ -491,13 +479,11 @@ public interface Policy<K extends Object, V extends Object> {
 
     /**
      * Returns the age of the entry based on the refresh policy. The entry's age is the cache's
-     * estimate of the amount of time since the entry's refresh time was last reset.
+     * estimate of the amount of time since the entry's refresh period was last reset.
      * <p>
-     * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
+     * A refresh policy uses the age to determine if an entry is fresh or stale by comparing it
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
      * where {@code freshnessLifetime = expires - currentTime}.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param key the key for the entry being queried
      * @param unit the unit that {@code age} is expressed in
@@ -506,10 +492,10 @@ public interface Policy<K extends Object, V extends Object> {
     OptionalLong ageOf(K key, TimeUnit unit);
 
     /**
-     * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
-     * estimate of the amount of time since the entry's expiration was last reset.
+     * Returns the age of the entry based on the refresh policy. The entry's age is the cache's
+     * estimate of the amount of time since the entry's refresh period was last reset.
      * <p>
-     * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
+     * A refresh policy uses the age to determine if an entry is fresh or stale by comparing it
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
      * where {@code freshnessLifetime = expires - currentTime}.
      *
@@ -528,8 +514,6 @@ public interface Policy<K extends Object, V extends Object> {
      * to elapsing this time bound. An entry is considered fresh if its age is less than this
      * duration, and stale otherwise. The refresh policy determines when the entry's age is
      * reset.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param unit the unit that duration is expressed in
      * @return the length of time after which an entry is eligible to be reloaded
@@ -552,8 +536,6 @@ public interface Policy<K extends Object, V extends Object> {
     /**
      * Specifies that each entry should be eligible for reloading once a fixed duration has elapsed.
      * The refresh policy determines when the entry's age is reset.
-     * <p>
-     * This method is scheduled for removal in version 3.0.0.
      *
      * @param duration the length of time after which an entry is eligible to be reloaded
      * @param unit the unit that {@code duration} is expressed in

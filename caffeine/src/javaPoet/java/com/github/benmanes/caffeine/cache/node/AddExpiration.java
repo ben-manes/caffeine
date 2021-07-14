@@ -115,8 +115,8 @@ public final class AddExpiration extends NodeRule {
         .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.PLAIN))
         .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.PLAIN));
     addVarHandle("accessTime", TypeName.get(long.class));
-    addTimeConstructorAssignment(context.constructorByKey, "accessTime");
-    addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime");
+    addTimeConstructorAssignment(context.constructorByKey, "accessTime", "now");
+    addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime", "now");
   }
 
   private void addWriteExpiration() {
@@ -127,8 +127,8 @@ public final class AddExpiration extends NodeRule {
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.PLAIN))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
       addVarHandle("writeTime", TypeName.get(long.class));
-      addTimeConstructorAssignment(context.constructorByKey, "writeTime");
-      addTimeConstructorAssignment(context.constructorByKeyRef, "writeTime");
+      addTimeConstructorAssignment(context.constructorByKey, "writeTime", "now & ~1L");
+      addTimeConstructorAssignment(context.constructorByKeyRef, "writeTime", "now & ~1L");
     }
   }
 
@@ -147,7 +147,8 @@ public final class AddExpiration extends NodeRule {
   }
 
   /** Adds a long constructor assignment. */
-  private void addTimeConstructorAssignment(MethodSpec.Builder constructor, String field) {
-    constructor.addStatement("$L.set(this, $N)", varHandleName(field), "now");
+  private void addTimeConstructorAssignment(
+      MethodSpec.Builder constructor, String field, String value) {
+    constructor.addStatement("$L.set(this, $N)", varHandleName(field), value);
   }
 }

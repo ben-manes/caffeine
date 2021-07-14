@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
@@ -22,6 +25,7 @@ import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.function.Function.identity;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -30,6 +34,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -40,6 +45,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -388,6 +394,30 @@ public final class ExpireAfterVarTest {
         is(Optional.of(Duration.ofMinutes(1))));
   }
 
+  @SuppressWarnings("unchecked")
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void getExpiresAfter_absent(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    Mockito.reset(context.expiry());
+    assertThat(expireAfterVar.getExpiresAfter(
+        context.absentKey(), TimeUnit.SECONDS).isPresent(), is(false));
+    verifyNoInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
+      population = Population.EMPTY)
+  public void getExpiresAfter_expired(Cache<Int, Int> cache, CacheContext context,
+      VarExpiration<Int, Int> expireAfterVar) {
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    assertThat(expireAfterVar.getExpiresAfter(
+        context.absentKey(), TimeUnit.SECONDS).isPresent(), is(false));
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
@@ -421,6 +451,32 @@ public final class ExpireAfterVarTest {
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(1L));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void setExpiresAfter_absent(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.setExpiresAfter(context.absentKey(), 1, TimeUnit.SECONDS);
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.asMap(), is(equalTo(context.original())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
+      population = Population.EMPTY)
+  public void setExpiresAfter_expired(Cache<Int, Int> cache, CacheContext context,
+      VarExpiration<Int, Int> expireAfterVar) {
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    expireAfterVar.setExpiresAfter(context.absentKey(), 1, TimeUnit.MINUTES);
+    cache.cleanUp();
+    assertThat(cache.asMap(), is(anEmptyMap()));
   }
 
   /* --------------- Policy: putIfAbsent --------------- */

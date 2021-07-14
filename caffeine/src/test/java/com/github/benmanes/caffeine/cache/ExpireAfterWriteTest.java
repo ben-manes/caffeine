@@ -30,7 +30,6 @@ import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -270,12 +269,31 @@ public final class ExpireAfterWriteTest {
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void ageOf_duration(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    assertThat(expireAfterWrite.ageOf(context.firstKey()), is(Optional.of(Duration.ZERO)));
+    assertThat(expireAfterWrite.ageOf(context.firstKey()).get().toSeconds(), is(0L));
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(expireAfterWrite.ageOf(context.firstKey()),
-        is(Optional.of(Duration.ofSeconds(30L))));
+    assertThat(expireAfterWrite.ageOf(context.firstKey()).get().toSeconds(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(expireAfterWrite.ageOf(context.firstKey()).isPresent(), is(false));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
+  public void ageOf_absent(CacheContext context,
+      @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    assertThat(expireAfterWrite.ageOf(
+        context.absentKey(), TimeUnit.SECONDS).isPresent(), is(false));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+          expireAfterWrite = Expire.ONE_MINUTE, population = Population.EMPTY)
+  public void ageOf_expired(Cache<Int, Int> cache, CacheContext context,
+      @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    assertThat(expireAfterWrite.ageOf(
+        context.absentKey(), TimeUnit.SECONDS).isPresent(), is(false));
   }
 
   /* --------------- Policy: oldest --------------- */
