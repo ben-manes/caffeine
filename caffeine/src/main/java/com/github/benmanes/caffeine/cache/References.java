@@ -154,7 +154,7 @@ final class References {
    */
   static final class WeakValueReference<V> extends WeakReference<V>
       implements InternalReference<V> {
-    private final Object keyReference;
+    private Object keyReference;
 
     public WeakValueReference(Object keyReference,
         @Nullable V value, @Nullable ReferenceQueue<V> queue) {
@@ -165,6 +165,10 @@ final class References {
     @Override
     public Object getKeyReference() {
       return keyReference;
+    }
+
+    public void setKeyReference(Object keyReference) {
+      this.keyReference = keyReference;
     }
 
     @Override
@@ -186,7 +190,7 @@ final class References {
    */
   static final class SoftValueReference<V> extends SoftReference<V>
       implements InternalReference<V> {
-    private final Object keyReference;
+    private Object keyReference;
 
     public SoftValueReference(Object keyReference,
         @Nullable V value, @Nullable ReferenceQueue<V> queue) {
@@ -197,6 +201,10 @@ final class References {
     @Override
     public Object getKeyReference() {
       return keyReference;
+    }
+
+    public void setKeyReference(Object keyReference) {
+      this.keyReference = keyReference;
     }
 
     @Override
