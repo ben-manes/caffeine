@@ -89,9 +89,9 @@ public final class AddConstructors extends NodeRule {
   }
 
   private void assignKeyRefAndValue() {
-    context.constructorByKeyRef.addStatement("$L.set(this, $N)",
-        varHandleName("key"), "keyReference");
     if (isStrongValues()) {
+      context.constructorByKeyRef.addStatement("$L.set(this, $N)",
+          varHandleName("key"), "keyReference");
       context.constructorByKeyRef.addStatement("$L.set(this, $N)",
           varHandleName("value"), "value");
     } else {
