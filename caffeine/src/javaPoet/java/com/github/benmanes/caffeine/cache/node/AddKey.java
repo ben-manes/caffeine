@@ -17,10 +17,12 @@ package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
+import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
 
 import javax.lang.model.element.Modifier;
 
 import com.squareup.javapoet.FieldSpec;
+import com.squareup.javapoet.MethodSpec;
 
 /**
  * Adds the key to the node.
@@ -37,17 +39,42 @@ public final class AddKey extends NodeRule {
 
   @Override
   protected void execute() {
+    if (isStrongValues()) {
+      addIfStrongValue();
+    } else {
+      addIfCollectedValue();
+    }
+  }
+
+  private void addIfStrongValue() {
+    FieldSpec.Builder fieldSpec = isStrongKeys()
+        ? FieldSpec.builder(kTypeVar, "key", Modifier.VOLATILE)
+        : FieldSpec.builder(keyReferenceType(), "key", Modifier.VOLATILE);
     context.nodeSubtype
         .addField(newFieldOffset(context.className, "key"))
-        .addField(newKeyField())
+        .addField(fieldSpec.build())
         .addMethod(newGetter(keyStrength(), kTypeVar, "key", Visibility.LAZY))
         .addMethod(newGetRef("key"));
   }
 
-  private FieldSpec newKeyField() {
-    FieldSpec.Builder fieldSpec = isStrongKeys()
-        ? FieldSpec.builder(kTypeVar, "key", Modifier.VOLATILE)
-        : FieldSpec.builder(keyReferenceType(), "key", Modifier.VOLATILE);
-    return fieldSpec.build();
+  private void addIfCollectedValue() {
+    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getKeyReference")
+        .addModifiers(context.publicFinalModifiers())
+        .returns(Object.class)
+        .addStatement("$1T valueRef = ($1T) getValueReference()", valueReferenceType())
+        .addStatement("return valueRef.getKeyReference()")
+        .build());
+
+    MethodSpec.Builder getKey = MethodSpec.methodBuilder("getKey")
+        .addModifiers(context.publicFinalModifiers())
+        .returns(kTypeVar)
+        .addStatement("$1T valueRef = ($1T) getValueReference()", valueReferenceType());
+    if (isStrongKeys()) {
+      getKey.addStatement("return ($T) valueRef.getKeyReference()", kTypeVar);
+    } else {
+      getKey.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceKeyType);
+      getKey.addStatement("return keyRef.get()");
+    }
+    context.nodeSubtype.addMethod(getKey.build());
   }
 }

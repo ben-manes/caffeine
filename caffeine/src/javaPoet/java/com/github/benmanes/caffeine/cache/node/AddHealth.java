@@ -21,8 +21,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_K
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
-
-import java.lang.ref.Reference;
+import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
 
 import com.squareup.javapoet.MethodSpec;
 
@@ -69,9 +68,6 @@ public final class AddHealth extends NodeRule {
 
     MethodSpec.Builder action = MethodSpec.methodBuilder(actionName)
         .addModifiers(context.publicFinalModifiers());
-    if (keyStrength() != Strength.STRONG) {
-      action.addStatement("(($T<K>) getKeyReference()).clear()", Reference.class);
-    }
     if (valueStrength() == Strength.STRONG) {
       // Set the value to null only when dead, as otherwise the explicit removal of an expired async
       // value will be notified as explicit rather than expired due to the isComputingAsync() check
@@ -79,10 +75,17 @@ public final class AddHealth extends NodeRule {
         action.addStatement("$T.UNSAFE.putObject(this, $N, null)",
             UNSAFE_ACCESS, offsetName("value"));
       }
+      action.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
+          UNSAFE_ACCESS, offsetName("key"), arg);
     } else {
-      action.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
+      action.addStatement("$1T valueRef = ($1T) getValueReference()", valueReferenceType());
+      if (keyStrength() != Strength.STRONG) {
+        action.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceKeyType);
+        action.addStatement("keyRef.clear()");
+      }
+      action.addStatement("valueRef.setKeyReference($N)", arg);
+      action.addStatement("valueRef.clear()");
     }
-    action.addStatement("$T.UNSAFE.putObject(this, $N, $N)", UNSAFE_ACCESS, offsetName("key"), arg);
     context.nodeSubtype.addMethod(action.build());
   }
 }

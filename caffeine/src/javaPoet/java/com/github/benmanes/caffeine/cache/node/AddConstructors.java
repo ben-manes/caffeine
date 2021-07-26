@@ -91,9 +91,9 @@ public final class AddConstructors extends NodeRule {
   }
 
   private void assignKeyRefAndValue() {
-    context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
-        UNSAFE_ACCESS, offsetName("key"), "keyReference");
     if (isStrongValues()) {
+      context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
+          UNSAFE_ACCESS, offsetName("key"), "keyReference");
       context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {

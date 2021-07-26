@@ -73,8 +73,9 @@ import com.google.common.testing.GcFinalization;
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
 
-  // These tests require that the JVM uses -XX:SoftRefLRUPolicyMSPerMB=0 so that soft references
-  // can be reliably garbage collected (by making them behave as weak references).
+  // These tests require that the JVM uses -XX:SoftRefLRUPolicyMSPerMB=0 and -XX:+UseParallelGC so
+  // that soft references can be reliably garbage collected by making them behave as weak
+  // references.
 
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL)
