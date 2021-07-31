@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
@@ -39,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.annotations.Listeners;
@@ -48,7 +52,9 @@ import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
@@ -507,6 +513,20 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
   public void weightOf_absent(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
+    assertThat(eviction.weightOf(context.absentKey()), is(OptionalInt.empty()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void weightOf_expired(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    cache.put(context.absentKey(), Int.valueOf(1));
+    context.ticker().advance(2, TimeUnit.MINUTES);
     assertThat(eviction.weightOf(context.absentKey()), is(OptionalInt.empty()));
   }
 

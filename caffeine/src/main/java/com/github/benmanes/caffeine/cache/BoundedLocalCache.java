@@ -3587,7 +3587,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           return OptionalInt.empty();
         }
         Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
-        if (node == null) {
+        if ((node == null) || cache.hasExpired(node, cache.expirationTicker().read())) {
           return OptionalInt.empty();
         }
         synchronized (node) {
