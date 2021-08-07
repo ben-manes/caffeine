@@ -15,14 +15,12 @@
  */
 package com.github.benmanes.caffeine.jcache.size;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryRemovedListener;
 
@@ -49,12 +47,12 @@ public final class JCacheMaximumWeightTest extends AbstractJCacheTest {
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
     CacheEntryRemovedListener<Integer, Integer> listener = events ->
         removedWeight.addAndGet(Iterables.getOnlyElement(events).getValue());
-    CaffeineConfiguration<Integer, Integer> configuration = new CaffeineConfiguration<>();
+    var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setMaximumWeight(OptionalLong.of(MAXIMUM));
     configuration.setWeigherFactory(Optional.of(() -> (key, value) -> value));
-    CacheEntryListenerConfiguration<Integer, Integer> listenerConfiguration =
-        new MutableCacheEntryListenerConfiguration<Integer, Integer>(() -> listener,
-            /* filterFactory */ null, /* isOldValueRequired */ true, /* isSynchronous */ true);
+    var listenerConfiguration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+        () -> listener, /* filterFactory */ null,
+        /* isOldValueRequired */ true, /* isSynchronous */ true);
     configuration.addCacheEntryListenerConfiguration(listenerConfiguration);
     configuration.setExecutorFactory(MoreExecutors::directExecutor);
     return configuration;
@@ -66,6 +64,6 @@ public final class JCacheMaximumWeightTest extends AbstractJCacheTest {
       jcache.put(i, 1);
     }
     jcache.put(2 * MAXIMUM, MAXIMUM / 2);
-    assertThat(removedWeight.get(), is(MAXIMUM / 2));
+    assertThat(removedWeight.get()).isEqualTo(MAXIMUM / 2);
   }
 }

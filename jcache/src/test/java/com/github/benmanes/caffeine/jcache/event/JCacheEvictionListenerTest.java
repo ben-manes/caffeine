@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -31,7 +30,6 @@ import javax.cache.event.CacheEntryRemovedListener;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -39,7 +37,6 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
-import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -50,25 +47,18 @@ public final class JCacheEvictionListenerTest {
 
   @Mock EvictionListener entryListener;
   @Mock Cache<Integer, Integer> cache;
-  AutoCloseable mocks;
 
   @BeforeMethod
-  public void before() {
-    mocks = MockitoAnnotations.openMocks(this);
+  public void before() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
     statistics = new JCacheStatisticsMXBean();
-    EventDispatcher<Integer, Integer> dispatcher =
-        new EventDispatcher<>(MoreExecutors.directExecutor());
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     listener = new JCacheEvictionListener<>(dispatcher, statistics);
     listener.setCache(cache);
     statistics.enable(true);
 
-    dispatcher.register(new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+    dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
         () -> entryListener, null, false, false));
-  }
-
-  @AfterMethod
-  public void afterMethod() throws Exception {
-    mocks.close();
   }
 
   @DataProvider
@@ -89,10 +79,10 @@ public final class JCacheEvictionListenerTest {
       } else {
         verify(entryListener).onRemoved(any());
       }
-      assertThat(statistics.getCacheEvictions(), is(1L));
+      assertThat(statistics.getCacheEvictions()).isEqualTo(1L);
     } else {
       verify(entryListener, never()).onRemoved(any());
-      assertThat(statistics.getCacheEvictions(), is(0L));
+      assertThat(statistics.getCacheEvictions()).isEqualTo(0L);
     }
   }
 

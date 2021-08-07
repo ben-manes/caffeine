@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.integration.CacheLoader;
-import javax.cache.spi.CachingProvider;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.testng.annotations.AfterMethod;
@@ -63,7 +62,7 @@ public abstract class AbstractJCacheTest {
 
   @BeforeClass(alwaysRun = true)
   public void beforeClass() {
-    CachingProvider provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
+    var provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
     cacheManager = provider.getCacheManager(
         provider.getDefaultURI(), provider.getDefaultClassLoader());
   }
@@ -108,7 +107,7 @@ public abstract class AbstractJCacheTest {
 
   /** The loading configuration used by the test. */
   protected CaffeineConfiguration<Integer, Integer> getLoadingConfiguration() {
-    CaffeineConfiguration<Integer, Integer> configuration = getConfiguration();
+    var configuration = getConfiguration();
     configuration.setCacheLoaderFactory(this::getCacheLoader);
     configuration.setReadThrough(true);
     return configuration;

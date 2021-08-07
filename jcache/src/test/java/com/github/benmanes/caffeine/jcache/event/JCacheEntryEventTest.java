@@ -15,26 +15,31 @@
  */
 package com.github.benmanes.caffeine.jcache.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.sameInstance;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 
 import javax.cache.Cache;
 import javax.cache.event.EventType;
 
-import org.mockito.Mockito;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JCacheEntryEventTest {
-  @SuppressWarnings("unchecked")
-  Cache<Integer, Integer> cache = Mockito.mock(Cache.class);
-  JCacheEntryEvent<Integer, Integer> event = new JCacheEntryEvent<>(
-      cache, EventType.CREATED, 1, true, 2, 3);
+  @Mock Cache<Integer, Integer> cache;
+
+  JCacheEntryEvent<Integer, Integer> event;
+
+  @BeforeTest
+  public void before() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
+    event = new JCacheEntryEvent<>(cache, EventType.CREATED, 1, true, 2, 3);
+  }
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void unwrap_fail() {
@@ -43,23 +48,22 @@ public final class JCacheEntryEventTest {
 
   @Test
   public void unwrap() {
-    assertThat(event.unwrap(Cache.Entry.class), sameInstance(event));
+    assertThat(event.unwrap(Cache.Entry.class)).isSameInstanceAs(event);
   }
 
   @Test
   public void isOldValueAvailable_false() {
-    JCacheEntryEvent<Integer, Integer> e =
-        new JCacheEntryEvent<>(cache, EventType.CREATED, 1, false, null, 3);
-    assertThat(e.isOldValueAvailable(), is(false));
+    var entry = new JCacheEntryEvent<>(cache, EventType.CREATED, 1, false, null, 3);
+    assertThat(entry.isOldValueAvailable()).isFalse();
   }
 
   @Test
   public void isOldValueAvailable() {
-    assertThat(event.isOldValueAvailable(), is(true));
+    assertThat(event.isOldValueAvailable()).isTrue();;
   }
 
   @Test
   public void getOldValue() {
-    assertThat(event.getOldValue(), is(2));
+    assertThat(event.getOldValue()).isEqualTo(2);
   }
 }

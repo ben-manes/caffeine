@@ -15,10 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anEmptyMap;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.concurrent.TimeUnit;
 
@@ -53,7 +50,7 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
 
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    CaffeineConfiguration<Integer, Integer> configuration = new CaffeineConfiguration<>();
+    var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setExpiryPolicyFactory(() -> new ModifiedExpiryPolicy(
         new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION)));
     configuration.setTickerFactory(() -> ticker::read);
@@ -67,7 +64,7 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
 
     jcache.getAndPut(KEY_1, VALUE_1);
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
   }
 
   @Test
@@ -75,9 +72,9 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
     advanceHalfExpiry();
 
-    assertThat(jcache.getAndReplace(KEY_1, VALUE_2), is(VALUE_1));
+    assertThat(jcache.getAndReplace(KEY_1, VALUE_2)).isEqualTo(VALUE_1);
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
   }
 
   @Test
@@ -87,7 +84,7 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
 
     jcache.put(KEY_1, VALUE_2);
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
   }
 
   @Test
@@ -98,7 +95,7 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.putAll(entries);
     for (Integer key : keys) {
       Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
+      assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
     }
   }
 
@@ -109,7 +106,7 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
 
     jcache.replace(KEY_1, VALUE_2);
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
   }
 
   @Test
@@ -117,9 +114,9 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
     advanceHalfExpiry();
 
-    assertThat(jcache.replace(KEY_1, VALUE_1, VALUE_2), is(true));
+    assertThat(jcache.replace(KEY_1, VALUE_1, VALUE_2)).isTrue();
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
   }
 
   @Test
@@ -127,9 +124,9 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
     advanceHalfExpiry();
 
-    assertThat(jcache.replace(KEY_1, VALUE_2, VALUE_3), is(false));
+    assertThat(jcache.replace(KEY_1, VALUE_2, VALUE_3)).isFalse();
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(START_TIME_MS + EXPIRY_DURATION);
   }
 
   @Test
@@ -137,13 +134,14 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
     advanceHalfExpiry();
 
-    assertThat(jcache.invoke(KEY_1, (entry, args) -> {
+    var result = jcache.invoke(KEY_1, (entry, args) -> {
       entry.setValue(VALUE_2);
       return null;
-    }), is(nullValue()));
+    });
+    assertThat(result).isNull();
 
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
   }
 
   @Test
@@ -151,14 +149,15 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.putAll(entries);
     advanceHalfExpiry();
 
-    assertThat(jcache.invokeAll(keys, (entry, args) -> {
+    var result = jcache.invokeAll(keys, (entry, args) -> {
       entry.setValue(VALUE_2);
       return null;
-    }), is(anEmptyMap()));
+    });
+    assertThat(result).isEmpty();
 
     for (Integer key : keys) {
       Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
+      assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
     }
   }
 }

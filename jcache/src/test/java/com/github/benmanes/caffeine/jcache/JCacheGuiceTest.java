@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 
@@ -28,7 +27,6 @@ import javax.cache.annotation.CacheResult;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.integration.CacheLoader;
-import javax.cache.spi.CachingProvider;
 
 import org.jsr107.ri.annotations.DefaultCacheResolverFactory;
 import org.jsr107.ri.annotations.guice.module.CacheAnnotationsModule;
@@ -39,14 +37,12 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.jcache.configuration.FactoryCreator;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.google.inject.util.Modules;
 
 /**
@@ -58,7 +54,7 @@ public final class JCacheGuiceTest {
 
   @BeforeMethod
   public void beforeMethod() {
-    Module module = Modules.override(new CacheAnnotationsModule()).with(new CaffeineJCacheModule());
+    var module = Modules.override(new CacheAnnotationsModule()).with(new CaffeineJCacheModule());
     Guice.createInjector(module).injectMembers(this);
   }
 
@@ -70,16 +66,16 @@ public final class JCacheGuiceTest {
   @Test
   public void factory() {
     Cache<Integer, Integer> cache = cacheManager.getCache("guice");
-    Map<Integer, Integer> result = cache.getAll(ImmutableSet.of(1, 2, 3));
-    assertThat(result, is(ImmutableMap.of(1, 1, 2, 2, 3, 3)));
+    var result = cache.getAll(ImmutableSet.of(1, 2, 3));
+    assertThat(result).containsExactly(1, 1, 2, 2, 3, 3);
   }
 
   @Test
   public void annotations() {
     for (int i = 0; i < 10; i++) {
-      assertThat(service.get(), is(1));
+      assertThat(service.get()).isEqualTo(1);
     }
-    assertThat(service.times, is(1));
+    assertThat(service.times).isEqualTo(1);
   }
 
   static class Service {
@@ -122,7 +118,7 @@ public final class JCacheGuiceTest {
     @SuppressWarnings("unchecked")
     public <T> Factory<T> factoryOf(String className) {
       try {
-        Class<T> clazz = (Class<T>) Class.forName(className);
+        var clazz = (Class<T>) Class.forName(className);
         return injector.getProvider(clazz)::get;
       } catch (ClassNotFoundException e) {
         throw new RuntimeException(e);
@@ -140,9 +136,8 @@ public final class JCacheGuiceTest {
 
     /** Resolves the annotations to the provider as multiple are on the IDE's classpath. */
     void configureCachingProvider() {
-      CachingProvider provider = Caching.getCachingProvider(
-          CaffeineCachingProvider.class.getName());
-      CacheManager cacheManager = provider.getCacheManager(
+      var provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
+      var cacheManager = provider.getCacheManager(
           provider.getDefaultURI(), provider.getDefaultClassLoader());
       bind(CacheResolverFactory.class).toInstance(new DefaultCacheResolverFactory(cacheManager));
       bind(CacheManager.class).toInstance(cacheManager);

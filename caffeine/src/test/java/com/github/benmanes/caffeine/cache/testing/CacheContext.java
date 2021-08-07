@@ -16,17 +16,12 @@
 package com.github.benmanes.caffeine.cache.testing;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Objects.requireNonNull;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -77,7 +72,6 @@ import com.google.common.testing.FakeTicker;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("deprecation")
 public final class CacheContext {
   private static final ThreadLocal<Map<Object, Object>> interner =
       ThreadLocal.withInitial(HashMap::new);
@@ -191,22 +185,26 @@ public final class CacheContext {
     return (compute == Compute.ASYNC);
   }
 
+  public boolean isSync() {
+    return (compute == Compute.SYNC);
+  }
+
   public Population population() {
     return population;
   }
 
   public Int firstKey() {
-    assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
+    assertWithMessage("Invalid usage of context").that(firstKey).isNotNull();
     return firstKey;
   }
 
   public Int middleKey() {
-    assertThat("Invalid usage of context", middleKey, is(not(nullValue())));
+    assertWithMessage("Invalid usage of context").that(middleKey).isNotNull();
     return middleKey;
   }
 
   public Int lastKey() {
-    assertThat("Invalid usage of context", lastKey, is(not(nullValue())));
+    assertWithMessage("Invalid usage of context").that(lastKey).isNotNull();
     return lastKey;
   }
 
@@ -272,7 +270,7 @@ public final class CacheContext {
   }
 
   public long maximumWeight() {
-    assertThat("Invalid usage of context", isWeighted(), is(not(nullValue())));
+    assertWithMessage("Invalid usage of context").that(isWeighted()).isTrue();
     long maximum = weigher.unitsPerEntry() * maximumSize.max();
     return (maximum < 0) ? Long.MAX_VALUE : maximum;
   }
@@ -351,10 +349,11 @@ public final class CacheContext {
     return requireNonNull(removalListener);
   }
 
-  public List<RemovalNotification<Int, Int>> removalNotifications() {
-    return (removalListenerType() == Listener.CONSUMING)
-        ? ((ConsumingRemovalListener<Int, Int>) removalListener).removed()
-        : Collections.emptyList();
+  public void clearRemovalNotifications() {
+    if (removalListenerType() == Listener.CONSUMING) {
+      var listener = (ConsumingRemovalListener<?, ?>) removalListener;
+      listener.removed().clear();
+    }
   }
 
   public Listener evictionListenerType() {
@@ -363,12 +362,6 @@ public final class CacheContext {
 
   public RemovalListener<Int, Int> evictionListener() {
     return requireNonNull(evictionListener);
-  }
-
-  public List<RemovalNotification<Int, Int>> evictionNotifications() {
-    return (evictionListenerType() == Listener.CONSUMING)
-        ? ((ConsumingRemovalListener<Int, Int>) evictionListener).removed()
-        : Collections.emptyList();
   }
 
   public boolean isRecordingStats() {
@@ -434,9 +427,10 @@ public final class CacheContext {
     if (isCaffeine()) {
       cache = isAsync() ? caffeine.buildAsync(loader).synchronous() : caffeine.build(loader);
     } else {
+      var guavaLoader = new SingleLoader<>(loader);
       cache = new GuavaLoadingCache<>(guava.build(
           com.google.common.cache.CacheLoader.asyncReloading(
-              new SingleLoader<>(loader), executor)), ticker, isRecordingStats());
+              guavaLoader, executor)), ticker, isRecordingStats());
     }
     this.cache = cache;
     return cache;
@@ -454,10 +448,6 @@ public final class CacheContext {
     AsyncLoadingCache<K, V> cache = caffeine.buildAsync(loader);
     this.cache = cache.synchronous();
     return cache;
-  }
-
-  public Implementation implementation() {
-    return implementation;
   }
 
   public boolean isCaffeine() {

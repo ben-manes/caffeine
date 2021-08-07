@@ -13,14 +13,11 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
+import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -29,6 +26,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFutureTask;
@@ -50,23 +48,21 @@ public final class Issue193Test {
 
   private ListenableFutureTask<Long> loadingTask;
 
-  private final AsyncCacheLoader<String, Long> loader =
-      (key, exec) -> {
-          // Fools the cache into thinking there is a future that's not immediately ready.
-          // (The Cache has optimizations for this that we want to avoid)
-        loadingTask = ListenableFutureTask.create(counter::getAndIncrement);
-        var f = new CompletableFuture<Long>();
-        loadingTask.addListener(() -> {
-          f.complete(Futures.getUnchecked(loadingTask));
-        }, exec);
-        return f;
-      };
+  private final AsyncCacheLoader<String, Long> loader = (key, exec) -> {
+    // Fools the cache into thinking there is a future that's not immediately ready.
+    // (The Cache has optimizations for this that we want to avoid)
+    loadingTask = ListenableFutureTask.create(counter::getAndIncrement);
+    var f = new CompletableFuture<Long>();
+    loadingTask.addListener(() -> {
+      f.complete(Futures.getUnchecked(loadingTask));
+    }, exec);
+    return f;
+  };
 
   private final String key = Issue193Test.class.getSimpleName();
 
   /** This ensures that any outstanding async loading is completed as well */
-  private long loadGet(AsyncLoadingCache<String, Long> cache, String key)
-      throws InterruptedException, ExecutionException {
+  private long loadGet(AsyncLoadingCache<String, Long> cache, String key) throws Exception {
     CompletableFuture<Long> future = cache.get(key);
     if (!loadingTask.isDone()) {
       loadingTask.run();
@@ -76,29 +72,28 @@ public final class Issue193Test {
 
   @Test
   public void invalidateDuringRefreshRemovalCheck() throws Exception {
-    List<Long> removed = new ArrayList<>();
-    AsyncLoadingCache<String, Long> cache =
-        Caffeine.newBuilder()
-            .ticker(ticker::read)
-            .executor(TestingExecutors.sameThreadScheduledExecutor())
-            .<String, Long>removalListener((key, value, reason) -> removed.add(value))
-            .refreshAfterWrite(10, TimeUnit.NANOSECONDS)
-            .buildAsync(loader);
+    var removed = new ArrayList<Long>();
+    AsyncLoadingCache<String, Long> cache = Caffeine.newBuilder()
+        .removalListener((String key, Long value, RemovalCause reason) -> removed.add(value))
+        .executor(TestingExecutors.sameThreadScheduledExecutor())
+        .refreshAfterWrite(10, TimeUnit.NANOSECONDS)
+        .ticker(ticker::read)
+        .buildAsync(loader);
 
     // Load so there is an initial value.
-    assertThat(loadGet(cache, key), is(0L));
+    assertThat(loadGet(cache, key)).isEqualTo(0);
 
     ticker.advance(11); // Refresh should fire on next access
-    assertThat(cache.synchronous().getIfPresent(key), is(0L)); // Old value
+    assertThat(cache).containsEntry(key, 0); // Old value
 
     cache.synchronous().invalidate(key); // Invalidate key entirely
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue())); // No value in cache (good)
+    assertThat(cache).doesNotContainKey(key); // No value in cache (good)
     loadingTask.run(); // Completes refresh
 
     // FIXME: java.lang.AssertionError: Not true that <1> is null
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue())); // Value in cache (bad)
+    assertThat(cache).doesNotContainKey(key); // Value in cache (bad)
 
-    // FIXME: Maybe?  This is what I wanted to actually test :)
-    assertThat(removed, is(List.of(0L, 1L))); // 1L was sent to removalListener anyways
+    // FIXME: Maybe? This is what I wanted to actually test :)
+    assertThat(removed).containsExactly(0L, 1L).inOrder(); // 1L was sent to removalListener anyways
   }
 }

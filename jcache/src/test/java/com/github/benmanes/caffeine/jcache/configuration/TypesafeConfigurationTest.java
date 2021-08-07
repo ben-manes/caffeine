@@ -15,22 +15,16 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import javax.cache.Cache;
 import javax.cache.Caching;
-import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 
@@ -51,25 +45,25 @@ public final class TypesafeConfigurationTest {
     Config config = ConfigFactory.load();
     Supplier<Config> configSource = () -> config;
     TypesafeConfigurator.setConfigSource(configSource);
-    assertThat(TypesafeConfigurator.configSource(), is(configSource));
+    assertThat(TypesafeConfigurator.configSource()).isEqualTo(configSource);
   }
 
   @Test
   public void defaults() {
     CaffeineConfiguration<Integer, Integer> defaults =
         TypesafeConfigurator.defaults(ConfigFactory.load());
-    assertThat(defaults.getKeyType(), is(Object.class));
-    assertThat(defaults.getValueType(), is(Object.class));
-    assertThat(defaults.getExecutorFactory().create(), is(ForkJoinPool.commonPool()));
-    assertThat(defaults.getMaximumSize(), is(OptionalLong.of(500)));
+    assertThat(defaults.getKeyType()).isEqualTo(Object.class);
+    assertThat(defaults.getValueType()).isEqualTo(Object.class);
+    assertThat(defaults.getExecutorFactory().create()).isEqualTo(ForkJoinPool.commonPool());
+    assertThat(defaults.getMaximumSize()).hasValue(500);
   }
 
   @Test
   public void testCache() {
     Optional<CaffeineConfiguration<Integer, Integer>> config =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
-    assertThat(config.get(), is(equalTo(TypesafeConfigurator.from(
-        ConfigFactory.load(), "test-cache").get())));
+    assertThat(config.get()).isEqualTo(TypesafeConfigurator.from(
+        ConfigFactory.load(), "test-cache").get());
     checkTestCache(config.get());
   }
 
@@ -79,19 +73,19 @@ public final class TypesafeConfigurationTest {
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
     Optional<CaffeineConfiguration<Integer, Integer>> config2 =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-2");
-    assertThat(config1, is(not(equalTo(config2))));
+    assertThat(config1).isNotEqualTo(config2);
 
-    assertThat(config2.get().getKeyType(), is(String.class));
-    assertThat(config2.get().getValueType(), is(Integer.class));
-    assertThat(config2.get().isNativeStatisticsEnabled(), is(false));
-    assertThat(config2.get().getExecutorFactory().create(), is(ForkJoinPool.commonPool()));
+    assertThat(config2.get().getKeyType()).isAssignableTo(String.class);
+    assertThat(config2.get().getValueType()).isAssignableTo(Integer.class);
+    assertThat(config2.get().isNativeStatisticsEnabled()).isFalse();
+    assertThat(config2.get().getExecutorFactory().create()).isEqualTo(ForkJoinPool.commonPool());
   }
 
   @Test
   public void getCache() {
     Cache<Integer, Integer> cache = Caching.getCachingProvider()
         .getCacheManager().getCache("test-cache");
-    assertThat(cache, is(not(nullValue())));
+    assertThat(cache).isNotNull();
 
     @SuppressWarnings("unchecked")
     CaffeineConfiguration<Integer, Integer> config =
@@ -103,15 +97,15 @@ public final class TypesafeConfigurationTest {
     checkStoreByValue(config);
     checkListener(config);
 
-    assertThat(config.getKeyType(), is(Object.class));
-    assertThat(config.getValueType(), is(Object.class));
-    assertThat(config.getExecutorFactory().create(), is(instanceOf(TestExecutor.class)));
-    assertThat(config.getSchedulerFactory().create(), is(instanceOf(TestScheduler.class)));
-    assertThat(config.getCacheLoaderFactory().create(), is(instanceOf(TestCacheLoader.class)));
-    assertThat(config.getCacheWriter(), is(instanceOf(TestCacheWriter.class)));
-    assertThat(config.isNativeStatisticsEnabled(), is(true));
-    assertThat(config.isStatisticsEnabled(), is(true));
-    assertThat(config.isManagementEnabled(), is(true));
+    assertThat(config.getKeyType()).isEqualTo(Object.class);
+    assertThat(config.getValueType()).isEqualTo(Object.class);
+    assertThat(config.getExecutorFactory().create()).isInstanceOf(TestExecutor.class);
+    assertThat(config.getSchedulerFactory().create()).isInstanceOf(TestScheduler.class);
+    assertThat(config.getCacheLoaderFactory().create()).isInstanceOf(TestCacheLoader.class);
+    assertThat(config.getCacheWriter()).isInstanceOf(TestCacheWriter.class);
+    assertThat(config.isNativeStatisticsEnabled()).isTrue();
+    assertThat(config.isStatisticsEnabled()).isTrue();
+    assertThat(config.isManagementEnabled()).isTrue();
 
     checkSize(config);
     checkRefresh(config);
@@ -120,41 +114,39 @@ public final class TypesafeConfigurationTest {
   }
 
   static void checkStoreByValue(CaffeineConfiguration<?, ?> config) {
-    assertThat(config.isStoreByValue(), is(true));
-    assertThat(config.getCopierFactory().create(),
-        instanceOf(JavaSerializationCopier.class));
+    assertThat(config.isStoreByValue()).isTrue();
+    assertThat(config.getCopierFactory().create()).isInstanceOf(JavaSerializationCopier.class);
   }
 
   static void checkListener(CaffeineConfiguration<?, ?> config) {
-    CacheEntryListenerConfiguration<?, ?> listener = Iterables.getOnlyElement(
-        config.getCacheEntryListenerConfigurations());
-    assertThat(listener.getCacheEntryListenerFactory().create(),
-        instanceOf(TestCacheEntryListener.class));
-    assertThat(listener.getCacheEntryEventFilterFactory().create(),
-        instanceOf(TestCacheEntryEventFilter.class));
-    assertThat(listener.isSynchronous(), is(true));
-    assertThat(listener.isOldValueRequired(), is(true));
+    var listener = Iterables.getOnlyElement(config.getCacheEntryListenerConfigurations());
+    assertThat(listener.getCacheEntryListenerFactory().create())
+        .isInstanceOf(TestCacheEntryListener.class);
+    assertThat(listener.getCacheEntryEventFilterFactory().create())
+        .isInstanceOf(TestCacheEntryEventFilter.class);
+    assertThat(listener.isSynchronous()).isTrue();
+    assertThat(listener.isOldValueRequired()).isTrue();
   }
 
   static void checkLazyExpiration(CaffeineConfiguration<?, ?> config) {
     ExpiryPolicy expiry = config.getExpiryPolicyFactory().create();
-    assertThat(expiry.getExpiryForCreation(), is(Duration.ONE_MINUTE));
-    assertThat(expiry.getExpiryForUpdate(), is(Duration.FIVE_MINUTES));
-    assertThat(expiry.getExpiryForAccess(), is(Duration.TEN_MINUTES));
+    assertThat(expiry.getExpiryForCreation()).isEqualTo(Duration.ONE_MINUTE);
+    assertThat(expiry.getExpiryForUpdate()).isEqualTo(Duration.FIVE_MINUTES);
+    assertThat(expiry.getExpiryForAccess()).isEqualTo(Duration.TEN_MINUTES);
   }
 
   static void checkEagerExpiration(CaffeineConfiguration<?, ?> config) {
-    assertThat(config.getExpireAfterWrite().getAsLong(), is(TimeUnit.MINUTES.toNanos(1)));
-    assertThat(config.getExpireAfterAccess().getAsLong(), is(TimeUnit.MINUTES.toNanos(5)));
+    assertThat(config.getExpireAfterWrite()).hasValue(TimeUnit.MINUTES.toNanos(1));
+    assertThat(config.getExpireAfterAccess()).hasValue(TimeUnit.MINUTES.toNanos(5));
   }
 
   static void checkRefresh(CaffeineConfiguration<?, ?> config) {
-    assertThat(config.getRefreshAfterWrite().getAsLong(), is(TimeUnit.SECONDS.toNanos(30)));
+    assertThat(config.getRefreshAfterWrite()).hasValue(TimeUnit.SECONDS.toNanos(30));
   }
 
   static void checkSize(CaffeineConfiguration<?, ?> config) {
-    assertThat(config.getMaximumSize(), is(OptionalLong.empty()));
-    assertThat(config.getMaximumWeight().getAsLong(), is(1_000L));
-    assertThat(config.getWeigherFactory().get().create(), instanceOf(TestWeigher.class));
+    assertThat(config.getMaximumSize()).isEmpty();
+    assertThat(config.getMaximumWeight()).hasValue(1_000L);
+    assertThat(config.getWeigherFactory().get().create()).isInstanceOf(TestWeigher.class);
   }
 }

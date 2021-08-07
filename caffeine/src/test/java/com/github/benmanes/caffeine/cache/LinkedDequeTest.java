@@ -15,14 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
+import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.google.common.collect.Iterators.elementsEqual;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,6 +25,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -37,6 +33,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
 import com.github.benmanes.caffeine.cache.LinkedDeque.PeekingIterator;
 import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -52,50 +49,50 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(Deque<?> deque) {
     deque.clear();
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "full")
   public void clear_whenPopulated(Deque<?> deque) {
     deque.clear();
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty")
   public void isEmpty_whenEmpty(Deque<?> deque) {
-    assertThat(deque.isEmpty(), is(true));
+    assertThat(deque.isEmpty()).isTrue();
   }
 
   @Test(dataProvider = "full")
   public void isEmpty_whenPopulated(Deque<?> deque) {
-    assertThat(deque.isEmpty(), is(false));
+    assertThat(deque.isEmpty()).isFalse();
   }
 
   @Test(dataProvider = "empty")
   public void size_whenEmpty(Deque<?> deque) {
-    assertThat(deque.size(), is(0));
+    assertThat(deque.size()).isEqualTo(0);
   }
 
   @Test(dataProvider = "full")
   public void size_whenPopulated(Deque<?> deque) {
-    assertThat(deque.size(), is(SIZE));
-    assertThat(Iterables.size(deque), is(SIZE));
+    assertThat(deque.size()).isEqualTo(SIZE);
   }
 
   @Test(dataProvider = "empty")
   public void contains_withNull(Deque<?> deque) {
-    assertThat(deque.contains(null), is(false));
+    assertThat(deque.contains(null)).isFalse();
   }
 
   @Test(dataProvider = "full")
   public void contains_whenFound(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.contains(Iterables.get(deque, SIZE / 2)), is(true));
+    int index = ThreadLocalRandom.current().nextInt(deque.size());
+    assertThat(deque.contains(Iterables.get(deque, index))).isTrue();
   }
 
   @Test(dataProvider = "full")
   public void contains_whenNotFound(LinkedDeque<LinkedValue> deque) {
-    LinkedValue unlinked = new LinkedValue(1);
-    assertThat(deque.contains(unlinked), is(false));
+    var unlinked = new LinkedValue(1);
+    assertThat(deque.contains(unlinked)).isFalse();
   }
 
   /* --------------- Move --------------- */
@@ -117,8 +114,8 @@ public final class LinkedDequeTest {
 
   private void checkMoveToFront(LinkedDeque<LinkedValue> deque, LinkedValue element) {
     deque.moveToFront(element);
-    assertThat(deque.peekFirst(), is(element));
-    assertThat(deque.size(), is(SIZE));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.peekFirst()).isEqualTo(element);
   }
 
   @Test(dataProvider = "full")
@@ -138,84 +135,84 @@ public final class LinkedDequeTest {
 
   private void checkMoveToBack(LinkedDeque<LinkedValue> deque, LinkedValue element) {
     deque.moveToBack(element);
-    assertThat(deque.size(), is(SIZE));
-    assertThat(deque.getLast(), is(element));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.getLast()).isEqualTo(element);
   }
 
   /* --------------- First / Last --------------- */
 
   @Test(dataProvider = "empty")
   public void isFirst_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.isFirst(new LinkedValue(0)), is(false));
-    assertThat(deque.isFirst(null), is(false));
+    assertThat(deque.isFirst(new LinkedValue(0))).isFalse();
+    assertThat(deque.isFirst(null)).isFalse();
   }
 
   @Test(dataProvider = "full")
   public void isFirst_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var first = deque.first;
-    assertThat(deque.isFirst(first), is(true));
-    assertThat(deque.first, is(first));
-    assertThat(deque, hasSize(SIZE));
-    assertThat(deque.contains(first), is(true));
+    assertThat(deque).hasSize(SIZE);;
+    assertThat(deque.isFirst(first)).isTrue();
+    assertThat(deque.contains(first)).isTrue();
+    assertThat(deque.first).isSameInstanceAs(first);
   }
 
   @Test(dataProvider = "empty")
   public void isLast_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.isLast(new LinkedValue(0)), is(false));
-    assertThat(deque.isLast(null), is(false));
+    assertThat(deque.isLast(new LinkedValue(0))).isFalse();
+    assertThat(deque.isLast(null)).isFalse();
   }
 
   @Test(dataProvider = "full")
   public void isLast_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var last = deque.last;
-    assertThat(deque.isLast(last), is(true));
-    assertThat(deque.last, is(last));
-    assertThat(deque, hasSize(SIZE));
-    assertThat(deque.contains(last), is(true));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.isLast(last)).isTrue();
+    assertThat(deque.contains(last)).isTrue();
+    assertThat(deque.last).isSameInstanceAs(last);
   }
 
   /* --------------- Peek --------------- */
 
   @Test(dataProvider = "empty")
   public void peek_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.peek(), is(nullValue()));
+    assertThat(deque.peek()).isNull();
   }
 
   @Test(dataProvider = "full")
   public void peek_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var first = deque.first;
-    assertThat(deque.peek(), is(first));
-    assertThat(deque.first, is(first));
-    assertThat(deque, hasSize(SIZE));
-    assertThat(deque.contains(first), is(true));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.contains(first)).isTrue();;
+    assertThat(deque.first).isSameInstanceAs(first);
+    assertThat(deque.peek()).isSameInstanceAs(first);
   }
 
   @Test(dataProvider = "empty")
   public void peekFirst_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.peekFirst(), is(nullValue()));
+    assertThat(deque.peekFirst()).isNull();
   }
 
   @Test(dataProvider = "full")
   public void peekFirst_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var first = deque.first;
-    assertThat(deque.peekFirst(), is(first));
-    assertThat(deque.first, is(first));
-    assertThat(deque, hasSize(SIZE));
-    assertThat(deque.contains(first), is(true));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.contains(first)).isTrue();
+    assertThat(deque.first).isSameInstanceAs(first);
+    assertThat(deque.peekFirst()).isSameInstanceAs(first);
   }
 
   @Test(dataProvider = "empty")
   public void peekLast_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.peekLast(), is(nullValue()));
+    assertThat(deque.peekLast()).isNull();
   }
 
   @Test(dataProvider = "full")
   public void peekLast_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var last = deque.last;
-    assertThat(deque.peekLast(), is(last));
-    assertThat(deque.last, is(last));
-    assertThat(deque, hasSize(SIZE));
-    assertThat(deque.contains(last), is(true));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.contains(last)).isTrue();
+    assertThat(deque.last).isSameInstanceAs(last);
+    assertThat(deque.peekLast()).isSameInstanceAs(last);
   }
 
   /* --------------- Get --------------- */
@@ -228,10 +225,10 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void getFirst_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var first = deque.first;
-    assertThat(deque.getFirst(), is(first));
-    assertThat(deque.first, is(first));
-    assertThat(deque, hasSize(SIZE));
-    assertThat(deque.contains(first), is(true));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.contains(first)).isTrue();
+    assertThat(deque.first).isSameInstanceAs(first);
+    assertThat(deque.getFirst()).isSameInstanceAs(first);
   }
 
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
@@ -242,10 +239,10 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void getLast_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var last = deque.last;
-    assertThat(deque.getLast(), is(last));
-    assertThat(deque.last, is(last));
-    assertThat(deque, hasSize(SIZE));
-    assertThat(deque.contains(last), is(true));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.contains(last)).isTrue();
+    assertThat(deque.last).isSameInstanceAs(last);
+    assertThat(deque.getLast()).isSameInstanceAs(last);
   }
 
   /* --------------- Element --------------- */
@@ -258,10 +255,10 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void element_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var first = deque.first;
-    assertThat(deque.element(), is(first));
-    assertThat(deque.first, is(first));
-    assertThat(deque, hasSize(SIZE));
-    assertThat(deque.contains(first), is(true));
+    assertThat(deque).hasSize(SIZE);
+    assertThat(deque.contains(first)).isTrue();
+    assertThat(deque.first).isSameInstanceAs(first);
+    assertThat(deque.element()).isSameInstanceAs(first);
   }
 
   /* --------------- Offer --------------- */
@@ -269,73 +266,73 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "empty")
   public void offer_whenEmpty(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(1);
-    assertThat(deque.offer(value), is(true));
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(1));
+    assertThat(deque.offer(value)).isTrue();
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(1);
   }
 
   @Test(dataProvider = "full")
   public void offer_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(SIZE);
-    assertThat(deque.offer(value), is(true));
-    assertThat(deque.peekFirst(), is(not(value)));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(SIZE + 1));
+    assertThat(deque.offer(value)).isTrue();
+    assertThat(deque.peekFirst()).isNotSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(SIZE + 1);
   }
 
   @Test(dataProvider = "full")
   public void offer_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.offer(deque.peek()), is(false));
-    assertThat(deque, hasSize(SIZE));
+    assertThat(deque.offer(deque.peek())).isFalse();
+    assertThat(deque).hasSize(SIZE);
   }
 
   @Test(dataProvider = "empty")
   public void offerFirst_whenEmpty(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(1);
-    assertThat(deque.offerFirst(value), is(true));
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(1));
+    assertThat(deque.offerFirst(value)).isTrue();
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(1);
   }
 
   @Test(dataProvider = "full")
   public void offerFirst_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(SIZE);
-    assertThat(deque.offerFirst(value), is(true));
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(not(value)));
-    assertThat(deque, hasSize(SIZE + 1));
+    assertThat(deque.offerFirst(value)).isTrue();
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isNotSameInstanceAs(value);
+    assertThat(deque).hasSize(SIZE + 1);
   }
 
   @Test(dataProvider = "full")
   public void offerFirst_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.offerFirst(deque.peek()), is(false));
-    assertThat(deque, hasSize(SIZE));
+    assertThat(deque.offerFirst(deque.peek())).isFalse();
+    assertThat(deque).hasSize(SIZE);
   }
 
   @Test(dataProvider = "empty")
   public void offerLast_whenEmpty(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(1);
-    assertThat(deque.offerLast(value), is(true));
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(1));
+    assertThat(deque.offerLast(value)).isTrue();
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(1);
   }
 
   @Test(dataProvider = "full")
   public void offerLast_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(SIZE);
-    assertThat(deque.offerLast(value), is(true));
-    assertThat(deque.peekFirst(), is(not(value)));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(SIZE + 1));
+    assertThat(deque.offerLast(value)).isTrue();
+    assertThat(deque.peekFirst()).isNotSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(SIZE + 1);
   }
 
   @Test(dataProvider = "full")
   public void offerLast_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.offerLast(deque.peek()), is(false));
-    assertThat(deque, hasSize(SIZE));
+    assertThat(deque.offerLast(deque.peek())).isFalse();
+    assertThat(deque).hasSize(SIZE);
   }
 
   /* --------------- Add --------------- */
@@ -343,42 +340,42 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "empty")
   public void add_whenEmpty(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(1);
-    assertThat(deque.add(value), is(true));
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(1));
+    assertThat(deque.add(value)).isTrue();
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(1);
   }
 
   @Test(dataProvider = "full")
   public void add_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(SIZE);
-    assertThat(deque.add(value), is(true));
-    assertThat(deque.peekFirst(), is(not(value)));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(SIZE + 1));
+    assertThat(deque.add(value)).isTrue();
+    assertThat(deque.peekFirst()).isNotSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(SIZE + 1);
   }
 
   @Test(dataProvider = "full")
   public void add_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.add(deque.peek()), is(false));
+    assertThat(deque.add(deque.peek())).isFalse();
   }
 
   @Test(dataProvider = "empty")
   public void addFirst_whenEmpty(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(1);
     deque.addFirst(value);
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(1));
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(1);
   }
 
   @Test(dataProvider = "full")
   public void addFirst_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(SIZE);
     deque.addFirst(value);
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(not(value)));
-    assertThat(deque, hasSize(SIZE + 1));
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isNotSameInstanceAs(value);
+    assertThat(deque).hasSize(SIZE + 1);
   }
 
   @Test(dataProvider = "full", expectedExceptions = IllegalArgumentException.class)
@@ -390,18 +387,18 @@ public final class LinkedDequeTest {
   public void addLast_whenEmpty(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(1);
     deque.addLast(value);
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(1));
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(1);
   }
 
   @Test(dataProvider = "full")
   public void addLast_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(SIZE);
     deque.addLast(value);
-    assertThat(deque.peekFirst(), is(not(value)));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(SIZE + 1));
+    assertThat(deque.peekFirst()).isNotSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(SIZE + 1);
   }
 
   @Test(dataProvider = "full", expectedExceptions = IllegalArgumentException.class)
@@ -411,90 +408,90 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "empty")
   public void addAll_withEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.addAll(List.of()), is(false));
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque.addAll(List.of())).isFalse();
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty")
   public void addAll_withPopulated(LinkedDeque<LinkedValue> deque) {
     var expected = new ArrayList<LinkedValue>();
     populate(expected);
-    assertThat(deque.addAll(expected), is(true));
-    assertThat(deque, contains(expected.toArray(new LinkedValue[0])));
+    assertThat(deque.addAll(expected)).isTrue();
+    assertThat(deque).containsExactlyElementsIn(expected).inOrder();
   }
 
   @Test(dataProvider = "full")
   @SuppressWarnings("ModifyingCollectionWithItself")
   public void addAll_withSelf(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.addAll(deque), is(false));
+    assertThat(deque.addAll(deque)).isFalse();
   }
 
   /* --------------- Poll --------------- */
 
   @Test(dataProvider = "empty")
   public void poll_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.poll(), is(nullValue()));
+    assertThat(deque.poll()).isNull();
   }
 
   @Test(dataProvider = "full")
   public void poll_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var first = deque.peek();
-    assertThat(deque.poll(), is(first));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.poll()).isSameInstanceAs(first);
+    assertThat(deque.contains(first)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void poll_toEmpty(LinkedDeque<LinkedValue> deque) {
     LinkedValue value;
     while ((value = deque.poll()) != null) {
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty")
   public void pollFirst_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.pollFirst(), is(nullValue()));
+    assertThat(deque.pollFirst()).isNull();
   }
 
   @Test(dataProvider = "full")
   public void pollFirst_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
-    assertThat(deque.pollFirst(), is(first));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.pollFirst()).isSameInstanceAs(first);
+    assertThat(deque.contains(first)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void pollFirst_toEmpty(LinkedDeque<LinkedValue> deque) {
     LinkedValue value;
     while ((value = deque.pollFirst()) != null) {
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty")
   public void pollLast_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.pollLast(), is(nullValue()));
+    assertThat(deque.pollLast()).isNull();
   }
 
   @Test(dataProvider = "full")
   public void pollLast_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var last = deque.peekLast();
-    assertThat(deque.pollLast(), is(last));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(last), is(false));
+    assertThat(deque.pollLast()).isSameInstanceAs(last);
+    assertThat(deque.contains(last)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void pollLast_toEmpty(LinkedDeque<LinkedValue> deque) {
     LinkedValue value;
     while ((value = deque.pollLast()) != null) {
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   /* --------------- Remove --------------- */
@@ -507,41 +504,41 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void remove_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
-    assertThat(deque.remove(), is(first));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.remove()).isSameInstanceAs(first);
+    assertThat(deque.contains(first)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void remove_toEmpty(LinkedDeque<LinkedValue> deque) {
     while (!deque.isEmpty()) {
       var value = deque.remove();
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty")
   public void removeElement_notFound(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.remove(new LinkedValue(0)), is(false));
+    assertThat(deque.remove(new LinkedValue(0))).isFalse();
   }
 
   @Test(dataProvider = "full")
   public void removeElement_whenFound(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
-    assertThat(deque.remove(first), is(true));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.remove(first)).isTrue();
+    assertThat(deque.contains(first)).isFalse();;
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void removeElement_toEmpty(LinkedDeque<LinkedValue> deque) {
     while (!deque.isEmpty()) {
       var value = deque.peek();
-      assertThat(deque.remove(value), is(true));
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.remove(value)).isTrue();
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
@@ -552,18 +549,18 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void removeFirst_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
-    assertThat(deque.removeFirst(), is(first));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.removeFirst()).isSameInstanceAs(first);
+    assertThat(deque.contains(first)).isFalse();;
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void removeFirst_toEmpty(LinkedDeque<LinkedValue> deque) {
     while (!deque.isEmpty()) {
       var value = deque.removeFirst();
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
@@ -574,84 +571,84 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void removeLast_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var last = deque.peekLast();
-    assertThat(deque.removeLast(), is(last));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(last), is(false));
+    assertThat(deque.removeLast()).isSameInstanceAs(last);
+    assertThat(deque.contains(last)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void removeLast_toEmpty(LinkedDeque<LinkedValue> deque) {
     while (!deque.isEmpty()) {
       var value = deque.removeLast();
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty")
   public void removeFirstOccurrence_notFound(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.removeFirstOccurrence(new LinkedValue(0)), is(false));
+    assertThat(deque.removeFirstOccurrence(new LinkedValue(0))).isFalse();
   }
 
   @Test(dataProvider = "full")
   public void removeFirstOccurrence_whenFound(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
-    assertThat(deque.removeFirstOccurrence(first), is(true));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.removeFirstOccurrence(first)).isTrue();
+    assertThat(deque.contains(first)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void removeFirstOccurrence_toEmpty(LinkedDeque<LinkedValue> deque) {
     while (!deque.isEmpty()) {
       var value = deque.peek();
-      assertThat(deque.removeFirstOccurrence(value), is(true));
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.removeFirstOccurrence(value)).isTrue();
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty")
   public void removeLastOccurrence_notFound(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.removeLastOccurrence(new LinkedValue(0)), is(false));
+    assertThat(deque.removeLastOccurrence(new LinkedValue(0))).isFalse();
   }
 
   @Test(dataProvider = "full")
   public void removeLastOccurrence_whenFound(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
-    assertThat(deque.removeLastOccurrence(first), is(true));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.removeLastOccurrence(first)).isTrue();
+    assertThat(deque.contains(first)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void removeLastOccurrence_toEmpty(LinkedDeque<LinkedValue> deque) {
     while (!deque.isEmpty()) {
       var value = deque.peek();
-      assertThat(deque.removeLastOccurrence(value), is(true));
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.removeLastOccurrence(value)).isTrue();
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "empty")
   public void removeAll_withEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.removeAll(List.of()), is(false));
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque.removeAll(List.of())).isFalse();
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "full")
   public void remove_withPopulated(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
-    assertThat(deque.removeAll(List.of(first)), is(true));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.removeAll(List.of(first))).isTrue();
+    assertThat(deque.contains(first)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void removeAll_toEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.removeAll(List.copyOf(deque)), is(true));
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque.removeAll(List.copyOf(deque))).isTrue();
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   /* --------------- Stack --------------- */
@@ -660,18 +657,18 @@ public final class LinkedDequeTest {
   public void push_whenEmpty(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(1);
     deque.push(value);
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(value));
-    assertThat(deque, hasSize(1));
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isSameInstanceAs(value);
+    assertThat(deque).hasSize(1);
   }
 
   @Test(dataProvider = "full")
   public void push_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var value = new LinkedValue(SIZE);
     deque.push(value);
-    assertThat(deque.peekFirst(), is(value));
-    assertThat(deque.peekLast(), is(not(value)));
-    assertThat(deque, hasSize(SIZE + 1));
+    assertThat(deque.peekFirst()).isSameInstanceAs(value);
+    assertThat(deque.peekLast()).isNotSameInstanceAs(value);
+    assertThat(deque).hasSize(SIZE + 1);
   }
 
   @Test(dataProvider = "full", expectedExceptions = IllegalArgumentException.class)
@@ -687,18 +684,18 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void pop_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
-    assertThat(deque.pop(), is(first));
-    assertThat(deque, hasSize(SIZE - 1));
-    assertThat(deque.contains(first), is(false));
+    assertThat(deque.pop()).isSameInstanceAs(first);
+    assertThat(deque.contains(first)).isFalse();
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void pop_toEmpty(LinkedDeque<LinkedValue> deque) {
     while (!deque.isEmpty()) {
       var value = deque.pop();
-      assertThat(deque.contains(value), is(false));
+      assertThat(deque.contains(value)).isFalse();
     }
-    assertThat(deque, is(deeplyEmpty()));
+    assertThat(deque).isExhaustivelyEmpty();
   }
 
   /* --------------- Iterators --------------- */
@@ -710,8 +707,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "empty")
   public void iterator_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.iterator().peek(), is(nullValue()));
-    assertThat(deque.iterator().hasNext(), is(false));
+    assertThat(deque.iterator().hasNext()).isFalse();
+    assertThat(deque.iterator().peek()).isNull();
   }
 
   @Test(dataProvider = "full")
@@ -719,8 +716,9 @@ public final class LinkedDequeTest {
     var expected = new ArrayList<LinkedValue>();
     populate(expected);
 
-    assertThat(deque.peek(), is(not(nullValue())));
-    assertThat(elementsEqual(deque.iterator(), expected.iterator()), is(true));
+    assertThat(deque.peek()).isNotNull();
+    assertThat(Iterators.size(deque.iterator())).isEqualTo(deque.size());
+    assertThat(elementsEqual(deque.iterator(), expected.iterator())).isTrue();
   }
 
   @Test(dataProvider = "full")
@@ -731,11 +729,11 @@ public final class LinkedDequeTest {
 
     int remaining = 0;
     while (iterator.hasNext()) {
-      assertThat(iterator.next(), is(not(value)));
+      assertThat(iterator.next()).isNotSameInstanceAs(value);
       remaining++;
     }
-    assertThat(remaining, is(SIZE - 1));
-    assertThat(deque, hasSize(SIZE - 1));
+    assertThat(remaining).isEqualTo(SIZE - 1);
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full", expectedExceptions = IllegalStateException.class)
@@ -753,8 +751,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "empty")
   public void descendingIterator_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.descendingIterator().peek(), is(nullValue()));
-    assertThat(deque.descendingIterator().hasNext(), is(false));
+    assertThat(deque.descendingIterator().hasNext()).isFalse();
+    assertThat(deque.descendingIterator().peek()).isNull();
   }
 
   @Test(dataProvider = "full")
@@ -763,8 +761,8 @@ public final class LinkedDequeTest {
     populate(expected);
     Collections.reverse(expected);
 
-    assertThat(deque.descendingIterator().peek(), is(not(nullValue())));
-    assertThat(elementsEqual(deque.descendingIterator(), expected.iterator()), is(true));
+    assertThat(deque.descendingIterator().peek()).isNotNull();
+    assertThat(elementsEqual(deque.descendingIterator(), expected.iterator())).isTrue();
   }
 
   @Test(dataProvider = "full")
@@ -775,11 +773,11 @@ public final class LinkedDequeTest {
 
     int remaining = 0;
     while (iterator.hasNext()) {
-      assertThat(iterator.next(), is(not(value)));
+      assertThat(iterator.next()).isNotEqualTo(value);
       remaining++;
     }
-    assertThat(remaining, is(SIZE - 1));
-    assertThat(deque, hasSize(SIZE - 1));
+    assertThat(remaining).isEqualTo(SIZE - 1);
+    assertThat(deque).hasSize(SIZE - 1);
   }
 
   @Test(dataProvider = "full")
@@ -788,7 +786,7 @@ public final class LinkedDequeTest {
         Iterators.concat(deque.iterator(), deque.descendingIterator()));
     Iterable<LinkedValue> actual = () -> PeekingIterator.concat(
         deque.iterator(), deque.descendingIterator());
-    assertThat(actual, contains(expect.toArray(LinkedValue[]::new)));
+    assertThat(actual).containsExactlyElementsIn(expect).inOrder();
   }
 
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
@@ -802,8 +800,8 @@ public final class LinkedDequeTest {
         Iterators.concat(deque.iterator(), deque.descendingIterator()));
     var actual = PeekingIterator.comparing(
         deque.iterator(), deque.descendingIterator(), (a, b) -> 1);
-    assertThat(actual.peek(), is(expect.get(0)));
-    assertThat((Iterable<LinkedValue>) () -> actual, contains(expect.toArray(new LinkedValue[0])));
+    assertThat(actual.peek()).isEqualTo(expect.get(0));
+    assertThat(ImmutableList.copyOf(actual)).containsExactlyElementsIn(expect).inOrder();
   }
 
   @Test(dataProvider = "full")
@@ -812,8 +810,8 @@ public final class LinkedDequeTest {
     var left = PeekingIterator.comparing(deque.iterator(), empty, (a, b) -> 1);
     var right = PeekingIterator.comparing(deque.iterator(), empty, (a, b) -> 1);
 
-    assertThat(left.peek(), is(deque.getFirst()));
-    assertThat(right.peek(), is(deque.getFirst()));
+    assertThat(left.peek()).isEqualTo(deque.getFirst());
+    assertThat(right.peek()).isEqualTo(deque.getFirst());
   }
 
   /* --------------- Deque providers --------------- */
@@ -842,69 +840,50 @@ public final class LinkedDequeTest {
   }
 
   static final class LinkedValue implements AccessOrder<LinkedValue>, WriteOrder<LinkedValue> {
+    final int value;
+
     LinkedValue prev;
     LinkedValue next;
-    final int value;
 
     LinkedValue(int value) {
       this.value = value;
     }
-
-    @Override
-    public LinkedValue getPreviousInAccessOrder() {
+    @Override public LinkedValue getPreviousInAccessOrder() {
       return prev;
     }
-
-    @Override
-    public void setPreviousInAccessOrder(LinkedValue prev) {
+    @Override public void setPreviousInAccessOrder(LinkedValue prev) {
       this.prev = prev;
     }
-
-    @Override
-    public LinkedValue getNextInAccessOrder() {
+    @Override public LinkedValue getNextInAccessOrder() {
       return next;
     }
-
-    @Override
-    public void setNextInAccessOrder(LinkedValue next) {
+    @Override public void setNextInAccessOrder(LinkedValue next) {
       this.next = next;
     }
-
-    @Override
-    public LinkedValue getPreviousInWriteOrder() {
+    @Override public LinkedValue getPreviousInWriteOrder() {
       return prev;
     }
-
-    @Override
-    public void setPreviousInWriteOrder(LinkedValue prev) {
+    @Override public void setPreviousInWriteOrder(LinkedValue prev) {
       this.prev = prev;
     }
-
-    @Override
-    public LinkedValue getNextInWriteOrder() {
+    @Override public LinkedValue getNextInWriteOrder() {
       return next;
     }
-
-    @Override
-    public void setNextInWriteOrder(LinkedValue next) {
+    @Override public void setNextInWriteOrder(LinkedValue next) {
       this.next = next;
     }
-
-    @Override
-    public boolean equals(Object o) {
+    @Override public boolean equals(Object o) {
       return (o instanceof LinkedValue) && (value == ((LinkedValue) o).value);
     }
-
-    @Override
-    public int hashCode() {
+    @Override public int hashCode() {
       return value;
     }
-
-    @Override
-    public String toString() {
-      return String.format("value=%s prev=%s, next=%s]", value,
-          (prev == null) ? null : prev.value,
-          (next == null) ? null : next.value);
+    @Override public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("value", value)
+          .add("prev", (prev == null) ? null : prev.value)
+          .add("next", (next == null) ? null : next.value)
+          .toString();
     }
   }
 }

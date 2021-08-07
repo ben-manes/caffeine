@@ -15,16 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static com.github.benmanes.caffeine.cache.IsValidAsyncCache.validAsyncCache;
-import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
-import static com.github.benmanes.caffeine.cache.IsValidMapView.validAsMap;
-import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
+import static com.github.benmanes.caffeine.cache.LocalCacheSubject.mapLocal;
+import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static com.google.common.truth.Truth.assertAbout;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static org.testng.ITestResult.FAILURE;
 
 import java.lang.reflect.Method;
@@ -51,7 +49,6 @@ import org.testng.TestRunner;
 import org.testng.internal.TestResult;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
@@ -62,7 +59,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -148,7 +144,11 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     boolean foundCache = findAndCheckCache(testResult);
     if (context != null) {
       if (!foundCache) {
-        assertThat(context.cache, is(validCache()));
+        if (context.cache != null) {
+          assertThat(context.cache).isValid();
+        } else if (context.asyncCache != null) {
+          assertThat(context.asyncCache).isValid();
+        }
       }
       checkNoStats(testResult, context);
       checkExecutor(testResult, context);
@@ -171,14 +171,14 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     boolean foundCache = false;
     for (Object param : testResult.getParameters()) {
       if (param instanceof Cache<?, ?>) {
+        assertThat((Cache<?, ?>) param).isValid();
         foundCache = true;
-        assertThat((Cache<?, ?>) param, is(validCache()));
-      } else if (param instanceof AsyncLoadingCache<?, ?>) {
+      } else if (param instanceof AsyncCache<?, ?>) {
+        assertThat((AsyncCache<?, ?>) param).isValid();
         foundCache = true;
-        assertThat((AsyncLoadingCache<?, ?>) param, is(validAsyncCache()));
       } else if (param instanceof Map<?, ?>) {
+        assertAbout(mapLocal()).that((Map<?, ?>) param).isValid();
         foundCache = true;
-        assertThat((Map<?, ?>) param, is(validAsMap()));
       }
     }
     return foundCache;
@@ -198,16 +198,16 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       return;
     }
 
-    assertThat("CacheContext required", context, is(not(nullValue())));
+    assertWithMessage("CacheContext required").that(context).isNotNull();
     if (!(context.executor() instanceof TrackingExecutor)) {
       return;
     }
 
     TrackingExecutor executor = (TrackingExecutor) context.executor();
     if (cacheSpec.executorFailure() == ExecutorFailure.EXPECTED) {
-      assertThat(executor.failed(), is(greaterThan(0)));
+      assertThat(executor.failed()).isGreaterThan(0);
     } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
-      assertThat(executor.failed(), is(0));
+      assertThat(executor.failed()).isEqualTo(0);
     }
   }
 
@@ -219,8 +219,8 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       return;
     }
 
-    assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
-    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
+    assertWithMessage("Test requires CacheContext param for validation").that(context).isNotNull();
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
   }
 
   /** Free memory by clearing unused resources after test execution. */
@@ -264,7 +264,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     for (Object param : testResult.getParameters()) {
       if (param instanceof CacheContext) {
         CacheContext context = (CacheContext) param;
-        if (context.implementation() == Implementation.Caffeine) {
+        if (context.isCaffeine()) {
           Reset.destroy(context.cache());
         }
       }

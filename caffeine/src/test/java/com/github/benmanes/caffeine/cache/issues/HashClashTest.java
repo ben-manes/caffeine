@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Set;
 import java.util.function.Function;
@@ -60,7 +58,7 @@ public final class HashClashTest {
 
     // add a hashcode clash for 1
     Long CLASH = (ITERS << 32) ^ ITERS ^ 1;
-    assertThat(CLASH.hashCode(), is(LONG_1.hashCode()));
+    assertThat(CLASH.hashCode()).isEqualTo(LONG_1.hashCode());
     cache.get(CLASH, Function.identity());
     printKeys(cache);
 
@@ -81,7 +79,7 @@ public final class HashClashTest {
     printKeys(cache);
     printStats(cache);
 
-    assertThat(cache.stats().hitRate(), is(greaterThan(0.99d)));
+    assertThat(cache.stats().hitRate()).isGreaterThan(0.99d);
   }
 
   static void printStats(Cache<Long, Long> cache) {

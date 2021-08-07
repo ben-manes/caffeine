@@ -33,7 +33,7 @@ import com.google.errorprone.annotations.Immutable;
  */
 @Immutable(containerOf = {"K", "V"})
 public final class RemovalNotification<K, V> extends SimpleImmutableEntry<K, V> {
-  private static final long serialVersionUID = 0;
+  private static final long serialVersionUID = 1L;
 
   private final RemovalCause cause;
 

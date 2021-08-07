@@ -15,34 +15,32 @@
  */
 package com.github.benmanes.caffeine.testing;
 
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeDiagnosingMatcher;
-import org.hamcrest.core.Is;
+import static com.google.common.truth.Truth.assertAbout;
+
+import com.google.common.truth.FailureMetadata;
+import com.google.common.truth.Subject;
 
 /**
- * A matcher that compares an {@link Int} to an {@link Integer}.
+ * Propositions for {@link Int} subjects.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class IsInt extends TypeSafeDiagnosingMatcher<Int> {
-  final Matcher<Int> matcher;
+public final class IntSubject extends Subject {
+  private static final Factory<IntSubject, Int> FACTORY = IntSubject::new;
 
-  IsInt(Matcher<Int> matcher) {
-    this.matcher = matcher;
+  private IntSubject(FailureMetadata metadata, Int subject) {
+    super(metadata, subject);
   }
 
-  @Override
-  public void describeTo(Description description) {
-    matcher.describeTo(description);
+  public static Factory<IntSubject, Int> integer() {
+    return FACTORY;
   }
 
-  @Override
-  protected boolean matchesSafely(Int value, Description description) {
-    return matcher.matches(value);
+  public static IntSubject assertThat(Int actual) {
+    return assertAbout(integer()).that(actual);
   }
 
-  public static IsInt isInt(int value) {
-    return new IsInt(Is.is(Int.valueOf(value)));
+  public void isEqualTo(int value) {
+    isEqualTo(Int.valueOf(value));
   }
 }

@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.sameInstance;
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -34,7 +32,6 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("deprecation")
 public final class StatsCounterTest {
 
   @Test
@@ -45,11 +42,11 @@ public final class StatsCounterTest {
     counter.recordEviction(1, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    assertThat(counter.snapshot(), is(CacheStats.of(0, 0, 0, 0, 0, 0, 0)));
-    assertThat(counter.toString(), is(CacheStats.of(0, 0, 0, 0, 0, 0, 0).toString()));
+    assertThat(counter.snapshot()).isEqualTo(CacheStats.of(0, 0, 0, 0, 0, 0, 0));
+    assertThat(counter.toString()).isEqualTo(CacheStats.of(0, 0, 0, 0, 0, 0, 0).toString());
 
     for (var type : DisabledStatsCounter.values()) {
-      assertThat(DisabledStatsCounter.valueOf(type.name()), is(counter));
+      assertThat(DisabledStatsCounter.valueOf(type.name())).isEqualTo(counter);
     }
   }
 
@@ -62,12 +59,12 @@ public final class StatsCounterTest {
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
     var expected = CacheStats.of(1, 1, 1, 1, 2, 1, 10);
-    assertThat(counter.snapshot(), is(expected));
-    assertThat(counter.toString(), is(expected.toString()));
-    assertThat(counter.snapshot().toString(), is(expected.toString()));
+    assertThat(counter.snapshot()).isEqualTo(expected);
+    assertThat(counter.toString()).isEqualTo(expected.toString());
+    assertThat(counter.snapshot().toString()).isEqualTo(expected.toString());
 
     counter.incrementBy(counter);
-    assertThat(counter.snapshot(), is(CacheStats.of(2, 2, 2, 2, 4, 2, 20)));
+    assertThat(counter.snapshot()).isEqualTo(CacheStats.of(2, 2, 2, 2, 4, 2, 20));
   }
 
   @Test
@@ -80,7 +77,7 @@ public final class StatsCounterTest {
       counter.recordLoadSuccess(1);
       counter.recordLoadFailure(1);
     });
-    assertThat(counter.snapshot(), is(CacheStats.of(5, 5, 5, 5, 10, 5, 50)));
+    assertThat(counter.snapshot()).isEqualTo(CacheStats.of(5, 5, 5, 5, 10, 5, 50));
   }
 
   @Test
@@ -92,15 +89,15 @@ public final class StatsCounterTest {
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
     var expected = CacheStats.of(1, 1, 1, 1, 2, 1, 10);
-    assertThat(counter.snapshot(), is(expected));
-    assertThat(counter.toString(), is(expected.toString()));
-    assertThat(counter.snapshot().toString(), is(expected.toString()));
+    assertThat(counter.snapshot()).isEqualTo(expected);
+    assertThat(counter.toString()).isEqualTo(expected.toString());
+    assertThat(counter.snapshot().toString()).isEqualTo(expected.toString());
   }
 
   @Test
   public void guarded_sameInstance() {
     var counter = StatsCounter.guardedStatsCounter(new ConcurrentStatsCounter());
-    assertThat(StatsCounter.guardedStatsCounter(counter), is(sameInstance(counter)));
+    assertThat(StatsCounter.guardedStatsCounter(counter)).isSameInstanceAs(counter);
   }
 
   @Test
@@ -119,7 +116,7 @@ public final class StatsCounterTest {
     guarded.recordEviction(10, RemovalCause.SIZE);
     guarded.recordLoadSuccess(1);
     guarded.recordLoadFailure(1);
-    assertThat(guarded.snapshot(), is(CacheStats.empty()));
+    assertThat(guarded.snapshot()).isEqualTo(CacheStats.empty());
 
     verify(statsCounter).recordHits(1);
     verify(statsCounter).recordMisses(1);
@@ -134,7 +131,7 @@ public final class StatsCounterTest {
     counter.recordLoadSuccess(Long.MAX_VALUE);
     counter.recordLoadSuccess(1);
     CacheStats stats = counter.snapshot();
-    assertThat(stats.totalLoadTime(), is(Long.MAX_VALUE));
+    assertThat(stats.totalLoadTime()).isEqualTo(Long.MAX_VALUE);
   }
 
   @Test
@@ -143,6 +140,6 @@ public final class StatsCounterTest {
     counter.recordLoadFailure(Long.MAX_VALUE);
     counter.recordLoadFailure(1);
     CacheStats stats = counter.snapshot();
-    assertThat(stats.totalLoadTime(), is(Long.MAX_VALUE));
+    assertThat(stats.totalLoadTime()).isEqualTo(Long.MAX_VALUE);
   }
 }

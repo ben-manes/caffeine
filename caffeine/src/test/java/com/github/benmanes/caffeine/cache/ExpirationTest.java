@@ -16,25 +16,17 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Pacer.TOLERANCE;
+import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
+import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
-import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
-import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
-import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
-import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.aMapWithSize;
-import static org.hamcrest.Matchers.anEmptyMap;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.both;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThan;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.base.Functions.identity;
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -72,9 +64,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
-import com.google.common.base.Functions;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Range;
 import com.google.common.util.concurrent.Futures;
 
 /**
@@ -98,12 +89,12 @@ public final class ExpirationTest {
     cache.put(context.absentKey(), context.absentValue());
     if (context.isZeroWeighted() && context.isGuava()) {
       // Guava translates to maximumSize=0, which won't evict
-      assertThat(cache.estimatedSize(), is(1L));
-      verifyListeners(context, verifier -> verifier.noInteractions());
+      assertThat(cache).hasSize(1);
+      assertThat(context).notifications().isEmpty();
     } else {
       runVariableExpiration(context);
-      assertThat(cache.estimatedSize(), is(0L));
-      verifyListeners(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPIRED));
+      assertThat(cache).isEmpty();
+      assertThat(context).notifications().withCause(EXPIRED).hasSize(1).exclusively();
     }
   }
 
@@ -124,19 +115,19 @@ public final class ExpirationTest {
 
     long minError = TimeUnit.MINUTES.toNanos(1) - TOLERANCE;
     long maxError = TimeUnit.MINUTES.toNanos(1) + TOLERANCE;
-    assertThat(delay.getValue(), is(both(greaterThan(minError)).and(lessThan(maxError))));
+    assertThat(delay.getValue()).isIn(Range.closed(minError, maxError));
 
     context.ticker().advance(delay.getValue());
     task.getValue().run();
 
     if (context.expiresVariably()) {
       // scheduled a timerWheel cascade, run next schedule
-      assertThat(delay.getAllValues(), hasSize(2));
+      assertThat(delay.getAllValues()).hasSize(2);
       context.ticker().advance(delay.getValue());
       task.getValue().run();
     }
 
-    assertThat(cache.asMap(), is(anEmptyMap()));
+    assertThat(cache).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -205,9 +196,9 @@ public final class ExpirationTest {
     }
 
     var maxExpirationPeriod = Duration.ofNanos(context.expiryTime().timeNanos() + Pacer.TOLERANCE);
-    assertThat(actualExpirationPeriods.get(key1), is(lessThanOrEqualTo(maxExpirationPeriod)));
-    assertThat(actualExpirationPeriods.get(key2), is(lessThanOrEqualTo(maxExpirationPeriod)));
-    assertThat(actualExpirationPeriods, is(aMapWithSize(original.size())));
+    assertThat(actualExpirationPeriods.get(key1)).isAtMost(maxExpirationPeriod);
+    assertThat(actualExpirationPeriods.get(key2)).isAtMost(maxExpirationPeriod);
+    assertThat(actualExpirationPeriods).hasSize(original.size());
   }
 
   /* --------------- Cache --------------- */
@@ -225,8 +216,8 @@ public final class ExpirationTest {
       context.ticker().advance(5, TimeUnit.MINUTES);
       return value;
     });
-    assertThat(cache.estimatedSize(), is(1L));
-    assertThat(cache.getIfPresent(key), is(value));
+    assertThat(cache).hasSize(1);
+    assertThat(cache).containsEntry(key, value);
   }
 
   @Test(dataProvider = "caches")
@@ -241,8 +232,8 @@ public final class ExpirationTest {
 
     runVariableExpiration(context);
     long count = context.initialSize();
-    assertThat(cache.estimatedSize(), is(1L));
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(cache).hasSize(1);
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -256,20 +247,17 @@ public final class ExpirationTest {
 
     cache.put(context.firstKey(), context.absentValue());
     cache.put(context.absentKey(), context.absentValue());
-    context.removalNotifications().clear(); // Ignore replacement notification
+    context.clearRemovalNotifications(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.firstKey()), is(context.absentValue()));
-    assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
-    assertThat(cache.getIfPresent(context.middleKey()), is(nullValue()));
-    assertThat(cache.estimatedSize(), is(2L));
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(cache).doesNotContainKey(context.middleKey());
 
-    if (context.isGuava()) {
-      cache.cleanUp();
-    }
-
+    cache.cleanUp();
+    assertThat(cache).hasSize(2);
     long count = context.initialSize() - 1;
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -284,8 +272,8 @@ public final class ExpirationTest {
         context.middleKey(), context.absentValue(), context.lastKey(), context.absentValue()));
 
     long count = context.initialSize();
-    assertThat(cache.estimatedSize(), is(3L));
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(cache).hasSize(3);
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -300,20 +288,17 @@ public final class ExpirationTest {
     cache.putAll(Map.of(
         context.firstKey(), context.absentValue(),
         context.absentKey(), context.absentValue()));
-    context.removalNotifications().clear(); // Ignore replacement notification
+    context.clearRemovalNotifications(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.firstKey()), is(context.absentValue()));
-    assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
-    assertThat(cache.getIfPresent(context.middleKey()), is(nullValue()));
-    assertThat(cache.estimatedSize(), is(2L));
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(cache).doesNotContainKey(context.middleKey());
 
-    if (context.isGuava()) {
-      cache.cleanUp();
-    }
-
+    cache.cleanUp();
+    assertThat(cache).hasSize(2);
     long count = context.initialSize() - 1;
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -327,7 +312,7 @@ public final class ExpirationTest {
     cache.invalidate(context.firstKey());
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -341,7 +326,7 @@ public final class ExpirationTest {
     cache.invalidateAll(context.firstMiddleLastKeys());
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -355,7 +340,7 @@ public final class ExpirationTest {
     cache.invalidateAll();
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -367,7 +352,7 @@ public final class ExpirationTest {
       expiryTime = Expire.ONE_MINUTE)
   public void estimatedSize(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(cache.estimatedSize(), is(context.initialSize()));
+    assertThat(cache).hasSize(context.initialSize());
   }
 
   @Test(dataProvider = "caches")
@@ -381,9 +366,9 @@ public final class ExpirationTest {
     context.ticker().advance(1, TimeUnit.MINUTES);
     cache.cleanUp();
 
+    assertThat(cache).isEmpty();
     long count = context.initialSize();
-    assertThat(cache.estimatedSize(), is(0L));
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   /* --------------- LoadingCache --------------- */
@@ -397,31 +382,31 @@ public final class ExpirationTest {
   public void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
     Int key = context.firstKey();
-    cache.refresh(key).join();
+    assertThat(cache.refresh(key)).succeedsWith(key);
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
-  /* --------------- AsyncLoadingCache --------------- */
+  /* --------------- AsyncCache --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
+  @CacheSpec(population = Population.FULL,
       removalListener = Listener.CONSUMING, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void get(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void get(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(2, TimeUnit.MINUTES);
 
-    cache.get(context.firstKey());
+    cache.get(context.firstKey(), k -> k);
     cache.get(context.middleKey(), k -> context.absentValue());
     cache.get(context.lastKey(), (k, executor) -> context.absentValue().asFuture());
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -430,7 +415,7 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE },
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void get_writeTime(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void get_writeTime(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     Int value = context.absentValue();
 
@@ -438,8 +423,8 @@ public final class ExpirationTest {
       context.ticker().advance(5, TimeUnit.MINUTES);
       return value;
     });
-    assertThat(cache.synchronous().estimatedSize(), is(1L));
-    assertThat(cache.getIfPresent(key), futureOf(value));
+    assertThat(cache).hasSize(1);
+    assertThat(cache).containsEntry(key, value);
   }
 
   @Test(dataProvider = "caches")
@@ -449,22 +434,22 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void get_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void get_async(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();
     cache.get(context.absentKey(), (k, e) -> future);
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.synchronous().cleanUp();
 
-    verifyRemovalListener(context, verifier -> verifier.noInteractions());
+    assertThat(context).removalNotifications().isEmpty();
     future.complete(context.absentValue());
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.absentKey()), is(future));
+    assertThat(cache).containsEntry(context.absentKey(), future);
 
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(cache).doesNotContainKey(context.absentKey());
 
     cache.synchronous().cleanUp();
-    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPIRED));
+    assertThat(context).removalNotifications().withCause(EXPIRED).hasSize(1).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -472,17 +457,18 @@ public final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expiryTime = Expire.ONE_MINUTE, loader = {Loader.BULK_IDENTITY})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void getAll(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void getAll(AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     context.ticker().advance(1, TimeUnit.MINUTES);
-    cache.getAll(context.firstMiddleLastKeys());
-    assertThat(cache.getAll(keys).join(), is(Maps.uniqueIndex(keys, Functions.identity())));
+    cache.getAll(context.firstMiddleLastKeys(), keysToLoad -> Maps.asMap(keysToLoad, identity()));
+    var expectedMap = Maps.asMap(keys, identity());
+    assertThat(cache.getAll(keys, keysToLoad -> Maps.asMap(keysToLoad, identity())).join())
+        .containsExactlyEntriesIn(expectedMap).inOrder();
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -491,14 +477,14 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
-  public void put_insert(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void put_insert(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
     cache.put(context.firstKey(), CacheContext.intern(context.absentValue().asFuture()));
 
     runVariableExpiration(context);
+    assertThat(cache).hasSize(1);
     long count = context.initialSize();
-    assertThat(cache.synchronous().estimatedSize(), is(1L));
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -508,22 +494,22 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void put_insert_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void put_insert_async(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.synchronous().cleanUp();
 
-    verifyRemovalListener(context, verifier -> verifier.noInteractions());
+    assertThat(context).removalNotifications().isEmpty();
     future.complete(context.absentValue());
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.absentKey()), is(future));
+    assertThat(cache).containsEntry(context.absentKey(), future);
 
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(cache).doesNotContainKey(context.absentKey());
 
     cache.synchronous().cleanUp();
-    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPIRED));
+    assertThat(context).removalNotifications().withCause(EXPIRED).hasSize(1).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -532,22 +518,23 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
-  public void put_replace(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void put_replace(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = context.absentValue().asFuture();
     context.ticker().advance(30, TimeUnit.SECONDS);
 
     cache.put(context.firstKey(), future);
     cache.put(context.absentKey(), future);
-    context.removalNotifications().clear(); // Ignore replacement notification
+    context.clearRemovalNotifications(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.firstKey()), is(futureOf(context.absentValue())));
-    assertThat(cache.getIfPresent(context.absentKey()), is(futureOf(context.absentValue())));
-    assertThat(cache.getIfPresent(context.middleKey()), is(nullValue()));
-    assertThat(cache.synchronous().estimatedSize(), is(2L));
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(cache).doesNotContainKey(context.middleKey());
 
+    cache.synchronous().cleanUp();
+    assertThat(cache).hasSize(2);
     long count = context.initialSize() - 1;
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   /* --------------- Map --------------- */
@@ -560,7 +547,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void isEmpty(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.isEmpty(), is(false));
+    assertThat(map.isEmpty()).isFalse();
   }
 
   @Test(dataProvider = "caches")
@@ -571,7 +558,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void size(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size()).isEqualTo(context.original().size());
   }
 
   @Test(dataProvider = "caches")
@@ -582,7 +569,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void containsKey(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.containsKey(context.firstKey()), is(false));
+    assertThat(map.containsKey(context.firstKey())).isFalse();
   }
 
   @Test(dataProvider = "caches")
@@ -593,7 +580,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void containsValue(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.containsValue(context.original().get(context.firstKey())), is(false));
+    assertThat(map.containsValue(context.original().get(context.firstKey()))).isFalse();
   }
 
   @Test(dataProvider = "caches")
@@ -607,7 +594,7 @@ public final class ExpirationTest {
     map.clear();
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -618,11 +605,11 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_insert(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.put(context.firstKey(), context.absentValue()), is(nullValue()));
+    assertThat(map.put(context.firstKey(), context.absentValue())).isNull();
 
+    assertThat(map).hasSize(1);
     long count = context.initialSize();
-    assertThat(map.size(), is(1));
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -634,22 +621,19 @@ public final class ExpirationTest {
   public void put_replace(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
 
-    assertThat(map.put(context.firstKey(), context.absentValue()), is(not(nullValue())));
-    assertThat(map.put(context.absentKey(), context.absentValue()), is(nullValue()));
-    context.removalNotifications().clear(); // Ignore replacement notification
+    assertThat(map.put(context.firstKey(), context.absentValue())).isNotNull();
+    assertThat(map.put(context.absentKey(), context.absentValue())).isNull();
+    context.clearRemovalNotifications(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(map.get(context.firstKey()), is(context.absentValue()));
-    assertThat(map.get(context.absentKey()), is(context.absentValue()));
-    assertThat(map.get(context.middleKey()), is(nullValue()));
-    assertThat(map.size(), is(2));
+    assertThat(map).containsEntry(context.firstKey(), context.absentValue());
+    assertThat(map).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(map).doesNotContainKey(context.middleKey());
 
-    if (context.isGuava()) {
-      context.cleanUp();
-    }
-
+    context.cleanUp();
+    assertThat(map).hasSize(2);
     long count = context.initialSize() - 1;
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -660,14 +644,14 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void replace(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(60, TimeUnit.SECONDS);
-    assertThat(map.replace(context.firstKey(), context.absentValue()), is(nullValue()));
+    assertThat(map.replace(context.firstKey(), context.absentValue())).isNull();
 
     if (!map.isEmpty()) {
       context.cleanUp();
     }
-    assertThat(map.size(), is(0));
+    assertThat(map).isExhaustivelyEmpty();
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -678,11 +662,11 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void replace_updated(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(map.replace(context.firstKey(), context.absentValue()), is(not(nullValue())));
+    assertThat(map.replace(context.firstKey(), context.absentValue())).isNotNull();
     context.ticker().advance(30, TimeUnit.SECONDS);
 
     context.cleanUp();
-    assertThat(map.size(), is(1));
+    assertThat(map).hasSize(1);
   }
 
   @Test(dataProvider = "caches")
@@ -694,14 +678,14 @@ public final class ExpirationTest {
   public void replaceConditionally(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(60, TimeUnit.SECONDS);
-    assertThat(map.replace(key, context.original().get(key), context.absentValue()), is(false));
+    assertThat(map.replace(key, context.original().get(key), context.absentValue())).isFalse();
 
     if (!map.isEmpty()) {
       context.cleanUp();
     }
-    assertThat(map.size(), is(0));
+    assertThat(map).isExhaustivelyEmpty();
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -713,11 +697,11 @@ public final class ExpirationTest {
   public void replaceConditionally_updated(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(map.replace(key, context.original().get(key), context.absentValue()), is(true));
+    assertThat(map.replace(key, context.original().get(key), context.absentValue())).isTrue();
     context.ticker().advance(30, TimeUnit.SECONDS);
 
     context.cleanUp();
-    assertThat(map.size(), is(1));
+    assertThat(map).hasSize(1);
   }
 
   @Test(dataProvider = "caches")
@@ -728,10 +712,10 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void remove(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.remove(context.firstKey()), is(nullValue()));
+    assertThat(map.remove(context.firstKey())).isNull();
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -743,10 +727,10 @@ public final class ExpirationTest {
   public void removeConditionally(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.remove(key, context.original().get(key)), is(false));
+    assertThat(map.remove(key, context.original().get(key))).isFalse();
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -758,11 +742,12 @@ public final class ExpirationTest {
   public void computeIfAbsent(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.computeIfAbsent(key, k -> context.absentValue()), is(context.absentValue()));
+    var result = map.computeIfAbsent(key, k -> context.absentValue());
+    assertThat(result).isEqualTo(context.absentValue());
 
-    assertThat(map.size(), is(1));
+    assertThat(map).hasSize(1);
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -778,8 +763,8 @@ public final class ExpirationTest {
       context.ticker().advance(5, TimeUnit.MINUTES);
       return value;
     });
-    assertThat(map.size(), is(1));
-    assertThat(map.containsKey(key), is(true));
+    assertThat(map).hasSize(1);
+    assertThat(map).containsKey(key);
   }
 
   @Test(dataProvider = "caches")
@@ -792,15 +777,15 @@ public final class ExpirationTest {
     Int key = context.firstKey();
     Int value = context.absentValue();
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.computeIfPresent(key, (k, v) -> value), is(nullValue()));
+    assertThat(map.computeIfPresent(key, (k, v) -> value)).isNull();
 
-    assertThat(map.size(), is(0));
+    assertThat(map).isExhaustivelyEmpty();
     if (context.isGuava()) {
       context.cleanUp();
     }
 
     long count = context.initialSize();
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -817,8 +802,8 @@ public final class ExpirationTest {
       return value;
     });
     context.cleanUp();
-    assertThat(map.size(), is(1));
-    assertThat(map.containsKey(key), is(true));
+    assertThat(map).hasSize(1);
+    assertThat(map).containsKey(key);
   }
 
   @Test(dataProvider = "caches")
@@ -832,12 +817,12 @@ public final class ExpirationTest {
     Int value = context.absentValue();
     context.ticker().advance(1, TimeUnit.MINUTES);
     assertThat(map.compute(key, (k, v) -> {
-      assertThat(v, is(nullValue()));
+      assertThat(v).isNull();
       return value;
-    }), is(value));
+    })).isEqualTo(value);
 
     long count = context.initialSize() - map.size() + 1;
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -854,8 +839,8 @@ public final class ExpirationTest {
       return value;
     });
     context.cleanUp();
-    assertThat(map.size(), is(1));
-    assertThat(map.containsKey(key), is(true));
+    assertThat(map).hasSize(1);
+    assertThat(map).containsKey(key);
   }
 
   @Test(dataProvider = "caches")
@@ -870,10 +855,10 @@ public final class ExpirationTest {
     context.ticker().advance(1, TimeUnit.MINUTES);
     assertThat(map.merge(key, value, (oldValue, v) -> {
       throw new AssertionError("Should never be called");
-    }), is(value));
+    })).isEqualTo(value);
 
     long count = context.initialSize() - map.size() + 1;
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -890,8 +875,8 @@ public final class ExpirationTest {
       return value;
     });
     context.cleanUp();
-    assertThat(map.size(), is(1));
-    assertThat(map.containsKey(key), is(true));
+    assertThat(map).hasSize(1);
+    assertThat(map).containsKey(key);
   }
 
   @Test(dataProvider = "caches")
@@ -902,9 +887,9 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void iterators(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(Iterators.size(map.keySet().iterator()), is(0));
-    assertThat(Iterators.size(map.values().iterator()), is(0));
-    assertThat(Iterators.size(map.entrySet().iterator()), is(0));
+    assertThat(map.keySet().iterator().hasNext()).isFalse();
+    assertThat(map.values().iterator().hasNext()).isFalse();
+    assertThat(map.entrySet().iterator().hasNext()).isFalse();
   }
 
   /* --------------- Weights --------------- */
@@ -923,9 +908,7 @@ public final class ExpirationTest {
 
     var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
     cache.asMap().putIfAbsent(context.absentKey(), newValue);
-
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
-        is((long) context.absent().size()));
+    assertThat(cache).hasWeightedSize(context.absent().size());
   }
 
   @Test(dataProvider = "caches")
@@ -938,15 +921,14 @@ public final class ExpirationTest {
   public void put_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     var value = CacheContext.intern(List.of(context.absentValue()));
     cache.put(context.absentKey(), value);
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(1L));
+    assertThat(cache).hasWeightedSize(1);
 
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(1L));
+    assertThat(cache).hasWeightedSize(1);
 
     var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
     cache.put(context.absentKey(), newValue);
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
-        is((long) context.absent().size()));
+    assertThat(cache).hasWeightedSize(context.absent().size());
   }
 
   @Test(dataProvider = "caches")
@@ -963,9 +945,7 @@ public final class ExpirationTest {
 
     var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
     cache.asMap().computeIfAbsent(context.absentKey(), k -> newValue);
-
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
-        is((long) context.absent().size()));
+    assertThat(cache).hasWeightedSize(context.absent().size());
   }
 
   @Test(dataProvider = "caches")
@@ -982,9 +962,7 @@ public final class ExpirationTest {
 
     var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
     cache.asMap().compute(context.absentKey(), (k, v) -> newValue);
-
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
-        is((long) context.absent().size()));
+    assertThat(cache).hasWeightedSize(context.absent().size());
   }
 
   @Test(dataProvider = "caches")
@@ -1002,9 +980,7 @@ public final class ExpirationTest {
     var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
     cache.asMap().merge(context.absentKey(), newValue,
         (oldValue, v) -> { throw new AssertionError("Should never be called"); });
-
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
-        is((long) context.absent().size()));
+    assertThat(cache).hasWeightedSize(context.absent().size());
   }
 
   @Test(dataProvider = "caches")
@@ -1015,8 +991,9 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
   public void keySetToArray(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(2 * context.expiryTime().timeNanos(), TimeUnit.NANOSECONDS);
-    assertThat(map.keySet().toArray(new Int[0]), arrayWithSize(0));
-    assertThat(map.keySet().toArray(), arrayWithSize(0));
+    assertThat(map.keySet().toArray(new Int[0])).isEmpty();
+    assertThat(map.keySet().toArray(Int[]::new)).isEmpty();
+    assertThat(map.keySet().toArray()).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -1029,10 +1006,10 @@ public final class ExpirationTest {
       implementation = Implementation.Caffeine)
   public void keySet_iterator(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(10, TimeUnit.MINUTES);
-    assertThat(map.keySet().iterator().hasNext(), is(false));
-    assertThat(map, is(emptyMap()));
-    verifyRemovalListener(context, verifier ->
-        verifier.hasOnly(context.initialSize(), RemovalCause.EXPIRED));
+    assertThat(map.keySet().iterator().hasNext()).isFalse();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPIRED)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -1043,8 +1020,9 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
   public void valuesToArray(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(2 * context.expiryTime().timeNanos(), TimeUnit.NANOSECONDS);
-    assertThat(map.values().toArray(new Int[0]), arrayWithSize(0));
-    assertThat(map.values().toArray(), arrayWithSize(0));
+    assertThat(map.values().toArray(new Int[0])).isEmpty();
+    assertThat(map.values().toArray(Int[]::new)).isEmpty();
+    assertThat(map.values().toArray()).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -1057,10 +1035,10 @@ public final class ExpirationTest {
       implementation = Implementation.Caffeine)
   public void values_iterator(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(10, TimeUnit.MINUTES);
-    assertThat(map.values().iterator().hasNext(), is(false));
-    assertThat(map, is(emptyMap()));
-    verifyRemovalListener(context, verifier ->
-        verifier.hasOnly(context.initialSize(), RemovalCause.EXPIRED));
+    assertThat(map.values().iterator().hasNext()).isFalse();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPIRED)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -1071,8 +1049,9 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
   public void entrySetToArray(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(2 * context.expiryTime().timeNanos(), TimeUnit.NANOSECONDS);
-    assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0]), arrayWithSize(0));
-    assertThat(map.entrySet().toArray(), arrayWithSize(0));
+    assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0])).isEmpty();
+    assertThat(map.entrySet().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
+    assertThat(map.entrySet().toArray()).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -1085,10 +1064,10 @@ public final class ExpirationTest {
       implementation = Implementation.Caffeine)
   public void entrySet_iterator(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(10, TimeUnit.MINUTES);
-    assertThat(map.keySet().iterator().hasNext(), is(false));
-    assertThat(map, is(emptyMap()));
-    verifyRemovalListener(context, verifier ->
-        verifier.hasOnly(context.initialSize(), RemovalCause.EXPIRED));
+    assertThat(map.keySet().iterator().hasNext()).isFalse();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPIRED)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   /**
@@ -1113,8 +1092,8 @@ public final class ExpirationTest {
     expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
     expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void getIfPresentQuietly_expired(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.policy().getIfPresentQuietly(context.firstKey()), is(not(nullValue())));
+    assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNotNull();
     context.ticker().advance(10, TimeUnit.MINUTES);
-    assertThat(cache.policy().getIfPresentQuietly(context.firstKey()), is(nullValue()));
+    assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNull();
   }
 }

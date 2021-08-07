@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
@@ -28,7 +27,6 @@ import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryRemovedListener;
 
@@ -68,12 +66,11 @@ public class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
     CacheEntryRemovedListener<Integer, Integer> listener = events -> removed.incrementAndGet();
 
-    CaffeineConfiguration<Integer, Integer> configuration = new CaffeineConfiguration<>();
+    var configuration = new CaffeineConfiguration<Integer, Integer>();
 
     configuration.setMaximumSize(OptionalLong.of(MAXIMUM));
-    CacheEntryListenerConfiguration<Integer, Integer> listenerConfiguration =
-        new MutableCacheEntryListenerConfiguration<>(() -> listener,
-            /* filterFactory */ null, /* isOldValueRequired */ false, /* isSynchronous */ true);
+    var listenerConfiguration = new MutableCacheEntryListenerConfiguration<>(() -> listener,
+        /* filterFactory */ null, /* isOldValueRequired */ false, /* isSynchronous */ true);
     configuration.addCacheEntryListenerConfiguration(listenerConfiguration);
     configuration.setExecutorFactory(MoreExecutors::directExecutor);
 
@@ -100,6 +97,6 @@ public class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
     for (int i = 0; i < 2 * MAXIMUM; i++) {
       jcache.put(i, i);
     }
-    assertThat(removed.get(), is(MAXIMUM));
+    assertThat(removed.get()).isEqualTo(MAXIMUM);
   }
 }

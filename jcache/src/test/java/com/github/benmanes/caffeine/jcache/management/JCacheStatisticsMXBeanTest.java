@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.management;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.testng.annotations.Test;
 
@@ -38,13 +37,13 @@ public final class JCacheStatisticsMXBeanTest {
     stats.recordRemoveTime(1);
 
     stats.clear();
-    assertThat(stats.getCacheHits(), is(0L));
-    assertThat(stats.getCacheMisses(), is(0L));
-    assertThat(stats.getCachePuts(), is(0L));
-    assertThat(stats.getCacheRemovals(), is(0L));
-    assertThat(stats.getCacheEvictions(), is(0L));
-    assertThat(stats.getAverageGetTime(), is(0F));
-    assertThat(stats.getAveragePutTime(), is(0F));
-    assertThat(stats.getAverageRemoveTime(), is(0F));
+    assertThat(stats.getCacheHits()).isEqualTo(0L);
+    assertThat(stats.getCacheMisses()).isEqualTo(0L);
+    assertThat(stats.getCachePuts()).isEqualTo(0L);
+    assertThat(stats.getCacheRemovals()).isEqualTo(0L);
+    assertThat(stats.getCacheEvictions()).isEqualTo(0L);
+    assertThat(stats.getAverageGetTime()).isEqualTo(0F);
+    assertThat(stats.getAveragePutTime()).isEqualTo(0F);
+    assertThat(stats.getAverageRemoveTime()).isEqualTo(0F);
   }
 }

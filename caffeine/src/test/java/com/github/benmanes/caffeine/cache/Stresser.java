@@ -21,7 +21,6 @@ import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -69,7 +68,7 @@ public final class Stresser {
 
   @SuppressWarnings("FutureReturnValueIgnored")
   public Stresser() {
-    ThreadFactory threadFactory = new ThreadFactoryBuilder()
+    var threadFactory = new ThreadFactoryBuilder()
         .setPriority(Thread.MAX_PRIORITY)
         .setDaemon(true)
         .build();
@@ -122,7 +121,7 @@ public final class Stresser {
       local.evictionLock.unlock();
     }
 
-    LocalTime elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(TimeUnit.SECONDS));
+    var elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(TimeUnit.SECONDS));
     System.out.printf("---------- %s ----------%n", elapsedTime);
     System.out.printf("Pending reads: %,d; writes: %,d%n", local.readBuffer.size(), pendingWrites);
     System.out.printf("Drain status = %s (%s)%n", STATUS[drainStatus], drainStatus);

@@ -59,8 +59,15 @@ subprojects {
   sourceCompatibility = JavaVersion.VERSION_11
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
 
+  configurations {
+    all {
+      exclude group: 'org.hamcrest', module: 'hamcrest-core'
+    }
+  }
+
   dependencies {
     testImplementation libraries.guava
+    testImplementation testLibraries.truth
     testImplementation testLibraries.mockito
     testImplementation testLibraries.hamcrest
     testImplementation testLibraries.awaitility

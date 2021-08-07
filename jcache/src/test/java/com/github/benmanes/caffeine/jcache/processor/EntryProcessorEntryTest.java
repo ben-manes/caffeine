@@ -15,11 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.processor;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasToString;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.sameInstance;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 import java.util.Optional;
@@ -43,21 +39,21 @@ public final class EntryProcessorEntryTest {
 
   @Test
   public void unwrap() {
-    assertThat(entry.unwrap(Cache.Entry.class), sameInstance(entry));
+    assertThat(entry.unwrap(Cache.Entry.class)).isSameInstanceAs(entry);
   }
 
   @Test
   public void equals() {
-    assertThat(entry, is(equalTo(entry)));
+    assertThat(entry.equals(entry)).isTrue();
   }
 
   @Test
   public void hash() {
-    assertThat(entry.hashCode(), is(entry.hashCode()));
+    assertThat(entry.hashCode()).isEqualTo(entry.hashCode());
   }
 
   @Test
   public void string() {
-    assertThat(entry, hasToString(Maps.immutableEntry(1, 2).toString()));
+    assertThat(entry.toString()).isEqualTo(Maps.immutableEntry(1, 2).toString());
   }
 }

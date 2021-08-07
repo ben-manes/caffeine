@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.caffeine.testing;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 import static org.testng.Assert.fail;
 
 import java.util.ArrayList;
@@ -30,7 +28,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -61,17 +58,16 @@ public final class Threads {
   private Threads() {}
 
   public static <A> void runTest(A collection, List<BiConsumer<A, Int>> operations) {
-    Queue<String> failures = new ConcurrentLinkedQueue<>();
-    Runnable thrasher = new Thrasher<A>(collection, failures, operations);
+    var failures = new ConcurrentLinkedQueue<String>();
+    var thrasher = new Thrasher<A>(collection, failures, operations);
     Threads.executeWithTimeOut(failures, () ->
         ConcurrentTestHarness.timeTasks(Threads.NTHREADS, thrasher));
-    assertThat(failures, is(empty()));
+    assertThat(failures).isEmpty();
   }
 
   public static void executeWithTimeOut(Queue<String> failures, Callable<Long> task) {
-    ExecutorService es = Executors.newSingleThreadExecutor(
-        new ThreadFactoryBuilder().setDaemon(true).build());
-    Future<Long> future = es.submit(task);
+    var es = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
+    var future = es.submit(task);
     try {
       long timeNS = future.get(TIMEOUT, TimeUnit.SECONDS);
       logger.debug("\nExecuted in " + TimeUnit.NANOSECONDS.toSeconds(timeNS) + " second(s)");
@@ -85,8 +81,8 @@ public final class Threads {
   }
 
   public static void handleTimout(Queue<String> failures, ExecutorService es, TimeoutException e) {
-    for (StackTraceElement[] trace : Thread.getAllStackTraces().values()) {
-      for (StackTraceElement element : trace) {
+    for (var trace : Thread.getAllStackTraces().values()) {
+      for (var element : trace) {
         logger.info("\tat " + element);
       }
       if (trace.length > 0) {
@@ -101,7 +97,7 @@ public final class Threads {
   }
 
   public static List<List<Int>> workingSets(int nThreads, int iterations) {
-    List<Int> keys = IntStream.range(0, iterations)
+    var keys = IntStream.range(0, iterations)
         .map(i -> ThreadLocalRandom.current().nextInt(iterations / 100))
         .mapToObj(Int::valueOf)
         .collect(Collectors.toList());
@@ -115,9 +111,9 @@ public final class Threads {
    * @param baseline the base working set to build from
    */
   private static <T> List<List<T>> shuffle(int samples, Collection<T> baseline) {
-    List<List<T>> workingSets = new ArrayList<>(samples);
+    var workingSets = new ArrayList<List<T>>(samples);
     for (int i = 0; i < samples; i++) {
-      List<T> workingSet = new ArrayList<>(baseline);
+      var workingSet = new ArrayList<T>(baseline);
       Collections.shuffle(workingSet);
       workingSets.add(ImmutableList.copyOf(workingSet));
     }
@@ -144,8 +140,7 @@ public final class Threads {
     public void run() {
       int id = index.getAndIncrement();
       for (Int e : sets.get(id)) {
-        BiConsumer<A, Int> operation = operations.get(
-            ThreadLocalRandom.current().nextInt(operations.size()));
+        var operation = operations.get(ThreadLocalRandom.current().nextInt(operations.size()));
         try {
           operation.accept(collection, e);
         } catch (Throwable t) {

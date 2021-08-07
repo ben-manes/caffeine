@@ -13,8 +13,7 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.sameInstance;
+import static com.google.common.truth.Truth.assertThat;
 
 import javax.cache.Cache;
 
@@ -39,9 +38,9 @@ public final class CacheProxyTest extends AbstractJCacheTest {
 
   @Test
   public void unwrap() {
-    assertThat(jcache.unwrap(Cache.class), sameInstance(jcache));
-    assertThat(jcache.unwrap(CacheProxy.class), sameInstance(jcache));
-    assertThat(jcache.unwrap(com.github.benmanes.caffeine.cache.Cache.class),
-        sameInstance(jcache.cache));
+    assertThat(jcache.unwrap(Cache.class)).isSameInstanceAs(jcache);
+    assertThat(jcache.unwrap(CacheProxy.class)).isSameInstanceAs(jcache);
+    assertThat(jcache.unwrap(com.github.benmanes.caffeine.cache.Cache.class))
+        .isSameInstanceAs(jcache.cache);
   }
 }

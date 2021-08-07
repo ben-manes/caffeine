@@ -15,10 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.copy;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.sameInstance;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.io.UncheckedIOException;
@@ -62,21 +59,21 @@ public final class JavaSerializationCopierTest {
 
   @Test(dataProvider = "copier")
   public void mutable(Copier copier) {
-    List<Integer> ints = new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4));
-    assertThat(copy(copier, ints), is(equalTo(ints)));
+    var ints = new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4));
+    assertThat(copy(copier, ints)).containsExactlyElementsIn(ints).inOrder();
   }
 
   @Test
   public void immutable() {
     String text = "test";
-    assertThat(copy(new JavaSerializationCopier(), text), is(sameInstance(text)));
+    assertThat(copy(new JavaSerializationCopier(), text)).isSameInstanceAs(text);
   }
 
   @Test(dataProvider = "copier")
-  @SuppressWarnings({"JdkObsolete", "JavaUtilDate"})
+  @SuppressWarnings({"JdkObsolete", "JavaUtilDate", "UndefinedEquals"})
   public void deepCopy_date(Copier copier) {
     Date date = new Date();
-    assertThat(copy(copier, date), is(equalTo(date)));
+    assertThat(copy(copier, date)).isEqualTo(date);
   }
 
   @Test(dataProvider = "copier")
@@ -84,25 +81,25 @@ public final class JavaSerializationCopierTest {
   public void deepCopy_calendar(Copier copier) {
     Calendar calendar = Calendar.getInstance();
     calendar.setTime(new Date());
-    assertThat(copy(copier, calendar), is(equalTo(calendar)));
+    assertThat(copy(copier, calendar)).isEqualTo(calendar);
   }
 
   @Test(dataProvider = "copier")
   public void array_primitive(Copier copier) {
     int[] ints = { 0, 1, 2, 3, 4 };
-    assertThat(copy(copier, ints), is(equalTo(ints)));
+    assertThat(copy(copier, ints)).isEqualTo(ints);
   }
 
   @Test(dataProvider = "copier")
   public void array_immutable(Copier copier) {
     Integer[] ints = { 0, 1, 2, 3, 4 };
-    assertThat(copy(copier, ints), is(equalTo(ints)));
+    assertThat(copy(copier, ints)).asList().containsExactlyElementsIn(ints).inOrder();
   }
 
   @Test(dataProvider = "copier")
   public void array_mutable(Copier copier) {
-    Object array = new Object[] { new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4)) };
-    assertThat(copy(copier, array), is(equalTo(array)));
+    Object[] array = new Object[] { new ArrayList<>(List.of(0, 1, 2, 3, 4)) };
+    assertThat(copy(copier, array)).asList().containsExactlyElementsIn(array).inOrder();
   }
 
   private <T> T copy(Copier copier, T object) {

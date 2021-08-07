@@ -66,9 +66,8 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  */
 @SuppressWarnings("PreferJavaTimeOverload")
 public final class GuavaCacheFromContext {
-  private static final ThreadLocal<Exception> error = new ThreadLocal<>();
-
   private GuavaCacheFromContext() {}
+  private static final ThreadLocal<Exception> error = new ThreadLocal<>();
 
   /** Returns a Guava-backed cache. */
   @SuppressWarnings("CheckReturnValue")
@@ -79,59 +78,59 @@ public final class GuavaCacheFromContext {
     context.guava = builder;
 
     builder.concurrencyLevel(1);
-    if (context.initialCapacity != InitialCapacity.DEFAULT) {
-      builder.initialCapacity(context.initialCapacity.size());
+    if (context.initialCapacity() != InitialCapacity.DEFAULT) {
+      builder.initialCapacity(context.initialCapacity().size());
     }
     if (context.isRecordingStats()) {
       builder.recordStats();
     }
-    if (context.maximumSize != Maximum.DISABLED) {
-      if (context.weigher == CacheWeigher.DEFAULT) {
-        builder.maximumSize(context.maximumSize.max());
+    if (context.maximum() != Maximum.DISABLED) {
+      if (context.weigher() == CacheWeigher.DEFAULT) {
+        builder.maximumSize(context.maximum().max());
       } else {
-        builder.weigher(new GuavaWeigher<Object, Object>(context.weigher));
+        builder.weigher(new GuavaWeigher<Object, Object>(context.weigher()));
         builder.maximumWeight(context.maximumWeight());
       }
     }
-    if (context.afterAccess != Expire.DISABLED) {
-      builder.expireAfterAccess(context.afterAccess.timeNanos(), TimeUnit.NANOSECONDS);
+    if (context.expiresAfterAccess()) {
+      builder.expireAfterAccess(context.expireAfterAccess().timeNanos(), TimeUnit.NANOSECONDS);
     }
-    if (context.afterWrite != Expire.DISABLED) {
-      builder.expireAfterWrite(context.afterWrite.timeNanos(), TimeUnit.NANOSECONDS);
+    if (context.expiresAfterWrite()) {
+      builder.expireAfterWrite(context.expireAfterWrite().timeNanos(), TimeUnit.NANOSECONDS);
     }
-    if (context.refresh != Expire.DISABLED) {
-      builder.refreshAfterWrite(context.refresh.timeNanos(), TimeUnit.NANOSECONDS);
+    if (context.refreshes()) {
+      builder.refreshAfterWrite(context.refreshAfterWrite().timeNanos(), TimeUnit.NANOSECONDS);
     }
     if (context.expires() || context.refreshes()) {
       builder.ticker(context.ticker());
     }
-    if (context.keyStrength == ReferenceType.WEAK) {
+    if (context.isWeakKeys()) {
       builder.weakKeys();
     } else if (context.keyStrength == ReferenceType.SOFT) {
       throw new IllegalStateException();
     }
-    if (context.valueStrength == ReferenceType.WEAK) {
+    if (context.isWeakValues()) {
       builder.weakValues();
-    } else if (context.valueStrength == ReferenceType.SOFT) {
+    } else if (context.isSoftValues()) {
       builder.softValues();
     }
-    if (context.removalListenerType != Listener.DEFAULT) {
-      boolean translateZeroExpire = (context.afterAccess == Expire.IMMEDIATELY) ||
-          (context.afterWrite == Expire.IMMEDIATELY);
+    if (context.removalListenerType() != Listener.DEFAULT) {
+      boolean translateZeroExpire = (context.expireAfterAccess() == Expire.IMMEDIATELY) ||
+          (context.expireAfterWrite() == Expire.IMMEDIATELY);
       builder.removalListener(new GuavaRemovalListener<>(
-          translateZeroExpire, context.removalListener));
+          translateZeroExpire, context.removalListener()));
     }
     Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker();
-    if (context.loader == null) {
+    if (context.loader() == null) {
       context.cache = new GuavaCache<>(builder.<Int, Int>build(),
           ticker, context.isRecordingStats());
     } else if (context.loader().isBulk()) {
-      context.cache = new GuavaLoadingCache<>(builder.build(
-          new BulkLoader<Int, Int>(context.loader())),
+      var loader = new BulkLoader<Int, Int>(context.loader());
+      context.cache = new GuavaLoadingCache<>(builder.build(loader),
           ticker, context.isRecordingStats());
     } else {
-      context.cache = new GuavaLoadingCache<>(builder.build(
-          new SingleLoader<Int, Int>(context.loader())),
+      var loader = new SingleLoader<Int, Int>(context.loader());
+      context.cache = new GuavaLoadingCache<>(builder.build(loader),
           ticker, context.isRecordingStats());
     }
     @SuppressWarnings("unchecked")
@@ -266,7 +265,7 @@ public final class GuavaCacheFromContext {
     public CacheStats stats() {
       var stats = statsCounter.snapshot().plus(cache.stats());
       return CacheStats.of(stats.hitCount(), stats.missCount(), stats.loadSuccessCount(),
-          stats.loadExceptionCount(), stats.totalLoadTime(), stats.evictionCount(), 0L);
+          stats.loadExceptionCount(), stats.totalLoadTime(), stats.evictionCount(), 0);
     }
 
     @Override
@@ -532,7 +531,7 @@ public final class GuavaCacheFromContext {
 
     CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
       if (futures.isEmpty()) {
-        return CompletableFuture.completedFuture(Collections.emptyMap());
+        return CompletableFuture.completedFuture(Map.of());
       }
       @SuppressWarnings("rawtypes")
       CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);

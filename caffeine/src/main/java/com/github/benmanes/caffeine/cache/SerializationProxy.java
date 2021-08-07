@@ -46,11 +46,11 @@ final class SerializationProxy<K, V> implements Serializable {
   @Nullable Ticker ticker;
   @Nullable Expiry<?, ?> expiry;
   @Nullable Weigher<?, ?> weigher;
-  @Nullable AsyncCacheLoader<?, ?> loader;
+  @Nullable AsyncCacheLoader<?, ?> cacheLoader;
   @Nullable RemovalListener<?, ?> removalListener;
   @Nullable RemovalListener<?, ?> evictionListener;
 
-  @SuppressWarnings({"unchecked", "PreferJavaTimeOverload", "deprecation"})
+  @SuppressWarnings("PreferJavaTimeOverload")
   Caffeine<Object, Object> recreateCaffeine() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (ticker != null) {
@@ -63,8 +63,10 @@ final class SerializationProxy<K, V> implements Serializable {
       builder.maximumSize(maximumSize);
     }
     if (weigher != null) {
+      @SuppressWarnings("unchecked")
+      var castedWeigher = (Weigher<Object, Object>) weigher;
       builder.maximumWeight(maximumWeight);
-      builder.weigher((Weigher<Object, Object>) weigher);
+      builder.weigher(castedWeigher);
     }
     if (expiry != null) {
       builder.expireAfter(expiry);
@@ -99,19 +101,19 @@ final class SerializationProxy<K, V> implements Serializable {
   Object readResolve() {
     Caffeine<Object, Object> builder = recreateCaffeine();
     if (async) {
-      if (loader == null) {
+      if (cacheLoader == null) {
         return builder.buildAsync();
       }
       @SuppressWarnings("unchecked")
-      AsyncCacheLoader<K, V> cacheLoader = (AsyncCacheLoader<K, V>) loader;
-      return builder.buildAsync(cacheLoader);
+      AsyncCacheLoader<K, V> loader = (AsyncCacheLoader<K, V>) cacheLoader;
+      return builder.buildAsync(loader);
     }
 
-    if (loader == null) {
+    if (cacheLoader == null) {
       return builder.build();
     }
     @SuppressWarnings("unchecked")
-    CacheLoader<K, V> cacheLoader = (CacheLoader<K, V>) loader;
-    return builder.build(cacheLoader);
+    CacheLoader<K, V> loader = (CacheLoader<K, V>) cacheLoader;
+    return builder.build(loader);
   }
 }

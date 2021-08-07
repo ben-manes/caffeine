@@ -23,7 +23,6 @@ import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.options;
 
-import javax.cache.Cache;
 import javax.cache.Caching;
 import javax.cache.spi.CachingProvider;
 import javax.inject.Inject;
@@ -63,10 +62,10 @@ public final class OSGiTest {
 
   @Test
   public void sanity() {
-    CachingProvider cachingProvider = Caching.getCachingProvider(
+    var cachingProvider = Caching.getCachingProvider(
         "com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider",
         getClass().getClassLoader());
-    Cache<String, Integer> cache = cachingProvider.getCacheManager()
+    var cache = cachingProvider.getCacheManager()
         .getCache("test-cache-2", String.class, Integer.class);
     assertNull(cache.get("a"));
   }

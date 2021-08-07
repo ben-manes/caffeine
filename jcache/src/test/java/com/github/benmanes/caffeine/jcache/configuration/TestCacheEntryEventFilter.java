@@ -21,8 +21,7 @@ import javax.cache.event.CacheEntryEventFilter;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TestCacheEntryEventFilter
-    implements CacheEntryEventFilter<Integer, Integer> {
+public final class TestCacheEntryEventFilter implements CacheEntryEventFilter<Integer, Integer> {
   @Override public boolean evaluate(CacheEntryEvent<? extends Integer, ? extends Integer> event) {
     return false;
   }

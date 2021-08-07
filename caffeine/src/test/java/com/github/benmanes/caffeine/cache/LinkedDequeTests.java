@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
@@ -76,7 +75,7 @@ public final class LinkedDequeTests extends TestCase {
             CollectionSize.ANY)
         .withSetUp(() -> useTarget.set(true))
         .withTearDown(() -> {
-          Arrays.asList(a, b, c, d, e).forEach(value -> {
+          List.of(a, b, c, d, e).forEach(value -> {
             value.setNextInAccessOrder(null);
             value.setPreviousInAccessOrder(null);
           });

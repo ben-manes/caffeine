@@ -54,7 +54,7 @@ public final class JCacheExpiryTest extends AbstractJCacheTest {
 
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    CaffeineConfiguration<Integer, Integer> configuration = new CaffeineConfiguration<>();
+    var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setExpiryFactory(Optional.of(() -> expiry));
     configuration.setTickerFactory(() -> ticker::read);
     return configuration;

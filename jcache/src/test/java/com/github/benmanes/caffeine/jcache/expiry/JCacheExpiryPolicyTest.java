@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
+import static com.google.common.truth.Truth.assertThat;
 
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
@@ -35,39 +33,40 @@ public final class JCacheExpiryPolicyTest {
 
   @Test
   public void creation() {
-    assertThat(eternal.getExpiryForCreation(), is(Duration.ETERNAL));
-    assertThat(temporal.getExpiryForCreation(), is(Duration.ONE_DAY));
+    assertThat(eternal.getExpiryForCreation()).isEqualTo(Duration.ETERNAL);
+    assertThat(temporal.getExpiryForCreation()).isEqualTo(Duration.ONE_DAY);
   }
 
   @Test
   public void update() {
-    assertThat(eternal.getExpiryForUpdate(), is(Duration.ETERNAL));
-    assertThat(temporal.getExpiryForUpdate(), is(Duration.ONE_HOUR));
+    assertThat(eternal.getExpiryForUpdate()).isEqualTo(Duration.ETERNAL);
+    assertThat(temporal.getExpiryForUpdate()).isEqualTo(Duration.ONE_HOUR);
   }
 
   @Test
   public void access() {
-    assertThat(eternal.getExpiryForAccess(), is(Duration.ETERNAL));
-    assertThat(temporal.getExpiryForAccess(), is(Duration.ONE_MINUTE));
+    assertThat(eternal.getExpiryForAccess()).isEqualTo(Duration.ETERNAL);
+    assertThat(temporal.getExpiryForAccess()).isEqualTo(Duration.ONE_MINUTE);
   }
 
   @Test
+  @SuppressWarnings("TruthIncompatibleType")
   public void equals_wrongType() {
-    assertThat(eternal, is(not(1)));
+    assertThat(eternal).isNotEqualTo(1);
   }
 
   @Test
   public void equals_wrongValue() {
-    assertThat(eternal, is(not(temporal)));
+    assertThat(eternal).isNotEqualTo(temporal);
   }
 
   @Test
   public void equals() {
-    assertThat(eternal, is(eternal));
+    assertThat(eternal.equals(eternal)).isTrue();
   }
 
   @Test
   public void hash() {
-    assertThat(eternal.hashCode(), is(not(temporal.hashCode())));
+    assertThat(eternal.hashCode()).isNotEqualTo(temporal.hashCode());
   }
 }

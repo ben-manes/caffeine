@@ -16,10 +16,8 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.testing.Awaits.await;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,51 +40,51 @@ public final class MpscGrowableArrayQueueTest {
 
   @Test(dataProvider = "empty")
   public void size_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.size(), is(0));
+    assertThat(buffer.size()).isEqualTo(0);
   }
 
   @Test(dataProvider = "populated")
   public void size_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.size(), is(POPULATED_SIZE));
+    assertThat(buffer.size()).isEqualTo(POPULATED_SIZE);
   }
 
   /* --------------- Offer --------------- */
 
   @Test(dataProvider = "empty")
   public void offer_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.offer(1), is(true));
-    assertThat(buffer.size(), is(1));
+    assertThat(buffer.offer(1)).isTrue();
+    assertThat(buffer).hasSize(1);
   }
 
   @Test(dataProvider = "populated")
   public void offer_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.offer(1), is(true));
-    assertThat(buffer.size(), is(POPULATED_SIZE + 1));
+    assertThat(buffer.offer(1)).isTrue();
+    assertThat(buffer).hasSize(POPULATED_SIZE + 1);
   }
 
   @Test(dataProvider = "full")
   public void offer_whenFull(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.offer(1), is(false));
-    assertThat(buffer.size(), is(FULL_SIZE));
+    assertThat(buffer.offer(1)).isFalse();
+    assertThat(buffer).hasSize(FULL_SIZE);
   }
 
   /* --------------- Poll --------------- */
 
   @Test(dataProvider = "empty")
   public void poll_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.poll(), is(nullValue()));
+    assertThat(buffer.poll()).isNull();
   }
 
   @Test(dataProvider = "populated")
   public void poll_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.poll(), is(not(nullValue())));
-    assertThat(buffer.size(), is(POPULATED_SIZE - 1));
+    assertThat(buffer.poll()).isNotNull();
+    assertThat(buffer).hasSize(POPULATED_SIZE - 1);
   }
 
   @Test(dataProvider = "full")
   public void poll_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     while (buffer.poll() != null) {}
-    assertThat(buffer.size(), is(0));
+    assertThat(buffer).isEmpty();
   }
 
   /* --------------- Concurrency --------------- */
@@ -114,7 +112,7 @@ public final class MpscGrowableArrayQueueTest {
     });
 
     await().untilAtomic(finished, is(2));
-    assertThat(buffer.size(), is(0));
+    assertThat(buffer).isEmpty();
   }
 
   @Test(dataProvider = "empty")
@@ -127,7 +125,7 @@ public final class MpscGrowableArrayQueueTest {
         }
       }
     });
-    assertThat(buffer.size(), is(count.get()));
+    assertThat(buffer).hasSize(count.get());
   }
 
   @Test(dataProvider = "empty")
@@ -154,7 +152,7 @@ public final class MpscGrowableArrayQueueTest {
     });
 
     await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
-    assertThat(buffer.size(), is(0));
+    assertThat(buffer).isEmpty();
   }
 
   /* --------------- Providers --------------- */

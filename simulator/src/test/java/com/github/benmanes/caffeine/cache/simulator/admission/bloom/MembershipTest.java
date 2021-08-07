@@ -15,11 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission.bloom;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.either;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThan;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -67,8 +64,10 @@ public class MembershipTest {
       int falsePositives = falsePositives(filter, input);
       int expectedInsertions = (int) (capacity * EXPECTED_INSERTIONS_MULTIPLIER);
       double falsePositiveRate = ((double) falsePositives / expectedInsertions);
-      assertThat(filterType.toString(), falsePositiveRate,
-          is(either(equalTo(Double.NaN)).or(lessThan(FPP + 0.2))));
+
+      if (!Double.isNaN(falsePositiveRate)) {
+        assertWithMessage(filterType.toString()).that(falsePositiveRate).isLessThan(FPP + 0.2);
+      }
       rows.add(row(filterType, capacity, expectedInsertions, falsePositives, falsePositiveRate));
 
       if (display) {
@@ -109,7 +108,7 @@ public class MembershipTest {
     for (int k = 0; k < i; k++) {
       truePositives += filter.mightContain(input[k]) ? 1 : 0;
     }
-    assertThat(truePositives, is(input.length / 2));
+    assertThat(truePositives).isEqualTo(input.length / 2);
 
     // Second half shouldn't be members
     for (; i < input.length; i++) {

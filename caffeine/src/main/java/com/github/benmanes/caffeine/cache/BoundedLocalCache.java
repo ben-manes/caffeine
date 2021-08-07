@@ -89,7 +89,6 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-@SuppressWarnings("deprecation")
 abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     implements LocalCache<K, V> {
 
@@ -3888,7 +3887,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (cache.refreshAfterWrite()) {
         proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
       }
-      proxy.loader = cache.cacheLoader;
+      proxy.cacheLoader = cache.cacheLoader;
       return proxy;
     }
   }
@@ -4008,7 +4007,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (cache.refreshAfterWrite()) {
         proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
       }
-      proxy.loader = loader;
+      proxy.cacheLoader = cacheLoader;
       proxy.async = true;
       return proxy;
     }

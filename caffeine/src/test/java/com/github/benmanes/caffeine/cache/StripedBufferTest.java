@@ -17,10 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.StripedBuffer.MAXIMUM_TABLE_SIZE;
 import static com.github.benmanes.caffeine.cache.StripedBuffer.NCPU;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.Matchers.nullValue;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,10 +37,10 @@ public final class StripedBufferTest {
 
   @Test(dataProvider = "buffers")
   public void init(FakeBuffer<Integer> buffer) {
-    assertThat(buffer.table, is(nullValue()));
+    assertThat(buffer.table).isNull();
 
     buffer.offer(ELEMENT);
-    assertThat(buffer.table.length, is(1));
+    assertThat(buffer.table).hasLength(1);
   }
 
   @Test(dataProvider = "buffers")
@@ -55,7 +52,7 @@ public final class StripedBufferTest {
         Thread.yield();
       }
     });
-    assertThat(buffer.table.length, lessThanOrEqualTo(MAXIMUM_TABLE_SIZE));
+    assertThat(buffer.table.length).isAtMost(MAXIMUM_TABLE_SIZE);
   }
 
   @Test
@@ -68,18 +65,18 @@ public final class StripedBufferTest {
         Thread.yield();
       }
     });
-    assertThat(buffer.table.length, is(MAXIMUM_TABLE_SIZE));
+    assertThat(buffer.table).hasLength(MAXIMUM_TABLE_SIZE);
   }
 
   @Test(dataProvider = "buffers")
   public void drain(FakeBuffer<Integer> buffer) {
     buffer.drainTo(e -> {});
-    assertThat(buffer.drains, is(0));
+    assertThat(buffer.drains).isEqualTo(0);
 
     // Expand and drain
     buffer.offer(ELEMENT);
     buffer.drainTo(e -> {});
-    assertThat(buffer.drains, is(1));
+    assertThat(buffer.drains).isEqualTo(1);
   }
 
   @DataProvider(name = "buffers")
@@ -87,7 +84,7 @@ public final class StripedBufferTest {
     var results = List.of(Buffer.SUCCESS, Buffer.FAILED, Buffer.FULL);
     var buffers = new ArrayList<Buffer<Integer>>();
     for (var result : results) {
-      buffers.add(new FakeBuffer<Integer>(result));
+      buffers.add(new FakeBuffer<>(result));
     }
     return buffers.toArray();
   }

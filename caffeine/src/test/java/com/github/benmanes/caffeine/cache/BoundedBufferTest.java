@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -47,8 +45,8 @@ public final class BoundedBufferTest {
         buffer.offer(DUMMY);
       }
     });
-    assertThat(buffer.writes(), is(greaterThan(0L)));
-    assertThat(buffer.writes(), is(buffer.size()));
+    assertThat(buffer.writes()).isGreaterThan(0);
+    assertThat(buffer.writes()).isEqualTo(buffer.size());
   }
 
   @Test(dataProvider = "buffer")
@@ -58,8 +56,8 @@ public final class BoundedBufferTest {
     }
     long[] read = new long[1];
     buffer.drainTo(e -> read[0]++);
-    assertThat(read[0], is(buffer.reads()));
-    assertThat(read[0], is(buffer.writes()));
+    assertThat(read[0]).isEqualTo(buffer.reads());
+    assertThat(read[0]).isEqualTo(buffer.writes());
   }
 
   @Test(dataProvider = "buffer")
@@ -78,7 +76,7 @@ public final class BoundedBufferTest {
       }
     });
     buffer.drainTo(e -> reads.incrementAndGet());
-    assertThat(reads.longValue(), is(buffer.reads()));
-    assertThat(reads.longValue(), is(buffer.writes()));
+    assertThat(reads.longValue()).isEqualTo(buffer.reads());
+    assertThat(reads.longValue()).isEqualTo(buffer.writes());
   }
 }

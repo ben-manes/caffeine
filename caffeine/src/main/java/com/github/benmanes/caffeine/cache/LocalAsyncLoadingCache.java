@@ -46,15 +46,15 @@ abstract class LocalAsyncLoadingCache<K, V>
       ? extends CompletableFuture<? extends Map<? extends K, ? extends V>>> bulkMappingFunction;
   final BiFunction<? super K, ? super Executor,
       ? extends CompletableFuture<? extends V>> mappingFunction;
-  final AsyncCacheLoader<K, V> loader;
+  final AsyncCacheLoader<K, V> cacheLoader;
 
   @Nullable LoadingCacheView<K, V> cacheView;
 
   @SuppressWarnings("unchecked")
-  LocalAsyncLoadingCache(AsyncCacheLoader<? super K, V> loader) {
-    this.bulkMappingFunction = newBulkMappingFunction(loader);
-    this.mappingFunction = newMappingFunction(loader);
-    this.loader = (AsyncCacheLoader<K, V>) loader;
+  LocalAsyncLoadingCache(AsyncCacheLoader<? super K, V> cacheLoader) {
+    this.bulkMappingFunction = newBulkMappingFunction(cacheLoader);
+    this.cacheLoader = (AsyncCacheLoader<K, V>) cacheLoader;
+    this.mappingFunction = newMappingFunction(cacheLoader);
   }
 
   /** Returns a mapping function that adapts to {@link AsyncCacheLoader#asyncLoad}. */
@@ -258,7 +258,7 @@ abstract class LocalAsyncLoadingCache<K, V>
         refreshed[0] = true;
         startTime[0] = asyncCache.cache().statsTicker().read();
         try {
-          return asyncCache.loader.asyncReload(key, oldValue, asyncCache.cache().executor());
+          return asyncCache.cacheLoader.asyncReload(key, oldValue, asyncCache.cache().executor());
         } catch (RuntimeException e) {
           throw e;
         } catch (InterruptedException e) {

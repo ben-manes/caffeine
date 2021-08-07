@@ -16,8 +16,7 @@
 package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.testing.Awaits.await;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -63,7 +62,7 @@ public final class Solr10141Test {
     AtomicLong removals = new AtomicLong();
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
-      assertThat(v.key, is(k));
+      assertThat(v.key).isEqualTo(k);
       if (!v.live.compareAndSet(true, false)) {
         throw new RuntimeException(String.format(
             "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
@@ -107,7 +106,7 @@ public final class Solr10141Test {
         Val v = cache.getIfPresent(k);
         if (v != null) {
           hits.incrementAndGet();
-          assertThat(k, is(v.key));
+          assertThat(k).isEqualTo(v.key);
         }
 
         if ((v == null) || (updateAnyway && r.nextBoolean())) {
@@ -125,13 +124,13 @@ public final class Solr10141Test {
       }
     });
 
-    await().until(() -> inserts.get() - removals.get() == cache.estimatedSize());
+    await().until(() -> (inserts.get() - removals.get()) == cache.estimatedSize());
 
     System.out.printf("Done!%n"
         + "entries=%,d inserts=%,d removals=%,d hits=%,d maxEntries=%,d maxObservedSize=%,d%n",
         cache.estimatedSize(), inserts.get(), removals.get(),
         hits.get(), maxEntries, maxObservedSize.get());
-    assertThat(failed.get(), is(false));
+    assertThat(failed.get()).isFalse();
   }
 
   @Test
@@ -141,7 +140,7 @@ public final class Solr10141Test {
     AtomicBoolean failed = new AtomicBoolean();
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
-      assertThat(v.key, is(k));
+      assertThat(v.key).isEqualTo(k);
       if (!v.live.compareAndSet(true, false)) {
         throw new RuntimeException(String.format(
             "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
@@ -172,7 +171,7 @@ public final class Solr10141Test {
         Long k = (long) r.nextInt(blocksInTest);
         Val v = cache.getIfPresent(k);
         if (v != null) {
-          assertThat(k, is(v.key));
+          assertThat(k).isEqualTo(v.key);
         }
 
         if ((v == null) || (updateAnyway && r.nextBoolean())) {
@@ -190,7 +189,7 @@ public final class Solr10141Test {
 
     cache.asMap().clear();
     await().until(() -> inserts.get() == removals.get());
-    assertThat(failed.get(), is(false));
+    assertThat(failed.get()).isFalse();
   }
 
   static class Val {

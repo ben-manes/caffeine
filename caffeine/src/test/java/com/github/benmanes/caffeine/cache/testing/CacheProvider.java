@@ -33,7 +33,6 @@ import org.testng.annotations.DataProvider;
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
@@ -56,7 +55,7 @@ public final class CacheProvider {
   /** Returns the lazily generated test scenarios. */
   @DataProvider(name = "caches")
   public static Iterator<Object[]> providesCaches(Method testMethod) throws Exception {
-    CacheGenerator generator = newCacheGenerator(testMethod);
+    var generator = newCacheGenerator(testMethod);
     return asTestCases(testMethod, generator.generate());
   }
 
@@ -96,14 +95,13 @@ public final class CacheProvider {
       Object[] params = new Object[parameters.length];
       for (int i = 0; i < params.length; i++) {
         Class<?> clazz = parameters[i].getType();
-        if (clazz.isAssignableFrom(CacheContext.class)) {
+        if (clazz.isInstance(context)) {
           params[i] = context;
-        } else if (clazz.isAssignableFrom(Caffeine.class)) {
+        } else if (clazz.isInstance(context.caffeine)) {
           params[i] = context.caffeine;
-        } else if (clazz.isAssignableFrom(cache.getClass())) {
+        } else if (clazz.isInstance(cache)) {
           params[i] = cache;
-        } else if ((context.asyncCache != null)
-            && clazz.isAssignableFrom(context.asyncCache.getClass())) {
+        } else if (clazz.isInstance(context.asyncCache)) {
           params[i] = context.asyncCache;
         } else if (clazz.isAssignableFrom(Map.class)) {
           params[i] = cache.asMap();

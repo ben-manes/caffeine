@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -80,15 +82,13 @@ final class CacheGenerator {
   }
 
   /** Returns the Cartesian set of the possible cache configurations. */
-  @SuppressWarnings("unchecked")
   private Set<List<Object>> combinations() {
-    Set<Boolean> asyncLoading = ImmutableSet.of(true, false);
-    Set<Stats> statistics = filterTypes(options.stats(), cacheSpec.stats());
-    Set<ReferenceType> keys = filterTypes(options.keys(), cacheSpec.keys());
-    Set<ReferenceType> values = filterTypes(options.values(), cacheSpec.values());
-    Set<Compute> computations = filterTypes(options.compute(), cacheSpec.compute());
-    Set<Implementation> implementations = filterTypes(
-        options.implementation(), cacheSpec.implementation());
+    var asyncLoading = ImmutableSet.of(true, false);
+    var keys = filterTypes(options.keys(), cacheSpec.keys());
+    var values = filterTypes(options.values(), cacheSpec.values());
+    var statistics = filterTypes(options.stats(), cacheSpec.stats());
+    var computations = filterTypes(options.compute(), cacheSpec.compute());
+    var implementations = filterTypes(options.implementation(), cacheSpec.implementation());
 
     if (isAsyncOnly) {
       values = values.contains(ReferenceType.STRONG)
@@ -135,12 +135,9 @@ final class CacheGenerator {
 
   /** Returns the set of options filtered if a specific type is specified. */
   private static <T> Set<T> filterTypes(Optional<T> type, T[] options) {
-    if (type.isPresent()) {
-      return type.filter(Arrays.asList(options)::contains).isPresent()
-          ? ImmutableSet.of(type.get())
-          : ImmutableSet.of();
-    }
-    return ImmutableSet.copyOf(options);
+    return type.isPresent()
+        ? type.filter(List.of(options)::contains).stream().collect(toImmutableSet())
+        : ImmutableSet.copyOf(options);
   }
 
   /** Returns a new cache context based on the combination. */
@@ -174,7 +171,7 @@ final class CacheGenerator {
   /** Returns if the context is a viable configuration. */
   private boolean isCompatible(CacheContext context) {
     boolean asyncIncompatible = context.isAsync()
-        && ((context.implementation() != Implementation.Caffeine) || !context.isStrongValues());
+        && (!context.isCaffeine() || !context.isStrongValues());
     boolean asyncLoaderIncompatible = context.isAsyncLoading()
         && (!context.isAsync() || !context.isLoading());
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
@@ -182,7 +179,7 @@ final class CacheGenerator {
     boolean referenceIncompatible = cacheSpec.requiresWeakOrSoft()
         && context.isStrongKeys() && context.isStrongValues();
     boolean expiryIncompatible = (context.expiryType() != CacheExpiry.DISABLED)
-        && ((context.implementation() != Implementation.Caffeine)
+        && (!context.isCaffeine()
             || (context.expireAfterAccess() != Expire.DISABLED)
             || (context.expireAfterWrite() != Expire.DISABLED));
     boolean expirationIncompatible = (cacheSpec.mustExpireWithAnyOf().length > 0)
@@ -190,8 +187,7 @@ final class CacheGenerator {
     boolean schedulerIgnored = (context.cacheScheduler != CacheScheduler.DEFAULT)
         && !context.expires();
     boolean evictionListenerIncompatible = (context.evictionListenerType() != Listener.DEFAULT)
-        && ((context.implementation() != Implementation.Caffeine)
-            || (context.isAsync() && context.isWeakKeys()));
+        && (!context.isCaffeine() || (context.isAsync() && context.isWeakKeys()));
 
     boolean skip = asyncIncompatible || asyncLoaderIncompatible || evictionListenerIncompatible
         || refreshIncompatible || weigherIncompatible || expiryIncompatible
@@ -201,11 +197,10 @@ final class CacheGenerator {
 
   /** Creates a new cache based on the context's configuration. */
   public static <K, V> Cache<K, V> newCache(CacheContext context) {
-    switch (context.implementation()) {
-      case Caffeine:
-        return CaffeineCacheFromContext.newCaffeineCache(context);
-      case Guava:
-        return GuavaCacheFromContext.newGuavaCache(context);
+    if (context.isCaffeine()) {
+      return CaffeineCacheFromContext.newCaffeineCache(context);
+    } else if (context.isGuava()) {
+      return GuavaCacheFromContext.newGuavaCache(context);
     }
     throw new IllegalStateException();
   }

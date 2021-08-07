@@ -17,9 +17,8 @@ package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.DAEMON_FACTORY;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.timeTasks;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.shutdownAndAwaitTermination;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 
 import java.time.Duration;
 import java.util.Random;
@@ -74,7 +73,7 @@ public final class Issue412Test {
   public void expire_remove() {
     timeTasks(NUM_THREADS, this::addRemoveAndExpire);
     shutdownAndAwaitTermination(executor, 1, TimeUnit.MINUTES);
-    assertThat(collected.get(), is(false));
+    assertThat(collected.get()).isFalse();
   }
 
   private void addRemoveAndExpire() {

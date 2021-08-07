@@ -15,10 +15,10 @@
  */
 package com.github.benmanes.caffeine.jcache.processor;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -39,7 +39,6 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.Streams;
 
 /**
@@ -62,7 +61,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
 
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    CaffeineConfiguration<Integer, Integer> config = new CaffeineConfiguration<>();
+    var config = new CaffeineConfiguration<Integer, Integer>();
     config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(Duration.FIVE_MINUTES));
     config.setCacheLoaderFactory(MapLoader::new);
     config.setCacheWriterFactory(MapWriter::new);
@@ -76,33 +75,33 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   @Test
   public void reload() {
     jcache.invoke(KEY_1, this::process);
-    assertThat(loads, is(1));
+    assertThat(loads).isEqualTo(1);
 
     ticker.advance(1, TimeUnit.MINUTES);
     jcache.invoke(KEY_1, this::process);
-    assertThat(loads, is(1));
+    assertThat(loads).isEqualTo(1);
 
     // Expire the entry
     ticker.advance(5, TimeUnit.MINUTES);
 
     jcache.invoke(KEY_1, this::process);
-    assertThat(loads, is(2));
+    assertThat(loads).isEqualTo(2);
 
     ticker.advance(1, TimeUnit.MINUTES);
     jcache.invoke(KEY_1, this::process);
-    assertThat(loads, is(2));
+    assertThat(loads).isEqualTo(2);
   }
 
   @Test
   public void writeOccursForInitialLoadOfEntry() {
     map.put(KEY_1, 100);
     jcache.invoke(KEY_1, this::process);
-    assertThat(loads, is(1));
-    assertThat(writes, is(1));
+    assertThat(loads).isEqualTo(1);
+    assertThat(writes).isEqualTo(1);
   }
 
   private Object process(MutableEntry<Integer, Integer> entry, Object... arguments) {
-    Integer value = MoreObjects.firstNonNull(entry.getValue(), 0);
+    Integer value = firstNonNull(entry.getValue(), 0);
     entry.setValue(++value);
     return null;
   }

@@ -15,10 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
-import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
+import static com.github.benmanes.caffeine.testing.FutureSubject.future;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.time.ZoneOffset.UTC;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -41,6 +40,7 @@ import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.testing.FutureSubject;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -107,8 +107,8 @@ public final class Issue30Test {
     source.put(B_KEY, B_ORIGINAL);
     lastLoad.clear();
 
-    assertThat("should serve initial value", cache.get(A_KEY), is(futureOf(A_ORIGINAL)));
-    assertThat("should serve initial value", cache.get(B_KEY), is(futureOf(B_ORIGINAL)));
+    assertThat("should serve initial value", cache.get(A_KEY)).succeedsWith(A_ORIGINAL);
+    assertThat("should serve initial value", cache.get(B_KEY)).succeedsWith(B_ORIGINAL);
   }
 
   private void firstUpdate(AsyncLoadingCache<String, String> cache,
@@ -116,16 +116,16 @@ public final class Issue30Test {
     source.put(A_KEY, A_UPDATE_1);
     source.put(B_KEY, B_UPDATE_1);
 
-    assertThat("should serve cached initial value", cache.get(A_KEY), is(futureOf(A_ORIGINAL)));
-    assertThat("should serve cached initial value", cache.get(B_KEY), is(futureOf(B_ORIGINAL)));
+    assertThat("should serve cached initial value", cache.get(A_KEY)).succeedsWith(A_ORIGINAL);
+    assertThat("should serve cached initial value", cache.get(B_KEY)).succeedsWith(B_ORIGINAL);
 
     Thread.sleep(EPSILON); // sleep for less than expiration
-    assertThat("still serve cached initial value", cache.get(A_KEY), is(futureOf(A_ORIGINAL)));
-    assertThat("still serve cached initial value", cache.get(B_KEY), is(futureOf(B_ORIGINAL)));
+    assertThat("still serve cached initial value", cache.get(A_KEY)).succeedsWith(A_ORIGINAL);
+    assertThat("still serve cached initial value", cache.get(B_KEY)).succeedsWith(B_ORIGINAL);
 
     Thread.sleep(TTL + EPSILON); // sleep until expiration
-    assertThat("now serve first updated value", cache.get(A_KEY), is(futureOf(A_UPDATE_1)));
-    assertThat("now serve first updated value", cache.get(B_KEY), is(futureOf(B_UPDATE_1)));
+    assertThat("now serve first updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
+    assertThat("now serve first updated value", cache.get(B_KEY)).succeedsWith(B_UPDATE_1);
   }
 
   private void secondUpdate(AsyncLoadingCache<String, String> cache,
@@ -133,12 +133,16 @@ public final class Issue30Test {
     source.put(A_KEY, A_UPDATE_2);
     source.put(B_KEY, B_UPDATE_2);
 
-    assertThat("serve cached first updated value", cache.get(A_KEY), is(futureOf(A_UPDATE_1)));
-    assertThat("serve cached first updated value", cache.get(B_KEY), is(futureOf(B_UPDATE_1)));
+    assertThat("serve cached first updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
+    assertThat("serve cached first updated value", cache.get(B_KEY)).succeedsWith(B_UPDATE_1);
 
     Thread.sleep(EPSILON); // sleep for less than expiration
-    assertThat("serve cached first updated value", cache.get(A_KEY), is(futureOf(A_UPDATE_1)));
-    assertThat("serve cached first updated value", cache.get(A_KEY), is(futureOf(A_UPDATE_1)));
+    assertThat("serve cached first updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
+    assertThat("serve cached first updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
+  }
+
+  private static FutureSubject assertThat(String message, CompletableFuture<?> actual) {
+    return assertWithMessage(message).about(future()).that(actual);
   }
 
   static final class Loader implements AsyncCacheLoader<String, String> {

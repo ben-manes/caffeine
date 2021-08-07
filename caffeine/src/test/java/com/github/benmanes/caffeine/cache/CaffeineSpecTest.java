@@ -16,12 +16,9 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
+import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -124,7 +121,7 @@ public final class CaffeineSpecTest {
     checkExpireAfterAccess(spec, context, builder, epoch);
     checkRefreshAfterWrite(spec, context, builder, epoch);
 
-    assertThat(spec, is(equalTo(CaffeineSpec.parse(spec.toParsableString()))));
+    assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString()));
   }
 
   static CaffeineSpec toSpec(CacheContext context,
@@ -169,100 +166,100 @@ public final class CaffeineSpecTest {
   static void checkInitialCapacity(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder) {
     if (context.initialCapacity() == InitialCapacity.DEFAULT) {
-      assertThat(spec.initialCapacity, is(UNSET_INT));
-      assertThat(builder.initialCapacity, is(UNSET_INT));
+      assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+      assertThat(builder.initialCapacity).isEqualTo(UNSET_INT);
     } else {
-      assertThat(spec.initialCapacity, is(context.initialCapacity().size()));
-      assertThat(builder.initialCapacity, is(context.initialCapacity().size()));
+      assertThat(spec.initialCapacity).isEqualTo(context.initialCapacity().size());
+      assertThat(builder.initialCapacity).isEqualTo(context.initialCapacity().size());
     }
   }
 
   static void checkMaximumSize(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
     if (context.isWeighted()) {
-      assertThat(spec.maximumSize, is(UNSET_LONG));
-      assertThat(builder.maximumSize, is(UNSET_LONG));
+      assertThat(spec.maximumSize).isEqualTo(UNSET_LONG);
+      assertThat(builder.maximumSize).isEqualTo(UNSET_LONG);
       return;
     }
     if (context.maximum() == Maximum.DISABLED) {
-      assertThat(spec.maximumSize, is(UNSET_LONG));
-      assertThat(builder.maximumSize, is(UNSET_LONG));
+      assertThat(spec.maximumSize).isEqualTo(UNSET_LONG);
+      assertThat(builder.maximumSize).isEqualTo(UNSET_LONG);
     } else {
-      assertThat(spec.maximumSize, is(context.maximum().max()));
-      assertThat(builder.maximumSize, is(context.maximum().max()));
+      assertThat(spec.maximumSize).isEqualTo(context.maximum().max());
+      assertThat(builder.maximumSize).isEqualTo(context.maximum().max());
     }
   }
 
   static void checkMaximumWeight(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
     if (!context.isWeighted()) {
-      assertThat(spec.maximumWeight, is(UNSET_LONG));
-      assertThat(builder.maximumWeight, is(UNSET_LONG));
+      assertThat(spec.maximumWeight).isEqualTo(UNSET_LONG);
+      assertThat(builder.maximumWeight).isEqualTo(UNSET_LONG);
       return;
     }
     if (context.maximum() == Maximum.DISABLED) {
-      assertThat(spec.maximumWeight, is(UNSET_LONG));
-      assertThat(builder.maximumWeight, is(UNSET_LONG));
+      assertThat(spec.maximumWeight).isEqualTo(UNSET_LONG);
+      assertThat(builder.maximumWeight).isEqualTo(UNSET_LONG);
     } else {
-      assertThat(spec.maximumWeight, is(context.maximum().max()));
-      assertThat(builder.maximumWeight, is(context.maximum().max()));
+      assertThat(spec.maximumWeight).isEqualTo(context.maximum().max());
+      assertThat(builder.maximumWeight).isEqualTo(context.maximum().max());
     }
   }
 
   static void checkWeakKeys(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
     if (context.isWeakKeys()) {
-      assertThat(spec.keyStrength, is(Strength.WEAK));
-      assertThat(builder.keyStrength, is(Strength.WEAK));
+      assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
+      assertThat(builder.keyStrength).isEqualTo(Strength.WEAK);
     } else {
-      assertThat(spec.keyStrength, is(nullValue()));
-      assertThat(builder.keyStrength, is(nullValue()));
+      assertThat(spec.keyStrength).isNull();
+      assertThat(builder.keyStrength).isNull();
     }
   }
 
   static void checkValueStrength(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
     if (context.isWeakValues()) {
-      assertThat(spec.valueStrength, is(Strength.WEAK));
-      assertThat(builder.valueStrength, is(Strength.WEAK));
+      assertThat(spec.valueStrength).isEqualTo(Strength.WEAK);
+      assertThat(builder.valueStrength).isEqualTo(Strength.WEAK);
     } else if (context.isSoftValues()) {
-      assertThat(spec.valueStrength, is(Strength.SOFT));
-      assertThat(builder.valueStrength, is(Strength.SOFT));
+      assertThat(spec.valueStrength).isEqualTo(Strength.SOFT);
+      assertThat(builder.valueStrength).isEqualTo(Strength.SOFT);
     } else {
-      assertThat(spec.valueStrength, is(nullValue()));
-      assertThat(builder.valueStrength, is(nullValue()));
+      assertThat(spec.valueStrength).isNull();
+      assertThat(builder.valueStrength).isNull();
     }
   }
 
   static void checkExpireAfterAccess(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder, Epoch epoch) {
     if (context.expireAfterAccess() == Expire.DISABLED) {
-      assertThat(spec.expireAfterAccess, is(nullValue()));
-      assertThat(builder.expireAfterAccessNanos, is(UNSET_LONG));
+      assertThat(spec.expireAfterAccess).isNull();
+      assertThat(builder.expireAfterAccessNanos).isEqualTo(UNSET_LONG);
     } else {
       long nanos = context.expireAfterAccess().timeNanos();
-      assertThat(spec.expireAfterAccess, is(epoch.toDuration(nanos)));
-      assertThat(builder.expireAfterAccessNanos, is(epoch.truncate(nanos)));
+      assertThat(spec.expireAfterAccess).isEqualTo(epoch.toDuration(nanos));
+      assertThat(builder.expireAfterAccessNanos).isEqualTo(epoch.truncate(nanos));
     }
   }
 
   static void checkExpireAfterWrite(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder, Epoch epoch) {
     if (context.expireAfterWrite() == Expire.DISABLED) {
-      assertThat(spec.expireAfterWrite, is(nullValue()));
-      assertThat(builder.expireAfterWriteNanos, is(UNSET_LONG));
+      assertThat(spec.expireAfterWrite).isNull();
+      assertThat(builder.expireAfterWriteNanos).isEqualTo(UNSET_LONG);
     } else {
       long nanos = context.expireAfterWrite().timeNanos();
-      assertThat(spec.expireAfterWrite, is(epoch.toDuration(nanos)));
-      assertThat(builder.expireAfterWriteNanos, is(epoch.truncate(nanos)));
+      assertThat(spec.expireAfterWrite).isEqualTo(epoch.toDuration(nanos));
+      assertThat(builder.expireAfterWriteNanos).isEqualTo(epoch.truncate(nanos));
     }
   }
 
   static void checkRefreshAfterWrite(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder, Epoch epoch) {
     if (context.refreshAfterWrite() == Expire.DISABLED) {
-      assertThat(spec.refreshAfterWrite, is(nullValue()));
-      assertThat(builder.refreshAfterWriteNanos, is(UNSET_LONG));
+      assertThat(spec.refreshAfterWrite).isNull();
+      assertThat(builder.refreshAfterWriteNanos).isEqualTo(UNSET_LONG);
     } else {
       long nanos = context.refreshAfterWrite().timeNanos();
-      assertThat(spec.refreshAfterWrite, is(epoch.toDuration(nanos)));
-      assertThat(builder.refreshAfterWriteNanos, is(epoch.truncate(nanos)));
+      assertThat(spec.refreshAfterWrite).isEqualTo(epoch.toDuration(nanos));
+      assertThat(builder.refreshAfterWriteNanos).isEqualTo(epoch.truncate(nanos));
     }
   }
 

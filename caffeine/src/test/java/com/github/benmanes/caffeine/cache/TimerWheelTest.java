@@ -16,14 +16,9 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.TimerWheel.SPANS;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.stream.Collectors.toList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThan;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.sameInstance;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
@@ -33,7 +28,6 @@ import static org.mockito.Mockito.when;
 import java.lang.ref.ReferenceQueue;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -99,7 +93,7 @@ public final class TimerWheelTest {
     verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
 
     for (var node : captor.getAllValues()) {
-      assertThat(node.getVariableTime(), is(lessThan(clock + duration)));
+      assertThat(node.getVariableTime()).isAtMost(clock + duration);
     }
   }
 
@@ -119,7 +113,7 @@ public final class TimerWheelTest {
     verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
 
     for (Node<?, ?> node : captor.getAllValues()) {
-      assertThat(node.getVariableTime(), is(lessThan(duration)));
+      assertThat(node.getVariableTime()).isAtMost(duration);
     }
     checkTimerWheel(duration);
   }
@@ -148,8 +142,8 @@ public final class TimerWheelTest {
       timerWheel.advance(Long.MAX_VALUE);
       Assert.fail();
     } catch (IllegalStateException e) {
-      assertThat(timerWheel.nanos, is(0L));
-      assertThat(timerWheel.wheel[1][1].getNextInVariableOrder(), is(sameInstance(timer)));
+      assertThat(timerWheel.nanos).isEqualTo(0);
+      assertThat(timerWheel.wheel[1][1].getNextInVariableOrder()).isSameInstanceAs(timer);
     }
   }
 
@@ -158,7 +152,7 @@ public final class TimerWheelTest {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
-    assertThat(timerWheel.getExpirationDelay(), is(Long.MAX_VALUE));
+    assertThat(timerWheel.getExpirationDelay()).isEqualTo(Long.MAX_VALUE);
   }
 
   @Test(dataProvider = "clock")
@@ -168,7 +162,7 @@ public final class TimerWheelTest {
 
     long delay = Duration.ofSeconds(1).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
-    assertThat(timerWheel.getExpirationDelay(), is(lessThanOrEqualTo(SPANS[0])));
+    assertThat(timerWheel.getExpirationDelay()).isAtMost(SPANS[0]);
   }
 
   @Test(dataProvider = "clock")
@@ -178,7 +172,7 @@ public final class TimerWheelTest {
 
     long delay = Duration.ofDays(14).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
-    assertThat(timerWheel.getExpirationDelay(), is(lessThanOrEqualTo(delay)));
+    assertThat(timerWheel.getExpirationDelay()).isAtMost(delay);
   }
 
   @Test(dataProvider = "clock")
@@ -199,7 +193,7 @@ public final class TimerWheelTest {
 
     long expectedDelay = (t80 - t45);
     long delay = timerWheel.getExpirationDelay();
-    assertThat(delay, is(lessThan(expectedDelay + SPANS[0]))); // cascaded T80 in wheel[1]
+    assertThat(delay).isLessThan(expectedDelay + SPANS[0]); // cascaded T80 in wheel[1]
   }
 
   @Test(dataProvider = "fuzzySchedule", invocationCount = 25)
@@ -216,7 +210,7 @@ public final class TimerWheelTest {
     int minBucket = Integer.MAX_VALUE;
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
-        LongArrayList timers = getTimers(timerWheel.wheel[i][j]);
+        var timers = getTimers(timerWheel.wheel[i][j]);
         for (int k = 0; k < timers.size(); k++) {
           long delay = timers.getLong(k);
           if (delay < minDelay) {
@@ -229,16 +223,18 @@ public final class TimerWheelTest {
     }
 
     long delay = timerWheel.getExpirationDelay();
-    String msg = String.format("delay=%d but minDelay=%d, minSpan=%d, minBucket=%d",
-        delay, minDelay, minSpan, minBucket);
     if (minDelay == Long.MAX_VALUE) {
-      assertThat(msg, delay, is(Long.MAX_VALUE));
+      var format = "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s";
+      assertWithMessage(format, delay, minDelay, minSpan, minBucket)
+          .that(delay).isEqualTo(Long.MAX_VALUE);
       return;
     }
 
     long maxError = minDelay + SPANS[minSpan];
     if (maxError > delay) {
-      assertThat(msg, delay, is(lessThan(maxError)));
+      var format = "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s";
+      assertWithMessage(format, delay, minDelay, minSpan, minBucket)
+          .that(delay).isLessThan(maxError);
     }
   }
 
@@ -297,13 +293,13 @@ public final class TimerWheelTest {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
-    Timer timer = new Timer(clock + TimeUnit.MINUTES.toNanos(15));
+    var timer = new Timer(clock + TimeUnit.MINUTES.toNanos(15));
     timerWheel.schedule(timer);
-    Node<?, ?> startBucket = timer.getNextInVariableOrder();
+    var startBucket = timer.getNextInVariableOrder();
 
     timer.setVariableTime(clock + TimeUnit.HOURS.toNanos(2));
     timerWheel.reschedule(timer);
-    assertThat(timer.getNextInVariableOrder(), is(not(startBucket)));
+    assertThat(timer.getNextInVariableOrder()).isNotSameInstanceAs(startBucket);
 
     timerWheel.advance(clock + TimeUnit.DAYS.toNanos(1));
     checkEmpty();
@@ -312,9 +308,9 @@ public final class TimerWheelTest {
   private void checkEmpty() {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
-        Node<Long, Long> sentinel = timerWheel.wheel[i][j];
-        assertThat(sentinel.getNextInVariableOrder(), is(sentinel));
-        assertThat(sentinel.getPreviousInVariableOrder(), is(sentinel));
+        var sentinel = timerWheel.wheel[i][j];
+        assertThat(sentinel.getNextInVariableOrder()).isSameInstanceAs(sentinel);
+        assertThat(sentinel.getPreviousInVariableOrder()).isSameInstanceAs(sentinel);
       }
     }
   }
@@ -325,8 +321,8 @@ public final class TimerWheelTest {
     timerWheel.nanos = clock;
     timerWheel.schedule(timer);
     timerWheel.deschedule(timer);
-    assertThat(timer.getNextInVariableOrder(), is(nullValue()));
-    assertThat(timer.getPreviousInVariableOrder(), is(nullValue()));
+    assertThat(timer.getNextInVariableOrder()).isNull();
+    assertThat(timer.getPreviousInVariableOrder()).isNull();
   }
 
   @Test(dataProvider = "clock")
@@ -364,8 +360,8 @@ public final class TimerWheelTest {
     timerWheel.advance(clock + SPANS[0]);
 
     verify(cache).evictEntry(any(), any(), anyLong());
-    assertThat(captor.getValue().getNextInVariableOrder(), is(not(nullValue())));
-    assertThat(captor.getValue().getPreviousInVariableOrder(), is(not(nullValue())));
+    assertThat(captor.getValue().getNextInVariableOrder()).isNotNull();
+    assertThat(captor.getValue().getPreviousInVariableOrder()).isNotNull();
   }
 
   @Test(dataProvider = "cascade")
@@ -380,7 +376,7 @@ public final class TimerWheelTest {
         count += getTimers(timerWheel.wheel[i][j]).size();
       }
     }
-    assertThat("\n" + timerWheel.toString(), count, is(1));
+    assertWithMessage(timerWheel.toString()).that(count).isEqualTo(1);
   }
 
   @DataProvider(name = "cascade")
@@ -410,7 +406,7 @@ public final class TimerWheelTest {
     }).boxed().sorted(order).collect(toList()).subList(0, expected);
 
     when(transformer.apply(anyLong())).thenAnswer(invocation -> invocation.getArgument(0));
-    assertThat(snapshot(ascending, limit, transformer), is(times));
+    assertThat(snapshot(ascending, limit, transformer)).isEqualTo(times);
     verify(transformer, times(expected)).apply(anyLong());
   }
 
@@ -423,7 +419,7 @@ public final class TimerWheelTest {
     var scenarios = new ArrayList<Object[]>();
     for (long clock : CLOCKS) {
       for (int limit : new int[] { 10, 100 }) {
-        scenarios.addAll(Arrays.asList(
+        scenarios.addAll(List.of(
             new Object[] { /* ascending */ true, limit, clock, Mockito.mock(Function.class) },
             new Object[] { /* ascending */ false, limit, clock, Mockito.mock(Function.class) }));
       }

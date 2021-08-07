@@ -15,10 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth8.assertThat;
 
-import java.util.OptionalLong;
 import java.util.function.Supplier;
 
 import javax.cache.Cache;
@@ -26,7 +24,6 @@ import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
-import javax.cache.spi.CachingProvider;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -45,7 +42,7 @@ public final class JCacheConfigurationTest {
 
   @BeforeClass
   public void beforeClass() {
-    final CachingProvider provider = Caching.getCachingProvider(PROVIDER_NAME);
+    var provider = Caching.getCachingProvider(PROVIDER_NAME);
     cacheManager = provider.getCacheManager();
     cacheManager.destroyCache("cache-not-in-config-file");
 
@@ -79,6 +76,6 @@ public final class JCacheConfigurationTest {
     @SuppressWarnings("unchecked")
     CaffeineConfiguration<?, ?> configuration =
         cache.getConfiguration(CaffeineConfiguration.class);
-    assertThat(configuration.getMaximumSize(), is(OptionalLong.of(expectedValue)));
+    assertThat(configuration.getMaximumSize()).hasValue(expectedValue);
   }
 }

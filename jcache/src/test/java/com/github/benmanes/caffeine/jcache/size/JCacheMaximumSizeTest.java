@@ -15,13 +15,11 @@
  */
 package com.github.benmanes.caffeine.jcache.size;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryRemovedListener;
 
@@ -46,11 +44,11 @@ public final class JCacheMaximumSizeTest extends AbstractJCacheTest {
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
     CacheEntryRemovedListener<Integer, Integer> listener = events -> removed.incrementAndGet();
-    CaffeineConfiguration<Integer, Integer> configuration = new CaffeineConfiguration<>();
+    var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setMaximumSize(OptionalLong.of(MAXIMUM));
-    CacheEntryListenerConfiguration<Integer, Integer> listenerConfiguration =
-        new MutableCacheEntryListenerConfiguration<Integer, Integer>(() -> listener,
-            /* filterFactory */ null, /* isOldValueRequired */ false, /* isSynchronous */ true);
+    var listenerConfiguration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+        () -> listener, /* filterFactory */ null,
+        /* isOldValueRequired */ false, /* isSynchronous */ true);
     configuration.addCacheEntryListenerConfiguration(listenerConfiguration);
     configuration.setExecutorFactory(MoreExecutors::directExecutor);
     return configuration;
@@ -61,6 +59,6 @@ public final class JCacheMaximumSizeTest extends AbstractJCacheTest {
     for (int i = 0; i < 2 * MAXIMUM; i++) {
       jcache.put(i, i);
     }
-    assertThat(removed.get(), is(MAXIMUM));
+    assertThat(removed.get()).isEqualTo(MAXIMUM);
   }
 }

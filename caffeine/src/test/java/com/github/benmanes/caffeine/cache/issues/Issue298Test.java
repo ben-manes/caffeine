@@ -17,9 +17,7 @@ package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -113,7 +111,7 @@ public final class Issue298Test {
     reader.join();
 
     // Ensure expire is [expireAfterCreate], not [infinite]
-    assertThat(policy.getExpiresAfter(key).get().toNanos(), is(lessThanOrEqualTo(EXPIRE_NS)));
+    assertThat(policy.getExpiresAfter(key).get().toNanos()).isAtMost(EXPIRE_NS);
   }
 
   private AsyncLoadingCache<String, String> makeAsyncCache() {

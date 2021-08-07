@@ -62,7 +62,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"ImmutableEnumChecker", "deprecation"})
+@SuppressWarnings("ImmutableEnumChecker")
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
 
@@ -149,13 +149,13 @@ public @interface CacheSpec {
     /** A flag indicating that entries are not evicted due to a maximum threshold. */
     DISABLED(Long.MAX_VALUE),
     /** A configuration where entries are evicted immediately. */
-    ZERO(0L),
+    ZERO(0),
     /** A configuration that holds a single unit. */
-    ONE(1L),
+    ONE(1),
     /** A configuration that holds 10 units. */
-    TEN(10L),
+    TEN(10),
     /** A configuration that holds 150 units. */
-    ONE_FIFTY(150L),
+    ONE_FIFTY(150),
     /** A configuration that holds the {@link Population#FULL} unit count. */
     FULL(InitialCapacity.FULL.size()),
     /** A configuration where the threshold is too high for eviction to occur. */
@@ -325,11 +325,11 @@ public @interface CacheSpec {
     /** A flag indicating that entries are not evicted due to expiration. */
     DISABLED(Long.MIN_VALUE),
     /** A configuration where entries are evicted immediately. */
-    IMMEDIATELY(0L),
+    IMMEDIATELY(0),
     /** A configuration where entries are evicted almost immediately. */
-    ONE_MILLISECOND(TimeUnit.MILLISECONDS.toNanos(1L)),
+    ONE_MILLISECOND(TimeUnit.MILLISECONDS.toNanos(1)),
     /** A configuration where entries are after a time duration. */
-    ONE_MINUTE(TimeUnit.MINUTES.toNanos(1L)),
+    ONE_MINUTE(TimeUnit.MINUTES.toNanos(1)),
     /** A configuration where entries should never expire. */
     /** A configuration that holds the {@link Population#FULL} count. */
     FOREVER(Long.MAX_VALUE);
@@ -348,7 +348,7 @@ public @interface CacheSpec {
   /** The time increment to advance by after each entry is added when populating the cache. */
   enum Advance {
     ZERO(0),
-    ONE_MINUTE(TimeUnit.MINUTES.toNanos(1L));
+    ONE_MINUTE(TimeUnit.MINUTES.toNanos(1));
 
     private final long timeNanos;
 

@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.lang.management.ManagementFactory;
 import java.util.function.Supplier;
@@ -25,7 +24,6 @@ import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.CompleteConfiguration;
-import javax.cache.spi.CachingProvider;
 import javax.management.ObjectName;
 
 import org.testng.annotations.BeforeClass;
@@ -46,7 +44,7 @@ public final class CacheManagerTest {
 
   @BeforeClass
   public void beforeClass() {
-    CachingProvider provider = Caching.getCachingProvider(PROVIDER_NAME);
+    var provider = Caching.getCachingProvider(PROVIDER_NAME);
     cacheManager = provider.getCacheManager(
         provider.getDefaultURI(), provider.getDefaultClassLoader());
   }
@@ -67,8 +65,8 @@ public final class CacheManagerTest {
 
     @SuppressWarnings("unchecked")
     CompleteConfiguration<?, ?> configuration = cache.getConfiguration(CompleteConfiguration.class);
-    assertThat(configuration.isManagementEnabled(), is(true));
-    assertThat(configuration.isStatisticsEnabled(), is(true));
+    assertThat(configuration.isManagementEnabled()).isTrue();
+    assertThat(configuration.isStatisticsEnabled()).isTrue();
 
     String name = "javax.cache:Cache=%s,CacheManager=%s,type=CacheStatistics";
     ManagementFactory.getPlatformMBeanServer().getObjectInstance(

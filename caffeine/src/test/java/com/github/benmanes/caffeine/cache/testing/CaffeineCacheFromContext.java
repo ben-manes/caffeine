@@ -26,7 +26,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
@@ -37,7 +36,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"PreferJavaTimeOverload", "deprecation"})
+@SuppressWarnings("PreferJavaTimeOverload")
 public final class CaffeineCacheFromContext {
   interface SerializableTicker extends Ticker, Serializable {}
 
@@ -47,37 +46,37 @@ public final class CaffeineCacheFromContext {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     context.caffeine = builder;
 
-    if (context.initialCapacity != InitialCapacity.DEFAULT) {
-      builder.initialCapacity(context.initialCapacity.size());
+    if (context.initialCapacity() != InitialCapacity.DEFAULT) {
+      builder.initialCapacity(context.initialCapacity().size());
     }
     if (context.isRecordingStats()) {
       builder.recordStats();
     }
-    if (context.maximumSize != Maximum.DISABLED) {
-      if (context.weigher == CacheWeigher.DEFAULT) {
-        builder.maximumSize(context.maximumSize.max());
+    if (context.maximum() != Maximum.DISABLED) {
+      if (context.weigher() == CacheWeigher.DEFAULT) {
+        builder.maximumSize(context.maximum().max());
       } else {
-        builder.weigher(context.weigher);
+        builder.weigher(context.weigher());
         builder.maximumWeight(context.maximumWeight());
       }
     }
     if (context.expiryType() != CacheExpiry.DISABLED) {
-      builder.expireAfter(context.expiry);
+      builder.expireAfter(context.expiry());
     }
-    if (context.afterAccess != Expire.DISABLED) {
-      builder.expireAfterAccess(context.afterAccess.timeNanos(), TimeUnit.NANOSECONDS);
+    if (context.expiresAfterAccess()) {
+      builder.expireAfterAccess(context.expireAfterAccess().timeNanos(), TimeUnit.NANOSECONDS);
     }
-    if (context.afterWrite != Expire.DISABLED) {
-      builder.expireAfterWrite(context.afterWrite.timeNanos(), TimeUnit.NANOSECONDS);
+    if (context.expiresAfterWrite()) {
+      builder.expireAfterWrite(context.expireAfterWrite().timeNanos(), TimeUnit.NANOSECONDS);
     }
-    if (context.refresh != Expire.DISABLED) {
-      builder.refreshAfterWrite(context.refresh.timeNanos(), TimeUnit.NANOSECONDS);
+    if (context.refreshes()) {
+      builder.refreshAfterWrite(context.refreshAfterWrite().timeNanos(), TimeUnit.NANOSECONDS);
     }
     if (context.expires() || context.refreshes()) {
       SerializableTicker ticker = context.ticker()::read;
       builder.ticker(ticker);
     }
-    if (context.keyStrength == ReferenceType.WEAK) {
+    if (context.isWeakKeys()) {
       builder.weakKeys();
     } else if (context.keyStrength == ReferenceType.SOFT) {
       throw new IllegalStateException();
@@ -87,30 +86,30 @@ public final class CaffeineCacheFromContext {
     } else if (context.isSoftValues()) {
       builder.softValues();
     }
-    if (context.cacheExecutor != CacheExecutor.DEFAULT) {
-      builder.executor(context.executor);
+    if (context.executorType() != CacheExecutor.DEFAULT) {
+      builder.executor(context.executor());
     }
     if (context.cacheScheduler != CacheScheduler.DEFAULT) {
-      builder.scheduler(context.scheduler);
+      builder.scheduler(context.scheduler());
     }
-    if (context.removalListenerType != Listener.DEFAULT) {
-      builder.removalListener(context.removalListener);
+    if (context.removalListenerType() != Listener.DEFAULT) {
+      builder.removalListener(context.removalListener());
     }
-    if (context.evictionListenerType != Listener.DEFAULT) {
-      builder.evictionListener(context.evictionListener);
+    if (context.evictionListenerType() != Listener.DEFAULT) {
+      builder.evictionListener(context.evictionListener());
     }
     if (context.isAsync()) {
-      if (context.loader == null) {
+      if (context.loader() == null) {
         context.asyncCache = builder.buildAsync();
       } else {
         context.asyncCache = builder.buildAsync(
-            context.isAsyncLoading ? context.loader.async() : context.loader);
+            context.isAsyncLoading() ? context.loader().async() : context.loader());
       }
       context.cache = context.asyncCache.synchronous();
-    } else if (context.loader == null) {
+    } else if (context.loader() == null) {
       context.cache = builder.build();
     } else {
-      context.cache = builder.build(context.loader);
+      context.cache = builder.build(context.loader());
     }
 
     @SuppressWarnings("unchecked")

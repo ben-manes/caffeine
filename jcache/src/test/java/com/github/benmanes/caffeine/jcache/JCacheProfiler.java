@@ -24,10 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
 import javax.cache.Cache;
-import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
-import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.common.base.Stopwatch;
@@ -51,8 +49,8 @@ public final class JCacheProfiler {
   JCacheProfiler() {
     random = new Random();
     count = new LongAdder();
-    CachingProvider provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
-    CacheManager cacheManager = provider.getCacheManager(
+    var provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
+    var cacheManager = provider.getCacheManager(
         provider.getDefaultURI(), provider.getDefaultClassLoader());
     cache = cacheManager.createCache("profiler", new MutableConfiguration<>());
     executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder()
@@ -83,7 +81,7 @@ public final class JCacheProfiler {
 
   @SuppressWarnings("FutureReturnValueIgnored")
   private void scheduleStatusTask() {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    var stopwatch = Stopwatch.createStarted();
     Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
       long count = this.count.longValue();
       long rate = count / stopwatch.elapsed(TimeUnit.SECONDS);

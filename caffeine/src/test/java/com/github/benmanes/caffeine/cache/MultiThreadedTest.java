@@ -39,8 +39,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.benmanes.caffeine.testing.Threads;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -103,17 +101,17 @@ public final class MultiThreadedTest {
   List<BiConsumer<LoadingCache<Int, Int>, Int>> operations = List.of(
       // LoadingCache
       (cache, key) -> { cache.get(key); },
-      (cache, key) -> { cache.getAll(ImmutableList.of(key)); },
+      (cache, key) -> { cache.getAll(List.of(key)); },
       (cache, key) -> { cache.refresh(key); },
 
       // Cache
       (cache, key) -> { cache.getIfPresent(key); },
       (cache, key) -> { cache.get(key, Function.identity()); },
-      (cache, key) -> { cache.getAllPresent(ImmutableList.of(key)); },
+      (cache, key) -> { cache.getAllPresent(List.of(key)); },
       (cache, key) -> { cache.put(key, key); },
-      (cache, key) -> { cache.putAll(ImmutableMap.of(key, key)); },
+      (cache, key) -> { cache.putAll(Map.of(key, key)); },
       (cache, key) -> { cache.invalidate(key); },
-      (cache, key) -> { cache.invalidateAll(ImmutableList.of(key)); },
+      (cache, key) -> { cache.invalidateAll(List.of(key)); },
       (cache, key) -> { // expensive so do it less frequently
         int random = ThreadLocalRandom.current().nextInt();
         if ((random & 255) == 0) {
@@ -131,7 +129,7 @@ public final class MultiThreadedTest {
       (cache, key) -> { Preconditions.checkState(cache.asMap().size() >= 0); },
       (cache, key) -> { cache.asMap().get(key); },
       (cache, key) -> { cache.asMap().put(key, key); },
-      (cache, key) -> { cache.asMap().putAll(ImmutableMap.of(key, key)); },
+      (cache, key) -> { cache.asMap().putAll(Map.of(key, key)); },
       (cache, key) -> { cache.asMap().putIfAbsent(key, key); },
       (cache, key) -> { cache.asMap().remove(key); },
       (cache, key) -> { cache.asMap().remove(key, key); },
@@ -166,6 +164,6 @@ public final class MultiThreadedTest {
       (cache, key) -> { cache.get(key, k -> key); },
       (cache, key) -> { cache.get(key, (k, e) -> CompletableFuture.completedFuture(key)); },
       (cache, key) -> { cache.get(key); },
-      (cache, key) -> { cache.getAll(ImmutableList.of(key)); },
+      (cache, key) -> { cache.getAll(List.of(key)); },
       (cache, key) -> { cache.put(key, CompletableFuture.completedFuture(key)); });
 }

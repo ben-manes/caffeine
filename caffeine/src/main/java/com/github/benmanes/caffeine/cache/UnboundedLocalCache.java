@@ -56,7 +56,6 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("deprecation")
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   static final Logger logger = System.getLogger(UnboundedLocalCache.class.getName());
   static final VarHandle REFRESHES;
@@ -954,19 +953,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     private static final long serialVersionUID = 1;
 
     final Function<K, V> mappingFunction;
-    final CacheLoader<? super K, V> loader;
+    final CacheLoader<? super K, V> cacheLoader;
     @Nullable final Function<Set<? extends K>, Map<K, V>> bulkMappingFunction;
 
-    UnboundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+    UnboundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> cacheLoader) {
       super(builder);
-      this.loader = loader;
-      this.mappingFunction = newMappingFunction(loader);
-      this.bulkMappingFunction = newBulkMappingFunction(loader);
+      this.cacheLoader = cacheLoader;
+      this.mappingFunction = newMappingFunction(cacheLoader);
+      this.bulkMappingFunction = newBulkMappingFunction(cacheLoader);
     }
 
     @Override
     public CacheLoader<? super K, V> cacheLoader() {
-      return loader;
+      return cacheLoader;
     }
 
     @Override
@@ -983,7 +982,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     Object writeReplace() {
       @SuppressWarnings("unchecked")
       SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
-      proxy.loader = loader;
+      proxy.cacheLoader = cacheLoader;
       return proxy;
     }
 
@@ -1101,8 +1100,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       SerializationProxy<K, V> proxy = new SerializationProxy<>();
       proxy.isRecordingStats = cache.isRecordingStats();
       proxy.removalListener = cache.removalListener;
+      proxy.cacheLoader = cacheLoader;
       proxy.ticker = cache.ticker;
-      proxy.loader = loader;
       proxy.async = true;
       return proxy;
     }

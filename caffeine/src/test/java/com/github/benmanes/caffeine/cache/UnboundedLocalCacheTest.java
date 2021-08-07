@@ -15,10 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-
-import java.util.Optional;
+import static com.google.common.truth.Truth8.assertThat;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -50,22 +47,9 @@ public final class UnboundedLocalCacheTest {
       values = ReferenceType.STRONG)
   @Test(dataProvider = "caches")
   public void noPolicy(Cache<Integer, Integer> cache, CacheContext context) {
-    assertThat(cache.policy().eviction(), is(Optional.empty()));
-    assertThat(cache.policy().expireAfterWrite(), is(Optional.empty()));
-    assertThat(cache.policy().expireAfterAccess(), is(Optional.empty()));
-    assertThat(cache.policy().refreshAfterWrite(), is(Optional.empty()));
-  }
-
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      refreshAfterWrite = Expire.DISABLED, keys = ReferenceType.STRONG,
-      values = ReferenceType.STRONG)
-  @Test(dataProvider = "caches")
-  public void noPolicy_async(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    assertThat(cache.synchronous().policy().eviction(), is(Optional.empty()));
-    assertThat(cache.synchronous().policy().expireAfterWrite(), is(Optional.empty()));
-    assertThat(cache.synchronous().policy().expireAfterAccess(), is(Optional.empty()));
-    assertThat(cache.synchronous().policy().refreshAfterWrite(), is(Optional.empty()));
+    assertThat(cache.policy().eviction()).isEmpty();
+    assertThat(cache.policy().expireAfterWrite()).isEmpty();
+    assertThat(cache.policy().expireAfterAccess()).isEmpty();
+    assertThat(cache.policy().refreshAfterWrite()).isEmpty();
   }
 }

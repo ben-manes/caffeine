@@ -2,6 +2,7 @@
 <dependency-verification version='1'>
   <trust-requirement pgp='GROUP' checksum='NONE' />
   <ignored-keys>
+    <ignored-key id='1993b355097c8b5a' />
     <ignored-key id='44ce7bf2825ea2cd' />
     <ignored-key id='8e1ad594207b7fb2' />
     <ignored-key id='ac5ec74981f9cda6' />
@@ -36,6 +37,7 @@
     <trusted-key id='a5def5a76f94a471' group='com.github.spotbugs' />
     <trusted-key id='c7ca19b7b620d787' group='com.github.stephenc.jcip' />
     <trusted-key id='5e1f79a7c298661e' group='com.google.auto' />
+    <trusted-key id='b0f3710fa64900e7' group='com.google.auto' />
     <trusted-key id='c51e6cbc7ff46f0b' group='com.google.auto.service' />
     <trusted-key id='b0f3710fa64900e7' group='com.google.auto.value' />
     <trusted-key id='353a436e043e3145' group='com.google.code.findbugs' />
@@ -55,6 +57,7 @@
     <trusted-key id='a7764f502a938c99' group='com.google.protobuf' />
     <trusted-key id='81c27de945332233' group='com.google.truth' />
     <trusted-key id='bac30622339994c4' group='com.google.truth' />
+    <trusted-key id='bac30622339994c4' group='com.google.truth.extensions' />
     <trusted-key id='3c0a8f4744f37328' group='com.googlecode.concurrentlinkedhashmap' />
     <trusted-key id='476634a4694e716a' group='com.googlecode.java-diff-utils' />
     <trusted-key id='72475fd306b9cab7' group='com.googlecode.javaewah' />
@@ -578,6 +581,9 @@
     </dependency>
     <dependency group='org.kordamp.gradle' module='jandex-gradle-plugin' version='0.9.0'>
       <sha512>CFAB87EE54727A23526EBB62939E38294E551DF853DEECFD9F3AA5C5FB70B697A5F59679BB90064B0DC57AE3BB4DFB7ECE5D215DEEBDFD5C76F72D3A9280A7BC</sha512>
+    </dependency>
+    <dependency group='org.lz4' module='lz4-java' version='1.8.0'>
+      <sha512>98D59086A6021CA571D9C1D64B715E43044C730E1AC563F514C40CF44302615D30378B6D5CC69990446522DE6260DC8E7B303E3990A3139DC326D058DFB6DBD9</sha512>
     </dependency>
     <dependency group='org.ow2.asm' module='asm-analysis' version='7.0'>
       <sha512>1A6CA169E9E2D29256F9C45570D89E5B039EAF7D405CCB3F7F79926552F2A0818975CE2C6ADCE3F1F59E28172E4303A1C790C52AB06263C61C9C8181FF279CEE</sha512>

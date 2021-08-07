@@ -367,7 +367,7 @@ public class CaffeineSpecGuavaTest extends TestCase {
     assertEquals(Strength.WEAK, spec.keyStrength);
     assertEquals(Strength.WEAK, spec.valueStrength);
     assertEquals(Duration.ofHours(1), spec.expireAfterWrite);
-    assertEquals(Duration.ofMinutes(10L), spec.expireAfterAccess);
+    assertEquals(Duration.ofMinutes(10), spec.expireAfterAccess);
     Caffeine<?, ?> expected = Caffeine.newBuilder()
         .initialCapacity(10)
         .maximumSize(20)

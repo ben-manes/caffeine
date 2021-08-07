@@ -17,11 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.testing.TestingExecutors.sameThreadScheduledExecutor;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -88,17 +85,17 @@ public final class SchedulerTest {
   public void disabledScheduler() {
     var future = Scheduler.disabledScheduler()
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
-    assertThat(future, is(DisabledFuture.INSTANCE));
+    assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
   }
 
   @Test
   public void disabledFuture() throws Exception {
-    assertThat(DisabledFuture.INSTANCE.isDone(), is(true));
-    assertThat(DisabledFuture.INSTANCE.isCancelled(), is(false));
-    assertThat(DisabledFuture.INSTANCE.cancel(false), is(false));
-    assertThat(DisabledFuture.INSTANCE.cancel(true), is(false));
-    assertThat(DisabledFuture.INSTANCE.get(), is(nullValue()));
-    assertThat(DisabledFuture.INSTANCE.get(0, TimeUnit.SECONDS), is(nullValue()));
+    assertThat(DisabledFuture.INSTANCE.get(0, TimeUnit.SECONDS)).isNull();
+    assertThat(DisabledFuture.INSTANCE.isCancelled()).isFalse();
+    assertThat(DisabledFuture.INSTANCE.cancel(false)).isFalse();
+    assertThat(DisabledFuture.INSTANCE.cancel(true)).isFalse();
+    assertThat(DisabledFuture.INSTANCE.isDone()).isTrue();
+    assertThat(DisabledFuture.INSTANCE.get()).isNull();
   }
 
   @Test
@@ -123,21 +120,21 @@ public final class SchedulerTest {
     var future = Scheduler.guardedScheduler(scheduler)
         .schedule(executor, command, 1L, TimeUnit.MINUTES);
     verify(scheduledExecutor).schedule(any(Runnable.class), eq(1L), eq(TimeUnit.MINUTES));
-    assertThat(future, is(DisabledFuture.INSTANCE));
+    assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
   }
 
   @Test
   public void guardedScheduler() {
     var future = Scheduler.guardedScheduler((r, e, d, u) -> Futures.immediateVoidFuture())
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
-    assertThat(future, is(Futures.immediateVoidFuture()));
+    assertThat(future).isSameInstanceAs(Futures.immediateVoidFuture());
   }
 
   @Test
   public void guardedScheduler_exception() {
     var future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new RuntimeException(); })
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
-    assertThat(future, is(DisabledFuture.INSTANCE));
+    assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
   }
 
   /* --------------- ScheduledExecutorService --------------- */
@@ -156,7 +153,7 @@ public final class SchedulerTest {
 
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
     var future = scheduler.schedule(executor, command, 1L, TimeUnit.MINUTES);
-    assertThat(future, is(not(DisabledFuture.INSTANCE)));
+    assertThat(future).isNotSameInstanceAs(DisabledFuture.INSTANCE);
 
     verify(scheduledExecutor).isShutdown();
     verify(scheduledExecutor).schedule(task.capture(), eq(1L), eq(TimeUnit.MINUTES));
@@ -175,7 +172,7 @@ public final class SchedulerTest {
     when(scheduledExecutor.isShutdown()).thenReturn(true);
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
     var future = scheduler.schedule(executor, () -> {}, 1L, TimeUnit.MINUTES);
-    assertThat(future, is(DisabledFuture.INSTANCE));
+    assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
 
     verify(scheduledExecutor).isShutdown();
     verifyNoMoreInteractions(scheduledExecutor);

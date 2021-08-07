@@ -26,8 +26,8 @@
 ext {
   versions = [
     akka: '2.6.15',
-    cache2k: '2.1.3.Alpha',
-    checkerFramework: '3.16.0',
+    cache2k: '2.1.5.Beta',
+    checkerFramework: '3.17.0',
     coherence: '20.06',
     commonsCompress: '1.21',
     commonsLang3: '3.12.0',
@@ -35,10 +35,10 @@ ext {
     commonsIo: '2.11.0',
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.1',
-    ehcache3: '3.9.4',
-    errorprone: '2.8.0',
+    ehcache3: '3.9.5',
+    errorprone: '2.8.1',
     errorproneJavac: '9+181-r4173-1',
-    elasticSearch: '7.13.4',
+    elasticSearch: '7.14.0',
     expiringMap: '0.5.10',
     fastfilter: '1.0.2',
     fastutil: '8.5.4',
@@ -131,9 +131,7 @@ ext {
     flipTables: "com.jakewharton.fliptables:fliptables:${versions.flipTables}",
     googleJavaFormat: "com.google.googlejavaformat:google-java-format:${versions.googleJavaFormat}",
     guava: "com.google.guava:guava:${versions.guava}",
-    jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${versions.jackrabbit}") {
-      exclude group: 'junit'
-    },
+    jackrabbit: "org.apache.jackrabbit:oak-core:${versions.jackrabbit}",
     jamm: "com.github.jbellis:jamm:${versions.jamm}",
     javaObjectLayout: "org.openjdk.jol:jol-cli:${versions.javaObjectLayout}",
     javapoet: "com.squareup:javapoet:${versions.javapoet}",
@@ -154,24 +152,15 @@ ext {
   ]
   testLibraries = [
     awaitility: "org.awaitility:awaitility:${testVersions.awaitility}",
-    guavaTestLib: dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
-      exclude group: 'com.google.truth'
-      exclude group: 'junit'
-    },
+    guavaTestLib: "com.google.guava:guava-testlib:${versions.guava}",
     hamcrest: "org.hamcrest:hamcrest:${testVersions.hamcrest}",
     jcacheGuice: "org.jsr107.ri:cache-annotations-ri-guice:${versions.jcache}",
     jcacheTck: "javax.cache:cache-tests:${testVersions.jcacheTck}",
     jcacheTckTests: "javax.cache:cache-tests:${testVersions.jcacheTck}:tests",
     jctools: "org.jctools:jctools-core:${testVersions.jctools}",
-    junit: dependencies.create("junit:junit:${testVersions.junit}") {
-      exclude group: 'org.hamcrest'
-    },
+    junit: "junit:junit:${testVersions.junit}",
     mockito: "org.mockito:mockito-core:${testVersions.mockito}",
-    osgiCompile: [
-      dependencies.create("org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}") {
-        exclude group: 'org.hamcrest'
-      },
-    ],
+    osgiCompile: "org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}",
     osgiRuntime: [
       "org.apache.felix:org.apache.felix.framework:${testVersions.felix}",
       "org.apache.felix:org.apache.felix.scr:${testVersions.felixScr}",
@@ -182,13 +171,13 @@ ext {
       "org.ops4j.pax.url:pax-url-aether:2.6.7",
     ],
     testng: [
-      dependencies.create("org.testng:testng:${testVersions.testng}") {
-        exclude group: 'junit'
-        exclude group: 'guice'
-      },
+      "org.testng:testng:${testVersions.testng}",
       "com.google.inject:guice:${testVersions.guice}"
     ],
-    truth: "com.google.truth:truth:${testVersions.truth}",
+    truth: [
+      "com.google.truth:truth:${testVersions.truth}",
+      "com.google.truth.extensions:truth-java8-extension:${testVersions.truth}"
+    ],
   ]
   gradlePlugins = [
     bnd: "biz.aQute.bnd:biz.aQute.bnd.gradle:${pluginVersions.bnd}",

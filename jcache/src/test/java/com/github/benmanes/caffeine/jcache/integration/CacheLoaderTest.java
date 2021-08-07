@@ -15,12 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.integration;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anEmptyMap;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;
 import java.util.Map;
@@ -54,13 +49,13 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   @Test
   public void load() {
     loadSupplier = () -> -1;
-    assertThat(jcacheLoading.get(1), is(-1));
+    assertThat(jcacheLoading.get(1)).isEqualTo(-1);
   }
 
   @Test
   public void load_null() {
     loadSupplier = () -> null;
-    assertThat(jcacheLoading.get(1), is(nullValue()));
+    assertThat(jcacheLoading.get(1)).isNull();
   }
 
   @Test
@@ -70,15 +65,15 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
       jcacheLoading.get(1);
       Assert.fail();
     } catch (CacheLoaderException e) {
-      assertThat(e.getCause(), instanceOf(IllegalStateException.class));
+      assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
     }
   }
 
   @Test
   public void loadAll() {
     loadAllSupplier = () -> ImmutableMap.of(1, -1, 2, -2, 3, -3);
-    Map<Integer, Integer> result = jcacheLoading.getAll(ImmutableSet.of(1, 2, 3));
-    assertThat(result, is(equalTo(loadAllSupplier.get())));
+    var result = jcacheLoading.getAll(ImmutableSet.of(1, 2, 3));
+    assertThat(result).containsExactlyEntriesIn(loadAllSupplier.get());
   }
 
   @Test(expectedExceptions = CacheLoaderException.class)
@@ -90,8 +85,8 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   @Test
   public void loadAll_nullMapping() {
     loadAllSupplier = () -> Collections.singletonMap(1, null);
-    Map<Integer, Integer> result = jcacheLoading.getAll(ImmutableSet.of(1, 2, 3));
-    assertThat(result, is(anEmptyMap()));
+    var result = jcacheLoading.getAll(ImmutableSet.of(1, 2, 3));
+    assertThat(result).isEmpty();
   }
 
   @Override protected CaffeineConfiguration<Integer, Integer> getConfiguration() {

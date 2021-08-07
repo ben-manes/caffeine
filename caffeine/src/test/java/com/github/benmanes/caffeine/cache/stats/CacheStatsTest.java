@@ -15,11 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasToString;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -41,12 +37,12 @@ public final class CacheStatsTest {
     var stats = CacheStats.of(0, 0, 0, 0, 0, 0, 0);
     checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0, 0);
 
-    assertThat(stats, is(equalTo(CacheStats.empty())));
-    assertThat(stats, is(not(equalTo(null))));
-    assertThat(stats, is(not(equalTo(new Object()))));
-    assertThat(stats, is(equalTo(CacheStats.empty())));
-    assertThat(stats.hashCode(), is(CacheStats.empty().hashCode()));
-    assertThat(stats, hasToString(CacheStats.empty().toString()));
+    assertThat(stats).isEqualTo(CacheStats.empty());
+    assertThat(stats.equals(null)).isFalse();
+    assertThat(stats).isNotEqualTo(new Object());
+    assertThat(stats).isEqualTo(CacheStats.empty());
+    assertThat(stats.hashCode()).isEqualTo(CacheStats.empty().hashCode());
+    assertThat(stats.toString()).isEqualTo(CacheStats.empty().toString());
   }
 
   @Test
@@ -55,15 +51,15 @@ public final class CacheStatsTest {
     checkStats(stats, 24, 11, 11.0/24, 13, 13.0/24,
         17, 19, 19.0/36, 17 + 19, 23, 23.0/(17 + 19), 27, 54);
 
-    assertThat(stats, is(equalTo(stats)));
-    assertThat(stats, is(not(equalTo(CacheStats.empty()))));
-    assertThat(stats.hashCode(), is(not(CacheStats.empty().hashCode())));
-    assertThat(stats, hasToString(not(CacheStats.empty().toString())));
+    assertThat(stats.equals(stats)).isTrue();
+    assertThat(stats).isNotEqualTo(CacheStats.empty());
+    assertThat(stats.hashCode()).isNotEqualTo(CacheStats.empty().hashCode());
+    assertThat(stats.toString()).isNotEqualTo(CacheStats.empty().toString());
 
     var expected = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
-    assertThat(stats, is(equalTo(expected)));
-    assertThat(stats.hashCode(), is(expected.hashCode()));
-    assertThat(stats, hasToString(expected.toString()));
+    assertThat(stats.equals(expected)).isTrue();
+    assertThat(stats.hashCode()).isEqualTo(expected.hashCode());
+    assertThat(stats.toString()).isEqualTo(expected.toString());
   }
 
   @Test
@@ -74,7 +70,7 @@ public final class CacheStatsTest {
     var diff = two.minus(one);
     checkStats(diff, 76, 42, 42.0 / 76, 34, 34.0 / 76,
         26, 22, 22.0 / 48, 26 + 22, 14, 14.0 / (26 + 22), 4, 8);
-    assertThat(one.minus(two), is(CacheStats.empty()));
+    assertThat(one.minus(two)).isEqualTo(CacheStats.empty());
   }
 
   @Test
@@ -86,7 +82,7 @@ public final class CacheStatsTest {
     checkStats(sum, 124, 64, 64.0 / 124, 60, 60.0 / 124,
         56, 52, 52.0 / 108, 56 + 52, 48, 48.0 / (56 + 52), 44, 88);
 
-    assertThat(sum, is(one.plus(two)));
+    assertThat(sum).isEqualTo(one.plus(two));
   }
 
   @Test
@@ -102,19 +98,19 @@ public final class CacheStatsTest {
       double hitRate, long missCount, double missRate, long loadSuccessCount,
       long loadFailureCount, double loadFailureRate, long loadCount, long totalLoadTime,
       double averageLoadPenalty, long evictionCount, long evictionWeight) {
-    assertThat(stats.requestCount(), is(requestCount));
-    assertThat(stats.hitCount(), is(hitCount));
-    assertThat(stats.hitRate(), is(hitRate));
-    assertThat(stats.missCount(), is(missCount));
-    assertThat(stats.missRate(), is(missRate));
-    assertThat(stats.loadSuccessCount(), is(loadSuccessCount));
-    assertThat(stats.loadFailureCount(), is(loadFailureCount));
-    assertThat(stats.loadFailureRate(), is(loadFailureRate));
-    assertThat(stats.loadCount(), is(loadCount));
-    assertThat(stats.totalLoadTime(), is(totalLoadTime));
-    assertThat(stats.averageLoadPenalty(), is(averageLoadPenalty));
-    assertThat(stats.evictionCount(), is(evictionCount));
-    assertThat(stats.evictionWeight(), is(evictionWeight));
+    assertThat(stats.requestCount()).isEqualTo(requestCount);
+    assertThat(stats.hitCount()).isEqualTo(hitCount);
+    assertThat(stats.hitRate()).isEqualTo(hitRate);
+    assertThat(stats.missCount()).isEqualTo(missCount);
+    assertThat(stats.missRate()).isEqualTo(missRate);
+    assertThat(stats.loadSuccessCount()).isEqualTo(loadSuccessCount);
+    assertThat(stats.loadFailureCount()).isEqualTo(loadFailureCount);
+    assertThat(stats.loadFailureRate()).isEqualTo(loadFailureRate);
+    assertThat(stats.loadCount()).isEqualTo(loadCount);
+    assertThat(stats.totalLoadTime()).isEqualTo(totalLoadTime);
+    assertThat(stats.averageLoadPenalty()).isEqualTo(averageLoadPenalty);
+    assertThat(stats.evictionCount()).isEqualTo(evictionCount);
+    assertThat(stats.evictionWeight()).isEqualTo(evictionWeight);
   }
 
   @DataProvider(name = "badArgs")

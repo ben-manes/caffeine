@@ -15,10 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -73,23 +70,23 @@ public final class PacerTest {
         .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
     pacer.schedule(executor, command, NOW, delay);
 
-    assertThat(pacer.future, is(DisabledFuture.INSTANCE));
-    assertThat(pacer.nextFireTime, is(NOW + Pacer.TOLERANCE));
+    assertThat(pacer.future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
   }
 
   @Test
   public void schedule_initialize_recurse() {
     long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
     doAnswer(invocation -> {
-      assertThat(pacer.future, is(nullValue()));
-      assertThat(pacer.nextFireTime, is(not(0L)));
+      assertThat(pacer.future).isNull();
+      assertThat(pacer.nextFireTime).isNotEqualTo(0);
       pacer.schedule(executor, command, NOW, delay);
       return DisabledFuture.INSTANCE;
     }).when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
 
     pacer.schedule(executor, command, NOW, delay);
-    assertThat(pacer.future, is(DisabledFuture.INSTANCE));
-    assertThat(pacer.nextFireTime, is(NOW + Pacer.TOLERANCE));
+    assertThat(pacer.future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
   }
 
   @Test
@@ -100,17 +97,17 @@ public final class PacerTest {
         .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
 
     pacer.schedule(executor, command, NOW, delay);
-    assertThat(pacer.nextFireTime, is(fireTime));
-    assertThat(pacer.future, is(future));
+    assertThat(pacer.nextFireTime).isEqualTo(fireTime);
+    assertThat(pacer.future).isSameInstanceAs(future);
 
     pacer.cancel();
     verify(future).cancel(false);
-    assertThat(pacer.nextFireTime, is(0L));
-    assertThat(pacer.future, is(nullValue()));
+    assertThat(pacer.nextFireTime).isEqualTo(0);
+    assertThat(pacer.future).isNull();
 
     pacer.schedule(executor, command, NOW, delay);
-    assertThat(pacer.nextFireTime, is(fireTime));
-    assertThat(pacer.future, is(future));
+    assertThat(pacer.nextFireTime).isEqualTo(fireTime);
+    assertThat(pacer.future).isSameInstanceAs(future);
   }
 
   @Test
@@ -121,8 +118,8 @@ public final class PacerTest {
     long expectedNextFireTime = pacer.nextFireTime;
     pacer.schedule(executor, command, NOW, ONE_MINUTE_IN_NANOS);
 
-    assertThat(pacer.future, is(future));
-    assertThat(pacer.nextFireTime, is(expectedNextFireTime));
+    assertThat(pacer.future).isSameInstanceAs(future);
+    assertThat(pacer.nextFireTime).isEqualTo(expectedNextFireTime);
     verifyNoInteractions(scheduler, executor, command, future);
   }
 
@@ -136,8 +133,8 @@ public final class PacerTest {
         - Math.max(1, random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE)));
     pacer.schedule(executor, command, NOW, delay);
 
-    assertThat(pacer.future, is(future));
-    assertThat(pacer.nextFireTime, is(expectedNextFireTime));
+    assertThat(pacer.future).isSameInstanceAs(future);
+    assertThat(pacer.nextFireTime).isEqualTo(expectedNextFireTime);
     verifyNoInteractions(scheduler, executor, command, future);
   }
 
@@ -151,8 +148,8 @@ public final class PacerTest {
         .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
     pacer.schedule(executor, command, NOW, delay);
 
-    assertThat(pacer.future, is(DisabledFuture.INSTANCE));
-    assertThat(pacer.nextFireTime, is(NOW + Pacer.TOLERANCE));
+    assertThat(pacer.future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
 
     verify(future).cancel(false);
     verify(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
@@ -171,8 +168,8 @@ public final class PacerTest {
         .when(scheduler).schedule(executor, command, delay, TimeUnit.NANOSECONDS);
     pacer.schedule(executor, command, NOW, delay);
 
-    assertThat(pacer.future, is(DisabledFuture.INSTANCE));
-    assertThat(pacer.nextFireTime, is(NOW + delay));
+    assertThat(pacer.future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + delay);
 
     verify(future).cancel(false);
     verify(scheduler).schedule(executor, command, delay, TimeUnit.NANOSECONDS);
@@ -184,8 +181,8 @@ public final class PacerTest {
   @Test
   public void cancel_initialize() {
     pacer.cancel();
-    assertThat(pacer.nextFireTime, is(0L));
-    assertThat(pacer.future, is(nullValue()));
+    assertThat(pacer.nextFireTime).isEqualTo(0);
+    assertThat(pacer.future).isNull();
   }
 
   @Test
@@ -195,7 +192,7 @@ public final class PacerTest {
 
     pacer.cancel();
     verify(future).cancel(false);
-    assertThat(pacer.nextFireTime, is(0L));
-    assertThat(pacer.future, is(nullValue()));
+    assertThat(pacer.future).isNull();
+    assertThat(pacer.nextFireTime).isEqualTo(0);
   }
 }

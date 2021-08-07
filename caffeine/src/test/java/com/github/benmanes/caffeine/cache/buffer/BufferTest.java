@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -52,7 +51,7 @@ public final class BufferTest {
       }
     });
     long recorded = buffer.recorded();
-    assertThat(recorded, is((long) ReadBuffer.BUFFER_SIZE));
+    assertThat(recorded).isEqualTo(ReadBuffer.BUFFER_SIZE);
   }
 
   @Test(dataProvider = "buffers")
@@ -63,7 +62,7 @@ public final class BufferTest {
     buffer.drain();
     long drained = buffer.drained();
     long recorded = buffer.recorded();
-    assertThat(drained, is(recorded));
+    assertThat(drained).isEqualTo(recorded);
   }
 
   @Test(dataProvider = "buffers")
@@ -81,6 +80,6 @@ public final class BufferTest {
     buffer.drain();
     long drained = buffer.drained();
     long recorded = buffer.recorded();
-    assertThat(drained, is(recorded));
+    assertThat(drained).isEqualTo(recorded);
   }
 }

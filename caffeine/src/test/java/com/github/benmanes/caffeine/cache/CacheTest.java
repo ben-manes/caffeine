@@ -15,24 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.IsCacheReserializable.reserializable;
-import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
-import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
+import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
+import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
+import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.aMapWithSize;
-import static org.hamcrest.Matchers.anEmptyMap;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,7 +48,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
@@ -76,7 +69,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void estimatedSize(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.estimatedSize(), is(context.initialSize()));
+    assertThat(cache.estimatedSize()).isEqualTo(context.initialSize());
   }
 
   /* --------------- getIfPresent --------------- */
@@ -91,18 +84,18 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresent_absent(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
-    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(0));
+    assertThat(cache.getIfPresent(context.absentKey())).isNull();
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(0);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getIfPresent_present(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.getIfPresent(context.firstKey()), is(not(nullValue())));
-    assertThat(cache.getIfPresent(context.middleKey()), is(not(nullValue())));
-    assertThat(cache.getIfPresent(context.lastKey()), is(not(nullValue())));
-    verifyStats(context, verifier -> verifier.hits(3).misses(0).success(0).failures(0));
+    assertThat(cache.getIfPresent(context.firstKey())).isNotNull();
+    assertThat(cache.getIfPresent(context.middleKey())).isNotNull();
+    assertThat(cache.getIfPresent(context.lastKey())).isNotNull();
+    assertThat(context).stats().hits(3).misses(0).success(0).failures(0);
   }
 
   /* --------------- get --------------- */
@@ -111,7 +104,7 @@ public final class CacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_nullKey(Cache<Int, Int> cache, CacheContext context) {
-    cache.get(null, Function.identity());
+    cache.get(null, identity());
   }
 
   @CacheSpec
@@ -134,15 +127,15 @@ public final class CacheTest {
     try {
       cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
     } finally {
-      verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
+      assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
     }
   }
 
   @CacheSpec
   @Test(dataProvider = "caches")
   public void get_absent_null(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.get(context.absentKey(), k -> null), is(nullValue()));
-    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
+    assertThat(cache.get(context.absentKey(), k -> null)).isNull();
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
   }
 
   @CacheSpec
@@ -150,21 +143,21 @@ public final class CacheTest {
   public void get_absent(Cache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     Int value = cache.get(key, k -> context.absentValue());
-    assertThat(value, is(context.absentValue()));
-    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(1).failures(0));
+    assertThat(value).isEqualTo(context.absentValue());
+    assertThat(context).stats().hits(0).misses(1).success(1).failures(0);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(Cache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> loader = key -> { throw new RuntimeException(); };
-    assertThat(cache.get(context.firstKey(), loader),
-        is(context.original().get(context.firstKey())));
-    assertThat(cache.get(context.middleKey(), loader),
-        is(context.original().get(context.middleKey())));
-    assertThat(cache.get(context.lastKey(), loader),
-        is(context.original().get(context.lastKey())));
-    verifyStats(context, verifier -> verifier.hits(3).misses(0).success(0).failures(0));
+    assertThat(cache.get(context.firstKey(), loader))
+        .isEqualTo(context.original().get(context.firstKey()));
+    assertThat(cache.get(context.middleKey(), loader))
+        .isEqualTo(context.original().get(context.middleKey()));
+    assertThat(cache.get(context.lastKey(), loader))
+        .isEqualTo(context.original().get(context.lastKey()));
+    assertThat(context).stats().hits(3).misses(0).success(0).failures(0);
   }
 
   /* --------------- getAllPresent --------------- */
@@ -186,18 +179,17 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_iterable_empty(Cache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAllPresent(List.of());
-    assertThat(result, is(anEmptyMap()));
+    assertThat(cache.getAllPresent(List.of())).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_absent(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAllPresent(context.absentKeys());
-    assertThat(result, is(anEmptyMap()));
+    assertThat(result).isExhaustivelyEmpty();
 
     int count = context.absentKeys().size();
-    verifyStats(context, verifier -> verifier.hits(0).misses(count).success(0).failures(0));
+    assertThat(context).stats().hits(0).misses(count).success(0).failures(0);
   }
 
   @CacheSpec
@@ -215,8 +207,8 @@ public final class CacheTest {
     expect.put(context.middleKey(), context.original().get(context.middleKey()));
     expect.put(context.lastKey(), context.original().get(context.lastKey()));
     var result = cache.getAllPresent(expect.keySet());
-    assertThat(result, is(equalTo(expect)));
-    verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
+    assertThat(result).containsExactlyEntriesIn(expect);
+    assertThat(context).stats().hits(expect.size()).misses(0).success(0).failures(0);
   }
 
   @Test(dataProvider = "caches")
@@ -224,8 +216,8 @@ public final class CacheTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_present_full(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAllPresent(context.original().keySet());
-    assertThat(result, is(equalTo(context.original())));
-    verifyStats(context, verifier -> verifier.hits(result.size()).misses(0).success(0).failures(0));
+    assertThat(result).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(result.size()).misses(0).success(0).failures(0);
   }
 
   @Test(dataProvider = "caches")
@@ -238,7 +230,7 @@ public final class CacheTest {
     var result = cache.getAllPresent(keys);
 
     long hits, misses;
-    if (context.implementation() == Implementation.Guava) {
+    if (context.isGuava()) {
       // Guava does not skip duplicates
       hits = 2L * context.initialSize();
       misses = 2L * context.absentKeys().size();
@@ -246,8 +238,8 @@ public final class CacheTest {
       hits = context.initialSize();
       misses = context.absentKeys().size();
     }
-    assertThat(result, is(equalTo(context.original())));
-    verifyStats(context, verifier -> verifier.hits(hits).misses(misses).success(0).failures(0));
+    assertThat(result).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(hits).misses(misses).success(0).failures(0);
   }
 
   @Test(dataProvider = "caches")
@@ -257,8 +249,8 @@ public final class CacheTest {
     var keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
 
-    var result = new ArrayList<>(cache.getAllPresent(keys).keySet());
-    assertThat(result, is(equalTo(keys)));
+    var result = cache.getAllPresent(keys);
+    assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
   @Test(dataProvider = "caches")
@@ -281,8 +273,7 @@ public final class CacheTest {
     cache.put(key, value);
 
     var result = cache.getAllPresent(keys);
-    assertThat(result.values(), not(hasItem(nullValue())));
-    assertThat(result, is(equalTo(Map.of(key, value))));
+    assertThat(result).containsExactly(key, value);
   }
 
   /* --------------- getAll --------------- */
@@ -303,8 +294,8 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_iterable_empty(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(List.of(), keys -> { throw new AssertionError(); });
-    assertThat(result.size(), is(0));
-    verifyStats(context, verifier -> verifier.hits(0).misses(0));
+    assertThat(result).isExhaustivelyEmpty();
+    assertThat(context).stats().hits(0).misses(0);
   }
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -333,7 +324,7 @@ public final class CacheTest {
       cache.getAll(context.absentKeys(), keys -> { throw new IllegalStateException(); });
     } finally {
       int misses = context.absentKeys().size();
-      verifyStats(context, verifier -> verifier.hits(0).misses(misses).success(0).failures(1));
+      assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
     }
   }
 
@@ -343,8 +334,8 @@ public final class CacheTest {
     var result = cache.getAll(context.absentKeys(), bulkMappingFunction());
 
     int count = context.absentKeys().size();
-    assertThat(result, aMapWithSize(count));
-    verifyStats(context, verifier -> verifier.hits(0).misses(count).success(1).failures(0));
+    assertThat(result).hasSize(count);
+    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
   }
 
   @Test(dataProvider = "caches")
@@ -357,8 +348,8 @@ public final class CacheTest {
     expect.put(context.lastKey(), context.lastKey().negate());
     var result = cache.getAll(expect.keySet(), bulkMappingFunction());
 
-    assertThat(result, is(equalTo(expect)));
-    verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
+    assertThat(result).containsExactlyEntriesIn(expect);
+    assertThat(context).stats().hits(expect.size()).misses(0).success(0).failures(0);
   }
 
   @Test(dataProvider = "caches")
@@ -366,8 +357,8 @@ public final class CacheTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_present_full(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.original().keySet(), bulkMappingFunction());
-    assertThat(result, is(equalTo(context.original())));
-    verifyStats(context, verifier -> verifier.hits(result.size()).misses(0).success(0).failures(0));
+    assertThat(result).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(result.size()).misses(0).success(0).failures(0);
   }
 
   @Test(dataProvider = "caches")
@@ -379,10 +370,10 @@ public final class CacheTest {
     var keys = Iterables.concat(absentKeys, absentKeys,
         context.original().keySet(), context.original().keySet());
     var result = cache.getAll(keys, bulkMappingFunction());
-    assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
+    assertThat(result).containsExactlyKeys(keys);
 
     long hits, misses;
-    if (context.implementation() == Implementation.Guava) {
+    if (context.isGuava()) {
       // Guava does not skip duplicates
       hits = 2L * context.initialSize();
       misses = 2L * absentKeys.size();
@@ -390,7 +381,7 @@ public final class CacheTest {
       hits = context.initialSize();
       misses = absentKeys.size();
     }
-    verifyStats(context, verifier -> verifier.hits(hits).misses(misses));
+    assertThat(context).stats().hits(hits).misses(misses);
   }
 
   @Test(dataProvider = "caches")
@@ -400,8 +391,8 @@ public final class CacheTest {
     var keys = new ArrayList<>(context.absentKeys());
     Collections.shuffle(keys);
 
-    var result = new ArrayList<>(cache.getAll(keys, bulkMappingFunction()).keySet());
-    assertThat(result, is(equalTo(keys)));
+    var result = cache.getAll(keys, bulkMappingFunction());
+    assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
   @Test(dataProvider = "caches")
@@ -412,8 +403,8 @@ public final class CacheTest {
     keys.addAll(context.absentKeys());
     Collections.shuffle(keys);
 
-    var result = new ArrayList<>(cache.getAll(keys, bulkMappingFunction()).keySet());
-    assertThat(result, is(equalTo(keys)));
+    var result = cache.getAll(keys, bulkMappingFunction());
+    assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
   @Test(dataProvider = "caches")
@@ -423,8 +414,8 @@ public final class CacheTest {
     var keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
 
-    var result = new ArrayList<>(cache.getAll(keys, bulkMappingFunction()).keySet());
-    assertThat(result, is(equalTo(keys)));
+    var result = cache.getAll(keys, bulkMappingFunction());
+    assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
   @Test(dataProvider = "caches")
@@ -434,8 +425,8 @@ public final class CacheTest {
     keys.addAll(context.absentKeys());
     Collections.shuffle(keys);
 
-    var result = new ArrayList<>(cache.getAll(keys, bulkMappingFunction()).keySet());
-    assertThat(result.subList(0, keys.size()), is(equalTo(keys)));
+    var result = List.copyOf(cache.getAll(keys, bulkMappingFunction()).keySet());
+    assertThat(result.subList(0, keys.size())).containsExactlyElementsIn(keys).inOrder();
   }
 
   @Test(dataProvider = "caches")
@@ -459,8 +450,8 @@ public final class CacheTest {
     cache.put(key, value);
 
     var result = cache.getAll(keys, keysToLoad -> Map.of());
-    assertThat(result.values(), not(hasItem(nullValue())));
-    assertThat(result, is(equalTo(ImmutableMap.of(key, value))));
+    assertThat(result.values()).doesNotContain(null);
+    assertThat(result).containsExactly(key, value);
   }
 
   static Function<Set<? extends Int>, Map<Int, Int>> bulkMappingFunction() {
@@ -477,8 +468,8 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_insert(Cache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
-    assertThat(cache.estimatedSize(), is(context.initialSize() + 1));
-    assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
+    assertThat(cache).hasSize(context.initialSize() + 1);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   @Test(dataProvider = "caches")
@@ -487,13 +478,13 @@ public final class CacheTest {
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
       cache.put(key, value);
-      assertThat(cache.getIfPresent(key), is(value));
+      assertThat(cache).containsEntry(key, value);
     }
-    assertThat(cache.estimatedSize(), is(context.initialSize()));
+    assertThat(cache).hasSize(context.initialSize());
 
     if (context.isGuava() || context.isAsync()) {
       int count = context.firstMiddleLastKeys().size();
-      verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
+      assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
     }
   }
 
@@ -502,12 +493,12 @@ public final class CacheTest {
   public void put_replace_differentValue(Cache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, context.absentValue());
-      assertThat(cache.getIfPresent(key), is(context.absentValue()));
+      assertThat(cache).containsEntry(key, context.absentValue());
     }
-    assertThat(cache.estimatedSize(), is(context.initialSize()));
+    assertThat(cache).hasSize(context.initialSize());
 
     int count = context.firstMiddleLastKeys().size();
-    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
   }
 
   @CheckNoStats
@@ -542,19 +533,19 @@ public final class CacheTest {
         .mapToObj(Int::valueOf)
         .collect(Collectors.toMap(Function.identity(), Int::negate));
     cache.putAll(entries);
-    assertThat(cache.estimatedSize(), is(100 + context.initialSize()));
+    assertThat(cache).hasSize(100 + context.initialSize());
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_replace(Cache<Int, Int> cache, CacheContext context) {
-    var entries = new HashMap<Int, Int>(context.original());
+    var entries = new HashMap<>(context.original());
     entries.replaceAll((key, value) -> value.add(1));
     cache.putAll(entries);
-    assertThat(cache.asMap(), is(equalTo(entries)));
-    verifyRemovalListener(context, verifier ->
-        verifier.hasOnly(entries.size(), RemovalCause.REPLACED));
+    assertThat(cache).containsExactlyEntriesIn(entries);
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .hasSize(entries.size()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -572,18 +563,18 @@ public final class CacheTest {
     });
 
     cache.putAll(entries);
-    assertThat(cache.asMap(), is(equalTo(entries)));
+    assertThat(cache).containsExactlyEntriesIn(entries);
     var expect = (context.isGuava() || context.isAsync()) ? entries : replaced;
-    verifyRemovalListener(context, verifier ->
-        verifier.hasOnly(expect.size(), RemovalCause.REPLACED));
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .hasSize(expect.size()).exclusively();
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_empty(Cache<Int, Int> cache, CacheContext context) {
-    cache.putAll(new HashMap<>());
-    assertThat(cache.estimatedSize(), is(context.initialSize()));
+    cache.putAll(Map.of());
+    assertThat(cache).hasSize(context.initialSize());
   }
 
   @CheckNoStats
@@ -600,7 +591,7 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void invalidate_absent(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidate(context.absentKey());
-    assertThat(cache.estimatedSize(), is(context.initialSize()));
+    assertThat(cache).hasSize(context.initialSize());
   }
 
   @Test(dataProvider = "caches")
@@ -610,8 +601,8 @@ public final class CacheTest {
       cache.invalidate(key);
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache.estimatedSize(), is(context.initialSize() - count));
-    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
+    assertThat(cache).hasSize(context.initialSize() - count);
+    assertThat(context).removalNotifications().withCause(EXPLICIT).hasSize(count).exclusively();
   }
 
   @CheckNoStats
@@ -627,16 +618,16 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void invalidateAll(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
-    assertThat(cache.estimatedSize(), is(0L));
-    verifyRemovalListener(context, verifier ->
-        verifier.hasOnly(context.initialSize(), RemovalCause.EXPLICIT));
+    assertThat(cache).isEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void invalidateAll_empty(Cache<Int, Int> cache, CacheContext context) {
-    cache.invalidateAll(new HashSet<>());
+    cache.invalidateAll(Set.of());
   }
 
   @Test(dataProvider = "caches")
@@ -646,17 +637,18 @@ public final class CacheTest {
         .filter(i -> ((i.intValue() % 2) == 0))
         .collect(Collectors.toList());
     cache.invalidateAll(keys);
-    assertThat(cache.estimatedSize(), is(context.initialSize() - keys.size()));
-    verifyRemovalListener(context, verifier -> verifier.hasOnly(keys.size(), RemovalCause.EXPLICIT));
+    assertThat(cache).hasSize(context.initialSize() - keys.size());
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .hasSize(keys.size()).exclusively();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void invalidateAll_full(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll(context.original().keySet());
-    assertThat(cache.estimatedSize(), is(0L));
-    verifyRemovalListener(context, verifier ->
-        verifier.hasOnly(context.initialSize(), RemovalCause.EXPLICIT));
+    assertThat(cache).isEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   @CacheSpec
@@ -681,7 +673,7 @@ public final class CacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void serialize(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache, is(reserializable()));
+    assertThat(cache).isReserialize();
   }
 
   /* --------------- Policy: stats --------------- */
@@ -693,8 +685,8 @@ public final class CacheTest {
     var stats = cache.stats()
         .plus(CacheStats.of(1, 2, 3, 4, 5, 6, 7)
         .minus(CacheStats.of(6, 5, 4, 3, 2, 1, 0)));
-    assertThat(stats, is(CacheStats.of(0, 0, 0, 1, 3, 5, 7)));
-    assertThat(cache.policy().isRecordingStats(), is(context.isRecordingStats()));
+    assertThat(stats).isEqualTo(CacheStats.of(0, 0, 0, 1, 3, 5, 7));
+    assertThat(cache.policy().isRecordingStats()).isEqualTo(context.isRecordingStats());
   }
 
   /* --------------- Policy: getIfPresentQuietly --------------- */
@@ -712,7 +704,7 @@ public final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresentQuietly_absent(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.policy().getIfPresentQuietly(context.absentKey()), is(nullValue()));
+    assertThat(cache.policy().getIfPresentQuietly(context.absentKey())).isNull();
   }
 
   @CheckNoStats
@@ -721,9 +713,9 @@ public final class CacheTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.policy().getIfPresentQuietly(context.firstKey()), is(not(nullValue())));
-    assertThat(cache.policy().getIfPresentQuietly(context.middleKey()), is(not(nullValue())));
-    assertThat(cache.policy().getIfPresentQuietly(context.lastKey()), is(not(nullValue())));
+    assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNotNull();
+    assertThat(cache.policy().getIfPresentQuietly(context.middleKey())).isNotNull();
+    assertThat(cache.policy().getIfPresentQuietly(context.lastKey())).isNotNull();
   }
 
   /* --------------- Policy: refreshes --------------- */
@@ -732,7 +724,7 @@ public final class CacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void refreshes_empty(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.policy().refreshes(), is(anEmptyMap()));
+    assertThat(cache.policy().refreshes()).isExhaustivelyEmpty();
   }
 
   @CacheSpec
