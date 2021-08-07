@@ -622,7 +622,8 @@ public final class LoadingCacheTest {
 
     await().untilTrue(started);
     cache.put(key2, original);
-    await().untilAsserted(() -> assertThat(cache).doesNotContainKey(key1));
+    cache.cleanUp();
+    assertThat(cache).doesNotContainKey(key1);
 
     done.set(true);
     if (context.isGuava()) {

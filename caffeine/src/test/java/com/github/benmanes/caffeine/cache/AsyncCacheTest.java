@@ -379,7 +379,7 @@ public final class AsyncCacheTest {
     expect.put(context.middleKey(), context.middleKey().negate());
     expect.put(context.lastKey(), context.lastKey().negate());
     var result = cache.getAll(expect.keySet(), keys -> {
-      assertThat(keys.size()).isLessThan(expect.size());
+      assertThat(keys).hasSizeLessThan(expect.size());
       return keys.stream().collect(toMap(identity(), Int::negate));
     }).join();
 
@@ -398,7 +398,7 @@ public final class AsyncCacheTest {
       return moreKeys.stream().collect(toMap(identity(), Int::negate));
     }).join();
 
-    assertThat(result.keySet()).isEqualTo(context.absentKeys());
+    assertThat(result).containsExactlyKeys(context.absentKeys());
     assertThat(cache).hasSizeGreaterThan(context.initialSize() + context.absentKeys().size());
     assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
   }

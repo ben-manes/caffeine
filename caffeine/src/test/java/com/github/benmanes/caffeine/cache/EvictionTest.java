@@ -163,9 +163,9 @@ public final class EvictionTest {
       cache.put(Int.valueOf(i), Int.listOf(1));
     }
     cache.asMap().computeIfPresent(Int.valueOf(1), (k, v) -> Int.listOf(1, 2));
-    assertThat(cache.getIfPresent(Int.valueOf(1))).hasSize(2);;
-    assertThat(cache).hasSize(2);
+    assertThat(cache).containsEntry(Int.valueOf(1), Int.listOf(1, 2));
     assertThat(cache).hasWeightedSize(3);
+    assertThat(cache).hasSize(2);
   }
 
   @Test(dataProvider = "caches")

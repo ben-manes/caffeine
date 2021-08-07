@@ -48,13 +48,6 @@ import com.google.common.truth.Subject;
  */
 @SuppressWarnings("GuardedBy")
 public final class LocalCacheSubject extends Subject {
-  private static final Factory<LocalCacheSubject, AsyncCache<?, ?>> ASYNC_FACTORY =
-      LocalCacheSubject::new;
-  private static final Factory<LocalCacheSubject, Cache<?, ?>> SYNC_FACTORY =
-      LocalCacheSubject::new;
-  private static final Factory<LocalCacheSubject, Map<?, ?>> MAP_FACTORY =
-      LocalCacheSubject::new;
-
   private final Object actual;
 
   private LocalCacheSubject(FailureMetadata metadata, Object subject) {
@@ -63,15 +56,15 @@ public final class LocalCacheSubject extends Subject {
   }
 
   public static Factory<LocalCacheSubject, AsyncCache<?, ?>> asyncLocal() {
-    return ASYNC_FACTORY;
+    return LocalCacheSubject::new;
   }
 
   public static Factory<LocalCacheSubject, Cache<?, ?>> syncLocal() {
-    return SYNC_FACTORY;
+    return LocalCacheSubject::new;
   }
 
   public static Factory<LocalCacheSubject, Map<?, ?>> mapLocal() {
-    return MAP_FACTORY;
+    return LocalCacheSubject::new;
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
@@ -290,7 +283,7 @@ public final class LocalCacheSubject extends Subject {
     Set<Node<Object, Object>> seen = Sets.newIdentityHashSet();
     for (var cell : deques.cellSet()) {
       long weightedSize = scanLinks(bounded, cell.getValue(), seen);
-      check(cell.getRowKey()).that(weightedSize).isEqualTo(cell.getColumnKey());;
+      check(cell.getRowKey()).that(weightedSize).isEqualTo(cell.getColumnKey());
       totalSize += cell.getValue().size();
       totalWeightedSize += weightedSize;
     }

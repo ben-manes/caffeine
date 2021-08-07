@@ -558,7 +558,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void size(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    assertThat(map.size()).isEqualTo(context.original().size());
+    assertThat(map.size()).isEqualTo(context.initialSize());
   }
 
   @Test(dataProvider = "caches")

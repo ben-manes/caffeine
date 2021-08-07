@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.testing;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.truth.Truth.assertAbout;
 
 import java.util.Collection;
@@ -33,8 +34,6 @@ import com.google.common.truth.FailureMetadata;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class CollectionSubject extends com.google.common.truth.IterableSubject {
-  private static final Factory<CollectionSubject, Collection<?>> FACTORY = CollectionSubject::new;
-
   private final Collection<?> actual;
 
   public CollectionSubject(FailureMetadata metadata, Collection<?> subject) {
@@ -43,7 +42,7 @@ public class CollectionSubject extends com.google.common.truth.IterableSubject {
   }
 
   public static Factory<CollectionSubject, Collection<?>> collection() {
-    return FACTORY;
+    return CollectionSubject::new;
   }
 
   public static <E> CollectionSubject assertThat(Collection<E> actual) {
@@ -53,6 +52,12 @@ public class CollectionSubject extends com.google.common.truth.IterableSubject {
   /** Fails if the collection does not have the given size. */
   public final void hasSize(long expectedSize) {
     hasSize(Ints.checkedCast(expectedSize));
+  }
+
+  /** Fails if the collection does not have less than the given size. */
+  public void hasSizeLessThan(long other) {
+    checkArgument(other >= 0, "expectedSize (%s) must be >= 0", other);
+    check("size()").that(actual.size()).isLessThan(Ints.checkedCast(other));
   }
 
   /**

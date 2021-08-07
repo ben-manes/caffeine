@@ -31,8 +31,6 @@ import com.google.common.truth.ThrowableSubject;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class FutureSubject extends Subject {
-  private static final Factory<FutureSubject, CompletableFuture<?>> FACTORY = FutureSubject::new;
-
   private final CompletableFuture<?> actual;
 
   private FutureSubject(FailureMetadata metadata, CompletableFuture<?> subject) {
@@ -41,7 +39,7 @@ public final class FutureSubject extends Subject {
   }
 
   public static Factory<FutureSubject, CompletableFuture<?>> future() {
-    return FACTORY;
+    return FutureSubject::new;
   }
 
   public static FutureSubject assertThat(CompletableFuture<?> actual) {

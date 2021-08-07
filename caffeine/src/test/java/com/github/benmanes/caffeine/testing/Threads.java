@@ -51,7 +51,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public final class Threads {
   private static final Logger logger = Logger.getLogger(Threads.class);
 
-  public static final int ITERATIONS = 40000;
+  public static final int ITERATIONS = 40_000;
   public static final int NTHREADS = 20;
   public static final int TIMEOUT = 30;
 

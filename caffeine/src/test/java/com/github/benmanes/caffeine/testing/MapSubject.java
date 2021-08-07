@@ -32,8 +32,6 @@ import com.google.common.truth.Ordered;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class MapSubject extends com.google.common.truth.MapSubject {
-  private static final Factory<MapSubject, Map<?, ?>> FACTORY = MapSubject::new;
-
   private final Map<?, ?> actual;
 
   public MapSubject(FailureMetadata metadata, Map<?, ?> subject) {
@@ -42,7 +40,7 @@ public class MapSubject extends com.google.common.truth.MapSubject {
   }
 
   public static Factory<MapSubject, Map<?, ?>> map() {
-    return FACTORY;
+    return MapSubject::new;
   }
 
   public static <K, V> MapSubject assertThat(Map<K, V> actual) {

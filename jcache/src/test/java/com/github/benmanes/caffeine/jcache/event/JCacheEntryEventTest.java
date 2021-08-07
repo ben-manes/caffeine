@@ -59,7 +59,7 @@ public final class JCacheEntryEventTest {
 
   @Test
   public void isOldValueAvailable() {
-    assertThat(event.isOldValueAvailable()).isTrue();;
+    assertThat(event.isOldValueAvailable()).isTrue();
   }
 
   @Test

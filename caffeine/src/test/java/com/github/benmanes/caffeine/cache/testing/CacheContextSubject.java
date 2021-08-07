@@ -49,9 +49,6 @@ import com.google.common.truth.Subject;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheContextSubject extends Subject {
-  private static final Factory<CacheContextSubject, CacheContext> CONTEXT_FACTORY =
-      CacheContextSubject::new;
-
   private final CacheContext actual;
 
   CacheContextSubject(FailureMetadata metadata, CacheContext subject) {
@@ -60,7 +57,7 @@ public final class CacheContextSubject extends Subject {
   }
 
   public static Factory<CacheContextSubject, CacheContext> context() {
-    return CONTEXT_FACTORY;
+    return CacheContextSubject::new;
   }
 
   public static CacheContextSubject assertThat(CacheContext actual) {

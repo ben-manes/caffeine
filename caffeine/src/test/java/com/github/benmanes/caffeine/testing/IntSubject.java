@@ -26,14 +26,13 @@ import com.google.common.truth.Subject;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IntSubject extends Subject {
-  private static final Factory<IntSubject, Int> FACTORY = IntSubject::new;
 
   private IntSubject(FailureMetadata metadata, Int subject) {
     super(metadata, subject);
   }
 
   public static Factory<IntSubject, Int> integer() {
-    return FACTORY;
+    return IntSubject::new;
   }
 
   public static IntSubject assertThat(Int actual) {

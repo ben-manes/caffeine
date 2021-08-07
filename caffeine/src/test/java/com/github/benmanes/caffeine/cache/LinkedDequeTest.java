@@ -150,7 +150,7 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void isFirst_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var first = deque.first;
-    assertThat(deque).hasSize(SIZE);;
+    assertThat(deque).hasSize(SIZE);
     assertThat(deque.isFirst(first)).isTrue();
     assertThat(deque.contains(first)).isTrue();
     assertThat(deque.first).isSameInstanceAs(first);
@@ -182,7 +182,7 @@ public final class LinkedDequeTest {
   public void peek_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
     var first = deque.first;
     assertThat(deque).hasSize(SIZE);
-    assertThat(deque.contains(first)).isTrue();;
+    assertThat(deque.contains(first)).isTrue();
     assertThat(deque.first).isSameInstanceAs(first);
     assertThat(deque.peek()).isSameInstanceAs(first);
   }
@@ -527,7 +527,7 @@ public final class LinkedDequeTest {
   public void removeElement_whenFound(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
     assertThat(deque.remove(first)).isTrue();
-    assertThat(deque.contains(first)).isFalse();;
+    assertThat(deque.contains(first)).isFalse();
     assertThat(deque).hasSize(SIZE - 1);
   }
 
@@ -550,7 +550,7 @@ public final class LinkedDequeTest {
   public void removeFirst_whenPopulated(LinkedDeque<LinkedValue> deque) {
     var first = deque.peekFirst();
     assertThat(deque.removeFirst()).isSameInstanceAs(first);
-    assertThat(deque.contains(first)).isFalse();;
+    assertThat(deque.contains(first)).isFalse();
     assertThat(deque).hasSize(SIZE - 1);
   }
 

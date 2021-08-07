@@ -34,9 +34,6 @@ import com.google.common.truth.Subject;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class AsyncCacheSubject extends Subject {
-  private static final Factory<AsyncCacheSubject, AsyncCache<?, ?>> FACTORY =
-      AsyncCacheSubject::new;
-
   private final AsyncCache<?, ?> actual;
 
   private AsyncCacheSubject(FailureMetadata metadata, AsyncCache<?, ?> subject) {
@@ -45,7 +42,7 @@ public final class AsyncCacheSubject extends Subject {
   }
 
   public static Factory<AsyncCacheSubject, AsyncCache<?, ?>> asyncCache() {
-    return FACTORY;
+    return AsyncCacheSubject::new;
   }
 
   public static AsyncCacheSubject assertThat(AsyncCache<?, ?> actual) {
@@ -86,9 +83,9 @@ public final class AsyncCacheSubject extends Subject {
   /** Fails if the cache does not contain the given value. */
   public void containsValue(Object value) {
     if (value instanceof Future<?>) {
-      check("cache").that(actual.asMap().values()).contains(value);
+      check("cache").about(map()).that(actual.asMap()).containsValue(value);
     } else {
-      check("cache").that(actual.synchronous().asMap().values()).contains(value);
+      check("cache").about(cache()).that(actual.synchronous()).containsValue(value);
     }
   }
 
@@ -106,7 +103,8 @@ public final class AsyncCacheSubject extends Subject {
     if (expectedMap.values().stream().anyMatch(value -> value instanceof Future<?>)) {
       check("cache").that(actual.asMap()).containsExactlyEntriesIn(expectedMap);
     } else {
-      check("cache").that(actual.synchronous().asMap()).containsExactlyEntriesIn(expectedMap);
+      check("cache").about(cache())
+          .that(actual.synchronous()).containsExactlyEntriesIn(expectedMap);
     }
   }
 

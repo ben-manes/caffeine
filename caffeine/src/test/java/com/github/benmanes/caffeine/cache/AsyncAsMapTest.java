@@ -81,7 +81,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void size(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.asMap().size()).isEqualTo(context.original().size());
+    assertThat(cache.asMap().size()).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -143,7 +143,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void containsValue_absent(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.asMap().containsValue(context.absentValue().asFuture())).isFalse();;
+    assertThat(cache.asMap().containsValue(context.absentValue().asFuture())).isFalse();
   }
 
   /* ---------------- get -------------- */
@@ -691,7 +691,7 @@ public final class AsyncAsMapTest {
       assertThat(value).succeedsWith(key);
     });
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .hasSize(cache.asMap().size()).exclusively();
+        .hasSize(context.initialSize()).exclusively();
   }
 
   /* ---------------- computeIfAbsent -------------- */
@@ -1137,7 +1137,7 @@ public final class AsyncAsMapTest {
     for (Int key : context.firstMiddleLastKeys()) {
       var value = cache.asMap().get(key);
       var result = cache.asMap().merge(key, key.negate().asFuture(), (oldValue, v) -> oldValue);
-      assertThat(result).isEqualTo(value);;
+      assertThat(result).isEqualTo(value);
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
@@ -1361,7 +1361,7 @@ public final class AsyncAsMapTest {
   public void keySpliterator_forEachRemaining(AsyncCache<Int, Int> cache, CacheContext context) {
     int[] count = new int[1];
     cache.asMap().keySet().spliterator().forEachRemaining(key -> count[0]++);
-    assertThat(count[0]).isEqualTo(cache.asMap().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1381,7 +1381,7 @@ public final class AsyncAsMapTest {
     do {
       advanced = spliterator.tryAdvance(key -> count[0]++);
     } while (advanced);
-    assertThat(count[0]).isEqualTo(cache.asMap().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1394,7 +1394,7 @@ public final class AsyncAsMapTest {
     int[] count = new int[1];
     spliterator.forEachRemaining(key -> count[0]++);
     other.forEachRemaining(key -> count[0]++);
-    assertThat(count[0]).isEqualTo(cache.asMap().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1402,7 +1402,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void keySpliterator_estimateSize(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().keySet().spliterator();
-    assertThat(spliterator.estimateSize()).isEqualTo(cache.asMap().size());
+    assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
   }
 
   /* ---------------- Values -------------- */
@@ -1543,7 +1543,7 @@ public final class AsyncAsMapTest {
   public void valueSpliterator_forEachRemaining(AsyncCache<Int, Int> cache, CacheContext context) {
     int[] count = new int[1];
     cache.asMap().values().spliterator().forEachRemaining(value -> count[0]++);
-    assertThat(count[0]).isEqualTo(cache.asMap().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1563,7 +1563,7 @@ public final class AsyncAsMapTest {
     do {
       advanced = spliterator.tryAdvance(value -> count[0]++);
     } while (advanced);
-    assertThat(count[0]).isEqualTo(cache.asMap().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1576,7 +1576,7 @@ public final class AsyncAsMapTest {
     int[] count = new int[1];
     spliterator.forEachRemaining(value -> count[0]++);
     other.forEachRemaining(value -> count[0]++);
-    assertThat(count[0]).isEqualTo(cache.asMap().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1584,7 +1584,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void valueSpliterator_estimateSize(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().values().spliterator();
-    assertThat(spliterator.estimateSize()).isEqualTo(cache.asMap().size());
+    assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
   }
 
   /* ---------------- Entry Set -------------- */
@@ -1749,7 +1749,7 @@ public final class AsyncAsMapTest {
       count[0]++;
       assertThat(entry.getValue()).succeedsWith(context.original().get(entry.getKey()));
     });
-    assertThat(count[0]).isEqualTo(context.original().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1775,7 +1775,7 @@ public final class AsyncAsMapTest {
         count[0]++;
       });
     } while (advanced);
-    assertThat(count[0]).isEqualTo(cache.asMap().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1788,7 +1788,7 @@ public final class AsyncAsMapTest {
     int[] count = new int[1];
     spliterator.forEachRemaining(entry -> count[0]++);
     other.forEachRemaining(entry -> count[0]++);
-    assertThat(count[0]).isEqualTo(cache.asMap().size());
+    assertThat(count[0]).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
@@ -1796,7 +1796,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void entrySpliterator_estimateSize(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().entrySet().spliterator();
-    assertThat(spliterator.estimateSize()).isEqualTo(cache.asMap().size());
+    assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
   }
 
   /* ---------------- WriteThroughEntry -------------- */

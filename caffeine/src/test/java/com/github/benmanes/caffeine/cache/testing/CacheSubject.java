@@ -41,8 +41,6 @@ public final class CacheSubject extends Subject {
   private static final Correspondence<Object, Object> EQUALITY =
       Correspondence.from(CacheSubject::tolerantEquals, "is equal to");
 
-  private static final Factory<CacheSubject, Cache<?, ?>> FACTORY = CacheSubject::new;
-
   private final Cache<?, ?> actual;
 
   CacheSubject(FailureMetadata metadata, Cache<?, ?> subject) {
@@ -51,7 +49,7 @@ public final class CacheSubject extends Subject {
   }
 
   public static Factory<CacheSubject, Cache<?, ?>> cache() {
-    return FACTORY;
+    return CacheSubject::new;
   }
 
   public static CacheSubject assertThat(Cache<?, ?> actual) {

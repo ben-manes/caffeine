@@ -29,9 +29,6 @@ import com.google.common.truth.FailureMetadata;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class LinkedDequeSubject extends CollectionSubject {
-  private static final Factory<LinkedDequeSubject, LinkedDeque<?>> FACTORY =
-      LinkedDequeSubject::new;
-
   private final LinkedDeque<Object> actual;
 
   @SuppressWarnings("unchecked")
@@ -41,7 +38,7 @@ final class LinkedDequeSubject extends CollectionSubject {
   }
 
   public static Factory<LinkedDequeSubject, LinkedDeque<?>> deque() {
-    return FACTORY;
+    return LinkedDequeSubject::new;
   }
 
   public static LinkedDequeSubject assertThat(LinkedDeque<?> actual) {

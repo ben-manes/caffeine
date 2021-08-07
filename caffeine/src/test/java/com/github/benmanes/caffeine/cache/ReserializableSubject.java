@@ -37,11 +37,6 @@ import com.google.common.truth.Subject;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ReserializableSubject extends Subject {
-  private static final Factory<ReserializableSubject, AsyncCache<?, ?>> ASYNC_FACTORY =
-      ReserializableSubject::new;
-  private static final Factory<ReserializableSubject, Cache<?, ?>> SYNC_FACTORY =
-      ReserializableSubject::new;
-
   private final Object actual;
 
   private ReserializableSubject(FailureMetadata metadata, Object subject) {
@@ -50,11 +45,11 @@ public final class ReserializableSubject extends Subject {
   }
 
   public static Factory<ReserializableSubject, AsyncCache<?, ?>> asyncReserializable() {
-    return ASYNC_FACTORY;
+    return ReserializableSubject::new;
   }
 
   public static Factory<ReserializableSubject, Cache<?, ?>> syncReserializable() {
-    return SYNC_FACTORY;
+    return ReserializableSubject::new;
   }
 
   public void isReserialize() {

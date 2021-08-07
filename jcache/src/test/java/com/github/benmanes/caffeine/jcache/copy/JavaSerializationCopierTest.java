@@ -98,7 +98,7 @@ public final class JavaSerializationCopierTest {
 
   @Test(dataProvider = "copier")
   public void array_mutable(Copier copier) {
-    Object[] array = new Object[] { new ArrayList<>(List.of(0, 1, 2, 3, 4)) };
+    Object[] array = { new ArrayList<>(List.of(0, 1, 2, 3, 4)) };
     assertThat(copy(copier, array)).asList().containsExactlyElementsIn(array).inOrder();
   }
 
