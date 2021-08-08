@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.google.common.collect.testing.ConcurrentMapTestSuiteBuilder;
 import com.google.common.collect.testing.Helpers;
 import com.google.common.collect.testing.SampleElements;
@@ -29,7 +32,7 @@ import com.google.common.collect.testing.features.CollectionFeature;
 import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.collect.testing.features.MapFeature;
 
-import junit.framework.Test;
+import junit.framework.TestSuite;
 
 /**
  * A JUnit test suite factory for the map tests from Guava's testlib.
@@ -40,14 +43,20 @@ public final class MapTestFactory {
 
   private MapTestFactory() {}
 
-  /**
-   * Returns a test suite.
-   *
-   * @param name the name of the cache type under test
-   * @param generator the map generator
-   * @return a suite of tests
-   */
-  public static Test suite(String name, TestMapGenerator<?, ?> generator) {
+  /** Returns a test suite based on the supplied configuration. */
+  public static Stream<TestSuite> makeTests(CacheContext context) {
+    var name = context.toString();
+    var tests = new ArrayList<TestSuite>(2);
+    tests.add(newTestSuite("Cache[" + name + "]", context, synchronousGenerator(context)));
+    if (context.isAsync()) {
+      tests.add(newTestSuite("AsyncCache[" + name + "]", context, asynchronousGenerator(context)));
+    }
+    return tests.stream();
+  }
+
+  /** Returns a test suite. */
+  private static TestSuite newTestSuite(String name,
+      CacheContext context, TestMapGenerator<?, ?> generator) {
     return ConcurrentMapTestSuiteBuilder
         .using(generator)
         .named(name)
@@ -56,34 +65,47 @@ public final class MapTestFactory {
             MapFeature.ALLOWS_NULL_ENTRY_QUERIES,
             CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
             CollectionSize.ANY)
-        .createTestSuite();
+        .withTearDown(() -> {
+          context.cache = null;
+          context.asyncCache = null;
+        }).createTestSuite();
   }
 
   /** Returns a map generator for synchronous values. */
-  public static TestStringMapGenerator synchronousGenerator(
-      Supplier<Map<String, String>> supplier) {
+  private static TestStringMapGenerator synchronousGenerator(CacheContext context) {
     return new TestStringMapGenerator() {
       @Override protected Map<String, String> create(Map.Entry<String, String>[] entries) {
-        Map<String, String> map = supplier.get();
-        for (Map.Entry<String, String> entry : entries) {
-          map.put(entry.getKey(), entry.getValue());
+        if (context.cache() == null) {
+          CacheGenerator.initialize(context);
         }
-        return map;
+
+        @SuppressWarnings("unchecked")
+        var cache = (Cache<String, String>) context.cache();
+        cache.invalidateAll();
+        for (var entry : entries) {
+          cache.put(entry.getKey(), entry.getValue());
+        }
+        return cache.asMap();
       }
     };
   }
 
   /** Returns a map generator for asynchronous values. */
-  public static TestAsyncMapGenerator asynchronousGenerator(
-      Supplier<Map<String, CompletableFuture<String>>> supplier) {
+  private static TestAsyncMapGenerator asynchronousGenerator(CacheContext context) {
     return new TestAsyncMapGenerator() {
       @Override protected Map<String, CompletableFuture<String>> create(
           Map.Entry<String, CompletableFuture<String>>[] entries) {
-        Map<String, CompletableFuture<String>> map = supplier.get();
-        for (Map.Entry<String, CompletableFuture<String>> entry : entries) {
-          map.put(entry.getKey(), entry.getValue());
+        if (context.asyncCache() == null) {
+          CacheGenerator.initialize(context);
         }
-        return map;
+
+        @SuppressWarnings("unchecked")
+        var cache = (AsyncCache<String, String>) context.asyncCache();
+        cache.synchronous().invalidateAll();
+        for (var entry : entries) {
+          cache.put(entry.getKey(), entry.getValue());
+        }
+        return cache.asMap();
       }
     };
   }

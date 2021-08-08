@@ -52,7 +52,7 @@ import com.google.common.collect.Sets;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class CacheGenerator {
+public final class CacheGenerator {
   private static final List<Map.Entry<Int, Int>> INTS = makeInts();
   private static final int BASE = 1_000;
 
@@ -60,6 +60,11 @@ final class CacheGenerator {
   private final CacheSpec cacheSpec;
   private final boolean isAsyncOnly;
   private final boolean isLoadingOnly;
+
+  public CacheGenerator(CacheSpec cacheSpec) {
+    this(cacheSpec, Options.fromSystemProperties(),
+        /* isLoadingOnly */ false, /* isAsyncOnly */ false);
+  }
 
   public CacheGenerator(CacheSpec cacheSpec, Options options,
       boolean isLoadingOnly, boolean isAsyncOnly) {
@@ -70,15 +75,15 @@ final class CacheGenerator {
   }
 
   /** Returns a lazy stream so that the test case is GC-able after use. */
-  public Stream<Map.Entry<CacheContext, Cache<Int, Int>>> generate() {
+  public Stream<CacheContext> generate() {
     return combinations().stream()
         .map(this::newCacheContext)
-        .filter(this::isCompatible)
-        .map(context -> {
-          Cache<Int, Int> cache = newCache(context);
-          populate(context, cache);
-          return Maps.immutableEntry(context, cache);
-        });
+        .filter(this::isCompatible);
+  }
+
+  /** Creates the cache and associates it with the context. */
+  public static void initialize(CacheContext context) {
+    populate(context, newCache(context));
   }
 
   /** Returns the Cartesian set of the possible cache configurations. */
@@ -196,7 +201,7 @@ final class CacheGenerator {
   }
 
   /** Creates a new cache based on the context's configuration. */
-  public static <K, V> Cache<K, V> newCache(CacheContext context) {
+  private static <K, V> Cache<K, V> newCache(CacheContext context) {
     if (context.isCaffeine()) {
       return CaffeineCacheFromContext.newCaffeineCache(context);
     } else if (context.isGuava()) {
@@ -207,7 +212,7 @@ final class CacheGenerator {
 
   /** Fills the cache up to the population size. */
   @SuppressWarnings("PreferJavaTimeOverload")
-  private void populate(CacheContext context, Cache<Int, Int> cache) {
+  private static void populate(CacheContext context, Cache<Int, Int> cache) {
     if (context.population.size() == 0) {
       return;
     }

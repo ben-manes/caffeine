@@ -15,60 +15,50 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.MapTestFactory.asynchronousGenerator;
-import static com.github.benmanes.caffeine.cache.testing.MapTestFactory.synchronousGenerator;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toConcurrentMap;
 
+import com.github.benmanes.caffeine.cache.testing.CacheGenerator;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.MapTestFactory;
+import com.google.common.collect.ImmutableSortedMap;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 /**
- * Guava testlib map tests for the {@link Cache#asMap()} view.
+ * Guava testlib map tests for the {@link Cache#asMap()} and {@link AsyncCache#asMap()} views.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineMapTests extends TestCase {
 
   public static Test suite() {
+    var tests = new CacheGenerator(cacheSpec()).generate().parallel()
+        .flatMap(MapTestFactory::makeTests)
+        .collect(toConcurrentMap(TestSuite::getName, identity()));
     var suite = new TestSuite();
-    addUnboundedTests(suite);
-    addBoundedTests(suite);
+    for (var test : ImmutableSortedMap.copyOf(tests).values()) {
+      suite.addTest(test);
+    }
     return suite;
   }
 
-  private static void addUnboundedTests(TestSuite suite) {
-    suite.addTest(MapTestFactory.suite("UnboundedCache", synchronousGenerator(() -> {
-      Cache<String, String> cache = Caffeine.newBuilder().build();
-      return cache.asMap();
-    })));
-    suite.addTest(MapTestFactory.suite("UnboundedAsyncCache", synchronousGenerator(() -> {
-      AsyncCache<String, String> cache = Caffeine.newBuilder().buildAsync();
-      return cache.synchronous().asMap();
-    })));
-    suite.addTest(MapTestFactory.suite("UnboundedAsyncCache", asynchronousGenerator(() -> {
-      AsyncCache<String, String> cache = Caffeine.newBuilder().buildAsync();
-      return cache.asMap();
-    })));
-  }
-
-  private static void addBoundedTests(TestSuite suite) {
-    suite.addTest(MapTestFactory.suite("BoundedCache", synchronousGenerator(() -> {
-      Cache<String, String> cache = Caffeine.newBuilder().maximumSize(Long.MAX_VALUE).build();
-      return cache.asMap();
-    })));
-    suite.addTest(MapTestFactory.suite("BoundedAsyncCache", synchronousGenerator(() -> {
-      AsyncCache<String, String> cache = Caffeine.newBuilder()
-          .maximumSize(Long.MAX_VALUE)
-          .buildAsync();
-      return cache.synchronous().asMap();
-    })));
-    suite.addTest(MapTestFactory.suite("BoundedAsyncCache", asynchronousGenerator(() -> {
-      AsyncCache<String, String> cache = Caffeine.newBuilder()
-          .maximumSize(Long.MAX_VALUE)
-          .buildAsync();
-      return cache.asMap();
-    })));
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      weigher = CacheWeigher.DEFAULT, removalListener = Listener.DEFAULT,
+      evictionListener = Listener.DEFAULT, stats = Stats.ENABLED)
+  private static CacheSpec cacheSpec() {
+    try {
+      return CaffeineMapTests.class.getDeclaredMethod("cacheSpec")
+          .getAnnotation(CacheSpec.class);
+    } catch (NoSuchMethodException | SecurityException e) {
+      throw new AssertionError(e);
+    }
   }
 }

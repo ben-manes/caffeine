@@ -36,7 +36,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
-import com.github.benmanes.caffeine.testing.Int;
 
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
@@ -65,13 +64,12 @@ public final class CacheProvider {
     requireNonNull(cacheSpec, "@CacheSpec not found");
     Options options = Options.fromSystemProperties();
 
-    // Inspect the test parameters for interface constraints (loading, async)
-    boolean isAsyncOnly = hasCacheOfType(testMethod, AsyncCache.class);
+    // Inspect the test parameters for interface constraints
     boolean isLoadingOnly =
         hasCacheOfType(testMethod, LoadingCache.class)
         || hasCacheOfType(testMethod, AsyncLoadingCache.class)
         || options.compute().filter(Compute.ASYNC::equals).isPresent();
-
+    boolean isAsyncOnly = hasCacheOfType(testMethod, AsyncCache.class);
     return new CacheGenerator(cacheSpec, options, isLoadingOnly, isAsyncOnly);
   }
 
@@ -80,16 +78,13 @@ public final class CacheProvider {
    * {@link Cache}, {@link CacheContext}, the {@link ConcurrentMap} {@link Cache#asMap()} view,
    * {@link Policy.Eviction}, and {@link Policy.FixedExpiration}.
    */
-  private static Iterator<Object[]> asTestCases(Method testMethod,
-      Stream<Map.Entry<CacheContext, Cache<Int, Int>>> scenarios) {
+  private static Iterator<Object[]> asTestCases(Method testMethod, Stream<CacheContext> scenarios) {
     Parameter[] parameters = testMethod.getParameters();
     CacheContext[] stashed = new CacheContext[1];
-    return scenarios.map(entry -> {
-      CacheContext context = entry.getKey();
-      Cache<Int, Int> cache = entry.getValue();
-
+    return scenarios.map(context -> {
       // Retain a strong reference to the context throughout the test execution so that the
       // cache entries are not collected due to the test not accepting the context parameter
+      CacheGenerator.initialize(context);
       stashed[0] = context;
 
       Object[] params = new Object[parameters.length];
@@ -99,20 +94,20 @@ public final class CacheProvider {
           params[i] = context;
         } else if (clazz.isInstance(context.caffeine)) {
           params[i] = context.caffeine;
-        } else if (clazz.isInstance(cache)) {
-          params[i] = cache;
+        } else if (clazz.isInstance(context.cache())) {
+          params[i] = context.cache();
         } else if (clazz.isInstance(context.asyncCache)) {
           params[i] = context.asyncCache;
         } else if (clazz.isAssignableFrom(Map.class)) {
-          params[i] = cache.asMap();
+          params[i] = context.cache().asMap();
         } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
-          params[i] = cache.policy().eviction().get();
+          params[i] = context.cache().policy().eviction().get();
         } else if (clazz.isAssignableFrom(Policy.FixedExpiration.class)) {
-          params[i] = expirationPolicy(parameters[i], cache);
+          params[i] = expirationPolicy(parameters[i], context.cache());
         } else if (clazz.isAssignableFrom(Policy.VarExpiration.class)) {
-          params[i] = cache.policy().expireVariably().get();
+          params[i] = context.cache().policy().expireVariably().get();
         } else if (clazz.isAssignableFrom(Policy.FixedRefresh.class)) {
-          params[i] = refreshPolicy(parameters[i], cache);
+          params[i] = refreshPolicy(parameters[i], context.cache());
         }
         if (params[i] == null) {
           checkNotNull(params[i], "Unknown parameter type: %s", clazz);
@@ -123,8 +118,8 @@ public final class CacheProvider {
   }
 
   /** Returns the fixed expiration policy for the given parameter. */
-  private static Policy.FixedExpiration<Int, Int> expirationPolicy(
-      Parameter parameter, Cache<Int, Int> cache) {
+  private static Policy.FixedExpiration<?, ?> expirationPolicy(
+      Parameter parameter, Cache<?, ?> cache) {
     if (parameter.isAnnotationPresent(ExpireAfterAccess.class)) {
       return cache.policy().expireAfterAccess().get();
     } else if (parameter.isAnnotationPresent(ExpireAfterWrite.class)) {
@@ -134,8 +129,7 @@ public final class CacheProvider {
   }
 
   /** Returns the fixed expiration policy for the given parameter. */
-  private static Policy.FixedRefresh<Int, Int> refreshPolicy(
-      Parameter parameter, Cache<Int, Int> cache) {
+  private static Policy.FixedRefresh<?, ?> refreshPolicy(Parameter parameter, Cache<?, ?> cache) {
     if (parameter.isAnnotationPresent(RefreshAfterWrite.class)) {
       return cache.policy().refreshAfterWrite().get();
     }

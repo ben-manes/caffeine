@@ -106,10 +106,10 @@ public final class CacheContext {
 
   final boolean isAsyncLoading;
 
-  Cache<?, ?> cache;
-  AsyncCache<?, ?> asyncCache;
-  Caffeine<Object, Object> caffeine;
   CacheBuilder<Object, Object> guava;
+  Caffeine<Object, Object> caffeine;
+  AsyncCache<?, ?> asyncCache;
+  Cache<?, ?> cache;
 
   @Nullable Int firstKey;
   @Nullable Int middleKey;
@@ -175,6 +175,22 @@ public final class CacheContext {
   @SuppressWarnings("unchecked")
   public static <K, V> V intern(K key, Function<K, V> mappingFunction) {
     return (V) interner.get().computeIfAbsent(key, k -> mappingFunction.apply((K) k));
+  }
+
+  public Caffeine<Object, Object> caffeine() {
+    return caffeine;
+  }
+
+  public CacheBuilder<Object, Object> guava() {
+    return guava;
+  }
+
+  public AsyncCache<?, ?> asyncCache() {
+    return asyncCache;
+  }
+
+  public Cache<?, ?> cache() {
+    return cache;
   }
 
   public InitialCapacity initialCapacity() {
@@ -370,10 +386,6 @@ public final class CacheContext {
 
   public CacheStats stats() {
     return cache.stats();
-  }
-
-  public Cache<?, ?> cache() {
-    return cache;
   }
 
   public boolean expires(Expiration expiration) {
