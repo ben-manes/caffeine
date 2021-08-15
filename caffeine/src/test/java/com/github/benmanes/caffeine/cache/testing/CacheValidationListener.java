@@ -25,7 +25,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.testng.ITestResult.FAILURE;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -77,7 +76,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   @Override
   public void onStart(ISuite suite) {
     if (suite instanceof SuiteRunner) {
-      Reflect invokedMethods = Reflect.on(suite).fields().get("invokedMethods");
+      var invokedMethods = Reflect.on(suite).fields().get("invokedMethods");
       if ((invokedMethods != null) && (invokedMethods.get() instanceof Collection)) {
         resultQueues.add(invokedMethods.get());
       }
@@ -93,7 +92,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     // Remove unused listener that retains all test results
     // https://github.com/cbeust/testng/issues/2096#issuecomment-706643074
     if (testResult.getTestContext() instanceof TestRunner) {
-      TestRunner runner = (TestRunner) testResult.getTestContext();
+      var runner = (TestRunner) testResult.getTestContext();
       runner.getTestListeners().stream()
           .filter(listener -> listener.getClass() == TestListenerAdapter.class)
           .flatMap(listener -> Reflect.on(listener).fields().values().stream())
@@ -105,7 +104,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       resultQueues.add(runner.getPassedTests().getAllResults());
       resultQueues.add(runner.getFailedTests().getAllResults());
 
-      Reflect invokedMethods = Reflect.on(runner).fields().get("m_invokedMethods");
+      var invokedMethods = Reflect.on(runner).fields().get("m_invokedMethods");
       if ((invokedMethods != null) && (invokedMethods.get() instanceof Collection)) {
         resultQueues.add(invokedMethods.get());
       }
@@ -159,7 +158,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   private void awaitExecutor(CacheContext context) {
     if ((context.cacheExecutor != CacheExecutor.DIRECT)
         && context.executor() instanceof TrackingExecutor) {
-      TrackingExecutor executor = (TrackingExecutor) context.executor();
+      var executor = (TrackingExecutor) context.executor();
       if (executor.submitted() != executor.completed()) {
         await().pollInSameThread().until(() -> executor.submitted() == executor.completed());
       }
@@ -192,8 +191,8 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   /** Checks whether the {@link TrackingExecutor} had unexpected failures. */
   private static void checkExecutor(ITestResult testResult, CacheContext context) {
-    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
+    var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+    var cacheSpec = testMethod.getAnnotation(CacheSpec.class);
     if (cacheSpec == null) {
       return;
     }
@@ -203,7 +202,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       return;
     }
 
-    TrackingExecutor executor = (TrackingExecutor) context.executor();
+    var executor = (TrackingExecutor) context.executor();
     if (cacheSpec.executorFailure() == ExecutorFailure.EXPECTED) {
       assertThat(executor.failed()).isGreaterThan(0);
     } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
@@ -213,7 +212,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   /** Checks the statistics if {@link CheckNoStats} is found. */
   private static void checkNoStats(ITestResult testResult, CacheContext context) {
-    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+    var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
     boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class);
     if (!checkNoStats) {
       return;
@@ -249,7 +248,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   private void resetMocks(ITestResult testResult) {
     for (Object param : testResult.getParameters()) {
       if (param instanceof CacheContext) {
-        CacheContext context = (CacheContext) param;
+        var context = (CacheContext) param;
         if (context.expiryType() == CacheExpiry.MOCKITO) {
           Mockito.clearInvocations(context.expiry());
         }
@@ -263,7 +262,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   private void resetCache(ITestResult testResult) {
     for (Object param : testResult.getParameters()) {
       if (param instanceof CacheContext) {
-        CacheContext context = (CacheContext) param;
+        var context = (CacheContext) param;
         if (context.isCaffeine()) {
           Reset.destroy(context.cache());
         }
@@ -272,7 +271,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   }
 
   private void clearTestResults(ITestResult testResult) {
-    TestResult result = (TestResult) testResult;
+    var result = (TestResult) testResult;
     result.setParameters(EMPTY_PARAMS);
     result.setContext(testngContext);
     result.setThrowable(null);

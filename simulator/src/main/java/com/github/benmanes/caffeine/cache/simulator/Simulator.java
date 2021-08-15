@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
@@ -121,7 +120,7 @@ public final class Simulator extends AbstractActor {
     long limit = settings.trace().limit();
     int batchSize = settings.batchSize();
     try (Stream<AccessEvent> events = traceReader.events().skip(skip).limit(limit)) {
-      Mutable<List<AccessEvent>> batch = new MutableObject<>(new ArrayList<>(batchSize));
+      var batch = new MutableObject<>(new ArrayList<AccessEvent>(batchSize));
       events.forEach(event -> {
         batch.getValue().add(event);
         if (batch.getValue().size() == batchSize) {

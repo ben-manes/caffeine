@@ -66,7 +66,7 @@ public final class JCacheExpiryPolicy implements ExpiryPolicy, Serializable {
     } else if (!(o instanceof ExpiryPolicy)) {
       return false;
     }
-    ExpiryPolicy policy = (ExpiryPolicy) o;
+    var policy = (ExpiryPolicy) o;
     return Objects.equals(creation, policy.getExpiryForCreation())
         && Objects.equals(update, policy.getExpiryForUpdate())
         && Objects.equals(access, policy.getExpiryForAccess());

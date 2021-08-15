@@ -358,7 +358,7 @@ public final class ExpireAfterWriteTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void oldest_order(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    Map<Int, Int> oldest = expireAfterWrite.oldest(Integer.MAX_VALUE);
+    var oldest = expireAfterWrite.oldest(Integer.MAX_VALUE);
     assertThat(oldest.keySet()).containsExactlyElementsIn(context.original().keySet()).inOrder();
   }
 

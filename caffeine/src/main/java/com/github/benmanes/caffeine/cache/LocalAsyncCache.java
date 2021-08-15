@@ -113,15 +113,15 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     requireNonNull(mappingFunction);
     requireNonNull(keys);
 
-    Map<K, CompletableFuture<V>> futures = new LinkedHashMap<>();
-    Map<K, CompletableFuture<V>> proxies = new HashMap<>();
+    var futures = new LinkedHashMap<K, CompletableFuture<V>>();
+    var proxies = new HashMap<K, CompletableFuture<V>>();
     for (K key : keys) {
       if (futures.containsKey(key)) {
         continue;
       }
       CompletableFuture<V> future = cache().getIfPresent(key, /* recordStats */ false);
       if (future == null) {
-        CompletableFuture<V> proxy = new CompletableFuture<>();
+        var proxy = new CompletableFuture<V>();
         future = cache().putIfAbsent(key, proxy);
         if (future == null) {
           future = proxy;
@@ -136,7 +136,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return composeResult(futures);
     }
 
-    AsyncBulkCompleter<K, V> completer = new AsyncBulkCompleter<>(cache(), proxies);
+    var completer = new AsyncBulkCompleter<K, V>(cache(), proxies);
     try {
       mappingFunction.apply(proxies.keySet(), cache().executor()).whenComplete(completer);
       return composeResult(futures);
@@ -158,7 +158,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @SuppressWarnings("rawtypes")
     CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
     return CompletableFuture.allOf(array).thenApply(ignored -> {
-      Map<K, V> result = new LinkedHashMap<>(futures.size());
+      var result = new LinkedHashMap<K, V>(futures.size());
       futures.forEach((key, future) -> {
         V value = future.getNow(null);
         if (value != null) {
@@ -189,7 +189,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   @SuppressWarnings("FutureReturnValueIgnored")
   default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
       long startTime, boolean recordMiss) {
-    AtomicBoolean completed = new AtomicBoolean();
+    var completed = new AtomicBoolean();
     valueFuture.whenComplete((value, error) -> {
       if (!completed.compareAndSet(false, true)) {
         // Ignore multiple invocations due to ForkJoinPool retrying on delays
@@ -238,7 +238,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         if (error == null) {
           error = new NullMapCompletionException();
         }
-        for (Map.Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
+        for (var entry : proxies.entrySet()) {
           cache.remove(entry.getKey(), entry.getValue());
           entry.getValue().obtrudeException(error);
         }
@@ -481,7 +481,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-      Map<Object, Object> result = new LinkedHashMap<>();
+      var result = new LinkedHashMap<Object, Object>();
       for (Object key : keys) {
         result.put(key, null);
       }
@@ -502,7 +502,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       asyncCache().cache().statsCounter().recordMisses(uniqueKeys - result.size());
 
       @SuppressWarnings("unchecked")
-      Map<K, V> castedResult = (Map<K, V>) result;
+      var castedResult = (Map<K, V>) result;
       return Collections.unmodifiableMap(castedResult);
     }
 

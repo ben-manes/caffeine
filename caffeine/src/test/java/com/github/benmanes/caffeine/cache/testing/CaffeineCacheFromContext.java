@@ -113,7 +113,7 @@ public final class CaffeineCacheFromContext {
     }
 
     @SuppressWarnings("unchecked")
-    Cache<K, V> castedCache = (Cache<K, V>) context.cache;
+    var castedCache = (Cache<K, V>) context.cache;
     Reset.resetThreadLocalRandom();
     return castedCache;
   }

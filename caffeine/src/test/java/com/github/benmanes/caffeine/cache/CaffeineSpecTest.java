@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 
@@ -126,7 +125,7 @@ public final class CaffeineSpecTest {
 
   static CaffeineSpec toSpec(CacheContext context,
       Epoch epoch, LongFunction<String> nanosToString) {
-    List<String> options = new ArrayList<>();
+    var options = new ArrayList<String>();
     if (context.initialCapacity() != InitialCapacity.DEFAULT) {
       options.add("initialCapacity=" + context.initialCapacity().size());
     }

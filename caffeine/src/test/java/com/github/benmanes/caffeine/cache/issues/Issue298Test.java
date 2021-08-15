@@ -94,7 +94,7 @@ public final class Issue298Test {
     await().untilTrue(startedCreate);
 
     // Async read trying to wait at expireAfterRead
-    CompletableFuture<Void> reader = CompletableFuture.runAsync(() -> {
+    var reader = CompletableFuture.runAsync(() -> {
       do {
         cache.get(key);
       } while (!endRead.get());

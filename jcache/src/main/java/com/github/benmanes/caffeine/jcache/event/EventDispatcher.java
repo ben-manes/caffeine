@@ -81,7 +81,7 @@ public final class EventDispatcher<K, V> {
     if (configuration.getCacheEntryListenerFactory() == null) {
       return;
     }
-    EventTypeAwareListener<K, V> listener = new EventTypeAwareListener<>(
+    var listener = new EventTypeAwareListener<K, V>(
         configuration.getCacheEntryListenerFactory().create());
 
     CacheEntryEventFilter<K, V> filter = event -> true;
@@ -90,7 +90,7 @@ public final class EventDispatcher<K, V> {
           configuration.getCacheEntryEventFilterFactory().create());
     }
 
-    Registration<K, V> registration = new Registration<>(configuration, filter, listener);
+    var registration = new Registration<K, V>(configuration, filter, listener);
     dispatchQueues.putIfAbsent(registration, CompletableFuture.completedFuture(null));
   }
 
@@ -190,7 +190,7 @@ public final class EventDispatcher<K, V> {
       return;
     }
     try {
-      CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();
+      CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
     } catch (CompletionException e) {
       logger.log(Level.WARNING, "", e);
     } finally {
@@ -214,7 +214,7 @@ public final class EventDispatcher<K, V> {
     }
 
     JCacheEntryEvent<K, V> event = null;
-    for (Registration<K, V> registration : dispatchQueues.keySet()) {
+    for (var registration : dispatchQueues.keySet()) {
       if (!registration.getCacheEntryListener().isCompatible(eventType)) {
         continue;
       }
@@ -226,11 +226,10 @@ public final class EventDispatcher<K, V> {
       }
 
       JCacheEntryEvent<K, V> e = event;
-      CompletableFuture<Void> future =
-          dispatchQueues.computeIfPresent(registration, (k, queue) -> {
-            Runnable action = () -> registration.getCacheEntryListener().dispatch(e);
-            return queue.thenRunAsync(action, executor);
-          });
+      var future = dispatchQueues.computeIfPresent(registration, (k, queue) -> {
+        Runnable action = () -> registration.getCacheEntryListener().dispatch(e);
+        return queue.thenRunAsync(action, executor);
+      });
       if ((future != null) && registration.isSynchronous() && !quiet) {
         pending.get().add(future);
       }

@@ -825,7 +825,6 @@ public final class ReferenceTest {
     assertThat(map.values().toArray()).isEmpty();
     assertThat(map.values().toArray(new Int[0])).isEmpty();
     assertThat(map.values().toArray(Int[]::new)).isEmpty();
-
   }
 
   @Test(dataProvider = "caches")

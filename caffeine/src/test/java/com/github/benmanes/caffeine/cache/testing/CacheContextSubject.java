@@ -42,6 +42,7 @@ import com.google.common.base.CaseFormat;
 import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
+import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
  * Propositions for {@link CacheContext} subjects.
@@ -65,6 +66,7 @@ public final class CacheContextSubject extends Subject {
   }
 
   /** Propositions for {@link CacheStats} subjects. */
+  @CheckReturnValue
   public StatsSubject stats() {
     return actual.isRecordingStats()
         ? check("stats").about(STATS_FACTORY).that(actual)
@@ -72,16 +74,19 @@ public final class CacheContextSubject extends Subject {
   }
 
   /** Propositions for the removal listener's notifications. */
+  @CheckReturnValue
   public ListenerSubject removalNotifications() {
     return check("context").about(REMOVAL_LISTENER_FACTORY).that(actual);
   }
 
   /** Propositions for the eviction listener's notifications. */
+  @CheckReturnValue
   public ListenerSubject evictionNotifications() {
     return check("context").about(EVICTION_LISTENER_FACTORY).that(actual);
   }
 
   /** Propositions for the removal and eviction listener's notifications. */
+  @CheckReturnValue
   public ListenerSubject notifications() {
     return check("context").about(LISTENERS_FACTORY).that(actual);
   }
@@ -171,6 +176,7 @@ public final class CacheContextSubject extends Subject {
     }
 
     /** Returns a subject with a qualifying removal cause. */
+    @CheckReturnValue
     public WithCause withCause(RemovalCause cause) {
       return new WithCause(cause);
     }

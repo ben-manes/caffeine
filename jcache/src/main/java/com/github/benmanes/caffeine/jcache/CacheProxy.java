@@ -205,7 +205,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    */
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
       Set<? extends K> keys, boolean updateAccessTime) {
-    Map<K, Expirable<V>> result = new HashMap<>(cache.getAllPresent(keys));
+    var result = new HashMap<K, Expirable<V>>(cache.getAllPresent(keys));
 
     int[] expired = { 0 };
     long[] millis = { 0L };
@@ -272,7 +272,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private void loadAllAndReplaceExisting(Set<? extends K> keys) {
     int[] ignored = { 0 };
     Map<K, V> loaded = cacheLoader.get().loadAll(keys);
-    for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
+    for (var entry : loaded.entrySet()) {
       putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false, ignored);
     }
   }
@@ -283,7 +283,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         .filter(key -> !cache.asMap().containsKey(key))
         .collect(toList());
     Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
-    for (Map.Entry<K, V> entry : result.entrySet()) {
+    for (var entry : result.entrySet()) {
       if ((entry.getKey() != null) && (entry.getValue() != null)) {
         putIfAbsentNoAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false);
       }
@@ -382,13 +382,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
 
-    for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
+    for (var entry : map.entrySet()) {
       requireNonNull(entry.getKey());
       requireNonNull(entry.getValue());
     }
     int[] puts = { 0 };
     CacheWriterException e = writeAllToCacheWriter(map);
-    for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
+    for (var entry : map.entrySet()) {
       putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false, puts);
     }
     dispatcher.awaitSynchronous();
@@ -1195,8 +1195,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       current = cursor;
       cursor = null;
       @SuppressWarnings("NullAway")
-      EntryProxy<K, V> entry = new EntryProxy<>(
-          copyOf(current.getKey()), copyValue(current.getValue()));
+      var entry = new EntryProxy<K, V>(copyOf(current.getKey()), copyValue(current.getValue()));
       return entry;
     }
 

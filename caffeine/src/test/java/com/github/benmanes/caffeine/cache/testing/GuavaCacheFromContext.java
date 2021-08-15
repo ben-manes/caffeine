@@ -120,18 +120,17 @@ public final class GuavaCacheFromContext {
       builder.removalListener(new GuavaRemovalListener<>(
           translateZeroExpire, context.removalListener()));
     }
-    Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker();
     if (context.loader() == null) {
       context.cache = new GuavaCache<>(builder.<Int, Int>build(),
-          ticker, context.isRecordingStats());
+          context.ticker(), context.isRecordingStats());
     } else if (context.loader().isBulk()) {
       var loader = new BulkLoader<Int, Int>(context.loader());
       context.cache = new GuavaLoadingCache<>(builder.build(loader),
-          ticker, context.isRecordingStats());
+          context.ticker(), context.isRecordingStats());
     } else {
       var loader = new SingleLoader<Int, Int>(context.loader());
       context.cache = new GuavaLoadingCache<>(builder.build(loader),
-          ticker, context.isRecordingStats());
+          context.ticker(), context.isRecordingStats());
     }
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) context.cache;

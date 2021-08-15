@@ -34,7 +34,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 
-import site.ycsb.generator.NumberGenerator;
 import site.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
@@ -87,8 +86,8 @@ public final class Issue412Test {
   }
 
   private static Integer[] generateSequence() {
-    Integer[] ints = new Integer[2 << 14];
-    NumberGenerator generator = new ScrambledZipfianGenerator(ints.length / 3);
+    var ints = new Integer[2 << 14];
+    var generator = new ScrambledZipfianGenerator(ints.length / 3);
     for (int i = 0; i < ints.length; i++) {
       ints[i] = generator.nextValue().intValue();
     }

@@ -49,9 +49,19 @@
     <Bug pattern="PATH_TRAVERSAL_IN"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"/>
+    <Method name="reformat"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.NodeFactoryGenerator"/>
     <Method name="main"/>
     <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.NodeFactoryGenerator"/>
+    <Method name="reformat"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
     <Class name="~com.github.benmanes.caffeine.*Benchmark.*"/>
@@ -101,6 +111,11 @@
   <Match>
     <Package name="~com.github.benmanes.caffeine.cache.simulator.*"/>
     <Bug pattern="PATH_TRAVERSAL_IN, PREDICTABLE_RANDOM"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.Simulator"/>
+    <Method name="broadcast"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader"/>

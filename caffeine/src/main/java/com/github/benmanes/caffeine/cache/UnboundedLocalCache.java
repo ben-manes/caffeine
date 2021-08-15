@@ -134,7 +134,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    Map<Object, Object> result = new LinkedHashMap<>();
+    var result = new LinkedHashMap<Object, Object>();
     for (Object key : keys) {
       result.put(key, null);
     }
@@ -153,7 +153,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     statsCounter.recordMisses(uniqueKeys - result.size());
 
     @SuppressWarnings("unchecked")
-    Map<K, V> castedResult = (Map<K, V>) result;
+    var castedResult = (Map<K, V>) result;
     return Collections.unmodifiableMap(castedResult);
   }
 
@@ -749,7 +749,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       if (!(o instanceof Entry<?, ?>)) {
         return false;
       }
-      Entry<?, ?> entry = (Entry<?, ?>) o;
+      var entry = (Entry<?, ?>) o;
       V value = cache.get(entry.getKey());
       return (value != null) && value.equals(entry.getValue());
     }
@@ -759,7 +759,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       if (!(obj instanceof Entry<?, ?>)) {
         return false;
       }
-      Entry<?, ?> entry = (Entry<?, ?>) obj;
+      var entry = (Entry<?, ?>) obj;
       return cache.remove(entry.getKey(), entry.getValue());
     }
 
@@ -767,7 +767,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
       requireNonNull(filter);
       boolean removed = false;
-      for (Entry<K, V> entry : cache.data.entrySet()) {
+      for (var entry : cache.data.entrySet()) {
         if (filter.test(entry)) {
           removed |= cache.remove(entry.getKey(), entry.getValue());
         }
@@ -836,7 +836,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public void forEachRemaining(Consumer<? super Entry<K, V>> action) {
       requireNonNull(action);
       spliterator.forEachRemaining(entry -> {
-        Entry<K, V> e = new WriteThroughEntry<>(cache, entry.getKey(), entry.getValue());
+        var e = new WriteThroughEntry<K, V>(cache, entry.getKey(), entry.getValue());
         action.accept(e);
       });
     }
@@ -845,7 +845,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public boolean tryAdvance(Consumer<? super Entry<K, V>> action) {
       requireNonNull(action);
       return spliterator.tryAdvance(entry -> {
-        Entry<K, V> e = new WriteThroughEntry<>(cache, entry.getKey(), entry.getValue());
+        var e = new WriteThroughEntry<K, V>(cache, entry.getKey(), entry.getValue());
         action.accept(e);
       });
     }
@@ -981,7 +981,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     Object writeReplace() {
       @SuppressWarnings("unchecked")
-      SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
+      var proxy = (SerializationProxy<K, V>) super.writeReplace();
       proxy.cacheLoader = cacheLoader;
       return proxy;
     }

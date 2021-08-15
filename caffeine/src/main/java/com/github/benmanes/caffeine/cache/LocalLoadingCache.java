@@ -64,7 +64,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   /** Sequentially loads each missing entry. */
   default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
-    Map<K, V> result = new LinkedHashMap<>();
+    var result = new LinkedHashMap<K, V>();
     for (K key : keys) {
       result.put(key, null);
     }
@@ -110,7 +110,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
       try {
         startTime[0] = cache().statsTicker().read();
         oldValue[0] = cache().getIfPresentQuietly(key, writeTime);
-        CompletableFuture<? extends V> refreshFuture = (oldValue[0] == null)
+        var refreshFuture = (oldValue[0] == null)
             ? cacheLoader().asyncLoad(key, cache().executor())
             : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
         reloading[0] = refreshFuture;
@@ -178,7 +178,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   @Override
   default CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-    Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
+    var result = new LinkedHashMap<K, CompletableFuture<V>>();
     for (K key : keys) {
       result.computeIfAbsent(key, this::refresh);
     }

@@ -448,11 +448,11 @@ public final class AsMapTest {
   public void putIfAbsent_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     Int newValue = context.absentValue();
-    CompletableFuture<Int> future = new CompletableFuture<>();
+    var future = new CompletableFuture<Int>();
 
     cache.put(key, future);
-    AtomicBoolean start = new AtomicBoolean();
-    AtomicBoolean done = new AtomicBoolean();
+    var start = new AtomicBoolean();
+    var done = new AtomicBoolean();
     ConcurrentTestHarness.execute(() -> {
       start.set(true);
       Int result = cache.synchronous().asMap().putIfAbsent(key, newValue);
@@ -502,12 +502,12 @@ public final class AsMapTest {
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DEFAULT, Listener.REJECTING})
   public void remove_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
     Int key = context.absentKey();
-    CompletableFuture<Int> future = new CompletableFuture<>();
 
     cache.put(key, future);
-    AtomicBoolean start = new AtomicBoolean();
-    AtomicBoolean done = new AtomicBoolean();
+    var start = new AtomicBoolean();
+    var done = new AtomicBoolean();
     ConcurrentTestHarness.execute(() -> {
       start.set(true);
       Int result = cache.synchronous().asMap().remove(key);

@@ -137,10 +137,10 @@ abstract class LocalAsyncLoadingCache<K, V>
       return getAll(keys, bulkMappingFunction);
     }
 
-    Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
     Function<K, CompletableFuture<V>> mappingFunction = this::get;
+    var result = new LinkedHashMap<K, CompletableFuture<V>>();
     for (K key : keys) {
-      CompletableFuture<V> future = result.computeIfAbsent(key, mappingFunction);
+      var future = result.computeIfAbsent(key, mappingFunction);
       requireNonNull(future);
     }
     return composeResult(result);
@@ -198,7 +198,7 @@ abstract class LocalAsyncLoadingCache<K, V>
 
     @Override
     public CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-      Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
+      var result = new LinkedHashMap<K, CompletableFuture<V>>();
       for (K key : keys) {
         result.computeIfAbsent(key, this::refresh);
       }

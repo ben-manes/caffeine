@@ -108,7 +108,7 @@ public final class JCacheLoaderAdapter<K, V>
           .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
           .collect(Collectors.toMap(Map.Entry::getKey,
               entry -> new Expirable<>(entry.getValue(), expireTimeMS())));
-      for (Map.Entry<K, Expirable<V>> entry : result.entrySet()) {
+      for (var entry : result.entrySet()) {
         dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
       }
 

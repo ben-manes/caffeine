@@ -85,7 +85,6 @@ public final class LoadingCacheTest {
   public void get_absent_null(LoadingCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey())).isNull();
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
-
   }
 
   @CacheSpec(loader = Loader.EXCEPTIONAL)

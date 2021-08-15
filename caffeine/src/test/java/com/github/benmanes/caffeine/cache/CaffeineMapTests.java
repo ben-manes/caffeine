@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toConcurrentMap;
+import java.util.Comparator;
 
 import com.github.benmanes.caffeine.cache.testing.CacheGenerator;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -26,7 +25,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.MapTestFactory;
-import com.google.common.collect.ImmutableSortedMap;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -40,13 +38,11 @@ import junit.framework.TestSuite;
 public final class CaffeineMapTests extends TestCase {
 
   public static Test suite() {
-    var tests = new CacheGenerator(cacheSpec()).generate().parallel()
-        .flatMap(MapTestFactory::makeTests)
-        .collect(toConcurrentMap(TestSuite::getName, identity()));
     var suite = new TestSuite();
-    for (var test : ImmutableSortedMap.copyOf(tests).values()) {
-      suite.addTest(test);
-    }
+    new CacheGenerator(cacheSpec()).generate().parallel()
+        .flatMap(MapTestFactory::makeTests)
+        .sorted(Comparator.comparing(TestSuite::getName))
+        .forEach(suite::addTest);
     return suite;
   }
 

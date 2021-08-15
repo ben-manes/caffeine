@@ -45,7 +45,6 @@ import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -2035,7 +2034,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    Map<Object, Object> result = new LinkedHashMap<>();
+    var result = new LinkedHashMap<Object, Object>();
     for (Object key : keys) {
       result.put(key, null);
     }
@@ -2043,8 +2042,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     int uniqueKeys = result.size();
     long now = expirationTicker().read();
     for (var iter = result.entrySet().iterator(); iter.hasNext();) {
-      Map.Entry<Object, Object> entry = iter.next();
       V value;
+      var entry = iter.next();
       Node<K, V> node = data.get(nodeFactory.newLookupKey(entry.getKey()));
       if ((node == null) || ((value = node.getValue()) == null) || hasExpired(node, now)) {
         iter.remove();
@@ -2826,9 +2825,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     try {
       maintenance(/* ignored */ null);
 
+      var iterator = iteratorSupplier.get();
       int initialCapacity = Math.min(limit, size());
-      Iterator<Node<K, V>> iterator = iteratorSupplier.get();
-      Map<K, V> map = new LinkedHashMap<>(initialCapacity);
+      var map = new LinkedHashMap<K, V>(initialCapacity);
       while ((map.size() < limit) && iterator.hasNext()) {
         Node<K, V> node = iterator.next();
         K key = node.getKey();
@@ -2903,7 +2902,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public Object[] toArray() {
-      List<Object> keys = new ArrayList<>(size());
+      var keys = new ArrayList<Object>(size());
       for (Object key : this) {
         keys.add(key);
       }
@@ -2912,7 +2911,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public <T> T[] toArray(T[] array) {
-      List<Object> keys = new ArrayList<>(size());
+      var keys = new ArrayList<Object>(size());
       for (Object key : this) {
         keys.add(key);
       }
@@ -3175,7 +3174,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (!(obj instanceof Entry<?, ?>)) {
         return false;
       }
-      Entry<?, ?> entry = (Entry<?, ?>) obj;
+      var entry = (Entry<?, ?>) obj;
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(entry.getKey()));
       return (node != null) && Objects.equals(node.getValue(), entry.getValue());
     }
@@ -3185,7 +3184,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (!(obj instanceof Entry<?, ?>)) {
         return false;
       }
-      Entry<?, ?> entry = (Entry<?, ?>) obj;
+      var entry = (Entry<?, ?>) obj;
       return cache.remove(entry.getKey(), entry.getValue());
     }
 

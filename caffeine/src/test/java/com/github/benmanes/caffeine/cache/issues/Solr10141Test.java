@@ -57,9 +57,9 @@ public final class Solr10141Test {
 
   @Test
   public void eviction() throws Exception {
-    AtomicLong hits = new AtomicLong();
-    AtomicLong inserts = new AtomicLong();
-    AtomicLong removals = new AtomicLong();
+    var hits = new AtomicLong();
+    var inserts = new AtomicLong();
+    var removals = new AtomicLong();
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
       assertThat(v.key).isEqualTo(k);
@@ -75,15 +75,15 @@ public final class Solr10141Test {
         .maximumSize(maxEntries)
         .build();
 
-    AtomicLong lastBlock = new AtomicLong();
-    AtomicBoolean failed = new AtomicBoolean();
-    AtomicLong maxObservedSize = new AtomicLong();
+    var lastBlock = new AtomicLong();
+    var failed = new AtomicBoolean();
+    var maxObservedSize = new AtomicLong();
 
     ConcurrentTestHarness.timeTasks(nThreads, new Runnable() {
 
       @Override public void run() {
         try {
-          Random r = new Random(rnd.nextLong());
+          var r = new Random(rnd.nextLong());
           for (int i = 0; i < readsPerThread; i++) {
             test(r);
           }
@@ -135,9 +135,9 @@ public final class Solr10141Test {
 
   @Test
   public void clear() throws Exception {
-    AtomicLong inserts = new AtomicLong();
-    AtomicLong removals = new AtomicLong();
-    AtomicBoolean failed = new AtomicBoolean();
+    var inserts = new AtomicLong();
+    var removals = new AtomicLong();
+    var failed = new AtomicBoolean();
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
       assertThat(v.key).isEqualTo(k);
@@ -157,7 +157,7 @@ public final class Solr10141Test {
 
       @Override public void run() {
         try {
-          Random r = new Random(rnd.nextLong());
+          var r = new Random(rnd.nextLong());
           for (int i = 0; i < readsPerThread; i++) {
             test(r);
           }

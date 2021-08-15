@@ -27,7 +27,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Constructor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,7 +46,7 @@ public final class AsyncTest {
 
   @Test
   public void reflectivelyConstruct() throws Exception {
-    Constructor<?> constructor = Async.class.getDeclaredConstructor();
+    var constructor = Async.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();
   }

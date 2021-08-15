@@ -1,6 +1,7 @@
 import net.ltgt.gradle.errorprone.CheckSeverity
 
 apply plugin: 'io.github.gradle-nexus.publish-plugin'
+apply plugin: 'org.kordamp.gradle.source-stats'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'jacoco'

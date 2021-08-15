@@ -53,8 +53,8 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
 
   @Override
   protected byte[] serialize(Object object) {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    try (ObjectOutputStream output = new ObjectOutputStream(bytes)) {
+    var bytes = new ByteArrayOutputStream();
+    try (var output = new ObjectOutputStream(bytes)) {
       output.writeObject(object);
     } catch (IOException e) {
       throw new UncheckedIOException("Failed to serialize " + object.getClass(), e);
@@ -65,8 +65,8 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
   @Override
   @SuppressWarnings("BanSerializableRead")
   protected Object deserialize(byte[] data, ClassLoader classLoader) {
-    try (InputStream bytes = new ByteArrayInputStream(data);
-        ObjectInputStream input = new ClassLoaderAwareObjectInputStream(bytes, classLoader)) {
+    try (var bytes = new ByteArrayInputStream(data);
+         var input = new ClassLoaderAwareObjectInputStream(bytes, classLoader)) {
       return input.readObject();
     } catch (IOException e) {
       throw new CacheException("Failed to deserialize", e);

@@ -11,6 +11,7 @@
     <trusted-key id='36feecf06c2da10b' group='biz.aQute.bnd' />
     <trusted-key id='52e6585e0102b84d' group='biz.aQute.bnd' />
     <trusted-key id='c5cc0278b1ee1c33' group='biz.aQute.bnd' />
+    <trusted-key id='d27d666cd88e42b4' group='co.elastic.logging' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools.build' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools.ddms' />
@@ -570,6 +571,9 @@
     <dependency group='org.kordamp.gradle' module='base-gradle-plugin' version='0.42.1'>
       <sha512>1EB4F9BCFC7411794CF2F665D80A0905904B483599B5EB76CDDD1C62C340E520E6A2E5AC30D6E2EF43882BFC3E72756B3B627466C112499B07B31D3EADB3B018</sha512>
     </dependency>
+    <dependency group='org.kordamp.gradle' module='base-gradle-plugin' version='0.46.0'>
+      <sha512>A2AE577D7135E1411A9C6BAAD045C72E32BC6D4F058FAA8F18E1899B4A1B8EFE6006E896EBC89345A37A0B2175EFFE115A48FF59A39E133E072760E64EC7C088</sha512>
+    </dependency>
     <dependency group='org.kordamp.gradle' module='jandex-gradle-plugin' version='0.6.0'>
       <sha512>93F5BF49FE5125BAFC561892F038BE371420B81F9FB210CAC31606C7868418F3CA9F133F3AC0C7D568CC1399468BF0FB54E32B6B0000AE1288A68E836B8D817E</sha512>
     </dependency>
@@ -581,6 +585,9 @@
     </dependency>
     <dependency group='org.kordamp.gradle' module='jandex-gradle-plugin' version='0.9.0'>
       <sha512>CFAB87EE54727A23526EBB62939E38294E551DF853DEECFD9F3AA5C5FB70B697A5F59679BB90064B0DC57AE3BB4DFB7ECE5D215DEEBDFD5C76F72D3A9280A7BC</sha512>
+    </dependency>
+    <dependency group='org.kordamp.gradle' module='sourcestats-gradle-plugin' version='0.46.0'>
+      <sha512>B9C81F86EFF60CB2E1E87529CC35685A6723BF8AC62EE2B5C6DABD09DF7DD379464965329B91B0A4178A07DE0B95B85709677F6921CCF75CFC1D0526C263E795</sha512>
     </dependency>
     <dependency group='org.lz4' module='lz4-java' version='1.8.0'>
       <sha512>98D59086A6021CA571D9C1D64B715E43044C730E1AC563F514C40CF44302615D30378B6D5CC69990446522DE6260DC8E7B303E3990A3139DC326D058DFB6DBD9</sha512>

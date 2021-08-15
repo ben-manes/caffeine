@@ -82,8 +82,8 @@ public final class Issue30Test {
 
   @DataProvider(name = "params")
   public Object[][] providesCache() {
-    ConcurrentMap<String, String> source = new ConcurrentHashMap<>();
-    ConcurrentMap<String, Instant> lastLoad = new ConcurrentHashMap<>();
+    var source = new ConcurrentHashMap<String, String>();
+    var lastLoad = new ConcurrentHashMap<String, Instant>();
     AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
         .expireAfterWrite(TTL, TimeUnit.MILLISECONDS)
         .executor(executor)

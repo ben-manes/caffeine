@@ -3,7 +3,6 @@
  */
 import static org.gradle.util.GradleVersion.version
 
-apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'com.github.spotbugs'
 apply plugin: 'net.ltgt.errorprone'
 apply plugin: 'net.ltgt.nullaway'
