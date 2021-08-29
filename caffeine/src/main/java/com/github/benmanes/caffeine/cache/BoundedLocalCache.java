@@ -127,10 +127,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * the window into the main space. If the main space is already full, then a historic frequency
    * filter determines whether to evict the newly admitted entry or the victim entry chosen by the
    * eviction policy. This process ensures that the entries in the window were very recently used
-   * and entries in the main space are accessed very frequently and are moderately recent. The
-   * windowing allows the policy to have a high hit rate when entries exhibit bursty access pattern
-   * while the filter ensures that popular items are retained. The admission window uses LRU and
-   * the main space uses Segmented LRU.
+   * and entries in the main space are accessed very frequently and are at least moderately recent.
+   * The windowing allows the policy to have a high hit rate when entries exhibit a bursty access
+   * pattern while the filter ensures that popular items are retained. The admission window uses
+   * LRU and the main space uses Segmented LRU.
    *
    * The optimal size of the window vs main spaces is workload dependent [3]. A large admission
    * window is favored by recency-biased workloads while a small one favors frequency-biased
@@ -939,8 +939,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
-   * Attempts to evict the entry based on the given removal cause. A removal due to may be ignored
-   * if the entry was updated and is no longer eligible for eviction.
+   * Attempts to evict the entry based on the given removal cause. A removal may be ignored if the
+   * entry was updated and is no longer eligible for eviction.
    *
    * @param node the entry to evict
    * @param cause the reason to evict

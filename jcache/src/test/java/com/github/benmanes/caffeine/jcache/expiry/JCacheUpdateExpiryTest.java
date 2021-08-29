@@ -54,7 +54,26 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     configuration.setExpiryPolicyFactory(() -> new ModifiedExpiryPolicy(
         new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION)));
     configuration.setTickerFactory(() -> ticker::read);
+    configuration.setStatisticsEnabled(true);
     return configuration;
+  }
+
+  @Test
+  public void containsKey_expired() {
+    jcache.put(KEY_1, VALUE_1);
+    ticker.setAutoIncrementStep(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+
+    assertThat(jcache.containsKey(KEY_1)).isFalse();
+    assertThat(getExpirable(jcache, KEY_1)).isNull();
+  }
+
+  @Test
+  public void get_expired() {
+    jcache.put(KEY_1, VALUE_1);
+    ticker.setAutoIncrementStep(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+
+    assertThat(jcache.get(KEY_1)).isNull();
+    assertThat(getExpirable(jcache, KEY_1)).isNull();
   }
 
   @Test

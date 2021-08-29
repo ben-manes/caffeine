@@ -46,6 +46,7 @@
     <trusted-key id='7a01b0f236e5430f' group='com.google.code.gson' />
     <trusted-key id='b0f3710fa64900e7' group='com.google.code.gson' />
     <trusted-key id='1669c4bb543e0445' group='com.google.errorprone' />
+    <trusted-key id='3c27d97b0c83a85c' group='com.google.errorprone' />
     <trusted-key id='912d2c0eccda55c0' group='com.google.errorprone' />
     <trusted-key id='9a259c7ee636c5ed' group='com.google.errorprone' />
     <trusted-key id='eba8e97b15086e24' group='com.google.errorprone' />
@@ -423,6 +424,9 @@
     </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.2'>
       <sha512>44C956BA53F81CEF4BC36EC4FC11A7862922524C970BCA4116790615A335795B28B0717F9F105C89949727DC77D97F5D4CE830438510776C52F69D968FCE14D6</sha512>
+    </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.3'>
+      <sha512>9EC10D4159C75F8C4E0AE9AE190FC8385FA54715B8DB8F675D1F3A64384F2C141B6EBBDEBB51AE349BD6ED162B29F94B1476E00FAB43505E9800668CBAAA84BD</sha512>
     </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>

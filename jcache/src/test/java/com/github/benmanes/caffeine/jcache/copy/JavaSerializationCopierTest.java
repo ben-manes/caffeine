@@ -17,8 +17,12 @@ package com.github.benmanes.caffeine.jcache.copy;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectStreamClass;
 import java.io.UncheckedIOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -28,8 +32,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+import javax.cache.CacheException;
+
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+
+import com.google.common.collect.ImmutableSet;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -53,8 +61,35 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test(dataProvider = "copier", expectedExceptions = UncheckedIOException.class)
-  public void notSerializable(Copier copier) {
-    copy(copier, new ByteArrayInputStream(new byte[0]));
+  public void serializable_fail(JavaSerializationCopier copier) {
+    copier.serialize(new Object());
+  }
+
+  @Test
+  public void deserializable_resolveClass() throws Exception {
+    var copier = new JavaSerializationCopier();
+    copier.copy(ImmutableSet.of(), ClassLoader.getPlatformClassLoader());
+  }
+
+  @Test(dataProvider = "copier", expectedExceptions = CacheException.class)
+  public void deserializable_badData(JavaSerializationCopier copier) {
+    copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader());
+  }
+
+  @Test(expectedExceptions = CacheException.class)
+  public void deserializable_classNotFound() throws Exception {
+    var copier = new JavaSerializationCopier() {
+      @Override protected ObjectInputStream newInputStream(
+          InputStream in, ClassLoader classLoader) throws IOException {
+        return new ObjectInputStream(in) {
+          @Override protected Class<?> resolveClass(ObjectStreamClass desc)
+              throws IOException, ClassNotFoundException {
+            throw new ClassNotFoundException();
+          }
+        };
+      }
+    };
+    copier.roundtrip(Instant.now(), Thread.currentThread().getContextClassLoader());
   }
 
   @Test(dataProvider = "copier")

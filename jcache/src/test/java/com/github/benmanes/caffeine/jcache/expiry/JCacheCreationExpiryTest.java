@@ -54,7 +54,30 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     configuration.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
         new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION)));
     configuration.setTickerFactory(() -> ticker::read);
+    configuration.setStatisticsEnabled(true);
     return configuration;
+  }
+
+  /* --------------- containsKey --------------- */
+
+  @Test
+  public void containsKey_expired() {
+    jcache.put(KEY_1, VALUE_1);
+    ticker.setAutoIncrementStep(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+
+    assertThat(jcache.containsKey(KEY_1)).isFalse();
+    assertThat(getExpirable(jcache, KEY_1)).isNull();
+  }
+
+  /* --------------- get --------------- */
+
+  @Test
+  public void get_expired() {
+    jcache.put(KEY_1, VALUE_1);
+    ticker.setAutoIncrementStep(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+
+    assertThat(jcache.get(KEY_1)).isNull();
+    assertThat(getExpirable(jcache, KEY_1)).isNull();
   }
 
   /* --------------- get (loading) --------------- */
@@ -74,6 +97,14 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     assertThat(jcacheLoading.get(KEY_1)).isEqualTo(KEY_1);
     Expirable<Integer> expirable = getExpirable(jcacheLoading, KEY_1);
     assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
+  }
+
+  @Test
+  public void get_loading_expired_lazy() {
+    jcacheLoading.put(KEY_1, VALUE_1);
+    ticker.setAutoIncrementStep((long) (EXPIRY_DURATION / 2.5), TimeUnit.MILLISECONDS);
+
+    assertThat(jcacheLoading.get(KEY_1)).isEqualTo(KEY_1);
   }
 
   @Test
@@ -197,9 +228,18 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     jcache.putIfAbsent(KEY_1, VALUE_1);
     advancePastExpiry();
 
-    jcache.putIfAbsent(KEY_1, VALUE_2);
+    assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isTrue();
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable.get()).isEqualTo(VALUE_2);
     assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
+  }
+
+  @Test
+  public void putIfAbsent_expired_lazy() {
+    jcache.putIfAbsent(KEY_1, VALUE_1);
+
+    ticker.setAutoIncrementStep(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+    assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isTrue();
   }
 
   @Test

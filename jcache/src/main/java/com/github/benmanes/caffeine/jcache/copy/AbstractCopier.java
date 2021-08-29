@@ -30,8 +30,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -57,7 +57,7 @@ public abstract class AbstractCopier<A> implements Copier {
         Inet6Address.class, InetSocketAddress.class, LocalDate.class, LocalTime.class,
         LocalDateTime.class, Instant.class, Duration.class);
     JAVA_DEEP_COPY = Map.of(Date.class, o -> ((Date) o).clone(),
-        Calendar.class, o -> ((Calendar) o).clone());
+        GregorianCalendar.class, o -> ((GregorianCalendar) o).clone());
   }
 
   private final Set<Class<?>> immutableClasses;

@@ -16,6 +16,7 @@ package com.github.benmanes.caffeine.jcache;
 import static com.google.common.truth.Truth.assertThat;
 
 import javax.cache.Cache;
+import javax.cache.configuration.Configuration;
 
 import org.testng.annotations.Test;
 
@@ -42,5 +43,18 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     assertThat(jcache.unwrap(CacheProxy.class)).isSameInstanceAs(jcache);
     assertThat(jcache.unwrap(com.github.benmanes.caffeine.cache.Cache.class))
         .isSameInstanceAs(jcache.cache);
+  }
+
+  @SuppressWarnings("serial")
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void unwrap_configuration() {
+    abstract class Dummy implements Configuration<Integer, Integer> {};
+    jcache.getConfiguration(Dummy.class);
+  }
+
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void unwrap_entry() {
+    jcache.put(KEY_1, VALUE_1);
+    jcache.iterator().next().unwrap(String.class);
   }
 }

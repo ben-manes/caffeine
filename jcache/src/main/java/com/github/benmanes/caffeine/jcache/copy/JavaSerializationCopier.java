@@ -66,13 +66,19 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
   @SuppressWarnings("BanSerializableRead")
   protected Object deserialize(byte[] data, ClassLoader classLoader) {
     try (var bytes = new ByteArrayInputStream(data);
-         var input = new ClassLoaderAwareObjectInputStream(bytes, classLoader)) {
+         var input = newInputStream(bytes, classLoader)) {
       return input.readObject();
     } catch (IOException e) {
       throw new CacheException("Failed to deserialize", e);
     } catch (ClassNotFoundException e) {
       throw new CacheException("Failed to resolve a deserialized class", e);
     }
+  }
+
+  // @VisibleForTesting
+  ObjectInputStream newInputStream(
+      InputStream in, ClassLoader classLoader) throws IOException {
+    return new ClassLoaderAwareObjectInputStream(in, classLoader);
   }
 
   /** An {@linkplain ObjectInputStream} that instantiates using the supplied classloader. */

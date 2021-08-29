@@ -64,12 +64,24 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     configuration.setExpiryPolicyFactory(() -> new AccessedExpiryPolicy(
         new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION)));
     configuration.setTickerFactory(() -> ticker::read);
+    configuration.setStatisticsEnabled(true);
     return configuration;
   }
 
   @DataProvider(name = "eternal")
   public Object[] providesEternal() {
     return new Object[] { true, false };
+  }
+
+  /* --------------- containsKey --------------- */
+
+  @Test
+  public void containsKey_expired() {
+    jcache.put(KEY_1, VALUE_1);
+    ticker.setAutoIncrementStep(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+
+    assertThat(jcache.containsKey(KEY_1)).isFalse();
+    assertThat(getExpirable(jcache, KEY_1)).isNull();
   }
 
   /* --------------- get --------------- */
@@ -92,6 +104,15 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
 
     assertThat(jcache.get(KEY_1)).isEqualTo(VALUE_1);
     assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
+  }
+
+  @Test
+  public void get_expired() {
+    jcache.put(KEY_1, VALUE_1);
+    ticker.setAutoIncrementStep(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+
+    assertThat(jcache.get(KEY_1)).isNull();
+    assertThat(getExpirable(jcache, KEY_1)).isNull();
   }
 
   /* --------------- get (loading) --------------- */
