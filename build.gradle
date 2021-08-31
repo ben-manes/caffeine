@@ -57,7 +57,7 @@ subprojects {
   apply from: "${rootDir}/gradle/dependencies.gradle"
   apply from: "${rootDir}/gradle/objectLayout.gradle"
 
-  sourceCompatibility = JavaVersion.VERSION_11
+  java.toolchain.languageVersion = JavaLanguageVersion.of(System.env.'JAVA_VERSION' ?: 11)
 
   configurations {
     all {
@@ -67,6 +67,7 @@ subprojects {
 
   dependencies {
     testImplementation libraries.guava
+    testImplementation libraries.slf4jNop
     testImplementation testLibraries.truth
     testImplementation testLibraries.mockito
     testImplementation testLibraries.hamcrest
@@ -157,14 +158,4 @@ tasks.coveralls {
 
   dependsOn jacocoRootReport
   onlyIf { System.env.'CI' }
-}
-
-def isNonStable = { String version ->
-  def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
-  def regex = /^[0-9,.v-]+(-r)?$/
-  return !stableKeyword && !(version ==~ regex)
-}
-
-dependencyUpdates.rejectVersionIf {
-  it.candidate.group == 'org.slf4j' && isNonStable(it.candidate.version)
 }

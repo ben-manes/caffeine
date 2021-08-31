@@ -5,15 +5,18 @@ env:
   ORG_GRADLE_PROJECT_checksumFailOn: build_finish
   ORG_GRADLE_PROJECT_checksumIgnore: false
   ORG_GRADLE_PROJECT_checksumPrint: true
+  JAVA_VERSION: 11
 
 jobs:
   qodana:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ 11, 16 ]
     steps:
       - uses: actions/checkout@v2
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: ${{ env.JAVA_VERSION }}
       - name: Cache Gradle packages
         uses: actions/cache@v2.1.6
         with:
@@ -21,7 +24,7 @@ jobs:
             ~/.gradle/wrapper
             ~/.gradle/caches
             ~/.sonar/cache
-          key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
+          key: ${{ runner.os }}-${{ github.job }}-${{ env.JAVA_VERSION }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle
       - name: Build
         run: ./gradlew build -x test
@@ -30,7 +33,7 @@ jobs:
         with:
           path: |
             ~/work/_temp/_github_home/qodana-cache
-          key: ${{ runner.os }}-qodana-${{ matrix.java }}-${{ github.ref }}
+          key: ${{ runner.os }}-qodana-${{ env.JAVA_VERSION }}-${{ github.ref }}
           restore-keys: |
             ${{ runner.os }}-qodana-${{ github.ref }}
             ${{ runner.os }}-qodana-
@@ -38,7 +41,7 @@ jobs:
         uses: JetBrains/qodana-action@v2.0-eap
       - uses: actions/upload-artifact@v2
         with:
-          name: qodana-${{ matrix.java }}
+          name: qodana-${{ env.JAVA_VERSION }}
           path: ${{ github.workspace }}/qodana
       - name: View Instructions
         run: |

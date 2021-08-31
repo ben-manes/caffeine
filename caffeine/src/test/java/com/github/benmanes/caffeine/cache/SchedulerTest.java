@@ -32,7 +32,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.LogManager;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -48,11 +47,6 @@ import com.google.common.util.concurrent.Futures;
  */
 @SuppressWarnings("FutureReturnValueIgnored")
 public final class SchedulerTest {
-  static {
-    // disable logging warnings caused by exceptions
-    LogManager.getLogManager().reset();
-  }
-
   private final NullPointerTester npeTester = new NullPointerTester();
 
   @Test(dataProvider = "schedulers")

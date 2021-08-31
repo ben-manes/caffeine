@@ -12,6 +12,8 @@ jobs:
     strategy:
       matrix:
         java: [ 11, 16 ]
+    env:
+      JAVA_VERSION: ${{ matrix.java }}
     steps:
       - uses: actions/checkout@v2.3.4
       - name: Set up JDK ${{ matrix.java }}
