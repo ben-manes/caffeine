@@ -45,7 +45,7 @@ public interface Policy<K extends Object, V extends Object> {
   /**
    * Returns the value associated with the {@code key} in this cache, or {@code null} if there is no
    * cached value for the {@code key}. Unlike {@link Cache#getIfPresent(Object)}, this method does
-   * not produce any side effects such as updating statistics, the eviction policy, reseting the
+   * not produce any side effects such as updating statistics, the eviction policy, resetting the
    * expiration time, or triggering a refresh.
    *
    * @param key the key whose associated value is to be returned
