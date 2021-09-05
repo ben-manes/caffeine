@@ -85,7 +85,6 @@
     <trusted-key id='0555b3ba1ca4ecf9' group='com.typesafe' />
     <trusted-key id='0753c4188493fd20' group='com.typesafe' />
     <trusted-key id='e735df276c508071' group='com.typesafe' />
-    <trusted-key id='0753c4188493fd20' group='com.typesafe.akka' />
     <trusted-key id='2b183b279dfd639e' group='com.typesafe.akka' />
     <trusted-key id='397618683a7cdc70' group='com.typesafe.akka' />
     <trusted-key id='6ff60b55630dc90e' group='com.typesafe.akka' />

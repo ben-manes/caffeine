@@ -31,7 +31,7 @@ import com.github.benmanes.caffeine.cache.ReadBuffer;
 final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
   final AtomicReference<E>[] buffer;
 
-  @SuppressWarnings({"unchecked", "cast", "rawtypes"})
+  @SuppressWarnings({"unchecked", "rawtypes"})
   public FastFlowBuffer() {
     buffer = new AtomicReference[BUFFER_SIZE];
     for (int i = 0; i < BUFFER_SIZE; i++) {

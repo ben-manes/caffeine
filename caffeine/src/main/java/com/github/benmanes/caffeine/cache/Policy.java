@@ -194,6 +194,26 @@ public interface Policy<K extends Object, V extends Object> {
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
+     * order of iteration is from the entries least likely to be retained (coldest) to the entries
+     * most likely to be retained (hottest). This order is determined by the eviction policy's best
+     * guess at the time of creating this snapshot view. If the cache is bounded by a maximum size
+     * rather than a maximum weight, then this method is equivalent to {@link #coldest(int)}.
+     * <p>
+     * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation. Because of the
+     * asynchronous nature of the page replacement policy, determining the retention ordering
+     * requires a traversal of the entries.
+     *
+     * @param weightLimit the maximum weight of the returned map (use {@link Long#MAX_VALUE} to
+     *        disregard the limit)
+     * @return a snapshot view of the cache from coldest entry to the hottest
+     */
+    default Map<K, V> coldestWeighted(@NonNegative long weightLimit) {
+      // This method was added & implemented in version 3.0.4
+      throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
      * order of iteration is from the entries most likely to be retained (hottest) to the entries
      * least likely to be retained (coldest). This order is determined by the eviction policy's best
      * guess at the time of creating this snapshot view.
@@ -207,6 +227,26 @@ public interface Policy<K extends Object, V extends Object> {
      * @return a snapshot view of the cache from hottest entry to the coldest
      */
     Map<K, V> hottest(@NonNegative int limit);
+
+    /**
+     * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
+     * order of iteration is from the entries most likely to be retained (hottest) to the entries
+     * least likely to be retained (coldest). This order is determined by the eviction policy's best
+     * guess at the time of creating this snapshot view. If the cache is bounded by a maximum size
+     * rather than a maximum weight, then this method is equivalent to {@link #hottest(int)}.
+     * <p>
+     * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation. Because of the
+     * asynchronous nature of the page replacement policy, determining the retention ordering
+     * requires a traversal of the entries.
+     *
+     * @param weightLimit the maximum weight of the returned map (use {@link Long#MAX_VALUE} to
+     *        disregard the limit)
+     * @return a snapshot view of the cache from hottest entry to the coldest
+     */
+    default Map<K, V> hottestWeighted(@NonNegative long weightLimit) {
+      // This method was added & implemented in version 3.0.4
+      throw new UnsupportedOperationException();
+    }
   }
 
   /** The low-level operations for a cache with a fixed expiration policy. */

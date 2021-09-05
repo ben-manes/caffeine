@@ -60,6 +60,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
 
 /**
  * The test cases for caches with a page replacement algorithm.
@@ -494,6 +495,15 @@ public final class EvictionTest {
   /* --------------- Policy: WeightedSize --------------- */
 
   @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+  public void weightedSize_absent(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    assertThat(eviction.weightOf(context.firstKey())).isEmpty();
+    assertThat(eviction.weightOf(context.absentKey())).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
   public void weightedSize(Cache<Int, Int> cache,
@@ -628,6 +638,73 @@ public final class EvictionTest {
     assertThat(coldest).containsExactlyEntriesIn(context.original());
   }
 
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void coldestWeight_unmodifiable(CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.coldestWeighted(Long.MAX_VALUE).clear();
+  }
+
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  public void coldestWeighted_negative(CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.coldestWeighted(-1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
+  public void coldestWeighted_zero(CacheContext context, Eviction<Int, Int> eviction) {
+    if (context.weigher() == CacheWeigher.ZERO) {
+      assertThat(eviction.coldestWeighted(0)).isEqualTo(context.original());
+    } else {
+      assertThat(eviction.coldestWeighted(0)).isExhaustivelyEmpty();
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestWeighted_partial(CacheContext context, Eviction<Int, Int> eviction) {
+    long weightedSize = context.original().entrySet().stream()
+        .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
+        .limit(context.original().size() / 2)
+        .sum();
+    var coldest = eviction.coldestWeighted(weightedSize);
+    var actualWeighedSize = coldest.entrySet().stream()
+        .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
+        .sum();
+    if (context.isWeighted()) {
+      assertThat(coldest).hasSizeIn(Range.closed(0, context.original().size()));
+    } else {
+      assertThat(coldest).hasSize(context.original().size() / 2);
+    }
+    assertThat(actualWeighedSize).isIn(Range.closed(0L, weightedSize));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL,
+      weigher = { CacheWeigher.DEFAULT, CacheWeigher.TEN },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void coldestWeighted_order(CacheContext context, Eviction<Int, Int> eviction) {
+    var keys = new LinkedHashSet<>(context.original().keySet());
+    var coldest = new LinkedHashSet<>(eviction.coldestWeighted(Long.MAX_VALUE).keySet());
+
+    // Ignore the last key; hard to predict with W-TinyLFU
+    keys.remove(context.lastKey());
+    coldest.remove(context.lastKey());
+    assertThat(coldest).containsExactlyElementsIn(keys).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, initialCapacity = InitialCapacity.EXCESSIVE,
+      maximumSize = Maximum.FULL)
+  public void coldestWeighted_snapshot(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var coldest = eviction.coldestWeighted(Long.MAX_VALUE);
+    cache.invalidateAll();
+    assertThat(coldest).containsExactlyEntriesIn(context.original());
+  }
+
   /* --------------- Policy: Hottest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
@@ -663,6 +740,73 @@ public final class EvictionTest {
   public void hottest_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
     var hottest = eviction.hottest(Integer.MAX_VALUE).keySet();
+    var coldest = new LinkedHashSet<>(ImmutableList.copyOf(hottest).reverse());
+
+    // Ignore the last key; hard to predict with W-TinyLFU
+    keys.remove(context.lastKey());
+    coldest.remove(context.lastKey());
+    assertThat(coldest).containsExactlyElementsIn(keys).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, initialCapacity = InitialCapacity.EXCESSIVE,
+      maximumSize = Maximum.FULL)
+  public void hottestWeighted_snapshot(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var hottest = eviction.hottestWeighted(Integer.MAX_VALUE);
+    cache.invalidateAll();
+    assertThat(hottest).containsExactlyEntriesIn(context.original());
+  }
+
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void hottestWeighted_unmodifiable(CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.hottestWeighted(Long.MAX_VALUE).clear();
+  }
+
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  public void hottestWeighted_negative(CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.hottestWeighted(-1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
+  public void hottestWeighted_zero(CacheContext context, Eviction<Int, Int> eviction) {
+    if (context.weigher() == CacheWeigher.ZERO) {
+      assertThat(eviction.hottestWeighted(0)).isEqualTo(context.original());
+    } else {
+      assertThat(eviction.hottestWeighted(0)).isExhaustivelyEmpty();
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestWeighted_partial(CacheContext context, Eviction<Int, Int> eviction) {
+    long weightedSize = context.original().entrySet().stream()
+        .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
+        .limit(context.original().size() / 2)
+        .sum();
+    var hottest = eviction.hottestWeighted(weightedSize);
+    var actualWeighedSize = hottest.entrySet().stream()
+        .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
+        .sum();
+    if (context.isWeighted()) {
+      assertThat(hottest).hasSizeIn(Range.closed(0, context.original().size()));
+    } else {
+      assertThat(hottest).hasSize(context.original().size() / 2);
+    }
+    assertThat(actualWeighedSize).isIn(Range.closed(0L, weightedSize));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void hottestWeighted_order(CacheContext context, Eviction<Int, Int> eviction) {
+    var keys = new LinkedHashSet<>(context.original().keySet());
+    var hottest = eviction.hottestWeighted(Long.MAX_VALUE).keySet();
     var coldest = new LinkedHashSet<>(ImmutableList.copyOf(hottest).reverse());
 
     // Ignore the last key; hard to predict with W-TinyLFU

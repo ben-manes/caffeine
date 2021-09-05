@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertAbout;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Range;
 import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Ordered;
@@ -56,6 +57,11 @@ public class MapSubject extends com.google.common.truth.MapSubject {
   public void hasSizeLessThan(long other) {
     checkArgument(other >= 0, "expectedSize (%s) must be >= 0", other);
     check("size()").that(actual.size()).isLessThan(Ints.checkedCast(other));
+  }
+
+  /** Fails if the map's size is not in {@code range}. */
+  public void hasSizeIn(Range<Integer> range) {
+    check("size()").that(actual.size()).isIn(range);;
   }
 
   /** Fails if the map does not contain the given keys, where duplicate keys are ignored. */

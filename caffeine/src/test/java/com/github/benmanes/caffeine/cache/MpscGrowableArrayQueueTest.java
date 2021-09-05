@@ -36,6 +36,29 @@ public final class MpscGrowableArrayQueueTest {
   private static final int POPULATED_SIZE = 10;
   private static final int FULL_SIZE = 32;
 
+  /* --------------- Constructor --------------- */
+
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void constructor_initialCapacity_tooSmall() {
+    new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 1, /* maxCapacity */ 4);
+  }
+
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void constructor_maxCapacity_tooSmall() {
+    new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 1);
+  }
+
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void constructor_inverted() {
+    new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 8, /* maxCapacity */ 4);
+  }
+
+  @Test
+  public void constructor() {
+    var buffer = new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 8);
+    assertThat(buffer.capacity()).isEqualTo(8);
+  }
+
   /* --------------- Size --------------- */
 
   @Test(dataProvider = "empty")
@@ -68,6 +91,24 @@ public final class MpscGrowableArrayQueueTest {
     assertThat(buffer).hasSize(FULL_SIZE);
   }
 
+  @Test(dataProvider = "empty")
+  public void relaxedOffer_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.relaxedOffer(1)).isTrue();
+    assertThat(buffer).hasSize(1);
+  }
+
+  @Test(dataProvider = "populated")
+  public void relaxedOffer_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.relaxedOffer(1)).isTrue();
+    assertThat(buffer).hasSize(POPULATED_SIZE + 1);
+  }
+
+  @Test(dataProvider = "full")
+  public void relaxedOffer_whenFull(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.relaxedOffer(1)).isFalse();
+    assertThat(buffer).hasSize(FULL_SIZE);
+  }
+
   /* --------------- Poll --------------- */
 
   @Test(dataProvider = "empty")
@@ -85,6 +126,61 @@ public final class MpscGrowableArrayQueueTest {
   public void poll_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     while (buffer.poll() != null) {}
     assertThat(buffer).isEmpty();
+  }
+
+  @Test(dataProvider = "empty")
+  public void relaxedPoll_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.relaxedPoll()).isNull();
+  }
+
+  @Test(dataProvider = "populated")
+  public void relaxedPoll_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.relaxedPoll()).isNotNull();
+    assertThat(buffer).hasSize(POPULATED_SIZE - 1);
+  }
+
+  @Test(dataProvider = "full")
+  public void relaxedPoll_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+    while (buffer.relaxedPoll() != null) {}
+    assertThat(buffer).isEmpty();
+  }
+
+  /* --------------- Peek --------------- */
+
+  @Test(dataProvider = "empty")
+  public void peek_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.peek()).isNull();
+  }
+
+  @Test(dataProvider = "populated")
+  public void peek_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.peek()).isNotNull();
+    assertThat(buffer).hasSize(POPULATED_SIZE);
+  }
+
+  @Test(dataProvider = "empty")
+  public void relaxedPeek_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.relaxedPeek()).isNull();
+  }
+
+  @Test(dataProvider = "populated")
+  public void relaxedPeek_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.relaxedPeek()).isNotNull();
+    assertThat(buffer).hasSize(POPULATED_SIZE);
+  }
+
+  /* --------------- Miscellaneous --------------- */
+
+  @SuppressWarnings("ReturnValueIgnored")
+  @Test(dataProvider = "full", expectedExceptions = UnsupportedOperationException.class)
+  public void iterator(MpscGrowableArrayQueue<Integer> buffer) {
+    buffer.iterator();
+  }
+
+  @Test(dataProvider = "populated")
+  public void inspection(MpscGrowableArrayQueue<Integer> buffer) {
+    assertThat(buffer.currentConsumerIndex()).isEqualTo(0);
+    assertThat(buffer.currentProducerIndex()).isEqualTo(POPULATED_SIZE);
   }
 
   /* --------------- Concurrency --------------- */

@@ -122,6 +122,11 @@ public final class CampPolicy implements Policy {
   }
 
   private void onMiss(AccessEvent event) {
+    if (event.weight() > maximumSize) {
+      policyStats.recordEviction();
+      return;
+    }
+
     size += event.weight();
     while (size > maximumSize) {
       evict();

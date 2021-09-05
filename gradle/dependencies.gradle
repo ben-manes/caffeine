@@ -27,7 +27,7 @@ ext {
   versions = [
     akka: '2.6.16',
     cache2k: '2.2.1.Final',
-    checkerFramework: '3.17.0',
+    checkerFramework: '3.18.0',
     coherence: '20.06',
     commonsCompress: '1.21',
     commonsLang3: '3.12.0',
@@ -83,12 +83,12 @@ ext {
   ]
   pluginVersions = [
     bnd: '5.3.0',
-    checkstyle: '8.45.1',
+    checkstyle: '9.0',
     coveralls: '2.12.0',
     errorprone: '2.0.2',
     findsecbugs: '1.11.0',
     jacoco: '0.8.6',
-    jmh: '0.6.5',
+    jmh: '0.6.6',
     jmhReport: '0.9.0',
     nexusPublish: '1.1.0',
     nullaway: '1.1.0',

@@ -66,7 +66,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.ToLongFunction;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -2083,7 +2083,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    *
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
-   * @param expiry the calculator for the expiration time
+   * @param expiry the calculator for the write expiration time
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
    * @return the prior value in or null if no mapping was found
    */
@@ -2728,14 +2728,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * Returns an unmodifiable snapshot map ordered in eviction order, either ascending or descending.
    * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation.
    *
-   * @param limit the maximum number of entries
+   * @param limit the maximum size of the snapshot
    * @param transformer a function that unwraps the value
-   * @param hottest the iteration order
+   * @param hottest the coldest or hottest iteration order
+   * @param weighted using unit or weight-based measurement
    * @return an unmodifiable snapshot in a specified order
    */
   @SuppressWarnings("GuardedByChecker")
-  Map<K, V> evictionOrder(int limit, Function<V, V> transformer, boolean hottest) {
-    Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> {
+  Map<K, V> evictionOrder(long limit, Function<V, V> transformer,
+      boolean hottest, boolean weighted) {
+    Iterable<Node<K, V>> iterable = () -> {
       Comparator<Node<K, V>> comparator = Comparator.comparingInt(node -> {
           K key = node.getKey();
           return (key == null) ? 0 : frequencySketch().frequency(key);
@@ -2752,28 +2754,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return PeekingIterator.concat(primary, accessOrderProtectedDeque().iterator());
       }
     };
-    return fixedSnapshot(iteratorSupplier, limit, transformer);
+
+    int initialCapacity = (int) Math.min(Math.min(limit, size()), Integer.SIZE);
+    ToLongFunction<Node<K, V>> measurer = weighted ? Node::getPolicyWeight : node -> 1L;
+    return fixedSnapshot(initialCapacity, limit, measurer, iterable, transformer);
   }
 
   /**
    * Returns an unmodifiable snapshot map ordered in access expiration order, either ascending or
    * descending. Beware that obtaining the mappings is <em>NOT</em> a constant-time operation.
    *
-   * @param limit the maximum number of entries
+   * @param limit the maximum size of the snapshot
    * @param transformer a function that unwraps the value
-   * @param oldest the iteration order
+   * @param oldest the youngest or oldest iteration order
    * @return an unmodifiable snapshot in a specified order
    */
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> expireAfterAccessOrder(int limit, Function<V, V> transformer, boolean oldest) {
-    if (!evicts()) {
-      Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> oldest
-          ? accessOrderWindowDeque().iterator()
-          : accessOrderWindowDeque().descendingIterator();
-      return fixedSnapshot(iteratorSupplier, limit, transformer);
-    }
-
-    Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> {
+    int initialCapacity = Math.min(limit, size());
+    Iterable<Node<K, V>> iterable;
+    if (evicts()) {
+      iterable = () -> {
         Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getAccessTime);
         PeekingIterator<Node<K, V>> first, second, third;
         if (oldest) {
@@ -2788,52 +2789,63 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
         return PeekingIterator.comparing(
             PeekingIterator.comparing(first, second, comparator), third, comparator);
-    };
-    return fixedSnapshot(iteratorSupplier, limit, transformer);
+      };
+    } else {
+      iterable = () -> oldest
+          ? accessOrderWindowDeque().iterator()
+          : accessOrderWindowDeque().descendingIterator();
+    }
+    return fixedSnapshot(initialCapacity, limit, node -> 1L, iterable, transformer);
   }
 
   /**
    * Returns an unmodifiable snapshot map ordered in write expiration order, either ascending or
    * descending. Beware that obtaining the mappings is <em>NOT</em> a constant-time operation.
    *
-   * @param limit the maximum number of entries
+   * @param limit the maximum size of the snapshot
    * @param transformer a function that unwraps the value
-   * @param oldest the iteration order
+   * @param oldest the youngest or oldest iteration order
    * @return an unmodifiable snapshot in a specified order
    */
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> expireAfterWriteOrder(int limit, Function<V, V> transformer, boolean oldest) {
-    Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> oldest
+    int initialCapacity = Math.min(limit, size());
+    Iterable<Node<K, V>> iterable = () -> oldest
         ? writeOrderDeque().iterator()
         : writeOrderDeque().descendingIterator();
-    return fixedSnapshot(iteratorSupplier, limit, transformer);
+    return fixedSnapshot(initialCapacity, limit, node -> 1L, iterable, transformer);
   }
 
   /**
    * Returns an unmodifiable snapshot map ordered by the provided iterator. Beware that obtaining
    * the mappings is <em>NOT</em> a constant-time operation.
    *
-   * @param iteratorSupplier the iterator
-   * @param limit the maximum number of entries
+   * @param initialCapacity the initial capacity
+   * @param limit the maximum size of the snapshot
+   * @param iterable the ordered iteration of entries
    * @param transformer a function that unwraps the value
+   * @param measurer a function that determines the entry's size
    * @return an unmodifiable snapshot in the iterator's order
    */
-  Map<K, V> fixedSnapshot(Supplier<Iterator<Node<K, V>>> iteratorSupplier,
-      int limit, Function<V, V> transformer) {
+  Map<K, V> fixedSnapshot(int initialCapacity, long limit, ToLongFunction<Node<K, V>> measurer,
+      Iterable<Node<K, V>> iterable, Function<V, V> transformer) {
     requireArgument(limit >= 0);
     evictionLock.lock();
     try {
       maintenance(/* ignored */ null);
 
-      var iterator = iteratorSupplier.get();
-      int initialCapacity = Math.min(limit, size());
+      long size = 0;
       var map = new LinkedHashMap<K, V>(initialCapacity);
-      while ((map.size() < limit) && iterator.hasNext()) {
-        Node<K, V> node = iterator.next();
+      for (var node : iterable) {
         K key = node.getKey();
         V value = transformer.apply(node.getValue());
         if ((key != null) && (value != null) && node.isAlive()) {
-          map.put(key, value);
+          size += measurer.applyAsLong(node);
+          if (size <= limit) {
+            map.put(key, value);
+          } else {
+            break;
+          }
         }
       }
       return Collections.unmodifiableMap(map);
@@ -3621,10 +3633,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
       }
       @Override public Map<K, V> coldest(int limit) {
-        return cache.evictionOrder(limit, transformer, /* hottest */ false);
+        return cache.evictionOrder(limit, transformer, /* hottest */ false, /* weighted */ false);
+      }
+      @Override public Map<K, V> coldestWeighted(long weightLimit) {
+        return cache.evictionOrder(weightLimit, transformer,
+            /* hottest */ false, /* weighted */ true);
       }
       @Override public Map<K, V> hottest(int limit) {
-        return cache.evictionOrder(limit, transformer, /* hottest */ true);
+        return cache.evictionOrder(limit, transformer, /* hottest */ true, /* weighted */ false);
+      }
+      @Override public Map<K, V> hottestWeighted(long weightLimit) {
+        return cache.evictionOrder(weightLimit, transformer,
+            /* hottest */ true, /* weighted */ true);
       }
     }
 

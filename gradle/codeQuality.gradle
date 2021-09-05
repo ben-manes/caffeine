@@ -22,20 +22,22 @@ dependencies {
   errorproneJavac libraries.errorproneJavac
   errorprone libraries.errorproneCore
   errorprone libraries.nullaway
-  errorprone files("${rootDir}/build/libs/caffeine_local.jar")
+  errorprone files("${buildDir}/libs/caffeine_local.jar")
 }
 
 // Gradle rewrites the compiler's dependency on Caffeine to a project dependency, which fails
 // Instead we have to download and trick the build to put the jar on the compiler's classpath
 // See the downloadCaffeineLocal() task and https://github.com/gradle/gradle/issues/11625
 task downloadCaffeineLocal() {
-  def version = '3.0.2'
-  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/' +
-    "${version}/caffeine-${version}.jar"
-  def local = file("${rootDir}/build/libs/caffeine_local.jar")
-  if (!local.exists()) {
-    local.parentFile.mkdirs()
-    new URL(url).withInputStream{ input -> local.withOutputStream{ it << input }}
+  doFirst {
+    def version = '3.0.3'
+    def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/' +
+      "${version}/caffeine-${version}.jar"
+    def local = file("${buildDir}/libs/caffeine_local.jar")
+    if (!local.exists()) {
+      local.parentFile.mkdirs()
+      new URL(url).withInputStream{ input -> local.withOutputStream{ it << input }}
+    }
   }
 }
 
@@ -93,18 +95,28 @@ sonarqube {
   }
 }
 
+def JVM_ARGS_STRONG_ENCAPSULATION = [
+  '--add-exports', 'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
+  '--add-exports', 'jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
+  '--add-exports', 'jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED',
+  '--add-exports', 'jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
+  '--add-exports', 'jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+  '--add-exports', 'jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED',
+  '--add-exports', 'jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED',
+  '--add-exports', 'jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
+  '--add-opens',   'jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+  '--add-opens',   'jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED',
+  '--add-opens',   'jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
+]
+
 tasks.withType(JavaExec) {
-  jvmArgs += [
-    '--add-exports', 'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
-    '--add-exports', 'jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
-    '--add-exports', 'jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
-    '--add-exports', 'jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
-    '--add-exports', 'jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED',
-  ]
+  jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
 }
 
 tasks.withType(JavaCompile).configureEach {
   dependsOn downloadCaffeineLocal
+
+  options.forkOptions.jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
   options.compilerArgs << [
     '-Xlint:all,-processing,-exports', '-auxiliaryclass',
     '-requires-automatic', '-requires-transitive-automatic',
