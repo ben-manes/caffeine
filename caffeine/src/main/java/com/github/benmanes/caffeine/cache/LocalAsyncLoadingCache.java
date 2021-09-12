@@ -278,7 +278,7 @@ abstract class LocalAsyncLoadingCache<K, V>
       var castedFuture = (CompletableFuture<V>) future;
       if (refreshed[0]) {
         castedFuture.whenComplete((newValue, error) -> {
-          boolean removed = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
+          asyncCache.cache().refreshes().remove(keyReference, castedFuture);
           long loadTime = asyncCache.cache().statsTicker().read() - startTime[0];
           if (error != null) {
             logger.log(Level.WARNING, "Exception thrown during refresh", error);
@@ -290,12 +290,17 @@ abstract class LocalAsyncLoadingCache<K, V>
           var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
             if (currentValue == oldValueFuture[0]) {
               if (currentValue == null) {
-                if (newValue == null) {
-                  return null;
-                } else if (removed) {
-                  return castedFuture;
-                }
+                // If the entry is absent then discard the refresh and maybe notifying the listener
+                discard[0] = (newValue != null);
+                return null;
+              } else if (currentValue == newValue) {
+                // If the reloaded value is the same instance then no-op
+                return currentValue;
+              } else if (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)) {
+                // If the completed futures hold the same value instance then no-op
+                return currentValue;
               } else {
+                // If the entry was not modified while in-flight (no ABA) then replace
                 long expectedWriteTime = writeTime[0];
                 if (asyncCache.cache().hasWriteTime()) {
                   asyncCache.cache().getIfPresentQuietly(key, writeTime);
@@ -305,6 +310,7 @@ abstract class LocalAsyncLoadingCache<K, V>
                 }
               }
             }
+            // Otherwise, a write invalidated the refresh so discard it and notify the listener
             discard[0] = true;
             return currentValue;
           }, asyncCache.cache().expiry(), /* recordMiss */ false,

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
@@ -25,6 +26,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -267,12 +269,25 @@ public final class AsyncAsMapTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
+      var oldValue = cache.asMap().get(key);
+      var value = cache.asMap().get(key).thenApply(val -> intern(new Int(val)));
+      assertThat(cache.asMap().put(key, value)).isSameInstanceAs(oldValue);
+      assertThat(cache).containsEntry(key, value);
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void put_replace_sameInstance(AsyncCache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
       var value = cache.asMap().get(key);
-      assertThat(cache.asMap().put(key, value)).isEqualTo(value);
+      assertThat(cache.asMap().put(key, value)).isSameInstanceAs(value);
       assertThat(cache).containsEntry(key, value);
     }
     assertThat(cache).hasSize(context.initialSize());
@@ -280,8 +295,7 @@ public final class AsyncAsMapTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_differentValue(AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       var newValue = context.absentValue().asFuture();
@@ -325,8 +339,7 @@ public final class AsyncAsMapTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void putAll_replace(AsyncCache<Int, Int> cache, CacheContext context) {
     var entries = context.original().keySet().stream().collect(toMap(identity(), Int::asFuture));
     cache.asMap().putAll(entries);
@@ -336,8 +349,7 @@ public final class AsyncAsMapTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  @CacheSpec(population = { Population.PARTIAL, Population.FULL })
   public void putAll_mixed(AsyncCache<Int, Int> cache, CacheContext context) {
     var entries = new HashMap<Int, CompletableFuture<Int>>();
     var replaced = new ArrayList<Int>();
@@ -523,8 +535,22 @@ public final class AsyncAsMapTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replace_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
+      var oldValue = cache.asMap().get(key);
+      var newValue = cache.asMap().get(key).thenApply(val -> intern(new Int(val)));
+      assertThat(cache.asMap().replace(key, newValue)).isSameInstanceAs(oldValue);
+      assertThat(cache).containsEntry(key, newValue);
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void replace_sameInstance(AsyncCache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
       var value = cache.asMap().get(key);
-      assertThat(cache.asMap().replace(key, value)).isEqualTo(value);
+      assertThat(cache.asMap().replace(key, value)).isSameInstanceAs(value);
       assertThat(cache).containsEntry(key, value);
     }
     assertThat(cache).hasSize(context.initialSize());
@@ -633,6 +659,20 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replaceConditionally_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
+      var oldValue = cache.asMap().get(key);
+      var newValue = cache.asMap().get(key).thenApply(val -> intern(new Int(val)));
+      assertThat(cache.asMap().replace(key, oldValue, newValue)).isTrue();
+      assertThat(cache).containsEntry(key, newValue);
+    }
+    assertThat(cache).hasSize(context.initialSize());
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void replaceConditionally_sameInstance(AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       var value = cache.asMap().get(key);
       assertThat(cache.asMap().replace(key, value, value)).isTrue();
@@ -886,7 +926,43 @@ public final class AsyncAsMapTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void computeIfPresent_present(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void computeIfPresent_present_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    var expectedMap = new HashMap<Int, CompletableFuture<Int>>();
+    for (Int key : context.firstMiddleLastKeys()) {
+      var value = intern(new Int(context.original().get(key))).asFuture();
+      assertThat(cache.asMap().computeIfPresent(key, (k, v) -> value)).isSameInstanceAs(value);
+      expectedMap.put(key, value);
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(expectedMap);
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void computeIfPresent_present_sameInstance(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
+      var value = key.asFuture();
+      assertThat(cache.asMap().computeIfPresent(key, (k, v) -> value)).isEqualTo(value);
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+
+    for (Int key : context.firstMiddleLastKeys()) {
+      assertThat(cache).containsEntry(key, key);
+    }
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void computeIfPresent_present_differentValue(
+      AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       var value = key.asFuture();
       assertThat(cache.asMap().computeIfPresent(key, (k, v) -> value)).isEqualTo(value);
@@ -997,9 +1073,26 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void compute_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    var expectedMap = new HashMap<Int, CompletableFuture<Int>>();
+    for (Int key : context.firstMiddleLastKeys()) {
+      var value = intern(new Int(context.original().get(key))).asFuture();
+      assertThat(cache.asMap().compute(key, (k, v) -> value)).isSameInstanceAs(value);
+      expectedMap.put(key, value);
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(expectedMap);
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_sameInstance(AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       var value = cache.asMap().get(key);
-      assertThat(cache.asMap().compute(key, (k, v) -> v)).isEqualTo(value);
+      assertThat(cache.asMap().compute(key, (k, v) -> value)).isSameInstanceAs(value);
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
@@ -1134,10 +1227,28 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void merge_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    var expectedMap = new HashMap<Int, CompletableFuture<Int>>();
+    for (Int key : context.firstMiddleLastKeys()) {
+      var value = cache.asMap().get(key).thenApply(Int::new);
+      var result = cache.asMap().merge(key, key.negate().asFuture(), (oldValue, v) -> value);
+      assertThat(result).isSameInstanceAs(value);
+      expectedMap.put(key, value);
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(expectedMap);
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void merge_sameInstance(AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       var value = cache.asMap().get(key);
-      var result = cache.asMap().merge(key, key.negate().asFuture(), (oldValue, v) -> oldValue);
-      assertThat(result).isEqualTo(value);
+      var result = cache.asMap().merge(key, key.negate().asFuture(), (oldValue, v) -> value);
+      assertThat(result).isSameInstanceAs(value);
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
@@ -1272,6 +1383,21 @@ public final class AsyncAsMapTest {
 
     var func = cache.asMap().keySet().toArray(Int[]::new);
     assertThat(func).asList().containsExactlyElementsIn(context.original().keySet());
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void keySet_contains_absent(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.asMap().keySet().contains(context.absentKey())).isFalse();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void keySet_contains_present(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.asMap().keySet().contains(context.firstKey())).isTrue();
   }
 
   @CheckNoStats
@@ -1429,6 +1555,21 @@ public final class AsyncAsMapTest {
     var func = cache.asMap().values().toArray(CompletableFuture<?>[]::new);
     var values3 = Stream.of(func).map(CompletableFuture::join).collect(toList());
     assertThat(values3).containsExactlyElementsIn(context.original().values());
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void values_contains_absent(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.asMap().values().contains(context.absentValue().asFuture())).isFalse();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void values_contains_present(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.asMap().values().contains(cache.asMap().get(context.firstKey()))).isTrue();
   }
 
   @CheckNoStats
@@ -1631,6 +1772,23 @@ public final class AsyncAsMapTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void entrySet_empty(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().entrySet()).isExhaustivelyEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_absent(AsyncCache<Int, Int> cache, CacheContext context) {
+    var entry = entry(context.absentKey(), context.absentValue().asFuture());
+    assertThat(cache.asMap().entrySet().contains(entry)).isFalse();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_present(AsyncCache<Int, Int> cache, CacheContext context) {
+    var entry = entry(context.firstKey(), cache.asMap().get(context.firstKey()));
+    assertThat(cache.asMap().entrySet().contains(entry)).isTrue();
   }
 
   @CheckNoStats

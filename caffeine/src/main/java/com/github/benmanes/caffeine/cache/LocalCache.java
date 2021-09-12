@@ -34,6 +34,9 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  */
 interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
+  /** Returns whether this cache is asynchronous. */
+  boolean isAsync();
+
   /** Returns whether this cache has statistics enabled. */
   boolean isRecordingStats();
 
@@ -120,6 +123,30 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   /** See {@link Cache#cleanUp}. */
   void cleanUp();
+
+  /** Notify the removal listener of a replacement if the value reference was changed. */
+  @SuppressWarnings("FutureReturnValueIgnored")
+  default void notifyOnReplace(K key, V oldValue, V newValue) {
+    if ((oldValue == null) || (oldValue == newValue)) {
+      return;
+    } else if (isAsync()) {
+      var oldFuture = (CompletableFuture<?>) oldValue;
+      var newFuture = (CompletableFuture<?>) newValue;
+      newFuture.whenCompleteAsync((nv, e) -> {
+        if (e == null) {
+          oldFuture.thenAcceptAsync(ov -> {
+            if (nv != ov) {
+              notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+            }
+          }, executor());
+        } else {
+          notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+        }
+      }, executor());
+    } else {
+      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+    }
+  }
 
   /** Decorates the remapping function to record statistics if enabled. */
   default <T, R> Function<? super T, ? extends R> statsAware(

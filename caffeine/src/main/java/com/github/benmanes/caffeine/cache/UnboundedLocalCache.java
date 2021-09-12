@@ -65,6 +65,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   final StatsCounter statsCounter;
   final boolean isRecordingStats;
   final Executor executor;
+  final boolean isAsync;
   final Ticker ticker;
 
   @Nullable Set<K> keySet;
@@ -72,13 +73,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Nullable Set<Entry<K, V>> entrySet;
   @Nullable volatile ConcurrentMap<Object, CompletableFuture<?>> refreshes;
 
-  UnboundedLocalCache(Caffeine<? super K, ? super V> builder, boolean async) {
+  UnboundedLocalCache(Caffeine<? super K, ? super V> builder, boolean isAsync) {
     this.data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     this.statsCounter = builder.getStatsCounterSupplier().get();
-    this.removalListener = builder.getRemovalListener(async);
+    this.removalListener = builder.getRemovalListener(isAsync);
     this.isRecordingStats = builder.isRecordingStats();
     this.executor = builder.getExecutor();
     this.ticker = builder.getTicker();
+    this.isAsync = isAsync;
   }
 
   static {
@@ -88,6 +90,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     } catch (ReflectiveOperationException e) {
       throw new ExceptionInInitializerError(e);
     }
+  }
+
+  @Override
+  public boolean isAsync() {
+    return isAsync;
   }
 
   @Override
@@ -308,13 +315,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
     V[] oldValue = (V[]) new Object[1];
-    RemovalCause[] cause = new RemovalCause[1];
+    boolean[] replaced = new boolean[1];
     V nv = data.computeIfPresent(key, (K k, V value) -> {
       BiFunction<? super K, ? super V, ? extends V> function = statsAware(remappingFunction,
           /* recordMiss */ false, /* recordLoad */ true, /* recordLoadFailure */ true);
       V newValue = function.apply(k, value);
 
-      cause[0] = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+      replaced[0] = (newValue != null);
       if (newValue != value) {
         oldValue[0] = value;
       }
@@ -322,8 +329,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       discardRefresh(k);
       return newValue;
     });
-    if (oldValue[0] != null) {
-      notifyRemoval(key, oldValue[0], cause[0]);
+    if (replaced[0]) {
+      notifyOnReplace(key, oldValue[0], nv);
+    } else if (oldValue[0] != null) {
+      notifyRemoval(key, oldValue[0], RemovalCause.EXPLICIT);
     }
     return nv;
   }
@@ -356,14 +365,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
     V[] oldValue = (V[]) new Object[1];
-    RemovalCause[] cause = new RemovalCause[1];
+    boolean[] replaced = new boolean[1];
     V nv = data.compute(key, (K k, V value) -> {
       V newValue = remappingFunction.apply(k, value);
       if ((value == null) && (newValue == null)) {
         return null;
       }
 
-      cause[0] = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+      replaced[0] = (newValue != null);
       if ((value != null) && (newValue != value)) {
         oldValue[0] = value;
       }
@@ -371,8 +380,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       discardRefresh(k);
       return newValue;
     });
-    if (oldValue[0] != null) {
-      notifyRemoval(key, oldValue[0], cause[0]);
+    if (replaced[0]) {
+      notifyOnReplace(key, oldValue[0], nv);
+    } else if (oldValue[0] != null) {
+      notifyRemoval(key, oldValue[0], RemovalCause.EXPLICIT);
     }
     return nv;
   }
@@ -421,9 +432,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     // ensures that the removal notification is processed after the removal has completed
     V oldValue = data.put(key, value);
-    if ((oldValue != null) && (oldValue != value)) {
-      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
-    }
+    notifyOnReplace(key, oldValue, value);
     return oldValue;
   }
 

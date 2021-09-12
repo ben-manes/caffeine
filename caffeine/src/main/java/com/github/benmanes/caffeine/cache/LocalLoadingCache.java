@@ -154,7 +154,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
               }
             }
           }
-          discard[0] = true;
+          discard[0] = (currentValue != newValue);
           return currentValue;
         }, cache().expiry(), /* recordMiss */ false,
             /* recordLoad */ false, /* recordLoadFailure */ true);

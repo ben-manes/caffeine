@@ -34,8 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -52,9 +50,9 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The cache test specification so that a {@link org.testng.annotations.DataProvider} can construct
@@ -614,9 +612,6 @@ public @interface CacheSpec {
     EXPECTED, DISALLOWED, IGNORED
   }
 
-  ExecutorService cachedExecutorService = Executors.newCachedThreadPool(
-      new ThreadFactoryBuilder().setDaemon(true).build());
-
   /** The executors that the cache can be configured with. */
   enum CacheExecutor {
     DEFAULT { // fork-join common pool
@@ -633,7 +628,7 @@ public @interface CacheSpec {
     },
     THREADED {
       @Override public Executor create() {
-        return new TrackingExecutor(cachedExecutorService);
+        return new TrackingExecutor(ConcurrentTestHarness.executor);
       }
     },
     REJECTING {

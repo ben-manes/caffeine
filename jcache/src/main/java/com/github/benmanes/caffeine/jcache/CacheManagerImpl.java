@@ -132,11 +132,11 @@ public final class CacheManagerImpl implements CacheManager {
 
       Configuration<?, ?> config = cache.getConfiguration();
       if (keyType != config.getKeyType()) {
-        throw new ClassCastException("Incompatible cache key types specified, expected " +
-                config.getKeyType() + " but " + keyType + " was specified");
+        throw new ClassCastException("Incompatible cache key types specified, expected "
+            + config.getKeyType() + " but " + keyType + " was specified");
       } else if (valueType != config.getValueType()) {
-        throw new ClassCastException("Incompatible cache value types specified, expected " +
-                config.getValueType() + " but " + valueType + " was specified");
+        throw new ClassCastException("Incompatible cache value types specified, expected "
+            + config.getValueType() + " but " + valueType + " was specified");
       }
       return cache;
     } finally {

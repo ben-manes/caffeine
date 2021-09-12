@@ -31,6 +31,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AF
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static org.hamcrest.Matchers.is;
@@ -46,6 +47,7 @@ import java.time.Duration;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -74,6 +76,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
@@ -1083,5 +1086,47 @@ public final class BoundedLocalCacheTest {
     verify(future).cancel(false);
     assertThat(localCache.pacer().nextFireTime).isEqualTo(0);
     assertThat(localCache.pacer().future).isNull();
+  }
+
+  @Test(dataProvider = "caches", groups = "isolated")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      expiry = CacheExpiry.DISABLED, maximumSize = Maximum.DISABLED, compute = Compute.SYNC,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, stats = Stats.DISABLED,
+      removalListener = Listener.DEFAULT, evictionListener = Listener.DEFAULT)
+  public void refreshIfNeeded_softLock(CacheContext context) {
+    var refresh = new AtomicBoolean();
+    var reloading = new AtomicBoolean();
+    var newValue = context.absentValue().add(1);
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override
+      public CompletableFuture<Int> asyncReload(Int key, Int oldValue, Executor executor) {
+        reloading.set(true);
+        await().untilTrue(refresh);
+        return newValue.asFuture();
+      }
+    });
+    var localCache = asBoundedLocalCache(cache);
+    cache.put(context.absentKey(), context.absentValue());
+    var lookupKey = localCache.nodeFactory.newLookupKey(context.absentKey());
+    var node = localCache.data.get(lookupKey);
+
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    ConcurrentTestHarness.execute(() -> cache.get(context.absentKey()));
+
+    await().untilTrue(reloading);
+    assertThat(node.getWriteTime() & 1L).isEqualTo(1);
+
+    localCache.refreshes = null;
+    cache.get(context.absentKey());
+    assertThat(cache.policy().refreshes()).isEmpty();
+
+    refresh.set(true);
+    await().untilAsserted(() -> assertThat(node.getWriteTime() & 1L).isEqualTo(0));
+    await().untilAsserted(() -> assertThat(cache).containsEntry(context.absentKey(), newValue));
   }
 }

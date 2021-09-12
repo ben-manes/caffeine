@@ -519,8 +519,7 @@ public final class EvictionTest {
   /* --------------- Policy: MaximumSize --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL,
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
   public void maximumSize_decrease(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     long newSize = context.maximumWeightOrSize() / 2;
@@ -552,8 +551,7 @@ public final class EvictionTest {
         .hasSize(context.initialSize()).exclusively();
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL,
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void maximumSize_decrease_negative(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {

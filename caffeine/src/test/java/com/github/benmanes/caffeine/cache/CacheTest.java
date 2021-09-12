@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
@@ -477,14 +478,29 @@ public final class CacheTest {
   public void put_replace_sameValue(Cache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
+      cache.put(key, intern(new Int(value)));
+      assertThat(cache).containsEntry(key, value);
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void put_replace_sameInstance(Cache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
+      Int value = context.original().get(key);
       cache.put(key, value);
       assertThat(cache).containsEntry(key, value);
     }
     assertThat(cache).hasSize(context.initialSize());
 
-    if (context.isGuava() || context.isAsync()) {
+    if (context.isGuava()) {
       int count = context.firstMiddleLastKeys().size();
       assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+    } else {
+      assertThat(context).removalNotifications().withCause(REPLACED).isEmpty();
     }
   }
 
@@ -537,8 +553,7 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void putAll_replace(Cache<Int, Int> cache, CacheContext context) {
     var entries = new HashMap<>(context.original());
     entries.replaceAll((key, value) -> value.add(1));
@@ -549,8 +564,7 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  @CacheSpec(population = { Population.PARTIAL, Population.FULL })
   public void putAll_mixed(Cache<Int, Int> cache, CacheContext context) {
     var entries = new HashMap<Int, Int>();
     var replaced = new HashMap<Int, Int>();
@@ -564,7 +578,7 @@ public final class CacheTest {
 
     cache.putAll(entries);
     assertThat(cache).containsExactlyEntriesIn(entries);
-    var expect = (context.isGuava() || context.isAsync()) ? entries : replaced;
+    var expect = context.isGuava() ? entries : replaced;
     assertThat(context).removalNotifications().withCause(REPLACED)
         .hasSize(expect.size()).exclusively();
   }

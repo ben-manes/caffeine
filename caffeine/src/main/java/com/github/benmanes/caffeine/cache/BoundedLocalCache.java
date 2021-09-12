@@ -47,7 +47,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -261,7 +260,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /* --------------- Shared --------------- */
 
-  /** Returns if the node's value is currently being computed, asynchronously. */
+  @Override
+  public boolean isAsync() {
+    return isAsync;
+  }
+
+  /** Returns if the node's value is currently being computed asynchronously. */
   final boolean isComputingAsync(Node<?, ?> node) {
     return isAsync && !Async.isReady((CompletableFuture<?>) node.getValue());
   }
@@ -1243,8 +1247,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Object keyReference = node.getKeyReference();
     if (((now - writeTime) > refreshAfterWriteNanos()) && (keyReference != null)
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
-        && !refreshes().containsKey(keyReference)
-        && ((writeTime & 1L) == 0L) && node.casWriteTime(writeTime, refreshWriteTime)) {
+        && ((writeTime & 1L) == 0L) && !refreshes().containsKey(keyReference)
+        && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
       @SuppressWarnings({"unchecked", "rawtypes"})
       CompletableFuture<? extends V>[] refreshFuture = new CompletableFuture[1];
@@ -1298,14 +1302,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           boolean[] discard = new boolean[1];
           compute(key, (k, currentValue) -> {
             if (currentValue == null) {
-              if (value == null) {
-                return null;
-              } else if (refreshes().get(key) == refreshFuture[0]) {
-                return value;
-              }
+              // If the entry is absent then discard the refresh and maybe notifying the listener
+              discard[0] = (value != null);
+              return null;
+            } else if (currentValue == value) {
+              // If the reloaded value is the same instance then no-op
+              return currentValue;
+            } else if (isAsync &&
+                (newValue == Async.getIfReady((CompletableFuture<?>) currentValue))) {
+              // If the completed futures hold the same value instance then no-op
+              return currentValue;
             } else if ((currentValue == oldValue) && (node.getWriteTime() == writeTime)) {
+              // If the entry was not modified while in-flight (no ABA) then replace
               return value;
             }
+            // Otherwise, a write invalidated the refresh so discard it and notify the listener
             discard[0] = true;
             return currentValue;
           }, expiry(), /* recordMiss */ false,
@@ -2178,8 +2189,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         notifyRemoval(key, oldValue, RemovalCause.EXPIRED);
       } else if (oldValue == null) {
         notifyRemoval(key, /* oldValue */ null, RemovalCause.COLLECTED);
-      } else if (mayUpdate && (value != oldValue)) {
-        notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+      } else if (mayUpdate) {
+        notifyOnReplace(key, oldValue, value);
       }
 
       int weightedDifference = mayUpdate ? (newWeight - oldWeight) : 0;
@@ -2330,9 +2341,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       afterRead(node, now[0], /* recordHit */ false);
     }
 
-    if (value != oldValue[0]) {
-      notifyRemoval(nodeKey[0], oldValue[0], RemovalCause.REPLACED);
-    }
+    notifyOnReplace(nodeKey[0], oldValue[0], value);
     return oldValue[0];
   }
 
@@ -2384,9 +2393,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       afterRead(node, now[0], /* recordHit */ false);
     }
 
-    if (oldValue != newValue) {
-      notifyRemoval(nodeKey[0], prevValue[0], RemovalCause.REPLACED);
-    }
+    notifyOnReplace(nodeKey[0], prevValue[0], newValue);
     return true;
   }
 
@@ -2500,8 +2507,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return null;
     }
     if (cause[0] != null) {
-      notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
-      statsCounter().recordEviction(weight[0], cause[0]);
+      if (cause[0] == RemovalCause.REPLACED) {
+        notifyOnReplace(key, oldValue[0], newValue[0]);
+      } else {
+        if (cause[0].wasEvicted()) {
+          statsCounter().recordEviction(weight[0], cause[0]);
+        }
+        notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
+      }
     }
     if (newValue[0] == null) {
       if (!isComputingAsync(node)) {
@@ -2675,10 +2688,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     });
 
     if (cause[0] != null) {
-      if (cause[0].wasEvicted()) {
-        statsCounter().recordEviction(weight[0], cause[0]);
+      if (cause[0] == RemovalCause.REPLACED) {
+        notifyOnReplace(key, oldValue[0], newValue[0]);
+      } else {
+        if (cause[0].wasEvicted()) {
+          statsCounter().recordEviction(weight[0], cause[0]);
+        }
+        notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
       }
-      notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
     }
 
     if (removed[0] != null) {
@@ -3188,7 +3205,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
       var entry = (Entry<?, ?>) obj;
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(entry.getKey()));
-      return (node != null) && Objects.equals(node.getValue(), entry.getValue());
+      return (node != null) && node.containsValue(entry.getValue());
     }
 
     @Override

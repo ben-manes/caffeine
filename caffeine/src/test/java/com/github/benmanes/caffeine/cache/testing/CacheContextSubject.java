@@ -23,9 +23,11 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.StreamSubject.streams;
 import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
@@ -226,7 +228,7 @@ public final class CacheContextSubject extends Subject {
         awaitUntil((type, listener) -> {
           var notifications = listener.removed().stream()
               .filter(notification -> cause == notification.getCause());
-          check(type).withMessage("%s", listener.removed()).about(streams())
+          check(type).withMessage("%s(%s)", cause, listener.removed()).about(streams())
               .that(notifications).isEmpty();
         });
       }
@@ -236,18 +238,29 @@ public final class CacheContextSubject extends Subject {
         awaitUntil((type, listener) -> {
           var notifications = listener.removed().stream()
               .filter(notification -> cause == notification.getCause());
-          check(type).withMessage("%s", listener.removed()).about(streams())
+          check(type).withMessage("%s(%s)", cause, listener.removed()).about(streams())
               .that(notifications).hasSize(Ints.checkedCast(expectedSize));
         });
         return new Exclusive(expectedSize);
       }
 
-      public Exclusive contains(Object key, Object value) {
+      public Exclusive contains(Int key, Int value) {
         awaitUntil((type, listener) -> {
-          check(type).withMessage("%s", listener.removed())
+          check(type).withMessage("%s", cause)
               .that(listener.removed()).contains(new RemovalNotification<>(key, value, cause));
         });
         return new Exclusive(1);
+      }
+
+      public Exclusive contains(Entry<?, ?>... entries) {
+        awaitUntil((type, listener) -> {
+          var notifications = Stream.of(entries)
+              .map(entry -> new RemovalNotification<>(entry.getKey(), entry.getValue(), cause))
+              .collect(toList());
+          check(type).withMessage("%s", cause)
+              .that(listener.removed()).containsAtLeastElementsIn(notifications);
+        });
+        return new Exclusive(entries.length);
       }
 
       public final class Exclusive {

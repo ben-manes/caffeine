@@ -156,10 +156,12 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   /** Waits until the executor has completed all of the submitted work. */
   private void awaitExecutor(CacheContext context) {
-    if ((context.cacheExecutor != CacheExecutor.DIRECT)
-        && context.executor() instanceof TrackingExecutor) {
+    if (context.executor() instanceof TrackingExecutor) {
       var executor = (TrackingExecutor) context.executor();
-      if (executor.submitted() != executor.completed()) {
+      executor.resume();
+
+      if ((context.cacheExecutor != CacheExecutor.DIRECT)
+          && (executor.submitted() != executor.completed())) {
         await().pollInSameThread().until(() -> executor.submitted() == executor.completed());
       }
     }

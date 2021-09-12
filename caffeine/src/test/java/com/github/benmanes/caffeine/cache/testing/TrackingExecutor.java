@@ -17,10 +17,12 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.util.concurrent.ForwardingExecutorService;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * An executor that retains metrics regarding the execution history.
@@ -28,16 +30,21 @@ import com.google.common.util.concurrent.ForwardingExecutorService;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TrackingExecutor extends ForwardingExecutorService {
+  private static final CountDownLatch ZERO = new CountDownLatch(0);
+
   private final ExecutorService delegate;
   private final AtomicInteger submitted;
   private final AtomicInteger completed;
   private final AtomicInteger failed;
+
+  private volatile CountDownLatch latch;
 
   public TrackingExecutor(ExecutorService executor) {
     delegate = requireNonNull(executor);
     submitted = new AtomicInteger();
     completed = new AtomicInteger();
     failed = new AtomicInteger();
+    latch = ZERO;
   }
 
   @Override
@@ -45,6 +52,7 @@ public final class TrackingExecutor extends ForwardingExecutorService {
     try {
       submitted.incrementAndGet();
       delegate.execute(() -> {
+        Uninterruptibles.awaitUninterruptibly(latch);
         try {
           command.run();
         } catch (Throwable t) {
@@ -71,6 +79,14 @@ public final class TrackingExecutor extends ForwardingExecutorService {
 
   public int failed() {
     return failed.get();
+  }
+
+  public void pause() {
+    latch = new CountDownLatch(1);
+  }
+
+  public void resume() {
+    latch.countDown();
   }
 
   @Override

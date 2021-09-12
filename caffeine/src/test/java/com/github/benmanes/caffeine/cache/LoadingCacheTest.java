@@ -434,6 +434,20 @@ public final class LoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, loader = Loader.IDENTITY)
+  public void refresh_present_sameInstance(LoadingCache<Int, Int> cache, CacheContext context) {
+    cache.put(context.absentKey(), context.absentKey());
+    var future = cache.refresh(context.absentKey());
+
+    assertThat(cache).hasSize(1);
+    assertThat(future).succeedsWith(context.absentKey());
+    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentKey());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.IDENTITY,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void refresh_present_differentValue(LoadingCache<Int, Int> cache, CacheContext context) {

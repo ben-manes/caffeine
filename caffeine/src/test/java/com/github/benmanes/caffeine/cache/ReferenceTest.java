@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -50,6 +51,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Maps;
 import com.google.common.testing.GcFinalization;
@@ -814,6 +816,14 @@ public final class ReferenceTest {
     assertThat(map.keySet().toArray(Int[]::new)).isEmpty();
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void keySet_contains(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().contains(new Int(context.firstKey()))).isFalse();
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -827,6 +837,15 @@ public final class ReferenceTest {
     assertThat(map.values().toArray(Int[]::new)).isEmpty();
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(values = { ReferenceType.WEAK, ReferenceType.SOFT },
+      population = Population.FULL, removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void values_contains(Map<Int, Int> map, CacheContext context) {
+    Int value = new Int(context.original().get(context.firstKey()));
+    assertThat(map.values().contains(value)).isFalse();
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -838,6 +857,16 @@ public final class ReferenceTest {
     assertThat(map.entrySet().toArray()).isEmpty();
     assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0])).isEmpty();
     assertThat(map.entrySet().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains(Map<Int, Int> map, CacheContext context) {
+    var entry = entry(new Int(context.firstKey()),
+        new Int(context.original().get(context.firstKey())));
+    assertThat(map.entrySet().contains(entry)).isFalse();
   }
 
   /** Ensures that that all the pending work is performed (Guava limits work per cycle). */
