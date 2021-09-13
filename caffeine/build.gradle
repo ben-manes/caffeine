@@ -42,6 +42,7 @@ dependencies {
   testImplementation testLibraries.junit
   testImplementation testLibraries.testng
   testImplementation testLibraries.jctools
+  testImplementation testLibraries.lincheck
   testImplementation libraries.commonsLang3
   testImplementation testLibraries.guavaTestLib
 

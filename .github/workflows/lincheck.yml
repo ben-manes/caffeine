@@ -1,26 +1,22 @@
-name: analysis
+name: lincheck
 on: [ push, pull_request ]
 
 env:
   ORG_GRADLE_PROJECT_checksumFailOn: build_finish
   ORG_GRADLE_PROJECT_checksumIgnore: false
   ORG_GRADLE_PROJECT_checksumPrint: true
+  JAVA_VERSION: 16
 
 jobs:
-  analyze:
+  lincheck:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ 11, 16 ]
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
     steps:
       - uses: actions/checkout@v2.3.4
-      - name: Set up JDK ${{ matrix.java }}
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
-          java-version: ${{ matrix.java }}
+          java-version: ${{ env.JAVA_VERSION }}
       - name: Cache Gradle packages
         uses: actions/cache@v2.1.6
         with:
@@ -29,5 +25,7 @@ jobs:
             ~/.gradle/caches
           key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle
-      - name: Run analyzers
-        run: ./.github/scripts/analyze.sh
+      - name: Run lincheck
+        run: |
+          set -eux
+          ./gradlew lincheckTests

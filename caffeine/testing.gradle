@@ -57,6 +57,11 @@ task isolatedTests(type: Test, group: 'Cache tests') {
   useTestNG()
 }
 
+task lincheckTests(type: Test, group: 'Cache tests') {
+  description = 'Tests that assert linearizability'
+  useTestNG()
+}
+
 task junitTests(type: Test, group: 'Cache tests', description: 'JUnit tests', dependsOn: jar) {
   useJUnit()
   tasks.test.dependsOn(it)
@@ -71,10 +76,20 @@ tasks.withType(Test) {
       options.includeGroups = ['slow']
     } else if (name.startsWith('isolated')) {
       options.includeGroups = ['isolated']
+      testLogging.events 'started'
+    } else if (name.startsWith('lincheck')) {
+      options.includeGroups = ['lincheck']
+      jvmArgs += [
+        '--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED',
+        '--add-exports', 'java.base/jdk.internal.util=ALL-UNNAMED',
+      ]
+      testLogging.events 'started'
+      maxHeapSize = '2g'
+      failFast = true
     } else {
       options {
         threadCount = Math.max(6, Runtime.getRuntime().availableProcessors() - 1)
-        excludeGroups = ['slow', 'isolated']
+        excludeGroups = ['slow', 'isolated', 'lincheck']
         jvmArgs '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled'
         parallel = 'methods'
       }

@@ -72,6 +72,7 @@ ext {
     jcacheTck: '1.1.1',
     jctools: '3.3.0',
     junit: '4.13.2',
+    lincheck: '2.14.1',
     mockito: '3.12.4',
     paxExam: '4.13.4',
     testng: '7.4.0',
@@ -162,6 +163,7 @@ ext {
     jcacheTckTests: "javax.cache:cache-tests:${testVersions.jcacheTck}:tests",
     jctools: "org.jctools:jctools-core:${testVersions.jctools}",
     junit: "junit:junit:${testVersions.junit}",
+    lincheck: "org.jetbrains.kotlinx:lincheck-jvm:${testVersions.lincheck}",
     mockito: "org.mockito:mockito-core:${testVersions.mockito}",
     osgiCompile: "org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}",
     osgiRuntime: [

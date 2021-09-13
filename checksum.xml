@@ -202,6 +202,7 @@
     <trusted-key id='bcf4173966770193' group='org.jetbrains' />
     <trusted-key id='6a0975f8b1127b83' group='org.jetbrains.kotlin' />
     <trusted-key id='b2c4d8b48a99f98a' group='org.jetbrains.kotlin' />
+    <trusted-key id='379ce192d401ab61' group='org.jetbrains.kotlinx' />
     <trusted-key id='66f8e4860bf74983' group='org.jooq' />
     <trusted-key id='145d819475314d97' group='org.json' />
     <trusted-key id='83d7db7c18913ca4' group='org.json' />
