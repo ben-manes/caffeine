@@ -150,7 +150,9 @@ ext {
     tcache: "com.trivago:triava:${versions.tcache}",
     stream: "com.clearspring.analytics:stream:${versions.stream}",
     univocityParsers: "com.univocity:univocity-parsers:${versions.univocityParsers}",
-    ycsb: "site.ycsb:core:${versions.ycsb}",
+    ycsb: dependencies.create("site.ycsb:core:${versions.ycsb}") {
+      transitive = false
+    },
     xz: "org.tukaani:xz:${versions.xz}",
     zstd: "com.github.luben:zstd-jni:${versions.zstd}",
   ]
