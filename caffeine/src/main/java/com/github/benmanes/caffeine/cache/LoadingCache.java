@@ -19,8 +19,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache,
  * and are stored in the cache until either evicted or manually invalidated.
@@ -59,7 +57,6 @@ public interface LoadingCache<K extends Object, V extends Object> extends Cache<
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping
    *         is left unestablished
    */
-  @Nullable
   V get(K key);
 
   /**
