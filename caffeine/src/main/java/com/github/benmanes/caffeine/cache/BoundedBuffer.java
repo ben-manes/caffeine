@@ -178,7 +178,7 @@ final class BBHeader {
     }
 
     boolean casWriteCounter(long expect, long update) {
-      return WRITE.compareAndSet(this, expect, update);
+      return WRITE.weakCompareAndSet(this, expect, update);
     }
 
     static {

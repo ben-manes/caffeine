@@ -32,7 +32,7 @@ jmh {
   jmhVersion = versions.jmh
 
   if (project.hasProperty('includePattern')) {
-    include = project.includePattern
+    includes = [ project.includePattern ]
   } else {
     tasks.jmh.doFirst { throw new GradleException("jmh: includePattern expected") }
   }
@@ -61,8 +61,8 @@ jmh {
 }
 
 jmhReport {
-  jmhResultPath = jmh.resultsFile
-  jmhReportOutput = file('build/reports/jmh')
+  jmhResultPath = jmh.resultsFile.get()
+  jmhReportOutput = file("${buildDir}/reports/jmh")
 }
 
 tasks.jmh.finalizedBy tasks.jmhReport

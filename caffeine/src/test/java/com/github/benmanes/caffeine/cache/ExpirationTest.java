@@ -27,6 +27,7 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -768,6 +769,26 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS, CacheExpiry.WRITE },
+      expireAfterAccess = { Expire.DISABLED, Expire.ONE_MINUTE }, compute = Compute.SYNC,
+      expireAfterWrite = { Expire.DISABLED, Expire.ONE_MINUTE })
+  public void computeIfAbsent_error(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    try {
+      cache.asMap().computeIfAbsent(context.firstKey(), key -> { throw new Error(); });
+    } catch (Error expected) {}
+
+    assertThat(cache.policy().expireAfterAccess()
+        .flatMap(policy -> policy.ageOf(context.firstKey()))).isEmpty();
+    assertThat(cache.policy().expireAfterWrite()
+        .flatMap(policy -> policy.ageOf(context.firstKey()))).isEmpty();
+    assertThat(cache.policy().expireVariably()
+        .flatMap(policy -> policy.getExpiresAfter(context.firstKey()))).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -807,6 +828,31 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS, CacheExpiry.WRITE },
+      compute = Compute.SYNC)
+  public void computeIfPresent_error(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    var access = cache.policy().expireAfterAccess()
+        .flatMap(policy -> policy.ageOf(context.firstKey()));
+    var write = cache.policy().expireAfterWrite()
+        .flatMap(policy -> policy.ageOf(context.firstKey()));
+    var variable = cache.policy().expireVariably()
+        .flatMap(policy -> policy.getExpiresAfter(context.firstKey()));
+    try {
+      cache.asMap().computeIfPresent(context.firstKey(), (key, value) -> { throw new Error(); });
+    } catch (Error expected) {}
+
+    assertThat(access).isEqualTo(cache.policy().expireAfterAccess()
+        .flatMap(policy -> policy.ageOf(context.firstKey())));
+    assertThat(write).isEqualTo(cache.policy().expireAfterWrite()
+        .flatMap(policy -> policy.ageOf(context.firstKey())));
+    assertThat(variable).isEqualTo(cache.policy().expireVariably()
+        .flatMap(policy -> policy.getExpiresAfter(context.firstKey())));
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -841,6 +887,51 @@ public final class ExpirationTest {
     context.cleanUp();
     assertThat(map).hasSize(1);
     assertThat(map).containsKey(key);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS, CacheExpiry.WRITE },
+      expireAfterAccess = { Expire.DISABLED, Expire.ONE_MINUTE }, compute = Compute.SYNC,
+      expireAfterWrite = { Expire.DISABLED, Expire.ONE_MINUTE })
+  public void compute_absent_error(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    try {
+      cache.asMap().compute(context.firstKey(), (key, value) -> { throw new Error(); });
+    } catch (Error expected) {}
+
+    assertThat(cache.policy().expireAfterAccess()
+        .flatMap(policy -> policy.ageOf(context.firstKey()))).isEmpty();
+    assertThat(cache.policy().expireAfterWrite()
+        .flatMap(policy -> policy.ageOf(context.firstKey()))).isEmpty();
+    assertThat(cache.policy().expireVariably()
+        .flatMap(policy -> policy.getExpiresAfter(context.firstKey()))).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS, CacheExpiry.WRITE },
+      compute = Compute.SYNC)
+  public void compute_present_error(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    var access = cache.policy().expireAfterAccess()
+        .flatMap(policy -> policy.ageOf(context.firstKey()));
+    var write = cache.policy().expireAfterWrite()
+        .flatMap(policy -> policy.ageOf(context.firstKey()));
+    var variable = cache.policy().expireVariably()
+        .flatMap(policy -> policy.getExpiresAfter(context.firstKey()));
+    try {
+      cache.asMap().compute(context.firstKey(), (key, value) -> { throw new Error(); });
+    } catch (Error expected) {}
+
+    assertThat(access).isEqualTo(cache.policy().expireAfterAccess()
+        .flatMap(policy -> policy.ageOf(context.firstKey())));
+    assertThat(write).isEqualTo(cache.policy().expireAfterWrite()
+        .flatMap(policy -> policy.ageOf(context.firstKey())));
+    assertThat(variable).isEqualTo(cache.policy().expireVariably()
+        .flatMap(policy -> policy.getExpiresAfter(context.firstKey())));
   }
 
   @Test(dataProvider = "caches")

@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Queue;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
+import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
@@ -34,6 +35,7 @@ import org.testng.annotations.Test;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@OpGroupConfig(name = "consumer", nonParallel = true)
 @Param(name = "element", gen = IntGen.class, conf = "1:5")
 public final class MpscGrowableArrayQueueLincheckTest extends VerifierState {
   private final Queue<Integer> queue;
@@ -47,8 +49,8 @@ public final class MpscGrowableArrayQueueLincheckTest extends VerifierState {
     return queue.offer(e);
   }
 
-  @Operation
-  public synchronized Integer poll() {
+  @Operation(group = "consumer")
+  public Integer poll() {
     return queue.poll();
   }
 

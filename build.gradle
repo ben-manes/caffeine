@@ -91,9 +91,7 @@ subprojects {
   }
 
   tasks.withType(Test) {
-    if (!it.name.startsWith('slow')) {
-      rootProject.testReport.reportOn it
-    }
+    rootProject.testReport.reportOn it
     it.dependsOn('jar')
 
     // ensure tasks don't overwrite the default report directories used by the 'test' task

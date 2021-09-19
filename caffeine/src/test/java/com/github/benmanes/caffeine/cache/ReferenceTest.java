@@ -30,6 +30,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -866,6 +867,18 @@ public final class ReferenceTest {
   public void entrySet_contains(Map<Int, Int> map, CacheContext context) {
     var entry = entry(new Int(context.firstKey()),
         new Int(context.original().get(context.firstKey())));
+    assertThat(map.entrySet().contains(entry)).isFalse();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullValue(Map<Int, Int> map, CacheContext context) {
+    var entry = new AbstractMap.SimpleEntry<>(context.firstKey(), null);
+    context.clear();
+
+    GcFinalization.awaitFullGc();
     assertThat(map.entrySet().contains(entry)).isFalse();
   }
 
