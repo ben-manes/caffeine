@@ -20,8 +20,6 @@ import static javax.cache.configuration.OptionalFeature.STORE_BY_REFERENCE;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -59,8 +57,7 @@ import com.typesafe.config.ConfigFactory;
  */
 @Component
 public final class CaffeineCachingProvider implements CachingProvider {
-  private static final ClassLoader DEFAULT_CLASS_LOADER = AccessController.doPrivileged(
-      (PrivilegedAction<ClassLoader>) JCacheClassLoader::new);
+  private static final ClassLoader DEFAULT_CLASS_LOADER = new JCacheClassLoader();
 
   @GuardedBy("itself")
   private final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;

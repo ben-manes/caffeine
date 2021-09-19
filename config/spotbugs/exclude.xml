@@ -83,6 +83,10 @@
 
   <!-- JCache -->
   <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider"/>
+    <Bug pattern="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
     <Method name="postProcess"/>
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>

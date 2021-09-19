@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 16 ]
+        java: [ 11, 17 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -32,9 +32,6 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
       - name: simulator
         run: ./gradlew simulator:run
-      - name: stats-metrics
-        working-directory: examples/stats-metrics
-        run: ./gradlew test
       - name: write-behind-rxjava
         working-directory: examples/write-behind-rxjava
         run: mvn test

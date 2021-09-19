@@ -26,7 +26,7 @@
 ext {
   versions = [
     akka: '2.6.16',
-    cache2k: '2.2.1.Final',
+    cache2k: '2.3.1.Alpha',
     checkerFramework: '3.18.0',
     coherence: '20.06',
     commonsCompress: '1.21',
@@ -41,7 +41,7 @@ ext {
     elasticSearch: '8.0.0-alpha1',
     expiringMap: '0.5.10',
     fastfilter: '1.0.2',
-    fastutil: '8.5.5',
+    fastutil: '8.5.6',
     flipTables: '1.1.0',
     googleJavaFormat: '1.11.0',
     guava: '30.1.1-jre',
@@ -78,9 +78,9 @@ ext {
     testng: '7.4.0',
     truth: '1.1.3',
     felix: '7.0.1',
-    felixScr: '2.1.28',
-    osgiUtilFunction: '1.1.0',
-    osgiUtilPromise: '1.1.1',
+    felixScr: '2.2.0-RC1',
+    osgiUtilFunction: '1.2.0-RC1',
+    osgiUtilPromise: '1.2.0-RC1',
   ]
   pluginVersions = [
     bnd: '5.3.0',
@@ -98,7 +98,7 @@ ext {
     shadow: '7.0.0',
     sonarqube: '3.3',
     spotbugs: '4.4.1',
-    spotbugsPlugin: '4.7.4',
+    spotbugsPlugin: '4.7.5',
     stats: '0.46.0',
     versions: '0.39.0',
   ]
@@ -179,7 +179,8 @@ ext {
     ],
     testng: [
       "org.testng:testng:${testVersions.testng}",
-      "com.google.inject:guice:${testVersions.guice}"
+      "com.google.inject:guice:${testVersions.guice}",
+      'org.ow2.asm:asm:9.2',
     ],
     truth: [
       "com.google.truth:truth:${testVersions.truth}",

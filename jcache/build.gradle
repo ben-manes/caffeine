@@ -92,10 +92,9 @@ task osgiTests(type: Test, group: 'Build', description: 'Isolated OSGi tests') {
   tasks.test.dependsOn(it)
   systemProperty 'config.osgi.version', versions.config
   systemProperty 'jcache.osgi.version', versions.jcache
-  systemProperty 'checkerAnnotations.version', versions.checkerFramework
   systemProperty 'felixScr.version', testVersions.felixScr
-  systemProperty 'osgiUtil.function', testVersions.osgiUtilFunction
   systemProperty 'osgiUtil.promise', testVersions.osgiUtilPromise
+  systemProperty 'osgiUtil.function', testVersions.osgiUtilFunction
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
   systemProperty 'caffeine-jcache.osgi.jar', project(':jcache').jar.archivePath.path
 }

@@ -6,14 +6,14 @@ env:
   ORG_GRADLE_PROJECT_checksumIgnore: false
   ORG_GRADLE_PROJECT_checksumPrint: true
   MIN_JVM: 11
-  MAX_JVM: 16
+  MAX_JVM: 17
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 16 ]
+        java: [ 11, 17 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

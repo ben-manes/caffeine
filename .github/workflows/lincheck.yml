@@ -5,7 +5,7 @@ env:
   ORG_GRADLE_PROJECT_checksumFailOn: build_finish
   ORG_GRADLE_PROJECT_checksumIgnore: false
   ORG_GRADLE_PROJECT_checksumPrint: true
-  JAVA_VERSION: 16
+  JAVA_VERSION: 17
 
 jobs:
   lincheck:

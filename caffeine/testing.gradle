@@ -65,6 +65,7 @@ task lincheckTests(type: Test, group: 'Cache tests') {
 task junitTests(type: Test, group: 'Cache tests', description: 'JUnit tests', dependsOn: jar) {
   useJUnit()
   tasks.test.dependsOn(it)
+  filter.includeTestsMatching '*Test*'
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
 }
 

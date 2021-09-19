@@ -78,7 +78,7 @@ public final class JCacheGuiceTest {
     assertThat(service.times).isEqualTo(1);
   }
 
-  static class Service {
+  public static class Service {
     int times;
 
     @CacheResult(cacheName = "annotations")

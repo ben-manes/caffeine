@@ -55,9 +55,12 @@ public final class OSGiTest {
         bundle("file:" + System.getProperty("caffeine-jcache.osgi.jar")),
         mavenBundle("com.typesafe", "config", System.getProperty("config.osgi.version")),
         mavenBundle("javax.cache", "cache-api", System.getProperty("jcache.osgi.version")),
-        mavenBundle("org.apache.felix", "org.apache.felix.scr", System.getProperty("felixScr.version")),
-        mavenBundle().groupId("org.osgi").artifactId("org.osgi.util.function").version(System.getProperty("osgiUtil.function")),
-        mavenBundle().groupId("org.osgi").artifactId("org.osgi.util.promise").version(System.getProperty("osgiUtil.promise")));
+        mavenBundle().groupId("org.apache.felix").artifactId("org.apache.felix.scr")
+            .version(System.getProperty("felixScr.version")),
+        mavenBundle().groupId("org.osgi").artifactId("org.osgi.util.function")
+            .version(System.getProperty("osgiUtil.function")),
+        mavenBundle().groupId("org.osgi").artifactId("org.osgi.util.promise")
+            .version(System.getProperty("osgiUtil.promise")));
   }
 
   @Test

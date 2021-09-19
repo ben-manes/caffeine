@@ -21,6 +21,7 @@ jar.manifest {
   attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.guava'
   attributes 'Import-Package': [
     'com.google.common.cache',
+    'com.google.common.util.concurrent',
     'com.github.benmanes.caffeine.cache',
     'com.github.benmanes.caffeine.cache.stats'].join(',')
   attributes 'Export-Package': 'com.github.benmanes.caffeine.guava'
@@ -42,9 +43,6 @@ task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tes
 
   useJUnit {
     includeCategories 'com.github.benmanes.caffeine.guava.OSGiTests'
-  }
-  options {
-    jvmArgs '-noverify'
   }
 }
 
