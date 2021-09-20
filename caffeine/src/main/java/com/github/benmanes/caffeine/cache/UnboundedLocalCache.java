@@ -759,8 +759,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         return false;
       }
       var entry = (Entry<?, ?>) o;
-      V value = cache.get(entry.getKey());
-      return (value != null) && value.equals(entry.getValue());
+      var key = entry.getKey();
+      var value = entry.getValue();
+      if ((key == null) || (value == null)) {
+        return false;
+      }
+      V cachedValue = cache.get(key);
+      return (cachedValue != null) && cachedValue.equals(value);
     }
 
     @Override

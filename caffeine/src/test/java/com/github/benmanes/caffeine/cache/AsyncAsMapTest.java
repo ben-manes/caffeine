@@ -31,6 +31,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -1772,6 +1773,24 @@ public final class AsyncAsMapTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void entrySet_empty(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().entrySet()).isExhaustivelyEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+    var entry = new AbstractMap.SimpleEntry<>(null, cache.asMap().get(context.firstKey()));
+    assertThat(cache.asMap().entrySet().contains(entry)).isFalse();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    var entry = new AbstractMap.SimpleEntry<>(context.firstKey(), null);
+    assertThat(cache.asMap().entrySet().contains(entry)).isFalse();
   }
 
   @CheckNoStats

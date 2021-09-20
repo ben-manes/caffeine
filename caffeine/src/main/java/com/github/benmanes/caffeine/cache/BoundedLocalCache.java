@@ -3204,9 +3204,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return false;
       }
       var entry = (Entry<?, ?>) obj;
+      var key = entry.getKey();
       var value = entry.getValue();
-      Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(entry.getKey()));
-      return (node != null) && (value != null) && node.containsValue(value);
+      if ((key == null) || (value == null)) {
+        return false;
+      }
+      Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
+      return (node != null) && node.containsValue(value);
     }
 
     @Override

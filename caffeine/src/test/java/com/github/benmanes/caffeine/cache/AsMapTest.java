@@ -29,6 +29,7 @@ import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -1996,6 +1997,24 @@ public final class AsMapTest {
 
     var func = map.entrySet().toArray(Map.Entry<?, ?>[]::new);
     assertThat(func).asList().containsExactlyElementsIn(context.original().entrySet());
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullKey(Map<Int, Int> map, CacheContext context) {
+    var entry = new AbstractMap.SimpleEntry<>(null, context.original().get(context.firstKey()));
+    assertThat(map.entrySet().contains(entry)).isFalse();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullValue(Map<Int, Int> map, CacheContext context) {
+    var entry = new AbstractMap.SimpleEntry<>(context.firstKey(), null);
+    assertThat(map.entrySet().contains(entry)).isFalse();
   }
 
   @CheckNoStats
