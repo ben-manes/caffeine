@@ -50,11 +50,9 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
@@ -274,8 +272,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(compute = Compute.ASYNC, removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_badLoader(CacheContext context) {
     var loader = new AsyncCacheLoader<Int, Int>() {
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
@@ -318,8 +315,8 @@ public final class AsyncLoadingCacheTest {
   /* --------------- refresh --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      executor = CacheExecutor.THREADED, compute = Compute.ASYNC, values = ReferenceType.STRONG)
+  @CacheSpec(population = Population.EMPTY,
+      compute = Compute.ASYNC, executor = CacheExecutor.THREADED)
   public void refresh(CacheContext context) {
     var done = new AtomicBoolean();
     var cache = context.buildAsync((Int key) -> {
@@ -341,9 +338,9 @@ public final class AsyncLoadingCacheTest {
     await().untilAsserted(() -> assertThat(cache).containsEntry(key, key.negate()));
   }
 
-  @Test(dataProvider = "caches", timeOut = 5000) // Issue #69
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      executor = CacheExecutor.THREADED, compute = Compute.ASYNC, values = ReferenceType.STRONG)
+  @Test(dataProvider = "caches", timeOut = 5_000) // Issue #69
+  @CacheSpec(population = Population.EMPTY,
+      compute = Compute.ASYNC, executor = CacheExecutor.THREADED)
   public void refresh_deadlock(CacheContext context) {
     var future = new CompletableFuture<Int>();
     var cache = context.buildAsync((Int k, Executor e) -> future);

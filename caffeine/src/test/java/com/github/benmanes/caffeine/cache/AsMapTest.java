@@ -56,7 +56,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -921,8 +920,8 @@ public final class AsMapTest {
     assertThat(map).hasSize(context.initialSize());
   }
 
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine)
   public void computeIfAbsent_recursive(Map<Int, Int> map, CacheContext context) {
     var mappingFunction = new Function<Int, Int>() {
       @Override public Int apply(Int key) {
@@ -935,8 +934,8 @@ public final class AsMapTest {
     } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
   }
 
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine)
   public void computeIfAbsent_pingpong(Map<Int, Int> map, CacheContext context) {
     var mappingFunction = new Function<Int, Int>() {
       @Override public Int apply(Int key) {
@@ -953,8 +952,8 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfAbsent_error(Map<Int, Int> map, CacheContext context) {
     try {
-      map.computeIfAbsent(context.absentKey(), key -> { throw new Error(); });
-    } catch (Error expected) {}
+      map.computeIfAbsent(context.absentKey(), key -> { throw new ExpectedError(); });
+    } catch (ExpectedError expected) {}
     assertThat(map).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
     assertThat(map.computeIfAbsent(context.absentKey(), key -> key)).isEqualTo(context.absentKey());
@@ -1083,8 +1082,8 @@ public final class AsMapTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void computeIfPresent_error(Map<Int, Int> map, CacheContext context) {
     try {
-      map.computeIfPresent(context.firstKey(), (key, value) -> { throw new Error(); });
-    } catch (Error expected) {}
+      map.computeIfPresent(context.firstKey(), (key, value) -> { throw new ExpectedError(); });
+    } catch (ExpectedError expected) {}
     assertThat(map).isEqualTo(context.original());
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
     assertThat(map.computeIfPresent(context.firstKey(), (k, v) -> k.negate()))
@@ -1101,9 +1100,7 @@ public final class AsMapTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(
-      implementation = Implementation.Caffeine,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL }, values = ReferenceType.WEAK)
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void computeIfPresent_present_sameValue(Map<Int, Int> map, CacheContext context) {
     var expectedMap = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
@@ -1211,8 +1208,8 @@ public final class AsMapTest {
     assertThat(context).removalNotifications().withCause(EXPLICIT).hasSize(count).exclusively();
   }
 
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine)
   public void compute_recursive(Map<Int, Int> map, CacheContext context) {
     var mappingFunction = new BiFunction<Int, Int, Int>() {
       @Override public Int apply(Int key, Int value) {
@@ -1226,7 +1223,7 @@ public final class AsMapTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine)
+  @CacheSpec(population = Population.EMPTY)
   public void compute_pingpong(Map<Int, Int> map, CacheContext context) {
     var key1 = Int.valueOf(1);
     var key2 = Int.valueOf(2);
@@ -1432,8 +1429,8 @@ public final class AsMapTest {
   public void merge_error(Map<Int, Int> map, CacheContext context) {
     try {
       map.merge(context.firstKey(), context.original().get(context.firstKey()),
-          (oldValue, value) -> { throw new Error(); });
-    } catch (Error expected) {}
+          (oldValue, value) -> { throw new ExpectedError(); });
+    } catch (ExpectedError expected) {}
     assertThat(map).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
   }
@@ -2209,8 +2206,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void writeThroughEntry(Map<Int, Int> map, CacheContext context) {
     var entry = map.entrySet().iterator().next();
 
@@ -2222,8 +2218,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void writeThroughEntry_null(Map<Int, Int> map, CacheContext context) {
     map.entrySet().iterator().next().setValue(null);
   }
@@ -2237,4 +2232,7 @@ public final class AsMapTest {
     var copy = SerializableTester.reserialize(entry);
     assertThat(entry).isEqualTo(copy);
   }
+
+  @SuppressWarnings("serial")
+  static final class ExpectedError extends Error {}
 }

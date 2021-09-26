@@ -108,11 +108,6 @@ public final class AsyncCacheSubject extends Subject {
     }
   }
 
-  /** Fails if the cache does not have the given weighted size. */
-  public void hasWeightedSize(long expectedSize) {
-    check("cache").about(cache()).that(actual.synchronous()).hasWeightedSize(expectedSize);
-  }
-
   /** Fails if the cache is not correctly serialized. */
   public void isReserialize() {
     check("reserializable").about(asyncReserializable()).that(actual).isReserialize();

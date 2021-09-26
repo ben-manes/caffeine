@@ -42,10 +42,8 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
@@ -255,7 +253,7 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  @CacheSpec(population = Population.EMPTY)
   public void getAllPresent_jdk8186171(Cache<Object, Int> cache, CacheContext context) {
     @SuppressWarnings("HashCodeToString")
     class Key {
@@ -264,7 +262,7 @@ public final class CacheTest {
       }
     }
 
-    var keys = new ArrayList<Key>();
+    var keys = intern(new ArrayList<Key>());
     for (int i = 0; i < Population.FULL.size(); i++) {
       keys.add(new Key());
     }
@@ -431,8 +429,7 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.EMPTY, keys = ReferenceType.STRONG)
+  @CacheSpec(population = Population.EMPTY)
   public void getAll_jdk8186171(CacheContext context) {
     @SuppressWarnings("HashCodeToString")
     class Key {
@@ -706,8 +703,7 @@ public final class CacheTest {
   /* --------------- Policy: getIfPresentQuietly --------------- */
 
   @CheckNoStats
-  @CacheSpec(implementation = Implementation.Caffeine,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getIfPresentQuietly_nullKey(Cache<Int, Int> cache, CacheContext context) {
     cache.policy().getIfPresentQuietly(null);
@@ -715,17 +711,15 @@ public final class CacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresentQuietly_absent(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.policy().getIfPresentQuietly(context.absentKey())).isNull();
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNotNull();
     assertThat(cache.policy().getIfPresentQuietly(context.middleKey())).isNotNull();

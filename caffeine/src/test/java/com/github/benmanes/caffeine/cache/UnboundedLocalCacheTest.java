@@ -25,7 +25,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
@@ -40,11 +39,10 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 @Test(dataProviderClass = CacheProvider.class)
 public final class UnboundedLocalCacheTest {
 
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.DISABLED,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      refreshAfterWrite = Expire.DISABLED, keys = ReferenceType.STRONG,
-      values = ReferenceType.STRONG)
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   @Test(dataProvider = "caches")
   public void noPolicy(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.policy().eviction()).isEmpty();

@@ -69,33 +69,33 @@ public final class CaffeineSpecTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
-      population = Population.EMPTY, compute = Compute.SYNC,
-      removalListener = Listener.DEFAULT, implementation = Implementation.Caffeine)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
+      compute = Compute.SYNC, removalListener = Listener.DEFAULT)
   public void seconds(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.SECONDS, "s"));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
-      population = Population.EMPTY, compute = Compute.SYNC,
-      removalListener = Listener.DEFAULT, implementation = Implementation.Caffeine)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
+      compute = Compute.SYNC, removalListener = Listener.DEFAULT)
   public void minutes(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.MINUTES, "m"));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
-      population = Population.EMPTY, compute = Compute.SYNC,
-      removalListener = Listener.DEFAULT, implementation = Implementation.Caffeine)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
+      compute = Compute.SYNC, removalListener = Listener.DEFAULT)
   public void hours(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.HOURS, "h"));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
-      population = Population.EMPTY, compute = Compute.SYNC,
-      removalListener = Listener.DEFAULT, implementation = Implementation.Caffeine)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
+      compute = Compute.SYNC, removalListener = Listener.DEFAULT)
   public void days(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.DAYS, "d"));
   }

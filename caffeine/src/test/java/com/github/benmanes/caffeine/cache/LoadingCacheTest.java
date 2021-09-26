@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
@@ -53,7 +54,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableSet;
@@ -280,8 +280,7 @@ public final class LoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.EMPTY, keys = ReferenceType.STRONG)
+  @CacheSpec(population = Population.EMPTY)
   public void getAll_jdk8186171(CacheContext context) {
     @SuppressWarnings("HashCodeToString")
     class Key {
@@ -291,7 +290,7 @@ public final class LoadingCacheTest {
     }
     LoadingCache<Object, Int> cache = context.build(key -> null);
 
-    var keys = new ArrayList<Key>();
+    var keys = intern(new ArrayList<Key>());
     for (int i = 0; i < Population.FULL.size(); i++) {
       keys.add(new Key());
     }

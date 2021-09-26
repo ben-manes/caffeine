@@ -267,11 +267,6 @@ public @interface CacheSpec {
   /** The fixed duration for the expiry. */
   Expire expiryTime() default Expire.FOREVER;
 
-  /** Indicates if the amount of time that should be auto-advance for each entry when populating. */
-  Advance[] advanceOnPopulation() default {
-    Advance.ZERO
-  };
-
   enum CacheExpiry {
     DISABLED {
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
@@ -343,22 +338,6 @@ public @interface CacheSpec {
     }
   }
 
-  /** The time increment to advance by after each entry is added when populating the cache. */
-  enum Advance {
-    ZERO(0),
-    ONE_MINUTE(TimeUnit.MINUTES.toNanos(1));
-
-    private final long timeNanos;
-
-    Advance(long timeNanos) {
-      this.timeNanos = timeNanos;
-    }
-
-    public long timeNanos() {
-      return timeNanos;
-    }
-  }
-
   /* --------------- Reference-based --------------- */
 
   /** Indicates that the combination must have a weak or soft reference collection setting. */
@@ -406,34 +385,25 @@ public @interface CacheSpec {
     Listener.DEFAULT,
   };
 
+  @SuppressWarnings("unchecked")
   enum Listener {
     /** A flag indicating that no removal listener is configured. */
-    DEFAULT {
-      @Override public <K, V> RemovalListener<K, V> create() {
-        return null;
-      }
-    },
+    DEFAULT(() -> null),
     /** A removal listener that rejects all notifications. */
-    REJECTING {
-      @Override public <K, V> RemovalListener<K, V> create() {
-        return RemovalListeners.rejecting();
-      }
-    },
+    REJECTING(RemovalListeners::rejecting),
     /** A {@link ConsumingRemovalListener} retains all notifications for evaluation by the test. */
-    CONSUMING {
-      @Override public <K, V> RemovalListener<K, V> create() {
-        return RemovalListeners.consuming();
-      }
-    },
+    CONSUMING(RemovalListeners::consuming),
     /** A removal listener that records interactions. */
-    MOCKITO {
-      @SuppressWarnings("unchecked")
-      @Override public <K, V> RemovalListener<K, V> create() {
-        return Mockito.mock(RemovalListener.class);
-      }
-    };
+    MOCKITO(() -> Mockito.mock(RemovalListener.class));
 
-    public abstract <K, V> RemovalListener<K, V> create();
+    private final Supplier<RemovalListener<Object, Object>> factory;
+
+    Listener(Supplier<RemovalListener<Object, Object>> factory) {
+      this.factory = factory;
+    }
+    public <K, V> RemovalListener<K, V> create() {
+      return (RemovalListener<K, V>) factory.get();
+    }
   }
 
   /* --------------- CacheLoader --------------- */

@@ -94,6 +94,7 @@
     <trusted-key id='1861c322c56014b2' group='commons-beanutils' />
     <trusted-key id='3faad2cd5ecbb314' group='commons-beanutils' />
     <trusted-key id='411063a3a0ffd119' group='commons-beanutils' />
+    <trusted-key id='21939ff0ca2a6567' group='commons-codec' />
     <trusted-key id='3faad2cd5ecbb314' group='commons-codec' />
     <trusted-key id='86fdc7e2a11262cb' group='commons-codec' />
     <trusted-key id='1861c322c56014b2' group='commons-collections' />
@@ -108,6 +109,8 @@
     <trusted-key id='32bbf14af07ca77b' group='io.github.fastfilter' />
     <trusted-key id='a6ea2e2bf22e0543' group='io.github.java-diff-utils' />
     <trusted-key id='602ec18d20c4661c' group='io.github.x-stream' />
+    <trusted-key id='9a2c7a98e457c53d' group='io.projectreactor' />
+    <trusted-key id='4406b84c1661dcd1' group='io.r2dbc' />
     <trusted-key id='94b291aef984a085' group='io.reactivex.rxjava3' />
     <trusted-key id='5e2f2b3d474efe6b' group='it.unimi.dsi' />
     <trusted-key id='823dba283a93ee3c' group='it.unimi.dsi' />
@@ -168,6 +171,7 @@
     <trusted-key id='ae5a7fb608a0221c' group='org.apache.maven' />
     <trusted-key id='bf1518e0160788a2' group='org.apache.maven.resolver' />
     <trusted-key id='85911f425ec61b51' group='org.apiguardian' />
+    <trusted-key id='521a9c06820d5c1d' group='org.aspectj' />
     <trusted-key id='368557390486f2c5' group='org.awaitility' />
     <trusted-key id='b341ddb020fcb6ab' group='org.bouncycastle' />
     <trusted-key id='d45c2659d37f5c87' group='org.cache2k' />
@@ -242,6 +246,7 @@
     <trusted-key id='2161d72e7dcd4258' group='org.sonarsource.scanner.api' />
     <trusted-key id='cfca4a29d26468de' group='org.sonarsource.scanner.api' />
     <trusted-key id='cfca4a29d26468de' group='org.sonarsource.scanner.gradle' />
+    <trusted-key id='9a2c7a98e457c53d' group='org.springframework' />
     <trusted-key id='9440c8d6decafa12' group='org.testng' />
     <trusted-key id='dddafa7674e54418' group='org.testng' />
     <trusted-key id='72385ff0af338d52' group='org.threeten' />
@@ -360,6 +365,75 @@
     </dependency>
     <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='3.0.0'>
       <sha512>5E0AAF09AE8E6BA8C6653E79C098520B5CC82B7953E5902528C638097A25EE6020C160A63D4D45EE4A367C66B50128A8D8A19B992B54C5A948FB44A1E7567C11</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-aop' version='208fafa4a3'>
+      <sha512>724EE5877AD0EF07E76A417505E611EB2D34E54CB6F918A41CD47F31BB6215A57DB3332E4F228F094EA0D2C17B0D52A0E92C70E9AB6992FCBBD83F9B95B26321</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-aspects' version='208fafa4a3'>
+      <sha512>D6255782CC501EA366563ED3F95E770668627F711D08D02C24381C892FBA279578454DBFCEA536C4780FFEA2A2C07C443D3AC5DBC03F099EB6374305A0C005D8</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-beans' version='208fafa4a3'>
+      <sha512>6CC8079B133D8DC8CD550994343646F8409A56273158546FD2C7E190B05573799F605CB1CEC3AB16E05E21B91787BA9DB7BE4DB936909E1832BE0E1293DAB59A</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-context-indexer' version='208fafa4a3'>
+      <sha512>D6DD92A7DF0663581E5D57B45D9224ECBF8B43334EF27E09FBE6F2819D282BF4A0A78DDEDA3EE61814A6A5C92FE3FF73A9E60F91B1F0987BB4B92189FB0FE9FD</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-context-support' version='208fafa4a3'>
+      <sha512>9249FEFDE77B88E68E490608423D40DA2D8171985D0878C5EAB75C4B1B01FF5FE11E2242259E7B7976AC8836C99B76BCD46FAB01BEDC30B1C45BAA1023CF6302</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-context' version='208fafa4a3'>
+      <sha512>4C0ED497B1028C748C725E5726215641EC654413F11413C0D0EB868569D0D8AA898130900F17E8C76C1788606919A606441AA90D5348A0EFCA174A618D90338D</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-core' version='208fafa4a3'>
+      <sha512>CA5BD814B149137FF7FCB52CE0261EA491C182E3B41BA0702EA3725D714FA76B85CC73078D254A351050C9332EEDEC9BFC846701A98D3FEA0127D4BA16ECB7F7</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-expression' version='208fafa4a3'>
+      <sha512>F173CC7E0FBC2BEDE655D20BB2CFD1AE771347C176FC59AEC0D1959327D94D223E44CCD64A8E96B9637E5840FD006935F5859C67EB992E9FAB77349B7E1A6A14</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-instrument' version='208fafa4a3'>
+      <sha512>AC62C764F78C5180F03EA58EEA3D5E66A3DB93A37AC612D1C2AB23C65726CD61868B53DC6EB3B982595852DA561843CF50BC43C5C4A362A6E8280BE5E89D6111</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-jcl' version='208fafa4a3'>
+      <sha512>73060E097B37683F251485BC20932012159FF6AAC2C8952271C674807AE83273DEA3DB232E7897B9EF3F56E41068C98F9D321658ECAF6EA664D4506FF95DC7E1</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-jdbc' version='208fafa4a3'>
+      <sha512>A38A0DB2C8BA0AB6BBCD17DD62625CF67886B2664E5EA02D3C2C1677DD84FD63BBEC3C4485234DC424E2C00BDA4B51FBA439C227F1D113800BEE85AB5F242A3B</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-jms' version='208fafa4a3'>
+      <sha512>93F850936BEAC2AC2F9BBB5B6644DC6B5E77520381DDA38B4C5D2D6B1315253FDF3B15CF0E3C7A0FACF8D2164DCCFB5CB61D54C5B05E52A8D52E2C02A3D4E2DC</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-messaging' version='208fafa4a3'>
+      <sha512>C4AACF24D6BCBB3278C0942D4772CB8BDF5C9EBEA68D94587EA83D66ED20E329DA9C14D0B406C9D5C64D05EED4B887F56C4D91410B2AF221EA90CB3EF5966F3F</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-orm' version='208fafa4a3'>
+      <sha512>D0ADDB6CD04B6283B870A08DCED7E838365B31B63BCBE45C5BBE6F62545126D51FE5DE219353C03F9BDE045AE6539F712DE06890E55A2EE52E2F1B71BBC94BF5</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-oxm' version='208fafa4a3'>
+      <sha512>FB90690350A257F2E164D5D77A614FE7988FEBF28EC9D616ACE4143FA161987A6965E85BA3095B3B27F552963B8E8CD17A27C65401C49060EA09DEBEDC816DAC</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-r2dbc' version='208fafa4a3'>
+      <sha512>B3690AA0E1E8CDD2A4EE342410F352769455EEEC988F57322D7EA3DD82EC8FD2FDCCDEAF1F603A0C080F5DDC727B134784083B4827426C06921F4B36930C5409</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-test' version='208fafa4a3'>
+      <sha512>F91D782396ACB868E8AB123D1E4B8432B93A449E3B43856DF2FFA4B393ABD0AF9EFF400977FC070C39BB368104804E0A5038FD1E6E1716DF9AF6E3774734A0D7</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-tx' version='208fafa4a3'>
+      <sha512>924DDFC09530C66FD400E92D50F5C0D7553CEAF913BF0E5FC69664282EEDFE7EB3B92BD0ECDB32EC64F51FDF38D52A1CE076A105927FB025B7CB782B07496AE1</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-web' version='208fafa4a3'>
+      <sha512>845EE811846E707233CA6C3D866E7D761C0036C81081BCF520927EDBA8B1D0B31A7AC15F647821F6434BD4EECC5715146EDEDC52D3AABB8E4C9A24C2C9511DD2</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-webflux' version='208fafa4a3'>
+      <sha512>F1AB0D030C7983804AD10FA1A375AFE50EFBBBEC15003E3EB1AD37953C591A6CFC9642912D682CDE180FF207B3CE4388BFB96E0AB17FA68806298C661F294F4</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-webmvc' version='208fafa4a3'>
+      <sha512>8F9401E239BFC8E80ED59C6CBE911A6FE1C1098A5FDDDE9B49916AD2FDB82DC63FDD6EC7E2B649564442E93C11317CA7CD4D178A3A9C59F1CFBA8A79BE904836</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects.spring-framework' module='spring-websocket' version='208fafa4a3'>
+      <sha512>BAA77246D7575449BD53C52C7C1401228603CE23FB2327492739A3308C9A3F4041710EAB0D5E875E00A13A3536A7855ED319F8AAE37457EF4788C57E268E3A43</sha512>
+    </dependency>
+    <dependency group='com.github.spring-projects' module='spring-framework' version='208fafa4a3'>
+      <sha512>A959CBD144487261AFD4AA2C4108B5D8D19A9F4B1FC1AAC270FA6BEA0D5E82EAC70AE550294935D25729321F5248756DC063CD30823A6D3C3A572902E5C86F8</sha512>
     </dependency>
     <dependency group='com.gradle.publish' module='plugin-publish-plugin' version='0.14.0'>
       <sha512>50C3BCDCB19435BDA4B65CA781019895D44B1778DAF304728D4A8981581AFD0A339740B48452611C09D2183605B02E95F7E55C184211001B6A8534FB6C1F2B74</sha512>
@@ -589,6 +663,9 @@
     <dependency group='org.kordamp.gradle' module='base-gradle-plugin' version='0.46.0'>
       <sha512>A2AE577D7135E1411A9C6BAAD045C72E32BC6D4F058FAA8F18E1899B4A1B8EFE6006E896EBC89345A37A0B2175EFFE115A48FF59A39E133E072760E64EC7C088</sha512>
     </dependency>
+    <dependency group='org.kordamp.gradle' module='base-gradle-plugin' version='0.47.0'>
+      <sha512>ADBFA4FFC3760D2EED3A0DA909FBCA3A917EDDE34A401EC06689B31F4BAE48D23CBD3A2CF2E0591A694AB09FA28E31D5448009850BEE452BFD2B127DB526E272</sha512>
+    </dependency>
     <dependency group='org.kordamp.gradle' module='jandex-gradle-plugin' version='0.6.0'>
       <sha512>93F5BF49FE5125BAFC561892F038BE371420B81F9FB210CAC31606C7868418F3CA9F133F3AC0C7D568CC1399468BF0FB54E32B6B0000AE1288A68E836B8D817E</sha512>
     </dependency>
@@ -603,6 +680,9 @@
     </dependency>
     <dependency group='org.kordamp.gradle' module='sourcestats-gradle-plugin' version='0.46.0'>
       <sha512>B9C81F86EFF60CB2E1E87529CC35685A6723BF8AC62EE2B5C6DABD09DF7DD379464965329B91B0A4178A07DE0B95B85709677F6921CCF75CFC1D0526C263E795</sha512>
+    </dependency>
+    <dependency group='org.kordamp.gradle' module='sourcestats-gradle-plugin' version='0.47.0'>
+      <sha512>A02D859D91CF51F8E272AC81400DE786AB75E193D836EA90C401AEC9F0C59DD26B0228511F0B7FA76C6589F30BD02EDAD5494049FD79882C7DA72F7A860C2DB2</sha512>
     </dependency>
     <dependency group='org.lz4' module='lz4-java' version='1.8.0'>
       <sha512>98D59086A6021CA571D9C1D64B715E43044C730E1AC563F514C40CF44302615D30378B6D5CC69990446522DE6260DC8E7B303E3990A3139DC326D058DFB6DBD9</sha512>

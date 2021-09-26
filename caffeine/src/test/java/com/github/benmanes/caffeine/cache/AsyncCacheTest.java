@@ -52,9 +52,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -481,8 +479,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_badLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getAll(context.absentKeys(), keysToLoad -> { throw new LoadAllException(); }))
         .failsWith(CompletionException.class).hasCauseThat().isInstanceOf(LoadAllException.class);
@@ -721,8 +718,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_badLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     try {
       cache.getAll(context.absentKeys(), (keysToLoad, executor) ->

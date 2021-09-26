@@ -53,7 +53,6 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -760,8 +759,8 @@ public final class AsyncAsMapTest {
     assertThat(cache).hasSize(context.initialSize());
   }
 
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine)
   public void computeIfAbsent_recursive(AsyncCache<Int, Int> cache, CacheContext context) {
     var mappingFunction = new Function<Int, CompletableFuture<Int>>() {
       @Override public CompletableFuture<Int> apply(Int key) {
@@ -774,8 +773,8 @@ public final class AsyncAsMapTest {
     } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
   }
 
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine)
   public void computeIfAbsent_pingpong(AsyncCache<Int, Int> cache, CacheContext context) {
     var mappingFunction = new Function<Int, CompletableFuture<Int>>() {
       @Override public CompletableFuture<Int> apply(Int key) {
@@ -1007,8 +1006,8 @@ public final class AsyncAsMapTest {
     assertThat(context).removalNotifications().withCause(EXPLICIT).hasSize(count).exclusively();
   }
 
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine)
   public void compute_recursive(AsyncCache<Int, Int> cache, CacheContext context) {
     var mappingFunction = new BiFunction<Int, CompletableFuture<Int>, CompletableFuture<Int>>() {
       @Override public CompletableFuture<Int> apply(Int key, CompletableFuture<Int> value) {
@@ -1021,8 +1020,8 @@ public final class AsyncAsMapTest {
     } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
   }
 
-  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine)
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
   public void compute_pingpong(AsyncCache<Int, Int> cache, CacheContext context) {
     var key1 = Int.valueOf(1);
     var key2 = Int.valueOf(2);

@@ -48,7 +48,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -209,8 +208,7 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Exceptional --------------- */
 
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void getIfPresent_expiryFails(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -224,7 +222,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, removalListener = Listener.REJECTING)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void get_expiryFails_create(Cache<Int, Int> cache, CacheContext context) {
@@ -239,8 +237,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void get_expiryFails_read(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -254,8 +251,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void getAllPresent_expiryFails(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -269,8 +265,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void put_insert_expiryFails(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -284,8 +279,8 @@ public final class ExpireAfterVarTest {
     }
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine, expiryTime = Expire.ONE_MINUTE,
-      population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void put_insert_replaceExpired_expiryFails(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireVariably) {
@@ -303,8 +298,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void put_update_expiryFails(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireVariably) {
@@ -330,8 +324,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+  @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS })
   public void getIfPresentQuietly(Cache<Int, Int> cache, CacheContext context) {
     var original = cache.policy().expireVariably().orElseThrow()
@@ -345,14 +338,13 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.EMPTY, expiry = CacheExpiry.DISABLED)
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.DISABLED)
   public void expireVariably_notEnabled(Cache<Int, Int> cache) {
     assertThat(cache.policy().expireVariably()).isEmpty();
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void getExpiresAfter(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -367,7 +359,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void getExpiresAfter_duration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -383,7 +375,7 @@ public final class ExpireAfterVarTest {
 
   @SuppressWarnings("unchecked")
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void getExpiresAfter_absent(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Mockito.reset(context.expiry());
@@ -392,19 +384,19 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
-      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
-      population = Population.EMPTY)
-  public void getExpiresAfter_expired(Cache<Int, Int> cache, CacheContext context,
-      VarExpiration<Int, Int> expireAfterVar) {
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      refreshAfterWrite = Expire.ONE_MINUTE)
+  public void getExpiresAfter_expired(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(2, TimeUnit.MINUTES);
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void setExpiresAfter(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -420,7 +412,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void setExpiresAfter_duration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -437,7 +429,7 @@ public final class ExpireAfterVarTest {
 
   @SuppressWarnings("unchecked")
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void setExpiresAfter_absent(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -448,12 +440,12 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
-      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
-      population = Population.EMPTY)
-  public void setExpiresAfter_expired(Cache<Int, Int> cache, CacheContext context,
-      VarExpiration<Int, Int> expireAfterVar) {
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+          refreshAfterWrite = Expire.ONE_MINUTE)
+  public void setExpiresAfter_expired(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(2, TimeUnit.MINUTES);
     expireAfterVar.setExpiresAfter(context.absentKey(), 1, TimeUnit.MINUTES);
@@ -465,7 +457,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_nullKey(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -474,7 +466,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_nullValue(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -483,7 +475,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_nullTimeUnit(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -492,7 +484,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_negativeDuration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -501,7 +493,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_nullDuration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -509,7 +501,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_insert(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -527,7 +519,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_present(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -548,7 +540,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_nullKey(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -557,7 +549,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_nullValue(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -566,7 +558,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_nullTimeUnit(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -575,7 +567,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_negativeDuration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -584,7 +576,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_nullDuration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -592,7 +584,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_insert(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -610,7 +602,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_replace(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -629,35 +621,33 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy: oldest --------------- */
 
-  @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void oldest_unmodifiable(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     expireAfterVar.oldest(Integer.MAX_VALUE).clear();
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void oldest_negative(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     expireAfterVar.oldest(-1);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void oldest_zero(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     assertThat(expireAfterVar.oldest(0)).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.ACCESS)
   public void oldest_partial(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     int count = context.original().size() / 2;
     assertThat(expireAfterVar.oldest(count)).hasSize(count);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = {Population.PARTIAL, Population.FULL}, expiry = CacheExpiry.ACCESS,
+  @CacheSpec(population = {Population.PARTIAL, Population.FULL}, expiry = CacheExpiry.ACCESS,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void oldest_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var oldest = expireAfterVar.oldest(Integer.MAX_VALUE);
@@ -665,7 +655,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void oldest_snapshot(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var oldest = expireAfterVar.oldest(Integer.MAX_VALUE);
@@ -675,35 +665,33 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy: youngest --------------- */
 
-  @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void youngest_unmodifiable(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     expireAfterVar.youngest(Integer.MAX_VALUE).clear();
   }
 
-  @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void youngest_negative(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     expireAfterVar.youngest(-1);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void youngest_zero(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     assertThat(expireAfterVar.youngest(0)).isExhaustivelyEmpty();
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.ACCESS)
   public void youngest_partial(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     int count = context.original().size() / 2;
     assertThat(expireAfterVar.youngest(count)).hasSize(count);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = {Population.PARTIAL, Population.FULL}, expiry = CacheExpiry.ACCESS,
+  @CacheSpec(population = {Population.PARTIAL, Population.FULL}, expiry = CacheExpiry.ACCESS,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void youngest_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var youngest = expireAfterVar.youngest(Integer.MAX_VALUE);
@@ -712,7 +700,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void youngest_snapshot(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var youngest = expireAfterVar.youngest(Integer.MAX_VALUE);

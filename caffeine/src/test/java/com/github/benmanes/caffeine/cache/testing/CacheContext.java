@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.testing;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -42,7 +43,6 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
@@ -99,7 +99,6 @@ public final class CacheContext {
   final Executor executor;
   final FakeTicker ticker;
   final Compute compute;
-  final Advance advance;
   final Expire refresh;
   final Loader loader;
   final Stats stats;
@@ -124,11 +123,11 @@ public final class CacheContext {
 
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
-      Expire refresh, Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
+      Expire refresh, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, CacheScheduler cacheScheduler, Listener removalListenerType,
       Listener evictionListenerType, Population population, boolean isLoading,
-      boolean isAsyncLoading, Compute compute, Loader loader,
-      Implementation implementation, CacheSpec cacheSpec) {
+      boolean isAsyncLoading, Compute compute, Loader loader, Implementation implementation,
+      CacheSpec cacheSpec) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = requireNonNull(weigher);
@@ -136,7 +135,6 @@ public final class CacheContext {
     this.afterAccess = requireNonNull(afterAccess);
     this.afterWrite = requireNonNull(afterWrite);
     this.refresh = requireNonNull(refresh);
-    this.advance = requireNonNull(advance);
     this.keyStrength = requireNonNull(keyStrength);
     this.valueStrength = requireNonNull(valueStrength);
     this.cacheExecutor = requireNonNull(cacheExecutor);
@@ -168,7 +166,7 @@ public final class CacheContext {
   /** Returns a thread local interned value. */
   @SuppressWarnings("unchecked")
   public static <T> T intern(T o) {
-    return (T) interner.get().computeIfAbsent(o, key -> o);
+    return (T) interner.get().computeIfAbsent(o, identity());
   }
 
   /** Returns a thread local interned value. */

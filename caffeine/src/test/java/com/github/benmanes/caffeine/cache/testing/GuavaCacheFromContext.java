@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -436,6 +437,7 @@ public final class GuavaCacheFromContext {
         return isRecordingStats;
       }
       @Override public V getIfPresentQuietly(K key) {
+        checkNotNull(key);
         return cache.asMap().get(key);
       }
       @Override public Map<K, CompletableFuture<V>> refreshes() {
@@ -493,7 +495,14 @@ public final class GuavaCacheFromContext {
         return cache.getAll(keys);
       } catch (UncheckedExecutionException e) {
         if (e.getCause() instanceof CacheMissException) {
-          return Map.of();
+          var results = new LinkedHashMap<K, V>();
+          for (K key : keys) {
+            var value = cache.asMap().get(key);
+            if (value != null) {
+              results.put(key, value);
+            }
+          }
+          return Collections.unmodifiableMap(results);
         }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {

@@ -38,7 +38,7 @@ import com.typesafe.config.ConfigFactory;
  */
 @SuppressWarnings("PMD.SuspiciousConstantFieldName")
 public final class MiniSimClimber implements HillClimber {
-  private static final HashFunction hasher = Hashing.murmur3_32(0x7f3a2142);
+  private static final HashFunction hasher = Hashing.murmur3_32_fixed(0x7f3a2142);
 
   private final WindowTinyLfuPolicy[] minis;
   private final long[] prevMisses;

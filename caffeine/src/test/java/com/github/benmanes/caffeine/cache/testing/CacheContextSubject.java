@@ -20,6 +20,8 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.Lis
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.ListenerSubject.REMOVAL_LISTENER_FACTORY;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.StatsSubject.STATS_FACTORY;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.truth.OptionalLongSubject.optionalLongs;
 import static com.google.common.truth.StreamSubject.streams;
 import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
@@ -65,6 +67,20 @@ public final class CacheContextSubject extends Subject {
 
   public static CacheContextSubject assertThat(CacheContext actual) {
     return assertAbout(context()).that(actual);
+  }
+
+  /** Fails if the cache does not have the given weighted size. */
+  public void hasWeightedSize(long expectedSize) {
+    checkArgument(expectedSize >= 0, "expectedSize (%s) must be >= 0", expectedSize);
+    actual.cache().policy().eviction().ifPresentOrElse(policy -> {
+      check("weightedSize()").about(optionalLongs())
+          .that(policy.weightedSize()).hasValue(expectedSize);
+    }, () -> {
+      long weight = actual.cache().asMap().entrySet().stream()
+          .mapToLong(entry -> actual.weigher().weigh(entry.getKey(), entry.getValue()))
+          .sum();
+      check("weight").that(weight).isEqualTo(expectedSize);
+    });
   }
 
   /** Propositions for {@link CacheStats} subjects. */

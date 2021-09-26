@@ -19,14 +19,12 @@ import static com.github.benmanes.caffeine.cache.LocalCacheSubject.syncLocal;
 import static com.github.benmanes.caffeine.cache.ReserializableSubject.syncReserializable;
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.truth.OptionalLongSubject.optionalLongs;
 import static com.google.common.truth.Truth.assertAbout;
 
 import java.util.Map;
 import java.util.Objects;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Policy;
 import com.google.common.truth.Correspondence;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Ordered;
@@ -59,10 +57,13 @@ public final class CacheSubject extends Subject {
   /** Fails if the cache is not empty. */
   public void isEmpty() {
     check("cache").about(map()).that(actual.asMap()).isExhaustivelyEmpty();
-    if (actual.policy().eviction().filter(Policy.Eviction::isWeighted).isPresent()) {
-      hasWeightedSize(0);
-    }
     hasSize(0);
+
+    actual.policy().eviction().ifPresent(policy -> {
+      policy.weightedSize().ifPresent(weightedSize -> {
+        check("weightedSize()").that(weightedSize).isEqualTo(0);
+      });
+    });
   }
 
   /** Fails if the cache does not have the given size. */
@@ -127,15 +128,6 @@ public final class CacheSubject extends Subject {
     check("cache").that(actual.asMap())
         .comparingValuesUsing(EQUALITY)
         .containsExactlyEntriesIn(expectedMap);
-  }
-
-  /** Fails if the cache does not have the given weighted size. */
-  public void hasWeightedSize(long expectedSize) {
-    checkArgument(expectedSize >= 0, "expectedSize (%s) must be >= 0", expectedSize);
-    var policy = actual.policy().eviction().orElseThrow(
-        () -> new AssertionError("Size eviction not enabled"));
-    check("weightedSize()").about(optionalLongs())
-        .that(policy.weightedSize()).hasValue(expectedSize);
   }
 
   /** Fails if the cache is not correctly serialized. */

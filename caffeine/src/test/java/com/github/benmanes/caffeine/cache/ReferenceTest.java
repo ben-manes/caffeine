@@ -44,7 +44,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
@@ -85,8 +84,8 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true,
-      population = Population.FULL, evictionListener = Listener.MOCKITO)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      evictionListener = Listener.MOCKITO)
   public void collect_evictionListenerFails(Cache<Int, Int> cache, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
@@ -101,10 +100,11 @@ public final class ReferenceTest {
   /* --------------- Cache --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getIfPresent(Cache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -113,10 +113,11 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void get(Cache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -131,10 +132,11 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getAllPresent(Cache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     context.clear();
@@ -143,10 +145,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getAll(Cache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     context.clear();
@@ -163,9 +165,9 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL,
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void put(Cache<Int, Int> cache, CacheContext context) {
     cache.put(context.firstKey(), context.absentValue());
@@ -183,10 +185,11 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void putAll(Cache<Int, Int> cache, CacheContext context) {
     var entries = Map.of(context.firstKey(), context.absentValue(),
         context.middleKey(), context.absentValue(), context.absentKey(), context.absentValue());
@@ -202,10 +205,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidate(Cache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
     Int value = cache.getIfPresent(key);
@@ -224,10 +227,11 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidateAll(Cache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     context.clear();
@@ -242,10 +246,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidateAll_full(Cache<Int, Int> cache, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
@@ -258,10 +262,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void cleanUp(Cache<Int, Int> cache, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
@@ -276,10 +280,10 @@ public final class ReferenceTest {
   /* --------------- LoadingCache --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      population = Population.FULL, weigher = CacheWeigher.DEFAULT, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void get_loading(LoadingCache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.original().get(key);
@@ -294,10 +298,11 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE}, removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING,
+      loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE})
   public void getAll_loading(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     context.clear();
@@ -313,10 +318,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      loader = Loader.IDENTITY, removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING, loader = Loader.IDENTITY)
   public void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.original().get(key);
@@ -336,10 +341,10 @@ public final class ReferenceTest {
   /* --------------- AsyncCache --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getIfPresent_async(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.original().get(key);
@@ -351,10 +356,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void get_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
 
@@ -366,10 +371,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getAll_async(AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = Set.of(context.firstKey(), context.lastKey(), context.absentKey());
     context.clear();
@@ -383,10 +388,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED,  removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED,  removalListener = Listener.CONSUMING)
   public void put_async(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     context.clear();
@@ -401,10 +406,10 @@ public final class ReferenceTest {
   /* --------------- Map --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void isEmpty(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
@@ -415,10 +420,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void size(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
@@ -429,10 +434,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void containsKey(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -442,10 +447,10 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @SuppressWarnings("UnusedVariable")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void containsValue(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.original().get(key);
@@ -459,10 +464,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void clear(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
@@ -474,8 +479,9 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT, population = Population.FULL,
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void putIfAbsent(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
@@ -498,10 +504,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void put_map(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -523,10 +529,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void replace(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -541,10 +547,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void replaceConditionally(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.original().get(key);
@@ -555,10 +561,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void remove(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -579,10 +585,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void removeConditionally(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.original().get(key);
@@ -599,10 +605,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void computeIfAbsent(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -623,10 +629,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void computeIfPresent(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -651,10 +657,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void compute(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -678,10 +684,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
-      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void merge(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
@@ -715,10 +721,10 @@ public final class ReferenceTest {
   /* --------------- Weights --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void putIfAbsent_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
@@ -727,18 +733,18 @@ public final class ReferenceTest {
     var value = cache.asMap().putIfAbsent(key, Int.listOf(1, 2, 3));
     if (context.isStrongValues()) {
       assertThat(value).isEqualTo(Int.listOf(1));
-      assertThat(cache).hasWeightedSize(1);
+      assertThat(context).hasWeightedSize(1);
     } else {
       assertThat(value).isNull();
-      assertThat(cache).hasWeightedSize(3);
+      assertThat(context).hasWeightedSize(3);
     }
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
   public void put_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
@@ -750,14 +756,14 @@ public final class ReferenceTest {
     } else {
       assertThat(value).isNull();
     }
-    assertThat(cache).hasWeightedSize(3);
+    assertThat(context).hasWeightedSize(3);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
   public void computeIfAbsent_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
@@ -765,31 +771,31 @@ public final class ReferenceTest {
 
     cache.asMap().computeIfAbsent(key, k -> Int.listOf(1, 2, 3));
     if (context.isStrongValues()) {
-      assertThat(cache).hasWeightedSize(1);
+      assertThat(context).hasWeightedSize(1);
     } else {
-      assertThat(cache).hasWeightedSize(3);
+      assertThat(context).hasWeightedSize(3);
     }
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
   public void compute_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
     GcFinalization.awaitFullGc();
 
     cache.asMap().compute(key, (k, v) -> Int.listOf(1, 2, 3));
-    assertThat(cache).hasWeightedSize(3);
+    assertThat(context).hasWeightedSize(3);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
   public void merge_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
@@ -801,11 +807,11 @@ public final class ReferenceTest {
       }
       return v;
     });
-    assertThat(cache).hasWeightedSize(3);
+    assertThat(context).hasWeightedSize(3);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
@@ -819,14 +825,14 @@ public final class ReferenceTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
+      removalListener = {Listener.DEFAULT, Listener.REJECTING})
   public void keySet_contains(Map<Int, Int> map, CacheContext context) {
     assertThat(map.keySet().contains(new Int(context.firstKey()))).isFalse();
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
@@ -840,15 +846,15 @@ public final class ReferenceTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(values = { ReferenceType.WEAK, ReferenceType.SOFT },
-      population = Population.FULL, removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      removalListener = {Listener.DEFAULT, Listener.REJECTING})
   public void values_contains(Map<Int, Int> map, CacheContext context) {
     Int value = new Int(context.original().get(context.firstKey()));
     assertThat(map.values().contains(value)).isFalse();
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
@@ -862,8 +868,8 @@ public final class ReferenceTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      removalListener = {Listener.DEFAULT, Listener.REJECTING})
   public void entrySet_contains(Map<Int, Int> map, CacheContext context) {
     var entry = entry(new Int(context.firstKey()),
         new Int(context.original().get(context.firstKey())));
@@ -872,8 +878,8 @@ public final class ReferenceTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      removalListener = {Listener.DEFAULT, Listener.REJECTING})
   public void entrySet_contains_nullValue(Map<Int, Int> map, CacheContext context) {
     var entry = new AbstractMap.SimpleEntry<>(context.firstKey(), null);
     context.clear();

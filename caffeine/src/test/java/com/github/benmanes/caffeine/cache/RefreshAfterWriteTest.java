@@ -55,9 +55,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
 import com.github.benmanes.caffeine.cache.testing.TrackingExecutor;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
@@ -358,7 +356,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
-      compute = Compute.ASYNC, values = ReferenceType.STRONG)
+      compute = Compute.ASYNC)
   public void get_sameFuture(CacheContext context) {
     var done = new AtomicBoolean();
     var cache = context.buildAsync((Int key) -> {
@@ -593,36 +591,33 @@ public final class RefreshAfterWriteTest {
   /* --------------- Policy: refreshAfterWrite --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void getRefreshesAfter(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
+  public void getRefreshesAfter(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(1);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(1);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshesAfter(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
+  public void setRefreshesAfter(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(2, TimeUnit.MINUTES);
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(2);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(2);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
   public void setRefreshesAfter_duration(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+      FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(2));
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(2);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(2);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void ageOf(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      refreshAfterWrite = Expire.ONE_MINUTE)
+  public void ageOf(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(0);
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(30);
@@ -631,10 +626,9 @@ public final class RefreshAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void ageOf_duration(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      refreshAfterWrite = Expire.ONE_MINUTE)
+  public void ageOf_duration(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     // Truncated to seconds to ignore the LSB (nanosecond) used for refreshAfterWrite's lock
     assertThat(refreshAfterWrite.ageOf(context.firstKey()).get().toSeconds()).isEqualTo(0);
     context.ticker().advance(30, TimeUnit.SECONDS);
@@ -644,20 +638,19 @@ public final class RefreshAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void ageOf_absent(CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
+  public void ageOf_absent(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, population = Population.EMPTY)
-  public void ageOf_expired(Cache<Int, Int> cache, CacheContext context,
-      @RefreshAfterWrite FixedRefresh<Int, Int> refreshAfterWrite) {
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void ageOf_expired(Cache<Int, Int> cache,
+      CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(2, TimeUnit.MINUTES);
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
