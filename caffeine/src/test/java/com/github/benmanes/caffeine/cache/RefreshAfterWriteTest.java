@@ -30,6 +30,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.util.Map.entry;
 import static org.hamcrest.Matchers.is;
+import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
+import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.time.Duration;
 import java.util.List;
@@ -59,6 +61,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.TrackingExecutor;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.google.common.collect.Iterables;
 
 /**
  * The test cases for caches that support the refresh after write policy.
@@ -244,6 +248,81 @@ public final class RefreshAfterWriteTest {
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(context.firstKey(), context.original().get(context.firstKey()));
     assertThat(cache).doesNotContainKey(context.firstKey());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void refreshIfNeeded_cancel_noLog(CacheContext context) {
+    var cacheLoader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new AssertionError();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        var future = new CompletableFuture<Int>();
+        future.cancel(false);
+        return future;
+      }
+    };
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(cacheLoader).synchronous()
+        : context.build(cacheLoader);
+    cache.put(context.absentKey(), context.absentValue());
+    TestLoggerFactory.getAllTestLoggers().values().stream()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+    context.ticker().advance(2, TimeUnit.MINUTES);
+
+    cache.get(context.absentKey());
+    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void refreshIfNeeded_timeout_noLog(CacheContext context) {
+    var cacheLoader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new AssertionError();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        var future = new CompletableFuture<Int>();
+        future.orTimeout(0, TimeUnit.SECONDS);
+        await().until(() -> future.isDone());
+        return future;
+      }
+    };
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(cacheLoader).synchronous()
+        : context.build(cacheLoader);
+    cache.put(context.absentKey(), context.absentValue());
+    TestLoggerFactory.getAllTestLoggers().values().stream()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+    context.ticker().advance(2, TimeUnit.MINUTES);
+
+    cache.get(context.absentKey());
+    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void refreshIfNeeded_error_log(CacheContext context) {
+    var expected = new RuntimeException();
+    CacheLoader<Int, Int> cacheLoader = key -> { throw expected; };
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(cacheLoader).synchronous()
+        : context.build(cacheLoader);
+    cache.put(context.absentKey(), context.absentValue());
+    TestLoggerFactory.getAllTestLoggers().values().stream()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+    context.ticker().advance(2, TimeUnit.MINUTES);
+
+    cache.get(context.absentKey());
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getThrowable().orElseThrow()).hasCauseThat().isSameInstanceAs(expected);
+    assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
   /* --------------- getIfPresent --------------- */

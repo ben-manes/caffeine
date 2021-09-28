@@ -13,6 +13,12 @@ eclipse.classpath.file.whenMerged {
   entries.find { it.path == 'src/jmh/java' }.entryAttributes['test'] = 'true'
 }
 
+configurations {
+  jmh {
+    exclude module: 'slf4j-test'
+  }
+}
+
 dependencies {
   afterEvaluate {
     jmh configurations.testImplementation.allDependencies

@@ -37,6 +37,7 @@
     <trusted-key id='1756b920eecf0e90' group='com.github.spotbugs' />
     <trusted-key id='a5def5a76f94a471' group='com.github.spotbugs' />
     <trusted-key id='c7ca19b7b620d787' group='com.github.stephenc.jcip' />
+    <trusted-key id='9ac091866ec743c2' group='com.github.valfirst' />
     <trusted-key id='5e1f79a7c298661e' group='com.google.auto' />
     <trusted-key id='b0f3710fa64900e7' group='com.google.auto' />
     <trusted-key id='c51e6cbc7ff46f0b' group='com.google.auto.service' />
@@ -257,6 +258,7 @@
     <trusted-key id='55c7e5e701832382' group='org.yaml' />
     <trusted-key id='e65e11d40d80db7c' group='site.ycsb' />
     <trusted-key id='a840320c83d56348' group='systems.comodal' />
+    <trusted-key id='9d147b6bf3772ad5' group='uk.org.lidalia' />
   </trusted-keys>
   <dependencies>
     <dependency group='' module='caffeine_local' version=''>
@@ -272,6 +274,9 @@
     </dependency>
     <dependency group='biz.aQute.bnd' module='biz.aQute.bnd.embedded-repo' version='5.4.0-SNAPSHOT'>
       <sha512>B683854D72E20AB8BE7AEBB41212A559D1B984560675D38423A6603C2F0B71578502431B0BBF7F94EB8833E66017B7237B0966DCF7165349B05A6385C595DA7B</sha512>
+    </dependency>
+    <dependency group='biz.aQute.bnd' module='biz.aQute.bnd.gradle' version='5.3.0'>
+      <sha512>46B0259FEC934F044B0B2120F5C63EF57F3A98CC227E46F2651B700DA936475FFA3546EB0DECB35B40D2EBA1DFF67A53E977F412F54C9A49DD18AE17E6F28051</sha512>
     </dependency>
     <dependency group='biz.aQute.bnd' module='biz.aQute.bnd.gradle' version='5.4.0-SNAPSHOT'>
       <sha512>4C5619A1191B8450FCC10AFD613F38B286B95EA28C4F20150AE388569ED7BDC6D963C042233A5FD45A8933DF86CD4DDCABDFFBD855181578289D1E0A5CD3E981</sha512>

@@ -29,6 +29,8 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
+import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,7 +38,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -56,6 +60,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.Int;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
@@ -656,6 +661,70 @@ public final class LoadingCacheTest {
       assertThat(context).removalNotifications().withCause(EXPLICIT).hasSize(1);
     }
     assertThat(context).stats().success(1).failures(0);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  public void refresh_cancel_noLog(CacheContext context) {
+    var cacheLoader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new AssertionError();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        var future = new CompletableFuture<Int>();
+        future.cancel(false);
+        return future;
+      }
+    };
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(cacheLoader).synchronous()
+        : context.build(cacheLoader);
+    TestLoggerFactory.getAllTestLoggers().values().stream()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+
+    cache.refresh(context.absentKey());
+    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  public void refresh_timeout_noLog(CacheContext context) {
+    var cacheLoader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new AssertionError();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        var future = new CompletableFuture<Int>();
+        future.orTimeout(0, TimeUnit.SECONDS);
+        await().until(() -> future.isDone());
+        return future;
+      }
+    };
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(cacheLoader).synchronous()
+        : context.build(cacheLoader);
+    TestLoggerFactory.getAllTestLoggers().values().stream()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+
+    cache.refresh(context.absentKey());
+    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  public void refresh_error_log(CacheContext context) throws Exception {
+    var expected = new RuntimeException();
+    CacheLoader<Int, Int> cacheLoader = key -> { throw expected; };
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(cacheLoader).synchronous()
+        : context.build(cacheLoader);
+    TestLoggerFactory.getAllTestLoggers().values().stream()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+
+    cache.refresh(context.absentKey());
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getThrowable().orElseThrow()).hasCauseThat().isSameInstanceAs(expected);
+    assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
   /* --------------- refreshAll --------------- */

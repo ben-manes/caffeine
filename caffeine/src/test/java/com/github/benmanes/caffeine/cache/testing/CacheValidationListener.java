@@ -24,6 +24,7 @@ import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.testng.ITestResult.FAILURE;
+import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.OFF_LEVELS;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -58,6 +59,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -81,10 +83,15 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         resultQueues.add(invokedMethods.get());
       }
     }
+    disableLoggers();
   }
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
+    TestLoggerFactory.getAllTestLoggers().values().stream()
+        .forEach(logger -> logger.setEnabledLevels(OFF_LEVELS));
+    TestLoggerFactory.clear();
+
     if (beforeCleanup.get() || !beforeCleanup.compareAndSet(false, true)) {
       return;
     }
@@ -227,6 +234,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   /** Free memory by clearing unused resources after test execution. */
   private void cleanUp(ITestResult testResult) {
     resultQueues.forEach(Collection::clear);
+    TestLoggerFactory.clear();
     resetMocks(testResult);
     resetCache(testResult);
 
@@ -294,5 +302,17 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         params[i] = Objects.toString(param);
       }
     }
+  }
+
+  private void disableLoggers() {
+    String packageName = Caffeine.class.getPackageName();
+    String[] classes = {"Caffeine", "LocalCache", "LocalManualCache", "LocalLoadingCache",
+        "LocalAsyncCache", "BoundedLocalCache", "UnboundedLocalCache",
+        "ExecutorServiceScheduler", "GuardedScheduler"};
+    for (var className : classes) {
+      System.getLogger(packageName + "." + className);
+    }
+    TestLoggerFactory.getAllTestLoggers().values().stream()
+        .forEach(logger -> logger.setEnabledLevelsForAllThreads(OFF_LEVELS));
   }
 }

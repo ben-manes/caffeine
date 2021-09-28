@@ -44,7 +44,7 @@ ext {
     fastutil: '8.5.6',
     flipTables: '1.1.0',
     googleJavaFormat: '1.11.0',
-    guava: '31.0-jre',
+    guava: '31.0.1-jre',
     jackrabbit: '1.40.0',
     jamm: '0.3.3',
     javaObjectLayout: '0.16',
@@ -75,6 +75,7 @@ ext {
     lincheck: '2.14.1',
     mockito: '3.12.4',
     paxExam: '4.13.4',
+    slf4jTest: '2.4.0',
     testng: '7.4.0',
     truth: '1.1.3',
     felix: '7.0.1',
@@ -176,6 +177,10 @@ ext {
       "org.ops4j.pax.exam:pax-exam-container-native:${testVersions.paxExam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${testVersions.paxExam}",
       "org.ops4j.pax.url:pax-url-aether:2.6.7",
+    ],
+    slf4jTest: [
+      "com.github.valfirst:slf4j-test:${testVersions.slf4jTest}",
+      "org.slf4j:slf4j-jdk-platform-logging:${versions.slf4j}",
     ],
     testng: [
       "org.testng:testng:${testVersions.testng}",

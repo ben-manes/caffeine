@@ -85,7 +85,7 @@ public final class AsyncTest {
       result.set(Async.getWhenSuccessful(future));
     });
     await().untilAtomic(result, is(1));
-    future.obtrudeValue(2);
+    future.complete(2);
     await().untilAtomic(result, is(2));
   }
 
