@@ -84,9 +84,8 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @throws NullPointerException if the specified collection is null or contains a null element
    * @throws CompletionException if a checked exception was thrown while loading the value
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
-   *         {@link CacheLoader#loadAll} returns {@code null}, returns a map containing null keys or
-   *         values, or fails to return an entry for each requested key. In all cases, the mapping
-   *         is left unestablished
+   *         {@link CacheLoader#loadAll} returns {@code null}, or returns a map containing null keys
+   *         or values. In all cases, the mapping is left unestablished.
    */
   @NonNull
   Map<@NonNull K, @NonNull V> getAll(@NonNull Iterable<? extends @NonNull K> keys);
