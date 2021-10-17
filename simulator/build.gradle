@@ -35,11 +35,11 @@ dependencies {
   testImplementation testLibraries.testng
 }
 
-compileJava {
+tasks.named('compileJava').configure {
   modularity.inferModulePath = false
 }
 
-test {
+tasks.named('test').configure {
   useTestNG()
 }
 
@@ -58,30 +58,34 @@ sonarqube {
   skipProject = true
 }
 
-jar.manifest {
-  attributes 'Bundle-SymbolicName': 'com.github.benmanes.caffeine.simulator'
-  attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.simulator'
+tasks.named('jar').configure {
+  manifest {
+    attributes 'Bundle-SymbolicName': 'com.github.benmanes.caffeine.simulator'
+    attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.simulator'
+  }
 }
-sourcesJar.dependsOn(compileJava)
+tasks.named('sourcesJar').configure {
+  dependsOn(compileJava)
+}
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
   options.errorprone.nullaway {
     severity = CheckSeverity.OFF
   }
 }
 
-tasks.withType(Javadoc) {
+tasks.withType(Javadoc).configureEach {
   options.addStringOption('Xdoclint:none', '-quiet')
 }
 
-run {
+tasks.named('run').configure {
   systemProperties System.properties.findAll {
     it.getKey().startsWith('akka') || it.getKey().startsWith('caffeine')
   }
   jvmArgs '-XX:+UseParallelGC', '-Xmx4g'
 }
 
-task rewrite(type: JavaExec) {
+tasks.register('rewrite', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.simulator.parser.Rewriter'
   classpath = sourceSets.main.runtimeClasspath
 

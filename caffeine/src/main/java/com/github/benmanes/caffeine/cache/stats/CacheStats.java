@@ -335,7 +335,7 @@ public final class CacheStats {
   @SuppressWarnings("ShortCircuitBoolean")
   private static long saturatedSubtract(long a, long b) {
     long naiveDifference = a - b;
-    if ((a ^ b) >= 0 | (a ^ naiveDifference) >= 0) {
+    if (((a ^ b) >= 0) | ((a ^ naiveDifference) >= 0)) {
       // If a and b have the same signs or a has the same sign as the result then there was no
       // overflow, return.
       return naiveDifference;
@@ -351,7 +351,7 @@ public final class CacheStats {
   @SuppressWarnings("ShortCircuitBoolean")
   private static long saturatedAdd(long a, long b) {
     long naiveSum = a + b;
-    if ((a ^ b) < 0 | (a ^ naiveSum) >= 0) {
+    if (((a ^ b) < 0) | ((a ^ naiveSum) >= 0)) {
       // If a and b have different signs or a has the same sign as the result then there was no
       // overflow, return.
       return naiveSum;

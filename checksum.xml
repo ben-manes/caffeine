@@ -10,6 +10,7 @@
   <trusted-keys>
     <trusted-key id='36feecf06c2da10b' group='biz.aQute.bnd' />
     <trusted-key id='52e6585e0102b84d' group='biz.aQute.bnd' />
+    <trusted-key id='7b534d9959cf9eac' group='biz.aQute.bnd' />
     <trusted-key id='c5cc0278b1ee1c33' group='biz.aQute.bnd' />
     <trusted-key id='d27d666cd88e42b4' group='co.elastic.logging' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools' />
@@ -72,6 +73,7 @@
     <trusted-key id='52931f4b72b4f54c' group='com.koloboke' />
     <trusted-key id='0c33729405f13ee8' group='com.oracle.coherence.ce' />
     <trusted-key id='dfb26dda74ac00c9' group='com.osacky.doctor' />
+    <trusted-key id='dfb26dda74ac00c9' group='com.osacky.tagger' />
     <trusted-key id='1063fe98bcecb758' group='com.puppycrawl.tools' />
     <trusted-key id='156e8da37abc7c91' group='com.sleepycat' />
     <trusted-key id='685c46769dbb5e5d' group='com.squareup' />
@@ -144,6 +146,7 @@
     <trusted-key id='0da8a5ec02d11ead' group='net.sf.jopt-simple' />
     <trusted-key id='be096e29edb8d141' group='net.sf.proguard' />
     <trusted-key id='1d185615d0a84648' group='net.sf.saxon' />
+    <trusted-key id='a929ea2321fdbf8f' group='net.sf.saxon' />
     <trusted-key id='098a31f381819057' group='net.sourceforge.nekohtml' />
     <trusted-key id='82de7be82166e84e' group='net.sourceforge.pmd' />
     <trusted-key id='d0bf1d737c9a1c22' group='net.sourceforge.pmd' />
@@ -183,6 +186,7 @@
     <trusted-key id='9b7d32f2d50582e6' group='org.codehaus.mojo' />
     <trusted-key id='012579464d01c06a' group='org.codehaus.plexus' />
     <trusted-key id='105de36038d8c6c5' group='org.codehaus.plexus' />
+    <trusted-key id='873a8e86b4372146' group='org.codehaus.plexus' />
     <trusted-key id='8b0378a57cd8e243' group='org.codehaus.plexus' />
     <trusted-key id='ae5a7fb608a0221c' group='org.codehaus.plexus' />
     <trusted-key id='79e193516be7998f' group='org.dom4j' />
@@ -365,6 +369,15 @@
     <dependency group='com.github.jengelman.gradle.plugins' module='shadow' version='6.1.0'>
       <sha512>B28C169500637C1FB668A45C59B890C78BBAB1AA9B70A8F4E0436A94D88773E372C46B1C7974E1D71676D1A2C49641F337E1242802BBB9050B083C2578CE3DC2</sha512>
     </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.8'>
+      <sha512>200B2783133DB13CEC356EC2390ED028AFE41A2E685A0805E9DC6F83BB0809C70FC1DCB14232F0863EC09C9508DABB988D3A728C4D10DC1E7AE17E25E5102C37</sha512>
+    </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.0-beta.2'>
+      <sha512>BD956309B6719B39F5C9F76134F94D4868AB64BF34E811ECA6C2B435C1E6AB1ED9E036BF6F12EB928FE8424EF9CF8DFF023A2498D7A930FA4E2F570516990BAE</sha512>
+    </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.0-beta.3'>
+      <sha512>F49F447FBCE57A1C8EA792FFA38744929CAEEB7398056B3760C3DB984E911C52BBC2057CA1000E29C91931FB94125BF1D3267858D3981988CB8F912CAF1CAA1C</sha512>
+    </dependency>
     <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.1'>
       <sha512>2C09B102601DF179B615EF37F5E56B9AA1100BB2A17D742B8CB452C1A193C44ED3EBE029FEAFB9822D55A680D99B682184C733D56F835874DD01B02209AFA13D</sha512>
     </dependency>
@@ -457,6 +470,9 @@
     </dependency>
     <dependency group='gradle.plugin.com.github.jengelman.gradle.plugins' module='shadow' version='7.0.0'>
       <sha512>826D35C2E981DDBBF010AB2A6074D46D0E307C77FB4AD63F3920E983554BF138E95F4E7242629D1752B434A59353C75B7D4172DAA0C0C54DFD8A19FF5574C239</sha512>
+    </dependency>
+    <dependency group='gradle.plugin.com.github.johnrengelman' module='shadow' version='7.1.0'>
+      <sha512>3DAB33F115BB27B80604AC59D2CA8DDBCA0002FBA647BB6BE3C13D10EBF072C2652E249E890F0FB3A9361952AD68D9B4864BD0E4660D5F4610BDD745AFC640C5</sha512>
     </dependency>
     <dependency group='gradle.plugin.com.github.kt3k.coveralls' module='coveralls-gradle-plugin' version='2.8.4'>
       <sha512>CEAA0F67FB9D04CDC125BC25694B4C412BFC0AFFC6ACC641C8E24E9E276E1990FF995B6A2A64DB896E4CF7E1BAD96682FBFC97DE95587C4313D6D8A958035E3C</sha512>

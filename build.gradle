@@ -24,7 +24,8 @@ buildScan {
   termsOfServiceUrl = 'https://gradle.com/terms-of-service'
 }
 
-task testReport(type: TestReport, group: 'Build') {
+tasks.register('testReport', TestReport) {
+  group = 'Build'
   description = 'Generates an aggregate test report'
   destinationDir = file("${buildDir}/reports/allTests")
 }
@@ -77,12 +78,12 @@ subprojects {
     testRuntimeOnly testLibraries.osgiRuntime
   }
 
-  task bundle(type: aQute.bnd.gradle.Bundle) {
+  tasks.register('bundle', aQute.bnd.gradle.Bundle) {
     from sourceSets.main.output
     sourceSet = sourceSets.main
   }
 
-  tasks.withType(JavaCompile) {
+  tasks.withType(JavaCompile).configureEach {
     if (name.contains('Test') || name.contains('Jmh')) {
       options.errorprone.nullaway {
         severity = CheckSeverity.OFF
@@ -90,9 +91,9 @@ subprojects {
     }
   }
 
-  tasks.withType(Test) {
+  tasks.withType(Test).configureEach {
     rootProject.testReport.reportOn it
-    it.dependsOn('jar')
+    it.dependsOn(jar)
 
     // ensure tasks don't overwrite the default report directories used by the 'test' task
     reports.html.destination = file("${buildDir}/reports/${name}")
@@ -121,7 +122,7 @@ nexusPublishing {
 // Only report code coverage for projects that are distributed
 def publishedProjects = subprojects.findAll { it.path != ':simulator' }
 
-task jacocoMerge(type: JacocoMerge) {
+tasks.register('jacocoMerge', JacocoMerge) {
   publishedProjects.each { subproject ->
     executionData subproject.tasks.withType(Test)
   }
@@ -130,7 +131,8 @@ task jacocoMerge(type: JacocoMerge) {
   }
 }
 
-task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
+tasks.register('jacocoRootReport', JacocoReport) {
+  group = 'Coverage reports'
   description = 'Generates an aggregate report from all subprojects'
   dependsOn publishedProjects.test, jacocoMerge
 
@@ -150,7 +152,7 @@ coveralls {
   jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
 }
 
-tasks.coveralls {
+tasks.named('coveralls').configure {
   group = 'Coverage reports'
   description = 'Uploads the aggregated coverage report to Coveralls'
 

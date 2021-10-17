@@ -13,37 +13,43 @@ dependencies {
   testImplementation testLibraries.guavaTestLib
 }
 
-compileJava {
+tasks.named('compileJava').configure {
   modularity.inferModulePath = true
 }
 
-jar.manifest {
-  attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.guava'
-  attributes 'Import-Package': [
-    'com.google.common.cache',
-    'com.google.common.util.concurrent',
-    'com.github.benmanes.caffeine.cache',
-    'com.github.benmanes.caffeine.cache.stats'].join(',')
-  attributes 'Export-Package': 'com.github.benmanes.caffeine.guava'
-  attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.guava'
+tasks.named('jar').configure {
+  manifest {
+    attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.guava'
+    attributes 'Import-Package': [
+      'com.google.common.cache',
+      'com.google.common.util.concurrent',
+      'com.github.benmanes.caffeine.cache',
+      'com.github.benmanes.caffeine.cache.stats'].join(',')
+    attributes 'Export-Package': 'com.github.benmanes.caffeine.guava'
+    attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.guava'
+  }
 }
 
-tasks.withType(Javadoc) {
+tasks.withType(Javadoc).configureEach {
   options.addStringOption('Xdoclint:none', '-quiet')
 }
 
-test {
+tasks.named('test').configure {
   useJUnit {
     excludeCategories 'com.github.benmanes.caffeine.guava.OSGiTests'
   }
 }
 
-task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tests') {
-  tasks.test.dependsOn(it)
+def osgiTests = tasks.register('osgiTests', Test) {
+  group = 'Cache tests'
+  description = 'Isolated OSGi tests'
 
   useJUnit {
     includeCategories 'com.github.benmanes.caffeine.guava.OSGiTests'
   }
+}
+tasks.named('test').configure {
+  dependsOn(osgiTests)
 }
 
 tasks.withType(Test) {

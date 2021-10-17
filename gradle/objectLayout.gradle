@@ -9,21 +9,33 @@ dependencies {
   objectLayout libraries.javaObjectLayout
 }
 
-task footprint(type: JavaExec,
-  description: 'Estimate the footprint of all objects reachable from a given instance')
-task externals(type: JavaExec, description: 'Shows objects reachable from a given instance')
-task estimates(type: JavaExec, description: 'Simulate the class layout in different VM modes')
-task internals(type: JavaExec, description: 'Show the field layout, default contents, and header')
+tasks.register('footprint', JavaExec) {
+  description = 'Estimate the footprint of all objects reachable from a given instance'
+}
+tasks.register('externals', JavaExec) {
+  description = 'Shows objects reachable from a given instance'
+}
+tasks.register('estimates', JavaExec) {
+  description = 'Simulate the class layout in different VM modes'
+}
+tasks.register('internals', JavaExec) {
+  description = 'Show the field layout, default contents, and header'
+}
 
-task packing(type: JavaExec, group: 'Object Layout',
-    description: 'Compute the object footprint under different field layout strategies') {
-  it.dependsOn(jar)
+tasks.register('packing', JavaExec) {
+  group = 'Object Layout'
+  description = 'Compute the object footprint under different field layout strategies'
+  dependsOn(jar)
   mainClass = 'org.openjdk.jol.Main'
   args it.name, jar.archivePath
   it.classpath configurations.objectLayout
 }
 
-[footprint, externals, estimates, internals]*.with {
+def objectLayoutTasks = [
+  tasks.named('footprint'), tasks.named('externals'),
+  tasks.named('estimates'), tasks.named('internals')
+]
+objectLayoutTasks*.configure {
   group 'Object Layout'
   dependsOn(compileJava)
   mainClass = 'org.openjdk.jol.Main'

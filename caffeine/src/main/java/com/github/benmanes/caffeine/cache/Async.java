@@ -110,6 +110,7 @@ final class Async {
     @Override
     public void onRemoval(@Nullable K key,
         @Nullable CompletableFuture<V> future, RemovalCause cause) {
+      // Must have been completed and be non-null to be eligible for eviction
       V value = Async.getIfReady(future);
       if (value != null) {
         delegate.onRemoval(key, value, cause);
@@ -124,8 +125,8 @@ final class Async {
   /**
    * A weigher for asynchronous computations. When the value is being loaded this weigher returns
    * {@code 0} to indicate that the entry should not be evicted due to a size constraint. If the
-   * value is computed successfully the entry must be reinserted so that the weight is updated and
-   * the expiration timeouts reflect the value once present. This can be done safely using
+   * value is computed successfully then the entry must be reinserted so that the weight is updated
+   * and the expiration timeouts reflect the value once present. This can be done safely using
    * {@link Map#replace(Object, Object, Object)}.
    */
   static final class AsyncWeigher<K, V> implements Weigher<K, CompletableFuture<V>>, Serializable {
@@ -150,9 +151,9 @@ final class Async {
   /**
    * An expiry for asynchronous computations. When the value is being loaded this expiry returns
    * {@code ASYNC_EXPIRY} to indicate that the entry should not be evicted due to an expiry
-   * constraint. If the value is computed successfully the entry must be reinserted so that the
-   * expiration is updated and the expiration timeouts reflect the value once present. The value
-   * maximum range is reserved to coordinate the asynchronous life cycle.
+   * constraint. If the value is computed successfully then the entry must be reinserted so that the
+   * expiration is updated and the expiration timeouts reflect the value once present. The
+   * duration's maximum range is reserved to coordinate with the asynchronous life cycle.
    */
   static final class AsyncExpiry<K, V> implements Expiry<K, CompletableFuture<V>>, Serializable {
     private static final long serialVersionUID = 1L;

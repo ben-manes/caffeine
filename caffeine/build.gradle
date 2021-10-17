@@ -67,29 +67,34 @@ dependencies {
   javaPoetImplementation libraries.googleJavaFormat
 }
 
-compileCodeGenJava {
+tasks.named('compileCodeGenJava').configure {
   gradle.taskGraph.whenReady {
-    enabled = gradle.taskGraph.hasTask('uploadArchives')
+    enabled = gradle.taskGraph.hasTask(':caffeine:publishToSonatype')
+  }
+  doFirst {
+    options.compilerArgs += [ '--module-path', classpath.asPath ]
   }
   dependsOn compileJava
+  options.debug = false
+  options.incremental = false
   destinationDirectory = compileJava.destinationDirectory
   classpath = sourceSets.main.runtimeClasspath + sourceSets.main.output
-  options.incremental = false
-  options.debug = false
 }
 
-jar.manifest {
-  attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine'
-  attributes 'Import-Package': ''
-  attributes 'Export-Package': [
-    'com.github.benmanes.caffeine',
-    'com.github.benmanes.caffeine.base',
-    'com.github.benmanes.caffeine.cache',
-    'com.github.benmanes.caffeine.cache.stats'].join(',')
-  attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine'
-}
+tasks.named('jar').configure {
+  dependsOn(compileCodeGenJava)
 
-jar.dependsOn(compileCodeGenJava)
+  manifest {
+    attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine'
+    attributes 'Import-Package': ''
+    attributes 'Export-Package': [
+      'com.github.benmanes.caffeine',
+      'com.github.benmanes.caffeine.base',
+      'com.github.benmanes.caffeine.cache',
+      'com.github.benmanes.caffeine.cache.stats'].join(',')
+    attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine'
+  }
+}
 
 sonarqube {
   properties {
@@ -97,7 +102,7 @@ sonarqube {
   }
 }
 
-task generateLocalCaches(type: JavaExec) {
+def generateLocalCaches = tasks.register('generateLocalCaches', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
   args "${buildDir}/generated-sources/"
@@ -106,10 +111,8 @@ task generateLocalCaches(type: JavaExec) {
   outputs.dir "${buildDir}/generated-sources/"
   outputs.cacheIf { true }
 }
-compileJava.dependsOn(generateLocalCaches)
-sourcesJar.dependsOn(generateLocalCaches)
 
-task generateNodes(type: JavaExec) {
+def generateNodes = tasks.register('generateNodes', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.NodeFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
   args "${buildDir}/generated-sources/"
@@ -118,10 +121,19 @@ task generateNodes(type: JavaExec) {
   outputs.dir "${buildDir}/generated-sources/"
   outputs.cacheIf { true }
 }
-compileJava.dependsOn(generateNodes)
-sourcesJar.dependsOn(generateNodes)
 
-task memoryOverhead(type: JavaExec, group: 'Benchmarks', description: 'Evaluates cache overhead') {
+tasks.named('compileJava').configure {
+  dependsOn(generateLocalCaches)
+  dependsOn(generateNodes)
+}
+tasks.named('sourcesJar').configure {
+  dependsOn(generateLocalCaches)
+  dependsOn(generateNodes)
+}
+
+tasks.register('memoryOverhead', JavaExec) {
+  group = 'Benchmarks'
+  description = 'Evaluates cache overhead'
   classpath sourceSets.jmh.runtimeClasspath
   jvmArgs "-javaagent:${configurations.javaAgent.singleFile}"
   mainClass = 'com.github.benmanes.caffeine.cache.MemoryBenchmark'

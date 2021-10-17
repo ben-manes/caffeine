@@ -47,18 +47,13 @@ import java.util.regex.Pattern;
  */
 @SuppressWarnings({"JdkObsolete", "JavaUtilDate"})
 public abstract class AbstractCopier<A> implements Copier {
-  private static final Map<Class<?>, Function<Object, Object>> JAVA_DEEP_COPY;
-  private static final Set<Class<?>> JAVA_IMMUTABLE;
-
-  static {
-    JAVA_IMMUTABLE = Set.of(Boolean.class, Byte.class, Character.class, Double.class, Float.class,
-        Short.class, Integer.class, Long.class, BigInteger.class, BigDecimal.class, String.class,
-        Class.class, UUID.class, URL.class, URI.class, Pattern.class, Inet4Address.class,
-        Inet6Address.class, InetSocketAddress.class, LocalDate.class, LocalTime.class,
-        LocalDateTime.class, Instant.class, Duration.class);
-    JAVA_DEEP_COPY = Map.of(Date.class, o -> ((Date) o).clone(),
-        GregorianCalendar.class, o -> ((GregorianCalendar) o).clone());
-  }
+  private static final Map<Class<?>, Function<Object, Object>> JAVA_DEEP_COPY = Map.of(Date.class,
+      o -> ((Date) o).clone(), GregorianCalendar.class, o -> ((GregorianCalendar) o).clone());
+  private static final Set<Class<?>> JAVA_IMMUTABLE = Set.of(Boolean.class, Byte.class,
+      Character.class, Double.class, Float.class, Short.class, Integer.class, Long.class,
+      BigInteger.class, BigDecimal.class, String.class, Class.class, UUID.class, URL.class,
+      URI.class, Pattern.class, Inet4Address.class, Inet6Address.class, InetSocketAddress.class,
+      LocalDate.class, LocalTime.class, LocalDateTime.class, Instant.class, Duration.class);
 
   private final Set<Class<?>> immutableClasses;
   private final Map<Class<?>, Function<Object, Object>> deepCopyStrategies;

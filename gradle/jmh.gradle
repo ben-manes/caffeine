@@ -25,7 +25,7 @@ dependencies {
   }
 }
 
-tasks.jmh {
+tasks.named('jmh').configure {
   group = 'Benchmarks'
   description = 'Executes a Java microbenchmark'
 }
@@ -71,8 +71,10 @@ jmhReport {
   jmhReportOutput = file("${buildDir}/reports/jmh")
 }
 
-tasks.jmh.finalizedBy tasks.jmhReport
-tasks.jmh.dependsOn tasks.bundle
+tasks.named('jmh').configure {
+  dependsOn(bundle)
+  finalizedBy(jmhReport)
+}
 
 tasks.named('compileJmhJava').configure {
   options.errorprone.disable('NullAway')

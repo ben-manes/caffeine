@@ -47,7 +47,7 @@ final class TimerWheel<K, V> {
    * structured in a hierarchy (seconds, minutes, hours, days) so that events scheduled in the
    * distant future are cascaded to lower buckets when the wheels rotate. This allows for events
    * to be added, removed, and expired in O(1) time, where expiration occurs for the entire bucket,
-   * and penalty of cascading is amortized by the rotations.
+   * and the penalty of cascading is amortized by the rotations.
    *
    * [1] Hashed and Hierarchical Timing Wheels
    * http://www.cs.columbia.edu/~nahum/w6998/papers/ton97-timing-wheels.pdf

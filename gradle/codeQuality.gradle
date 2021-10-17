@@ -20,34 +20,37 @@ dependencies {
   checkstyleConfig gradlePlugins.checkstyle
   spotbugsPlugins gradlePlugins.findsecbugs
   errorproneJavac libraries.errorproneJavac
+  errorprone files("${buildDir}/libs/caffeine-local.jar")
   errorprone libraries.errorproneCore
   errorprone libraries.nullaway
-  errorprone files("${buildDir}/libs/caffeine_local.jar")
 }
 
-// Gradle rewrites the compiler's dependency on Caffeine to a project dependency, which fails
-// Instead we have to download and trick the build to put the jar on the compiler's classpath
-// See the downloadCaffeineLocal() task and https://github.com/gradle/gradle/issues/11625
-task downloadCaffeineLocal() {
+// Gradle rewrites ErrorProne's dependency on Caffeine to a project dependency, which then fails.
+// Instead we have to download and trick the build to put the jar on the compiler's classpath.
+tasks.register('downloadCaffeineLocal') {
+  def local = file("${buildDir}/libs/caffeine-local.jar")
+  outputs.upToDateWhen { local.exists() }
+
   doFirst {
-    def version = '3.0.3'
+    def version = '3.0.4'
     def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/' +
       "${version}/caffeine-${version}.jar"
-    def local = file("${buildDir}/libs/caffeine_local.jar")
     if (!local.exists()) {
       local.parentFile.mkdirs()
-      new URL(url).withInputStream{ input -> local.withOutputStream{ it << input }}
+      new URL(url).withInputStream{ input -> local.withOutputStream { it << input } }
     }
   }
 }
 
-javadoc.options.links(
-  'https://checkerframework.org/api/',
-  'https://lightbend.github.io/config/latest/api/',
-  "https://guava.dev/releases/${versions.guava}/api/docs/",
-  "https://docs.oracle.com/en/java/javase/${JavaVersion.current().majorVersion}/docs/api/")
+tasks.named('javadoc').configure {
+  options.links(
+    'https://checkerframework.org/api/',
+    'https://lightbend.github.io/config/latest/api/',
+    "https://guava.dev/releases/${versions.guava}/api/docs/",
+    "https://docs.oracle.com/en/java/javase/${JavaVersion.current().majorVersion}/docs/api/")
+}
 
-jar {
+tasks.named('jar').configure {
   manifest.attributes 'Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0'
   metaInf {
     from "${rootDir}/LICENSE"
@@ -62,6 +65,7 @@ checkstyle {
 
 spotbugs {
   effort = 'max'
+  reportLevel = 'low'
   toolVersion = pluginVersions.spotbugs
   excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
 }
@@ -109,7 +113,7 @@ def JVM_ARGS_STRONG_ENCAPSULATION = [
   '--add-opens',   'jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
 ]
 
-tasks.withType(JavaExec) {
+tasks.withType(JavaExec).configureEach {
   jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
 }
 
@@ -152,12 +156,10 @@ tasks.named('compileTestJava').configure {
   options.errorprone.disable('NullAway')
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
+  jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=0'
   if (System.properties.containsKey('debug')) {
     jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
-  }
-  options {
-    jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=0'
   }
   if (System.env.'CI') {
     reports.html.required = false
@@ -171,7 +173,7 @@ tasks.withType(Test) {
   }
 }
 
-tasks.withType(Checkstyle) {
+tasks.withType(Checkstyle).configureEach {
   enabled = System.properties.containsKey('checkstyle')
   group = 'Checkstyle'
   reports {
@@ -181,16 +183,16 @@ tasks.withType(Checkstyle) {
 }
 
 afterEvaluate {
-  tasks.findAll { it.name.startsWith('spotbugs') }.each {
-    it.enabled = System.properties.containsKey('spotbugs')
-    it.group = 'SpotBugs'
-    it.reports {
+  tasks.findAll { it.name.startsWith('spotbugs') }*.configure {
+    enabled = System.properties.containsKey('spotbugs')
+    group = 'SpotBugs'
+    reports {
       html.required = true
     }
   }
 }
 
-tasks.withType(Pmd) {
+tasks.withType(Pmd).configureEach {
   enabled = System.properties.containsKey('pmd')
   group = 'PMD'
   reports {

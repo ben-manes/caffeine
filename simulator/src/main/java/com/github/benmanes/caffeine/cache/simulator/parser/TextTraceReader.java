@@ -20,7 +20,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.util.stream.Stream;
 
 import com.google.common.io.Closeables;
@@ -30,7 +29,7 @@ import com.google.common.io.Closeables;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public abstract class TextTraceReader extends AbstractTraceReader implements TraceReader {
+public abstract class TextTraceReader extends AbstractTraceReader {
 
   protected TextTraceReader(String filePath) {
     super(filePath);
@@ -40,7 +39,7 @@ public abstract class TextTraceReader extends AbstractTraceReader implements Tra
   @SuppressWarnings("PMD.CloseResource")
   protected Stream<String> lines() {
     InputStream input = readFile();
-    Reader reader = new InputStreamReader(input, UTF_8);
+    var reader = new InputStreamReader(input, UTF_8);
     return new BufferedReader(reader).lines().map(String::trim)
         .onClose(() -> Closeables.closeQuietly(input));
   }

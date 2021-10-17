@@ -1,11 +1,13 @@
 /**
- * The configuration to break cache tests into independant tasks.
+ * The configuration to break cache tests into independent tasks.
  */
 test {
   useTestNG()
   exclude 'com/github/benmanes/caffeine/cache/**'
 }
-compileTestJava.dependsOn(jar)
+tasks.named('compileTestJava').configure {
+  dependsOn(jar)
+}
 
 def implementations = ['Caffeine', 'Guava']
 def testNames = [
@@ -24,8 +26,8 @@ testNames.each { testName ->
   def testType = testName - implementation - 'Test' - 'Stats' - 'Async' - 'Sync'
   def labels = testType.split('And').collect { it[0].toLowerCase() + it.substring(1) }
 
-  task "${testName}"(type: Test) {
-    it.useTestNG()
+  tasks.register("${testName}", Test) {
+    useTestNG()
     group = 'Cache tests'
     description = 'Runs ' + labels.join(' with ') +
       implementation + ' and ' + (hasStats ? 'stats ' : 'no stats ') +
@@ -38,7 +40,6 @@ testNames.each { testName ->
       systemProperties['values'] = strength[1]
       systemProperties['compute'] = isAsync ? 'async' : 'sync'
       systemProperties['stats'] = hasStats ? 'enabled' : 'disabled'
-
     }
     systemProperties['implementation'] = implementation
 
@@ -52,24 +53,28 @@ testNames.each { testName ->
   }
 }
 
-task isolatedTests(type: Test, group: 'Cache tests') {
+tasks.register('isolatedTests', Test) {
+  group = 'Cache tests'
   description = 'Tests that must be run in isolation'
   useTestNG()
 }
 
-task lincheckTests(type: Test, group: 'Cache tests') {
+tasks.register('lincheckTests', Test) {
+  group = 'Cache tests'
   description = 'Tests that assert linearizability'
   useTestNG()
 }
 
-task junitTests(type: Test, group: 'Cache tests', description: 'JUnit tests', dependsOn: jar) {
+tasks.register('junitTests', Test) {
+  group = 'Cache tests'
+  description = 'JUnit tests'
   useJUnit()
+  dependsOn(jar)
   tasks.test.dependsOn(it)
-  filter.includeTestsMatching '*Test*'
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
   if (options instanceof TestNGOptions) {
     if (name.startsWith('slow')) {
       maxParallelForks = 2
@@ -90,15 +95,17 @@ tasks.withType(Test) {
     } else {
       options {
         threadCount = Math.max(6, Runtime.getRuntime().availableProcessors() - 1)
-        excludeGroups = ['slow', 'isolated', 'lincheck']
         jvmArgs '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled'
+        excludeGroups = ['slow', 'isolated', 'lincheck']
         parallel = 'methods'
       }
     }
   }
 }
 
-task stress(type: JavaExec, group: 'Cache tests', description: 'Executes a stress test') {
+tasks.register('stress', JavaExec) {
+  group = 'Cache tests'
+  description = 'Executes a stress test'
   mainClass = 'com.github.benmanes.caffeine.cache.Stresser'
   classpath sourceSets.test.runtimeClasspath
 }

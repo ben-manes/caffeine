@@ -30,8 +30,6 @@ import com.typesafe.config.Config;
 public final class IndicatorResetCountMin4 implements Frequency {
   private final ClimberResetCountMin4 sketch;
 
-  int prevHintSum;
-  int prevHintCount;
   Indicator indicator;
 
   public IndicatorResetCountMin4(Config config) {
@@ -74,13 +72,5 @@ public final class IndicatorResetCountMin4 implements Frequency {
 
   public int getPeriod() {
     return sketch.getPeriod();
-  }
-
-  public int getHintSum() {
-    return prevHintSum;
-  }
-
-  public int getHintCount() {
-    return prevHintCount;
   }
 }

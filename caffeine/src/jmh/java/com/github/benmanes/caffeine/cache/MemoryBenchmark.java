@@ -27,6 +27,7 @@ import java.util.stream.IntStream;
 import org.github.jamm.MemoryMeter;
 import org.github.jamm.MemoryMeter.Guess;
 
+import com.google.common.base.Functions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.math.LongMath;
@@ -137,11 +138,7 @@ public final class MemoryBenchmark {
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
         .refreshAfterWrite(1, TimeUnit.MINUTES)
         .maximumSize(MAXIMUM_SIZE)
-        .build(new CacheLoader<Integer, Integer>() {
-          @Override public Integer load(Integer key) {
-            return key;
-          }
-        });
+        .build(CacheLoader.from(Functions.identity()));
     compare("Maximum Size & Refresh after Write", caffeine, guava);
   }
 
@@ -215,7 +212,7 @@ public final class MemoryBenchmark {
 
     int leftPadded = Math.max((36 - label.length()) / 2 - 1, 1);
     out.printf(" %2$-" + leftPadded + "s %s%n", label, " ");
-    String result = FlipTable.of(new String[] { "Cache", "Baseline", "Per Entry" },new String[][] {
+    String result = FlipTable.of(new String[] { "Cache", "Baseline", "Per Entry" }, new String[][] {
         evaluate("Caffeine", caffeine.asMap()),
         evaluate("Guava", guava.asMap())
     });

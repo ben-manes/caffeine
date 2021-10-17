@@ -6,7 +6,7 @@ dependencies {
   compileOnly annotationProcessors.values()
 }
 
-compileJava {
+tasks.named('compileJava').configure {
   File path = file("${buildDir}/generated-sources/main")
   options.annotationProcessorGeneratedSourcesDirectory = path
   sourceSets.main.java.srcDirs += path

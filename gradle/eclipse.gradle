@@ -23,7 +23,9 @@ eclipse.project.file.withXml { provider ->
 }
 
 // For the Eclipse STS plugin
-task afterEclipseImport(description: 'Post processing after project generation', group: 'IDE') {
+tasks.register('afterEclipseImport') {
+  group = 'IDE'
+  description = 'Post processing after project generation'
   ext.srcFile = file('.project')
   inputs.file srcFile
   outputs.dir srcFile

@@ -14,7 +14,8 @@ java {
   withSourcesJar()
 }
 
-task testJar(type: Jar, group: 'Build') {
+tasks.register('testJar', Jar) {
+  group = 'Build'
   description = 'Assembles a jar archive containing the test classes.'
   from sourceSets.test.output
   archiveClassifier = 'test'
