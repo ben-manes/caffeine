@@ -65,12 +65,12 @@ public final class AddExpiration extends NodeRule {
   }
 
   private void addLink(String method, String varName) {
-    MethodSpec getter = MethodSpec.methodBuilder("get" + capitalize(method))
+    var getter = MethodSpec.methodBuilder("get" + capitalize(method))
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return $N", varName)
         .returns(NODE)
         .build();
-    MethodSpec setter = MethodSpec.methodBuilder("set" + capitalize(method))
+    var setter = MethodSpec.methodBuilder("set" + capitalize(method))
         .addModifiers(Modifier.PUBLIC)
         .addParameter(NODE, varName)
         .addStatement("this.$N = $N", varName, varName)
@@ -81,17 +81,17 @@ public final class AddExpiration extends NodeRule {
   }
 
   private void addVariableTime(String varName) {
-    MethodSpec getter = MethodSpec.methodBuilder("getVariableTime")
+    var getter = MethodSpec.methodBuilder("getVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return (long) $L.get(this)", varHandleName(varName))
         .returns(long.class)
         .build();
-    MethodSpec setter = MethodSpec.methodBuilder("setVariableTime")
+    var setter = MethodSpec.methodBuilder("setVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(long.class, varName)
         .addStatement("$L.set(this, $N)", varHandleName(varName), varName)
         .build();
-    MethodSpec cas = MethodSpec.methodBuilder("casVariableTime")
+    var cas = MethodSpec.methodBuilder("casVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(long.class, "expect")
         .addParameter(long.class, "update")

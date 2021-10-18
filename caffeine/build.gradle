@@ -44,6 +44,7 @@ dependencies {
   testImplementation testLibraries.jctools
   testImplementation testLibraries.lincheck
   testImplementation libraries.commonsLang3
+  testImplementation testLibraries.slf4jTest
   testImplementation testLibraries.guavaTestLib
 
   javaAgent libraries.jamm
@@ -68,13 +69,12 @@ dependencies {
 }
 
 tasks.named('compileCodeGenJava').configure {
-  gradle.taskGraph.whenReady {
-    enabled = gradle.taskGraph.hasTask(':caffeine:publishToSonatype')
-  }
+  onlyIf { System.env.'CI' }
+  dependsOn compileJava
+
   doFirst {
     options.compilerArgs += [ '--module-path', classpath.asPath ]
   }
-  dependsOn compileJava
   options.debug = false
   options.incremental = false
   destinationDirectory = compileJava.destinationDirectory
@@ -83,7 +83,6 @@ tasks.named('compileCodeGenJava').configure {
 
 tasks.named('jar').configure {
   dependsOn(compileCodeGenJava)
-
   manifest {
     attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine'
     attributes 'Import-Package': ''
@@ -123,8 +122,12 @@ def generateNodes = tasks.register('generateNodes', JavaExec) {
 }
 
 tasks.named('compileJava').configure {
+  finalizedBy(compileCodeGenJava)
   dependsOn(generateLocalCaches)
   dependsOn(generateNodes)
+}
+tasks.named('compileTestJava').configure {
+  dependsOn(compileCodeGenJava)
 }
 tasks.named('sourcesJar').configure {
   dependsOn(generateLocalCaches)

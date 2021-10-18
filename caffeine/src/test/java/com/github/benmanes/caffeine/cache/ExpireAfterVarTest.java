@@ -427,7 +427,6 @@ public final class ExpireAfterVarTest {
     assertThat(cache).hasSize(1);
   }
 
-  @SuppressWarnings("unchecked")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)

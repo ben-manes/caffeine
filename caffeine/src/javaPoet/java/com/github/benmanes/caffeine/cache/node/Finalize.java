@@ -18,6 +18,9 @@ package com.github.benmanes.caffeine.cache.node;
 import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
 import static com.github.benmanes.caffeine.cache.Specifications.METHOD_HANDLES;
 
+import org.apache.commons.lang3.StringUtils;
+
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.CodeBlock;
 
 /**
@@ -34,6 +37,12 @@ public class Finalize extends NodeRule {
 
   @Override
   protected void execute() {
+    if (!context.suppressedWarnings.isEmpty()) {
+      var format = "{" + StringUtils.repeat("$S", ", ", context.suppressedWarnings.size()) + "}";
+      context.nodeSubtype.addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
+          .addMember("value", format, context.suppressedWarnings.toArray())
+          .build());
+    }
     context.nodeSubtype
         .addMethod(context.constructorDefault.build())
         .addMethod(context.constructorByKey.build())

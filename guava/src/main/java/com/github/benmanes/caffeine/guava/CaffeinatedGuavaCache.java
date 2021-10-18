@@ -47,10 +47,10 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
-  static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-  final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
-  @Nullable transient ConcurrentMap<K, V> mapView;
+  private final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
+  private transient @Nullable ConcurrentMap<K, V> mapView;
 
   CaffeinatedGuavaCache(com.github.benmanes.caffeine.cache.Cache<K, V> cache) {
     this.cache = requireNonNull(cache);

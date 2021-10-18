@@ -15,6 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
+import org.apache.commons.lang3.StringUtils;
+
+import com.squareup.javapoet.AnnotationSpec;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -27,6 +31,12 @@ public final class Finalize extends LocalCacheRule {
 
   @Override
   protected void execute() {
+    if (!context.suppressedWarnings.isEmpty()) {
+      var format = "{" + StringUtils.repeat("$S", ", ", context.suppressedWarnings.size()) + "}";
+      context.cache.addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
+          .addMember("value", format, context.suppressedWarnings.toArray())
+          .build());
+    }
     context.cache.addMethod(context.constructor.build());
   }
 }

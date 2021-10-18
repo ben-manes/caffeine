@@ -118,7 +118,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
 
   /** Creates an accessor that returns the reference. */
   protected final MethodSpec newGetRef(String varName) {
-    MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName) + "Reference")
+    var getter = MethodSpec.methodBuilder("get" + capitalize(varName) + "Reference")
         .addModifiers(context.publicFinalModifiers())
         .returns(Object.class);
     getter.addStatement("return $L.get(this)", varHandleName(varName));
@@ -128,7 +128,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   /** Creates an accessor that returns the unwrapped variable. */
   protected final MethodSpec newGetter(Strength strength, TypeName varType,
       String varName, Visibility visibility) {
-    MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName))
+    var getter = MethodSpec.methodBuilder("get" + capitalize(varName))
         .addModifiers(context.publicFinalModifiers())
         .returns(varType);
     if (strength == Strength.STRONG) {
@@ -156,7 +156,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   /** Creates a mutator to the variable. */
   protected final MethodSpec newSetter(TypeName varType, String varName, Visibility visibility) {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
-    MethodSpec.Builder setter = MethodSpec.methodBuilder(methodName)
+    var setter = MethodSpec.methodBuilder(methodName)
         .addModifiers(context.publicFinalModifiers())
         .addParameter(varType, varName);
     if (visibility.isPlain) {
@@ -168,7 +168,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   }
 
   private Strength strengthOf(Feature feature) {
-    for (Strength strength : Strength.values()) {
+    for (var strength : Strength.values()) {
       if (feature.name().startsWith(strength.name())) {
         return strength;
       }

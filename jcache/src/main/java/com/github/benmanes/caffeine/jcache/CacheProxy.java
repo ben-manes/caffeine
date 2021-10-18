@@ -271,7 +271,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   /** Performs the bulk load where the existing entries are replace. */
   private void loadAllAndReplaceExisting(Set<? extends K> keys) {
     int[] ignored = { 0 };
-    Map<K, V> loaded = cacheLoader.get().loadAll(keys);
+    @SuppressWarnings("NullAway")
+    Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
     for (var entry : loaded.entrySet()) {
       putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false, ignored);
     }
@@ -282,7 +283,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     List<K> keysToLoad = keys.stream()
         .filter(key -> !cache.asMap().containsKey(key))
         .collect(toList());
-    Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
+    @SuppressWarnings("NullAway")
+    Map<K, V> result = cacheLoader.orElseThrow().loadAll(keysToLoad);
     for (var entry : result.entrySet()) {
       if ((entry.getKey() != null) && (entry.getValue() != null)) {
         putIfAbsentNoAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false);

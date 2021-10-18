@@ -33,9 +33,13 @@ public final class AddConstructor extends LocalCacheRule {
 
   @Override
   protected void execute() {
-    String cacheLoader = context.superClass.equals(BOUNDED_LOCAL_CACHE)
-        ? "(CacheLoader<K, V>) cacheLoader"
-        : "cacheLoader";
+    String cacheLoader;
+    if (context.superClass.equals(BOUNDED_LOCAL_CACHE)) {
+      cacheLoader = "(CacheLoader<K, V>) cacheLoader";
+      context.suppressedWarnings.add("unchecked");
+    } else {
+      cacheLoader = "cacheLoader";
+    }
     context.constructor
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)

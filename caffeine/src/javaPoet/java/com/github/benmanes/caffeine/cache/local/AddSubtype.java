@@ -22,7 +22,6 @@ import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
 import com.google.common.base.CaseFormat;
-import com.squareup.javapoet.AnnotationSpec;
 
 /**
  * Adds the cache inheritance hierarchy.
@@ -38,10 +37,8 @@ public final class AddSubtype extends LocalCacheRule {
 
   @Override
   protected void execute() {
+    context.suppressedWarnings.add("MissingOverride");
     context.cache.superclass(context.superClass)
-        .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-            .addMember("value", "{$S, $S, $S}", "unchecked", "MissingOverride", "NullAway")
-            .build())
         .addJavadoc(getJavaDoc())
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);

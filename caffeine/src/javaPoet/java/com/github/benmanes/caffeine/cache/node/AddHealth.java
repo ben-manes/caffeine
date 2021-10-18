@@ -64,7 +64,7 @@ public final class AddHealth extends NodeRule {
         .returns(boolean.class)
         .build());
 
-    MethodSpec.Builder action = MethodSpec.methodBuilder(actionName)
+    var action = MethodSpec.methodBuilder(actionName)
         .addModifiers(context.publicFinalModifiers());
     if (valueStrength() == Strength.STRONG) {
       // Set the value to null only when dead, as otherwise the explicit removal of an expired async

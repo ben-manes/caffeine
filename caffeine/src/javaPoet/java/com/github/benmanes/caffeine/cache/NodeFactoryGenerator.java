@@ -113,7 +113,7 @@ public final class NodeFactoryGenerator {
       .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
       .build();
 
-  final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
+  final List<NodeRule> rules = List.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
       new AddFactoryMethods(),  new AddHealth(), new Finalize());
   final Feature[] featureByIndex = { null, null, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE,
@@ -166,7 +166,7 @@ public final class NodeFactoryGenerator {
       List<Path> files = stream
           .filter(path -> path.toString().endsWith(".java"))
           .collect(toList());
-      Formatter formatter = new Formatter();
+      var formatter = new Formatter();
       for (Path file : files) {
         String source = Files.readString(file);
         String formatted = formatter.formatSourceAndFixImports(source);
@@ -184,7 +184,7 @@ public final class NodeFactoryGenerator {
   }
 
   private void addConstants() {
-    List<String> constants = ImmutableList.of("key", "value", "accessTime", "writeTime");
+    var constants = List.of("key", "value", "accessTime", "writeTime");
     for (String constant : constants) {
       String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
       nodeFactory.addField(FieldSpec.builder(String.class, name)
@@ -246,8 +246,8 @@ public final class NodeFactoryGenerator {
 
   private MethodSpec newReferenceKeyMethod() {
     return MethodSpec.methodBuilder("newReferenceKey")
-        .addJavadoc("Returns a key suitable for inserting into the cache. If the cache holds"
-            + " keys strongly then\nthe key is returned. If the cache holds keys weakly "
+        .addJavadoc("Returns a key suitable for inserting into the cache. If the cache holds "
+            + "keys strongly then\nthe key is returned. If the cache holds keys weakly "
             + "then a {@link $T}\nholding the key argument is returned.\n", referenceKeyType)
         .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
         .addParameter(kTypeVar, "key")
@@ -293,8 +293,7 @@ public final class NodeFactoryGenerator {
   }
 
   private NavigableMap<String, Set<Feature>> getClassNameToFeatures() {
-    NavigableMap<String, Set<Feature>> classNameToFeatures = new TreeMap<>();
-
+    var classNameToFeatures = new TreeMap<String, Set<Feature>>();
     for (List<Object> combination : combinations()) {
       Set<Feature> features = getFeatures(combination);
       String className = Feature.makeClassName(features);
@@ -304,7 +303,7 @@ public final class NodeFactoryGenerator {
   }
 
   private Set<Feature> getFeatures(List<Object> combination) {
-    Set<Feature> features = new LinkedHashSet<>();
+    var features = new LinkedHashSet<Feature>();
     features.add((Feature) combination.get(0));
     features.add((Feature) combination.get(1));
     for (int i = 2; i < combination.size(); i++) {
@@ -333,8 +332,7 @@ public final class NodeFactoryGenerator {
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
 
-    NodeContext context = new NodeContext(superClass, className,
-        isFinal, parentFeatures, generateFeatures);
+    var context = new NodeContext(superClass, className, isFinal, parentFeatures, generateFeatures);
     for (NodeRule rule : rules) {
       rule.accept(context);
     }
@@ -342,19 +340,16 @@ public final class NodeFactoryGenerator {
   }
 
   private Set<List<Object>> combinations() {
-    Set<Feature> keyStrengths = ImmutableSet.of(Feature.STRONG_KEYS, Feature.WEAK_KEYS);
-    Set<Feature> valueStrengths = ImmutableSet.of(
-        Feature.STRONG_VALUES, Feature.WEAK_VALUES, Feature.SOFT_VALUES);
-    Set<Boolean> expireAfterAccess = ImmutableSet.of(false, true);
-    Set<Boolean> expireAfterWrite = ImmutableSet.of(false, true);
-    Set<Boolean> refreshAfterWrite = ImmutableSet.of(false, true);
-    Set<Boolean> maximumSize = ImmutableSet.of(false, true);
-    Set<Boolean> weighed = ImmutableSet.of(false, true);
+    var keyStrengths = Set.of(Feature.STRONG_KEYS, Feature.WEAK_KEYS);
+    var valueStrengths = Set.of(Feature.STRONG_VALUES, Feature.WEAK_VALUES, Feature.SOFT_VALUES);
+    var expireAfterAccess = Set.of(false, true);
+    var expireAfterWrite = Set.of(false, true);
+    var refreshAfterWrite = Set.of(false, true);
+    var maximumSize = Set.of(false, true);
+    var weighed = Set.of(false, true);
 
-    @SuppressWarnings("unchecked")
-    Set<List<Object>> combinations = Sets.cartesianProduct(keyStrengths, valueStrengths,
+    return Sets.cartesianProduct(keyStrengths, valueStrengths,
         expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximumSize, weighed);
-    return combinations;
   }
 
   /** Returns an encoded form of the class name for compact use. */

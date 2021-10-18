@@ -65,7 +65,6 @@ import com.github.benmanes.caffeine.cache.local.Finalize;
 import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
 import com.github.benmanes.caffeine.cache.local.LocalCacheRule;
 import com.google.common.base.CaseFormat;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -99,7 +98,7 @@ public final class LocalCacheFactoryGenerator {
   final Feature[] featureByIndex = { null, null, Feature.LISTENING, Feature.STATS,
       Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
       Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
-  final List<LocalCacheRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructor(),
+  final List<LocalCacheRule> rules = List.of(new AddSubtype(), new AddConstructor(),
       new AddKeyValueStrength(), new AddRemovalListener(), new AddStats(),
       new AddExpirationTicker(), new AddMaximum(), new AddFastPath(), new AddDeques(),
       new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
@@ -166,7 +165,7 @@ public final class LocalCacheFactoryGenerator {
       List<Path> files = stream
           .filter(path -> path.toString().endsWith(".java"))
           .collect(toList());
-      Formatter formatter = new Formatter();
+      var formatter = new Formatter();
       for (Path file : files) {
         String source = Files.readString(file);
         String formatted = formatter.formatSourceAndFixImports(source);
@@ -178,7 +177,7 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private void addConstants() {
-    List<String> constants = ImmutableList.of("maximum", "windowMaximum", "mainProtectedMaximum",
+    var constants = List.of("maximum", "windowMaximum", "mainProtectedMaximum",
         "weightedSize", "windowWeightedSize", "mainProtectedWeightedSize");
     for (String constant : constants) {
       String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
@@ -188,7 +187,7 @@ public final class LocalCacheFactoryGenerator {
           .build());
     }
 
-    constants = ImmutableList.of("key", "value", "accessTime", "writeTime");
+    constants = List.of("key", "value", "accessTime", "writeTime");
     for (String constant : constants) {
       String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
       factory.addField(FieldSpec.builder(String.class, name)
@@ -212,7 +211,7 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private NavigableMap<String, Set<Feature>> getClassNameToFeatures() {
-    NavigableMap<String, Set<Feature>> classNameToFeatures = new TreeMap<>();
+    var classNameToFeatures = new TreeMap<String, Set<Feature>>();
     for (List<Object> combination : combinations()) {
       Set<Feature> features = getFeatures(combination);
       String className = encode(Feature.makeClassName(features));
@@ -222,7 +221,7 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private Set<Feature> getFeatures(List<Object> combination) {
-    Set<Feature> features = new LinkedHashSet<>();
+    var features = new LinkedHashSet<Feature>();
     features.add(((Boolean) combination.get(0)) ? Feature.STRONG_KEYS : Feature.WEAK_KEYS);
     features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
     for (int i = 2; i < combination.size(); i++) {
@@ -237,8 +236,7 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private Set<List<Object>> combinations() {
-    Set<Boolean> options = ImmutableSet.of(true, false);
-    List<Set<Boolean>> sets = Collections.nCopies(featureByIndex.length, options);
+    List<Set<Boolean>> sets = Collections.nCopies(featureByIndex.length, Set.of(true, false));
     return Sets.cartesianProduct(sets);
   }
 
@@ -257,8 +255,8 @@ public final class LocalCacheFactoryGenerator {
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
 
-    LocalCacheContext context = new LocalCacheContext(
-        superClass, className, isFinal, parentFeatures, generateFeatures);
+    var context = new LocalCacheContext(superClass,
+        className, isFinal, parentFeatures, generateFeatures);
     for (LocalCacheRule rule : rules) {
       rule.accept(context);
     }

@@ -35,6 +35,7 @@ public final class AddRemovalListener extends LocalCacheRule {
 
   @Override
   protected void execute() {
+    context.suppressedWarnings.add("NullAway");
     context.cache.addField(
         FieldSpec.builder(REMOVAL_LISTENER, "removalListener", Modifier.FINAL).build());
     context.constructor.addStatement("this.removalListener = builder.getRemovalListener(async)");

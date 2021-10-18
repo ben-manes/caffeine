@@ -7,6 +7,7 @@ dependencies {
   api project(':caffeine')
   api libraries.guava
 
+  testImplementation libraries.slf4jNop
   testImplementation testLibraries.junit
   testImplementation testLibraries.truth
   testImplementation testLibraries.jctools

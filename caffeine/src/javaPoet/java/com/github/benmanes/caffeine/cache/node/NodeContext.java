@@ -20,11 +20,13 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.google.common.collect.Sets;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
@@ -39,6 +41,7 @@ public final class NodeContext {
   public final TypeName superClass;
   public final Set<Feature> parentFeatures;
   public final Set<Feature> generateFeatures;
+  public final Set<String> suppressedWarnings;
   public final List<Consumer<CodeBlock.Builder>> varHandles;
 
   public TypeSpec.Builder nodeSubtype;
@@ -51,10 +54,11 @@ public final class NodeContext {
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
     this.isFinal = isFinal;
     this.varHandles = new ArrayList<>();
+    this.suppressedWarnings = new TreeSet<>();
     this.className = requireNonNull(className);
     this.superClass = requireNonNull(superClass);
-    this.parentFeatures = requireNonNull(parentFeatures);
-    this.generateFeatures = requireNonNull(generateFeatures);
+    this.parentFeatures = Sets.immutableEnumSet(parentFeatures);
+    this.generateFeatures = Sets.immutableEnumSet(generateFeatures);
   }
 
   public Modifier[] publicFinalModifiers() {

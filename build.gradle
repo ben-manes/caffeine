@@ -71,7 +71,6 @@ subprojects {
     testImplementation testLibraries.truth
     testImplementation testLibraries.mockito
     testImplementation testLibraries.hamcrest
-    testImplementation testLibraries.slf4jTest
     testImplementation testLibraries.awaitility
     testImplementation testLibraries.osgiCompile
 

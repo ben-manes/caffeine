@@ -36,6 +36,7 @@ public final class AddExpireAfterAccess extends LocalCacheRule {
 
   @Override
   protected void execute() {
+    context.suppressedWarnings.add("NullAway");
     variableExpiration();
     fixedExpiration();
   }

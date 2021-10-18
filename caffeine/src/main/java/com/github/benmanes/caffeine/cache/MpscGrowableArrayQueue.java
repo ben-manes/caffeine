@@ -625,7 +625,6 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset(long)}
    * @return the element at the offset
    */
-  @SuppressWarnings("unchecked")
   static <E> E lpElement(E[] buffer, long offset) {
     return (E) REF_ARRAY.get(buffer, (int) offset);
   }
@@ -637,7 +636,6 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset(long)}
    * @return the element at the offset
    */
-  @SuppressWarnings("unchecked")
   static <E> E lvElement(E[] buffer, long offset) {
     return (E) REF_ARRAY.getVolatile(buffer, (int) offset);
   }

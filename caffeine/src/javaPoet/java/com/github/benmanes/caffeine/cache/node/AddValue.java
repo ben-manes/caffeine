@@ -49,13 +49,16 @@ public final class AddValue extends NodeRule {
         .addMethod(newGetRef("value"))
         .addMethod(makeSetValue())
         .addMethod(makeContainsValue());
-    addVarHandle("value", isStrongValues()
-        ? ClassName.get(Object.class)
-        : valueReferenceType().rawType);
+    if (isStrongValues()) {
+      addVarHandle("value", ClassName.get(Object.class));
+    } else {
+      addVarHandle("value", valueReferenceType().rawType);
+      context.suppressedWarnings.add("NullAway");
+    }
   }
 
   private FieldSpec newValueField() {
-    FieldSpec.Builder fieldSpec = isStrongValues()
+    var fieldSpec = isStrongValues()
         ? FieldSpec.builder(vTypeVar, "value", Modifier.VOLATILE)
         : FieldSpec.builder(valueReferenceType(), "value", Modifier.VOLATILE);
     return fieldSpec.build();
@@ -63,7 +66,7 @@ public final class AddValue extends NodeRule {
 
   /** Creates the getValue method. */
   private MethodSpec makeGetValue() {
-    MethodSpec.Builder getter = MethodSpec.methodBuilder("getValue")
+    var getter = MethodSpec.methodBuilder("getValue")
         .addModifiers(context.publicFinalModifiers())
         .returns(vTypeVar);
     String handle = varHandleName("value");
@@ -72,7 +75,7 @@ public final class AddValue extends NodeRule {
       return getter.build();
     }
 
-    CodeBlock code = CodeBlock.builder()
+    var code = CodeBlock.builder()
         .beginControlFlow("for (;;)")
             .addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)", Reference.class, handle)
             .addStatement("V referent = ref.get()")
@@ -86,7 +89,7 @@ public final class AddValue extends NodeRule {
 
   /** Creates the setValue method. */
   private MethodSpec makeSetValue() {
-    MethodSpec.Builder setter = MethodSpec.methodBuilder("setValue")
+    var setter = MethodSpec.methodBuilder("setValue")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(vTypeVar, "value")
         .addParameter(vRefQueueType, "referenceQueue");
@@ -105,7 +108,7 @@ public final class AddValue extends NodeRule {
   }
 
   private MethodSpec makeContainsValue() {
-    MethodSpec.Builder containsValue = MethodSpec.methodBuilder("containsValue")
+    var containsValue = MethodSpec.methodBuilder("containsValue")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(Object.class, "value")
         .returns(boolean.class);

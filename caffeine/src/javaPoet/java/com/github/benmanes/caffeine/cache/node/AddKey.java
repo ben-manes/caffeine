@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.node;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
 
+import java.util.List;
+
 import javax.lang.model.element.Modifier;
 
 import com.squareup.javapoet.ClassName;
@@ -80,5 +82,6 @@ public final class AddKey extends NodeRule {
       getKey.addStatement("return keyRef.get()");
     }
     context.nodeSubtype.addMethod(getKey.build());
+    context.suppressedWarnings.addAll(List.of("NullAway", "unchecked"));
   }
 }

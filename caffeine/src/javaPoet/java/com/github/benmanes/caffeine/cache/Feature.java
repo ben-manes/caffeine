@@ -17,10 +17,10 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 
 /**
  * The features that may be code generated.
@@ -46,8 +46,12 @@ public enum Feature {
   LISTENING,
   STATS;
 
+  private static final Set<Feature> fastPathIncompatible = Sets.immutableEnumSet(
+      Feature.EXPIRE_ACCESS, Feature.WEAK_KEYS, Feature.INFIRM_VALUES,
+      Feature.WEAK_VALUES, Feature.SOFT_VALUES);
+
   public static String makeEnumName(Iterable<Feature> features) {
-    return StreamSupport.stream(features.spliterator(), false)
+    return Streams.stream(features)
         .map(Feature::name)
         .collect(Collectors.joining("_"));
   }
@@ -110,8 +114,6 @@ public enum Feature {
   }
 
   public static boolean usesFastPath(Set<Feature> features) {
-    Set<Feature> incompatible = Sets.immutableEnumSet(Feature.EXPIRE_ACCESS,
-        Feature.WEAK_KEYS, Feature.INFIRM_VALUES, Feature.WEAK_VALUES, Feature.SOFT_VALUES);
-    return features.stream().noneMatch(incompatible::contains) && usesMaximum(features);
+    return features.stream().noneMatch(fastPathIncompatible::contains) && usesMaximum(features);
   }
 }

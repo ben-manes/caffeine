@@ -41,6 +41,10 @@ public final class AddConstructors extends NodeRule {
     addConstructorDefault();
     addConstructorByKey();
     addConstructorByKeyRef();
+    context.suppressedWarnings.add("NullAway");
+    if (isBaseClass()) {
+      context.suppressedWarnings.add("PMD.UnusedFormalParameter");
+    }
   }
 
   /** Adds the constructor used to create a factory. */

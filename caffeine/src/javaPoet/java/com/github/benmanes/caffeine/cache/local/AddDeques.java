@@ -52,6 +52,7 @@ public final class AddDeques extends LocalCacheRule {
         "this.$L = builder.evicts() || builder.expiresAfterAccess()\n? new $T()\n: null",
         "accessOrderWindowDeque", ACCESS_ORDER_DEQUE);
     addFieldAndMethod(ACCESS_ORDER_DEQUE, "accessOrderWindowDeque");
+    context.suppressedWarnings.add("NullAway");
   }
 
   private void addAccessOrderMainDeque() {
@@ -61,6 +62,7 @@ public final class AddDeques extends LocalCacheRule {
     }
     addDeque(ACCESS_ORDER_DEQUE, "accessOrderProbationDeque");
     addDeque(ACCESS_ORDER_DEQUE, "accessOrderProtectedDeque");
+    context.suppressedWarnings.add("NullAway");
   }
 
   private void addWriteOrderDeque() {
@@ -69,6 +71,7 @@ public final class AddDeques extends LocalCacheRule {
       return;
     }
     addDeque(WRITE_ORDER_DEQUE, "writeOrderDeque");
+    context.suppressedWarnings.add("NullAway");
   }
 
   private void addDeque(TypeName type, String name) {

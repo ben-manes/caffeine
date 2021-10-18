@@ -163,7 +163,8 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       try {
         if (replaceExistingValues) {
           int[] ignored = { 0 };
-          Map<K, V> loaded = cacheLoader.get().loadAll(keys);
+          @SuppressWarnings("NullAway")
+          Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
           for (var entry : loaded.entrySet()) {
             putNoCopyOrAwait(entry.getKey(), entry.getValue(),
                 /* publishToWriter */ false, ignored);

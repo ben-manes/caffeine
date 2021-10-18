@@ -14,6 +14,7 @@ dependencies {
   api libraries.osgiComponentAnnotations
 
   testImplementation libraries.guava
+  testImplementation libraries.slf4jNop
   testImplementation testLibraries.junit
   testImplementation testLibraries.testng
   testImplementation testLibraries.mockito

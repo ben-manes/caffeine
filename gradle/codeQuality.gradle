@@ -148,6 +148,9 @@ tasks.withType(JavaCompile).configureEach {
 
     nullaway {
       annotatedPackages.add('com.github.benmanes.caffeine')
+      checkOptionalEmptiness = true
+      suggestSuppressions = true
+      checkContracts = true
     }
   }
 }
