@@ -30,8 +30,13 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -85,6 +90,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   final String name;
 
   protected final Optional<CacheLoader<K, V>> cacheLoader;
+  protected final Set<CompletableFuture<?>> inFlight;
   protected final JCacheStatisticsMXBean statistics;
   protected final EventDispatcher<K, V> dispatcher;
   protected final ExpiryPolicy expiry;
@@ -117,6 +123,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         ? configuration.getCacheWriter()
         : DisabledCacheWriter.get();
     cacheMXBean = new JCacheMXBean(this);
+    inFlight = ConcurrentHashMap.newKeySet();
   }
 
   @Override
@@ -237,6 +244,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @SuppressWarnings({"CatchingUnchecked", "FutureReturnValueIgnored"})
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();
@@ -249,7 +257,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       listener.onCompletion();
       return;
     }
-    executor.execute(() -> {
+
+    CompletableFuture<?> future = CompletableFuture.runAsync(() -> {
       try {
         if (replaceExistingValues) {
           loadAllAndReplaceExisting(keys);
@@ -264,7 +273,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       } finally {
         dispatcher.ignoreSynchronous();
       }
-    });
+    }, executor);
+
+    inFlight.add(future);
+    future.whenComplete((r, e) -> inFlight.remove(future));
   }
 
   /** Performs the bulk load where the existing entries are replace. */
@@ -892,7 +904,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         cacheManager.destroyCache(name);
         closed = true;
 
-        Throwable thrown = null;
+        Throwable thrown = shutdownExecutor();
         thrown = tryClose(expiry, thrown);
         thrown = tryClose(writer, thrown);
         thrown = tryClose(cacheLoader.orElse(null), thrown);
@@ -905,6 +917,24 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
     }
     cache.invalidateAll();
+  }
+
+  @SuppressWarnings("FutureReturnValueIgnored")
+  private @Nullable Throwable shutdownExecutor() {
+    Throwable thrown = null;
+    if (executor instanceof ExecutorService) {
+      ExecutorService es = (ExecutorService) executor;
+      es.shutdown();
+    }
+    try {
+      CompletableFuture
+          .allOf(inFlight.toArray(new CompletableFuture[0]))
+          .get(10, TimeUnit.SECONDS);
+    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+      thrown = e;
+    }
+    inFlight.clear();
+    return thrown;
   }
 
   /**
