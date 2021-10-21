@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -150,7 +151,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   @Override
-  @SuppressWarnings("CatchingUnchecked")
+  @SuppressWarnings({"CatchingUnchecked", "FutureReturnValueIgnored"})
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();
@@ -159,7 +160,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         ? NullCompletionListener.INSTANCE
         : completionListener;
 
-    executor.execute(() -> {
+    var future = CompletableFuture.runAsync(() -> {
       try {
         if (replaceExistingValues) {
           int[] ignored = { 0 };
@@ -178,6 +179,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       } finally {
         dispatcher.ignoreSynchronous();
       }
-    });
+    }, executor);
+
+    inFlight.add(future);
+    future.whenComplete((r, e) -> inFlight.remove(future));
   }
 }
