@@ -729,6 +729,45 @@ public final class AsyncCacheTest {
     }
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllBifunction_early_success(AsyncCache<Int, Int> cache, CacheContext context) {
+    var key = context.absentKeys().iterator().next();
+    var value = Int.valueOf(Integer.MAX_VALUE);
+
+    var bulk = new CompletableFuture<Map<Int, Int>>();
+    var result = cache.getAll(context.absentKeys(), (keysToLoad, executor) -> bulk);
+    var future = cache.asMap().get(key);
+    future.complete(value);
+
+    bulk.complete(context.absent());
+    assertThat(future).succeedsWith(context.absent().get(key));
+    assertThat(result.join()).containsExactlyEntriesIn(context.absent());
+    assertThat(cache.synchronous().asMap()).containsAtLeastEntriesIn(context.absent());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllBifunction_early_failure(AsyncCache<Int, Int> cache, CacheContext context) {
+    var key = context.absentKeys().iterator().next();
+    var error = new IllegalStateException();
+
+    var bulk = new CompletableFuture<Map<Int, Int>>();
+    var result = cache.getAll(context.absentKeys(), (keysToLoad, executor) -> bulk);
+    var future = cache.asMap().get(key);
+    future.completeExceptionally(error);
+
+    bulk.complete(context.absent());
+    assertThat(future).succeedsWith(context.absent().get(key));
+    assertThat(cache.synchronous().asMap()).containsAtLeastEntriesIn(context.absent());
+    if (result.isCompletedExceptionally()) {
+      assertThat(result).failsWith(CompletionException.class)
+          .hasCauseThat().isSameInstanceAs(error);
+    } else {
+      assertThat(result.join()).containsExactlyEntriesIn(context.absent());
+    }
+  }
+
   /* --------------- put --------------- */
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })

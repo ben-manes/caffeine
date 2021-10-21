@@ -43,7 +43,7 @@ ext {
     fastfilter: '1.0.2',
     fastutil: '8.5.6',
     flipTables: '1.1.0',
-    googleJavaFormat: '1.11.0',
+    googleJavaFormat: '1.12.0',
     guava: '31.0.1-jre',
     jackrabbit: '1.40.0',
     jamm: '0.3.3',
@@ -85,7 +85,6 @@ ext {
   ]
   pluginVersions = [
     bnd: '6.0.0',
-    //bnd: '5.3.0',
     checkstyle: '9.0.1',
     coveralls: '2.12.0',
     errorprone: '2.0.2',
@@ -94,7 +93,7 @@ ext {
     jmh: '0.6.6',
     jmhReport: '0.9.0',
     nexusPublish: '1.1.0',
-    nullaway: '1.1.0',
+    nullaway: '1.2.0',
     pmd: '6.39.0',
     semanticVersioning: '1.1.0',
     shadow: '7.1.0',

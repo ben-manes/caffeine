@@ -243,7 +243,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
         for (var entry : proxies.entrySet()) {
           cache.remove(entry.getKey(), entry.getValue());
-          entry.getValue().completeExceptionally(error);
+          entry.getValue().obtrudeException(error);
         }
         cache.statsCounter().recordLoadFailure(loadTime);
         if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
@@ -260,7 +260,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     private void fillProxies(Map<? extends K, ? extends V> result) {
       proxies.forEach((key, future) -> {
         V value = result.get(key);
-        future.complete(value);
+        future.obtrudeValue(value);
         if (value == null) {
           cache.remove(key, future);
         } else {
