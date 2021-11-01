@@ -15,10 +15,8 @@
  */
 package com.github.benmanes.caffeine.examples.coalescing.bulkloader;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.stream.Collectors.toMap;
-
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -37,6 +35,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toMap;
+
 /**
  * An implementation of {@link AsyncCacheLoader} that delays fetching a bit until "enough" keys are collected
  * to do a bulk call. The assumption is that doing a bulk call is so much more efficient that it is worth
@@ -48,18 +49,22 @@ import java.util.stream.Stream;
  */
 public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, Value> {
     private final Consumer<Collection<WaitingKey>> bulkLoader;
-    private int maxLoadSize; // maximum number of keys to load in one call
-    private long maxDelay; // maximum time between request of a value and loading it
-    private volatile Queue<WaitingKey> waitingKeys = new ConcurrentLinkedQueue<>();
-    private ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
+    private final int maxLoadSize; // maximum number of keys to load in one call
+    private final long maxDelay; // maximum time between request of a value and loading it
+    private final Queue<WaitingKey> waitingKeys = new ConcurrentLinkedQueue<>();
+    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> schedule;
     // Queue.size() is expensive, so here we keep track of the queue size separately
-    private AtomicInteger size = new AtomicInteger(0);
+    private final AtomicInteger size = new AtomicInteger(0);
 
-    private final class WaitingKey {
-        Key key;
-        CompletableFuture<Value> future;
-        long waitingSince;
+    class WaitingKey {
+        private final Key key;
+        private final CompletableFuture<Value> future = new CompletableFuture<>();
+        private final long waitingSince = System.currentTimeMillis();
+
+        private WaitingKey(Key key) {
+            this.key = key;
+        }
     }
 
     /**
@@ -72,8 +77,8 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
      *                    for the corresponding future.
      */
     public static <Key, Value> CoalescingBulkloader<Key, Value> byOrder(int maxLoadSize, long maxDelay,
-            final Function<Stream<Key>, CompletableFuture<Stream<Value>>> load) {
-        return new CoalescingBulkloader<>(maxLoadSize, maxDelay, toLoad -> {
+                                                                        final Function<Stream<Key>, CompletableFuture<Stream<Value>>> load) {
+        return new CoalescingBulkloader<Key, Value>(maxLoadSize, maxDelay, toLoad -> {
             final Stream<Key> keys = toLoad.stream().map(wk -> wk.key);
             load.apply(keys).thenAccept(values -> {
                 final Iterator<Value> iv = values.iterator();
@@ -97,8 +102,8 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
      *                    for the corresponding future.
      */
     public static <Key, Value> CoalescingBulkloader<Key, Value> byMap(int maxLoadSize, long maxDelay,
-            final Function<Stream<Key>, CompletableFuture<Map<Key, Value>>> load) {
-        return new CoalescingBulkloader<>(maxLoadSize, maxDelay, toLoad -> {
+                                                                      final Function<Stream<Key>, CompletableFuture<Map<Key, Value>>> load) {
+        return new CoalescingBulkloader<Key, Value>(maxLoadSize, maxDelay, toLoad -> {
             final Stream<Key> keys = toLoad.stream().map(wk -> wk.key);
             load.apply(keys).thenAccept(values -> {
                 for (CoalescingBulkloader<Key, Value>.WaitingKey waitingKey : toLoad) {
@@ -124,9 +129,9 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
      *                       for the corresponding future.
      */
     public static <Key, Value, Intermediate> CoalescingBulkloader<Key, Value> byExtraction(int maxLoadSize, long maxDelay,
-            final Function<Intermediate, Key> keyExtractor,
-            final Function<Intermediate, Value> valueExtractor,
-            final Function<Stream<Key>, CompletableFuture<Stream<Intermediate>>> load) {
+                                                                                           final Function<Intermediate, Key> keyExtractor,
+                                                                                           final Function<Intermediate, Value> valueExtractor,
+                                                                                           final Function<Stream<Key>, CompletableFuture<Stream<Intermediate>>> load) {
         return byMap(maxLoadSize, maxDelay,
                 keys -> load.apply(keys).thenApply(
                         intermediates -> intermediates.collect(toMap(keyExtractor, valueExtractor))));
@@ -140,11 +145,9 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
         this.maxDelay = maxDelay;
     }
 
-    @Override public CompletableFuture<Value> asyncLoad(Key key, Executor executor) {
-        final WaitingKey waitingKey = new WaitingKey();
-        waitingKey.key = key;
-        waitingKey.future = new CompletableFuture<>();
-        waitingKey.waitingSince = System.currentTimeMillis();
+    @Override
+    public CompletableFuture<Value> asyncLoad(Key key, Executor executor) {
+        final WaitingKey waitingKey = new WaitingKey(key);
         waitingKeys.add(waitingKey);
 
         if (size.incrementAndGet() >= maxLoadSize) {
@@ -156,12 +159,13 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
         return waitingKey.future;
     }
 
-    synchronized private void startWaiting() {
+    private synchronized void startWaiting() {
+        if (schedule != null)
+            schedule.cancel(false);
         schedule = timer.schedule(this::doLoad, maxDelay, MILLISECONDS);
     }
 
-    synchronized private void doLoad() {
-        schedule.cancel(false);
+    private synchronized void doLoad() {
         do {
             List<WaitingKey> toLoad = new ArrayList<>(Math.min(size.get(), maxLoadSize));
             int counter = maxLoadSize;
