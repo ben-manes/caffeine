@@ -76,8 +76,10 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
      *                    Extra values are ignored. Missing values lead to a {@link java.util.NoSuchElementException}
      *                    for the corresponding future.
      */
-    public static <Key, Value> CoalescingBulkloader<Key, Value> byOrder(int maxLoadSize, long maxDelay,
-                                                                        final Function<Stream<Key>, CompletableFuture<Stream<Value>>> load) {
+    public static <Key, Value> CoalescingBulkloader<Key, Value> byOrder(
+            int maxLoadSize,
+            long maxDelay,
+            final Function<Stream<Key>, CompletableFuture<Stream<Value>>> load) {
         return new CoalescingBulkloader<Key, Value>(maxLoadSize, maxDelay, toLoad -> {
             final Stream<Key> keys = toLoad.stream().map(wk -> wk.key);
             load.apply(keys).thenAccept(values -> {
@@ -101,8 +103,10 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
      *                    Extra values are ignored. Missing values lead to a {@link java.util.NoSuchElementException}
      *                    for the corresponding future.
      */
-    public static <Key, Value> CoalescingBulkloader<Key, Value> byMap(int maxLoadSize, long maxDelay,
-                                                                      final Function<Stream<Key>, CompletableFuture<Map<Key, Value>>> load) {
+    public static <Key, Value> CoalescingBulkloader<Key, Value> byMap(
+            int maxLoadSize,
+            long maxDelay,
+            final Function<Stream<Key>, CompletableFuture<Map<Key, Value>>> load) {
         return new CoalescingBulkloader<Key, Value>(maxLoadSize, maxDelay, toLoad -> {
             final Stream<Key> keys = toLoad.stream().map(wk -> wk.key);
             load.apply(keys).thenAccept(values -> {
@@ -128,10 +132,12 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
      *                       Extra values are ignored. Missing values lead to a {@link java.util.NoSuchElementException}
      *                       for the corresponding future.
      */
-    public static <Key, Value, Intermediate> CoalescingBulkloader<Key, Value> byExtraction(int maxLoadSize, long maxDelay,
-                                                                                           final Function<Intermediate, Key> keyExtractor,
-                                                                                           final Function<Intermediate, Value> valueExtractor,
-                                                                                           final Function<Stream<Key>, CompletableFuture<Stream<Intermediate>>> load) {
+    public static <Key, Value, Intermediate> CoalescingBulkloader<Key, Value> byExtraction(
+            int maxLoadSize,
+            long maxDelay,
+            final Function<Intermediate, Key> keyExtractor,
+            final Function<Intermediate, Value> valueExtractor,
+            final Function<Stream<Key>, CompletableFuture<Stream<Intermediate>>> load) {
         return byMap(maxLoadSize, maxDelay,
                 keys -> load.apply(keys).thenApply(
                         intermediates -> intermediates.collect(toMap(keyExtractor, valueExtractor))));
