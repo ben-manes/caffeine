@@ -11,7 +11,7 @@ jobs:
   qodana:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.3.5
+      - uses: actions/checkout@v2.4.0
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v2
         with:
