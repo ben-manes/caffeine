@@ -108,6 +108,7 @@
     <trusted-key id='1861c322c56014b2' group='commons-lang' />
     <trusted-key id='a41f13c999945293' group='commons-logging' />
     <trusted-key id='379ce192d401ab61' group='info.picocli' />
+    <trusted-key id='6601e5c08dccbb96' group='info.picocli' />
     <trusted-key id='0d9cb5ee96b7bc22' group='io.airlift' />
     <trusted-key id='32bbf14af07ca77b' group='io.github.fastfilter' />
     <trusted-key id='a6ea2e2bf22e0543' group='io.github.java-diff-utils' />
@@ -372,11 +373,20 @@
     <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.8'>
       <sha512>200B2783133DB13CEC356EC2390ED028AFE41A2E685A0805E9DC6F83BB0809C70FC1DCB14232F0863EC09C9508DABB988D3A728C4D10DC1E7AE17E25E5102C37</sha512>
     </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.7.9'>
+      <sha512>755DA0929DEC520A7A5AFA7C46C5DAB0040A7DDD8C6DC9E2092BB83074BFF519E23DDE2CE45118F449B6CE417B4123D519FDA6FE6694D295B575C983F782C49D</sha512>
+    </dependency>
     <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.0-beta.2'>
       <sha512>BD956309B6719B39F5C9F76134F94D4868AB64BF34E811ECA6C2B435C1E6AB1ED9E036BF6F12EB928FE8424EF9CF8DFF023A2498D7A930FA4E2F570516990BAE</sha512>
     </dependency>
     <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.0-beta.3'>
       <sha512>F49F447FBCE57A1C8EA792FFA38744929CAEEB7398056B3760C3DB984E911C52BBC2057CA1000E29C91931FB94125BF1D3267858D3981988CB8F912CAF1CAA1C</sha512>
+    </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.0-beta.5'>
+      <sha512>ED4830A92C542A6CA4DFFDC74F9A5AC80D4C554B8B54451083EA345E9B2F0790E90F20393F3E36B08EE44CDD053FA2489B3C489CF9A14A14BB4EF723938B79E8</sha512>
+    </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.0-beta.6'>
+      <sha512>B865FAE7D5F9515F7E92CB9442A5480597F024C779A47A53D68E09D6933AA95E68DE1FE74D73DF35C0A3D991D6882F9F8598738227CDE5CF13E3C1BCB08CDD54</sha512>
     </dependency>
     <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.1'>
       <sha512>2C09B102601DF179B615EF37F5E56B9AA1100BB2A17D742B8CB452C1A193C44ED3EBE029FEAFB9822D55A680D99B682184C733D56F835874DD01B02209AFA13D</sha512>

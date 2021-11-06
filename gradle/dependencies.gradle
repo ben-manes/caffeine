@@ -26,8 +26,8 @@
 ext {
   versions = [
     akka: '2.6.17',
-    cache2k: '2.3.1.Alpha',
-    checkerFramework: '3.18.1',
+    cache2k: '2.4.1.Final',
+    checkerFramework: '3.19.0',
     coherence: '20.06',
     commonsCompress: '1.21',
     commonsLang3: '3.12.0',
@@ -36,7 +36,7 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.1',
     ehcache3: '3.9.7',
-    errorprone: '2.9.0',
+    errorprone: '2.10.0',
     errorproneJavac: '9+181-r4173-1',
     elasticSearch: '8.0.0-alpha1',
     expiringMap: '0.5.10',
@@ -56,7 +56,7 @@ ext {
     nullaway: '0.9.2',
     ohc: '0.6.1',
     osgiComponentAnnotations: '1.5.0',
-    picocli: '4.6.1',
+    picocli: '4.6.2',
     slf4j: '2.0.0-alpha5',
     tcache: '2.0.1',
     stream: '2.9.8',
@@ -66,7 +66,7 @@ ext {
     zstd: '1.5.0-4',
   ]
   testVersions = [
-    awaitility: '4.1.0',
+    awaitility: '4.1.1',
     guice: '5.0.1',
     hamcrest: '2.2',
     jcacheTck: '1.1.1',
@@ -85,7 +85,7 @@ ext {
   ]
   pluginVersions = [
     bnd: '6.0.0',
-    checkstyle: '9.0.1',
+    checkstyle: '9.1',
     coveralls: '2.12.0',
     errorprone: '2.0.2',
     findsecbugs: '1.11.0',
@@ -94,12 +94,12 @@ ext {
     jmhReport: '0.9.0',
     nexusPublish: '1.1.0',
     nullaway: '1.2.0',
-    pmd: '6.39.0',
+    pmd: '6.40.0',
     semanticVersioning: '1.1.0',
     shadow: '7.1.0',
     sonarqube: '3.3',
     spotbugs: '4.4.2',
-    spotbugsPlugin: '4.7.8',
+    spotbugsPlugin: '5.0.0-beta.6',
     stats: '0.47.0',
     versions: '0.39.0',
   ]

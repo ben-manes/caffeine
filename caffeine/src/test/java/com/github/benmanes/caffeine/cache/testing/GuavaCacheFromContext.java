@@ -461,8 +461,7 @@ public final class GuavaCacheFromContext {
     }
   }
 
-  static class GuavaLoadingCache<K, V> extends GuavaCache<K, V>
-      implements LoadingCache<K, V>, Serializable {
+  static class GuavaLoadingCache<K, V> extends GuavaCache<K, V> implements LoadingCache<K, V> {
     private static final long serialVersionUID = 1L;
 
     private final com.google.common.cache.LoadingCache<K, V> cache;

@@ -472,8 +472,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
   }
 
-  @SuppressWarnings("serial")
   abstract class AbstractCacheView<K, V> implements Cache<K, V>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     transient @Nullable AsMapView<K, V> asMapView;
 
     abstract LocalAsyncCache<K, V> asyncCache();

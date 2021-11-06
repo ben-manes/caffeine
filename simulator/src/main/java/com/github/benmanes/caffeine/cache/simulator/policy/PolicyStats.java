@@ -292,7 +292,7 @@ public class PolicyStats {
   }
 
   @AutoValue @AutoBuilder
-  public static abstract class Metric {
+  public abstract static class Metric {
     public enum MetricType { NUMBER, PERCENT, OBJECT }
 
     public abstract String name();

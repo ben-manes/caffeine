@@ -237,7 +237,7 @@ public final class Registry {
   }
 
   @AutoValue
-  static abstract class Factory {
+  abstract static class Factory {
     abstract Class<? extends Policy> policyClass();
     abstract Function<Config, Set<Policy>> creator();
 

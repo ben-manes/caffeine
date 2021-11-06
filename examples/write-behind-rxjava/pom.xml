@@ -10,10 +10,10 @@
 
   <properties>
     <java.version>11</java.version>
-    <caffeine.version>3.0.2</caffeine.version>
+    <caffeine.version>3.0.4</caffeine.version>
     <rxjava.version>2.2.21</rxjava.version>
     <junit.version>4.13.2</junit.version>
-    <awaitility.version>4.1.0</awaitility.version>
+    <awaitility.version>4.1.1</awaitility.version>
   </properties>
 
   <dependencies>

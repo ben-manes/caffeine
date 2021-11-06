@@ -100,7 +100,7 @@ public final class MapTestFactory {
     };
   }
 
-  private static abstract class TestAsyncMapGenerator
+  private abstract static class TestAsyncMapGenerator
       implements TestMapGenerator<String, CompletableFuture<String>> {
     static final CompletableFuture<String> JAN = CompletableFuture.completedFuture("January");
     static final CompletableFuture<String> FEB = CompletableFuture.completedFuture("February");
