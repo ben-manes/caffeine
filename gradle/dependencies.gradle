@@ -109,7 +109,7 @@ ext {
   ]
 
   libraries = [
-    akka: "com.typesafe.akka:akka-actor_2.12:${versions.akka}",
+    akka: "com.typesafe.akka:akka-actor-typed_3:${versions.akka}",
     cache2k: "org.cache2k:cache2k-core:${versions.cache2k}",
     checkerAnnotations: "org.checkerframework:checker-qual:${versions.checkerFramework}",
     checkerFramework: "org.checkerframework:checker:${versions.checkerFramework}",
@@ -146,6 +146,10 @@ ext {
     picocli: "info.picocli:picocli:${versions.picocli}",
     slf4jNop: [
       "org.slf4j:slf4j-nop:${versions.slf4j}",
+      "org.slf4j:slf4j-jdk-platform-logging:${versions.slf4j}",
+    ],
+    slf4jJdk: [
+      "org.slf4j:slf4j-jdk14:${versions.slf4j}",
       "org.slf4j:slf4j-jdk-platform-logging:${versions.slf4j}",
     ],
     tcache: "com.trivago:triava:${versions.tcache}",

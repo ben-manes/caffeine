@@ -207,6 +207,7 @@
     <trusted-key id='e7bf252cf360097e' group='org.hdrhistogram' />
     <trusted-key id='cb43338e060cf9fa' group='org.jacoco' />
     <trusted-key id='10066a9707090cf9' group='org.javassist' />
+    <trusted-key id='164779204e106a76' group='org.javassist' />
     <trusted-key id='eb23d947b2b8e23c' group='org.jctools' />
     <trusted-key id='e93671c7272b7b3f' group='org.jdom' />
     <trusted-key id='379ce192d401ab61' group='org.jetbrains' />
@@ -246,7 +247,10 @@
     <trusted-key id='03a0e85480e2c433' group='org.plumelib' />
     <trusted-key id='1364c5e2df3e99c5' group='org.reactivestreams' />
     <trusted-key id='8e1ad594207b7fb2' group='org.reflections' />
+    <trusted-key id='f13d3e721d56bd54' group='org.reflections' />
+    <trusted-key id='8f7f6c0451967b84' group='org.scala-lang' />
     <trusted-key id='c03ef1d7d692bcff' group='org.scala-lang' />
+    <trusted-key id='63426a08b91ed6b0' group='org.scala-lang.modules' />
     <trusted-key id='64163449a529ab1e' group='org.scala-lang.modules' />
     <trusted-key id='2c7b12f2a511e325' group='org.slf4j' />
     <trusted-key id='2161d72e7dcd4258' group='org.sonarsource.scanner.api' />

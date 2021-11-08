@@ -16,6 +16,8 @@
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.Spliterator.NONNULL;
+import static java.util.Spliterator.ORDERED;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -23,7 +25,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -47,7 +48,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
   public Stream<AccessEvent> events() {
     var input = new DataInputStream(readFile());
     var stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
-        new TraceIterator(input), Spliterator.ORDERED), /* parallel */ false);
+        new TraceIterator(input), ORDERED | NONNULL), /* parallel */ false);
     return stream.onClose(() -> Closeables.closeQuietly(input));
   }
 

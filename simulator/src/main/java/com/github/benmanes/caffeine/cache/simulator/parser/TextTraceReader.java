@@ -39,8 +39,7 @@ public abstract class TextTraceReader extends AbstractTraceReader {
   @SuppressWarnings("PMD.CloseResource")
   protected Stream<String> lines() {
     InputStream input = readFile();
-    var reader = new InputStreamReader(input, UTF_8);
-    return new BufferedReader(reader).lines().map(String::trim)
-        .onClose(() -> Closeables.closeQuietly(input));
+    var reader = new BufferedReader(new InputStreamReader(input, UTF_8));
+    return reader.lines().map(String::trim).onClose(() -> Closeables.closeQuietly(reader));
   }
 }

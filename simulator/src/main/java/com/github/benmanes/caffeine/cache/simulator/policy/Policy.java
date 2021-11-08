@@ -39,12 +39,15 @@ public interface Policy {
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
 
-  /** The annotated name. */
+  /** The policy's name. */
   default String name() {
     PolicySpec policySpec = getClass().getAnnotation(PolicySpec.class);
-    checkState((policySpec != null) && isNotBlank(policySpec.name()),
-        "The @%s name must be specified on %s", PolicySpec.class.getSimpleName(), getClass());
-    return policySpec.name().trim();
+    if ((policySpec != null) && isNotBlank(policySpec.name())) {
+      return policySpec.name().trim();
+    }
+    checkState(stats() != null, "The @%s name must be specified on %s or by the %s",
+        PolicySpec.class.getSimpleName(), getClass(), PolicyStats.class.getSimpleName());
+    return stats().name();
   }
 
   /** The additional features supported. */
