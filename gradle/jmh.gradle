@@ -40,7 +40,7 @@ jmh {
   if (project.hasProperty('includePattern')) {
     includes = [ project.includePattern ]
   } else {
-    tasks.jmh.doFirst { throw new GradleException("jmh: includePattern expected") }
+    tasks.jmh.doFirst { throw new GradleException('jmh: includePattern expected') }
   }
   // Benchmark parameters: Separated by '&' for parameter types, and ',' for multiple values
   if (project.hasProperty('benchmarkParameters')) {

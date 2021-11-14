@@ -42,8 +42,8 @@ objectLayoutTasks*.configure {
   classpath configurations.objectLayout, sourceSets.main.runtimeClasspath
   doFirst {
     if (!project.hasProperty('className')) {
-      throw new GradleException("Usage: $it.name " +
-        "-PclassName=com.github.benmanes.caffeine.[CLASS_NAME]")
+      throw new GradleException("Usage: ${it.name} " +
+        '-PclassName=com.github.benmanes.caffeine.[CLASS_NAME]')
     }
     args it.name, 'com.github.benmanes.caffeine.' + className
   }

@@ -29,7 +29,6 @@ jobs:
           path: |
             ~/.gradle/wrapper
             ~/.gradle/caches
-            ~/.sonar/cache
           key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle
       - name: Run tests
@@ -38,7 +37,6 @@ jobs:
         if: >
           matrix.java == env.MIN_JVM
           && github.event_name == 'push'
-          && endsWith(github.ref, github.event.repository.default_branch)
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: ./gradlew coveralls -S

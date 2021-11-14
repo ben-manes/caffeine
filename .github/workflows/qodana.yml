@@ -23,7 +23,6 @@ jobs:
           path: |
             ~/.gradle/wrapper
             ~/.gradle/caches
-            ~/.sonar/cache
           key: ${{ runner.os }}-${{ github.job }}-${{ env.JAVA_VERSION }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle
       - name: Build

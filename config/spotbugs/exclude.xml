@@ -4,8 +4,9 @@
     xsi:schemaLocation="http://findbugs.sourceforge.net/filter/3.0.0
     https://raw.githubusercontent.com/findbugsproject/findbugs/3.0.1/findbugs/etc/findbugsfilter.xsd">
   <Match>
-    <Bug pattern="EI_EXPOSE_REP, EI_EXPOSE_REP2, SE_BAD_FIELD, SE_BAD_FIELD_STORE,
-      SE_NO_SUITABLE_CONSTRUCTOR, SE_TRANSIENT_FIELD_NOT_RESTORED, DMI_RANDOM_USED_ONLY_ONCE"/>
+    <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE, EI_EXPOSE_REP, EI_EXPOSE_REP2,
+      MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR, SE_BAD_FIELD, SE_BAD_FIELD_STORE,
+      SE_NO_SUITABLE_CONSTRUCTOR, SE_TRANSIENT_FIELD_NOT_RESTORED"/>
   </Match>
 
   <!-- Caffeine -->
@@ -128,6 +129,16 @@
     <Bug pattern="FORMAT_STRING_MANIPULATION, UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
 
+  <!-- Guava -->
+  <Match>
+    <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache"/>
+    <Or>
+      <Method name="getAll"/>
+      <Method name="getUnchecked"/>
+    </Or>
+    <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+  </Match>
+
   <!-- JCache -->
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider"/>
@@ -152,6 +163,14 @@
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
     <Method name="close"/>
     <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.LoadingCacheProxy"/>
+    <Or>
+      <Method name="get"/>
+      <Method name="getAll"/>
+    </Or>
+    <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.copy.AbstractCopier"/>

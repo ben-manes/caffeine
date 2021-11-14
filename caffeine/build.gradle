@@ -97,7 +97,7 @@ tasks.named('jar').configure {
 
 sonarqube {
   properties {
-    property "sonar.exclusions", '**/NodeFactory.java, **/LocalCacheFactory.java'
+    property 'sonar.exclusions', '**/NodeFactory.java, **/LocalCacheFactory.java'
   }
 }
 

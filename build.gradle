@@ -119,42 +119,33 @@ nexusPublishing {
 }
 
 // Only report code coverage for projects that are distributed
-def publishedProjects = subprojects.findAll { it.path != ':simulator' }
+def coveredProjects = [ 'caffeine', 'guava', 'jcache' ].collect { project(it) }
 
-tasks.register('jacocoMerge', JacocoMerge) {
-  publishedProjects.each { subproject ->
-    executionData subproject.tasks.withType(Test)
-  }
-  doFirst {
-    executionData = files(executionData.findAll { it.exists() })
-  }
-}
-
-tasks.register('jacocoRootReport', JacocoReport) {
+tasks.register('jacocoFullReport', JacocoReport) {
   group = 'Coverage reports'
   description = 'Generates an aggregate report from all subprojects'
-  dependsOn publishedProjects.test, jacocoMerge
 
-  additionalSourceDirs.from = files(publishedProjects.sourceSets.main.allSource.srcDirs)
-  sourceDirectories.from = files(publishedProjects.sourceSets.main.allSource.srcDirs)
-  classDirectories.from = files(publishedProjects.sourceSets.main.output)
-  executionData jacocoMerge.destinationFile
+  coveredProjects.each {
+    sourceSets it.sourceSets.main
+    mustRunAfter it.tasks.withType(Test)
+    executionData fileTree(it.buildDir.absolutePath).include('jacoco/*.exec')
+  }
 
   reports {
     html.required = true // human readable
-    xml.required = true // required by coveralls
+    xml.required = true  // required by coveralls
   }
 }
 
 coveralls {
-  sourceDirs = publishedProjects.sourceSets.main.allSource.srcDirs.flatten()
-  jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+  sourceDirs = coveredProjects.sourceSets.main.allSource.srcDirs.flatten()
+  jacocoReportPath = "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
 }
 
 tasks.named('coveralls').configure {
   group = 'Coverage reports'
   description = 'Uploads the aggregated coverage report to Coveralls'
 
-  dependsOn jacocoRootReport
+  dependsOn jacocoFullReport
   onlyIf { System.env.'CI' }
 }

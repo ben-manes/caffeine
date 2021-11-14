@@ -98,7 +98,7 @@ ext {
     semanticVersioning: '1.1.0',
     shadow: '7.1.0',
     sonarqube: '3.3',
-    spotbugs: '4.4.2',
+    spotbugs: '4.5.0',
     spotbugsPlugin: '5.0.0-beta.6',
     stats: '0.47.0',
     versions: '0.39.0',
@@ -180,7 +180,7 @@ ext {
       "org.osgi:org.osgi.util.promise:${testVersions.osgiUtilPromise}",
       "org.ops4j.pax.exam:pax-exam-container-native:${testVersions.paxExam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${testVersions.paxExam}",
-      "org.ops4j.pax.url:pax-url-aether:2.6.7",
+      'org.ops4j.pax.url:pax-url-aether:2.6.7',
     ],
     slf4jTest: [
       "com.github.valfirst:slf4j-test:${testVersions.slf4jTest}",
