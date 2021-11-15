@@ -19,11 +19,6 @@ buildscript {
   }
 }
 
-buildScan {
-  termsOfServiceAgree = 'yes'
-  termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-}
-
 tasks.register('testReport', TestReport) {
   group = 'Build'
   description = 'Generates an aggregate test report'

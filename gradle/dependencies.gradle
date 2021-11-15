@@ -99,7 +99,7 @@ ext {
     shadow: '7.1.0',
     sonarqube: '3.3',
     spotbugs: '4.5.0',
-    spotbugsPlugin: '5.0.0-beta.6',
+    spotbugsPlugin: '5.0.0-beta.7',
     stats: '0.47.0',
     versions: '0.39.0',
   ]

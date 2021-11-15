@@ -82,7 +82,6 @@ tasks.withType(Test).configureEach {
       options.includeGroups = ['slow']
     } else if (name.startsWith('isolated')) {
       options.includeGroups = ['isolated']
-      testLogging.events 'started'
     } else if (name.startsWith('lincheck')) {
       options.includeGroups = ['lincheck']
       jvmArgs += [

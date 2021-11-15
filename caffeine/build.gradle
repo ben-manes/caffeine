@@ -126,7 +126,7 @@ tasks.named('compileJava').configure {
   dependsOn(generateLocalCaches)
   dependsOn(generateNodes)
 }
-tasks.named('compileTestJava').configure {
+['compileTestJava', 'pmdMain', 'spotbugsMain'].collect { tasks.named(it) }*.configure {
   dependsOn(compileCodeGenJava)
 }
 tasks.named('sourcesJar').configure {

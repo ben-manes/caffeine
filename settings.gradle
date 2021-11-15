@@ -24,6 +24,16 @@ include 'guava'
 include 'jcache'
 include 'simulator'
 
+gradleEnterprise.buildScan {
+  if (System.env.'CI') {
+    tag 'CI'
+    publishAlways()
+    uploadInBackground = false
+  }
+  termsOfServiceAgree = 'yes'
+  termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+}
+
 // Note: we need to verify the checksum for checksum-dependency-plugin itself
 def expectedSha512 = [
   '5EC9186DAA4F484B8BD4616E897912DD481CEFD34CA3B2B789824A61F46283B04CF98BEC7A16FB11354175651F5584640E249BFF915A61DE4C43008A98937FBD':
