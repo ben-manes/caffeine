@@ -84,14 +84,6 @@ public enum Feature {
         || features.contains(Feature.MAXIMUM_WEIGHT);
   }
 
-  public static boolean usesWriteQueue(Set<Feature> features) {
-    return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT)
-        || features.contains(Feature.EXPIRE_ACCESS)
-        || features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE);
-  }
-
   public static boolean useWriteTime(Set<Feature> features) {
     return features.contains(Feature.EXPIRE_WRITE)
         || features.contains(Feature.REFRESH_WRITE);

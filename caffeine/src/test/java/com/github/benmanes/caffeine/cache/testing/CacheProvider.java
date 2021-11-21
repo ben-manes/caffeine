@@ -61,7 +61,10 @@ public final class CacheProvider {
 
   /** Returns the parameters for the test case scenarios. */
   private Iterator<Object[]> getTestCases() {
-    return scenarios().map(this::asTestCases).iterator();
+    return scenarios()
+        .map(this::asTestCases)
+        .filter(params -> params.length > 0)
+        .iterator();
   }
 
   /** Returns the test scenarios. */
@@ -72,7 +75,10 @@ public final class CacheProvider {
     return generator.generate();
   }
 
-  /** Returns the test case parameters based on the method parameter types. */
+  /**
+   * Returns the test case parameters based on the method parameter types or an empty array if
+   * incompatible.
+   */
   private Object[] asTestCases(CacheContext context) {
     boolean intern = true;
     CacheGenerator.initialize(context);
@@ -89,6 +95,9 @@ public final class CacheProvider {
       } else if (clazz.isAssignableFrom(Map.class)) {
         params[i] = context.cache().asMap();
       } else if (clazz.isAssignableFrom(BOUNDED_LOCAL_CACHE)) {
+        if (!BOUNDED_LOCAL_CACHE.isInstance(context.cache().asMap())) {
+          return new Object[] {};
+        }
         params[i] = context.cache().asMap();
       } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
         params[i] = context.cache().policy().eviction().orElse(null);

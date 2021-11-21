@@ -168,6 +168,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       executor.resume();
 
       if ((context.cacheExecutor != CacheExecutor.DIRECT)
+          && (context.cacheExecutor != CacheExecutor.DISCARDING)
           && (executor.submitted() != executor.completed())) {
         await().pollInSameThread().until(() -> executor.submitted() == executor.completed());
       }

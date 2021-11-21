@@ -214,6 +214,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   final @Nullable RemovalListener<K, V> evictionListener;
   final @Nullable CacheLoader<K, V> cacheLoader;
 
+  final MpscGrowableArrayQueue<Runnable> writeBuffer;
   final ConcurrentHashMap<Object, Node<K, V>> data;
   final PerformCleanupTask drainBuffersTask;
   final Consumer<Node<K, V>> accessPolicy;
@@ -245,6 +246,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
+    writeBuffer = new MpscGrowableArrayQueue<>(WRITE_BUFFER_MIN, WRITE_BUFFER_MAX);
 
     if (evicts()) {
       setMaximumSize(builder.getMaximum());
@@ -289,15 +291,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @GuardedBy("evictionLock")
   protected WriteOrderDeque<Node<K, V>> writeOrderDeque() {
-    throw new UnsupportedOperationException();
-  }
-
-  /** If the page replacement policy buffers writes. */
-  protected boolean buffersWrites() {
-    return false;
-  }
-
-  protected MpscGrowableArrayQueue<Runnable> writeBuffer() {
     throw new UnsupportedOperationException();
   }
 
@@ -1454,25 +1447,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param task the pending operation to be applied
    */
   void afterWrite(Runnable task) {
-    if (buffersWrites()) {
-      for (int i = 0; i < WRITE_BUFFER_RETRIES; i++) {
-        if (writeBuffer().offer(task)) {
-          scheduleAfterWrite();
-          return;
-        }
-        scheduleDrainBuffers();
+    for (int i = 0; i < WRITE_BUFFER_RETRIES; i++) {
+      if (writeBuffer.offer(task)) {
+        scheduleAfterWrite();
+        return;
       }
+      scheduleDrainBuffers();
+    }
 
-      // The maintenance task may be scheduled but not running due to all of the executor's threads
-      // being busy. If all of the threads are writing into the cache then no progress can be made
-      // without assistance.
-      try {
-        performCleanUp(task);
-      } catch (RuntimeException e) {
-        logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", e);
-      }
-    } else {
-      scheduleAfterWrite();
+    // The maintenance task may be scheduled but not running due. This might occur due to all of the
+    // executor's threads being busy (perhaps writing into this cache), the write rate greatly
+    // exceeds the consuming rate, priority inversion, or if the executor silently discarded the
+    // maintenance task. In these scenarios then the writing threads cannot make progress and
+    // instead writers provide assistance by performing this work directly.
+    try {
+      performCleanUp(task);
+    } catch (RuntimeException e) {
+      logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", e);
     }
   }
 
@@ -1686,12 +1677,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** Drains the write buffer. */
   @GuardedBy("evictionLock")
   void drainWriteBuffer() {
-    if (!buffersWrites()) {
-      return;
-    }
-
-    for (int i = 0; i < WRITE_BUFFER_MAX; i++) {
-      Runnable task = writeBuffer().poll();
+    for (int i = 0; i <= WRITE_BUFFER_MAX; i++) {
+      Runnable task = writeBuffer.poll();
       if (task == null) {
         return;
       }
@@ -1905,7 +1892,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       // Apply all pending writes
       Runnable task;
-      while (buffersWrites() && (task = writeBuffer().poll()) != null) {
+      while ((task = writeBuffer.poll()) != null) {
         task.run();
       }
 

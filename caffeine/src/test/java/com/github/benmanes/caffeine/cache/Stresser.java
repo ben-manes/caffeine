@@ -115,7 +115,7 @@ public final class Stresser {
     int pendingWrites;
     local.evictionLock.lock();
     try {
-      pendingWrites = local.writeBuffer().size();
+      pendingWrites = local.writeBuffer.size();
       drainStatus = local.drainStatus();
     } finally {
       local.evictionLock.unlock();
