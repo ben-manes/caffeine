@@ -391,6 +391,21 @@ public final class ExpirationTest {
   /* --------------- AsyncCache --------------- */
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void getIfPresent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
+    future.complete(null);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       removalListener = Listener.CONSUMING, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -450,6 +465,21 @@ public final class ExpirationTest {
 
     cache.synchronous().cleanUp();
     assertThat(context).removalNotifications().withCause(EXPIRED).hasSize(1).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void get_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.get(context.absentKey(), k -> k)).isSameInstanceAs(future);
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.get(context.absentKey(), k -> k)).isSameInstanceAs(future);
+    future.complete(null);
   }
 
   @Test(dataProvider = "caches")
@@ -573,6 +603,23 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void containsKey_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().containsKey(context.absentKey())).isTrue();
+    assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isTrue();
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().containsKey(context.absentKey())).isTrue();
+    assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isTrue();
+    future.complete(null);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -581,6 +628,21 @@ public final class ExpirationTest {
   public void containsValue(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
     assertThat(map.containsValue(context.original().get(context.firstKey()))).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void containsValue_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().containsValue(future)).isTrue();
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().containsValue(future)).isTrue();
+    future.complete(null);
   }
 
   @Test(dataProvider = "caches")
@@ -637,6 +699,23 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void put_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    var f3 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    assertThat(cache.asMap().put(context.absentKey(), f2)).isSameInstanceAs(f1);
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().put(context.absentKey(), f3)).isSameInstanceAs(f2);
+    f3.complete(null);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -667,6 +746,23 @@ public final class ExpirationTest {
 
     context.cleanUp();
     assertThat(map).hasSize(1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void replace_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    var f3 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    assertThat(cache.asMap().replace(context.absentKey(), f2)).isSameInstanceAs(f1);
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().replace(context.absentKey(), f3)).isSameInstanceAs(f2);
+    f3.complete(null);
   }
 
   @Test(dataProvider = "caches")
@@ -705,6 +801,23 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void replaceConditionally_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    var f3 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    assertThat(cache.asMap().replace(context.absentKey(), f1, f2)).isTrue();
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().replace(context.absentKey(), f2, f3)).isTrue();
+    f3.complete(null);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -716,6 +829,23 @@ public final class ExpirationTest {
 
     long count = context.initialSize();
     assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void remove_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    assertThat(cache.asMap().remove(context.absentKey())).isSameInstanceAs(f1);
+
+    var f2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f2);
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().remove(context.absentKey())).isSameInstanceAs(f2);
   }
 
   @Test(dataProvider = "caches")
@@ -731,6 +861,23 @@ public final class ExpirationTest {
 
     long count = context.initialSize();
     assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void removeConditionally_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    assertThat(cache.asMap().remove(context.absentKey(), f1)).isTrue();
+
+    var f2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f2);
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().remove(context.absentKey(), f2)).isTrue();
   }
 
   @Test(dataProvider = "caches")
@@ -787,6 +934,23 @@ public final class ExpirationTest {
         .flatMap(policy -> policy.ageOf(context.firstKey()))).isEmpty();
     assertThat(cache.policy().expireVariably()
         .flatMap(policy -> policy.getExpiresAfter(context.firstKey()))).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void computeIfAbsent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    assertThat(cache.asMap().computeIfAbsent(
+        context.absentKey(), key -> null)).isSameInstanceAs(f1);
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().computeIfAbsent(
+        context.absentKey(), key -> null)).isSameInstanceAs(f1);
+    f1.complete(null);
   }
 
   @Test(dataProvider = "caches")
@@ -852,6 +1016,30 @@ public final class ExpirationTest {
         .flatMap(policy -> policy.ageOf(context.firstKey())));
     assertThat(variable).isEqualTo(cache.policy().expireVariably()
         .flatMap(policy -> policy.getExpiresAfter(context.firstKey())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void computeIfPresent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
+      assertThat(f).isSameInstanceAs(f1);
+      return f2;
+    });
+
+    var f3 = new CompletableFuture<Int>();
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
+      assertThat(f).isSameInstanceAs(f2);
+      return f3;
+    });
+    f3.complete(null);
   }
 
   @Test(dataProvider = "caches")
@@ -940,6 +1128,30 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void compute_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    cache.asMap().compute(context.absentKey(), (k, f) -> {
+      assertThat(f).isSameInstanceAs(f1);
+      return f2;
+    });
+
+    var f3 = new CompletableFuture<Int>();
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    cache.asMap().compute(context.absentKey(), (k, f) -> {
+      assertThat(f).isSameInstanceAs(f2);
+      return f3;
+    });
+    f3.complete(null);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -986,6 +1198,26 @@ public final class ExpirationTest {
     assertThat(map.keySet().iterator().hasNext()).isFalse();
     assertThat(map.values().iterator().hasNext()).isFalse();
     assertThat(map.entrySet().iterator().hasNext()).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void iterator_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().keySet().contains(context.absentKey())).isTrue();
+    assertThat(cache.asMap().values().contains(future)).isTrue();
+    assertThat(cache.asMap().entrySet().contains(Map.entry(context.absentKey(), future))).isTrue();
+
+    context.ticker().advance(5, TimeUnit.MINUTES);
+    assertThat(cache.asMap().keySet().contains(context.absentKey())).isTrue();
+    assertThat(cache.asMap().values().contains(future)).isTrue();
+    assertThat(cache.asMap().entrySet().contains(Map.entry(context.absentKey(), future))).isTrue();
+    future.complete(null);
   }
 
   /* --------------- Weights --------------- */

@@ -69,7 +69,7 @@ import com.github.valfirst.slf4jtest.TestLoggerFactory;
 public final class CacheValidationListener implements ISuiteListener, IInvokedMethodListener {
   private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
   private static final ITestContext testngContext = Mockito.mock(ITestContext.class);
-  private static final AtomicBoolean detailedParams = new AtomicBoolean();
+  private static final AtomicBoolean detailedParams = new AtomicBoolean(false);
   private static final Object[] EMPTY_PARAMS = {};
 
   private final List<Collection<?>> resultQueues = new CopyOnWriteArrayList<>();

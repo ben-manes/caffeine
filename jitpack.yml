@@ -1,2 +1,5 @@
-jdk:
-  - openjdk11
+before_install:
+  - source "$HOME/.sdkman/bin/sdkman-init.sh"
+  - sdk update
+  - sdk install java 11.0.13-zulu
+  - sdk use java 11.0.13-zulu

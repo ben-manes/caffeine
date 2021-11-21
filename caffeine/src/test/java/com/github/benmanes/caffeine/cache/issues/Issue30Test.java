@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.future;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.time.ZoneOffset.UTC;
@@ -125,7 +126,9 @@ public final class Issue30Test {
 
     Thread.sleep(TTL + EPSILON); // sleep until expiration
     assertThat("now serve first updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
-    assertThat("now serve first updated value", cache.get(B_KEY)).succeedsWith(B_UPDATE_1);
+    await().untilAsserted(() -> {
+      assertThat("now serve first updated value", cache.get(B_KEY)).succeedsWith(B_UPDATE_1);
+    });
   }
 
   private void secondUpdate(AsyncLoadingCache<String, String> cache,
