@@ -1,0 +1,164 @@
+version: 2.1
+
+parameters:
+  java_version:
+    type: integer
+    default: 17
+
+commands:
+  setup_java:
+    parameters:
+      version:
+        type: integer
+    steps:
+      - run:
+          name: Workaround for running apt behind the scene
+          command: sudo killall -9 apt-get || true
+      - run:
+          name: Switch to US mirror for faster performances
+          command: sudo sed -i 's/\/\/archive.ubuntu.com/\/\/us.archive.ubuntu.com/g' /etc/apt/sources.list
+      - run:
+          name: Add openjdk-r PPA
+          command: |
+            sudo add-apt-repository ppa:openjdk-r/ppa
+            sudo apt-get update
+      - run:
+          name: Generate cache version
+          command: |
+            apt-cache policy openjdk-<< parameters.version >>-jdk | grep 'Candidate:' | cut -d' ' -f4 > .openjdk_version
+            cat .openjdk_version
+      - restore_cache:
+          keys:
+            - apt-cache-{{ checksum ".openjdk_version" }}-v1
+      - run:
+          name: Create temp directory if restore cache didn't
+          command: mkdir -p /tmp/archives
+      - run:
+          name: Restore apt cache
+          command: sudo rsync -av /tmp/archives/ /var/cache/apt/archives/
+      - run:
+          name: Install openjdk
+          command: |
+            sudo apt-get install --assume-yes openjdk-<< parameters.version >>-jdk
+            sudo update-java-alternatives --set java-1.<< parameters.version >>.0-openjdk-arm64
+      - run:
+          name: Prepare to save apt cache
+          command: rsync -av /var/cache/apt/archives/*.deb /tmp/archives/
+      - save_cache:
+          key: apt-cache-{{ checksum ".openjdk_version" }}-v1
+          paths:
+            - /tmp/archives
+  setup_gradle_cache:
+    parameters:
+      cache_key:
+        type: string
+    steps:
+      - restore_cache:
+          key: << parameters.cache_key >>-gradle-wrapper-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
+      - restore_cache:
+          key: << parameters.cache_key >>-gradle-cache-{{ checksum "build.gradle" }}
+  save_gradle_cache:
+    parameters:
+      cache_key:
+        type: string
+    steps:
+      - save_cache:
+          paths:
+            - ~/.gradle/wrapper
+          key: << parameters.cache_key >>-gradle-wrapper-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+          key: << parameters.cache_key >>-gradle-cache-{{ checksum "build.gradle" }}
+  run_tests:
+    parameters:
+      cache_key:
+        type: string
+      test_steps:
+        type: steps
+    steps:
+      - checkout
+      - setup_java:
+          version: << pipeline.parameters.java_version >>
+      - setup_gradle_cache:
+          cache_key: << parameters.cache_key >>
+      - steps: << parameters.test_steps >>
+      - save_gradle_cache:
+          cache_key: << parameters.cache_key >>
+
+jobs:
+  strong_keys:
+    resource_class: arm.medium
+    machine:
+      image: ubuntu-2004:202101-01
+    environment:
+      JAVA_VERSION: << pipeline.parameters.java_version >>
+    steps:
+      - run_tests:
+          cache_key: strong_keys
+          test_steps:
+            - run:
+                name: Run tests
+                command: >
+                  ./gradlew
+                  :caffeine:strongKeysAndSoftValuesStatsSyncCaffeineTest
+                  :caffeine:strongKeysAndSoftValuesSyncCaffeineTest
+                  :caffeine:strongKeysAndStrongValuesAsyncCaffeineTest
+                  :caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest
+                  :caffeine:strongKeysAndStrongValuesStatsSyncCaffeineTest
+                  :caffeine:strongKeysAndStrongValuesSyncCaffeineTest
+                  :caffeine:strongKeysAndWeakValuesStatsSyncCaffeineTest
+                  :caffeine:strongKeysAndWeakValuesSyncCaffeineTest
+  weak_keys:
+    resource_class: arm.medium
+    machine:
+      image: ubuntu-2004:202101-01
+    environment:
+      JAVA_VERSION: << pipeline.parameters.java_version >>
+    steps:
+      - run_tests:
+          cache_key: weak_keys
+          test_steps:
+            - run:
+                name: Run tests
+                command: >
+                  ./gradlew
+                  :caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest
+                  :caffeine:weakKeysAndSoftValuesSyncCaffeineTest
+                  :caffeine:weakKeysAndStrongValuesAsyncCaffeineTest
+                  :caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest
+                  :caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest
+                  :caffeine:weakKeysAndStrongValuesSyncCaffeineTest
+                  :caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest
+                  :caffeine:weakKeysAndWeakValuesSyncCaffeineTest
+  isolated:
+    resource_class: arm.medium
+    machine:
+      image: ubuntu-2004:202101-01
+    environment:
+      JAVA_VERSION: << pipeline.parameters.java_version >>
+    steps:
+      - run_tests:
+          cache_key: isolated
+          test_steps:
+            - run:
+                name: Run tests
+                command: >
+                  ./gradlew
+                  :guava:test
+                  :jcache:test
+                  :simulator:test
+                  :caffeine:junitTests
+                  :caffeine:slowCaffeineTest
+                no_output_timeout: 1h
+            - run:
+                name: Run isolated tests
+                command: ./gradlew :caffeine:isolatedTests
+
+workflows:
+  version: 2
+  workflow:
+    jobs:
+      - strong_keys
+      - weak_keys
+      - isolated
