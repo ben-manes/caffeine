@@ -12,14 +12,14 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatability;
+package com.github.benmanes.caffeine.guava.compatibility;
 
-import static com.github.benmanes.caffeine.guava.compatability.TestingCacheLoaders.bulkLoader;
-import static com.github.benmanes.caffeine.guava.compatability.TestingCacheLoaders.constantLoader;
-import static com.github.benmanes.caffeine.guava.compatability.TestingCacheLoaders.errorLoader;
-import static com.github.benmanes.caffeine.guava.compatability.TestingCacheLoaders.exceptionLoader;
-import static com.github.benmanes.caffeine.guava.compatability.TestingCacheLoaders.identityLoader;
-import static com.github.benmanes.caffeine.guava.compatability.TestingRemovalListeners.countingRemovalListener;
+import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.bulkLoader;
+import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.constantLoader;
+import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.errorLoader;
+import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.exceptionLoader;
+import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.identityLoader;
+import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.countingRemovalListener;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -38,8 +38,8 @@ import java.util.logging.Logger;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.github.benmanes.caffeine.guava.compatability.TestingCacheLoaders.IdentityLoader;
-import com.github.benmanes.caffeine.guava.compatability.TestingRemovalListeners.CountingRemovalListener;
+import com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.IdentityLoader;
+import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.CacheStats;

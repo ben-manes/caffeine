@@ -12,7 +12,7 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatability;
+package com.github.benmanes.caffeine.guava.compatibility;
 
 import static java.util.Arrays.asList;
 import junit.framework.TestCase;

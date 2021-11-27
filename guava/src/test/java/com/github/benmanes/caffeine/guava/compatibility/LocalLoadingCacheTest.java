@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatability;
+package com.github.benmanes.caffeine.guava.compatibility;
 
-import static com.github.benmanes.caffeine.guava.compatability.TestingCacheLoaders.identityLoader;
+import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.identityLoader;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.lang.Thread.UncaughtExceptionHandler;

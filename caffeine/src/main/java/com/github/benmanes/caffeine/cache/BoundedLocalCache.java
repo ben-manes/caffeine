@@ -202,7 +202,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final double HILL_CLIMBER_STEP_PERCENT = 0.0625d;
   /** The rate to decrease the step size to adapt by. */
   static final double HILL_CLIMBER_STEP_DECAY_RATE = 0.98d;
-  /** The maximum number of entries that can be transfered between queues. */
+  /** The maximum number of entries that can be transferred between queues. */
   static final int QUEUE_TRANSFER_THRESHOLD = 1_000;
   /** The maximum time window between entry updates before the expiration must be reordered. */
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);

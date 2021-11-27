@@ -48,7 +48,7 @@ commands:
           key: apt-cache-{{ checksum ".openjdk_version" }}-v1
           paths:
             - /tmp/archives
-  setup_gradle_cache:
+  restore_gradle_cache:
     parameters:
       cache_key:
         type: string
@@ -80,7 +80,7 @@ commands:
       - checkout
       - setup_java:
           version: << pipeline.parameters.java_version >>
-      - setup_gradle_cache:
+      - restore_gradle_cache:
           cache_key: << parameters.cache_key >>
       - steps: << parameters.test_steps >>
       - save_gradle_cache:

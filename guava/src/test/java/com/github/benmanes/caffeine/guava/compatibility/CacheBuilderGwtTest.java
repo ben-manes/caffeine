@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatability;
+package com.github.benmanes.caffeine.guava.compatibility;
 
 import java.util.Arrays;
 import java.util.Iterator;

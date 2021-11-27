@@ -1,22 +1,22 @@
-/* lirs.c 
- *  
- * See Sigmetrics'02 paper "`LIRS: An Efficient Low Inter-reference 
+/* lirs.c
+ *
+ * See Sigmetrics'02 paper "`LIRS: An Efficient Low Inter-reference
  * Recency Set Replacement Policy to Improve Buffer Cache Performance"
- * for more description. "The paper" is used to refer to this paper in the 
+ * for more description. "The paper" is used to refer to this paper in the
  * following.
- *  
+ *
  * This program is written by Song Jiang (sjiang@cs.wm.edu) Nov 15, 2002
  */
 
-/* Input File Format: 
+/* Input File Format:
  * (1) trace file: the (UBN) Unique Block Number of each reference, which
  *     is the unique number for each accessed block. It is strongly recommended
- *     that all blocks are mapped into 0 ... N-1 (or 1 ... N) if the total  
+ *     that all blocks are mapped into 0 ... N-1 (or 1 ... N) if the total
  *     access blocks is N. For example, if the accessed block numbers are:
- *     52312, 13456, 52312, 13456, 72345, then N = 3, and what appears in the 
- *     trace file is 0 1 0 1 2 (or 1 2 1 2 3). You can write a program using 
- *     hash table to do the trace conversion, or modify the program. 
- *     
+ *     52312, 13456, 52312, 13456, 72345, then N = 3, and what appears in the
+ *     trace file is 0 1 0 1 2 (or 1 2 1 2 3). You can write a program using
+ *     hash table to do the trace conversion, or modify the program.
+ *
  */
 
 /* Command Line Uasge: only prefix of trace file is required. e.g.
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     printf("%s file_name_prefix[.trace] \n", argv[0]);
     exit(1);
   }
-  
+
   strcpy(trc_file_name, argv[1]);
   strcat(trc_file_name, ".trace");
   trace_fp = openReadFile(trc_file_name);
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     printf("trace error!\n");
     exit(1);
   }
-  
+
   mem_size = DEFAULT_MEMSIZE;
 
   page_tbl = (page_struct *)calloc(vm_size+1, sizeof(page_struct));
@@ -73,10 +73,10 @@ int main(int argc, char* argv[])
   /* initialize the page table */
   for (i = 0; i <= vm_size; i++){
     page_tbl[i].ref_times = 0;
-    page_tbl[i].pf_times = 0; 
+    page_tbl[i].pf_times = 0;
 
     page_tbl[i].page_num = i;
-    page_tbl[i].isResident = 0; 
+    page_tbl[i].isResident = 0;
     page_tbl[i].isHIR_block = 1;
 
     page_tbl[i].LIRS_next = NULL;
@@ -105,12 +105,12 @@ int main(int argc, char* argv[])
   evict_cur_idx = 0;
 
   /* the memory ratio for hirs is 1% */
-  HIR_block_portion_limit = (unsigned long)(HIR_RATE/100.0*mem_size); 
+  HIR_block_portion_limit = (unsigned long)(HIR_RATE/100.0*mem_size);
   if (HIR_block_portion_limit < LOWEST_HG_NUM)
     HIR_block_portion_limit = LOWEST_HG_NUM;
 
   LIRS_Repl(trace_fp);
- 
+
   printf("\n");
   printf(" Memory size                        = %ld\n", mem_size);
 //  printf(" Llirs (record size for LIRS stack) = %ld\n", cur_lir_S_len);
@@ -134,7 +134,7 @@ FILE *openReadFile(char file_name[])
     printf("can not find file %s.\n", file_name);
     return NULL;
   }
-  
+
   return fp;
 }
 
@@ -143,13 +143,13 @@ void LIRS_Repl(FILE *trace_fp)
   unsigned long ref_block, i, j, step;
   char ref_block_str[128];
   long last_ref_pg = -1;
-  long num_LIR_pgs = 0; 
+  long num_LIR_pgs = 0;
   struct pf_struct *temp_ptr;
   int collect_stat = (STAT_START_POINT==0)?1:0;
   int count=0;
   int printout_idx = 1;
-  
-  fseek(trace_fp, 0, SEEK_SET);  
+
+  fseek(trace_fp, 0, SEEK_SET);
   do {
     fscanf(trace_fp, "%s", ref_block_str);
   } while(strcmp(ref_block_str, "*") == 0);
@@ -176,12 +176,12 @@ void LIRS_Repl(FILE *trace_fp)
       collect_stat = 1;
       warm_pg_refs++;
     }
-      
+
     if (ref_block > vm_size) {
       fprintf(stderr, "Wrong ref page number found: %ld.\n", ref_block);
       return;
     }
-    
+
     if (ref_block == last_ref_pg) {
       fscanf(trace_fp, "%s", ref_block_str);
       if (strcmp(ref_block_str, "*")) {
@@ -200,10 +200,10 @@ void LIRS_Repl(FILE *trace_fp)
         num_pg_flt++;
       }
 
-      if (free_mem_size == 0){ 
-        /* remove the "front" of the HIR resident page from cache (queue Q), 
-           but not from LIRS stack S 
-         */ 
+      if (free_mem_size == 0){
+        /* remove the "front" of the HIR resident page from cache (queue Q),
+           but not from LIRS stack S
+         */
         /* actually Q is an LRU stack, "front" is the bottom of the stack,
            "end" is its top
          */
@@ -229,17 +229,17 @@ void LIRS_Repl(FILE *trace_fp)
     page_tbl[ref_block].isResident = TRUE;
     if (page_tbl[ref_block].recency == S_STACK_OUT)
       cur_lir_S_len++;
-	
+
     if (page_tbl[ref_block].isHIR_block &&
        (page_tbl[ref_block].recency == S_STACK_IN)) {
       page_tbl[ref_block].isHIR_block = FALSE;
-      num_LIR_pgs++; 
+      num_LIR_pgs++;
 
       if (num_LIR_pgs > mem_size-HIR_block_portion_limit) {
         add_HIR_list_head(LIR_LRU_block_ptr);
         HIR_list_head->isHIR_block = TRUE;
         HIR_list_head->recency = S_STACK_OUT;
-        num_LIR_pgs--; 
+        num_LIR_pgs--;
         LIR_LRU_block_ptr = find_last_LIR_LRU();// prune the LIR stack
       }
       else {
@@ -247,7 +247,7 @@ void LIRS_Repl(FILE *trace_fp)
       }
     }
     else if (page_tbl[ref_block].isHIR_block) {
-      add_HIR_list_head((page_struct *)&page_tbl[ref_block]); 
+      add_HIR_list_head((page_struct *)&page_tbl[ref_block]);
     }
 
     page_tbl[ref_block].recency = S_STACK_IN;
@@ -265,9 +265,9 @@ void LIRS_Repl(FILE *trace_fp)
 }
 
 
-/* remove a block from memory */ 
+/* remove a block from memory */
 int remove_LIRS_list(page_struct *page_ptr)
-{ 
+{
   if (!page_ptr)
     return FALSE;
 
@@ -281,11 +281,11 @@ int remove_LIRS_list(page_struct *page_ptr)
 
   if (!page_ptr->LIRS_prev)
     LRU_list_head = page_ptr->LIRS_next;
-  else     
+  else
     page_ptr->LIRS_prev->LIRS_next = page_ptr->LIRS_next;
 
   if (!page_ptr->LIRS_next)
-    LRU_list_tail = page_ptr->LIRS_prev; 
+    LRU_list_tail = page_ptr->LIRS_prev;
   else
     page_ptr->LIRS_next->LIRS_prev = page_ptr->LIRS_prev;
 
@@ -309,7 +309,7 @@ void record_evict(unsigned long page_num) {
   evict_cur_idx++;
 }
 
-/* remove a block from its teh front of HIR resident list */
+/* remove a block from its the front of HIR resident list */
 int remove_HIR_list(page_struct *HIR_block_ptr)
 {
   if (!HIR_block_ptr)
@@ -317,11 +317,11 @@ int remove_HIR_list(page_struct *HIR_block_ptr)
 
   if (!HIR_block_ptr->HIR_rsd_prev)
     HIR_list_head = HIR_block_ptr->HIR_rsd_next;
-  else 
+  else
     HIR_block_ptr->HIR_rsd_prev->HIR_rsd_next = HIR_block_ptr->HIR_rsd_next;
 
   if (!HIR_block_ptr->HIR_rsd_next)
-    HIR_list_tail = HIR_block_ptr->HIR_rsd_prev; 
+    HIR_list_tail = HIR_block_ptr->HIR_rsd_prev;
   else
     HIR_block_ptr->HIR_rsd_next->HIR_rsd_prev = HIR_block_ptr->HIR_rsd_prev;
 
@@ -342,8 +342,8 @@ page_struct *find_last_LIR_LRU()
     LIR_LRU_block_ptr->recency = S_STACK_OUT;
     cur_lir_S_len--;
     LIR_LRU_block_ptr = LIR_LRU_block_ptr->LIRS_prev;
-  }    
- 
+  }
+
   return LIR_LRU_block_ptr;
 }
 
@@ -370,7 +370,7 @@ page_struct *prune_LIRS_stack()
   return tmp_ptr;
 }
 
-/* put a HIR resident block on the end of HIR resident list */ 
+/* put a HIR resident block on the end of HIR resident list */
 void add_HIR_list_head(page_struct * new_rsd_HIR_ptr)
 {
   new_rsd_HIR_ptr->HIR_rsd_next = HIR_list_head;
@@ -383,15 +383,15 @@ void add_HIR_list_head(page_struct * new_rsd_HIR_ptr)
   return;
 }
 
-/* put a newly referenced block on the top of LIRS stack */ 
+/* put a newly referenced block on the top of LIRS stack */
 void add_LRU_list_head(page_struct *new_ref_ptr)
 {
-  new_ref_ptr->LIRS_next = LRU_list_head; 
+  new_ref_ptr->LIRS_next = LRU_list_head;
 
   if (!LRU_list_head){
     LRU_list_head = LRU_list_tail = new_ref_ptr;
-    LIR_LRU_block_ptr = LRU_list_tail; /* since now the point to lir page with Smax isn't nil */ 
-  } 
+    LIR_LRU_block_ptr = LRU_list_tail; /* since now the point to lir page with Smax isn't nil */
+  }
   else {
     LRU_list_head->LIRS_prev = new_ref_ptr;
     LRU_list_head = new_ref_ptr;
@@ -400,16 +400,16 @@ void add_LRU_list_head(page_struct *new_ref_ptr)
   return;
 }
 
-/* insert a block in LIRS list */ 
+/* insert a block in LIRS list */
 void insert_LRU_list(page_struct *old_ref_ptr, page_struct *new_ref_ptr)
 {
   old_ref_ptr->LIRS_next = new_ref_ptr->LIRS_next;
   old_ref_ptr->LIRS_prev = new_ref_ptr;
-  
+
   if (new_ref_ptr->LIRS_next)
     new_ref_ptr->LIRS_next->LIRS_prev = old_ref_ptr;
   new_ref_ptr->LIRS_next = old_ref_ptr;
-  
+
   return;
 }
 

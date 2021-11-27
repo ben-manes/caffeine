@@ -195,6 +195,7 @@
     <trusted-key id='eca081a9790d4fc4' group='org.eclipse.jdt.core.compiler' />
     <trusted-key id='5b05ccde140c2876' group='org.eclipse.jgit' />
     <trusted-key id='01d734ee5ee9c3f8' group='org.eclipse.sisu' />
+    <trusted-key id='5e1d8523fe7eac7b' group='org.ehcache' />
     <trusted-key id='b83a12a027fc6962' group='org.ehcache' />
     <trusted-key id='d27d666cd88e42b4' group='org.elasticsearch' />
     <trusted-key id='afc18a2271eddfe1' group='org.glassfish.hk2' />
@@ -236,6 +237,7 @@
     <trusted-key id='bff2ee42c8282e76' group='org.ops4j.pax.exam' />
     <trusted-key id='75ed6d831ac2f4ba' group='org.ops4j.pax.swissbox' />
     <trusted-key id='bf8ea4f17f15e52f' group='org.ops4j.pax.swissbox' />
+    <trusted-key id='bff2ee42c8282e76' group='org.ops4j.pax.swissbox' />
     <trusted-key id='492985b45e8d6711' group='org.ops4j.pax.tinybundles' />
     <trusted-key id='494a3c0ddce0bc7d' group='org.ops4j.pax.url' />
     <trusted-key id='adbec7a623dbb1d6' group='org.ops4j.pax.url' />
@@ -397,6 +399,9 @@
     </dependency>
     <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.0-beta.8'>
       <sha512>91E20F45BBBE65CFAD1C1534BD3F95AB53F34DB34255AE35FED7EDE37F1AE7C1B56F1BB3494EC32ECE081FD7A1626712D8E5E5B2E41588098B076F6D44FE2E48</sha512>
+    </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.0-rc.1'>
+      <sha512>BC3BF88FB96DF29FA572179B63009FB95D7A41F938E00AEC5EE6B3F59205E934F74B31F2BFCBF7284F9CEE65CE2D24953D5353726C816C2E8D57C76C40B467A7</sha512>
     </dependency>
     <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.1'>
       <sha512>2C09B102601DF179B615EF37F5E56B9AA1100BB2A17D742B8CB452C1A193C44ED3EBE029FEAFB9822D55A680D99B682184C733D56F835874DD01B02209AFA13D</sha512>
