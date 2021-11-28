@@ -108,8 +108,9 @@ public interface AsyncCache<K, V> {
    * <p>
    * A single request to the {@code mappingFunction} is performed for all keys which are not already
    * present in the cache. If another call to {@link #get} tries to load the value for a key in
-   * {@code keys}, that thread retrieves a future that is completed by this bulk computation. Note
-   * that multiple threads can concurrently load values for distinct keys.
+   * {@code keys}, that thread retrieves a future that is completed by this bulk computation. Any
+   * loaded values for keys that were not specifically requested will not be returned, but will be
+   * stored in the cache. Note that multiple threads can concurrently load values for distinct keys.
    * <p>
    * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
    * ignored.
@@ -138,8 +139,9 @@ public interface AsyncCache<K, V> {
    * <p>
    * A single request to the {@code mappingFunction} is performed for all keys which are not already
    * present in the cache. If another call to {@link #get} tries to load the value for a key in
-   * {@code keys}, that thread retrieves a future that is completed by this bulk computation. Note
-   * that multiple threads can concurrently load values for distinct keys.
+   * {@code keys}, that thread retrieves a future that is completed by this bulk computation. Any
+   * loaded values for keys that were not specifically requested will not be returned, but will be
+   * stored in the cache. Note that multiple threads can concurrently load values for distinct keys.
    * <p>
    * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
    * ignored.

@@ -105,7 +105,9 @@ public interface Cache<K, V> {
    * the value for a key in {@code keys}, implementations may either have that thread load the entry
    * or simply wait for this thread to finish and return the loaded value. In the case of
    * overlapping non-blocking loads, the last load to complete will replace the existing entry. Note
-   * that multiple threads can concurrently load values for distinct keys.
+   * that multiple threads can concurrently load values for distinct keys. Any loaded values for
+   * keys that were not specifically requested will not be returned, but will be stored in the
+   * cache.
    * <p>
    * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
    * ignored.
