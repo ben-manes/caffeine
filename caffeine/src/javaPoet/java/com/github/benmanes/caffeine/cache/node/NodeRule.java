@@ -132,7 +132,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
         .addModifiers(context.publicFinalModifiers())
         .returns(varType);
     if (strength == Strength.STRONG) {
-      if ((visibility == Visibility.PLAIN) || (visibility == Visibility.OPAQUE)) {
+      if (visibility == Visibility.PLAIN) {
         var template = String.format("return (%s) $L.get(this)",
             varType.isPrimitive() ? "$L" : "$T");
         getter.addStatement(template, varType, varHandleName(varName));

@@ -77,7 +77,7 @@ public final class AddValue extends NodeRule {
 
     var code = CodeBlock.builder()
         .beginControlFlow("for (;;)")
-            .addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)", Reference.class, handle)
+            .addStatement("$1T<V> ref = ($1T<V>) $2L.getOpaque(this)", Reference.class, handle)
             .addStatement("V referent = ref.get()")
             .beginControlFlow("if ((referent != null) || (ref == $L.getAcquire(this)))", handle)
                 .addStatement("return referent")

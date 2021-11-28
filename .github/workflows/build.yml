@@ -33,15 +33,6 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
       - name: Run tests
         run: ./.github/scripts/test.sh
-      - name: Set up JDK 17.0.1
-        if: matrix.java == env.MAX_JVM
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'zulu'
-          java-version: 17.0.1
-      - name: Run JDK-8274349 tests
-        if: matrix.java == env.MAX_JVM
-        run: ./gradlew jdk8274349Test
       - name: Publish Coverage
         if: >
           matrix.java == env.MIN_JVM
@@ -72,3 +63,18 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
         run: ./gradlew publishToSonatype
+  jdk8274349:
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: 17
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - name: Set up JDK 17.0.1
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: 17.0.1
+      - name: Run JDK-8274349 tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: jdk8274349Test
