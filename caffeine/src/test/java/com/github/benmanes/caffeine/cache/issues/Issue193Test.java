@@ -30,7 +30,6 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFutureTask;
-import com.google.common.util.concurrent.testing.TestingExecutors;
 
 /**
  * Issue #193: Invalidate before Refresh completes still stores value
@@ -75,8 +74,8 @@ public final class Issue193Test {
     var removed = new ArrayList<Long>();
     AsyncLoadingCache<String, Long> cache = Caffeine.newBuilder()
         .removalListener((String key, Long value, RemovalCause reason) -> removed.add(value))
-        .executor(TestingExecutors.sameThreadScheduledExecutor())
         .refreshAfterWrite(10, TimeUnit.NANOSECONDS)
+        .executor(Runnable::run)
         .ticker(ticker::read)
         .buildAsync(loader);
 

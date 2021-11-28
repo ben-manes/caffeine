@@ -97,7 +97,7 @@ def testCompatibilityKit = tasks.register('testCompatibilityKit', Test) {
   systemProperty 'javax.management.builder.initial', "${pkg}.management.JCacheMBeanServerBuilder"
 }
 
-def osgiTests = tasks.register('osgiTests', Test) {
+def osgiTest = tasks.register('osgiTest', Test) {
   group = 'Build'
   description = 'Isolated OSGi tests'
   useJUnit()
@@ -112,5 +112,5 @@ def osgiTests = tasks.register('osgiTests', Test) {
 
 tasks.named('test').configure {
   dependsOn(testCompatibilityKit)
-  dependsOn(osgiTests)
+  dependsOn(osgiTest)
 }

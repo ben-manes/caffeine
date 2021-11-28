@@ -148,12 +148,12 @@ jobs:
                   :guava:test
                   :jcache:test
                   :simulator:test
-                  :caffeine:junitTests
+                  :caffeine:junitTest
                   :caffeine:slowCaffeineTest
                 no_output_timeout: 1h
             - run:
                 name: Run isolated tests
-                command: ./gradlew :caffeine:isolatedTests
+                command: ./gradlew :caffeine:isolatedTest
 
 workflows:
   version: 2

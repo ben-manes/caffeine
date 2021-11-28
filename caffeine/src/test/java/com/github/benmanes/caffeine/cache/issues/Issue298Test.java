@@ -33,6 +33,7 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
  * Issue #298: Stale data when using Expiry
@@ -116,6 +117,7 @@ public final class Issue298Test {
 
   private AsyncLoadingCache<String, String> makeAsyncCache() {
     return Caffeine.newBuilder()
+        .executor(ConcurrentTestHarness.executor)
         .expireAfter(new Expiry<String, String>() {
           @Override public long expireAfterCreate(@Nonnull String key,
               @Nonnull String value, long currentTime) {

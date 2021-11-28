@@ -33,6 +33,15 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
       - name: Run tests
         run: ./.github/scripts/test.sh
+      - name: Set up JDK 17.0.1
+        if: matrix.java == env.MAX_JVM
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: 17.0.1
+      - name: Run JDK-8274349 tests
+        if: matrix.java == env.MAX_JVM
+        run: ./gradlew jdk8274349Test
       - name: Publish Coverage
         if: >
           matrix.java == env.MIN_JVM

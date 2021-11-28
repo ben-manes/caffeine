@@ -53,25 +53,31 @@ testNames.each { testName ->
   }
 }
 
-tasks.register('isolatedTests', Test) {
+tasks.register('isolatedTest', Test) {
   group = 'Cache tests'
   description = 'Tests that must be run in isolation'
   useTestNG()
 }
 
-tasks.register('lincheckTests', Test) {
+tasks.register('lincheckTest', Test) {
   group = 'Cache tests'
   description = 'Tests that assert linearizability'
   useTestNG()
 }
 
-tasks.register('junitTests', Test) {
+tasks.register('junitTest', Test) {
   group = 'Cache tests'
   description = 'JUnit tests'
   useJUnit()
   dependsOn(jar)
   tasks.test.dependsOn(it)
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
+}
+
+tasks.register('jdk8274349Test', Test) {
+  group = 'Cache tests'
+  description = 'JDK-8274349 tests'
+  useTestNG()
 }
 
 tasks.withType(Test).configureEach {
@@ -91,13 +97,16 @@ tasks.withType(Test).configureEach {
       testLogging.events 'started'
       maxHeapSize = '2g'
       failFast = true
+    } else if (name.startsWith('jdk8274349')) {
+      options.includeGroups = ['jdk8274349']
+      jvmArgs '-XX:ActiveProcessorCount=1'
     } else {
       options {
         threadCount = Math.max(6, Runtime.getRuntime().availableProcessors() - 1)
-        jvmArgs '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled'
-        excludeGroups = ['slow', 'isolated', 'lincheck']
+        excludeGroups = ['slow', 'isolated', 'lincheck', 'jdk8274349']
         parallel = 'methods'
       }
+      jvmArgs '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled'
     }
   }
 }

@@ -19,7 +19,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.mockito.Mockito.verify;
 
+import java.lang.Runtime.Version;
 import java.time.Duration;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -31,6 +33,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.google.common.collect.Range;
 import com.google.common.testing.FakeTicker;
 
 /**
@@ -619,6 +622,17 @@ public final class CaffeineTest {
     var builder = Caffeine.newBuilder().executor(directExecutor());
     assertThat(builder.getExecutor()).isSameInstanceAs(directExecutor());
     builder.build();
+  }
+
+  @Test(groups = "jdk8274349")
+  public void executor_jdk8274349() throws ReflectiveOperationException {
+    // This test requires either JDK 17 or 17.0.1 using a single cpu (-XX:ActiveProcessorCount=1)
+    assertThat(Runtime.version()).isIn(Range.closedOpen(
+        Version.parse("17"), Version.parse("17.0.2")));
+    assertThat(Runtime.getRuntime().availableProcessors()).isEqualTo(1);
+
+    // JDK-8274349: ForkJoinPool.commonPool() does not work with 1 cpu
+    assertThat(Caffeine.newBuilder().getExecutor()).isNotSameInstanceAs(ForkJoinPool.commonPool());
   }
 
   /* --------------- ticker --------------- */

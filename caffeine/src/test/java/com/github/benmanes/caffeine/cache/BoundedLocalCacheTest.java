@@ -159,6 +159,7 @@ public final class BoundedLocalCacheTest {
       }
     };
     var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .executor(CacheExecutor.THREADED.create())
         .evictionListener(evictionListener)
         .maximumSize(0)
         .build());
@@ -169,7 +170,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
 
     done.set(true);
-    await().untilAsserted(() -> assertThat(cache.drainStatus).isEqualTo(IDLE));
+    await().untilAsserted(() -> assertThat(cache.drainStatus).isAnyOf(REQUIRED, IDLE));
   }
 
   @Test(dataProvider = "caches")
@@ -373,9 +374,9 @@ public final class BoundedLocalCacheTest {
         (k, v, cause) -> removedValues.accumulateAndGet(v, Int::add);
 
     var cache = Caffeine.newBuilder()
+        .executor(CacheExecutor.DIRECT.create())
         .evictionListener(evictionListener)
         .removalListener(removalListener)
-        .executor(Runnable::run)
         .maximumSize(100)
         .build();
     var localCache = asBoundedLocalCache(cache);

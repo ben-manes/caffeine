@@ -28,4 +28,4 @@ jobs:
       - name: Run lincheck
         run: |
           set -eux
-          ./gradlew lincheckTests
+          ./gradlew lincheckTest

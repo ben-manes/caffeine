@@ -2,6 +2,6 @@
 set -eux
 
 ./gradlew check
-./gradlew :caffeine:isolatedTests
+./gradlew :caffeine:isolatedTest
 ./gradlew :caffeine:slowGuavaTest
 ./gradlew :caffeine:slowCaffeineTest

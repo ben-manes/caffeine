@@ -41,7 +41,7 @@ tasks.named('test').configure {
   }
 }
 
-def osgiTests = tasks.register('osgiTests', Test) {
+def osgiTest = tasks.register('osgiTest', Test) {
   group = 'Cache tests'
   description = 'Isolated OSGi tests'
 
@@ -50,7 +50,7 @@ def osgiTests = tasks.register('osgiTests', Test) {
   }
 }
 tasks.named('test').configure {
-  dependsOn(osgiTests)
+  dependsOn(osgiTest)
 }
 
 tasks.withType(Test) {

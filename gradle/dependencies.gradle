@@ -94,7 +94,7 @@ ext {
     jmhReport: '0.9.0',
     nexusPublish: '1.1.0',
     nullaway: '1.2.0',
-    pmd: '6.40.0',
+    pmd: '6.41.0',
     semanticVersioning: '1.1.0',
     shadow: '7.1.0',
     sonarqube: '3.3',

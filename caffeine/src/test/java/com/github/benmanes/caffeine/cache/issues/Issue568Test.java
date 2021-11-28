@@ -23,6 +23,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
  * Issue #568: Incorrect handling of weak/soft reference caching.
@@ -41,7 +42,10 @@ public class Issue568Test {
    */
   @Test
   public void intermittentNull() throws InterruptedException {
-    Cache<String, String> cache = Caffeine.newBuilder().weakValues().build();
+    Cache<String, String> cache = Caffeine.newBuilder()
+        .executor(ConcurrentTestHarness.executor)
+        .weakValues()
+        .build();
 
     String key = "key";
     String val = "val";
@@ -87,6 +91,7 @@ public class Issue568Test {
     var error = new AtomicReference<RuntimeException>();
     Cache<String, Object> cache = Caffeine.newBuilder()
         .weakValues()
+        .executor(ConcurrentTestHarness.executor)
         .removalListener((k, v, cause) -> {
           if (cause == RemovalCause.COLLECTED && (v != null)) {
             error.compareAndSet(null, new IllegalStateException("Evicted a live value: " + v));

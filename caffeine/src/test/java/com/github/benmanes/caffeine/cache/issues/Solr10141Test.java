@@ -71,6 +71,7 @@ public final class Solr10141Test {
     };
 
     Cache<Long, Val> cache = Caffeine.newBuilder()
+        .executor(ConcurrentTestHarness.executor)
         .removalListener(listener)
         .maximumSize(maxEntries)
         .build();
