@@ -1510,7 +1510,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (drainStatus >= PROCESSING_TO_IDLE) {
           return;
         }
-        lazySetDrainStatus(PROCESSING_TO_IDLE);
+        setDrainStatusRelease(PROCESSING_TO_IDLE);
         executor.execute(drainBuffersTask);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
@@ -1556,7 +1556,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @GuardedBy("evictionLock")
   void maintenance(@Nullable Runnable task) {
-    lazySetDrainStatus(PROCESSING_TO_IDLE);
+    setDrainStatusRelease(PROCESSING_TO_IDLE);
 
     try {
       drainReadBuffer();
@@ -1575,7 +1575,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       climb();
     } finally {
       if ((drainStatus() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
-        lazySetDrainStatus(REQUIRED);
+        setDrainStatusOpaque(REQUIRED);
       }
     }
   }
@@ -1684,7 +1684,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
       task.run();
     }
-    lazySetDrainStatus(PROCESSING_TO_REQUIRED);
+    setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
   }
 
   /**
@@ -4131,11 +4131,15 @@ final class BLCHeader {
     }
 
     int drainStatus() {
-      return (int) DRAIN_STATUS.get(this);
+      return (int) DRAIN_STATUS.getOpaque(this);
     }
 
-    void lazySetDrainStatus(int drainStatus) {
+    void setDrainStatusOpaque(int drainStatus) {
       DRAIN_STATUS.setOpaque(this, drainStatus);
+    }
+
+    void setDrainStatusRelease(int drainStatus) {
+      DRAIN_STATUS.setRelease(this, drainStatus);
     }
 
     boolean casDrainStatus(int expect, int update) {

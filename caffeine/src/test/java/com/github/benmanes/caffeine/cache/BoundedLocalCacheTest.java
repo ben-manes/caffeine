@@ -755,10 +755,10 @@ public final class BoundedLocalCacheTest {
   }
 
   private static Node<Int, Int> firstBeforeAccess(
-      BoundedLocalCache<Int, Int> localCache, CacheContext context) {
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
     return context.isZeroWeighted()
-        ? localCache.accessOrderWindowDeque().peek()
-        : localCache.accessOrderProbationDeque().peek();
+        ? cache.accessOrderWindowDeque().peek()
+        : cache.accessOrderProbationDeque().peek();
   }
 
   private static void updateRecency(BoundedLocalCache<Int, Int> cache,
@@ -874,7 +874,7 @@ public final class BoundedLocalCacheTest {
   public void drain_nonblocking(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var done = new AtomicBoolean();
     Runnable task = () -> {
-      cache.lazySetDrainStatus(REQUIRED);
+      cache.setDrainStatusRelease(REQUIRED);
       cache.scheduleDrainBuffers();
       done.set(true);
     };
@@ -907,13 +907,13 @@ public final class BoundedLocalCacheTest {
     checkDrainBlocks(cache, () -> eviction.setMaximum(0));
   }
 
-  void checkDrainBlocks(BoundedLocalCache<Int, Int> localCache, Runnable task) {
+  void checkDrainBlocks(BoundedLocalCache<Int, Int> cache, Runnable task) {
     var done = new AtomicBoolean();
-    var lock = localCache.evictionLock;
+    var lock = cache.evictionLock;
     lock.lock();
     try {
       ConcurrentTestHarness.execute(() -> {
-        localCache.lazySetDrainStatus(REQUIRED);
+        cache.setDrainStatusRelease(REQUIRED);
         task.run();
         done.set(true);
       });

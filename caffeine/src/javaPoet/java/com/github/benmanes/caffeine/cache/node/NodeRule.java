@@ -132,22 +132,27 @@ public abstract class NodeRule implements Consumer<NodeContext> {
         .addModifiers(context.publicFinalModifiers())
         .returns(varType);
     if (strength == Strength.STRONG) {
-      if (visibility.isPlain) {
-        if (varType.isPrimitive()) {
-          getter.addStatement("return ($L) $L.get(this)",
-              varType.toString(), varHandleName(varName));
-        } else {
-          getter.addStatement("return ($T) $L.get(this)", varType, varHandleName(varName));
-        }
-      } else {
+      if ((visibility == Visibility.PLAIN) || (visibility == Visibility.OPAQUE)) {
+        var template = String.format("return (%s) $L.get(this)",
+            varType.isPrimitive() ? "$L" : "$T");
+        getter.addStatement(template, varType, varHandleName(varName));
+      } else if (visibility == Visibility.OPAQUE) {
+        var template = String.format("return (%s) $L.getOpaque(this)",
+            varType.isPrimitive() ? "$L" : "$T");
+        getter.addStatement(template, varType, varHandleName(varName));
+      } else if (visibility == Visibility.VOLATILE) {
         getter.addStatement("return $N", varName);
+      } else {
+        throw new IllegalArgumentException();
       }
     } else {
-      if (visibility.isPlain) {
+      if (visibility == Visibility.PLAIN) {
         getter.addStatement("return (($T<$T>) $L.get(this)).get()",
             Reference.class, varType, varHandleName(varName));
-      } else {
+      } else if (visibility == Visibility.VOLATILE) {
         getter.addStatement("return $N.get()", varName);
+      } else {
+        throw new IllegalArgumentException();
       }
     }
     return getter.build();
@@ -159,10 +164,14 @@ public abstract class NodeRule implements Consumer<NodeContext> {
     var setter = MethodSpec.methodBuilder(methodName)
         .addModifiers(context.publicFinalModifiers())
         .addParameter(varType, varName);
-    if (visibility.isPlain) {
+    if (visibility == Visibility.PLAIN) {
       setter.addStatement("$L.set(this, $N)", varHandleName(varName), varName);
-    } else {
+    } else if (visibility == Visibility.OPAQUE) {
+      setter.addStatement("$L.setOpaque(this, $N)", varHandleName(varName), varName);
+    } else if (visibility == Visibility.VOLATILE) {
       setter.addStatement("this.$N = $N", varName, varName);
+    } else {
+      throw new IllegalArgumentException();
     }
     return setter.build();
   }
@@ -181,12 +190,6 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   }
 
   protected enum Visibility {
-    IMMEDIATE(false), PLAIN(true);
-
-    final boolean isPlain;
-
-    Visibility(boolean mode) {
-      this.isPlain = mode;
-    }
+    PLAIN, OPAQUE, VOLATILE
   }
 }

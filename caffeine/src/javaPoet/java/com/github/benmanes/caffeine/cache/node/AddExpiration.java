@@ -83,13 +83,13 @@ public final class AddExpiration extends NodeRule {
   private void addVariableTime(String varName) {
     var getter = MethodSpec.methodBuilder("getVariableTime")
         .addModifiers(Modifier.PUBLIC)
-        .addStatement("return (long) $L.get(this)", varHandleName(varName))
+        .addStatement("return (long) $L.getOpaque(this)", varHandleName(varName))
         .returns(long.class)
         .build();
     var setter = MethodSpec.methodBuilder("setVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(long.class, varName)
-        .addStatement("$L.set(this, $N)", varHandleName(varName), varName)
+        .addStatement("$L.setOpaque(this, $N)", varHandleName(varName), varName)
         .build();
     var cas = MethodSpec.methodBuilder("casVariableTime")
         .addModifiers(Modifier.PUBLIC)
@@ -112,8 +112,8 @@ public final class AddExpiration extends NodeRule {
 
     context.nodeSubtype
         .addField(long.class, "accessTime", Modifier.VOLATILE)
-        .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.PLAIN))
-        .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.PLAIN));
+        .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.OPAQUE))
+        .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.OPAQUE));
     addVarHandle("accessTime", TypeName.get(long.class));
     addTimeConstructorAssignment(context.constructorByKey, "accessTime", "now");
     addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime", "now");
@@ -124,7 +124,7 @@ public final class AddExpiration extends NodeRule {
         && Feature.useWriteTime(context.generateFeatures)) {
       context.nodeSubtype
           .addField(long.class, "writeTime", Modifier.VOLATILE)
-          .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.PLAIN))
+          .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.OPAQUE))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
       addVarHandle("writeTime", TypeName.get(long.class));
       addTimeConstructorAssignment(context.constructorByKey, "writeTime", "now & ~1L");
