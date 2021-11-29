@@ -7,7 +7,7 @@ enabled = true
 [[analyzers]]
 name = "java"
 enabled = true
-
+x = false
   [analyzers.meta]
   runtime_version = "11"
   
