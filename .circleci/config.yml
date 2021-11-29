@@ -1,0 +1,14 @@
+version: 2.1
+
+jobs:
+  disabled:
+    docker:
+      - image: cimg/openjdk:8.0
+    steps:
+      - checkout
+
+workflows:
+  version: 2
+  workflow:
+    jobs:
+      - disabled
