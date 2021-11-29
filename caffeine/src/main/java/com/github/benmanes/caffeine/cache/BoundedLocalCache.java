@@ -45,7 +45,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -3134,8 +3133,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return false;
       }
       Entry<?, ?> entry = (Entry<?, ?>) obj;
-      Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(entry.getKey()));
-      return (node != null) && Objects.equals(node.getValue(), entry.getValue());
+      Object key = entry.getKey();
+      Object value = entry.getValue();
+      if ((key == null) || (value == null)) {
+        return false;
+      }
+      Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
+      return (node != null) && node.containsValue(value);
     }
 
     @Override

@@ -35,6 +35,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1690,6 +1691,45 @@ public final class AsyncAsMapTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void entrySet_empty(AsyncCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.asMap().entrySet(), is(deeplyEmpty()));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullKey(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    Map.Entry<Integer, CompletableFuture<Integer>> entry =
+        new AbstractMap.SimpleEntry<>(null, cache.asMap().get(context.firstKey()));
+    assertThat(cache.asMap().entrySet().contains(entry), is(false));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullValue(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    Map.Entry<Integer, CompletableFuture<Integer>> entry =
+        new AbstractMap.SimpleEntry<>(context.firstKey(), null);
+    assertThat(cache.asMap().entrySet().contains(entry), is(false));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    Map.Entry<Integer, CompletableFuture<Integer>> entry = immutableEntry(
+        context.absentKey(), CompletableFuture.completedFuture(context.absentValue()));
+    assertThat(cache.asMap().entrySet().contains(entry), is(false));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_present(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    Map.Entry<Integer, CompletableFuture<Integer>> entry = immutableEntry(
+        context.firstKey(), cache.asMap().get(context.firstKey()));
+    assertThat(cache.asMap().entrySet().contains(entry), is(true));
   }
 
   @CheckNoStats

@@ -1002,8 +1002,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           return false;
         }
         Entry<?, ?> entry = (Entry<?, ?>) o;
-        V value = AsMapView.this.get(entry.getKey());
-        return (value != null) && value.equals(entry.getValue());
+        Object key = entry.getKey();
+        Object value = entry.getValue();
+        if ((key == null) || (value == null)) {
+          return false;
+        }
+        V cachedValue = AsMapView.this.get(key);
+        return (cachedValue != null) && cachedValue.equals(value);
       }
 
       @Override

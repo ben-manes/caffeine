@@ -33,6 +33,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -2161,6 +2162,43 @@ public final class AsMapTest {
     Object[] array = map.entrySet().toArray();
     assertThat(array.length, is(length));
     assertThat(Arrays.asList(array).containsAll(context.original().entrySet()), is(true));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullKey(Map<Integer, Integer> map, CacheContext context) {
+    Map.Entry<Integer, Integer> entry = new AbstractMap.SimpleEntry<>(
+        null, context.original().get(context.firstKey()));
+    assertThat(map.entrySet().contains(entry), is(false));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_nullValue(Map<Integer, Integer> map, CacheContext context) {
+    Map.Entry<Integer, Integer> entry = new AbstractMap.SimpleEntry<>(context.firstKey(), null);
+    assertThat(map.entrySet().contains(entry), is(false));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_absent(Map<Integer, Integer> map, CacheContext context) {
+    Map.Entry<Integer, Integer> entry = immutableEntry(context.absentKey(), context.absentValue());
+    assertThat(map.entrySet().contains(entry), is(false));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_contains_present(Map<Integer, Integer> map, CacheContext context) {
+    Map.Entry<Integer, Integer> entry = immutableEntry(
+        context.firstKey(), context.original().get(context.firstKey()));
+    assertThat(map.entrySet().contains(entry), is(true));
   }
 
   @CheckNoWriter @CheckNoStats
