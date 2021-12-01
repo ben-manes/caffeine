@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.time.ZoneOffset.UTC;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -125,7 +126,9 @@ public final class Issue30Test {
 
     Thread.sleep(TTL + EPSILON); // sleep until expiration
     assertThat("now serve first updated value", cache.get(A_KEY), is(futureOf(A_UPDATE_1)));
-    assertThat("now serve first updated value", cache.get(B_KEY), is(futureOf(B_UPDATE_1)));
+    await().untilAsserted(() -> {
+      assertThat("now serve first updated value", cache.get(B_KEY), is(futureOf(B_UPDATE_1)));
+    });
   }
 
   private void secondUpdate(AsyncLoadingCache<String, String> cache,
