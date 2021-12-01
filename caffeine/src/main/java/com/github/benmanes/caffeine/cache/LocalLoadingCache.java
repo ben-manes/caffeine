@@ -23,8 +23,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -101,7 +103,9 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     refreshFuture.whenComplete((newValue, error) -> {
       long loadTime = cache().statsTicker().read() - startTime;
       if (error != null) {
-        logger.log(Level.WARNING, "Exception thrown during refresh", error);
+        if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
+          logger.log(Level.WARNING, "Exception thrown during refresh", error);
+        }
         cache().statsCounter().recordLoadFailure(loadTime);
         return;
       }

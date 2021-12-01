@@ -20,8 +20,10 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -153,7 +155,9 @@ abstract class LocalAsyncLoadingCache<K, V>
           long loadTime = asyncCache.cache().statsTicker().read() - now;
           if (error != null) {
             asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
-            logger.log(Level.WARNING, "Exception thrown during refresh", error);
+            if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
+              logger.log(Level.WARNING, "Exception thrown during refresh", error);
+            }
             return;
           }
 

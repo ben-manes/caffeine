@@ -30,11 +30,13 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -194,7 +196,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
       long loadTime = cache().statsTicker().read() - startTime;
       if (value == null) {
-        if (error != null) {
+        if ((error != null) && !(error instanceof CancellationException)
+            && !(error instanceof TimeoutException)) {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", error);
         }
         cache().remove(key, valueFuture);
@@ -239,7 +242,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           entry.getValue().obtrudeException(error);
         }
         cache.statsCounter().recordLoadFailure(loadTime);
-        logger.log(Level.WARNING, "Exception thrown during asynchronous load", error);
+        if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
+          logger.log(Level.WARNING, "Exception thrown during asynchronous load", error);
+        }
       } else {
         fillProxies(result);
         addNewEntries(result);

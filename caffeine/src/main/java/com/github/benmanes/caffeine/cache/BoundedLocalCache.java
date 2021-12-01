@@ -50,6 +50,7 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.Spliterator;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -58,6 +59,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -1219,7 +1221,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         refreshFuture.whenComplete((newValue, error) -> {
           long loadTime = statsTicker().read() - startTime;
           if (error != null) {
-            logger.log(Level.WARNING, "Exception thrown during refresh", error);
+            if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
+              logger.log(Level.WARNING, "Exception thrown during refresh", error);
+            }
             node.casWriteTime(refreshWriteTime, oldWriteTime);
             statsCounter().recordLoadFailure(loadTime);
             return;
