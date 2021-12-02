@@ -11,16 +11,9 @@ jobs:
       - name: Set up JDK 11
         uses: actions/setup-java@v2
         with:
-          distribution: 'zulu'
+          cache: 'gradle'
           java-version: 11
-      - name: Cache Gradle packages
-        uses: actions/cache@v2.1.7
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle
+          distribution: 'zulu'
       - name: Releasing
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}

@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
@@ -219,6 +220,17 @@ public final class LoadingCacheTest {
     var result = cache.getAll(context.original().keySet());
     assertThat(result).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(result.size()).misses(0).success(0).failures(0);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_exceeds(LoadingCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.absentKeys());
+
+    assertThat(result.keySet()).containsExactlyElementsIn(context.absentKeys());
+    assertThat(cache).hasSizeGreaterThan(context.initialSize() + context.absentKeys().size());
+    assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
   }
 
   @Test(dataProvider = "caches")

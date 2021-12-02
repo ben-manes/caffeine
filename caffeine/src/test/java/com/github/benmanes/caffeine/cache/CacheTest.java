@@ -47,6 +47,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
@@ -358,6 +359,20 @@ public final class CacheTest {
     var result = cache.getAll(context.original().keySet(), bulkMappingFunction());
     assertThat(result).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(result.size()).misses(0).success(0).failures(0);
+  }
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches")
+  public void getAll_exceeds(Cache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(Set.of(context.absentKey()), keys -> context.absent());
+
+    var expected = new ImmutableMap.Builder<Int, Int>()
+        .putAll(context.original())
+        .putAll(context.absent())
+        .build();
+    assertThat(cache).containsExactlyEntriesIn(expected);
+    assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
+    assertThat(result).containsExactlyEntriesIn(Map.of(context.absentKey(), context.absentValue()));
   }
 
   @Test(dataProvider = "caches")

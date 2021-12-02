@@ -255,6 +255,7 @@ public final class CacheContext {
       return absent;
     }
     absent = new LinkedHashMap<>();
+    absent.put(absentKey(), absentValue());
     do {
       Int key = nextAbsentKey();
       absent.put(key, key.negate());

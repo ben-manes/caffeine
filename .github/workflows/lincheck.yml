@@ -15,16 +15,9 @@ jobs:
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v2
         with:
+          cache: 'gradle'
           distribution: 'zulu'
           java-version: ${{ env.JAVA_VERSION }}
-      - name: Cache Gradle packages
-        uses: actions/cache@v2.1.7
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle
       - name: Run lincheck
         run: |
           set -eux

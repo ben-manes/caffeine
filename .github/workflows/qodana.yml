@@ -17,14 +17,6 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: ${{ env.JAVA_VERSION }}
-      - name: Cache Gradle packages
-        uses: actions/cache@v2.1.7
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: ${{ runner.os }}-${{ github.job }}-${{ env.JAVA_VERSION }}-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle
       - name: Build
         run: ./gradlew build -x test
       - name: Cache Qodana dependencies
