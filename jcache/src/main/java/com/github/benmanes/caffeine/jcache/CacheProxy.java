@@ -928,7 +928,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     try {
       CompletableFuture
-          .allOf(inFlight.toArray(new CompletableFuture[0]))
+          .allOf(inFlight.toArray(new CompletableFuture<?>[0]))
           .get(10, TimeUnit.SECONDS);
     } catch (InterruptedException | ExecutionException | TimeoutException e) {
       thrown = e;

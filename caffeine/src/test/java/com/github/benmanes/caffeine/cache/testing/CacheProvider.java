@@ -44,6 +44,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheProvider {
+  private static final Class<?> BOUNDED_LOCAL_CACHE =
+      classForName("com.github.benmanes.caffeine.cache.BoundedLocalCache");
 
   static {
     // disable logging warnings caused by exceptions in asynchronous computations
@@ -106,6 +108,11 @@ public final class CacheProvider {
           params[i] = context.asyncCache;
         } else if (clazz.isAssignableFrom(Map.class)) {
           params[i] = cache.asMap();
+        } else if (clazz.isAssignableFrom(BOUNDED_LOCAL_CACHE)) {
+          if (!BOUNDED_LOCAL_CACHE.isInstance(context.cache().asMap())) {
+            return null;
+          }
+          params[i] = context.cache().asMap();
         } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
           params[i] = cache.policy().eviction().get();
         } else if (clazz.isAssignableFrom(Policy.Expiration.class)) {
@@ -137,5 +144,13 @@ public final class CacheProvider {
   /** Returns if the required cache matches the provided type. */
   private static boolean hasCacheOfType(Method testMethod, Class<?> cacheType) {
     return Arrays.stream(testMethod.getParameterTypes()).anyMatch(cacheType::isAssignableFrom);
+  }
+
+  private static Class<?> classForName(String className) {
+    try {
+      return Class.forName(className);
+    } catch (ClassNotFoundException e) {
+      throw new AssertionError(e);
+    }
   }
 }

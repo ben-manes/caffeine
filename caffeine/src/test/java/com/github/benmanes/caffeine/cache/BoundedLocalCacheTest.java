@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCES
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
@@ -169,16 +170,16 @@ public final class BoundedLocalCacheTest {
         await().untilTrue(done);
       }
     };
-    BoundedLocalCache<Integer, Integer> map = asBoundedLocalCache(
+    BoundedLocalCache<Integer, Integer> cache = asBoundedLocalCache(
         Caffeine.newBuilder().writer(writer).maximumSize(0L).build());
-    map.put(1, 1);
+    cache.put(1, 1);
     await().untilTrue(evicting);
 
-    map.put(2, 2);
-    assertThat(map.drainStatus, is(PROCESSING_TO_REQUIRED));
+    cache.put(2, 2);
+    assertThat(cache.drainStatus, is(PROCESSING_TO_REQUIRED));
 
     done.set(true);
-    await().until(() -> map.drainStatus, is(IDLE));
+    await().until(() -> cache.drainStatus, is(IDLE));
   }
 
   @Test(dataProvider = "caches")
@@ -187,7 +188,63 @@ public final class BoundedLocalCacheTest {
       executorFailure = ExecutorFailure.EXPECTED, executor = CacheExecutor.REJECTING,
       removalListener = Listener.CONSUMING)
   public void scheduleDrainBuffers_rejected(Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     cache.put(context.absentKey(), context.absentValue());
+
+    assertThat(localCache.drainStatus, is(IDLE));
+    assertThat(localCache.writeBuffer.isEmpty(), is(true));
+    assertThat(localCache.evictionLock.isLocked(), is(false));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  public void afterWrite_drainFullWriteBuffer(
+      BoundedLocalCache<Integer, Integer> cache, CacheContext context) {
+    cache.drainStatus = PROCESSING_TO_IDLE;
+
+    int[] queued = { 0 };
+    Runnable pendingTask = () -> queued[0]++;
+
+    for (int i = 0; i < WRITE_BUFFER_MAX; i++) {
+      cache.afterWrite(pendingTask);
+    }
+    assertThat(cache.drainStatus, is(PROCESSING_TO_REQUIRED));
+
+    int[] triggered = { 0 };
+    Runnable triggerTask = () -> triggered[0] = WRITE_BUFFER_MAX + 1;
+    cache.afterWrite(triggerTask);
+
+    assertThat(cache.drainStatus, is(IDLE));
+    assertThat(cache.evictionLock.isLocked(), is(false));
+    assertThat(queued[0], is(equalTo(WRITE_BUFFER_MAX)));
+    assertThat(triggered[0], is(equalTo(WRITE_BUFFER_MAX + 1)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, executor = CacheExecutor.DISCARDING)
+  public void afterWrite_drainFullWriteBuffer_discarded(
+      BoundedLocalCache<Integer, Integer> cache, CacheContext context) {
+    cache.put(context.absentKey(), context.absentValue());
+    assertThat(cache.drainStatus, is(equalTo(PROCESSING_TO_IDLE)));
+    assertThat(cache.evictionLock.isLocked(), is(false));
+
+    int[] queued = { 1 };
+    Runnable pendingTask = () -> queued[0]++;
+
+    for (int i = 0; i < (WRITE_BUFFER_MAX - 1); i++) {
+      cache.afterWrite(pendingTask);
+    }
+    assertThat(cache.drainStatus, is(equalTo(PROCESSING_TO_REQUIRED)));
+
+    int[] triggered = { 0 };
+    Runnable triggerTask = () -> triggered[0] = WRITE_BUFFER_MAX + 1;
+    cache.afterWrite(triggerTask);
+
+    assertThat(cache.drainStatus, is(IDLE));
+    assertThat(cache.evictionLock.isLocked(), is(false));
+    assertThat(queued[0], is(equalTo(WRITE_BUFFER_MAX)));
+    assertThat(triggered[0], is(equalTo(WRITE_BUFFER_MAX + 1)));
   }
 
   /* --------------- Eviction --------------- */
@@ -794,7 +851,7 @@ public final class BoundedLocalCacheTest {
     localCache.afterWrite(() -> ran[0] = true);
     assertThat(ran[0], is(true));
 
-    assertThat(localCache.writeBuffer().size(), is(0));
+    assertThat(localCache.writeBuffer.size(), is(0));
   }
 
   @Test(dataProvider = "caches")
@@ -818,29 +875,6 @@ public final class BoundedLocalCacheTest {
 
     cache.cleanUp();
     assertThat(localCache.readBuffer.reads(), is(1));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.FULL, maximumSize = Maximum.FULL)
-  public void afterWrite_drainFullWriteBuffer(Cache<Integer, Integer> cache, CacheContext context) {
-    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    localCache.drainStatus = PROCESSING_TO_IDLE;
-
-    int[] processed = { 0 };
-    Runnable pendingTask = () -> processed[0]++;
-
-    int[] expectedCount = { 0 };
-    while (localCache.writeBuffer().offer(pendingTask)) {
-      expectedCount[0]++;
-    }
-
-    int[] triggered = { 0 };
-    Runnable triggerTask = () -> triggered[0] = 1 + expectedCount[0];
-    localCache.afterWrite(triggerTask);
-
-    assertThat(processed[0], is(expectedCount[0]));
-    assertThat(triggered[0], is(expectedCount[0] + 1));
   }
 
   @Test(dataProvider = "caches")
@@ -888,7 +922,7 @@ public final class BoundedLocalCacheTest {
 
     int size = localCache.accessOrderWindowDeque().size()
         + localCache.accessOrderProbationDeque().size();
-    assertThat(localCache.writeBuffer().size(), is(0));
+    assertThat(localCache.writeBuffer.size(), is(0));
     assertThat(size, is(1));
   }
 
@@ -1042,7 +1076,7 @@ public final class BoundedLocalCacheTest {
         && localCache.readBuffer != Buffer.<Node<Integer, Integer>>disabled();
 
     cache.put(1, 1);
-    assertThat(localCache.writeBuffer().producerIndex, is(2L));
+    assertThat(localCache.writeBuffer.producerIndex, is(2L));
 
     // If within the tolerance, treat the update as a read
     cache.put(1, 2);
@@ -1050,7 +1084,7 @@ public final class BoundedLocalCacheTest {
       assertThat(localCache.readBuffer.reads(), is(0));
       assertThat(localCache.readBuffer.writes(), is(1));
     }
-    assertThat(localCache.writeBuffer().producerIndex, is(2L));
+    assertThat(localCache.writeBuffer.producerIndex, is(2L));
 
     // If exceeds the tolerance, treat the update as a write
     context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
@@ -1059,7 +1093,7 @@ public final class BoundedLocalCacheTest {
       assertThat(localCache.readBuffer.reads(), is(1));
       assertThat(localCache.readBuffer.writes(), is(1));
     }
-    assertThat(localCache.writeBuffer().producerIndex, is(4L));
+    assertThat(localCache.writeBuffer.producerIndex, is(4L));
   }
 
   @Test(dataProvider = "caches")
@@ -1068,20 +1102,20 @@ public final class BoundedLocalCacheTest {
   public void put_expireTolerance_expiry(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     cache.put(1, 1);
-    assertThat(localCache.writeBuffer().producerIndex, is(2L));
+    assertThat(localCache.writeBuffer.producerIndex, is(2L));
 
     // If within the tolerance, treat the update as a read
     cache.put(1, 2);
     assertThat(localCache.readBuffer.reads(), is(0));
     assertThat(localCache.readBuffer.writes(), is(1));
-    assertThat(localCache.writeBuffer().producerIndex, is(2L));
+    assertThat(localCache.writeBuffer.producerIndex, is(2L));
 
     // If exceeds the tolerance, treat the update as a write
     context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
     cache.put(1, 3);
     assertThat(localCache.readBuffer.reads(), is(1));
     assertThat(localCache.readBuffer.writes(), is(1));
-    assertThat(localCache.writeBuffer().producerIndex, is(4L));
+    assertThat(localCache.writeBuffer.producerIndex, is(4L));
 
     // If the expire time reduces by more than the tolerance, treat the update as a write
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
@@ -1089,7 +1123,7 @@ public final class BoundedLocalCacheTest {
     cache.put(1, 4);
     assertThat(localCache.readBuffer.reads(), is(1));
     assertThat(localCache.readBuffer.writes(), is(1));
-    assertThat(localCache.writeBuffer().producerIndex, is(6L));
+    assertThat(localCache.writeBuffer.producerIndex, is(6L));
 
     // If the expire time increases by more than the tolerance, treat the update as a write
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
@@ -1097,7 +1131,7 @@ public final class BoundedLocalCacheTest {
     cache.put(1, 4);
     assertThat(localCache.readBuffer.reads(), is(1));
     assertThat(localCache.readBuffer.writes(), is(1));
-    assertThat(localCache.writeBuffer().producerIndex, is(8L));
+    assertThat(localCache.writeBuffer.producerIndex, is(8L));
   }
 
   @Test(dataProvider = "caches")

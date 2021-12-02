@@ -87,7 +87,7 @@ public final class IsValidBoundedLocalCache<K, V>
     for (;;) {
       cache.cleanUp();
 
-      if (cache.buffersWrites() && (cache.writeBuffer().size() > 0)) {
+      if (cache.writeBuffer.size() > 0) {
         continue; // additional writes to drain
       } else if (cache.evicts() && (cache.adjustment() != adjustment)) {
         adjustment = cache.adjustment();
@@ -254,7 +254,7 @@ public final class IsValidBoundedLocalCache<K, V>
     }
 
     Supplier<String> errorMsg = () -> String.format(
-        "Size != list length; pending=%s, additional: %s", cache.writeBuffer().size(),
+        "Size != list length; pending=%s, additional: %s", cache.writeBuffer.size(),
         Sets.difference(seen, ImmutableSet.copyOf(cache.data.values())));
     desc.expectThat(errorMsg, cache.size(), is(seen.size()));
 

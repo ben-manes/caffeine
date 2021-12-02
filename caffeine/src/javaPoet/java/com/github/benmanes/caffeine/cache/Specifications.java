@@ -95,11 +95,6 @@ public final class Specifications {
   public static final TypeName WRITE_ORDER_DEQUE =
       ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME, "WriteOrderDeque"), NODE);
 
-  public static final ClassName WRITE_QUEUE_TYPE =
-      ClassName.get(PACKAGE_NAME, "MpscGrowableArrayQueue");
-  public static final TypeName WRITE_QUEUE =
-      ParameterizedTypeName.get(WRITE_QUEUE_TYPE, ClassName.get(Runnable.class));
-
   public static final TypeName EXPIRY = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "Expiry"), kTypeVar, vTypeVar);
   public static final TypeName TIMER_WHEEL = ParameterizedTypeName.get(

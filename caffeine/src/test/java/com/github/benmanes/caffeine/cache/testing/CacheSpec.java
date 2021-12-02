@@ -34,8 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -53,9 +51,10 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.util.concurrent.testing.TestingExecutors;
 
 /**
  * The cache test specification so that a {@link org.testng.annotations.DataProvider} can construct
@@ -633,40 +632,34 @@ public @interface CacheSpec {
     EXPECTED, DISALLOWED, IGNORED
   }
 
-  ExecutorService cachedExecutorService = Executors.newCachedThreadPool(
-      new ThreadFactoryBuilder().setDaemon(true).build());
-
   /** The executors that the cache can be configured with. */
   enum CacheExecutor {
-    DEFAULT { // fork-join common pool
-      @Override public Executor create() {
-        // Use with caution as may be unpredictable during tests if awaiting completion
-        return null;
-      }
-    },
-    DIRECT {
-      @Override public Executor create() {
-        // Cache implementations must avoid deadlocks by incorrectly assuming async execution
-        return new TrackingExecutor(MoreExecutors.newDirectExecutorService());
-      }
-    },
-    THREADED {
-      @Override public Executor create() {
-        return new TrackingExecutor(cachedExecutorService);
-      }
-    },
-    REJECTING {
-      @Override public Executor create() {
-        // Cache implementations must avoid corrupting internal state due to rejections
-        return new ForkJoinPool() {
-          @Override public void execute(Runnable task) {
-            throw new RejectedExecutionException();
-          }
-        };
-      }
-    };
+    // Use with caution as may be unpredictable during tests if awaiting completion
+    DEFAULT(() -> null), // fork-join common pool
+    // Cache implementations must avoid deadlocks by incorrectly assuming async execution
+    DIRECT(() -> new TrackingExecutor(MoreExecutors.newDirectExecutorService())),
+    // Cache implementations must continue to evict if the maintenance task is lost
+    DISCARDING(() -> new TrackingExecutor(TestingExecutors.noOpScheduledExecutor())),
+    // Use with caution as may be unpredictable during tests if awaiting completion
+    THREADED(() -> new TrackingExecutor(ConcurrentTestHarness.executor)),
+    // Cache implementations must avoid corrupting internal state due to rejections
+    REJECTING(() -> {
+      return new ForkJoinPool() {
+        @Override public void execute(Runnable task) {
+          throw new RejectedExecutionException();
+        }
+      };
+    });
 
-    public abstract Executor create();
+    private final Supplier<Executor> executor;
+
+    CacheExecutor(Supplier<Executor> executor) {
+      this.executor = requireNonNull(executor);
+    }
+
+    public Executor create() {
+      return executor.get();
+    }
   }
 
   /* --------------- Scheduler --------------- */

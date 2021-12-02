@@ -29,7 +29,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -290,8 +289,8 @@ public final class Caffeine<K, V> {
    * with {@link #removalListener} or utilize asynchronous computations. A test may instead prefer
    * to configure the cache to execute tasks directly on the same thread.
    * <p>
-   * Beware that configuring a cache with an executor that throws {@link RejectedExecutionException}
-   * may experience non-deterministic behavior.
+   * Beware that configuring a cache with an executor that discards tasks or never runs them may
+   * experience non-deterministic behavior.
    *
    * @param executor the executor to use for asynchronous execution
    * @return this {@code Caffeine} instance (for chaining)
