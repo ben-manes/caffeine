@@ -1455,7 +1455,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       scheduleDrainBuffers();
     }
 
-    // The maintenance task may be scheduled but not running due. This might occur due to all of the
+    // The maintenance task may be scheduled but not running. This might occur due to all of the
     // executor's threads being busy (perhaps writing into this cache), the write rate greatly
     // exceeds the consuming rate, priority inversion, or if the executor silently discarded the
     // maintenance task. In these scenarios then the writing threads cannot make progress and

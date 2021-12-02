@@ -74,12 +74,6 @@ tasks.register('junitTest', Test) {
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
 }
 
-tasks.register('jdk8274349Test', Test) {
-  group = 'Cache tests'
-  description = 'JDK-8274349 tests'
-  useTestNG()
-}
-
 tasks.withType(Test).configureEach {
   if (options instanceof TestNGOptions) {
     if (name.startsWith('slow')) {
@@ -97,13 +91,10 @@ tasks.withType(Test).configureEach {
       testLogging.events 'started'
       maxHeapSize = '2g'
       failFast = true
-    } else if (name.startsWith('jdk8274349')) {
-      options.includeGroups = ['jdk8274349']
-      jvmArgs '-XX:ActiveProcessorCount=1'
     } else {
       options {
         threadCount = Math.max(6, Runtime.getRuntime().availableProcessors() - 1)
-        excludeGroups = ['slow', 'isolated', 'lincheck', 'jdk8274349']
+        excludeGroups = ['slow', 'isolated', 'lincheck']
         parallel = 'methods'
       }
       jvmArgs '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled'

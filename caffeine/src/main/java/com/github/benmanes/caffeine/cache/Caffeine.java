@@ -300,14 +300,7 @@ public final class Caffeine<K extends Object, V extends Object> {
   }
 
   Executor getExecutor() {
-    if ((executor != null)
-        && !((executor instanceof ForkJoinPool) && (executor == ForkJoinPool.commonPool()))) {
-      return executor;
-    } else if ((ForkJoinPool.getCommonPoolParallelism() == 1) && (Runtime.version().feature() == 17)
-        && (Runtime.version().interim() == 0) && (Runtime.version().update() <= 1)) {
-      return Runnable::run; // JDK-8274349
-    }
-    return ForkJoinPool.commonPool();
+    return (executor == null) ? ForkJoinPool.commonPool() : executor;
   }
 
   /**
