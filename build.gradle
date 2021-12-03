@@ -37,7 +37,7 @@ allprojects {
   version.with {
     major = 3 // incompatible API changes
     minor = 0 // backwards-compatible additions
-    patch = 5 // backwards-compatible bug fixes
+    patch = 6 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
 }
