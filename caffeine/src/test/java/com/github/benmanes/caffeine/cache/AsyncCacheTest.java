@@ -349,6 +349,41 @@ public final class AsyncCacheTest {
     cache.getAll(Collections.singletonList(null), keys -> { throw new AssertionError(); });
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllFunction_iterable_empty(AsyncCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(List.of(), keys -> { throw new AssertionError(); }).join();
+    assertThat(result).isExhaustivelyEmpty();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllFunction_immutable_keys(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = cache.getAll(context.absentKeys(), keys -> {
+      keys.clear();
+      return Map.of();
+    });
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void getAllFunction_immutable_result(AsyncCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.absentKeys(),
+        keys -> keys.stream().collect(toMap(identity(), identity()))).join();
+    result.clear();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllFunction_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.getAll(context.absentKeys(), keys -> null))
+        .failsWith(NullMapCompletionException.class);
+    assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
+  }
+
   @CacheSpec
   @Test(dataProvider = "caches")
   public void getAllFunction_absent_failure(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -523,14 +558,6 @@ public final class AsyncCacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllFunction_iterable_empty(AsyncCache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(List.of(), keys -> { throw new AssertionError(); }).join();
-    assertThat(result).isExhaustivelyEmpty();
-  }
-
-  @CheckNoStats
-  @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_iterable_empty(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(List.of(),
         (keys, executor) -> { throw new AssertionError(); }).join();
@@ -539,28 +566,21 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void getAllFunction_immutable(AsyncCache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.absentKeys(),
-        keys -> keys.stream().collect(toMap(identity(), identity()))).join();
-    result.clear();
+  public void getAllBifunction_immutable_keys(AsyncCache<Int, Int> cache, CacheContext context) {
+    cache.getAll(context.absentKeys(), (keys, executor) -> {
+      keys.clear();
+      return CompletableFuture.completedFuture(Map.of());
+    });
   }
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void getAllBifunction_immutable(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void getAllBifunction_immutable_result(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
       return CompletableFuture.completedFuture(
           keys.stream().collect(toMap(identity(), identity())));
     }).join();
     result.clear();
-  }
-
-  @CacheSpec
-  @Test(dataProvider = "caches")
-  public void getAllFunction_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.getAll(context.absentKeys(), keys -> null))
-        .failsWith(NullMapCompletionException.class);
-    assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
   }
 
   @CacheSpec

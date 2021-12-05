@@ -500,6 +500,28 @@ public @interface CacheSpec {
         throw new IllegalStateException();
       }
     },
+    /** A bulk loader that tries to modify the keys. */
+    BULK_MODIFY_KEYS {
+      @Override public Int load(Int key) {
+        return key;
+      }
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
+        keys.clear();
+        return Map.of();
+      }
+    },
+    /** A async bulk loader that tries to modify the keys. */
+    ASYNC_BULK_MODIFY_KEYS {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
+          Set<? extends Int> keys, Executor executor) {
+        keys.clear();
+        return CompletableFuture.completedFuture(Map.of());
+      }
+    },
+    /** A async loader returns a incomplete future. */
     ASYNC_INCOMPLETE {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
@@ -519,7 +541,7 @@ public @interface CacheSpec {
     private final AsyncCacheLoader<Int, Int> asyncLoader;
 
     Loader() {
-      bulk = name().startsWith("BULK");
+      bulk = name().contains("BULK");
       asyncLoader = bulk
           ? new BulkSeriazableAsyncCacheLoader(this)
           : new SeriazableAsyncCacheLoader(this);

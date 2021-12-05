@@ -89,7 +89,7 @@ ext {
     coveralls: '2.12.0',
     errorprone: '2.0.2',
     findsecbugs: '1.11.0',
-    jacoco: '0.8.6',
+    jacoco: '0.8.7',
     jmh: '0.6.6',
     jmhReport: '0.9.0',
     nexusPublish: '1.1.0',

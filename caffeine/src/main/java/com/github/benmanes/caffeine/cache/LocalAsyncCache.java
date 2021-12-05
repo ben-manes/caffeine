@@ -138,9 +138,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return composeResult(futures);
     }
 
-    var completer = new AsyncBulkCompleter<K, V>(cache(), proxies);
+    var completer = new AsyncBulkCompleter<>(cache(), proxies);
     try {
-      mappingFunction.apply(proxies.keySet(), cache().executor()).whenComplete(completer);
+      var loader = mappingFunction.apply(
+          Collections.unmodifiableSet(proxies.keySet()), cache().executor());
+      loader.whenComplete(completer);
       return composeResult(futures);
     } catch (Throwable t) {
       completer.accept(/* result */ null, t);

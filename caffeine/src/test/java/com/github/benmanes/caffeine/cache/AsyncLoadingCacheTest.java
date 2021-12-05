@@ -141,9 +141,25 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.getAll(List.of()).join()).isExhaustivelyEmpty();
   }
 
+  @CacheSpec(loader = Loader.BULK_MODIFY_KEYS)
+  @Test(dataProvider = "caches")
+  public void getAll_immutable_keys_loader(
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var future = cache.getAll(context.absentKeys());
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @CacheSpec(loader = Loader.ASYNC_BULK_MODIFY_KEYS)
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void getAll_immutable_keys_asyncLoader(
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    cache.getAll(context.absentKeys());
+  }
+
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void getAll_immutable(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void getAll_immutable_result(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(context.absentKeys()).join().clear();
   }
 

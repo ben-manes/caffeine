@@ -312,7 +312,16 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void getAll_immutable(Cache<Int, Int> cache, CacheContext context) {
+  public void getAll_immutable_keys(Cache<Int, Int> cache, CacheContext context) {
+    cache.getAll(context.absentKeys(), keys -> {
+      keys.clear();
+      return Map.of();
+    });
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void getAll_immutable_result(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), bulkMappingFunction());
     result.clear();
   }

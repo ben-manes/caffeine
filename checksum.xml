@@ -151,6 +151,7 @@
     <trusted-key id='098a31f381819057' group='net.sourceforge.nekohtml' />
     <trusted-key id='82de7be82166e84e' group='net.sourceforge.pmd' />
     <trusted-key id='d0bf1d737c9a1c22' group='net.sourceforge.pmd' />
+    <trusted-key id='347cd0eaed975c5f' group='org.antlr' />
     <trusted-key id='6b1b008864323b92' group='org.antlr' />
     <trusted-key id='411063a3a0ffd119' group='org.apache-extras.beanshell' />
     <trusted-key id='a2115ae15f6b8b72' group='org.apache.ant' />
