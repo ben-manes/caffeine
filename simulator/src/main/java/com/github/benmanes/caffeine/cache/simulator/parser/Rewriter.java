@@ -21,28 +21,33 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 
+import com.google.common.base.CaseFormat;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
 
 import picocli.CommandLine;
+import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
 import picocli.CommandLine.Option;
 
 /**
- * A simple utility to rewrite traces for into the format used by other simulators. This lets us
- * run multiple simulators in parallel for a quick-and-dirty analysis, rather than port their code
- * into Java.
+ * A simple utility to rewrite traces into the format used by other simulators. This lets us run
+ * multiple simulators in parallel for a quick-and-dirty analysis, rather than port their code into
+ * Java.
  * <p>
  * <pre>{@code
  *   ./gradlew :simulator:rewrite -q \
- *      -PinputFormat=? \
- *      -PinputFiles=? \
- *      -PoutputFile=? \
- *      -PoutputFormat=?
+ *      --inputFormat=? \
+ *      --inputFiles=? \
+ *      --outputFile=? \
+ *      --outputFormat=?
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Command(mixinStandardHelpOptions = true)
 public final class Rewriter implements Runnable {
   @Option(names = "--inputFiles", required = true, split = ",", description = "The trace input "
       + "files. To use a mix of formats, specify the entry as format:path, e.g. lirs:loop.trace.gz")
@@ -72,11 +77,31 @@ public final class Rewriter implements Runnable {
         }
       });
       writer.writeFooter();
-      System.out.printf("Rewrote %,d events from %,d inputs in %s%n",
+      System.out.printf("Rewrote %,d events from %,d input(s) in %s%n",
           tick[0], inputFiles.size(), stopwatch);
+      System.out.printf("Output in %s format to %s%n",
+          CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_HYPHEN, outputFormat.name()), outputFile);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  private static String[] argumentsWithDefaults(String[] args) {
+    var params = Lists.newArrayList(args);
+    if (!params.contains("--inputFormat")) {
+      boolean found = false;
+      boolean defaultFormat = true;
+      for (int i = 0; i < args.length - 1; i++) {
+        if (Objects.equals(args[i], "--inputFiles")) {
+          defaultFormat &= args[i + 1].contains(":");
+          found = true;
+        }
+      }
+      if (found && defaultFormat) {
+        params.addAll(List.of("--inputFormat", TraceFormat.values()[0].name()));
+      }
+    }
+    return params.toArray(String[]::new);
   }
 
   public static void main(String[] args) {
@@ -84,6 +109,6 @@ public final class Rewriter implements Runnable {
         .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
         .setCommandName(Rewriter.class.getSimpleName())
         .setCaseInsensitiveEnumValuesAllowed(true)
-        .execute(args);
+        .execute(argumentsWithDefaults(args));
   }
 }

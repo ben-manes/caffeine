@@ -4,8 +4,6 @@ import net.ltgt.gradle.errorprone.CheckSeverity
 apply from: "${rootDir}/gradle/autoValue.gradle"
 apply plugin:'application'
 
-mainClassName = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
-
 dependencies {
   implementation project(':caffeine')
 
@@ -78,6 +76,9 @@ tasks.withType(Javadoc).configureEach {
   options.addStringOption('Xdoclint:none', '-quiet')
 }
 
+application {
+  mainClass = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
+}
 tasks.named('run').configure {
   systemProperties System.properties.findAll {
     it.getKey().startsWith('akka') || it.getKey().startsWith('caffeine')
@@ -85,17 +86,102 @@ tasks.named('run').configure {
   jvmArgs '-XX:+UseParallelGC', '-Xmx4g'
 }
 
-tasks.register('rewrite', JavaExec) {
-  mainClass = 'com.github.benmanes.caffeine.cache.simulator.parser.Rewriter'
-  classpath = sourceSets.main.runtimeClasspath
+class Simulate extends DefaultTask {
+  @Input @Option(option = 'maximumSize', description = 'The maximum cache sizes')
+  List<String> maximumSizes = []
+  @Input @Option(option = 'format', description = 'The output file format')
+  String outputFormat = 'csv'
+  @Input @Option(option = 'metric', description = 'The metric to compare')
+  String metric = 'Hit Rate'
+  @OutputFiles
+  List<File> reports = []
 
-  def arguments = ['inputFormat', 'inputFiles', 'outputFile', 'outputFormat']
-  for (def argument : arguments) {
-    if (project.hasProperty(argument)) {
-      args "--${argument}", project.property(argument)
+  @TaskAction def run() {
+    if (maximumSizes.isEmpty()) {
+      def yellow = { "\033[33m${it}\033[0m" }
+      def italic = { "\033[3m${it}\033[0m" }
+      project.logger.error(
+        "\t${yellow('--maximumSize=')}${italic('<Long>[,<Long>...]')} is required")
+      return
+    }
+    maximumSizes = maximumSizes
+      .collectMany { it.split(',') as Set }
+      .collect { it.replaceAll('_', '').toLong() }
+      .sort()
+    for (def maximumSize : maximumSizes) {
+      printf 'Running with maximumSize=%,d...%n ', maximumSize
+      def report = "${project.buildDir}/reports/csv/result_${maximumSize}.csv"
+      reports += new File(report)
+      project.javaexec {
+        systemProperties project.tasks.run.systemProperties
+        classpath = project.sourceSets.main.runtimeClasspath
+        mainClass = project.application.mainClass
+        jvmArgs project.tasks.run.jvmArgs
+        systemProperties [
+          'caffeine.simulator.report.format': 'csv',
+          'caffeine.simulator.report.output': report,
+          'caffeine.simulator.maximum-size': maximumSize,
+        ]
+      }
+    }
+
+    project.javaexec {
+      classpath = project.sourceSets.main.runtimeClasspath
+      mainClass = 'com.github.benmanes.caffeine.cache.simulator.report.csv.CombinedCsvReport'
+      for (int i = 0; i < maximumSizes.size(); i++) {
+        args '--inputFiles', reports.collect { "${maximumSizes[i]}=${reports[i]}" }.join(',')
+      }
+      def combinedReport = "${project.buildDir}/reports/csv/" +
+        "${metric.toLowerCase().replaceAll(' ', '_')}.${outputFormat}"
+      reports += new File(combinedReport)
+      args '--outputFile', combinedReport
+      args '--outputFormat', outputFormat
+      args '--metric', metric
     }
   }
-  if (args.isEmpty()) {
-    args '--help'
+}
+tasks.register('simulate', Simulate) {
+  group 'Application'
+  description 'Runs multiple simulations and generates an aggregate report'
+  dependsOn processResources, compileJava
+  outputs.upToDateWhen { false }
+}
+
+class Rewrite extends DefaultTask {
+  @Input @Optional @Option(option = 'inputFiles', description = 'The trace input files')
+  List<String> inputFiles
+  @Input @Optional @Option(option = 'inputFormat', description = 'The default trace input format')
+  String inputFormat
+  @Input @Optional @Option(option = 'outputFile', description = 'The trace output file')
+  String outputFile
+  @Input @Optional @Option(option = 'outputFormat', description = 'The trace output format')
+  String outputFormat
+
+  @TaskAction def run() {
+    project.javaexec {
+      classpath = project.sourceSets.main.runtimeClasspath
+      mainClass = 'com.github.benmanes.caffeine.cache.simulator.parser.Rewriter'
+      if (inputFiles) {
+        args '--inputFiles', inputFiles.join(',')
+      }
+      if (inputFormat) {
+        args '--inputFormat', inputFormat
+      }
+      if (outputFile) {
+        args '--outputFile', outputFile
+      }
+      if (outputFormat) {
+        args '--outputFormat', outputFormat
+      }
+      if (!inputFiles && !inputFormat && !outputFile && !outputFormat) {
+        args '--help'
+      }
+    }
   }
+}
+tasks.register('rewrite', Rewrite) {
+  group 'Application'
+  description 'Rewrite traces into the format used by other simulators'
+  dependsOn processResources, compileJava
+  outputs.upToDateWhen { false }
 }

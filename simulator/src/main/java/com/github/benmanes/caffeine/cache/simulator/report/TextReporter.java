@@ -22,7 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -69,7 +69,8 @@ public abstract class TextReporter implements Reporter {
     if (output.equalsIgnoreCase("console")) {
       System.out.println(report);
     } else {
-      Files.write(Paths.get(output), report.getBytes(UTF_8));
+      Files.createDirectories(Path.of(output).getParent());
+      Files.write(Path.of(output), report.getBytes(UTF_8));
     }
   }
 
