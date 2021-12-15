@@ -27,7 +27,7 @@ ext {
   versions = [
     akka: '2.6.17',
     cache2k: '2.5.1.Alpha',
-    checkerFramework: '3.19.0',
+    checkerFramework: '3.20.0',
     coherence: '20.06',
     commonsCompress: '1.21',
     commonsLang3: '3.12.0',
@@ -63,7 +63,7 @@ ext {
     univocityParsers: '2.9.1',
     ycsb: '0.17.0',
     xz: '1.9',
-    zstd: '1.5.0-4',
+    zstd: '1.5.0-5',
   ]
   testVersions = [
     awaitility: '4.1.1',
@@ -78,7 +78,7 @@ ext {
     slf4jTest: '2.4.0',
     testng: '7.4.0',
     truth: '1.1.3',
-    felix: '7.0.1',
+    felix: '7.0.3',
     felixScr: '2.2.0-RC1',
     osgiUtilFunction: '1.2.0',
     osgiUtilPromise: '1.2.0',
@@ -98,8 +98,8 @@ ext {
     semanticVersioning: '1.1.0',
     shadow: '7.1.0',
     sonarqube: '3.3',
-    spotbugs: '4.5.0',
-    spotbugsPlugin: '5.0.0-rc.1',
+    spotbugs: '4.5.2',
+    spotbugsPlugin: '5.0.2',
     stats: '0.47.0',
     versions: '0.39.0',
   ]

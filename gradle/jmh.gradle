@@ -73,7 +73,7 @@ jmhReport {
 
 tasks.named('jmh').configure {
   dependsOn(bundle)
-  finalizedBy(jmhReport)
+  finalizedBy(tasks.jmhReport)
 }
 
 tasks.named('compileJmhJava').configure {

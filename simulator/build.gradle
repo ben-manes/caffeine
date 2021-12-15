@@ -79,14 +79,21 @@ tasks.withType(Javadoc).configureEach {
 application {
   mainClass = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
 }
+
 tasks.named('run').configure {
   systemProperties System.properties.findAll {
     it.getKey().startsWith('akka') || it.getKey().startsWith('caffeine')
   }
+
   jvmArgs '-XX:+UseParallelGC', '-Xmx4g'
+  if (project.hasProperty('jvmArgs')) {
+    jvmArgs project.jvmArgs.split(',')
+  }
 }
 
 class Simulate extends DefaultTask {
+  @Input @Optional @Option(option = 'jvmArgs', description = 'The jvm arguments')
+  String jvmArguments
   @Input @Option(option = 'maximumSize', description = 'The maximum cache sizes')
   List<String> maximumSizes = []
   @Input @Option(option = 'format', description = 'The output file format')
@@ -116,7 +123,10 @@ class Simulate extends DefaultTask {
         systemProperties project.tasks.run.systemProperties
         classpath = project.sourceSets.main.runtimeClasspath
         mainClass = project.application.mainClass
-        jvmArgs project.tasks.run.jvmArgs
+        jvmArgs project.tasks.run.allJvmArgs
+        if (jvmArguments) {
+          jvmArgs jvmArguments.split(',')
+        }
         systemProperties [
           'caffeine.simulator.report.format': 'csv',
           'caffeine.simulator.report.output': report,
