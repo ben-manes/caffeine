@@ -32,6 +32,8 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
       - name: simulator
         run: ./gradlew simulator:run
+      - name: chart simulation
+        run: ./gradlew simulator:simulate --maximumSize=100,200,300
       - name: write-behind-rxjava
         working-directory: examples/write-behind-rxjava
         run: mvn test

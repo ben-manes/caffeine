@@ -23,6 +23,7 @@ dependencies {
   implementation libraries.commonsIo
   implementation libraries.fastfilter
   implementation libraries.flipTables
+  implementation libraries.jfreechart
   implementation libraries.expiringMap
   implementation libraries.commonsLang3
   implementation libraries.commonsMath3
@@ -96,12 +97,14 @@ class Simulate extends DefaultTask {
   String jvmArguments
   @Input @Option(option = 'maximumSize', description = 'The maximum cache sizes')
   List<String> maximumSizes = []
-  @Input @Option(option = 'format', description = 'The output file format')
-  String outputFormat = 'csv'
   @Input @Option(option = 'metric', description = 'The metric to compare')
   String metric = 'Hit Rate'
-  @OutputFiles
-  List<File> reports = []
+  @Input @Option(option = 'title', description = 'The chart title')
+  String title = ''
+  @Input @Option(option = 'theme', description = 'The chart theme')
+  String theme = 'dark'
+  @OutputDirectory
+  File reportDir = new File("${project.buildDir}/reports/${name}")
 
   @TaskAction def run() {
     if (maximumSizes.isEmpty()) {
@@ -111,14 +114,16 @@ class Simulate extends DefaultTask {
         "\t${yellow('--maximumSize=')}${italic('<Long>[,<Long>...]')} is required")
       return
     }
+    def reports = [:]
     maximumSizes = maximumSizes
       .collectMany { it.split(',') as Set }
       .collect { it.replaceAll('_', '').toLong() }
       .sort()
+    def baseName = metric.toLowerCase().replaceAll(' ', '_')
     for (def maximumSize : maximumSizes) {
       printf 'Running with maximumSize=%,d...%n ', maximumSize
-      def report = "${project.buildDir}/reports/csv/result_${maximumSize}.csv"
-      reports += new File(report)
+      def report = "${reportDir}/${baseName}_${maximumSize}.csv"
+      reports[maximumSize] = new File(report)
       project.javaexec {
         systemProperties project.tasks.run.systemProperties
         classpath = project.sourceSets.main.runtimeClasspath
@@ -135,18 +140,26 @@ class Simulate extends DefaultTask {
       }
     }
 
+    def combinedReport = "${reportDir}/${baseName}.csv"
     project.javaexec {
-      classpath = project.sourceSets.main.runtimeClasspath
       mainClass = 'com.github.benmanes.caffeine.cache.simulator.report.csv.CombinedCsvReport'
-      for (int i = 0; i < maximumSizes.size(); i++) {
-        args '--inputFiles', reports.collect { "${maximumSizes[i]}=${reports[i]}" }.join(',')
+      classpath = project.sourceSets.main.runtimeClasspath
+      reports.each { maximumSize, report ->
+        args '--inputFiles', "${maximumSize}=${report}"
       }
-      def combinedReport = "${project.buildDir}/reports/csv/" +
-        "${metric.toLowerCase().replaceAll(' ', '_')}.${outputFormat}"
-      reports += new File(combinedReport)
       args '--outputFile', combinedReport
-      args '--outputFormat', outputFormat
       args '--metric', metric
+    }
+
+    def chart = "${reportDir}/${baseName}.png"
+    project.javaexec {
+      mainClass = 'com.github.benmanes.caffeine.cache.simulator.report.csv.PlotCsv'
+      classpath = project.sourceSets.main.runtimeClasspath
+      args '--inputFile', combinedReport
+      args '--outputFile', chart
+      args '--metric', metric
+      args '--title', title
+      args '--theme', theme
     }
   }
 }

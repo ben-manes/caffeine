@@ -27,14 +27,10 @@ import java.util.stream.Stream;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import com.univocity.parsers.common.AbstractWriter;
-import com.univocity.parsers.common.CommonWriterSettings;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
-import com.univocity.parsers.tsv.TsvWriter;
-import com.univocity.parsers.tsv.TsvWriterSettings;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -49,8 +45,6 @@ import picocli.CommandLine.Option;
  */
 @Command(mixinStandardHelpOptions = true)
 public final class CombinedCsvReport implements Runnable {
-  enum CombinedReportFormat { CSV, TSV; }
-
   @Option(names = "--inputFiles", required = true, split = ",",
       description = "The maximumSize to the csv file path")
   private Map<Long, Path> inputFiles;
@@ -59,9 +53,6 @@ public final class CombinedCsvReport implements Runnable {
   private String metric;
   @Option(names = "--outputFile", required = true, description = "The combined report")
   private Path outputFile;
-  @Option(names = "--outputFormat", required = true, defaultValue = "csv",
-      description = "The output file format")
-  private CombinedReportFormat outputFormat;
 
   @Override
   public void run() {
@@ -115,21 +106,11 @@ public final class CombinedCsvReport implements Runnable {
     return new CsvParser(settings);
   }
 
-  private AbstractWriter<?> newWriter(String[] headers) {
-    switch (outputFormat) {
-      case CSV:
-        return new CsvWriter(outputFile.toFile(), configure(new CsvWriterSettings(), headers));
-      case TSV:
-        return new TsvWriter(outputFile.toFile(), configure(new TsvWriterSettings(), headers));
-      default:
-        throw new IllegalArgumentException(outputFormat + " is not supported");
-    }
-  }
-
-  private static <T extends CommonWriterSettings<?>> T configure(T settings, String[] headers) {
+  private CsvWriter newWriter(String[] headers) {
+    var settings = new CsvWriterSettings();
     settings.setHeaderWritingEnabled(true);
     settings.setHeaders(headers);
-    return settings;
+    return new CsvWriter(outputFile.toFile(), settings);
   }
 
   public static void main(String[] args) {

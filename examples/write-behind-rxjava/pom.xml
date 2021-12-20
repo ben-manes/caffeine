@@ -10,10 +10,12 @@
 
   <properties>
     <java.version>11</java.version>
-    <caffeine.version>3.0.4</caffeine.version>
-    <rxjava.version>2.2.21</rxjava.version>
     <junit.version>4.13.2</junit.version>
+    <rxjava.version>2.2.21</rxjava.version>
+    <caffeine.version>3.0.5</caffeine.version>
     <awaitility.version>4.1.1</awaitility.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
 
   <dependencies>
@@ -43,6 +45,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
         <configuration>
           <source>${java.version}</source>
           <target>${java.version}</target>

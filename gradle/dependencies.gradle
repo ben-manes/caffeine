@@ -27,7 +27,7 @@ ext {
   versions = [
     akka: '2.6.17',
     cache2k: '2.5.1.Alpha',
-    checkerFramework: '3.20.0',
+    checkerFramework: '3.21.0',
     coherence: '20.06',
     commonsCompress: '1.21',
     commonsLang3: '3.12.0',
@@ -37,7 +37,6 @@ ext {
     config: '1.4.1',
     ehcache3: '3.10.0-alpha0',
     errorprone: '2.10.0',
-    errorproneJavac: '9+181-r4173-1',
     elasticSearch: '8.0.0-beta1',
     expiringMap: '0.5.10',
     fastfilter: '1.0.2',
@@ -50,6 +49,7 @@ ext {
     javaObjectLayout: '0.16',
     javapoet: '1.13.0',
     jcache: '1.1.1',
+    jfreechart: '1.5.3',
     jmh: '1.33',
     joor: '0.9.14',
     jsr330: '1',
@@ -73,7 +73,7 @@ ext {
     jctools: '3.3.0',
     junit: '4.13.2',
     lincheck: '2.14.1',
-    mockito: '4.1.0',
+    mockito: '4.2.0',
     paxExam: '4.13.5',
     slf4jTest: '2.4.0',
     testng: '7.4.0',
@@ -96,15 +96,15 @@ ext {
     nullaway: '1.2.0',
     pmd: '6.41.0',
     semanticVersioning: '1.1.0',
-    shadow: '7.1.0',
+    shadow: '7.1.1',
     sonarqube: '3.3',
     spotbugs: '4.5.2',
-    spotbugsPlugin: '5.0.2',
+    spotbugsPlugin: '5.0.3',
     stats: '0.47.0',
     versions: '0.39.0',
   ]
   annotationProcessorVersions = [
-    autoValue: '1.8.2',
+    autoValue: '1.9',
     autoValueBuilder: '2.9.3',
   ]
 
@@ -122,7 +122,6 @@ ext {
     ehcache3: "org.ehcache:ehcache:${versions.ehcache3}",
     errorproneAnnotations: "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
     errorproneCore: "com.google.errorprone:error_prone_core:${versions.errorprone}",
-    errorproneJavac: "com.google.errorprone:javac:${versions.errorproneJavac}",
     elasticSearch: dependencies.create("org.elasticsearch:elasticsearch:${versions.elasticSearch}") {
       exclude module: 'elasticsearch-plugin-classloader'
       exclude group: 'org.apache.lucene'
@@ -138,6 +137,7 @@ ext {
     javaObjectLayout: "org.openjdk.jol:jol-cli:${versions.javaObjectLayout}",
     javapoet: "com.squareup:javapoet:${versions.javapoet}",
     jcache: "javax.cache:cache-api:${versions.jcache}",
+    jfreechart: "org.jfree:jfreechart:${versions.jfreechart}",
     jsr330: "javax.inject:javax.inject:${versions.jsr330}",
     joor: "org.jooq:joor-java-8:${versions.joor}",
     nullaway: "com.uber.nullaway:nullaway:${versions.nullaway}",

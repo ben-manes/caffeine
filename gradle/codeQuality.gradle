@@ -19,7 +19,7 @@ configurations {
 dependencies {
   checkstyleConfig gradlePlugins.checkstyle
   spotbugsPlugins gradlePlugins.findsecbugs
-  errorproneJavac libraries.errorproneJavac
+
   errorprone files("${buildDir}/libs/caffeine-local.jar")
   errorprone libraries.errorproneCore
   errorprone libraries.nullaway
