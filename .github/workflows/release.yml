@@ -14,6 +14,7 @@ jobs:
           cache: 'gradle'
           java-version: 11
           distribution: 'zulu'
+      - uses: gradle/gradle-build-action@v2
       - name: Releasing
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}

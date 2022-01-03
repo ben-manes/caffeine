@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator.report.csv;
 import static java.awt.Font.BOLD;
 import static java.awt.Font.PLAIN;
 import static java.util.Locale.US;
-import static org.jfree.chart.block.BlockBorder.NONE;
 import static org.jfree.chart.plot.DefaultDrawingSupplier.DEFAULT_FILL_PAINT_SEQUENCE;
 import static org.jfree.chart.plot.DefaultDrawingSupplier.DEFAULT_OUTLINE_PAINT_SEQUENCE;
 import static org.jfree.chart.plot.DefaultDrawingSupplier.DEFAULT_OUTLINE_STROKE_SEQUENCE;
@@ -82,7 +81,6 @@ public final class PlotCsv implements Runnable {
   @Override
   public void run() {
     var chart = ChartFactory.createLineChart(title, "Maximum Size", metric, data());
-    chart.getLegend().setFrame(NONE);
     chart.setTextAntiAlias(true);
     chart.setAntiAlias(true);
 
@@ -197,8 +195,8 @@ public final class PlotCsv implements Runnable {
   }
 
   private Color getLineColor(float hue) {
-    int a = ((int) (style.alpha() * 255.0 + 0.5)) << 24;
     int rgb = 0xffffff & Color.HSBtoRGB(hue, style.saturation(), style.brightness());
+    int a = ((int) (style.alpha() * 255.0 + 0.5)) << 24;
     return new Color(rgb | a, /* alpha */  true);
   }
 

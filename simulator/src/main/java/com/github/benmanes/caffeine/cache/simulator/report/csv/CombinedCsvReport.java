@@ -19,7 +19,6 @@ import static java.util.stream.Collectors.toList;
 
 import java.nio.file.Path;
 import java.text.NumberFormat;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
@@ -87,7 +86,7 @@ public final class CombinedCsvReport implements Runnable {
         .collect(toList());
     var formatter = NumberFormat.getInstance(Locale.US);
     var headers = Stream
-        .concat(List.of("Policy").stream(), inputFiles.keySet().stream().map(formatter::format))
+        .concat(Stream.of("Policy"), inputFiles.keySet().stream().map(formatter::format))
         .toArray(String[]::new);
     var writer = newWriter(headers);
     for (var policy : policies) {

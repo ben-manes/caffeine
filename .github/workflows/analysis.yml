@@ -22,5 +22,6 @@ jobs:
           cache: 'gradle'
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
+      - uses: gradle/gradle-build-action@v2
       - name: Run analyzers
         run: ./.github/scripts/analyze.sh

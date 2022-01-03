@@ -213,6 +213,9 @@ public class BasicSettings {
     public CounterSettings counter() {
       return new CounterSettings();
     }
+    public RepeatSettings repeating() {
+      return new RepeatSettings();
+    }
     public UniformSettings uniform() {
       return new UniformSettings();
     }
@@ -229,6 +232,11 @@ public class BasicSettings {
     public final class CounterSettings {
       public int start() {
         return config().getInt("synthetic.counter.start");
+      }
+    }
+    public final class RepeatSettings {
+      public int items() {
+        return config().getInt("synthetic.repeating.items");
       }
     }
     public final class UniformSettings {

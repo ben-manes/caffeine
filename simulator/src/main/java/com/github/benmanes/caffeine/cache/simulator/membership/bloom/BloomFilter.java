@@ -74,9 +74,7 @@ public final class BloomFilter implements Membership {
     double optimalBitsFactor = -Math.log(fpp) / (Math.log(2) * Math.log(2));
     int optimalNumberOfBits = (int) (expectedInsertions * optimalBitsFactor);
     int optimalSize = Math.max(2, optimalNumberOfBits >>> BITS_PER_LONG_SHIFT);
-    if ((table != null) && (table.length >= optimalSize)) {
-      return;
-    } else {
+    if ((table == null) || (table.length < optimalSize)) {
       int powerOfTwoShift = Integer.SIZE - Integer.numberOfLeadingZeros(optimalSize - 1);
       tableShift = Integer.SIZE - powerOfTwoShift;
       table = new long[1 << powerOfTwoShift];

@@ -24,6 +24,7 @@ jobs:
           cache: 'gradle'
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
+      - uses: gradle/gradle-build-action@v2
       - name: Run tests
         run: ./.github/scripts/test.sh
       - name: Publish Coverage

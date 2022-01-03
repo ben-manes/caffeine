@@ -46,7 +46,7 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
  */
 @SuppressWarnings("OvershadowingSubclassFields")
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
-  final LoadingCache<K, Expirable<V>> cache;
+  private final LoadingCache<K, Expirable<V>> cache;
 
   @SuppressWarnings("PMD.ExcessiveParameterList")
   public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,

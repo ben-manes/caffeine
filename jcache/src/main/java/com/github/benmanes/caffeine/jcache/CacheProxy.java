@@ -22,10 +22,10 @@ import static java.util.stream.Collectors.toMap;
 import java.io.Closeable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -82,12 +82,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private static final Logger logger = System.getLogger(CacheProxy.class.getName());
 
   final com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache;
-  final CaffeineConfiguration<K, V> configuration;
-  final CacheManager cacheManager;
-  final CacheWriter<K, V> writer;
-  final JCacheMXBean cacheMXBean;
-  final Copier copier;
-  final String name;
+
+  private final CaffeineConfiguration<K, V> configuration;
+  private final CacheManager cacheManager;
+  private final CacheWriter<K, V> writer;
+  private final JCacheMXBean cacheMXBean;
+  private final Copier copier;
+  private final String name;
 
   protected final Optional<CacheLoader<K, V>> cacheLoader;
   protected final Set<CompletableFuture<?>> inFlight;
@@ -97,7 +98,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final Executor executor;
   protected final Ticker ticker;
 
-  volatile boolean closed;
+  private volatile boolean closed;
 
   @SuppressWarnings({"PMD.ExcessiveParameterList", "NullAway"})
   public CacheProxy(String name, Executor executor, CacheManager cacheManager,
@@ -1068,7 +1069,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (!configuration.isWriteThrough() || keys.isEmpty()) {
       return null;
     }
-    List<K> keysToDelete = new ArrayList<>(keys);
+    Set<K> keysToDelete = new LinkedHashSet<>(keys);
     try {
       writer.deleteAll(keysToDelete);
       return null;
