@@ -126,12 +126,12 @@ public final class NodeFactoryGenerator {
   private final List<TypeSpec> nodeTypes;
 
   @SuppressWarnings("NullAway.Init")
-  public NodeFactoryGenerator(Path directory) {
+  NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
     this.nodeTypes = new ArrayList<>();
   }
 
-  void generate() throws IOException {
+  void generate() throws FormatterException, IOException {
     nodeFactory = TypeSpec.interfaceBuilder("NodeFactory")
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
@@ -161,7 +161,7 @@ public final class NodeFactoryGenerator {
     }
   }
 
-  private void reformat() throws IOException {
+  private void reformat() throws FormatterException, IOException {
     try (Stream<Path> stream = Files.walk(directory)) {
       List<Path> files = stream
           .filter(path -> path.toString().endsWith(".java"))
@@ -172,8 +172,6 @@ public final class NodeFactoryGenerator {
         String formatted = formatter.formatSourceAndFixImports(source);
         Files.writeString(file, formatted);
       }
-    } catch (FormatterException e) {
-      throw new RuntimeException(e);
     }
   }
 
@@ -368,7 +366,7 @@ public final class NodeFactoryGenerator {
         .replaceFirst("_SIZE", "S");
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws FormatterException, IOException {
     new NodeFactoryGenerator(Paths.get(args[0])).generate();
   }
 }

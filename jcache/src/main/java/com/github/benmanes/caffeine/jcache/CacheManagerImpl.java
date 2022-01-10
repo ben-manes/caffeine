@@ -46,6 +46,7 @@ public final class CacheManagerImpl implements CacheManager {
   private final Map<String, CacheProxy<?, ?>> caches;
   private final CachingProvider cacheProvider;
   private final Properties properties;
+  private final Object lock;
   private final URI uri;
 
   private final boolean runsAsAnOsgiBundle;
@@ -61,6 +62,7 @@ public final class CacheManagerImpl implements CacheManager {
     this.properties = requireNonNull(properties);
     this.caches = new ConcurrentHashMap<>();
     this.uri = requireNonNull(uri);
+    this.lock = new Object();
   }
 
   @Override
@@ -215,7 +217,7 @@ public final class CacheManagerImpl implements CacheManager {
     if (isClosed()) {
       return;
     }
-    synchronized (this) {
+    synchronized (lock) {
       if (!isClosed()) {
         cacheProvider.close(uri, classLoaderReference.get());
         for (Cache<?, ?> cache : caches.values()) {

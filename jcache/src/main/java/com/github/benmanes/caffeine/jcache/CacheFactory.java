@@ -242,38 +242,38 @@ final class CacheFactory {
     /** Configures the write expiration and returns if set. */
     @SuppressWarnings("PreferJavaTimeOverload")
     private boolean configureExpireAfterWrite() {
-      if (config.getExpireAfterWrite().isPresent()) {
-        caffeine.expireAfterWrite(config.getExpireAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
-        return true;
+      if (config.getExpireAfterWrite().isEmpty()) {
+        return false;
       }
-      return false;
+      caffeine.expireAfterWrite(config.getExpireAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
+      return true;
     }
 
     /** Configures the access expiration and returns if set. */
     @SuppressWarnings("PreferJavaTimeOverload")
     private boolean configureExpireAfterAccess() {
-      if (config.getExpireAfterAccess().isPresent()) {
-        caffeine.expireAfterAccess(config.getExpireAfterAccess().getAsLong(), TimeUnit.NANOSECONDS);
-        return true;
+      if (config.getExpireAfterAccess().isEmpty()) {
+        return false;
       }
-      return false;
+      caffeine.expireAfterAccess(config.getExpireAfterAccess().getAsLong(), TimeUnit.NANOSECONDS);
+      return true;
     }
 
     /** Configures the custom expiration and returns if set. */
     private boolean configureExpireVariably() {
-      if (config.getExpiryFactory().isPresent()) {
-        caffeine.expireAfter(new ExpiryAdapter<>(config.getExpiryFactory().get().create()));
-        return true;
+      if (config.getExpiryFactory().isEmpty()) {
+        return false;
       }
-      return false;
+      caffeine.expireAfter(new ExpiryAdapter<>(config.getExpiryFactory().orElseThrow().create()));
+      return true;
     }
 
     private boolean configureJCacheExpiry() {
-      if (!(expiryPolicy instanceof EternalExpiryPolicy)) {
-        caffeine.expireAfter(new ExpirableToExpiry<>(ticker));
-        return true;
+      if (expiryPolicy instanceof EternalExpiryPolicy) {
+        return false;
       }
-      return false;
+      caffeine.expireAfter(new ExpirableToExpiry<>(ticker));
+      return true;
     }
 
     @SuppressWarnings("PreferJavaTimeOverload")

@@ -50,7 +50,7 @@ public class Finalize extends NodeRule {
     addStaticBlock();
   }
 
-  public void addStaticBlock() {
+  private void addStaticBlock() {
     if (context.varHandles.isEmpty()) {
       return;
     }

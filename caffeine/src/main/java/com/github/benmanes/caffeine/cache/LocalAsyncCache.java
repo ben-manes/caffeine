@@ -37,6 +37,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
@@ -287,8 +288,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     static final class NullMapCompletionException extends CompletionException {
       private static final long serialVersionUID = 1L;
 
-      public NullMapCompletionException() {
-        super("null map", null);
+      @SuppressWarnings("UnsynchronizedOverridesSynchronized")
+      @Override public Throwable fillInStackTrace() {
+        return this;
       }
     }
   }
@@ -526,12 +528,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @SuppressWarnings({"PMD.AvoidThrowingNullPointerException", "PMD.PreserveStackTrace"})
-    protected static <T> T resolve(CompletableFuture<T> future) {
+    protected static <T> T resolve(Future<T> future) {
       try {
         return future.get();
       } catch (ExecutionException e) {
         if (e.getCause() instanceof NullMapCompletionException) {
-          throw new NullPointerException(e.getCause().getMessage());
+          throw new NullPointerException("null map");
         } else if (e.getCause() instanceof RuntimeException) {
           throw (RuntimeException) e.getCause();
         } else if (e.getCause() instanceof Error) {

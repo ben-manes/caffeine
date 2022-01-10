@@ -17,8 +17,9 @@ configurations {
 }
 
 dependencies {
-  checkstyleConfig gradlePlugins.checkstyle
+  spotbugsPlugins gradlePlugins.spotbugsContrib
   spotbugsPlugins gradlePlugins.findsecbugs
+  checkstyleConfig gradlePlugins.checkstyle
 
   errorprone files("${buildDir}/libs/caffeine-local.jar")
   errorprone libraries.errorproneCore
@@ -32,7 +33,7 @@ tasks.register('downloadCaffeineLocal') {
   outputs.upToDateWhen { local.exists() }
 
   doFirst {
-    def version = '3.0.4'
+    def version = '3.0.5'
     def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/' +
       "${version}/caffeine-${version}.jar"
     if (!local.exists()) {

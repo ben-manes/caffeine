@@ -110,12 +110,12 @@ public final class LocalCacheFactoryGenerator {
   private final List<TypeSpec> factoryTypes;
 
   @SuppressWarnings("NullAway.Init")
-  public LocalCacheFactoryGenerator(Path directory) {
+  LocalCacheFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
     this.factoryTypes = new ArrayList<>();
   }
 
-  void generate() throws IOException {
+  void generate() throws FormatterException, IOException {
     factory = TypeSpec.classBuilder("LocalCacheFactory")
         .addModifiers(Modifier.FINAL)
         .addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
@@ -159,7 +159,7 @@ public final class LocalCacheFactoryGenerator {
     }
   }
 
-  private void reformat() throws IOException {
+  private void reformat() throws FormatterException, IOException {
     try (Stream<Path> stream = Files.walk(directory)) {
       List<Path> files = stream
           .filter(path -> path.toString().endsWith(".java"))
@@ -170,8 +170,6 @@ public final class LocalCacheFactoryGenerator {
         String formatted = formatter.formatSourceAndFixImports(source);
         Files.writeString(file, formatted);
       }
-    } catch (FormatterException e) {
-      throw new RuntimeException(e);
     }
   }
 
@@ -285,7 +283,7 @@ public final class LocalCacheFactoryGenerator {
         .replaceFirst("_REFRESH_WRITE", "R");
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws FormatterException, IOException {
     new LocalCacheFactoryGenerator(Paths.get(args[0])).generate();
   }
 }

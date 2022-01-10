@@ -59,7 +59,7 @@ public final class MiniSimClimber implements HillClimber {
     this.prevPercent = 1 - settings.percentMain().get(0);
     this.period = settings.minisimPeriod();
     this.minis = new WindowTinyLfuPolicy[101];
-    this.prevMisses = new long[101];
+    this.prevMisses = new long[minis.length];
 
     for (int i = 0; i < minis.length; i++) {
       double percentMain = 1.0 - (i / 100.0);
@@ -94,7 +94,7 @@ public final class MiniSimClimber implements HillClimber {
       return Adaptation.hold();
     }
 
-    long[] periodMisses = new long[101];
+    long[] periodMisses = new long[minis.length];
     for (int i = 0; i < minis.length; i++) {
       periodMisses[i] = minis[i].stats().missCount() - prevMisses[i];
       prevMisses[i] = minis[i].stats().missCount();

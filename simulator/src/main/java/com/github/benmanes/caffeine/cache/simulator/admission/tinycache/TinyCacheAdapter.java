@@ -26,12 +26,13 @@ import com.typesafe.config.Config;
  * @author gilga1983@gmail.com (Gil Einziger)
  */
 public final class TinyCacheAdapter implements Frequency {
-  // the actual data structure.
-  final TinyCacheSketch tcs;
   // size between cache and sample.
   static final int sampleFactor = 10;
   // max frequency estimation of an item.
   static final int maxcount = 10;
+
+  // the actual data structure.
+  final TinyCacheSketch tcs;
 
   /**
    * Note that in this implementation there are always 64 items per set.

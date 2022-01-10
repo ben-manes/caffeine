@@ -1055,7 +1055,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       entries.forEach(entry -> {
         map.remove(entry.getKey());
       });
-      throw e;
+      return e;
     } catch (RuntimeException e) {
       entries.forEach(entry -> {
         map.remove(entry.getKey());
@@ -1075,7 +1075,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return null;
     } catch (CacheWriterException e) {
       keys.removeAll(keysToDelete);
-      throw e;
+      return e;
     } catch (RuntimeException e) {
       keys.removeAll(keysToDelete);
       return new CacheWriterException("Exception in CacheWriter", e);

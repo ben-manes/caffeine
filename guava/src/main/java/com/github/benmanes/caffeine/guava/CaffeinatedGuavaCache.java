@@ -31,6 +31,7 @@ import java.util.function.Predicate;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache.CacheLoaderException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.CacheStats;
@@ -106,7 +107,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   }
 
   @Override
-  public void putAll(Map<? extends K,? extends V> m) {
+  public void putAll(Map<? extends K, ? extends V> m) {
     cache.putAll(m);
   }
 
@@ -238,6 +239,10 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
 
     CacheLoaderException(Exception e) {
       super(e);
+    }
+    @SuppressWarnings("UnsynchronizedOverridesSynchronized")
+    @Override public Throwable fillInStackTrace() {
+      return this;
     }
   }
 }

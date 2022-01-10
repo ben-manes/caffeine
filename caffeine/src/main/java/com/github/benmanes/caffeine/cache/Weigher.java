@@ -78,7 +78,8 @@ enum SingletonWeigher implements Weigher<Object, Object> {
 }
 
 final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
-  static final long serialVersionUID = 1;
+  private static final long serialVersionUID = 1;
+
   final Weigher<? super K, ? super V> delegate;
 
   BoundedWeigher(Weigher<? super K, ? super V> delegate) {

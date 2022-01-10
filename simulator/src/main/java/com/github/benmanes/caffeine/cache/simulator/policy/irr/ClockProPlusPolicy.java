@@ -68,6 +68,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 @PolicySpec(name = "irr.ClockProPlus")
 public final class ClockProPlusPolicy implements KeyOnlyPolicy {
+  // Enable to print out the internal state
+  private static final boolean debug = false;
+
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
 
@@ -108,9 +111,6 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   // {min,max}ResColdSize are boundary of coldTarget.
   private int minResColdSize;
   private int maxResColdSize;
-
-  // Enable to print out the internal state
-  static final boolean debug = false;
 
   public ClockProPlusPolicy(Config config) {
     ClockProPlusSettings settings = new ClockProPlusSettings(config);

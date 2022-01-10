@@ -37,16 +37,18 @@ import com.typesafe.config.Config;
  * @author gilg1983@gmail.com (Gil Einziger)
  */
 public final class RandomRemovalFrequencyTable implements Frequency {
-  /** sum of total items */
-  private final int maxSum;
-  /** total sum of stored items **/
-  private int currSum;
   /** controls both the max count and how many items are remembered (the sum) */
   private static final int sampleFactor = 8;
-  /** used to dropped items at random */
-  private final Random random;
+
   /** a place holder for TinyTable */
   private final Map<Long, Integer> table;
+  /** used to dropped items at random */
+  private final Random random;
+  /** sum of total items */
+  private final int maxSum;
+
+  /** total sum of stored items **/
+  private int currSum;
 
   public RandomRemovalFrequencyTable(Config config) {
     BasicSettings settings = new BasicSettings(config);

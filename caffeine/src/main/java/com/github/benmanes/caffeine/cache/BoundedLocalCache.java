@@ -375,7 +375,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /* --------------- Eviction Listener Support --------------- */
 
-  public void notifyEviction(@Nullable K key, @Nullable V value, RemovalCause cause) {
+  private void notifyEviction(@Nullable K key, @Nullable V value, RemovalCause cause) {
     if (evictionListener == null) {
       return;
     }

@@ -54,6 +54,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 @PolicySpec(name = "sketch.HillClimberWindowTinyLfu")
 public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
+  private static final boolean debug = false;
+  private static final boolean trace = false;
+
   private final double initialPercentMain;
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -70,9 +73,6 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   private double windowSize;
   private double protectedSize;
-
-  static final boolean debug = false;
-  static final boolean trace = false;
 
   public HillClimberWindowTinyLfuPolicy(HillClimberType strategy, double percentMain,
       HillClimberWindowTinyLfuSettings settings) {

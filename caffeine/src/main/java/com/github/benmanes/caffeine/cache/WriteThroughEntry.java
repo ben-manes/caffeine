@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
-  static final long serialVersionUID = 1;
+  private static final long serialVersionUID = 1;
 
   private final ConcurrentMap<K, V> map;
 

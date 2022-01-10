@@ -50,22 +50,14 @@ public enum Feature {
       Feature.EXPIRE_ACCESS, Feature.WEAK_KEYS, Feature.INFIRM_VALUES,
       Feature.WEAK_VALUES, Feature.SOFT_VALUES);
 
-  public static String makeEnumName(Iterable<Feature> features) {
-    return Streams.stream(features)
-        .map(Feature::name)
-        .collect(Collectors.joining("_"));
-  }
-
   public static String makeEnumName(String enumName) {
     return CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, enumName);
   }
 
   public static String makeClassName(Iterable<Feature> features) {
-    String enumName = makeEnumName(features);
-    return makeClassName(enumName);
-  }
-
-  public static String makeClassName(String enumName) {
+    String enumName = Streams.stream(features)
+        .map(Feature::name)
+        .collect(Collectors.joining("_"));
     return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
   }
 

@@ -181,7 +181,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
         if (loaded == null) {
           throw new InvalidCacheLoadException("null map");
         }
-        Map<K, V> result = new HashMap<>(loaded.size());
+        Map<K, V> result = new HashMap<>(loaded.size(), /* load factor */ 1.0f);
         loaded.forEach((key, value) -> {
           if ((key == null) || (value == null)) {
             nullBulkLoad.set(true);

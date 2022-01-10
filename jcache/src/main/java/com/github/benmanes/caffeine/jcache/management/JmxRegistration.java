@@ -27,8 +27,6 @@ import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 
-import com.github.benmanes.caffeine.jcache.CacheProxy;
-
 /**
  * Jmx cache utilities.
  *
@@ -57,7 +55,7 @@ public final class JmxRegistration {
    * @param cache the cache to unregister
    * @param type the mxbean type
    */
-  public static void unregisterMXBean(CacheProxy<?, ?> cache, MBeanType type) {
+  public static void unregisterMXBean(Cache<?, ?> cache, MBeanType type) {
     ObjectName objectName = getObjectName(cache, type);
     unregister(objectName);
   }

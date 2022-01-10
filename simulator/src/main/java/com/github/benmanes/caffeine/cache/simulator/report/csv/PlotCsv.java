@@ -74,7 +74,7 @@ public final class PlotCsv implements Runnable {
   private String metric;
   @Option(names = "--title", description = "The chart's title")
   private String title;
-  @Option(names = "--theme", required = true, defaultValue = "dark",
+  @Option(names = "--theme", required = true, defaultValue = "light",
       converter = ChartStyleConverter.class, description = "The chart's theme (light, dark)")
   private ChartStyle style;
 
@@ -155,12 +155,12 @@ public final class PlotCsv implements Runnable {
   }
 
   private void configureGrid(CategoryPlot plot) {
-    plot.setDomainGridlinePaint(style.gridLine());
     plot.setDomainGridlineStroke(new BasicStroke());
+    plot.setDomainGridlinePaint(style.gridLine());
     plot.setDomainGridlinesVisible(true);
 
-    plot.setRangeGridlinePaint(style.gridLine());
     plot.setRangeGridlineStroke(new BasicStroke());
+    plot.setRangeGridlinePaint(style.gridLine());
     plot.setRangeGridlinesVisible(true);
 
     plot.setOutlineVisible(false);

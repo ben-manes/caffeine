@@ -70,7 +70,7 @@ CWD=$PWD
 until [ $CWD == / ]; do
     GRADLEW=$CWD/gradlew
     if [ -e $GRADLEW ]; then
-        exec $GRADLEW $@
+        exec $GRADLEW "$@"
     fi
     CWD=$(dirname $CWD)
 done

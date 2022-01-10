@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -22,10 +24,9 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * The ClockPro algorithm. This algorithm differs from LIRS by replacing the LRU stacks with Clock
@@ -51,6 +52,9 @@ import static com.google.common.base.Preconditions.checkState;
  */
 @PolicySpec(name = "irr.ClockProSimple")
 public final class ClockProSimplePolicy implements KeyOnlyPolicy {
+  // Enable to print out the internal state
+  private static final boolean debug = false;
+
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
 
@@ -91,9 +95,6 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
   //  - increases when test entry gets a hit
   //  - decreases when test entry is removed
   private int coldTarget;
-
-  // Enable to print out the internal state
-  static final boolean debug = false;
 
   public ClockProSimplePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);

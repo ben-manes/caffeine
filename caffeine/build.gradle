@@ -82,7 +82,7 @@ tasks.named('compileCodeGenJava').configure {
 }
 
 tasks.named('jar').configure {
-  dependsOn(compileCodeGenJava)
+  dependsOn compileCodeGenJava
   manifest {
     attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine'
     attributes 'Import-Package': ''
@@ -104,34 +104,31 @@ sonarqube {
 def generateLocalCaches = tasks.register('generateLocalCaches', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
-  args "${buildDir}/generated-sources/"
-
-  outputs.upToDateWhen { !tasks.compileJavaPoetJava.didWork }
   outputs.dir "${buildDir}/generated-sources/"
-  outputs.cacheIf { true }
+  args "${buildDir}/generated-sources/"
+  dependsOn compileJavaPoetJava
 }
 
 def generateNodes = tasks.register('generateNodes', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.NodeFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
-  args "${buildDir}/generated-sources/"
-
-  outputs.upToDateWhen { !tasks.compileJavaPoetJava.didWork }
   outputs.dir "${buildDir}/generated-sources/"
-  outputs.cacheIf { true }
+  args "${buildDir}/generated-sources/"
+  dependsOn compileJavaPoetJava
 }
 
 tasks.named('compileJava').configure {
-  finalizedBy(compileCodeGenJava)
-  dependsOn(generateLocalCaches)
-  dependsOn(generateNodes)
+  dependsOn generateLocalCaches, generateNodes
+  finalizedBy compileCodeGenJava
+}
+tasks.named('compileJavaPoetJava').configure {
+  finalizedBy generateLocalCaches, generateNodes
 }
 ['compileTestJava', 'pmdMain', 'spotbugsMain'].collect { tasks.named(it) }*.configure {
-  dependsOn(compileCodeGenJava)
+  dependsOn compileCodeGenJava
 }
 tasks.named('sourcesJar').configure {
-  dependsOn(generateLocalCaches)
-  dependsOn(generateNodes)
+  dependsOn generateLocalCaches, generateNodes
 }
 
 tasks.register('memoryOverhead', JavaExec) {

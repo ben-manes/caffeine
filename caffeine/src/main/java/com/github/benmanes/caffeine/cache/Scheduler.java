@@ -21,12 +21,10 @@ import java.io.Serializable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * A scheduler that submits a task to an executor after a given delay.
@@ -99,8 +97,8 @@ enum SystemScheduler implements Scheduler {
 }
 
 final class ExecutorServiceScheduler implements Scheduler, Serializable {
-  static final Logger logger = System.getLogger(ExecutorServiceScheduler.class.getName());
-  static final long serialVersionUID = 1;
+  private static final Logger logger = System.getLogger(ExecutorServiceScheduler.class.getName());
+  private static final long serialVersionUID = 1;
 
   final ScheduledExecutorService scheduledExecutorService;
 
@@ -129,8 +127,8 @@ final class ExecutorServiceScheduler implements Scheduler, Serializable {
 }
 
 final class GuardedScheduler implements Scheduler, Serializable {
-  static final Logger logger = System.getLogger(GuardedScheduler.class.getName());
-  static final long serialVersionUID = 1;
+  private static final Logger logger = System.getLogger(GuardedScheduler.class.getName());
+  private static final long serialVersionUID = 1;
 
   final Scheduler delegate;
 
@@ -175,12 +173,11 @@ enum DisabledFuture implements Future<Void> {
   @Override public boolean cancel(boolean mayInterruptIfRunning) {
     return false;
   }
-  @Override public Void get() throws InterruptedException, ExecutionException {
+  @Override public Void get(long timeout, TimeUnit unit) {
+    requireNonNull(unit);
     return null;
   }
-  @Override public Void get(long timeout, TimeUnit unit)
-      throws InterruptedException, ExecutionException, TimeoutException {
-    requireNonNull(unit);
+  @Override public Void get() {
     return null;
   }
 }

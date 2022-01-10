@@ -55,6 +55,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 @PolicySpec(name = "irr.Lirs")
 public final class LirsPolicy implements KeyOnlyPolicy {
+  // Enable to print out the internal state
+  private static final boolean debug = false;
+
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final List<Object> evicted;
@@ -71,9 +74,6 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   int sizeNR;
   int sizeHot;
   int residentSize;
-
-  // Enable to print out the internal state
-  static final boolean debug = false;
 
   public LirsPolicy(Config config) {
     LirsSettings settings = new LirsSettings(config);

@@ -72,6 +72,7 @@
     <trusted-key id='e0cb7823cfd00fbf' group='com.jakewharton.picnic' />
     <trusted-key id='a50569c7ca7fa1f0' group='com.jcraft' />
     <trusted-key id='52931f4b72b4f54c' group='com.koloboke' />
+    <trusted-key id='8e3e24631db3b4e0' group='com.mebigfatguy.sb-contrib' />
     <trusted-key id='0c33729405f13ee8' group='com.oracle.coherence.ce' />
     <trusted-key id='dfb26dda74ac00c9' group='com.osacky.doctor' />
     <trusted-key id='dfb26dda74ac00c9' group='com.osacky.tagger' />
@@ -366,6 +367,9 @@
     <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.40.0'>
       <sha512>47D46F7E4481C2D107F4EBE18EB03BAFFA1383BDAA614E9B18E5C69A3F0712CCC88D3D142D090CBE00E359820418F2CF5670F8686DA512B488E4D063A5A8C8D3</sha512>
     </dependency>
+    <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.41.0'>
+      <sha512>27A66A61915CE5267605968A4D4024671221A2620D0EAF501FB4021F68CD5A32A6FF1812ED7081351767562A3703F9EC48EA72C5845377BC5B4703D8740076DD</sha512>
+    </dependency>
     <dependency group='com.github.brianfrankcooper.YCSB' module='core' version='0.15.0'>
       <sha512>DF5BFED7DFC327166FE0CB81BD6A9655F44CCB268E7E69204BD09955147CE9A97EBBCC28F9ACF315DBAF49E850A43CE8744F44E68D7BE816EACCAF0BEE41B203</sha512>
     </dependency>
@@ -416,6 +420,9 @@
     </dependency>
     <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.3'>
       <sha512>2FD5E4F2A0178762BE14EA39A4087B43CA4E7C15BFF0051F5EE61C940A6BA7B520E4D52625134BCAE6C6F0B3BF0503F007265E360B6DF8B570E8884353A3743C</sha512>
+    </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.4'>
+      <sha512>51372BCAFB87FBFDEC5DAB387014693B86A800CE5954C847A11DA1E36FC5ACF95110F335B0BBA31B1E1D31960DE0F5565F34A73CA5567EBFDFEACC70DB574EFB</sha512>
     </dependency>
     <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.1'>
       <sha512>2C09B102601DF179B615EF37F5E56B9AA1100BB2A17D742B8CB452C1A193C44ED3EBE029FEAFB9822D55A680D99B682184C733D56F835874DD01B02209AFA13D</sha512>

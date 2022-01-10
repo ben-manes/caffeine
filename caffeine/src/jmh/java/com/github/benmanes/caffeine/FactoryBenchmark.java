@@ -32,34 +32,29 @@ public class FactoryBenchmark {
   private final ReflectionFactory reflectionFactory = new ReflectionFactory();
   private final MethodHandleFactory methodHandleFactory = new MethodHandleFactory();
 
-  @State(Scope.Thread)
-  public static class ThreadState {
-    int i;
+  @Benchmark
+  public Alpha direct() {
+    return new Alpha();
   }
 
   @Benchmark
-  public Alpha direct(ThreadState state) {
-    return new Alpha(state.i++);
+  public Alpha methodHandle_invoke() {
+    return methodHandleFactory.invoke();
   }
 
   @Benchmark
-  public Alpha methodHandle_invoke(ThreadState state) {
-    return methodHandleFactory.invoke(state.i++);
+  public Alpha methodHandle_invokeExact() {
+    return methodHandleFactory.invokeExact();
   }
 
   @Benchmark
-  public Alpha methodHandle_invokeExact(ThreadState state) {
-    return methodHandleFactory.invokeExact(state.i++);
-  }
-
-  @Benchmark
-  public Alpha reflection(ThreadState state) {
-    return reflectionFactory.newInstance(state.i++);
+  public Alpha reflection() {
+    return reflectionFactory.newInstance();
   }
 
   static final class MethodHandleFactory {
     private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-    private static final MethodType METHOD_TYPE = MethodType.methodType(void.class, int.class);
+    private static final MethodType METHOD_TYPE = MethodType.methodType(void.class);
 
     private final MethodHandle methodHandle;
 
@@ -71,17 +66,17 @@ public class FactoryBenchmark {
       }
     }
 
-    Alpha invoke(int x) {
+    Alpha invoke() {
       try {
-        return (Alpha) methodHandle.invoke(x);
+        return (Alpha) methodHandle.invoke();
       } catch (Throwable e) {
         throw new RuntimeException(e);
       }
     }
 
-    Alpha invokeExact(int x) {
+    Alpha invokeExact() {
       try {
-        return (Alpha) methodHandle.invokeExact(x);
+        return (Alpha) methodHandle.invokeExact();
       } catch (Throwable e) {
         throw new RuntimeException(e);
       }
@@ -93,15 +88,15 @@ public class FactoryBenchmark {
 
     ReflectionFactory() {
       try {
-        constructor = Alpha.class.getConstructor(int.class);
+        constructor = Alpha.class.getConstructor();
       } catch (NoSuchMethodException | SecurityException e) {
         throw new RuntimeException(e);
       }
     }
 
-    Alpha newInstance(int x) {
+    Alpha newInstance() {
       try {
-        return constructor.newInstance(x);
+        return constructor.newInstance();
       } catch (Throwable e) {
         throw new RuntimeException(e);
       }
@@ -109,11 +104,6 @@ public class FactoryBenchmark {
   }
 
   static final class Alpha {
-    @SuppressWarnings("unused")
-    private final int x;
-
-    public Alpha(int x) {
-      this.x = x;
-    }
+    public Alpha() {}
   }
 }

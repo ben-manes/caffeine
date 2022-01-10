@@ -51,7 +51,6 @@ public abstract class CountMin4 implements Frequency {
     double countersMultiplier = settings.tinyLfu().countMin4().countersMultiplier();
     long counters = (long) (countersMultiplier * settings.maximumSize());
     ensureCapacity(counters);
-
   }
 
   /**
@@ -154,7 +153,7 @@ public abstract class CountMin4 implements Frequency {
   }
 
   /** Performs the aging process after an addition to allow old entries to fade away. */
-  protected void tryReset(boolean added) {}
+  protected abstract void tryReset(boolean added);
 
   /**
    * Increments the specified counter by 1 if it is not already at the maximum value (15).

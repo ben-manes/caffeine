@@ -53,9 +53,9 @@ public final class OhcPolicy implements KeyOnlyPolicy {
     policyStats = new PolicyStats(name() + " (%s)", (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu");
     cache = OHCacheBuilder.<Long, Long>newBuilder()
         .capacity(ENTRY_SIZE * settings.maximumSize())
+        .valueSerializer(LongSerializer.INSTANCE)
+        .keySerializer(LongSerializer.INSTANCE)
         .edenSize(settings.percentEden())
-        .valueSerializer(longSerializer)
-        .keySerializer(longSerializer)
         .eviction(policy)
         .build();
   }
@@ -120,7 +120,9 @@ public final class OhcPolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final CacheSerializer<Long> longSerializer = new CacheSerializer<Long>() {
+  static final class LongSerializer implements CacheSerializer<Long> {
+    static final LongSerializer INSTANCE = new LongSerializer();
+
     @Override public void serialize(Long value, ByteBuffer buffer) {
       buffer.putLong(value);
     }

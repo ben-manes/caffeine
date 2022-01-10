@@ -23,6 +23,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 
 /**
@@ -32,12 +34,15 @@ import com.google.common.hash.Hashing;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class WikipediaTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
-  private static final String[] CONTAINS_FILTER = {"?search=", "&search=", "User+talk", "User_talk",
-      "User:", "Talk:", "&diff=", "&action=rollback", "Special:Watchlist"};
-  private static final String[] STARTS_WITH_FILTER = {"wiki/Special:Search", "w/query.php",
-      "wiki/Talk:", "wiki/Special:AutoLogin", "Special:UserLogin", "w/api.php", "error:"};
-  private static final String[] SEARCH_LIST = { "%2F", "%20", "&amp;", "%3A" };
-  private static final String[] REPLACEMENT_LIST = { "/", " ", "&", ":" };
+  private static final ImmutableList<String> CONTAINS_FILTER = ImmutableList.of("?search=",
+      "&search=", "User+talk", "User_talk", "User:", "Talk:", "&diff=", "&action=rollback",
+      "Special:Watchlist");
+  private static final ImmutableList<String> STARTS_WITH_FILTER = ImmutableList.of(
+      "wiki/Special:Search", "w/query.php", "wiki/Talk:", "wiki/Special:AutoLogin",
+      "Special:UserLogin", "w/api.php", "error:");
+  private static final ImmutableList<Replacement> REPLACEMENTS = ImmutableList.of(
+      Replacement.of("%2F", "/"), Replacement.of("%20", " "),
+      Replacement.of("&amp;", "&"), Replacement.of("%3A", ":"));
 
   public WikipediaTraceReader(String filePath) {
     super(filePath);
@@ -103,8 +108,8 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
 
     // Replace the html entities that we want to search for inside paths
     String cleansed = url.substring(index + 1);
-    for (int i = 0; i < SEARCH_LIST.length; i++) {
-      cleansed = StringUtils.replace(cleansed, SEARCH_LIST[i], REPLACEMENT_LIST[i]);
+    for (var replacement : REPLACEMENTS) {
+      cleansed = StringUtils.replace(cleansed, replacement.search(), replacement.replace());
     }
     return cleansed;
   }
@@ -125,5 +130,15 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
       }
     }
     return true;
+  }
+
+  @AutoValue
+  static abstract class Replacement {
+    abstract String search();
+    abstract String replace();
+
+    static Replacement of(String search, String replace) {
+      return new AutoValue_WikipediaTraceReader_Replacement(search, replace);
+    }
   }
 }

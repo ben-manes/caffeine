@@ -102,7 +102,7 @@ class Simulate extends DefaultTask {
   @Input @Option(option = 'title', description = 'The chart title')
   String title = ''
   @Input @Option(option = 'theme', description = 'The chart theme')
-  String theme = 'dark'
+  String theme = 'light'
   @OutputDirectory
   File reportDir = new File("${project.buildDir}/reports/${name}")
 

@@ -139,7 +139,8 @@ public final class RefreshAfterWriteTest {
 
     for (int i = 0; i < 5; i++) {
       context.ticker().advance(2, TimeUnit.MINUTES);
-      cache.get(key);
+      Int value = cache.get(key);
+      assertThat(value).isEqualTo(key);
       await().untilAtomic(reloads, is(i + 1));
     }
   }
