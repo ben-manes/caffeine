@@ -76,7 +76,8 @@ public interface AsyncCache<K extends Object, V extends Object> {
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
    * {@code mappingFunction} if necessary. This method provides a simple substitute for the
-   * conventional "if cached, return; otherwise create, cache and return" pattern.
+   * conventional "if cached, return; otherwise create, cache and return" pattern. The instance
+   * returned from the {@code mappingFunction} will be stored directly into the cache.
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
@@ -87,7 +88,8 @@ public interface AsyncCache<K extends Object, V extends Object> {
    * attempt to update any other mappings of this cache.
    *
    * @param key key with which the specified value is to be associated
-   * @param mappingFunction the function to asynchronously compute a value
+   * @param mappingFunction the function to asynchronously compute a value, optionally using the
+   *        given executor
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key or mappingFunction is null, or if the
    *         future returned by the mappingFunction is null
@@ -129,6 +131,7 @@ public interface AsyncCache<K extends Object, V extends Object> {
    * those values if necessary. The returned map contains entries that were already cached, combined
    * with newly loaded entries; it will never contain null keys or values. If the any of the
    * asynchronous computations fail, those entries will be automatically removed from this cache.
+   * The instances returned from the {@code mappingFunction} will be stored directly into the cache.
    * <p>
    * A single request to the {@code mappingFunction} is performed for all keys which are not already
    * present in the cache. If another call to {@link #get} tries to load the value for a key in
@@ -140,7 +143,8 @@ public interface AsyncCache<K extends Object, V extends Object> {
    * ignored.
    *
    * @param keys the keys whose associated values are to be returned
-   * @param mappingFunction the function to asynchronously compute the values
+   * @param mappingFunction the function to asynchronously compute the values, optionally using the
+   *        given executor
    * @return the future containing an unmodifiable mapping of keys to values for the specified keys
    *         in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or

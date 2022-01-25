@@ -52,7 +52,7 @@ public interface AsyncCacheLoader<K extends Object, V extends Object> {
    * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly.
    *
    * @param key the non-null key whose value should be loaded
-   * @param executor the executor with which the entry is asynchronously loaded
+   * @param executor the executor with which the entry may be asynchronously loaded with
    * @return the future value associated with {@code key}
    * @throws Exception or Error, in which case the mapping is unchanged
    * @throws InterruptedException if this method is interrupted. {@code InterruptedException} is
@@ -77,7 +77,7 @@ public interface AsyncCacheLoader<K extends Object, V extends Object> {
    * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly.
    *
    * @param keys the unique, non-null keys whose values should be loaded
-   * @param executor the executor with which the entries are asynchronously loaded
+   * @param executor the executor with which the entry may be asynchronously loaded with
    * @return a future containing the map from each key in {@code keys} to the value associated with
    *         that key; <b>may not contain null values</b>
    * @throws Exception or Error, in which case the mappings are unchanged
@@ -103,7 +103,7 @@ public interface AsyncCacheLoader<K extends Object, V extends Object> {
    *
    * @param key the non-null key whose value should be loaded
    * @param oldValue the non-null old value corresponding to {@code key}
-   * @param executor the executor with which the entry is asynchronously loaded
+   * @param executor the executor with which the entry may be asynchronously loaded with
    * @return a future containing the new value associated with {@code key}, or containing
    *         {@code null} if the mapping is to be removed
    * @throws Exception or Error, in which case the mapping is unchanged
