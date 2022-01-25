@@ -20,6 +20,4 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
       - uses: gradle/gradle-build-action@v2
       - name: Run lincheck
-        run: |
-          set -eux
-          ./gradlew lincheckTest
+        run: ./gradlew lincheckTest

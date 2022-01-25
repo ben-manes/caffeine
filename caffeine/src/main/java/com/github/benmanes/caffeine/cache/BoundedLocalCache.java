@@ -473,7 +473,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return null;
   }
 
-  @Override
+  /** Returns the {@link Ticker} used by this cache for expiration. */
   public Ticker expirationTicker() {
     return Ticker.disabledTicker();
   }

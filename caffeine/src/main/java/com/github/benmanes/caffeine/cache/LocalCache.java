@@ -58,9 +58,6 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Returns the {@link Expiry} used by this cache. */
   @Nullable Expiry<K, V> expiry();
 
-  /** Returns the {@link Ticker} used by this cache for expiration. */
-  Ticker expirationTicker();
-
   /** Returns the {@link Ticker} used by this cache for statistics. */
   Ticker statsTicker();
 

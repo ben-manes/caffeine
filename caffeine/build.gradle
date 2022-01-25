@@ -59,7 +59,6 @@ dependencies {
   jmh libraries.flipTables
   jmh libraries.jackrabbit
   jmh libraries.expiringMap
-  jmh libraries.elasticSearch
   jmh libraries.concurrentlinkedhashmap
 
   javaPoetImplementation libraries.guava
@@ -88,7 +87,6 @@ tasks.named('jar').configure {
     attributes 'Import-Package': ''
     attributes 'Export-Package': [
       'com.github.benmanes.caffeine',
-      'com.github.benmanes.caffeine.base',
       'com.github.benmanes.caffeine.cache',
       'com.github.benmanes.caffeine.cache.stats'].join(',')
     attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine'

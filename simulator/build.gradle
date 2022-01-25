@@ -27,7 +27,6 @@ dependencies {
   implementation libraries.expiringMap
   implementation libraries.commonsLang3
   implementation libraries.commonsMath3
-  implementation libraries.elasticSearch
   implementation libraries.commonsCompress
   implementation libraries.univocityParsers
 

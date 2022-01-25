@@ -55,7 +55,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Cache2kPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.CaffeinePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache3Policy;
-import com.github.benmanes.caffeine.cache.simulator.policy.product.ElasticSearchPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.ExpiringMapPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.OhcPolicy;
@@ -233,7 +232,6 @@ public final class Registry {
     register(CaffeinePolicy.class, CaffeinePolicy::new);
     register(Ehcache3Policy.class, Ehcache3Policy::new);
     register(ExpiringMapPolicy.class, ExpiringMapPolicy::new);
-    register(ElasticSearchPolicy.class, ElasticSearchPolicy::new);
   }
 
   @AutoValue

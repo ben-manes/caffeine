@@ -229,11 +229,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public Ticker expirationTicker() {
-    return Ticker.disabledTicker();
-  }
-
-  @Override
   public Ticker statsTicker() {
     return ticker;
   }

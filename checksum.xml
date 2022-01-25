@@ -57,6 +57,7 @@
     <trusted-key id='abe9f3126bb741c1' group='com.google.guava' />
     <trusted-key id='f6d4a1d411e9d1ae' group='com.google.guava' />
     <trusted-key id='0a2496e4955cac56' group='com.google.inject' />
+    <trusted-key id='5e975cb00c643dbf' group='com.google.inject' />
     <trusted-key id='f0df21d1d0a3c384' group='com.google.inject' />
     <trusted-key id='29579f18fa8fd93b' group='com.google.j2objc' />
     <trusted-key id='a7764f502a938c99' group='com.google.protobuf' />
@@ -145,6 +146,7 @@
     <trusted-key id='b5ad94bdd6bdb924' group='me.champeau.jmh' />
     <trusted-key id='7999befba1039e8b' group='net.bytebuddy' />
     <trusted-key id='bb2914c1fa0811c3' group='net.bytebuddy' />
+    <trusted-key id='15c71c0a4e0b8edd' group='net.java.dev.jna' />
     <trusted-key id='75bf031b7c94e183' group='net.java.dev.jna' />
     <trusted-key id='243fbb4d5814c621' group='net.jodah' />
     <trusted-key id='0da8a5ec02d11ead' group='net.sf.jopt-simple' />
@@ -424,6 +426,9 @@
     <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.4'>
       <sha512>51372BCAFB87FBFDEC5DAB387014693B86A800CE5954C847A11DA1E36FC5ACF95110F335B0BBA31B1E1D31960DE0F5565F34A73CA5567EBFDFEACC70DB574EFB</sha512>
     </dependency>
+    <dependency group='com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='5.0.5'>
+      <sha512>8D6E78F1F9D54E0D50525328BAD7CC904F98CAC05FF7B783784E2115185CBE0A4CF659B8A8129E0759D96775A1B2A0AFB63953ECA897FEDEFF8A2B7A371B804E</sha512>
+    </dependency>
     <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.1'>
       <sha512>2C09B102601DF179B615EF37F5E56B9AA1100BB2A17D742B8CB452C1A193C44ED3EBE029FEAFB9822D55A680D99B682184C733D56F835874DD01B02209AFA13D</sha512>
     </dependency>
@@ -672,6 +677,9 @@
     </dependency>
     <dependency group='net.ltgt.gradle' module='gradle-nullaway-plugin' version='1.2.0'>
       <sha512>6F44BE79691ECF80771220086E796626B45D053BEA913AD16E5AD3DEA3FA07995FEC8045DA6265B4FDF837EA985AD7E58DC398405D3FFA79C4E2DAA5881E2D09</sha512>
+    </dependency>
+    <dependency group='net.ltgt.gradle' module='gradle-nullaway-plugin' version='1.3.0'>
+      <sha512>51F4EECF44441AC5BA056087C6C9BC10750FC5A2DBE3FBEE69372B2187E9B045C198C8BED86003657D77BB3297C41B32008CFC4857BA8E02DD461029A5D5C237</sha512>
     </dependency>
     <dependency group='net.sf.ezmorph' module='ezmorph' version='1.0.6'>
       <sha512>16D30BE564723B74F312B4E7D06F349370FB6726B3162778C869CD723ECA2A40C4972C2757B3E107E1820CEC0D70B0BD2B96EFCD466518FC64495F7AEF97967A</sha512>

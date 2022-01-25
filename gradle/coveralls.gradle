@@ -1,0 +1,59 @@
+/**
+ * Configurations for code coverage
+ */
+apply plugin: 'com.github.kt3k.coveralls'
+apply plugin: 'jacoco'
+
+def testReport = tasks.register('testReport', TestReport) {
+  group = 'Build'
+  description = 'Generates an aggregate test report'
+  destinationDir = file("${buildDir}/reports/allTests")
+}
+
+subprojects {
+  apply plugin: 'java-library'
+
+  tasks.withType(Test).configureEach { testTask ->
+    testReport.configure {
+      reportOn testTask
+    }
+    testTask.dependsOn(jar)
+
+    // ensure tasks don't overwrite the default report directories used by the 'test' task
+    reports.html.destination = file("${buildDir}/reports/${name}")
+    reports.junitXml.destination = file("${buildDir}/reports/${name}/results")
+    binaryResultsDirectory = file("${buildDir}/reports/${name}/results/binary/${name}")
+  }
+}
+
+// Only report code coverage for projects that are distributed
+def coveredProjects = [ 'caffeine', 'guava', 'jcache' ].collect { project(it) }
+
+tasks.register('jacocoFullReport', JacocoReport) {
+  group = 'Coverage reports'
+  description = 'Generates an aggregate report from all subprojects'
+
+  coveredProjects.each {
+    sourceSets it.sourceSets.main
+    mustRunAfter it.tasks.withType(Test)
+    executionData fileTree(it.buildDir.absolutePath).include('jacoco/*.exec')
+  }
+
+  reports {
+    html.required = true // human readable
+    xml.required = true  // required by coveralls
+  }
+}
+
+coveralls {
+  sourceDirs = coveredProjects.sourceSets.main.allSource.srcDirs.flatten()
+  jacocoReportPath = "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
+}
+
+tasks.named('coveralls').configure {
+  group = 'Coverage reports'
+  description = 'Uploads the aggregated coverage report to Coveralls'
+
+  dependsOn jacocoFullReport
+  onlyIf { System.env.'CI' }
+}

@@ -3,8 +3,8 @@ import net.ltgt.gradle.errorprone.CheckSeverity
 apply plugin: 'io.github.gradle-nexus.publish-plugin'
 apply plugin: 'org.kordamp.gradle.source-stats'
 apply plugin: 'com.github.ben-manes.versions'
-apply plugin: 'com.github.kt3k.coveralls'
-apply plugin: 'jacoco'
+
+apply from: "${rootDir}/gradle/coveralls.gradle"
 
 buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
@@ -17,12 +17,6 @@ buildscript {
   dependencies {
     classpath gradlePlugins.values()
   }
-}
-
-tasks.register('testReport', TestReport) {
-  group = 'Build'
-  description = 'Generates an aggregate test report'
-  destinationDir = file("${buildDir}/reports/allTests")
 }
 
 allprojects {
@@ -55,9 +49,9 @@ subprojects {
 
   java.toolchain.languageVersion = JavaLanguageVersion.of(System.env.'JAVA_VERSION' ?: 11)
 
-  configurations {
-    all {
-      exclude group: 'org.hamcrest', module: 'hamcrest-core'
+  configurations.all {
+    resolutionStrategy.dependencySubstitution {
+      substitute module('org.hamcrest:hamcrest-core') using module(testLibraries.hamcrest)
     }
   }
 
@@ -85,16 +79,6 @@ subprojects {
     }
   }
 
-  tasks.withType(Test).configureEach {
-    rootProject.testReport.reportOn it
-    it.dependsOn(jar)
-
-    // ensure tasks don't overwrite the default report directories used by the 'test' task
-    reports.html.destination = file("${buildDir}/reports/${name}")
-    reports.junitXml.destination = file("${buildDir}/reports/${name}/results")
-    binaryResultsDirectory = file("${buildDir}/reports/${name}/results/binary/${name}")
-  }
-
   if (project != project(':caffeine')) {
     javadoc.options.linksOffline(
       "https://static.javadoc.io/${group}/caffeine/${version}/",
@@ -111,36 +95,4 @@ nexusPublishing {
       password = project.properties['nexusPassword'] ?: System.env.'NEXUS_PASSWORD'
     }
   }
-}
-
-// Only report code coverage for projects that are distributed
-def coveredProjects = [ 'caffeine', 'guava', 'jcache' ].collect { project(it) }
-
-tasks.register('jacocoFullReport', JacocoReport) {
-  group = 'Coverage reports'
-  description = 'Generates an aggregate report from all subprojects'
-
-  coveredProjects.each {
-    sourceSets it.sourceSets.main
-    mustRunAfter it.tasks.withType(Test)
-    executionData fileTree(it.buildDir.absolutePath).include('jacoco/*.exec')
-  }
-
-  reports {
-    html.required = true // human readable
-    xml.required = true  // required by coveralls
-  }
-}
-
-coveralls {
-  sourceDirs = coveredProjects.sourceSets.main.allSource.srcDirs.flatten()
-  jacocoReportPath = "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
-}
-
-tasks.named('coveralls').configure {
-  group = 'Coverage reports'
-  description = 'Uploads the aggregated coverage report to Coveralls'
-
-  dependsOn jacocoFullReport
-  onlyIf { System.env.'CI' }
 }
