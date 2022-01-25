@@ -275,9 +275,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     /** Adds to the cache any extra entries computed that were not requested. */
     private void addNewEntries(Map<? extends K, ? extends V> result) {
-      if (proxies.size() == result.size()) {
-        return;
-      }
       result.forEach((key, value) -> {
         if (!proxies.containsKey(key)) {
           cache.put(key, CompletableFuture.completedFuture(value));

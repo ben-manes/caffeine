@@ -476,6 +476,19 @@ public @interface CacheSpec {
         return result;
       }
     },
+    /** A bulk-only loader that loads only keys that were not requested. */
+    BULK_DIFFERENT {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws Exception {
+        var result = new HashMap<Int, Int>(keys.size());
+        for (Int key : keys) {
+          result.put(key.negate(), key);
+        }
+        return result;
+      }
+    },
     /** A bulk-only loader that loads more than requested. */
     BULK_NEGATIVE_EXCEEDS {
       @Override public Int load(Int key) {
