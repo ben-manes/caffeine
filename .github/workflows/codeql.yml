@@ -14,6 +14,12 @@ on:
   schedule:
     - cron: '0 0 * * 4'
 
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  security-events: write
+
 jobs:
   analyze:
     name: Analyze

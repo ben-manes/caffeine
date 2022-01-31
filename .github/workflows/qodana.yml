@@ -1,5 +1,10 @@
 name: Qodana
 on: [ push, pull_request ]
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  security-events: write
 
 env:
   ORG_GRADLE_PROJECT_checksumFailOn: never

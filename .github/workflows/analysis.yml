@@ -1,4 +1,5 @@
 name: analysis
+permissions: read-all
 on: [ push, pull_request ]
 
 env:

@@ -1,4 +1,5 @@
 name: build
+permissions: read-all
 on: [ push, pull_request ]
 
 env:

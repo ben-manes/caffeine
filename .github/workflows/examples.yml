@@ -1,4 +1,5 @@
 name: examples
+permissions: read-all
 on: [ push, pull_request ]
 
 env:
