@@ -38,7 +38,6 @@ import java.lang.ref.WeakReference;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -2921,24 +2920,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public Spliterator<K> spliterator() {
       return new KeySpliterator<>(cache);
-    }
-
-    @Override
-    public Object[] toArray() {
-      var keys = new ArrayList<Object>(size());
-      for (Object key : this) {
-        keys.add(key);
-      }
-      return keys.toArray();
-    }
-
-    @Override
-    public <T> T[] toArray(T[] array) {
-      var keys = new ArrayList<Object>(size());
-      for (Object key : this) {
-        keys.add(key);
-      }
-      return keys.toArray(array);
     }
   }
 

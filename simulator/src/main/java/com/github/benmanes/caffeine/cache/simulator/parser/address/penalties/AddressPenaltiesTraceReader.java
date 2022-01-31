@@ -22,7 +22,6 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
-import com.google.common.collect.ImmutableSet;
 
 /**
  * An extension to {@link AddressTraceReader} where the trace files were augmented to include hit
@@ -58,7 +57,7 @@ public final class AddressPenaltiesTraceReader extends TextTraceReader {
 
   @Override
   public Set<Characteristic> characteristics() {
-    return ImmutableSet.of();
+    return Set.of();
   }
 
   @Override

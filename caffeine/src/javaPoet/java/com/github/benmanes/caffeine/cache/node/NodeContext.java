@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
@@ -39,9 +40,9 @@ public final class NodeContext {
   public final boolean isFinal;
   public final String className;
   public final TypeName superClass;
-  public final Set<Feature> parentFeatures;
-  public final Set<Feature> generateFeatures;
   public final Set<String> suppressedWarnings;
+  public final ImmutableSet<Feature> parentFeatures;
+  public final ImmutableSet<Feature> generateFeatures;
   public final List<Consumer<CodeBlock.Builder>> varHandles;
 
   public TypeSpec.Builder nodeSubtype;

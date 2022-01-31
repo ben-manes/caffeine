@@ -19,11 +19,12 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.schedul
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
-import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -481,12 +482,8 @@ public @interface CacheSpec {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws Exception {
-        var result = new HashMap<Int, Int>(keys.size());
-        for (Int key : keys) {
-          result.put(key.negate(), key);
-        }
-        return result;
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
+        return keys.stream().collect(toMap(Int::negate, identity()));
       }
     },
     /** A bulk-only loader that loads more than requested. */
@@ -582,7 +579,7 @@ public @interface CacheSpec {
       public CompletableFuture<? extends Int> asyncLoad(Int key, Executor executor) {
         return loader.asyncLoad(key, executor);
       }
-      private Object readResolve() throws ObjectStreamException {
+      private Object readResolve() {
         return loader.asyncLoader;
       }
     }

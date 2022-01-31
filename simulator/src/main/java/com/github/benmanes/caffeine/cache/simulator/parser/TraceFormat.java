@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static java.util.Locale.US;
 import static java.util.stream.Collectors.toList;
 
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -50,8 +50,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTr
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 
 /**
  * The trace file formats.
@@ -100,10 +100,10 @@ public enum TraceFormat {
   public TraceReader readFiles(List<String> filePaths) {
     return new TraceReader() {
 
-      @Override public Set<Characteristic> characteristics() {
+      @Override public ImmutableSet<Characteristic> characteristics() {
         return readers().stream()
             .flatMap(reader -> reader.characteristics().stream())
-            .collect(Sets.toImmutableEnumSet());
+            .collect(toImmutableEnumSet());
       }
 
       @Override public Stream<AccessEvent> events() {

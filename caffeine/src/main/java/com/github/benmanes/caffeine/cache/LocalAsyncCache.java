@@ -284,11 +284,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     static final class NullMapCompletionException extends CompletionException {
       private static final long serialVersionUID = 1L;
-
-      @SuppressWarnings("UnsynchronizedOverridesSynchronized")
-      @Override public Throwable fillInStackTrace() {
-        return this;
-      }
     }
   }
 

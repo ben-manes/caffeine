@@ -39,7 +39,6 @@ import org.tukaani.xz.XZInputStream;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 
 /**
@@ -70,7 +69,7 @@ public abstract class AbstractTraceReader implements TraceReader {
     BufferedInputStream buffered = null;
     try {
       buffered = new BufferedInputStream(input, BUFFER_SIZE);
-      List<Function<InputStream, InputStream>> extractors = ImmutableList.of(
+      List<Function<InputStream, InputStream>> extractors = List.of(
           this::tryXZ, this::tryCompressed, this::tryArchived);
       for (var extractor : extractors) {
         buffered.mark(100);

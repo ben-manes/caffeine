@@ -21,6 +21,7 @@ package com.github.benmanes.caffeine.cache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@FunctionalInterface
 public interface Ticker {
 
   /**

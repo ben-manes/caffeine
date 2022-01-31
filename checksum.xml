@@ -60,6 +60,7 @@
     <trusted-key id='5e975cb00c643dbf' group='com.google.inject' />
     <trusted-key id='f0df21d1d0a3c384' group='com.google.inject' />
     <trusted-key id='29579f18fa8fd93b' group='com.google.j2objc' />
+    <trusted-key id='4b1e11d5a4b91e89' group='com.google.protobuf' />
     <trusted-key id='a7764f502a938c99' group='com.google.protobuf' />
     <trusted-key id='81c27de945332233' group='com.google.truth' />
     <trusted-key id='bac30622339994c4' group='com.google.truth' />
@@ -254,6 +255,7 @@
     <trusted-key id='734aef3d43509290' group='org.osgi' />
     <trusted-key id='5f69ad087600b22c' group='org.ow2.asm' />
     <trusted-key id='2be5d98f751f4136' group='org.pcollections' />
+    <trusted-key id='dee12b9896f97e34' group='org.pcollections' />
     <trusted-key id='03a0e85480e2c433' group='org.plumelib' />
     <trusted-key id='1364c5e2df3e99c5' group='org.reactivestreams' />
     <trusted-key id='8e1ad594207b7fb2' group='org.reflections' />

@@ -82,10 +82,10 @@ public abstract class TextReporter implements Reporter {
   /** Returns the column headers. */
   protected Set<String> headers() {
     if (headers == null) {
-      Set<String> all = results.stream()
+      ImmutableSet<String> all = results.stream()
             .flatMap(policyStats -> policyStats.metrics().keySet().stream())
             .collect(toImmutableSet());
-      Set<String> used = results.stream()
+      ImmutableSet<String> used = results.stream()
           .flatMap(policyStats -> policyStats.metrics().values().stream())
           .filter(metric -> metric.characteristics().isEmpty()
               || metric.characteristics().stream().anyMatch(characteristics::contains))

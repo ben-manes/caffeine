@@ -23,7 +23,6 @@ import java.util.stream.Stream;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
-import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 
 /**
@@ -43,7 +42,7 @@ public final class AdaptSizeTraceReader extends TextTraceReader {
 
   @Override
   public Set<Characteristic> characteristics() {
-    return Sets.immutableEnumSet(WEIGHTED);
+    return Set.of(WEIGHTED);
   }
 
   @Override

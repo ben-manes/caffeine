@@ -30,7 +30,6 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"GuardedByChecker", "GuardedByValidator"})
 abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
@@ -79,13 +78,13 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
 
   /** Returns the weight of this entry from the policy's perspective. */
   @NonNegative
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public int getPolicyWeight() {
     return 1;
   }
 
   /** Sets the weight from the policy's perspective. */
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public void setPolicyWeight(@NonNegative int weight) {}
 
   /* --------------- Health --------------- */
@@ -133,22 +132,22 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
     throw new UnsupportedOperationException();
   }
 
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public Node<K, V> getPreviousInVariableOrder() {
     throw new UnsupportedOperationException();
   }
 
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public void setPreviousInVariableOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public Node<K, V> getNextInVariableOrder() {
     throw new UnsupportedOperationException();
   }
 
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public void setNextInVariableOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
@@ -211,25 +210,25 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   public void setAccessTime(long time) {}
 
   @Override
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public @Nullable Node<K, V> getPreviousInAccessOrder() {
     return null;
   }
 
   @Override
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public void setPreviousInAccessOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public @Nullable Node<K, V> getNextInAccessOrder() {
     return null;
   }
 
   @Override
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public void setNextInAccessOrder(@Nullable Node<K, V> next) {
     throw new UnsupportedOperationException();
   }
@@ -256,30 +255,31 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   }
 
   @Override
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public @Nullable Node<K, V> getPreviousInWriteOrder() {
     return null;
   }
 
   @Override
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public void setPreviousInWriteOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public @Nullable Node<K, V> getNextInWriteOrder() {
     return null;
   }
 
   @Override
-  @GuardedBy("evictionLock")
+  // @GuardedBy("evictionLock")
   public void setNextInWriteOrder(@Nullable Node<K, V> next) {
     throw new UnsupportedOperationException();
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public final String toString() {
     return String.format("%s=[key=%s, value=%s, weight=%d, queueType=%,d, accessTimeNS=%,d, "
         + "writeTimeNS=%,d, varTimeNs=%,d, prevInAccess=%s, nextInAccess=%s, prevInWrite=%s, "

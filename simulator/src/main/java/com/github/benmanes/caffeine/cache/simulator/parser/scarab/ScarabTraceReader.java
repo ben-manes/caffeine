@@ -22,7 +22,6 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
-import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the trace files provided by
@@ -38,7 +37,7 @@ public final class ScarabTraceReader extends BinaryTraceReader {
 
   @Override
   public Set<Characteristic> characteristics() {
-    return ImmutableSet.of();
+    return Set.of();
   }
 
   @Override

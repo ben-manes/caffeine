@@ -51,7 +51,7 @@ import com.google.common.collect.Sets;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheGenerator {
-  private static final List<Map.Entry<Int, Int>> INTS = makeInts();
+  private static final ImmutableList<Map.Entry<Int, Int>> INTS = makeInts();
   private static final int BASE = 1_000;
 
   private final Options options;
@@ -245,7 +245,7 @@ public final class CacheGenerator {
   }
 
   /** Returns a cache of integers and their negation. */
-  private static List<Map.Entry<Int, Int>> makeInts() {
+  private static ImmutableList<Map.Entry<Int, Int>> makeInts() {
     int size = Stream.of(CacheSpec.Population.values())
         .mapToInt(population -> Math.toIntExact(population.size()))
         .max().getAsInt();

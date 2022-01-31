@@ -135,10 +135,11 @@ tasks.withType(JavaCompile).configureEach {
       'FuzzyEqualsShouldNotBeUsedInEqualsMethod', 'FunctionalInterfaceClash', 'HashCodeToString',
       'IterablePathParameter', 'LockMethodChecker', 'LongLiteralLowerCaseSuffix', 'MissingBraces',
       'MissingDefault', 'MixedArrayDimensions', 'MissingDefault', 'NoAllocation', 'NumericEquality',
-      'PackageLocation', 'RedundantThrows', 'RemoveUnusedImports', 'ReturnsNullCollection',
-      'StringEquality', 'StronglyTypeTime', 'SwitchDefault', 'TimeUnitMismatch', 'TransientMisuse',
-      'UnlockMethod', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass', 'UnnecessaryOptionalGet',
-      'UnsafeLocaleUsage', ]
+      'PackageLocation', 'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports',
+      'ReturnsNullCollection', 'StringEquality', 'StronglyTypeByteString', 'StronglyTypeTime',
+      'SwitchDefault', 'TimeUnitMismatch', 'TransientMisuse', 'UnlockMethod',
+      'UnnecessarilyVisible', 'UnnecessaryAnonymousClass', 'UnnecessaryOptionalGet',
+      'UnsafeLocaleUsage', 'UsingJsr305CheckReturnValue']
     enabledChecks.each { enable(it) }
 
     def disabledChecks = [ 'AutoValueSubclassLeaked', 'EmptyCatch', 'MissingSummary' ]

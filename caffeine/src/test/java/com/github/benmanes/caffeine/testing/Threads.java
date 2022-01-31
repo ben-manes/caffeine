@@ -117,7 +117,7 @@ public final class Threads {
       Collections.shuffle(workingSet);
       workingSets.add(ImmutableList.copyOf(workingSet));
     }
-    return ImmutableList.copyOf(workingSets);
+    return List.copyOf(workingSets);
   }
 
   /** Executes operations against the cache to simulate random load. */

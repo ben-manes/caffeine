@@ -23,7 +23,6 @@ import java.util.stream.Stream;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
-import com.google.common.collect.Sets;
 
 /**
  * A reader for the trace files provided by the authors of the LRB algorithm. See
@@ -39,7 +38,7 @@ public final class LrbTraceReader extends TextTraceReader {
 
   @Override
   public Set<Characteristic> characteristics() {
-    return Sets.immutableEnumSet(WEIGHTED);
+    return Set.of(WEIGHTED);
   }
 
   @Override

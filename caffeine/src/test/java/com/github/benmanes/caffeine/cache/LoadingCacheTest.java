@@ -242,6 +242,17 @@ public final class LoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.BULK_DIFFERENT,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_different(LoadingCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.absentKeys());
+
+    assertThat(result).isEmpty();
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
+    assertThat(context).stats().hits(0).misses(context.absent().size()).success(1).failures(0);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })

@@ -25,7 +25,6 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -440,15 +439,8 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
-    int requested = ThreadLocalRandom.current().nextInt(1, context.absent().size() / 2);
-    var requestedKeys = context.absentKeys().stream().limit(requested).collect(toSet());
-    var actual = context.absent().entrySet().stream()
-        .filter(entry -> !requestedKeys.contains(entry.getKey()))
-        .limit(requested)
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-    var result = cache.getAll(requestedKeys, keys -> {
-      return actual;
-    }).join();
+    var actual = context.absentKeys().stream().collect(toMap(Int::negate, identity()));
+    var result = cache.getAll(context.absentKeys(), keys -> actual).join();
 
     assertThat(result).isEmpty();
     assertThat(cache).hasSize(context.initialSize() + actual.size());
@@ -676,13 +668,8 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllBifunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
-    int requested = ThreadLocalRandom.current().nextInt(1, context.absent().size() / 2);
-    var requestedKeys = context.absentKeys().stream().limit(requested).collect(toSet());
-    var actual = context.absent().entrySet().stream()
-        .filter(entry -> !requestedKeys.contains(entry.getKey()))
-        .limit(requested)
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-    var result = cache.getAll(requestedKeys, (keys, executor) -> {
+    var actual = context.absentKeys().stream().collect(toMap(Int::negate, identity()));
+    var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
       return CompletableFuture.completedFuture(actual);
     }).join();
 

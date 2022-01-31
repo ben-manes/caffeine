@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -175,7 +176,7 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
-  public Iterable<String> getCacheNames() {
+  public Collection<String> getCacheNames() {
     requireNotClosed();
     return Collections.unmodifiableCollection(new ArrayList<>(caches.keySet()));
   }

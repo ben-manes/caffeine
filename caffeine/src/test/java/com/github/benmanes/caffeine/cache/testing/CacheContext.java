@@ -222,7 +222,7 @@ public final class CacheContext {
     return lastKey;
   }
 
-  public Set<Int> firstMiddleLastKeys() {
+  public ImmutableSet<Int> firstMiddleLastKeys() {
     return ImmutableSet.of(firstKey(), middleKey(), lastKey());
   }
 

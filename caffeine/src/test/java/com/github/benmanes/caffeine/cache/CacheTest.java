@@ -385,6 +385,18 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_different(Cache<Int, Int> cache, CacheContext context) {
+    var actual = context.absentKeys().stream().collect(toMap(Int::negate, identity()));
+    var result = cache.getAll(context.absentKeys(), keys -> actual);
+
+    assertThat(result).isEmpty();
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(actual);
+    assertThat(cache).hasSize(context.initialSize() + actual.size());
+    assertThat(context).stats().hits(0).misses(actual.size()).success(1).failures(0);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_duplicates(Cache<Int, Int> cache, CacheContext context) {

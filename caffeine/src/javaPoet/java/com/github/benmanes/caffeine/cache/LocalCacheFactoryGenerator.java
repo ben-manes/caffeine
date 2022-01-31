@@ -242,7 +242,7 @@ public final class LocalCacheFactoryGenerator {
     Set<Feature> parentFeatures;
     Set<Feature> generateFeatures;
     if (features.size() == 2) {
-      parentFeatures = ImmutableSet.of();
+      parentFeatures = Set.of();
       generateFeatures = features;
       superClass = BOUNDED_LOCAL_CACHE;
     } else {

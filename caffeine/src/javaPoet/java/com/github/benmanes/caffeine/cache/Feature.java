@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
@@ -46,7 +47,7 @@ public enum Feature {
   LISTENING,
   STATS;
 
-  private static final Set<Feature> fastPathIncompatible = Sets.immutableEnumSet(
+  private static final ImmutableSet<Feature> fastPathIncompatible = Sets.immutableEnumSet(
       Feature.EXPIRE_ACCESS, Feature.WEAK_KEYS, Feature.INFIRM_VALUES,
       Feature.WEAK_VALUES, Feature.SOFT_VALUES);
 

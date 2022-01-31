@@ -32,7 +32,6 @@ import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -118,7 +117,7 @@ public class MembershipTest {
   }
 
   private Config getConfig(FilterType filterType, int capacity) {
-    Map<String, Object> properties = ImmutableMap.of(
+    Map<String, Object> properties = Map.of(
         "membership.expected-insertions-multiplier", EXPECTED_INSERTIONS_MULTIPLIER,
         "membership.filter", filterType.name(),
         "maximum-size", capacity,
