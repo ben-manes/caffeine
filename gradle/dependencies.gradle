@@ -26,15 +26,15 @@
 ext {
   versions = [
     akka: '2.6.18',
-    cache2k: '2.5.3.Beta',
-    checkerFramework: '3.21.1',
+    cache2k: '2.6.0.Final',
+    checkerFramework: '3.21.2',
     coherence: '20.06',
     commonsCompress: '1.21',
     commonsLang3: '3.12.0',
     commonsMath3: '3.6.1',
     commonsIo: '2.11.0',
     concurrentlinkedhashmap: '1.4.2',
-    config: '1.4.1',
+    config: '1.4.2',
     ehcache3: '3.10.0-alpha0',
     errorprone: '2.11.0',
     expiringMap: '0.5.10',

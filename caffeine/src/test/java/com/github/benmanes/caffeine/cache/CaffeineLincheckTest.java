@@ -15,25 +15,37 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
+import org.testng.annotations.Factory;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.testing.AbstractLincheckMapTest;
+import com.github.benmanes.caffeine.cache.testing.AbstractLincheckCacheTest;
 
 /**
- * Linearization test cases for {@link UnboundedLocalCache}.
+ * Linearization test cases.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(groups = "lincheck")
-public final class UnboundedLincheckTest extends AbstractLincheckMapTest {
+public final class CaffeineLincheckTest {
 
-  @Override
-  protected ConcurrentMap<Integer, Integer> create() {
-    Cache<Integer, Integer> cache = Caffeine.newBuilder()
-        .executor(Runnable::run)
-        .build();
-    return cache.asMap();
+  @Factory
+  public Object[] factory() {
+    return new Object[] { new BoundedLincheckTest(), new UnboundedLincheckTest() };
+  }
+
+  public static final class BoundedLincheckTest extends AbstractLincheckCacheTest {
+    public BoundedLincheckTest() {
+      super(Caffeine.newBuilder()
+          .maximumSize(Long.MAX_VALUE)
+          .expireAfterWrite(Long.MAX_VALUE, TimeUnit.DAYS));
+    }
+  }
+
+  public static final class UnboundedLincheckTest extends AbstractLincheckCacheTest {
+    public UnboundedLincheckTest() {
+      super(Caffeine.newBuilder());
+    }
   }
 }
