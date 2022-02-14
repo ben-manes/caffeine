@@ -16,18 +16,13 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
-import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.ReferenceQueue;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -39,7 +34,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("GuardedBy")
-final class TimerWheel<K, V> {
+final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
 
   /*
    * A timer wheel [1] stores timer events in buckets on a circular buffer. A bucket represents a
@@ -281,70 +276,157 @@ final class TimerWheel<K, V> {
   }
 
   /**
-   * Returns an unmodifiable snapshot map roughly ordered by the expiration time. The wheels are
-   * evaluated in order, but the timers that fall within the bucket's range are not sorted. Beware
-   * that obtaining the mappings is <em>NOT</em> a constant-time operation.
-   *
-   * @param ascending the direction
-   * @param limit the maximum number of entries
-   * @param transformer a function that unwraps the value
-   * @return an unmodifiable snapshot in the desired order
+   * Returns an iterator roughly ordered by the expiration time from the entries most likely to
+   * expire (oldest) to the entries least likely to expire (youngest). The wheels are evaluated in
+   * order, but the timers that fall within the bucket's range are not sorted.
    */
-  public Map<K, V> snapshot(boolean ascending, int limit, Function<V, V> transformer) {
-    requireArgument(limit >= 0);
-
-    Map<K, V> map = new LinkedHashMap<>(Math.min(limit, cache.size()));
-    int startLevel = ascending ? 0 : wheel.length - 1;
-    for (int i = 0; i < wheel.length; i++) {
-      int indexOffset = ascending ? i : -i;
-      int index = startLevel + indexOffset;
-
-      int ticks = (int) (nanos >>> SHIFT[index]);
-      int bucketMask = (wheel[index].length - 1);
-      int startBucket = (ticks & bucketMask) + (ascending ? 1 : 0);
-      for (int j = 0; j < wheel[index].length; j++) {
-        int bucketOffset = ascending ? j : -j;
-        Node<K, V> sentinel = wheel[index][(startBucket + bucketOffset) & bucketMask];
-
-        for (Node<K, V> node = traverse(ascending, sentinel);
-            node != sentinel; node = traverse(ascending, node)) {
-          if (map.size() >= limit) {
-            break;
-          }
-
-          K key = node.getKey();
-          V value = transformer.apply(node.getValue());
-          if ((key != null) && (value != null) && node.isAlive()) {
-            map.put(key, value);
-          }
-        }
-      }
-    }
-    return Collections.unmodifiableMap(map);
-  }
-
-  static <K, V> Node<K, V> traverse(boolean ascending, Node<K, V> node) {
-    return ascending ? node.getNextInVariableOrder() : node.getPreviousInVariableOrder();
-  }
-
   @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder();
-    for (int i = 0; i < wheel.length; i++) {
-      Map<Integer, List<K>> buckets = new TreeMap<>();
-      for (int j = 0; j < wheel[i].length; j++) {
-        List<K> events = new ArrayList<>();
-        for (Node<K, V> node = wheel[i][j].getNextInVariableOrder();
-            node != wheel[i][j]; node = node.getNextInVariableOrder()) {
-          events.add(node.getKey());
-        }
-        if (!events.isEmpty()) {
-          buckets.put(j, events);
-        }
-      }
-      builder.append("Wheel #").append(i + 1).append(": ").append(buckets).append('\n');
+  public Iterator<Node<K, V>> iterator() {
+    return new AscendingIterator();
+  }
+
+  /**
+   * Returns an iterator roughly ordered by the expiration time from the entries least likely to
+   * expire (youngest) to the entries most likely to expire (oldest). The wheels are evaluated in
+   * order, but the timers that fall within the bucket's range are not sorted.
+   */
+  public Iterator<Node<K, V>> descendingIterator() {
+    return new DescendingIterator();
+  }
+
+  /** An iterator with rough ordering that can be specialized for either direction. */
+  abstract class Traverser implements Iterator<Node<K, V>> {
+    final long expectedNanos;
+
+    @Nullable Node<K, V> previous;
+    @Nullable Node<K, V> current;
+
+    Traverser() {
+      expectedNanos = nanos;
     }
-    return builder.deleteCharAt(builder.length() - 1).toString();
+
+    @Override
+    public boolean hasNext() {
+      if (nanos != expectedNanos) {
+        throw new ConcurrentModificationException();
+      } else if (current != null) {
+        return true;
+      } else if (isDone()) {
+        return false;
+      }
+      current = computeNext();
+      return (current != null);
+    }
+
+    @Override
+    @SuppressWarnings("NullAway")
+    public Node<K, V> next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      previous = current;
+      current = null;
+      return previous;
+    }
+
+    @Nullable Node<K, V> computeNext() {
+      var node = (previous == null) ? sentinel() : previous;
+      for (;;) {
+        node = traverse(node);
+        if (node != sentinel()) {
+          return node;
+        } else if ((node = goToNextBucket()) != null) {
+          continue;
+        } else if ((node = goToNextWheel()) != null) {
+          continue;
+        }
+        return null;
+      }
+    }
+
+    /** Returns if the iteration has completed. */
+    abstract boolean isDone();
+
+    /** Returns the sentinel at the current wheel and bucket position. */
+    abstract Node<K, V> sentinel();
+
+    /** Returns the node's successor, or the bucket's sentinel if at the end. */
+    abstract Node<K, V> traverse(Node<K, V> node);
+
+    /** Returns the sentinel for the wheel's next bucket, or null if the wheel is exhausted. */
+    abstract @Nullable Node<K, V> goToNextBucket();
+
+    /** Returns the sentinel for the next wheel's bucket position, or null if no more wheels. */
+    abstract @Nullable Node<K, V> goToNextWheel();
+  }
+
+  final class AscendingIterator extends Traverser {
+    int wheelIndex;
+    int steps;
+
+    @Override boolean isDone() {
+      return (wheelIndex == wheel.length);
+    }
+    @Override Node<K, V> sentinel() {
+      return wheel[wheelIndex][bucketIndex()];
+    }
+    @Override Node<K, V> traverse(Node<K, V> node) {
+      return node.getNextInVariableOrder();
+    }
+    @Override @Nullable Node<K, V> goToNextBucket() {
+      return (++steps < wheel[wheelIndex].length)
+          ? wheel[wheelIndex][bucketIndex()]
+          : null;
+    }
+    @Override @Nullable Node<K, V> goToNextWheel() {
+      if (++wheelIndex == wheel.length) {
+        return null;
+      }
+      steps = 0;
+      return wheel[wheelIndex][bucketIndex()];
+    }
+    int bucketIndex() {
+      int ticks = (int) (nanos >>> SHIFT[wheelIndex]);
+      int bucketMask = wheel[wheelIndex].length - 1;
+      int bucketOffset = (ticks & bucketMask) + 1;
+      return (bucketOffset + steps) & bucketMask;
+    }
+  }
+
+  final class DescendingIterator extends Traverser {
+    int wheelIndex;
+    int steps;
+
+    DescendingIterator() {
+      wheelIndex = wheel.length - 1;
+    }
+    @Override boolean isDone() {
+      return (wheelIndex == -1);
+    }
+    @Override Node<K, V> sentinel() {
+      return wheel[wheelIndex][bucketIndex()];
+    }
+    @Override @Nullable Node<K, V> goToNextBucket() {
+      return (++steps < wheel[wheelIndex].length)
+          ? wheel[wheelIndex][bucketIndex()]
+          : null;
+    }
+    @Override @Nullable Node<K, V> goToNextWheel() {
+      if (--wheelIndex < 0) {
+        return null;
+      }
+      steps = 0;
+      return wheel[wheelIndex][bucketIndex()];
+    }
+    @Override Node<K, V> traverse(Node<K, V> node) {
+      return node.getPreviousInVariableOrder();
+    }
+    int bucketIndex() {
+      int ticks = (int) (nanos >>> SHIFT[wheelIndex]);
+      int bucketMask = wheel[wheelIndex].length - 1;
+      int bucketOffset = (ticks & bucketMask);
+      return (bucketOffset - steps) & bucketMask;
+    }
   }
 
   /** A sentinel for the doubly-linked list in the bucket. */

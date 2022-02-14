@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.jcache;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.Map;
-
 import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
@@ -37,6 +35,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.jcache.configuration.FactoryCreator;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.inject.AbstractModule;
@@ -101,7 +100,7 @@ public final class JCacheGuiceTest {
     }
 
     @Override
-    public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+    public ImmutableMap<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
       return Maps.toMap(ImmutableSet.copyOf(keys), this::load);
     }
   }

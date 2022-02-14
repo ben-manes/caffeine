@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.testing;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.cache.CacheLoader.asyncReloading;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
@@ -24,7 +25,6 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
@@ -81,6 +81,7 @@ public final class CacheContext {
   final InitialCapacity initialCapacity;
   final Implementation implementation;
   final CacheScheduler cacheScheduler;
+  final SerializableFakeTicker ticker;
   final Listener evictionListenerType;
   final Listener removalListenerType;
   final CacheExecutor cacheExecutor;
@@ -97,7 +98,6 @@ public final class CacheContext {
   final Expire afterWrite;
   final Expire expiryTime;
   final Executor executor;
-  final FakeTicker ticker;
   final Compute compute;
   final Expire refresh;
   final Loader loader;
@@ -439,9 +439,7 @@ public final class CacheContext {
       cache = isAsync() ? caffeine.buildAsync(loader).synchronous() : caffeine.build(loader);
     } else {
       var guavaLoader = new SingleLoader<>(loader);
-      cache = new GuavaLoadingCache<>(guava.build(
-          com.google.common.cache.CacheLoader.asyncReloading(
-              guavaLoader, executor)), ticker, isRecordingStats());
+      cache = new GuavaLoadingCache<>(guava.build(asyncReloading(guavaLoader, executor)), this);
     }
     this.cache = cache;
     return cache;
@@ -504,16 +502,18 @@ public final class CacheContext {
         .add("initialCapacity", initialCapacity)
         .add("stats", stats)
         .add("implementation", implementation)
+        .add("startTime", ticker.startTime)
         .toString();
   }
 
   @SuppressWarnings("serial")
   static final class SerializableFakeTicker extends FakeTicker implements Serializable {
-    private static final long START_TIME = new Random().nextLong();
+    final long startTime;
 
     @SuppressWarnings("PreferJavaTimeOverload")
     public SerializableFakeTicker() {
-      advance(START_TIME);
+      startTime = ThreadLocalRandom.current().nextLong();
+      advance(startTime);
     }
   }
 }

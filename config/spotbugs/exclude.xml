@@ -59,9 +59,19 @@
 
   <!-- Caffeine -->
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.AbstractLinkedDeque$AbstractLinkedIterator"/>
+    <Method name="&lt;init&gt;"/>
+    <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
     <Method name="admit"/>
     <Bug pattern="PREDICTABLE_RANDOM"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
+    <Method name="snapshot"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.Caffeine"/>
@@ -120,6 +130,16 @@
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.SerializationProxy"/>
     <Bug pattern="DESERIALIZATION_GADGET"/>
+  </Match>
+  <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.cache.SnapshotEntry$CompleteEntry"/>
+      <Class name="com.github.benmanes.caffeine.cache.SnapshotEntry$ExpirableEntry"/>
+      <Class name="com.github.benmanes.caffeine.cache.SnapshotEntry$ExpirableWeightedEntry"/>
+      <Class name="com.github.benmanes.caffeine.cache.SnapshotEntry$RefreshableExpirableEntry"/>
+      <Class name="com.github.benmanes.caffeine.cache.SnapshotEntry$WeightedEntry"/>
+    </Or>
+    <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.StripedBuffer"/>

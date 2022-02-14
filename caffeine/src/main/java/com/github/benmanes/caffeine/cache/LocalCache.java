@@ -96,7 +96,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * whether to record miss and load statistics based on the success of this operation.
    */
   @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      @Nullable Expiry<K, V> expiry, boolean recordMiss,
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordMiss,
       boolean recordLoad, boolean recordLoadFailure);
 
   @Override

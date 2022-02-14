@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Comparator;
+import java.util.ConcurrentModificationException;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -36,10 +37,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * implementations. Each implementation must define unique names for accessing and modifying its
  * link pointers.
  * <p>
- * The iterators returned by this class are <em>not</em> <i>fail-fast</i>: If the deque is modified
- * at any time after the iterator is created, the iterator will be in an unknown state. Thus, in the
- * face of concurrent modification, the iterator risks arbitrary, non-deterministic behavior at an
- * undetermined time in the future.
+ * The iterators returned by this class are <i>fail-fast</i>: If the deque is structurally modified
+ * at any time after the iterator is created, in any way except through the iterator's own
+ * {@link Iterator#remove() remove} method, then the iterator will throw a
+ * {@link ConcurrentModificationException}. Thus, in the face of concurrent modification, the
+ * iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at
+ * an undetermined time in the future. Note that the fail-fast behavior of an iterator cannot be
+ * guaranteed and should be used only to detect bugs.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection

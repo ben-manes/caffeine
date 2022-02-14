@@ -253,7 +253,7 @@ public class EmptyCachesTest extends TestCase {
       cache.getUnchecked(1);
       cache.getUnchecked(2);
 
-      Collection<Object> values = cache.asMap().keySet();
+      Set<Object> values = cache.asMap().keySet();
       // We don't know whether these are still in the cache, so we can't assert on the return
       // values of these removes, but the cache should be empty after the removes, regardless.
       values.remove(1);

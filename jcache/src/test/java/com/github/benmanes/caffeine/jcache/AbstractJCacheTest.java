@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.jcache;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.CacheManager;
@@ -51,8 +50,8 @@ public abstract class AbstractJCacheTest {
   protected static final Integer KEY_2 = 2, VALUE_2 = -2;
   protected static final Integer KEY_3 = 3, VALUE_3 = -3;
 
-  protected final Set<Integer> keys = ImmutableSet.of(KEY_1, KEY_2, KEY_3);
-  protected final Map<Integer, Integer> entries = ImmutableMap.of(
+  protected final ImmutableSet<Integer> keys = ImmutableSet.of(KEY_1, KEY_2, KEY_3);
+  protected final ImmutableMap<Integer, Integer> entries = ImmutableMap.of(
       KEY_1, VALUE_1, KEY_2, VALUE_2, KEY_3, VALUE_3);
 
   protected LoadingCacheProxy<Integer, Integer> jcacheLoading;

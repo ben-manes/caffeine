@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.AbstractCollection;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -51,6 +52,13 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   @Nullable E last;
 
   /**
+   * The number of times this deque has been <i>structurally modified</i>. Structural modifications
+   * are those that change the size of the deque, or otherwise perturb it in such a fashion that
+   * iterations in progress may yield incorrect results.
+   */
+  int modCount;
+
+  /**
    * Links the element to the front of the deque so that it becomes the first element.
    *
    * @param e the unlinked element
@@ -65,6 +73,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       setPrevious(f, e);
       setNext(e, f);
     }
+    modCount++;
   }
 
   /**
@@ -82,6 +91,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       setNext(l, e);
       setPrevious(e, l);
     }
+    modCount++;
   }
 
   /** Unlinks the non-null first element. */
@@ -97,6 +107,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     } else {
       setPrevious(next, null);
     }
+    modCount++;
     return f;
   }
 
@@ -112,6 +123,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     } else {
       setNext(prev, null);
     }
+    modCount++;
     return l;
   }
 
@@ -133,6 +145,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       setPrevious(next, prev);
       setNext(e, null);
     }
+    modCount++;
   }
 
   @Override
@@ -170,6 +183,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       e = next;
     }
     first = last = null;
+    modCount++;
   }
 
   @Override
@@ -305,6 +319,9 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
+  public abstract boolean remove(Object o);
+
+  @Override
   public boolean removeFirstOccurrence(Object o) {
     return remove(o);
   }
@@ -364,17 +381,21 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     @Nullable E previous;
     @Nullable E cursor;
 
+    int expectedModCount;
+
     /**
      * Creates an iterator that can can traverse the deque.
      *
      * @param start the initial element to begin traversal from
      */
     AbstractLinkedIterator(@Nullable E start) {
+      expectedModCount = modCount;
       cursor = start;
     }
 
     @Override
     public boolean hasNext() {
+      checkForComodification();
       return (cursor != null);
     }
 
@@ -402,8 +423,21 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       if (previous == null) {
         throw new IllegalStateException();
       }
+      checkForComodification();
+
       AbstractLinkedDeque.this.remove(previous);
+      expectedModCount = modCount;
       previous = null;
+    }
+
+    /**
+     * If the expected modCount value that the iterator believes that the backing deque should have
+     * is violated then the iterator has detected concurrent modification.
+     */
+    void checkForComodification() {
+      if (modCount != expectedModCount) {
+        throw new ConcurrentModificationException();
+      }
     }
   }
 }

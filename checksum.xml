@@ -53,6 +53,7 @@
     <trusted-key id='9a259c7ee636c5ed' group='com.google.errorprone' />
     <trusted-key id='eba8e97b15086e24' group='com.google.errorprone' />
     <trusted-key id='9a259c7ee636c5ed' group='com.google.googlejavaformat' />
+    <trusted-key id='d364abaa39a47320' group='com.google.googlejavaformat' />
     <trusted-key id='5d67bffcba1f9a39' group='com.google.gradle' />
     <trusted-key id='abe9f3126bb741c1' group='com.google.guava' />
     <trusted-key id='f6d4a1d411e9d1ae' group='com.google.guava' />
@@ -90,6 +91,7 @@
     <trusted-key id='602ec18d20c4661c' group='com.thoughtworks.xstream' />
     <trusted-key id='fa65b4e0f7a915e0' group='com.trivago' />
     <trusted-key id='0555b3ba1ca4ecf9' group='com.typesafe' />
+    <trusted-key id='061107b0f74a6daa' group='com.typesafe' />
     <trusted-key id='0753c4188493fd20' group='com.typesafe' />
     <trusted-key id='e735df276c508071' group='com.typesafe' />
     <trusted-key id='2b183b279dfd639e' group='com.typesafe.akka' />
@@ -373,6 +375,9 @@
     </dependency>
     <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.41.0'>
       <sha512>27A66A61915CE5267605968A4D4024671221A2620D0EAF501FB4021F68CD5A32A6FF1812ED7081351767562A3703F9EC48EA72C5845377BC5B4703D8740076DD</sha512>
+    </dependency>
+    <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.42.0'>
+      <sha512>1ABEEE4AA1A033F7A38333846B8B65AD6A859F1A3F4420F193A5A47A096EEE032D2F769B1BD79A05F752EC3139A256CEE9EED36984B5078CFF651DAC0412D352</sha512>
     </dependency>
     <dependency group='com.github.brianfrankcooper.YCSB' module='core' version='0.15.0'>
       <sha512>DF5BFED7DFC327166FE0CB81BD6A9655F44CCB268E7E69204BD09955147CE9A97EBBCC28F9ACF315DBAF49E850A43CE8744F44E68D7BE816EACCAF0BEE41B203</sha512>

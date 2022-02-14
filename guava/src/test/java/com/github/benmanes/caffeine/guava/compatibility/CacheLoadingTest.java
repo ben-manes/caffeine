@@ -447,7 +447,7 @@ public class CacheLoadingTest extends TestCase {
         Caffeine.newBuilder().executor(MoreExecutors.directExecutor()), loader);
 
     Object[] lookupKeys = new Object[] { new Object(), new Object(), new Object() };
-    Map<Object, Object> result = cache.getAll(asList(lookupKeys));
+    ImmutableMap<Object, Object> result = cache.getAll(asList(lookupKeys));
     assertThat(result.keySet()).containsExactlyElementsIn(asList(lookupKeys));
     for (Map.Entry<Object, Object> entry : result.entrySet()) {
       Object key = entry.getKey();
@@ -484,7 +484,7 @@ public class CacheLoadingTest extends TestCase {
     assertSame(extraKey, cache.asMap().get(extraKey));
 
     Object[] lookupKeys = new Object[] { new Object(), new Object(), new Object() };
-    Map<Object, Object> result = cache.getAll(asList(lookupKeys));
+    ImmutableMap<Object, Object> result = cache.getAll(asList(lookupKeys));
     assertThat(result.keySet()).containsExactlyElementsIn(asList(lookupKeys));
     for (Map.Entry<Object, Object> entry : result.entrySet()) {
       Object key = entry.getKey();

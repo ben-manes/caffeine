@@ -641,6 +641,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     public @Nullable V putIfAbsent(K key, V value) {
       requireNonNull(value);
 
+      // Keep in sync with BoundedVarExpiration.putIfAbsentAsync(key, value, duration, unit)
       for (;;) {
         CompletableFuture<V> priorFuture = delegate.get(key);
         if (priorFuture != null) {

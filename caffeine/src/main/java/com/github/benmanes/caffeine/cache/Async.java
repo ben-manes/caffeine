@@ -158,9 +158,9 @@ final class Async {
   static final class AsyncExpiry<K, V> implements Expiry<K, CompletableFuture<V>>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    final Expiry<K, V> delegate;
+    final Expiry<? super K, ? super V> delegate;
 
-    AsyncExpiry(Expiry<K, V> delegate) {
+    AsyncExpiry(Expiry<? super K, ? super V> delegate) {
       this.delegate = requireNonNull(delegate);
     }
 

@@ -334,7 +334,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      @Nullable Expiry<K, V> expiry, boolean recordMiss,
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordMiss,
       boolean recordLoad, boolean recordLoadFailure) {
     requireNonNull(remappingFunction);
     return remap(key, statsAware(remappingFunction, recordMiss, recordLoad, recordLoadFailure));
@@ -926,8 +926,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override public boolean isRecordingStats() {
       return cache.isRecordingStats;
     }
-    @Override public V getIfPresentQuietly(Object key) {
+    @Override public @Nullable V getIfPresentQuietly(K key) {
       return transformer.apply(cache.data.get(key));
+    }
+    @Override public @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
+      V value = transformer.apply(cache.data.get(key));
+      return (value == null) ? null : SnapshotEntry.forEntry(key, value);
     }
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;

@@ -15,7 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.TimerWheel.SHIFT;
 import static com.github.benmanes.caffeine.cache.TimerWheel.SPANS;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.stream.Collectors.toList;
@@ -28,14 +30,15 @@ import static org.mockito.Mockito.when;
 import java.lang.ref.ReferenceQueue;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.mockito.ArgumentCaptor;
@@ -44,12 +47,13 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
+import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.google.common.primitives.Longs;
+import com.google.common.collect.Streams;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 
@@ -70,14 +74,16 @@ public final class TimerWheelTest {
 
   @BeforeMethod
   public void beforeMethod() {
+    Reset.setThreadLocalRandom(random.nextInt(), random.nextInt());
     mocks = MockitoAnnotations.openMocks(this);
     timerWheel = new TimerWheel<>(cache);
-
-    Reset.setThreadLocalRandom(random.nextInt(), random.nextInt());
   }
 
   @AfterMethod
-  public void afterMethod() throws Exception {
+  public void afterMethod(ITestResult testResult) throws Exception {
+    if (!testResult.isSuccess()) {
+      printTimerWheel();
+    }
     mocks.close();
   }
 
@@ -117,7 +123,6 @@ public final class TimerWheelTest {
     }
     checkTimerWheel(duration);
   }
-
 
   @Test(dataProvider = "clock")
   public void advance(long clock) {
@@ -240,7 +245,7 @@ public final class TimerWheelTest {
 
   @DataProvider(name = "clock")
   public Iterator<Object> providesClock() {
-    return Longs.asList(CLOCKS).stream().map(o -> (Object) o).iterator();
+    return LongStream.of(CLOCKS).mapToObj(o -> (Object) o).iterator();
   }
 
   @DataProvider(name = "schedule")
@@ -376,7 +381,7 @@ public final class TimerWheelTest {
         count += getTimers(timerWheel.wheel[i][j]).size();
       }
     }
-    assertWithMessage(timerWheel.toString()).that(count).isEqualTo(1);
+    assertThat(count).isEqualTo(1);
   }
 
   @DataProvider(name = "cascade")
@@ -393,38 +398,95 @@ public final class TimerWheelTest {
     return args.iterator();
   }
 
-  @Test(dataProvider = "snapshot")
-  public void snapshot(boolean ascending, int limit, long clock, Function<Long, Long> transformer) {
-    int count = 21;
+  @Test(dataProvider = "clock")
+  public void iterator_fixed(long clock) {
     timerWheel.nanos = clock;
-    int expected = Math.min(limit, count);
-    Comparator<Long> order = ascending ? Comparator.naturalOrder() : Comparator.reverseOrder();
-    var times = IntStream.range(0, count).mapToLong(i -> {
+    var input = IntStream.range(0, 21).mapToLong(i -> {
       long time = clock + TimeUnit.SECONDS.toNanos(2L << i);
       timerWheel.schedule(new Timer(time));
       return time;
-    }).boxed().sorted(order).collect(toList()).subList(0, expected);
+    }).boxed().collect(toImmutableList());
 
-    when(transformer.apply(anyLong())).thenAnswer(invocation -> invocation.getArgument(0));
-    assertThat(snapshot(ascending, limit, transformer)).isEqualTo(times);
-    verify(transformer, times(expected)).apply(anyLong());
+    var ascending = Streams.stream(timerWheel.iterator())
+        .limit(input.size() + 1).map(Node::getKey).collect(toList());
+    assertThat(ascending).containsExactlyElementsIn(input).inOrder();
+
+    var descending = Streams.stream(timerWheel.descendingIterator())
+        .limit(input.size() + 1).map(Node::getKey).collect(toList());
+    assertThat(descending).containsExactlyElementsIn(input.reverse()).inOrder();
   }
 
-  private List<Long> snapshot(boolean ascending, int limit, Function<Long, Long> transformer) {
-    return List.copyOf(timerWheel.snapshot(ascending, limit, transformer).keySet());
+  @Test(invocationCount = 25)
+  public void iterator_random() {
+    int range = ThreadLocalRandom.current().nextInt(0, 1000);
+    timerWheel.nanos = ThreadLocalRandom.current().nextLong(
+        TimeUnit.MILLISECONDS.toNanos(500), TimeUnit.DAYS.toNanos(7));
+    var input = IntStream.range(0, range).mapToLong(i -> {
+      return ThreadLocalRandom.current().nextLong(
+          TimeUnit.SECONDS.toNanos(1), TimeUnit.DAYS.toNanos(7));
+    }).boxed().sorted().collect(toList());
+    for (long time : input) {
+      timerWheel.schedule(new Timer(time));
+    }
+
+    var ascending = Streams.stream(timerWheel.iterator())
+        .limit(range + 1).map(Node::getKey).collect(toList());
+    assertThat(ascending).containsExactlyElementsIn(input);
+    assertThat(ascending).containsExactlyElementsIn(snapshot(/* ascending */ true)).inOrder();
+
+    var descending = Streams.stream(timerWheel.descendingIterator())
+        .limit(range + 1).map(Node::getKey).collect(toList());
+    assertThat(descending).containsExactlyElementsIn(snapshot(/* ascending */ false)).inOrder();
+    assertThat(descending).containsExactlyElementsIn(input);
   }
 
-  @DataProvider(name="snapshot")
-  public Iterator<Object[]> providesSnaphot() {
-    var scenarios = new ArrayList<Object[]>();
-    for (long clock : CLOCKS) {
-      for (int limit : new int[] { 10, 100 }) {
-        scenarios.addAll(List.of(
-            new Object[] { /* ascending */ true, limit, clock, Mockito.mock(Function.class) },
-            new Object[] { /* ascending */ false, limit, clock, Mockito.mock(Function.class) }));
+  /** Returns a snapshot roughly ordered by the expiration time. */
+  private List<Long> snapshot(boolean ascending) {
+    var snapshot = new ArrayList<Long>(cache.size());
+    int startLevel = ascending ? 0 : timerWheel.wheel.length - 1;
+    Function<Node<?, ?>, Node<?, ?>> successor =
+        ascending ? Node::getNextInVariableOrder : Node::getPreviousInVariableOrder;
+    for (int i = 0; i < timerWheel.wheel.length; i++) {
+      int indexOffset = ascending ? i : -i;
+      int index = startLevel + indexOffset;
+      int ticks = (int) (timerWheel.nanos >>> SHIFT[index]);
+      int bucketMask = (timerWheel.wheel[index].length - 1);
+      int startBucket = (ticks & bucketMask) + (ascending ? 1 : 0);
+      for (int j = 0; j < timerWheel.wheel[index].length; j++) {
+        int bucketOffset = ascending ? j : -j;
+        var sentinel = timerWheel.wheel[index][(startBucket + bucketOffset) & bucketMask];
+        for (var node = successor.apply(sentinel); node != sentinel; node = successor.apply(node)) {
+          if ((node.getKey() != null) && (node.getValue() != null) && node.isAlive()) {
+            snapshot.add(node.getVariableTime());
+          }
+        }
       }
     }
-    return scenarios.iterator();
+    return snapshot;
+  }
+
+  private void printTimerWheel() {
+    var builder = new StringBuilder();
+    for (int i = 0; i < timerWheel.wheel.length; i++) {
+      int ticks = (int) (timerWheel.nanos >>> SHIFT[i]);
+      int bucketMask = (timerWheel.wheel[i].length - 1);
+      int index = (ticks & bucketMask);
+      var buckets = new TreeMap<String, List<Long>>();
+      for (int j = 0; j < timerWheel.wheel[i].length; j++) {
+        var events = new ArrayList<Long>();
+        for (var node = timerWheel.wheel[i][j].getNextInVariableOrder();
+             node != timerWheel.wheel[i][j]; node = node.getNextInVariableOrder()) {
+          events.add(node.getKey());
+        }
+        if (j == index) {
+          buckets.put("*" + j, events);
+        } else if (!events.isEmpty()) {
+          buckets.put(Integer.toString(j), events);
+        }
+      }
+      builder.append(" - Wheel #").append(i + 1).append(": ").append(buckets).append('\n');
+    }
+    System.err.printf("%nCurrent state:%n%s%n%n", builder.deleteCharAt(builder.length() - 1));
   }
 
   private static final class Timer extends Node<Long, Long> {

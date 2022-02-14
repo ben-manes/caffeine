@@ -25,13 +25,17 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 import java.time.Duration;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -379,6 +383,93 @@ public final class ExpireAfterAccessTest {
     assertThat(oldest).containsExactlyEntriesIn(context.original());
   }
 
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_null(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    expireAfterAccess.oldest(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_nullResult(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var result = expireAfterAccess.oldest(stream -> null);
+    assertThat(result).isNull();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_throwsException(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var expected = new IllegalStateException();
+    try {
+      expireAfterAccess.oldest(stream -> { throw expected; });
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).isSameInstanceAs(expected);
+    }
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_concurrentModification(Cache<Int, Int> cache,
+      CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    expireAfterAccess.oldest(stream -> {
+      cache.put(context.absentKey(), context.absentValue());
+      return stream.count();
+    });
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class,
+      expectedExceptionsMessageRegExp = "source already consumed or closed")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_closed(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    expireAfterAccess.oldest(stream -> stream).forEach(e -> {});
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_partial(Cache<Int, Int> cache,
+      CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var result = expireAfterAccess.oldest(stream -> stream
+        .limit(context.initialSize() / 2)
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_full(Cache<Int, Int> cache,
+      CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var result = expireAfterAccess.oldest(stream -> stream
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    assertThat(cache).containsExactlyEntriesIn(result);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = {Population.PARTIAL, Population.FULL},
+      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_order(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var oldest = expireAfterAccess.oldest(stream ->
+        stream.map(Map.Entry::getKey).collect(toList()));
+    assertThat(oldest).containsExactlyElementsIn(context.original().keySet()).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(mustExpireWithAnyOf = AFTER_ACCESS, population = {Population.PARTIAL, Population.FULL})
+  public void oldestFunc_metadata(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var entries = expireAfterAccess.oldest(stream -> stream.collect(toList()));
+    for (var entry : entries) {
+      assertThat(context).containsEntry(entry);
+    }
+  }
+
   /* --------------- Policy: youngest --------------- */
 
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
@@ -417,8 +508,8 @@ public final class ExpireAfterAccessTest {
   public void youngest_order(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var youngest = expireAfterAccess.youngest(Integer.MAX_VALUE);
-    var keys = ImmutableList.copyOf(youngest.keySet()).reverse();
-    assertThat(keys).containsExactlyElementsIn(context.original().keySet()).inOrder();
+    var expected = ImmutableList.copyOf(context.original().keySet()).reverse();
+    assertThat(youngest.keySet()).containsExactlyElementsIn(expected).inOrder();
   }
 
   @Test(dataProvider = "caches")
@@ -428,5 +519,93 @@ public final class ExpireAfterAccessTest {
     var youngest = expireAfterAccess.youngest(Integer.MAX_VALUE);
     cache.invalidateAll();
     assertThat(youngest).containsExactlyEntriesIn(context.original());
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_null(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    expireAfterAccess.youngest(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_nullResult(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var result = expireAfterAccess.youngest(stream -> null);
+    assertThat(result).isNull();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_throwsException(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var expected = new IllegalStateException();
+    try {
+      expireAfterAccess.youngest(stream -> { throw expected; });
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).isSameInstanceAs(expected);
+    }
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_concurrentModification(Cache<Int, Int> cache,
+      CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    expireAfterAccess.youngest(stream -> {
+      cache.put(context.absentKey(), context.absentValue());
+      return stream.count();
+    });
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class,
+      expectedExceptionsMessageRegExp = "source already consumed or closed")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_closed(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    expireAfterAccess.youngest(stream -> stream).forEach(e -> {});
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_partial(Cache<Int, Int> cache,
+      CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var result = expireAfterAccess.youngest(stream -> stream
+        .limit(context.initialSize() / 2)
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_full(Cache<Int, Int> cache,
+      CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var result = expireAfterAccess.youngest(stream -> stream
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    assertThat(cache).containsExactlyEntriesIn(result);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = {Population.PARTIAL, Population.FULL},
+      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_order(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var youngest = expireAfterAccess.youngest(
+        stream -> stream.map(Map.Entry::getKey).collect(toList()));
+    var expected = ImmutableList.copyOf(context.original().keySet()).reverse();
+    assertThat(youngest).containsExactlyElementsIn(expected).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(mustExpireWithAnyOf = AFTER_ACCESS, population = {Population.PARTIAL, Population.FULL})
+  public void youngestFunc_metadata(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var entries = expireAfterAccess.youngest(stream -> stream.collect(toList()));
+    for (var entry : entries) {
+      assertThat(context).containsEntry(entry);
+    }
   }
 }

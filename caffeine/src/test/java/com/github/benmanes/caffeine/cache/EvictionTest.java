@@ -28,11 +28,14 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executo
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.ConcurrentModificationException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -615,6 +619,126 @@ public final class EvictionTest {
     assertThat(coldest).containsExactlyEntriesIn(context.original());
   }
 
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestFunc_null(CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.coldest(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestFunc_nullResult(CacheContext context, Eviction<Int, Int> eviction) {
+    var result = eviction.coldest(stream -> null);
+    assertThat(result).isNull();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestFunc_throwsException(CacheContext context, Eviction<Int, Int> eviction) {
+    var expected = new IllegalStateException();
+    try {
+      eviction.coldest(stream -> { throw expected; });
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).isSameInstanceAs(expected);
+    }
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestFunc_concurrentModification(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.coldest(stream -> {
+      cache.put(context.absentKey(), context.absentValue());
+      return stream.count();
+    });
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class,
+      expectedExceptionsMessageRegExp = "source already consumed or closed")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestFunc_closed(CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.coldest(stream -> stream).forEach(e -> {});
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestFunc_partial(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var result = eviction.coldest(stream -> stream
+        .limit(context.initialSize() / 2)
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestFunc_full(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var result = eviction.coldest(stream -> stream
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    assertThat(cache).containsExactlyEntriesIn(result);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, initialCapacity = InitialCapacity.EXCESSIVE,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
+      removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  public void coldestFunc_order(CacheContext context, Eviction<Int, Int> eviction) {
+    var keys = new LinkedHashSet<>(context.original().keySet());
+    var coldest = new LinkedHashSet<>(eviction.coldest(stream ->
+        stream.map(Map.Entry::getKey).collect(toList())));
+
+    // Ignore the last key; hard to predict with W-TinyLFU
+    keys.remove(context.lastKey());
+    coldest.remove(context.lastKey());
+    assertThat(coldest).containsExactlyElementsIn(keys).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void coldestFunc_metadata(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.coldest(stream -> stream.peek(entry -> {
+      long snapshot = (context.expires() || context.refreshes()) ? context.ticker().read() : 0L;
+      assertThat(entry.snapshotAt()).isEqualTo(snapshot);
+
+      assertThat(entry.weight()).isEqualTo(eviction.weightOf(entry.getKey()).orElse(1));
+
+      if (!context.expires()) {
+        assertThat(entry.expiresAt()).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
+      }
+      cache.policy().expireAfterAccess().ifPresent(policy -> {
+        long expected = context.ticker().read() + policy.getExpiresAfter(TimeUnit.NANOSECONDS)
+            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
+        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.expiresAt()))
+            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
+      });
+      cache.policy().expireAfterWrite().ifPresent(policy -> {
+        long expected = context.ticker().read() + policy.getExpiresAfter(TimeUnit.NANOSECONDS)
+            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
+        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.expiresAt()))
+            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
+      });
+      cache.policy().expireVariably().ifPresent(policy -> {
+        long expected = context.ticker().read()
+            + policy.getExpiresAfter(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
+        assertThat(entry.expiresAt()).isEqualTo(expected);
+      });
+
+      if (!context.refreshes()) {
+        assertThat(entry.refreshableAt()).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
+      }
+      cache.policy().refreshAfterWrite().ifPresent(policy -> {
+        long expected = context.ticker().read() + policy.getRefreshesAfter(TimeUnit.NANOSECONDS)
+            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
+        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.refreshableAt()))
+            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
+      });
+    }).count());
+  }
+
   @CacheSpec(maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void coldestWeight_unmodifiable(CacheContext context, Eviction<Int, Int> eviction) {
@@ -724,6 +848,134 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottest_snapshot(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var hottest = eviction.hottest(Integer.MAX_VALUE);
+    cache.invalidateAll();
+    assertThat(hottest).containsExactlyEntriesIn(context.original());
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestFunc_null(CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.hottest(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestFunc_nullResult(CacheContext context, Eviction<Int, Int> eviction) {
+    var result = eviction.hottest(stream -> null);
+    assertThat(result).isNull();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestFunc_throwsException(CacheContext context, Eviction<Int, Int> eviction) {
+    var expected = new IllegalStateException();
+    try {
+      eviction.hottest(stream -> { throw expected; });
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).isSameInstanceAs(expected);
+    }
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestFunc_concurrentModification(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.hottest(stream -> {
+      cache.put(context.absentKey(), context.absentValue());
+      return stream.count();
+    });
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class,
+      expectedExceptionsMessageRegExp = "source already consumed or closed")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestFunc_closed(CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.hottest(stream -> stream).forEach(e -> {});
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestFunc_partial(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var result = eviction.hottest(stream -> stream
+        .limit(context.initialSize() / 2)
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestFunc_full(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var result = eviction.hottest(stream -> stream
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+    assertThat(cache).containsExactlyEntriesIn(result);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, initialCapacity = InitialCapacity.EXCESSIVE,
+      maximumSize = Maximum.FULL, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  public void hottestFunc_order(CacheContext context, Eviction<Int, Int> eviction) {
+    var keys = new LinkedHashSet<>(context.original().keySet());
+    var hottest = eviction.hottest(stream -> stream.map(Map.Entry::getKey).collect(toList()));
+    var coldest = new LinkedHashSet<>(ImmutableList.copyOf(hottest).reverse());
+
+    // Ignore the last key; hard to predict with W-TinyLFU
+    keys.remove(context.lastKey());
+    coldest.remove(context.lastKey());
+    assertThat(coldest).containsExactlyElementsIn(keys).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
+  public void hottestFunc_metadata(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    eviction.hottest(stream -> stream.peek(entry -> {
+      long snapshot = (context.expires() || context.refreshes()) ? context.ticker().read() : 0L;
+      assertThat(entry.snapshotAt()).isEqualTo(snapshot);
+
+      assertThat(entry.weight()).isEqualTo(eviction.weightOf(entry.getKey()).orElse(1));
+
+      if (!context.expires()) {
+        assertThat(entry.expiresAt()).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
+      }
+      cache.policy().expireAfterAccess().ifPresent(policy -> {
+        long expected = context.ticker().read() + policy.getExpiresAfter(TimeUnit.NANOSECONDS)
+            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
+        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.expiresAt()))
+            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
+      });
+      cache.policy().expireAfterWrite().ifPresent(policy -> {
+        long expected = context.ticker().read() + policy.getExpiresAfter(TimeUnit.NANOSECONDS)
+            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
+        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.expiresAt()))
+            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
+      });
+      cache.policy().expireVariably().ifPresent(policy -> {
+        long expected = context.ticker().read()
+            + policy.getExpiresAfter(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
+        assertThat(entry.expiresAt()).isEqualTo(expected);
+      });
+
+      if (!context.refreshes()) {
+        assertThat(entry.refreshableAt()).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
+      }
+      cache.policy().refreshAfterWrite().ifPresent(policy -> {
+        long expected = context.ticker().read() + policy.getRefreshesAfter(TimeUnit.NANOSECONDS)
+            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
+        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.refreshableAt()))
+            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
+      });
+    }).count());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void hottestWeighted_snapshot(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     var hottest = eviction.hottestWeighted(Integer.MAX_VALUE);
@@ -785,14 +1037,5 @@ public final class EvictionTest {
     keys.remove(context.lastKey());
     coldest.remove(context.lastKey());
     assertThat(coldest).containsExactlyElementsIn(keys).inOrder();
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
-  public void hottest_snapshot(Cache<Int, Int> cache,
-      CacheContext context, Eviction<Int, Int> eviction) {
-    var hottest = eviction.hottest(Integer.MAX_VALUE);
-    cache.invalidateAll();
-    assertThat(hottest).containsExactlyEntriesIn(context.original());
   }
 }

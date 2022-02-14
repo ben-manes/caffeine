@@ -20,8 +20,6 @@ import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoade
 import static com.google.common.truth.Truth.assertThat;
 
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -271,12 +269,12 @@ public class LocalLoadingCacheTest extends TestCase {
     assertEquals(0, map.size());
 
     cache.getUnchecked(one);
-    Map<Object, Object> newMap = ImmutableMap.of(one, one);
+    var newMap = ImmutableMap.of(one, one);
     assertEquals(newMap, map);
     assertEquals(newMap.entrySet(), map.entrySet());
     assertEquals(newMap.keySet(), map.keySet());
-    Set<Object> expectedValues = ImmutableSet.of(one);
-    Set<Object> actualValues = ImmutableSet.copyOf(map.values());
+    var expectedValues = ImmutableSet.of(one);
+    var actualValues = ImmutableSet.copyOf(map.values());
     assertEquals(expectedValues, actualValues);
   }
 

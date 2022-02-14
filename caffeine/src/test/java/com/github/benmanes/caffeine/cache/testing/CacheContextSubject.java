@@ -19,12 +19,14 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.Lis
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.ListenerSubject.LISTENERS_FACTORY;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.ListenerSubject.REMOVAL_LISTENER_FACTORY;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.StatsSubject.STATS_FACTORY;
+import static com.github.benmanes.caffeine.cache.testing.CacheSubject.cache;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.truth.OptionalLongSubject.optionalLongs;
 import static com.google.common.truth.StreamSubject.streams;
 import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -35,6 +37,8 @@ import java.util.function.Function;
 import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -83,6 +87,14 @@ public final class CacheContextSubject extends Subject {
     });
   }
 
+  /** Fails if the cache does not have the given entry and metadata. */
+  public void containsEntry(CacheEntry<Int, Int> entry) {
+    checkBasic(entry);
+    checkWeight(entry);
+    checkExpiresAt(entry);
+    checkRefreshableAt(entry);
+  }
+
   /** Propositions for {@link CacheStats} subjects. */
   @CheckReturnValue
   public StatsSubject stats() {
@@ -107,6 +119,69 @@ public final class CacheContextSubject extends Subject {
   @CheckReturnValue
   public ListenerSubject notifications() {
     return check("context").about(LISTENERS_FACTORY).that(actual);
+  }
+
+  private void checkBasic(CacheEntry<Int, Int> entry) {
+    check("entry").about(cache()).that(actual.cache())
+        .containsEntry(entry.getKey(), entry.getValue());
+    check("snapshotAt").that(entry.snapshotAt())
+        .isEqualTo((actual.expires() || actual.refreshes()) ? actual.ticker().read() : 0L);
+    try {
+      entry.setValue(entry.getValue());
+      failWithActual("setValue", entry);
+    } catch (UnsupportedOperationException expected) {}
+  }
+
+  private void checkWeight(CacheEntry<Int, Int> entry) {
+    @SuppressWarnings("unchecked")
+    var cache = (Cache<Int, Int>) actual.cache();
+    cache.policy().eviction().ifPresent(policy -> {
+      check("weight").that(entry.weight()).isEqualTo(policy.weightOf(entry.getKey()).orElse(1));
+    });
+  }
+
+  private void checkExpiresAt(CacheEntry<Int, Int> entry) {
+    @SuppressWarnings("unchecked")
+    var cache = (Cache<Int, Int>) actual.cache();
+    long expiresAt = entry.expiresAt();
+    long now = actual.ticker().read();
+
+    if (!actual.expires()) {
+      check("expiresAt").that(expiresAt).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
+    }
+    cache.policy().expireAfterAccess().ifPresent(policy -> {
+      long expected = now + policy.getExpiresAfter(NANOSECONDS)
+          - policy.ageOf(entry.getKey(), NANOSECONDS).orElseThrow();
+      check("expiresAccessAt").that(NANOSECONDS.toSeconds(expiresAt))
+          .isEqualTo(NANOSECONDS.toSeconds(expected));
+    });
+    cache.policy().expireAfterWrite().ifPresent(policy -> {
+      long expected = now + policy.getExpiresAfter(NANOSECONDS)
+          - policy.ageOf(entry.getKey(), NANOSECONDS).orElseThrow();
+      check("expiresWriteAt").that(NANOSECONDS.toSeconds(expiresAt))
+          .isEqualTo(NANOSECONDS.toSeconds(expected));
+    });
+    cache.policy().expireVariably().ifPresent(policy -> {
+      long expected = now + policy.getExpiresAfter(entry.getKey(), NANOSECONDS).orElseThrow();
+      check("expiresVariablyAt").that(expiresAt).isEqualTo(expected);
+    });
+  }
+
+  private void checkRefreshableAt(CacheEntry<Int, Int> entry) {
+    @SuppressWarnings("unchecked")
+    var cache = (Cache<Int, Int>) actual.cache();
+    long refreshableAt = entry.refreshableAt();
+    long now = actual.ticker().read();
+
+    if (!actual.refreshes()) {
+      check("refreshableAt").that(refreshableAt).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
+    }
+    cache.policy().refreshAfterWrite().ifPresent(policy -> {
+      long expected = now + policy.getRefreshesAfter(NANOSECONDS)
+          - policy.ageOf(entry.getKey(), NANOSECONDS).orElseThrow();
+      check("refreshableAt").that(NANOSECONDS.toSeconds(entry.refreshableAt()))
+          .isEqualTo(NANOSECONDS.toSeconds(expected));
+    });
   }
 
   public static final class StatsSubject extends Subject {

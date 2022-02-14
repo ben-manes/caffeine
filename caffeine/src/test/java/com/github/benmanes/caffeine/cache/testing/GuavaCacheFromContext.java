@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,6 +40,7 @@ import java.util.function.Function;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
+import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
@@ -122,16 +124,13 @@ public final class GuavaCacheFromContext {
           translateZeroExpire, context.removalListener()));
     }
     if (context.loader() == null) {
-      context.cache = new GuavaCache<>(builder.<Int, Int>build(),
-          context.ticker(), context.isRecordingStats());
+      context.cache = new GuavaCache<>(builder.<Int, Int>build(), context);
     } else if (context.loader().isBulk()) {
       var loader = new BulkLoader<Int, Int>(context.loader());
-      context.cache = new GuavaLoadingCache<>(builder.build(loader),
-          context.ticker(), context.isRecordingStats());
+      context.cache = new GuavaLoadingCache<>(builder.build(loader), context);
     } else {
       var loader = new SingleLoader<Int, Int>(context.loader());
-      context.cache = new GuavaLoadingCache<>(builder.build(loader),
-          context.ticker(), context.isRecordingStats());
+      context.cache = new GuavaLoadingCache<>(builder.build(loader), context);
     }
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) context.cache;
@@ -143,17 +142,19 @@ public final class GuavaCacheFromContext {
 
     private final com.google.common.cache.Cache<K, V> cache;
     private final boolean isRecordingStats;
+    private final boolean canSnapshot;
     private final Ticker ticker;
 
     transient ConcurrentMap<K, V> mapView;
     transient StatsCounter statsCounter;
     transient Policy<K, V> policy;
 
-    GuavaCache(com.google.common.cache.Cache<K, V> cache, Ticker ticker, boolean isRecordingStats) {
+    GuavaCache(com.google.common.cache.Cache<K, V> cache, CacheContext context) {
+      this.canSnapshot = context.expires() || context.refreshes();
+      this.isRecordingStats = context.isRecordingStats();
       this.statsCounter = new SimpleStatsCounter();
-      this.isRecordingStats = isRecordingStats;
       this.cache = requireNonNull(cache);
-      this.ticker = ticker;
+      this.ticker = context.ticker();
     }
 
     @Override
@@ -440,6 +441,15 @@ public final class GuavaCacheFromContext {
         checkNotNull(key);
         return cache.asMap().get(key);
       }
+      @Override public CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
+        checkNotNull(key);
+        V value = cache.asMap().get(key);
+        if (value == null) {
+          return null;
+        }
+        long snapshotAt = canSnapshot ? ticker.read() : 0L;
+        return new GuavaCacheEntry<>(key, value, snapshotAt);
+      }
       @Override public Map<K, CompletableFuture<V>> refreshes() {
         return Map.of();
       }
@@ -466,9 +476,8 @@ public final class GuavaCacheFromContext {
 
     private final com.google.common.cache.LoadingCache<K, V> cache;
 
-    GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache,
-        Ticker ticker, boolean isRecordingStats) {
-      super(cache, ticker, isRecordingStats);
+    GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache, CacheContext context) {
+      super(cache, context);
       this.cache = requireNonNull(cache);
     }
 
@@ -630,6 +639,31 @@ public final class GuavaCacheFromContext {
       var keysToLoad = (keys instanceof Set) ? (Set<? extends K>) keys : ImmutableSet.copyOf(keys);
       var loaded = (Map<K, V>) delegate.loadAll(keysToLoad);
       return loaded;
+    }
+  }
+
+  static final class GuavaCacheEntry<K, V>
+      extends SimpleImmutableEntry<K, V> implements CacheEntry<K, V> {
+    private static final long serialVersionUID = 1L;
+
+    private final long snapshot;
+
+    public GuavaCacheEntry(K key, V value, long snapshot) {
+      super(key, value);
+      this.snapshot = snapshot;
+    }
+
+    @Override public int weight() {
+      return 1;
+    }
+    @Override public long expiresAt() {
+      return snapshot + Long.MAX_VALUE;
+    }
+    @Override public long refreshableAt() {
+      return snapshot + Long.MAX_VALUE;
+    }
+    @Override public long snapshotAt() {
+      return snapshot;
     }
   }
 

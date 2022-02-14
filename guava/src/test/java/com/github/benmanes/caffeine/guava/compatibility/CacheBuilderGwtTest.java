@@ -138,7 +138,7 @@ public class CacheBuilderGwtTest extends TestCase {
     cache.put(10, 20);
 
     ImmutableSet<Integer> keys = ImmutableSet.of(10, 20, 30, 54, 443, 1);
-    Map<Integer, Integer> map = cache.getAll(keys);
+    ImmutableMap<Integer, Integer> map = cache.getAll(keys);
 
     // Original test depended on order, but that was only expected for the emulated implementation
     assertEquals(keys, map.keySet());

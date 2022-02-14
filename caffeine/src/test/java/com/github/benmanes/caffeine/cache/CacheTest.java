@@ -757,9 +757,36 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNotNull();
-    assertThat(cache.policy().getIfPresentQuietly(context.middleKey())).isNotNull();
-    assertThat(cache.policy().getIfPresentQuietly(context.lastKey())).isNotNull();
+    for (Int key : context.firstMiddleLastKeys()) {
+      assertThat(cache.policy().getIfPresentQuietly(key)).isEqualTo(context.original().get(key));
+    }
+  }
+
+  /* --------------- Policy: getEntryIfPresentQuietly --------------- */
+
+  @CheckNoStats
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getEntryIfPresentQuietly_nullKey(Cache<Int, Int> cache, CacheContext context) {
+    cache.policy().getEntryIfPresentQuietly(null);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getEntryIfPresentQuietly_absent(Cache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.policy().getEntryIfPresentQuietly(context.absentKey())).isNull();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getEntryIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
+      var entry = cache.policy().getEntryIfPresentQuietly(key);
+      assertThat(context).containsEntry(entry);
+    }
   }
 
   /* --------------- Policy: refreshes --------------- */
