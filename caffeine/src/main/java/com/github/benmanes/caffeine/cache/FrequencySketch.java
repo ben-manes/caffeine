@@ -177,7 +177,7 @@ final class FrequencySketch<E> {
       count += Long.bitCount(table[i] & ONE_MASK);
       table[i] = (table[i] >>> 1) & RESET_MASK;
     }
-    size = (size >>> 1) - (count >>> 2);
+    size = (size - (count >>> 2)) >>> 1;
   }
 
   /**
