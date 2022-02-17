@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.testing.TestingExecutors.sameThreadScheduledExecutor;
@@ -38,7 +39,6 @@ import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.Futures;
 
@@ -69,7 +69,7 @@ public final class SchedulerTest {
   public void scheduler(Scheduler scheduler) {
     var executed = new AtomicBoolean();
     Runnable task = () -> executed.set(true);
-    scheduler.schedule(ConcurrentTestHarness.executor, task, 1L, TimeUnit.NANOSECONDS);
+    scheduler.schedule(executor, task, 1L, TimeUnit.NANOSECONDS);
     await().untilTrue(executed);
   }
 

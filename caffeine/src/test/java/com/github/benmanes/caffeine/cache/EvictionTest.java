@@ -700,43 +700,10 @@ public final class EvictionTest {
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void coldestFunc_metadata(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    eviction.coldest(stream -> stream.peek(entry -> {
-      long snapshot = (context.expires() || context.refreshes()) ? context.ticker().read() : 0L;
-      assertThat(entry.snapshotAt()).isEqualTo(snapshot);
-
-      assertThat(entry.weight()).isEqualTo(eviction.weightOf(entry.getKey()).orElse(1));
-
-      if (!context.expires()) {
-        assertThat(entry.expiresAt()).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
-      }
-      cache.policy().expireAfterAccess().ifPresent(policy -> {
-        long expected = context.ticker().read() + policy.getExpiresAfter(TimeUnit.NANOSECONDS)
-            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
-        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.expiresAt()))
-            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
-      });
-      cache.policy().expireAfterWrite().ifPresent(policy -> {
-        long expected = context.ticker().read() + policy.getExpiresAfter(TimeUnit.NANOSECONDS)
-            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
-        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.expiresAt()))
-            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
-      });
-      cache.policy().expireVariably().ifPresent(policy -> {
-        long expected = context.ticker().read()
-            + policy.getExpiresAfter(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
-        assertThat(entry.expiresAt()).isEqualTo(expected);
-      });
-
-      if (!context.refreshes()) {
-        assertThat(entry.refreshableAt()).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
-      }
-      cache.policy().refreshAfterWrite().ifPresent(policy -> {
-        long expected = context.ticker().read() + policy.getRefreshesAfter(TimeUnit.NANOSECONDS)
-            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
-        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.refreshableAt()))
-            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
-      });
-    }).count());
+    var entries = eviction.coldest(stream -> stream.collect(toList()));
+    for (var entry : entries) {
+      assertThat(context).containsEntry(entry);
+    }
   }
 
   @CacheSpec(maximumSize = Maximum.FULL)
@@ -935,43 +902,10 @@ public final class EvictionTest {
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void hottestFunc_metadata(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    eviction.hottest(stream -> stream.peek(entry -> {
-      long snapshot = (context.expires() || context.refreshes()) ? context.ticker().read() : 0L;
-      assertThat(entry.snapshotAt()).isEqualTo(snapshot);
-
-      assertThat(entry.weight()).isEqualTo(eviction.weightOf(entry.getKey()).orElse(1));
-
-      if (!context.expires()) {
-        assertThat(entry.expiresAt()).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
-      }
-      cache.policy().expireAfterAccess().ifPresent(policy -> {
-        long expected = context.ticker().read() + policy.getExpiresAfter(TimeUnit.NANOSECONDS)
-            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
-        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.expiresAt()))
-            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
-      });
-      cache.policy().expireAfterWrite().ifPresent(policy -> {
-        long expected = context.ticker().read() + policy.getExpiresAfter(TimeUnit.NANOSECONDS)
-            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
-        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.expiresAt()))
-            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
-      });
-      cache.policy().expireVariably().ifPresent(policy -> {
-        long expected = context.ticker().read()
-            + policy.getExpiresAfter(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
-        assertThat(entry.expiresAt()).isEqualTo(expected);
-      });
-
-      if (!context.refreshes()) {
-        assertThat(entry.refreshableAt()).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
-      }
-      cache.policy().refreshAfterWrite().ifPresent(policy -> {
-        long expected = context.ticker().read() + policy.getRefreshesAfter(TimeUnit.NANOSECONDS)
-            - policy.ageOf(entry.getKey(), TimeUnit.NANOSECONDS).orElseThrow();
-        assertThat(TimeUnit.NANOSECONDS.toSeconds(entry.refreshableAt()))
-            .isEqualTo(TimeUnit.NANOSECONDS.toSeconds(expected));
-      });
-    }).count());
+    var entries = eviction.hottest(stream -> stream.collect(toList()));
+    for (var entry : entries) {
+      assertThat(context).containsEntry(entry);
+    }
   }
 
   @Test(dataProvider = "caches")

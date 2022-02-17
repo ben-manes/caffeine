@@ -150,20 +150,26 @@ public final class CacheContextSubject extends Subject {
       check("expiresAt").that(expiresAt).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
     }
     cache.policy().expireAfterAccess().ifPresent(policy -> {
-      long expected = now + policy.getExpiresAfter(NANOSECONDS)
-          - policy.ageOf(entry.getKey(), NANOSECONDS).orElseThrow();
+      var duration = policy.getExpiresAfter().minus(
+          policy.ageOf(entry.getKey()).orElseThrow());
       check("expiresAccessAt").that(NANOSECONDS.toSeconds(expiresAt))
-          .isEqualTo(NANOSECONDS.toSeconds(expected));
+          .isEqualTo(NANOSECONDS.toSeconds(now + duration.toNanos()));
+      check("expiresAccessAfter")
+          .that(entry.expiresAfter().toSeconds()).isEqualTo(duration.toSeconds());
     });
     cache.policy().expireAfterWrite().ifPresent(policy -> {
-      long expected = now + policy.getExpiresAfter(NANOSECONDS)
-          - policy.ageOf(entry.getKey(), NANOSECONDS).orElseThrow();
+      var duration = policy.getExpiresAfter().minus(
+          policy.ageOf(entry.getKey()).orElseThrow());
       check("expiresWriteAt").that(NANOSECONDS.toSeconds(expiresAt))
-          .isEqualTo(NANOSECONDS.toSeconds(expected));
+          .isEqualTo(NANOSECONDS.toSeconds(now + duration.toNanos()));
+      check("expiresWriteAfter")
+          .that(entry.expiresAfter().toSeconds()).isEqualTo(duration.toSeconds());
     });
     cache.policy().expireVariably().ifPresent(policy -> {
       long expected = now + policy.getExpiresAfter(entry.getKey(), NANOSECONDS).orElseThrow();
       check("expiresVariablyAt").that(expiresAt).isEqualTo(expected);
+      check("expiresVariablyAfter").that(entry.expiresAfter())
+          .isEqualTo(policy.getExpiresAfter(entry.getKey()).orElseThrow());
     });
   }
 
@@ -177,10 +183,12 @@ public final class CacheContextSubject extends Subject {
       check("refreshableAt").that(refreshableAt).isEqualTo(entry.snapshotAt() + Long.MAX_VALUE);
     }
     cache.policy().refreshAfterWrite().ifPresent(policy -> {
-      long expected = now + policy.getRefreshesAfter(NANOSECONDS)
-          - policy.ageOf(entry.getKey(), NANOSECONDS).orElseThrow();
-      check("refreshableAt").that(NANOSECONDS.toSeconds(entry.refreshableAt()))
-          .isEqualTo(NANOSECONDS.toSeconds(expected));
+      var duration = policy.getRefreshesAfter().minus(
+          policy.ageOf(entry.getKey()).orElseThrow());
+      check("refreshableAt").that(NANOSECONDS.toSeconds(refreshableAt))
+          .isEqualTo(NANOSECONDS.toSeconds(now + duration.toNanos()));
+      check("refreshableAfter")
+          .that(entry.refreshableAfter().toSeconds()).isEqualTo(duration.toSeconds());
     });
   }
 

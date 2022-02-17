@@ -642,8 +642,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       requireNonNull(value);
 
       // Keep in sync with BoundedVarExpiration.putIfAbsentAsync(key, value, duration, unit)
+      CompletableFuture<V> priorFuture = null;
+      long[] writeTime = new long[1];
       for (;;) {
-        CompletableFuture<V> priorFuture = delegate.get(key);
+        priorFuture = (priorFuture == null)
+            ? delegate.get(key)
+            : delegate.getIfPresentQuietly(key, writeTime);
         if (priorFuture != null) {
           if (!priorFuture.isDone()) {
             Async.getWhenSuccessful(priorFuture);
@@ -700,8 +704,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       K castedKey = (K) key;
       boolean[] done = { false };
       boolean[] removed = { false };
+      long[] writeTime = new long[1];
+      CompletableFuture<V> future = null;
       for (;;) {
-        CompletableFuture<V> future = delegate.get(key);
+        future = (future == null)
+            ? delegate.get(key)
+            : delegate.getIfPresentQuietly(castedKey, writeTime);
         if ((future == null) || future.isCompletedExceptionally()) {
           return false;
         }
@@ -735,8 +743,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @SuppressWarnings({"unchecked", "rawtypes"})
       V[] oldValue = (V[]) new Object[1];
       boolean[] done = { false };
+      long[] writeTime = new long[1];
       for (;;) {
-        CompletableFuture<V> future = delegate.get(key);
+        CompletableFuture<V> future = delegate.getIfPresentQuietly(key, writeTime);
         if ((future == null) || future.isCompletedExceptionally()) {
           return null;
         }
@@ -769,8 +778,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       boolean[] done = { false };
       boolean[] replaced = { false };
+      long[] writeTime = new long[1];
       for (;;) {
-        CompletableFuture<V> future = delegate.get(key);
+        CompletableFuture<V> future = delegate.getIfPresentQuietly(key, writeTime);
         if ((future == null) || future.isCompletedExceptionally()) {
           return false;
         }
@@ -800,8 +810,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     public @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
       requireNonNull(mappingFunction);
 
+      long[] writeTime = new long[1];
+      CompletableFuture<V> priorFuture = null;
       for (;;) {
-        CompletableFuture<V> priorFuture = delegate.get(key);
+        priorFuture = (priorFuture == null)
+            ? delegate.get(key)
+            : delegate.getIfPresentQuietly(key, writeTime);
         if (priorFuture != null) {
           if (!priorFuture.isDone()) {
             Async.getWhenSuccessful(priorFuture);
@@ -846,8 +860,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @SuppressWarnings({"unchecked", "rawtypes"})
       V[] newValue = (V[]) new Object[1];
+      long[] writeTime = new long[1];
       for (;;) {
-        Async.getWhenSuccessful(delegate.get(key));
+        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key, writeTime));
 
         CompletableFuture<V> valueFuture = delegate.computeIfPresent(key, (k, oldValueFuture) -> {
           if (!oldValueFuture.isDone()) {
@@ -878,8 +893,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @SuppressWarnings({"unchecked", "rawtypes"})
       V[] newValue = (V[]) new Object[1];
+      long[] writeTime = new long[1];
       for (;;) {
-        Async.getWhenSuccessful(delegate.get(key));
+        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key, writeTime));
 
         CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
           if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
@@ -911,8 +927,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       CompletableFuture<V> newValueFuture = CompletableFuture.completedFuture(value);
       boolean[] merged = { false };
+      long[] writeTime = new long[1];
       for (;;) {
-        Async.getWhenSuccessful(delegate.get(key));
+        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key, writeTime));
 
         CompletableFuture<V> mergedValueFuture = delegate.merge(
             key, newValueFuture, (oldValueFuture, valueFuture) -> {

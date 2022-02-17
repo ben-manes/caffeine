@@ -33,7 +33,10 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -54,6 +57,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
@@ -96,6 +100,50 @@ public final class ExpireAfterVarTest {
     } finally {
       done.set(true);
     }
+  }
+
+  /* --------------- Get --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void getIfPresent(Cache<Int, Int> cache, CacheContext context) {
+    cache.getIfPresent(context.firstKey());
+
+    verify(context.expiry()).expireAfterRead(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void get(LoadingCache<Int, Int> cache, CacheContext context) {
+    cache.get(context.firstKey());
+
+    verify(context.expiry()).expireAfterRead(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void getAll_present(LoadingCache<Int, Int> cache, CacheContext context) {
+    cache.getAll(context.firstMiddleLastKeys());
+
+    verify(context.expiry(), times(3)).expireAfterRead(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO,
+      loader = {Loader.IDENTITY, Loader.BULK_IDENTITY})
+  public void getAll_absent(LoadingCache<Int, Int> cache, CacheContext context) {
+    cache.getAll(context.absentKeys());
+
+    verify(context.expiry(), times(context.absent().size()))
+        .expireAfterCreate(any(), any(), anyLong());
+    if (context.isAsync() && !context.loader().isBulk()) {
+      verify(context.expiry(), times(context.absent().size()))
+          .expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    }
+    verifyNoMoreInteractions(context.expiry());
   }
 
   /* --------------- Create --------------- */
@@ -323,6 +371,144 @@ public final class ExpireAfterVarTest {
 
   static final class ExpirationException extends RuntimeException {
     private static final long serialVersionUID = 1L;
+  }
+
+  /* --------------- Compute --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void computeIfAbsent_absent(Map<Int, Int> map, CacheContext context) {
+    map.computeIfAbsent(context.absentKey(), identity());
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void computeIfAbsent_nullValue(Map<Int, Int> map, CacheContext context) {
+    map.computeIfAbsent(context.absentKey(), key -> null);
+    verifyNoInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void computeIfAbsent_present(Map<Int, Int> map, CacheContext context) {
+    map.computeIfAbsent(context.firstKey(), identity());
+    verify(context.expiry()).expireAfterRead(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void computeIfPresent_absent(Map<Int, Int> map, CacheContext context) {
+    map.computeIfPresent(context.absentKey(), (key, value) -> value);
+    verifyNoInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void computeIfPresent_nullValue(Map<Int, Int> map, CacheContext context) {
+    map.computeIfPresent(context.firstKey(), (key, value) -> null);
+    verifyNoInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void computeIfPresent_present_differentValue(Map<Int, Int> map, CacheContext context) {
+    map.computeIfPresent(context.firstKey(), (key, value) -> context.absentValue());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void computeIfPresent_present_sameInstance(Map<Int, Int> map, CacheContext context) {
+    map.computeIfPresent(context.firstKey(), (key, value) -> value);
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void compute_absent(Map<Int, Int> map, CacheContext context) {
+    map.compute(context.absentKey(), (key, value) -> context.absentValue());
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void compute_nullValue(Map<Int, Int> map, CacheContext context) {
+    map.compute(context.absentKey(), (key, value) -> null);
+    verifyNoInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void compute_present_differentValue(Map<Int, Int> map, CacheContext context) {
+    map.compute(context.firstKey(), (key, value) -> context.absentValue());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void compute_present_sameInstance(Map<Int, Int> map, CacheContext context) {
+    map.compute(context.firstKey(), (key, value) -> value);
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void merge_absent(Map<Int, Int> map, CacheContext context) {
+    map.merge(context.absentKey(), context.absentValue(), (key, value) -> context.absentValue());
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void merge_nullValue(Map<Int, Int> map, CacheContext context) {
+    map.merge(context.firstKey(), context.absentValue(), (key, value) -> null);
+    verifyNoInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void merge_present_differentValue(Map<Int, Int> map, CacheContext context) {
+    map.merge(context.firstKey(), context.absentKey(), (key, value) -> context.absentValue());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void merge_present_sameInstance(Map<Int, Int> map, CacheContext context) {
+    map.merge(context.firstKey(), context.absentKey(), (key, value) -> value);
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  public void refresh_absent(LoadingCache<Int, Int> cache, CacheContext context) {
+    cache.refresh(context.absentKey()).join();
+
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    if (context.isAsync()) {
+      verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    }
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void refresh_present(LoadingCache<Int, Int> cache, CacheContext context) {
+    cache.refresh(context.firstKey()).join();
+
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
   }
 
   /* --------------- Policy --------------- */

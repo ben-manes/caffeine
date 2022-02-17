@@ -32,6 +32,7 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.google.common.testing.FakeTicker;
+import com.google.common.testing.NullPointerTester;
 
 /**
  * A test for the builder methods.
@@ -54,6 +55,12 @@ public final class CaffeineTest {
   @AfterClass
   public void afterClass() throws Exception {
     mocks.close();
+  }
+
+  @Test
+  public void nullParameters() {
+    var npeTester = new NullPointerTester();
+    npeTester.testAllPublicInstanceMethods(Caffeine.newBuilder());
   }
 
   @Test

@@ -2863,7 +2863,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       expiresAfter = Math.min(expiresAfter, now - node.getAccessTime() + expiresAfterAccessNanos());
     }
     if (expiresAfterWrite()) {
-      expiresAfter = Math.min(expiresAfter, now - node.getWriteTime() + expiresAfterWriteNanos());
+      expiresAfter = Math.min(expiresAfter,
+          (now & ~1L) - (node.getWriteTime() & ~1L) + expiresAfterWriteNanos());
     }
     if (expiresVariable()) {
       expiresAfter = node.getVariableTime() - now;

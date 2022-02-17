@@ -25,7 +25,10 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -35,9 +38,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.Policy.Eviction;
+import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
+import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
+import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
@@ -49,8 +57,10 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
+import com.google.common.testing.NullPointerTester;
 
 /**
  * The test cases for the {@link Cache} interface that simulate the most generic usages. These
@@ -721,6 +731,73 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void serialize(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache).isReserialize();
+  }
+
+  /* --------------- null parameter --------------- */
+
+  private final ImmutableSetMultimap<Class<?>, Method> testMethods = getPublicMethods();
+  private final NullPointerTester npeTester = new NullPointerTester();
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void nullParameters(Cache<Int, Int> cache, CacheContext context) {
+    checkNullPointer(cache);
+    checkNullPointer(cache.asMap());
+    checkNullPointer(cache.stats());
+    checkNullPointer(cache.policy());
+    checkNullPointer(cache.asMap().keySet());
+    checkNullPointer(cache.asMap().values());
+    checkNullPointer(cache.asMap().entrySet());
+    checkNullPointer(cache.policy().eviction().orElse(null));
+    checkNullPointer(cache.policy().expireVariably().orElse(null));
+    checkNullPointer(cache.policy().expireAfterWrite().orElse(null));
+    checkNullPointer(cache.policy().expireAfterAccess().orElse(null));
+    checkNullPointer(cache.policy().refreshAfterWrite().orElse(null));
+
+    if (context.isAsync()) {
+      checkNullPointer(context.asyncCache());
+      checkNullPointer(context.asyncCache().asMap());
+      checkNullPointer(context.asyncCache().asMap().keySet());
+      checkNullPointer(context.asyncCache().asMap().values());
+      checkNullPointer(context.asyncCache().asMap().entrySet());
+    }
+  }
+
+  private void checkNullPointer(Object o) {
+    if (o == null) {
+      return;
+    }
+    testMethods.asMap().entrySet().stream()
+        .filter(entry -> entry.getKey().isInstance(o))
+        .flatMap(entry -> entry.getValue().stream())
+        .forEach(method -> npeTester.testMethod(o, method));
+  }
+
+  private ImmutableSetMultimap<Class<?>, Method> getPublicMethods() {
+    var classes = List.of(Cache.class, LoadingCache.class, AsyncCache.class,
+        AsyncLoadingCache.class, CacheStats.class, Policy.class, Eviction.class,
+        FixedRefresh.class, FixedExpiration.class, VarExpiration.class, Map.class,
+        Collection.class, Set.class);
+    var ignored = ImmutableSet.of(
+        Triple.of(Map.class, "equals", List.of(Object.class)),
+        Triple.of(Set.class, "equals", List.of(Object.class)),
+        Triple.of(Set.class, "remove", List.of(Object.class)),
+        Triple.of(Set.class, "contains", List.of(Object.class)),
+        Triple.of(Collection.class, "equals", List.of(Object.class)),
+        Triple.of(Collection.class, "remove", List.of(Object.class)),
+        Triple.of(Collection.class, "contains", List.of(Object.class)),
+        Triple.of(Map.class, "remove", List.of(Object.class, Object.class)),
+        Triple.of(Map.class, "getOrDefault", List.of(Object.class, Object.class)));
+    var builder = new ImmutableSetMultimap.Builder<Class<?>, Method>();
+    for (var clazz : classes) {
+      for (var method : clazz.getMethods()) {
+        var key = Triple.of(clazz, method.getName(), List.of(method.getParameterTypes()));
+        if (!ignored.contains(key) && !Modifier.isStatic(method.getModifiers())) {
+          builder.put(clazz, method);
+        }
+      }
+    }
+    return builder.build();
   }
 
   /* --------------- Policy: stats --------------- */

@@ -24,6 +24,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.mockito.Mockito;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
@@ -209,7 +211,7 @@ public final class CacheGenerator {
   }
 
   /** Fills the cache up to the population size. */
-  @SuppressWarnings("PreferJavaTimeOverload")
+  @SuppressWarnings({"PreferJavaTimeOverload", "unchecked"})
   private static void populate(CacheContext context, Cache<Int, Int> cache) {
     if (context.population.size() == 0) {
       return;
@@ -241,6 +243,9 @@ public final class CacheGenerator {
     }
     if (context.executorType() != CacheExecutor.DIRECT) {
       cache.cleanUp();
+    }
+    if (context.expiryType() == CacheExpiry.MOCKITO) {
+      Mockito.clearInvocations(context.expiry());
     }
   }
 

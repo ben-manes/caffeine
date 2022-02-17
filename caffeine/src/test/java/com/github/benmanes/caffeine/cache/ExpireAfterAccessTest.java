@@ -207,10 +207,9 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
-  @SuppressWarnings("FutureReturnValueIgnored")
   public void getIfPresent_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.getIfPresent(context.firstKey());
+    cache.getIfPresent(context.firstKey()).join();
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache).containsKey(context.firstKey());
     assertThat(cache).doesNotContainKey(context.lastKey());

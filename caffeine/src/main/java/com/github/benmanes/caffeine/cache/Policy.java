@@ -312,7 +312,7 @@ public interface Policy<K extends Object, V extends Object> {
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short, simple. While the computation is in progress further eviction
-     * maintenance will be halted. {@code mappingFunction}.
+     * maintenance will be halted.
      *
      * @param <T> the type of the result of the mappingFunction
      * @param mappingFunction the mapping function to compute a value
@@ -815,21 +815,39 @@ public interface Policy<K extends Object, V extends Object> {
 
     /**
      * Returns the {@link Ticker#read()} ticks for when this entry expires. If the cache was not
-     * configured with an expiration policy then always {@link Long#MAX_VALUE} ticks from the
-     * {@link #snapshotAt()} reading.
+     * configured with an expiration policy then this method always around {@link Long#MAX_VALUE}
+     * ticks from the {@link #snapshotAt()} reading.
      *
      * @return the ticker reading for when the entry expires
      */
     long expiresAt();
 
     /**
+     * Returns the duration between {@link #expiresAt()} and {@link #snapshotAt()}.
+     *
+     * @return the length of time after which the entry will be automatically removed
+     */
+    default Duration expiresAfter() {
+      return Duration.ofNanos(expiresAt() - snapshotAt());
+    }
+
+    /**
      * Returns the {@link Ticker#read()} ticks for when this entry becomes refreshable. If the cache
-     * was not configured with a refresh policy then always {@link Long#MAX_VALUE} ticks from the
-     * {@link #snapshotAt()} reading.
+     * was not configured with a refresh policy then always around {@link Long#MAX_VALUE} ticks from
+     * the {@link #snapshotAt()} reading.
      *
      * @return the ticker reading for when the entry may be refreshed
      */
     long refreshableAt();
+
+    /**
+     * Returns the duration between {@link #refreshableAt()} and {@link #snapshotAt()}.
+     *
+     * @return the length of time after which an entry is eligible to be reloaded
+     */
+    default Duration refreshableAfter() {
+      return Duration.ofNanos(refreshableAt() - snapshotAt());
+    }
 
     /**
      * Returns the {@link Ticker#read()} ticks for when this snapshot of the entry was taken. This

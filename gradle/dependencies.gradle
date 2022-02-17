@@ -99,7 +99,7 @@ ext {
     sonarqube: '3.3',
     spotbugs: '4.5.3',
     spotbugsContrib: '7.4.7',
-    spotbugsPlugin: '5.0.5',
+    spotbugsPlugin: '5.0.6',
     stats: '0.47.0',
     versions: '0.42.0',
   ]
