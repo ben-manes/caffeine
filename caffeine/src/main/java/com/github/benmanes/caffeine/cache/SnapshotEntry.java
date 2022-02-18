@@ -29,7 +29,7 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
   private final V value;
   private final K key;
 
-  private SnapshotEntry(K key, V value, long snapshot) {
+  SnapshotEntry(K key, V value, long snapshot) {
     this.snapshot = snapshot;
     this.key = requireNonNull(key);
     this.value = requireNonNull(value);
@@ -95,10 +95,10 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     }
   }
 
-  private static class WeightedEntry<K, V> extends SnapshotEntry<K, V> {
+  static class WeightedEntry<K, V> extends SnapshotEntry<K, V> {
     final int weight;
 
-    public WeightedEntry(K key, V value, long snapshot, int weight) {
+    WeightedEntry(K key, V value, long snapshot, int weight) {
       super(key, value, snapshot);
       this.weight = weight;
     }
@@ -107,10 +107,10 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     }
   }
 
-  private static class ExpirableEntry<K, V> extends SnapshotEntry<K, V> {
+  static class ExpirableEntry<K, V> extends SnapshotEntry<K, V> {
     final long expiresAt;
 
-    public ExpirableEntry(K key, V value, long snapshot, long expiresAt) {
+    ExpirableEntry(K key, V value, long snapshot, long expiresAt) {
       super(key, value, snapshot);
       this.expiresAt = expiresAt;
     }
@@ -119,10 +119,10 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     }
   }
 
-  private static class ExpirableWeightedEntry<K, V> extends WeightedEntry<K, V> {
+  static class ExpirableWeightedEntry<K, V> extends WeightedEntry<K, V> {
     final long expiresAt;
 
-    public ExpirableWeightedEntry(K key, V value, long snapshot, int weight, long expiresAt) {
+    ExpirableWeightedEntry(K key, V value, long snapshot, int weight, long expiresAt) {
       super(key, value, snapshot, weight);
       this.expiresAt = expiresAt;
     }
@@ -131,11 +131,10 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     }
   }
 
-  private static class RefreshableExpirableEntry<K, V> extends ExpirableEntry<K, V> {
+  static class RefreshableExpirableEntry<K, V> extends ExpirableEntry<K, V> {
     final long refreshableAt;
 
-    public RefreshableExpirableEntry(K key, V value,
-        long snapshot, long expiresAt, long refreshableAt) {
+    RefreshableExpirableEntry(K key, V value, long snapshot, long expiresAt, long refreshableAt) {
       super(key, value, snapshot, expiresAt);
       this.refreshableAt = refreshableAt;
     }
@@ -144,11 +143,10 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     }
   }
 
-  private static final class CompleteEntry<K, V> extends ExpirableWeightedEntry<K, V> {
+  static final class CompleteEntry<K, V> extends ExpirableWeightedEntry<K, V> {
     final long refreshableAt;
 
-    public CompleteEntry(K key, V value, long snapshot,
-        int weight, long expiresAt, long refreshableAt) {
+    CompleteEntry(K key, V value, long snapshot, int weight, long expiresAt, long refreshableAt) {
       super(key, value, snapshot, weight, expiresAt);
       this.refreshableAt = refreshableAt;
     }

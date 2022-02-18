@@ -32,11 +32,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
@@ -396,6 +398,34 @@ public final class TimerWheelTest {
       }
     }
     return args.iterator();
+  }
+
+  @Test(dataProvider = "iterator")
+  public void iterator_hasNext(Supplier<Iterator<?>> factory) {
+    var iterator = factory.get();
+    assertThat(iterator.hasNext()).isFalse();
+
+    timerWheel.schedule(new Timer(1));
+    assertThat(iterator.hasNext()).isFalse();
+
+    iterator = factory.get();
+    assertThat(iterator.hasNext()).isTrue();
+    assertThat(iterator.hasNext()).isTrue();
+
+    iterator.next();
+    assertThat(iterator.hasNext()).isFalse();
+
+    try {
+      iterator.next();
+      Assert.fail();
+    } catch (NoSuchElementException expected) {}
+  }
+
+  @DataProvider(name = "iterator")
+  public Object[][] providesIterators() {
+    Supplier<Iterator<?>> descending = () -> timerWheel.descendingIterator();
+    Supplier<Iterator<?>> ascending = () -> timerWheel.iterator();
+    return new Object[][] { {ascending}, {descending}};
   }
 
   @Test(dataProvider = "clock")

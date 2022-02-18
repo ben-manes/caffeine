@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.ass
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
@@ -46,6 +47,11 @@ import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.CompleteEntry;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableEntry;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableWeightedEntry;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.RefreshableExpirableEntry;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.WeightedEntry;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
@@ -60,6 +66,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
+import com.google.common.testing.EqualsTester;
 import com.google.common.testing.NullPointerTester;
 
 /**
@@ -880,5 +887,40 @@ public final class CacheTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void refreshes_unmodifiable(Cache<Int, Int> cache, CacheContext context) {
     cache.policy().refreshes().clear();
+  }
+
+  /* --------------- Policy: CacheEntry --------------- */
+
+  @Test(expectedExceptions = UnsupportedOperationException.class)
+  public void cacheEntry_setValue() {
+    SnapshotEntry.forEntry(1, 2).setValue(3);
+  }
+
+  @Test
+  public void cacheEntry_equals_hashCode_toString() {
+    long snapshot = 100;
+    int weight = 200;
+    long expiresAt = 300;
+    long refreshableAt = 400;
+    var tester = new EqualsTester()
+        .addEqualityGroup(1, 1, 1);
+
+    for (int i = 0; i < 10; i++) {
+      var key = i;
+      var value = i + 1;
+      var group = List.of(Map.entry(key, value),
+          new SnapshotEntry<>(key, value, snapshot),
+          new WeightedEntry<>(key, value, snapshot, weight),
+          new ExpirableEntry<>(key, value, snapshot, expiresAt),
+          new ExpirableWeightedEntry<>(key, value, snapshot, weight, expiresAt),
+          new RefreshableExpirableEntry<>(key, value, snapshot, expiresAt, refreshableAt),
+          new CompleteEntry<>(key, value, snapshot, weight, expiresAt, refreshableAt));
+      for (var entry : group) {
+        assertWithMessage("%s", entry.getClass())
+            .that(entry.toString()).isEqualTo(key + "=" + value);
+      }
+      tester.addEqualityGroup(group.toArray());
+    }
+    tester.testEquals();
   }
 }
