@@ -46,6 +46,7 @@ dependencies {
   testImplementation libraries.commonsLang3
   testImplementation testLibraries.slf4jTest
   testImplementation testLibraries.guavaTestLib
+  testImplementation testLibraries.commonsCollectionsTests
   testImplementation testLibraries.eclipseCollectionsTestLib
 
   javaAgent libraries.jamm

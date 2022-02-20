@@ -66,6 +66,7 @@ ext {
   ]
   testVersions = [
     awaitility: '4.1.1',
+    commonsCollectionsTests: '4.4',
     eclipseCollections: '11.0.0',
     guice: '5.1.0',
     hamcrest: '2.2',
@@ -161,6 +162,10 @@ ext {
   ]
   testLibraries = [
     awaitility: "org.awaitility:awaitility:${testVersions.awaitility}",
+    commonsCollectionsTests: [
+      "org.apache.commons:commons-collections4:${testVersions.commonsCollectionsTests}",
+      "org.apache.commons:commons-collections4:${testVersions.commonsCollectionsTests}:tests",
+    ],
     eclipseCollectionsTestLib: "org.eclipse.collections:eclipse-collections-testutils:${testVersions.eclipseCollections}",
     guavaTestLib: "com.google.guava:guava-testlib:${versions.guava}",
     hamcrest: "org.hamcrest:hamcrest:${testVersions.hamcrest}",
