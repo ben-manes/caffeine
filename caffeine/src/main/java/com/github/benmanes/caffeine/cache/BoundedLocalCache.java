@@ -40,6 +40,7 @@ import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.time.Duration;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -3872,6 +3873,55 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         var oldValueFuture = (CompletableFuture<V>) cache.put(
             key, asyncValue, expiry, /* onlyIfAbsent */ false);
         return Async.getWhenSuccessful(oldValueFuture);
+      }
+      @SuppressWarnings("NullAway")
+      @Override public V compute(K key,
+          BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+          Duration duration) {
+        requireNonNull(key);
+        requireNonNull(duration);
+        requireNonNull(remappingFunction);
+        requireArgument(!duration.isNegative(), "duration cannot be negative: %s", duration);
+        var expiry = new FixedExpiry<K, V>(duration.toNanos(), TimeUnit.NANOSECONDS);
+
+        return cache.isAsync
+            ? computeAsync(key, remappingFunction, expiry)
+            : cache.compute(key, remappingFunction, expiry, /* recordMiss */ false,
+                /* recordLoad */ true, /* recordLoadFailure */ true);
+      }
+      @Nullable V computeAsync(K key,
+          BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+          Expiry<? super K, ? super V> expiry) {
+        // Keep in sync with LocalAsyncCache.AsMapView#compute(key, remappingFunction)
+        @SuppressWarnings("unchecked")
+        var delegate = (LocalCache<K, CompletableFuture<V>>) cache;
+
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        V[] newValue = (V[]) new Object[1];
+        long[] writeTime = new long[1];
+        for (;;) {
+          Async.getWhenSuccessful(delegate.getIfPresentQuietly(key, writeTime));
+
+          CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
+            if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
+              return oldValueFuture;
+            }
+
+            V oldValue = Async.getIfReady(oldValueFuture);
+            BiFunction<? super K, ? super V, ? extends V> function = delegate.statsAware(
+                remappingFunction, /* recordMiss */ false, /* recordLoad */ true,
+                /* recordLoadFailure */ true);
+            newValue[0] = function.apply(key, oldValue);
+            return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
+          }, new AsyncExpiry<>(expiry), /* recordMiss */ false,
+              /* recordLoad */ false, /* recordLoadFailure */ false);
+
+          if (newValue[0] != null) {
+            return newValue[0];
+          } else if (valueFuture == null) {
+            return null;
+          }
+        }
       }
       @Override public Map<K, V> oldest(int limit) {
         return oldest(new SizeLimiter<>(Math.min(limit, cache.size()), limit));

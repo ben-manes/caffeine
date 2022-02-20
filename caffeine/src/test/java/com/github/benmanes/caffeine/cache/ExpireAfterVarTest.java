@@ -16,7 +16,10 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
+import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
+import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
@@ -41,9 +44,12 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.ConcurrentModificationException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
 
 import org.mockito.Mockito;
 import org.testng.Assert;
@@ -55,6 +61,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
@@ -807,6 +814,366 @@ public final class ExpireAfterVarTest {
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
     assertThat(cache).hasSize(1);
+  }
+
+  /* --------------- Policy: compute --------------- */
+
+  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void compute_nullKey(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(null, (key, value) -> key.negate(), Duration.ZERO);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  public void compute_nullMappingFunction(CacheContext context,
+      VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(Int.valueOf(1), null, Duration.ZERO);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  public void compute_negativeDuration(
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(Int.valueOf(1), (key, value) -> key.negate(), Duration.ofMinutes(-1));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_remove(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    for (Int key : context.firstMiddleLastKeys()) {
+      assertThat(expireAfterVar.compute(key, (k, v) -> null, Duration.ofDays(1))).isNull();
+    }
+
+    verifyNoInteractions(context.expiry());
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(cache).hasSize(context.initialSize() - count);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(count);
+    assertThat(context).removalNotifications().withCause(EXPLICIT).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.ACCESS)
+  public void compute_recursive(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var mappingFunction = new BiFunction<Int, Int, Int>() {
+      @Override public Int apply(Int key, Int value) {
+        return expireAfterVar.compute(key, this, Duration.ofDays(1));
+      }
+    };
+    try {
+      expireAfterVar.compute(context.absentKey(), mappingFunction, Duration.ofDays(1));
+      Assert.fail();
+    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.ACCESS, population = Population.EMPTY)
+  public void compute_pingpong(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var key1 = Int.valueOf(1);
+    var key2 = Int.valueOf(2);
+    var mappingFunction = new BiFunction<Int, Int, Int>() {
+      @Override public Int apply(Int key, Int value) {
+        return expireAfterVar.compute(key.equals(key1) ? key2 : key1, this, Duration.ofDays(1));
+      }
+    };
+    try {
+      expireAfterVar.compute(key1, mappingFunction, Duration.ofDays(1));
+      Assert.fail();
+    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO)
+  public void compute_error(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    try {
+      expireAfterVar.compute(context.absentKey(),
+          (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
+      Assert.fail();
+    } catch (IllegalStateException e) { /* ignored */ }
+
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+
+    Int result = expireAfterVar.compute(context.absentKey(),
+        (k, v) -> k.negate(), Duration.ofDays(1));
+    assertThat(result).isEqualTo(context.absentKey().negate());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  public void compute_absent_nullValue(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    Int result = expireAfterVar.compute(context.absentKey(),
+        (key, value) -> null, Duration.ofDays(1));
+    verifyNoInteractions(context.expiry());
+
+    assertThat(result).isNull();
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  public void compute_absent(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
+
+    Int result = expireAfterVar.compute(context.absentKey(),
+        (key, value) -> context.absentValue(), duration);
+    verifyNoInteractions(context.expiry());
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey())).hasValue(duration);
+
+    assertThat(result).isEqualTo(context.absentValue());
+    assertThat(cache).hasSize(1 + context.initialSize());
+    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO)
+  public void compute_absent_expires(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(context.absentKey(),
+        (k, v) -> context.absentValue(), Duration.ofMinutes(1));
+    context.ticker().advance(Duration.ofMinutes(5));
+    context.cleanUp();
+
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(context).removalNotifications().withCause(EXPIRED).hasSize(1).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO)
+  public void compute_absent_expiresImmediately(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(context.absentKey(), (k, v) -> context.absentValue(), Duration.ZERO);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    context.ticker().advance(Duration.ofMinutes(1));
+    context.cleanUp();
+
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().withCause(EXPIRED).hasSize(1).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void compute_absent_expiresLater(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(context.absentKey(),
+        (k, v) -> context.absentValue(), Duration.ofMinutes(5));
+    context.ticker().advance(Duration.ofMinutes(3));
+    context.cleanUp();
+
+    assertThat(cache).hasSize(1);
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).containsKey(context.absentKey());
+    assertThat(context).removalNotifications().withCause(EXPIRED).hasSize(context.initialSize());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_sameValue(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
+    var expectedMap = new HashMap<Int, Int>();
+    for (Int key : context.firstMiddleLastKeys()) {
+      Int value = intern(new Int(context.original().get(key)));
+      Int result = expireAfterVar.compute(key, (k, v) -> value, duration);
+
+      expectedMap.put(key, value);
+      assertThat(result).isSameInstanceAs(value);
+      assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache.asMap()).containsAtLeastEntriesIn(expectedMap);
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = Listener.REJECTING)
+  public void compute_sameInstance(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
+    for (Int key : context.firstMiddleLastKeys()) {
+      Int value = context.original().get(key);
+      Int result = expireAfterVar.compute(key, (k, v) -> value, duration);
+
+      assertThat(result).isSameInstanceAs(value);
+      assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
+    }
+    verifyNoInteractions(context.expiry());
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+
+    for (Int key : context.firstMiddleLastKeys()) {
+      Int value = context.original().get(key);
+      assertThat(cache).containsEntry(key, value);
+    }
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_differentValue(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
+    for (Int key : context.firstMiddleLastKeys()) {
+      Int value = context.original().get(key).negate();
+      Int result = expireAfterVar.compute(key, (k, v) -> value, duration);
+
+      assertThat(result).isEqualTo(key);
+      assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
+    }
+    verifyNoInteractions(context.expiry());
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+
+    for (Int key : context.firstMiddleLastKeys()) {
+      assertThat(cache).containsEntry(key, key);
+    }
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_present_expires(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(context.firstKey(),
+        (k, v) -> context.absentValue(), Duration.ofMinutes(1));
+    context.ticker().advance(Duration.ofMinutes(5));
+    context.cleanUp();
+
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).hasSize(context.initialSize() - 1);
+    assertThat(cache).doesNotContainKey(context.firstKey());
+    assertThat(context).removalNotifications().withCause(EXPIRED).hasSize(1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_present_expiresImmediately(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(context.firstKey(), (k, v) -> context.absentValue(), Duration.ZERO);
+    assertThat(cache).doesNotContainKey(context.firstKey());
+    context.ticker().advance(Duration.ofMinutes(1));
+    context.cleanUp();
+
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).hasSize(context.initialSize() - 1);
+    assertThat(context).removalNotifications().withCause(EXPIRED).hasSize(1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_present_expiresLater(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.compute(context.firstKey(),
+        (k, v) -> context.absentValue(), Duration.ofMinutes(5));
+    context.ticker().advance(Duration.ofMinutes(3));
+    context.cleanUp();
+
+    assertThat(cache).hasSize(1);
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).containsKey(context.firstKey());
+    assertThat(context).removalNotifications()
+        .withCause(EXPIRED).hasSize(context.initialSize() - 1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, population = Population.EMPTY,
+      removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  public void compute_async_null(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    Int key = context.absentKey();
+    Int newValue = context.absentValue();
+    var future = new CompletableFuture<Int>();
+
+    cache.put(key, future);
+    var start = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    ConcurrentTestHarness.execute(() -> {
+      start.set(true);
+      Int result = expireAfterVar.compute(key, (k, oldValue) -> newValue, Duration.ofDays(1));
+      assertThat(result).isEqualTo(newValue);
+      done.set(true);
+    });
+    await().untilTrue(start);
+    future.complete(null);
+
+    await().untilTrue(done);
+    verifyNoInteractions(context.expiry());
+    assertThat(cache).containsEntry(key, newValue);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void compute_writeTime(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    Int key = context.firstKey();
+    Int value = context.absentValue();
+    var duration = Duration.ofNanos(context.expiryTime().timeNanos());
+
+    expireAfterVar.compute(key, (k, v) -> {
+      context.ticker().advance(5, TimeUnit.MINUTES);
+      return value;
+    }, duration);
+    context.cleanUp();
+    assertThat(cache).hasSize(1);
+    assertThat(cache).containsKey(key);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void compute_absent_error(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    try {
+      expireAfterVar.compute(context.firstKey(),
+          (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
+      Assert.fail();
+    } catch (IllegalStateException expected) {}
+
+    assertThat(expireAfterVar.getExpiresAfter(context.firstKey())).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void compute_present_error(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    var variable = expireAfterVar.getExpiresAfter(context.firstKey());
+    try {
+      expireAfterVar.compute(context.firstKey(),
+          (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
+      Assert.fail();
+    } catch (IllegalStateException expected) {}
+
+    assertThat(variable).isEqualTo(expireAfterVar.getExpiresAfter(context.firstKey()));
   }
 
   /* --------------- Policy: oldest --------------- */

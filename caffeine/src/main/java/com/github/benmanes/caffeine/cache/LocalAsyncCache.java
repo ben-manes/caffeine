@@ -889,6 +889,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override
     public @Nullable V compute(K key,
         BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+      // Keep in sync with BoundedVarExpiration.computeAsync(key, remappingFunction, expiry)
       requireNonNull(remappingFunction);
 
       @SuppressWarnings({"unchecked", "rawtypes"})

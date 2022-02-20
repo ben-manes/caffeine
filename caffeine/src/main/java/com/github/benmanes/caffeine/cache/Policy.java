@@ -23,11 +23,13 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 /**
  * An access point for inspecting and performing low-level operations based on the cache's runtime
@@ -557,8 +559,8 @@ public interface Policy<K extends Object, V extends Object> {
     /**
      * Associates the {@code value} with the {@code key} in this cache if the specified key is not
      * already associated with a value. This method differs from {@link Map#putIfAbsent} by
-     * substituting the configured {@link Expiry} with the specified write duration, has no effect
-     * on the duration if the entry was present, and returns the success rather than a value.
+     * substituting the configured {@link Expiry} with the specified duration, has no effect on the
+     * duration if the entry was present, and returns the success rather than a value.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
@@ -574,8 +576,8 @@ public interface Policy<K extends Object, V extends Object> {
     /**
      * Associates the {@code value} with the {@code key} in this cache if the specified key is not
      * already associated with a value. This method differs from {@link Map#putIfAbsent} by
-     * substituting the configured {@link Expiry} with the specified write duration, has no effect
-     * on the duration if the entry was present, and returns the success rather than a value.
+     * substituting the configured {@link Expiry} with the specified duration, has no effect on the
+     * duration if the entry was present, and returns the success rather than a value.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
@@ -593,7 +595,7 @@ public interface Policy<K extends Object, V extends Object> {
      * Associates the {@code value} with the {@code key} in this cache. If the cache previously
      * contained a value associated with the {@code key}, the old value is replaced by the new
      * {@code value}. This method differs from {@link Cache#put} by substituting the configured
-     * {@link Expiry} with the specified write duration.
+     * {@link Expiry} with the specified duration.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
@@ -610,7 +612,7 @@ public interface Policy<K extends Object, V extends Object> {
      * Associates the {@code value} with the {@code key} in this cache. If the cache previously
      * contained a value associated with the {@code key}, the old value is replaced by the new
      * {@code value}. This method differs from {@link Cache#put} by substituting the
-     * configured {@link Expiry} with the specified write duration.
+     * configured {@link Expiry} with the specified duration.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
@@ -622,6 +624,36 @@ public interface Policy<K extends Object, V extends Object> {
      */
     default @Nullable V put(K key, V value, Duration duration) {
       return put(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
+    }
+
+    /**
+     * Attempts to compute a mapping for the specified key and its current mapped value (or
+     * {@code null} if there is no current mapping). The entire method invocation is performed
+     * atomically. The supplied function is invoked exactly once per invocation of this method. Some
+     * attempted update operations on this cache by other threads may be blocked while the
+     * computation is in progress, so the computation should be short and simple. This method
+     * differs from {@code cache.asMap().compute(key, remappingFunction)} by substituting the
+     * configured {@link Expiry} with the specified duration.
+     * <p>
+     * <b>Warning:</b> the {@code remappingFunction} <b>must not</b> attempt to update any other
+     * mappings of this cache.
+     *
+     * @param key key with which the specified value is to be associated
+     * @param remappingFunction the function to compute a value
+     * @param duration the length of time from now when the entry should be automatically removed
+     * @return the new value associated with the specified key, or null if none
+     * @throws IllegalArgumentException if {@code duration} is negative
+     * @throws NullPointerException if the specified key, remappingFunction, or duration is null
+     * @throws IllegalStateException if the computation detectably attempts a recursive update to
+     *         this cache that would otherwise never complete
+     * @throws RuntimeException or Error if the remappingFunction does so, in which case the mapping
+     *         is unchanged
+     */
+    default @PolyNull V compute(K key,
+        BiFunction<? super K, ? super V, ? extends @PolyNull V> remappingFunction,
+        Duration duration) {
+      // This method was added & implemented in version 3.0.6
+      throw new UnsupportedOperationException();
     }
 
     /**
