@@ -66,10 +66,10 @@ public final class MapTestFactory {
         .using(generator)
         .named(name)
         .withFeatures(
+            CollectionSize.ANY,
             MapFeature.GENERAL_PURPOSE,
             MapFeature.ALLOWS_NULL_ENTRY_QUERIES,
-            CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
-            CollectionSize.ANY)
+            CollectionFeature.SUPPORTS_ITERATOR_REMOVE)
         .createTestSuite();
   }
 

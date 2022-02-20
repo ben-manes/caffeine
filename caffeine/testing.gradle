@@ -68,9 +68,13 @@ tasks.register('lincheckTest', Test) {
 tasks.register('junitTest', Test) {
   group = 'Cache tests'
   description = 'JUnit tests'
+
   useJUnit()
   dependsOn(jar)
   tasks.test.dependsOn(it)
+
+  failFast = true
+  maxHeapSize = '2g'
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
 }
 

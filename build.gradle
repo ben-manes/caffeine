@@ -1,6 +1,7 @@
 import net.ltgt.gradle.errorprone.CheckSeverity
 
 apply plugin: 'io.github.gradle-nexus.publish-plugin'
+apply plugin: 'io.snyk.gradle.plugin.snykplugin'
 apply plugin: 'org.kordamp.gradle.source-stats'
 apply plugin: 'com.github.ben-manes.versions'
 
@@ -95,4 +96,11 @@ nexusPublishing {
       password = project.properties['nexusPassword'] ?: System.env.'NEXUS_PASSWORD'
     }
   }
+}
+
+snyk {
+  api = System.env.SNYK_TOKEN
+  arguments = '--all-sub-projects --sarif-file-output=snyk.sarif'
+  autoDownload = true
+  autoUpdate = true
 }

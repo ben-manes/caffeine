@@ -66,6 +66,7 @@ ext {
   ]
   testVersions = [
     awaitility: '4.1.1',
+    eclipseCollections: '11.0.0',
     guice: '5.1.0',
     hamcrest: '2.2',
     jcacheTck: '1.1.1',
@@ -96,6 +97,7 @@ ext {
     pmd: '6.42.0',
     semanticVersioning: '1.1.0',
     shadow: '7.1.2',
+    snyke: '0.4',
     sonarqube: '3.3',
     spotbugs: '4.5.3',
     spotbugsContrib: '7.4.7',
@@ -159,6 +161,7 @@ ext {
   ]
   testLibraries = [
     awaitility: "org.awaitility:awaitility:${testVersions.awaitility}",
+    eclipseCollectionsTestLib: "org.eclipse.collections:eclipse-collections-testutils:${testVersions.eclipseCollections}",
     guavaTestLib: "com.google.guava:guava-testlib:${versions.guava}",
     hamcrest: "org.hamcrest:hamcrest:${testVersions.hamcrest}",
     jcacheGuice: "org.jsr107.ri:cache-annotations-ri-guice:${versions.jcache}",
@@ -210,6 +213,7 @@ ext {
     pmd: "net.sourceforge.pmd:pmd:${pluginVersions.pmd}",
     semanticVersioning: "io.ehdev:gradle-semantic-versioning:${pluginVersions.semanticVersioning}",
     shadow: "gradle.plugin.com.github.johnrengelman:shadow:${pluginVersions.shadow}",
+    snyke: "gradle.plugin.io.snyk.gradle.plugin:snyk:${pluginVersions.snyke}",
     sonarqube: "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:${pluginVersions.sonarqube}",
     spotbugs: "com.github.spotbugs:spotbugs:${pluginVersions.spotbugs}",
     spotbugsContrib: "com.mebigfatguy.sb-contrib:sb-contrib:${pluginVersions.spotbugsContrib}",

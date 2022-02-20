@@ -38,7 +38,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
@@ -401,14 +400,14 @@ public final class TimerWheelTest {
   }
 
   @Test(dataProvider = "iterator")
-  public void iterator_hasNext(Supplier<Iterator<?>> factory) {
-    var iterator = factory.get();
+  public void iterator_hasNext(Iterable<Node<Long, Long>> iterable) {
+    var iterator = iterable.iterator();
     assertThat(iterator.hasNext()).isFalse();
 
     timerWheel.schedule(new Timer(1));
     assertThat(iterator.hasNext()).isFalse();
 
-    iterator = factory.get();
+    iterator = iterable.iterator();
     assertThat(iterator.hasNext()).isTrue();
     assertThat(iterator.hasNext()).isTrue();
 
@@ -423,9 +422,9 @@ public final class TimerWheelTest {
 
   @DataProvider(name = "iterator")
   public Object[][] providesIterators() {
-    Supplier<Iterator<?>> descending = () -> timerWheel.descendingIterator();
-    Supplier<Iterator<?>> ascending = () -> timerWheel.iterator();
-    return new Object[][] { {ascending}, {descending}};
+    Iterable<Node<Long, Long>> descending = () -> timerWheel.descendingIterator();
+    Iterable<Node<Long, Long>> ascending = () -> timerWheel.iterator();
+    return new Object[][] {{ascending}, {descending}};
   }
 
   @Test(dataProvider = "clock")

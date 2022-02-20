@@ -202,6 +202,7 @@
     <trusted-key id='ae5a7fb608a0221c' group='org.codehaus.plexus' />
     <trusted-key id='79e193516be7998f' group='org.dom4j' />
     <trusted-key id='7c7d8456294423ba' group='org.easymock' />
+    <trusted-key id='e46d9a6a3624b8e3' group='org.eclipse.collections' />
     <trusted-key id='eca081a9790d4fc4' group='org.eclipse.jdt.core.compiler' />
     <trusted-key id='5b05ccde140c2876' group='org.eclipse.jgit' />
     <trusted-key id='01d734ee5ee9c3f8' group='org.eclipse.sisu' />
@@ -606,6 +607,9 @@
     </dependency>
     <dependency group='gradle.plugin.io.morethan.jmhreport' module='gradle-jmh-report' version='0.9.0'>
       <sha512>3C76A1066218F9C54B83D167E34B563C09BA2F72DB330F5843B2324DD2E40EE1F7E7887416B9C7A8DC03C07223E42216B76569F5D3962B911F922A6963C0C917</sha512>
+    </dependency>
+    <dependency group='gradle.plugin.io.snyk.gradle.plugin' module='snyk' version='0.4'>
+      <sha512>57615A7D2E58587CB360913ED2C995F433DAA3E80FCAAE5CDB74D730ACA84E309FA7B8C4B678340EC4004CFEEF70B250CDBAA712B2290746A57B1D946882A968</sha512>
     </dependency>
     <dependency group='gradle.plugin.org.kt3k.gradle.plugin' module='coveralls-gradle-plugin' version='2.12.0'>
       <sha512>9AEC8CAD28C018AEA65F3C2C57FD0D4B82C00A8F6C778F6DBAA61C961AF3A7C369655F5A5E93B360FAE297ADFA3205BC40EAF16847B6EDB56F01DF9AD655A18C</sha512>

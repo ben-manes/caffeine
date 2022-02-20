@@ -38,6 +38,10 @@ final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
   @Override
   @SuppressWarnings("PMD.LinguisticNaming")
   public V setValue(V value) {
+    // See ConcurrentHashMap: "Sets our entry's value and writes through to the map. The value to
+    // return is somewhat arbitrary here. Since we do not necessarily track asynchronous changes,
+    // the most recent "previous" value could be different from what we return (or could even have
+    // been removed, in which case the put will re-establish). We do not and cannot guarantee more."
     map.put(getKey(), value);
     return super.setValue(value);
   }
