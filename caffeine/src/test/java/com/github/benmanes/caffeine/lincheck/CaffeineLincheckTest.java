@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.lincheck;
 
 import java.util.concurrent.TimeUnit;
 
 import org.testng.annotations.Factory;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.testing.AbstractLincheckCacheTest;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
  * Linearization test cases.
