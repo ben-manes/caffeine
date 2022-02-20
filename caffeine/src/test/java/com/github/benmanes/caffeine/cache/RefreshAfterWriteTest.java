@@ -34,6 +34,7 @@ import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -672,6 +673,21 @@ public final class RefreshAfterWriteTest {
   public void getRefreshesAfter(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(1);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(1);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
+  public void setRefreshAfter_negative(Cache<Int, Int> cache,
+      CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+    refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(-2));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
+  public void setRefreshAfter_excessive(Cache<Int, Int> cache,
+      CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+    refreshAfterWrite.setRefreshesAfter(ChronoUnit.FOREVER.getDuration());
+    assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.NANOSECONDS)).isEqualTo(Long.MAX_VALUE);
   }
 
   @Test(dataProvider = "caches")

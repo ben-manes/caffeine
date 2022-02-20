@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
+import static com.github.benmanes.caffeine.cache.Caffeine.saturatedToNanos;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
@@ -3882,7 +3883,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         requireNonNull(duration);
         requireNonNull(remappingFunction);
         requireArgument(!duration.isNegative(), "duration cannot be negative: %s", duration);
-        var expiry = new FixedExpiry<K, V>(duration.toNanos(), TimeUnit.NANOSECONDS);
+        var expiry = new FixedExpiry<K, V>(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
 
         return cache.isAsync
             ? computeAsync(key, remappingFunction, expiry)

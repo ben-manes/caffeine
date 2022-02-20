@@ -29,6 +29,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
@@ -265,6 +266,21 @@ public final class ExpireAfterAccessTest {
   public void getExpiresAfter_duration(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     assertThat(expireAfterAccess.getExpiresAfter()).isEqualTo(Duration.ofMinutes(1));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void setExpiresAfter_negative(Cache<Int, Int> cache, CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    expireAfterAccess.setExpiresAfter(Duration.ofMinutes(-2));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  public void setExpiresAfter_excessive(Cache<Int, Int> cache, CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    expireAfterAccess.setExpiresAfter(ChronoUnit.FOREVER.getDuration());
+    assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.NANOSECONDS)).isEqualTo(Long.MAX_VALUE);
   }
 
   @Test(dataProvider = "caches")

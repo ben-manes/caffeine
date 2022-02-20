@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.saturatedToNanos;
+
 import java.time.Duration;
 import java.util.ConcurrentModificationException;
 import java.util.Map;
@@ -412,7 +414,7 @@ public interface Policy<K extends Object, V extends Object> {
      * @throws NullPointerException if the duration is null
      */
     default void setExpiresAfter(Duration duration) {
-      setExpiresAfter(duration.toNanos(), TimeUnit.NANOSECONDS);
+      setExpiresAfter(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -553,7 +555,7 @@ public interface Policy<K extends Object, V extends Object> {
      * @throws NullPointerException if the specified key or duration is null
      */
     default void setExpiresAfter(K key, Duration duration) {
-      setExpiresAfter(key, duration.toNanos(), TimeUnit.NANOSECONDS);
+      setExpiresAfter(key, saturatedToNanos(duration), TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -588,7 +590,7 @@ public interface Policy<K extends Object, V extends Object> {
      * @throws NullPointerException if the specified key, value, or duration is null
      */
     default @Nullable V putIfAbsent(K key, V value, Duration duration) {
-      return putIfAbsent(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
+      return putIfAbsent(key, value, saturatedToNanos(duration), TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -623,7 +625,7 @@ public interface Policy<K extends Object, V extends Object> {
      * @throws NullPointerException if the specified key, value, or duration is null
      */
     default @Nullable V put(K key, V value, Duration duration) {
-      return put(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
+      return put(key, value, saturatedToNanos(duration), TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -825,7 +827,7 @@ public interface Policy<K extends Object, V extends Object> {
      * @throws NullPointerException if the duration is null
      */
     default void setRefreshesAfter(Duration duration) {
-      setRefreshesAfter(duration.toNanos(), TimeUnit.NANOSECONDS);
+      setRefreshesAfter(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
     }
   }
 

@@ -20,6 +20,7 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -235,7 +236,7 @@ public final class CaffeineTest {
     var builder = Caffeine.newBuilder().maximumSize(0);
     assertThat(builder.maximumSize).isEqualTo(0);
     var cache = builder.build();
-    assertThat(cache.policy().eviction().get().getMaximum()).isEqualTo(0);
+    assertThat(cache.policy().eviction().orElseThrow().getMaximum()).isEqualTo(0);
   }
 
   @Test
@@ -243,7 +244,7 @@ public final class CaffeineTest {
     var builder = Caffeine.newBuilder().maximumSize(Integer.MAX_VALUE);
     assertThat(builder.maximumSize).isEqualTo(Integer.MAX_VALUE);
     var cache = builder.build();
-    assertThat(cache.policy().eviction().get().getMaximum()).isEqualTo(Integer.MAX_VALUE);
+    assertThat(cache.policy().eviction().orElseThrow().getMaximum()).isEqualTo(Integer.MAX_VALUE);
   }
 
   /* --------------- maximumWeight --------------- */
@@ -274,7 +275,7 @@ public final class CaffeineTest {
         .maximumWeight(0).weigher(Weigher.singletonWeigher());
     assertThat(builder.weigher).isSameInstanceAs(Weigher.singletonWeigher());
     assertThat(builder.maximumWeight).isEqualTo(0);
-    var eviction = builder.build().policy().eviction().get();
+    var eviction = builder.build().policy().eviction().orElseThrow();
     assertThat(eviction.getMaximum()).isEqualTo(0);
     assertThat(eviction.isWeighted()).isTrue();
   }
@@ -286,7 +287,7 @@ public final class CaffeineTest {
     assertThat(builder.maximumWeight).isEqualTo(Integer.MAX_VALUE);
     assertThat(builder.weigher).isSameInstanceAs(Weigher.singletonWeigher());
 
-    var eviction = builder.build().policy().eviction().get();
+    var eviction = builder.build().policy().eviction().orElseThrow();
     assertThat(eviction.getMaximum()).isEqualTo(Integer.MAX_VALUE);
     assertThat(eviction.isWeighted()).isTrue();
   }
@@ -343,7 +344,7 @@ public final class CaffeineTest {
   public void expireAfterAccess_small() {
     var builder = Caffeine.newBuilder().expireAfterAccess(0, TimeUnit.MILLISECONDS);
     assertThat(builder.expireAfterAccessNanos).isEqualTo(0);
-    var expiration = builder.build().policy().expireAfterAccess().get();
+    var expiration = builder.build().policy().expireAfterAccess().orElseThrow();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS)).isEqualTo(0);
   }
 
@@ -351,7 +352,7 @@ public final class CaffeineTest {
   public void expireAfterAccess_large() {
     var builder = Caffeine.newBuilder().expireAfterAccess(Integer.MAX_VALUE, TimeUnit.NANOSECONDS);
     assertThat(builder.expireAfterAccessNanos).isEqualTo(Integer.MAX_VALUE);
-    var expiration = builder.build().policy().expireAfterAccess().get();
+    var expiration = builder.build().policy().expireAfterAccess().orElseThrow();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS)).isEqualTo(Integer.MAX_VALUE);
   }
 
@@ -374,20 +375,27 @@ public final class CaffeineTest {
   }
 
   @Test
-  public void expireAfterAccess_duration_small() {
-    var builder = Caffeine.newBuilder().expireAfterAccess(Duration.ofMillis(0));
+  public void expireAfterAccess_duration() {
+    var builder = Caffeine.newBuilder().expireAfterAccess(Duration.ofMinutes(1));
+    assertThat(builder.expireAfterAccessNanos).isEqualTo(Duration.ofMinutes(1).toNanos());
+    var expiration = builder.build().policy().expireAfterAccess().orElseThrow();
+    assertThat(expiration.getExpiresAfter()).isEqualTo(Duration.ofMinutes(1));
+  }
+
+  @Test
+  public void expireAfterAccess_duration_immediate() {
+    var builder = Caffeine.newBuilder().expireAfterAccess(Duration.ZERO);
     assertThat(builder.expireAfterAccessNanos).isEqualTo(0);
-    var expiration = builder.build().policy().expireAfterAccess().get();
+    var expiration = builder.build().policy().expireAfterAccess().orElseThrow();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS)).isEqualTo(0);
   }
 
   @Test
-  public void expireAfterAccess_duration_large() {
-    var builder = Caffeine.newBuilder()
-        .expireAfterAccess(Duration.ofNanos(Integer.MAX_VALUE));
-    assertThat(builder.expireAfterAccessNanos).isEqualTo(Integer.MAX_VALUE);
-    var expiration = builder.build().policy().expireAfterAccess().get();
-    assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS)).isEqualTo(Integer.MAX_VALUE);
+  public void expireAfterAccess_duration_excessive() {
+    var builder = Caffeine.newBuilder().expireAfterAccess(ChronoUnit.FOREVER.getDuration());
+    assertThat(builder.expireAfterAccessNanos).isEqualTo(Long.MAX_VALUE);
+    var expiration = builder.build().policy().expireAfterAccess().orElseThrow();
+    assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS)).isEqualTo(Long.MAX_VALUE);
   }
 
   /* --------------- expireAfterWrite --------------- */
@@ -412,7 +420,7 @@ public final class CaffeineTest {
   public void expireAfterWrite_small() {
     var builder = Caffeine.newBuilder().expireAfterWrite(0, TimeUnit.MILLISECONDS);
     assertThat(builder.expireAfterWriteNanos).isEqualTo(0);
-    var expiration = builder.build().policy().expireAfterWrite().get();
+    var expiration = builder.build().policy().expireAfterWrite().orElseThrow();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS)).isEqualTo(0);
   }
 
@@ -421,7 +429,7 @@ public final class CaffeineTest {
     var builder = Caffeine.newBuilder()
         .expireAfterWrite(Integer.MAX_VALUE, TimeUnit.NANOSECONDS);
     assertThat(builder.expireAfterWriteNanos).isEqualTo(Integer.MAX_VALUE);
-    var expiration = builder.build().policy().expireAfterWrite().get();
+    var expiration = builder.build().policy().expireAfterWrite().orElseThrow();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS)).isEqualTo(Integer.MAX_VALUE);
   }
 
@@ -444,20 +452,27 @@ public final class CaffeineTest {
   }
 
   @Test
-  public void expireAfterWrite_duration_small() {
-    var builder = Caffeine.newBuilder().expireAfterWrite(Duration.ofMillis(0));
+  public void expireAfterWrite_duration() {
+    var builder = Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(1));
+    assertThat(builder.expireAfterWriteNanos).isEqualTo(Duration.ofMinutes(1).toNanos());
+    var expiration = builder.build().policy().expireAfterWrite().orElseThrow();
+    assertThat(expiration.getExpiresAfter()).isEqualTo(Duration.ofMinutes(1));
+  }
+
+  @Test
+  public void expireAfterWrite_duration_immediate() {
+    var builder = Caffeine.newBuilder().expireAfterWrite(Duration.ZERO);
     assertThat(builder.expireAfterWriteNanos).isEqualTo(0);
-    var expiration = builder.build().policy().expireAfterWrite().get();
+    var expiration = builder.build().policy().expireAfterWrite().orElseThrow();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS)).isEqualTo(0);
   }
 
   @Test
-  public void expireAfterWrite_duration_large() {
-    var builder = Caffeine.newBuilder()
-        .expireAfterWrite(Duration.ofNanos(Integer.MAX_VALUE));
-    assertThat(builder.expireAfterWriteNanos).isEqualTo(Integer.MAX_VALUE);
-    var expiration = builder.build().policy().expireAfterWrite().get();
-    assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS)).isEqualTo(Integer.MAX_VALUE);
+  public void expireAfterWrite_duration_excessive() {
+    var builder = Caffeine.newBuilder().expireAfterWrite(ChronoUnit.FOREVER.getDuration());
+    assertThat(builder.expireAfterWriteNanos).isEqualTo(Long.MAX_VALUE);
+    var expiration = builder.build().policy().expireAfterWrite().orElseThrow();
+    assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS)).isEqualTo(Long.MAX_VALUE);
   }
 
   /* --------------- expiry --------------- */
@@ -540,14 +555,20 @@ public final class CaffeineTest {
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void refreshAfterWrite_duration_zero() {
-    Caffeine.newBuilder().refreshAfterWrite(Duration.ofMillis(0));
+    Caffeine.newBuilder().refreshAfterWrite(Duration.ZERO);
   }
 
   @Test
   public void refreshAfterWrite_duration() {
-    var builder = Caffeine.newBuilder()
-        .refreshAfterWrite(Duration.ofMillis(1));
-    assertThat(builder.getRefreshAfterWriteNanos()).isEqualTo(TimeUnit.MILLISECONDS.toNanos(1));
+    var builder = Caffeine.newBuilder().refreshAfterWrite(Duration.ofMinutes(1));
+    assertThat(builder.getRefreshAfterWriteNanos()).isEqualTo(Duration.ofMinutes(1).toNanos());
+    builder.build(k -> k);
+  }
+
+  @Test
+  public void refreshAfterWrite_excessive() {
+    var builder = Caffeine.newBuilder().refreshAfterWrite(ChronoUnit.FOREVER.getDuration());
+    assertThat(builder.getRefreshAfterWriteNanos()).isEqualTo(Long.MAX_VALUE);
     builder.build(k -> k);
   }
 
