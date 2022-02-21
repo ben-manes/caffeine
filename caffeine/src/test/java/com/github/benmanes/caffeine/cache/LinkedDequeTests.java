@@ -69,6 +69,7 @@ public final class LinkedDequeTests extends TestCase {
         })
         .named(name)
         .withFeatures(
+            CollectionFeature.FAILS_FAST_ON_CONCURRENT_MODIFICATION,
             CollectionFeature.ALLOWS_NULL_QUERIES,
             CollectionFeature.GENERAL_PURPOSE,
             CollectionFeature.KNOWN_ORDER,

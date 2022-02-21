@@ -436,7 +436,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-  removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putIfAbsent_present(Map<Int, Int> map, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);

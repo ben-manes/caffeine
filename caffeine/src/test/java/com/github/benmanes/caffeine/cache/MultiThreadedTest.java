@@ -63,8 +63,7 @@ public final class MultiThreadedTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
-      stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
-      removalListener = Listener.DEFAULT, expireAfterWrite = Expire.FOREVER,
+      stats = Stats.DISABLED, population = Population.EMPTY, removalListener = Listener.DEFAULT,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
       evictionListener = Listener.DEFAULT)
@@ -86,8 +85,7 @@ public final class MultiThreadedTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
-      stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
-      expireAfterWrite = Expire.FOREVER, removalListener = Listener.DEFAULT,
+      stats = Stats.DISABLED, population = Population.EMPTY, removalListener = Listener.DEFAULT,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
       evictionListener = Listener.DEFAULT)

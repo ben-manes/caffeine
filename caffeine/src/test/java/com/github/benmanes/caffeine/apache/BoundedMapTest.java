@@ -25,7 +25,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-
 public final class BoundedMapTest extends CaffeineMapTestCase {
 
   public BoundedMapTest(String testName) {
