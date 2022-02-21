@@ -21,7 +21,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
- * Apache Commons Collections' map tests for against the {@link Cache#asMap()} view.
+ * Apache Commons Collections' map tests for the {@link Cache#asMap()} view.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -30,9 +30,7 @@ public final class BoundedMapTest extends CaffeineMapTestCase {
   public BoundedMapTest(String testName) {
     super(testName);
   }
-
-  @Override
-  public Cache<Object, Object> makeCache() {
+  @Override public Cache<Object, Object> makeCache() {
     return Caffeine.newBuilder()
         .expireAfterWrite(Long.MAX_VALUE, TimeUnit.DAYS)
         .maximumSize(Long.MAX_VALUE)

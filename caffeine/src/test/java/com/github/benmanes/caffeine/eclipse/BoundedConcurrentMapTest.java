@@ -24,7 +24,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.eclipse.mutable.ConcurrentHashMapTest;
 
 /**
- * Eclipse Collections' map tests for against the {@link Cache#asMap()} view.
+ * Eclipse Collections' map tests for the {@link Cache#asMap()} view.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

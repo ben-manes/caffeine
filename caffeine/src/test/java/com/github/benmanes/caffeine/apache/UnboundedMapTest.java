@@ -19,7 +19,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
- * Apache Commons Collections' map tests for against the {@link Cache#asMap()} view.
+ * Apache Commons Collections' map tests for the {@link Cache#asMap()} view.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -28,9 +28,7 @@ public final class UnboundedMapTest extends CaffeineMapTestCase {
   public UnboundedMapTest(String testName) {
     super(testName);
   }
-
-  @Override
-  public Cache<Object, Object> makeCache() {
+  @Override public Cache<Object, Object> makeCache() {
     return Caffeine.newBuilder().build();
   }
 }

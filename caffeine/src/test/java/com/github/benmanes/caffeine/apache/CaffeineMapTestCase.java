@@ -22,7 +22,7 @@ import org.apache.commons.collections4.map.AbstractMapTest;
 import com.github.benmanes.caffeine.cache.Cache;
 
 /**
- * Apache Commons Collections' map tests for against the {@link Cache#asMap()} view.
+ * Apache Commons Collections' map tests for the {@link Cache#asMap()} view.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -31,31 +31,22 @@ public abstract class CaffeineMapTestCase extends AbstractMapTest<Object, Object
   public CaffeineMapTestCase(String testName) {
     super(testName);
   }
-
-  @Override
-  public boolean isAllowNullKey() {
+  @Override public boolean isAllowNullKey() {
     return false;
   }
-
-  @Override
-  public boolean isAllowNullValue() {
+  @Override public boolean isAllowNullValue() {
     return false;
   }
-
-  @Override
-  public boolean isFailFastExpected() {
+  @Override public boolean isFailFastExpected() {
     return false;
   }
-
-  @Override
-  public boolean isSubMapViewsSerializable() {
+  @Override public boolean isSubMapViewsSerializable() {
     return false;
   }
-
-  @Override
-  public Map<Object, Object> makeObject() {
+  @Override public Map<Object, Object> makeObject() {
     return makeCache().asMap();
   }
 
+  /** Returns a new, empty cache instance. */
   public abstract Cache<Object, Object> makeCache();
 }

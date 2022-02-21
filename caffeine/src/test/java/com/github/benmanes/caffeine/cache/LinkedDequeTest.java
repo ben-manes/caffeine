@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -789,6 +790,16 @@ public final class LinkedDequeTest {
     assertThat(actual).containsExactlyElementsIn(expect).inOrder();
   }
 
+  @Test(dataProvider = "full")
+  public void concat_peek(LinkedDeque<LinkedValue> deque) {
+    var iterator = PeekingIterator.concat(deque.iterator(), deque.iterator());
+    while (iterator.hasNext()) {
+      var expected = iterator.peek();
+      assertThat(iterator.next()).isEqualTo(expected);
+    }
+    assertThat(iterator.peek()).isNull();
+  }
+
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
   public void concat_noMoreElements(LinkedDeque<LinkedValue> deque) {
     PeekingIterator.concat(deque.iterator(), deque.iterator()).next();
@@ -799,7 +810,7 @@ public final class LinkedDequeTest {
     var expect = ImmutableList.copyOf(
         Iterators.concat(deque.iterator(), deque.descendingIterator()));
     var actual = PeekingIterator.comparing(
-        deque.iterator(), deque.descendingIterator(), (a, b) -> 1);
+        deque.iterator(), deque.descendingIterator(), comparator().reversed());
     assertThat(actual.peek()).isEqualTo(expect.get(0));
     assertThat(ImmutableList.copyOf(actual)).containsExactlyElementsIn(expect).inOrder();
   }
@@ -807,11 +818,15 @@ public final class LinkedDequeTest {
   @Test(dataProvider = "full")
   public void comparing_uneven(LinkedDeque<LinkedValue> deque) {
     var empty = new AccessOrderDeque<LinkedValue>().iterator();
-    var left = PeekingIterator.comparing(deque.iterator(), empty, (a, b) -> 1);
-    var right = PeekingIterator.comparing(deque.iterator(), empty, (a, b) -> 1);
+    var left = PeekingIterator.comparing(deque.iterator(), empty, comparator().reversed());
+    var right = PeekingIterator.comparing(empty, deque.iterator(), comparator().reversed());
 
     assertThat(left.peek()).isEqualTo(deque.getFirst());
     assertThat(right.peek()).isEqualTo(deque.getFirst());
+  }
+
+  private static Comparator<LinkedValue> comparator() {
+    return Comparator.comparing((LinkedValue v) -> v.value);
   }
 
   /* --------------- Deque providers --------------- */
