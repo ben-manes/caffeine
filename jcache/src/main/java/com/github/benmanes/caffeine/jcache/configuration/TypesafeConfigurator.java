@@ -229,7 +229,7 @@ public final class TypesafeConfigurator {
       }
     }
 
-    /** Adds the write through settings. */
+    /** Adds the write-through settings. */
     private void addWriteThrough() {
       configuration.setWriteThrough(merged.getBoolean("write-through.enabled"));
       if (isSet("write-through.writer")) {

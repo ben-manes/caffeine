@@ -79,7 +79,7 @@ public interface Scheduler {
    * {@code scheduler}.
    *
    * @param scheduler the scheduler to delegate to
-   * @return an scheduler that suppresses and logs any exception thrown by the delegate
+   * @return a scheduler that suppresses and logs any exception thrown by the delegate
    */
   static Scheduler guardedScheduler(Scheduler scheduler) {
     return (scheduler instanceof GuardedScheduler) ? scheduler : new GuardedScheduler(scheduler);

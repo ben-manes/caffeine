@@ -48,8 +48,8 @@ final class References {
 
     /**
      * Returns the key that is associated to the cache entry holding this reference. If the cache
-     * holds keys strongly, this is that key instance. Otherwise the cache holds keys weakly and the
-     * {@link WeakKeyReference} is returned.
+     * holds keys strongly, this is that key instance. Otherwise, the cache holds keys weakly and
+     * the {@link WeakKeyReference} is returned.
      *
      * @return the key that is associated to the cached entry
      */

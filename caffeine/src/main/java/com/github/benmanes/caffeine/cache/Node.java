@@ -241,13 +241,13 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   }
 
   /**
-   * Sets the write time in nanoseconds. This update may be set lazily and rely on the memory fence
+   * Sets the write-time in nanoseconds. This update may be set lazily and rely on the memory fence
    * when the lock is released.
    */
   public void setWriteTime(long time) {}
 
   /**
-   * Atomically sets the write time to the given updated value if the current value equals the
+   * Atomically sets the write-time to the given updated value if the current value equals the
    * expected value and returns if the update was successful.
    */
   public boolean casWriteTime(long expect, long update) {

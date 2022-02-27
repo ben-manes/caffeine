@@ -40,7 +40,7 @@ final class CountMin64 {
     this.hashA = new long[depth];
 
     // We're using a linear hash functions of the form ((a*x+b) mod p) where a,b are chosen
-    // independently for each hash function. However we can set b = 0 as all it does is shift the
+    // independently for each hash function. However, we can set b = 0 as all it does is shift the
     // results without compromising their uniformity or independence with the other hashes.
     Random r = new Random(seed);
     for (int i = 0; i < depth; ++i) {

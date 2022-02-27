@@ -106,7 +106,7 @@ public final class EventDispatcher<K, V> {
   }
 
   /**
-   * Publishes a creation event for the entry to all of the interested listeners.
+   * Publishes a creation event for the entry to the interested listeners.
    *
    * @param cache the cache where the entry was created
    * @param key the entry's key
@@ -118,7 +118,7 @@ public final class EventDispatcher<K, V> {
   }
 
   /**
-   * Publishes a update event for the entry to all of the interested listeners.
+   * Publishes an update event for the entry to the interested listeners.
    *
    * @param cache the cache where the entry was updated
    * @param key the entry's key
@@ -131,7 +131,7 @@ public final class EventDispatcher<K, V> {
   }
 
   /**
-   * Publishes a remove event for the entry to all of the interested listeners.
+   * Publishes a removal event for the entry to the interested listeners.
    *
    * @param cache the cache where the entry was removed
    * @param key the entry's key
@@ -143,8 +143,8 @@ public final class EventDispatcher<K, V> {
   }
 
   /**
-   * Publishes a remove event for the entry to all of the interested listeners. This method does
-   * not register the synchronous listener's future with {@link #awaitSynchronous()}.
+   * Publishes a removal event for the entry to the interested listeners. This method does not
+   * register the synchronous listener's future with {@link #awaitSynchronous()}.
    *
    * @param cache the cache where the entry was removed
    * @param key the entry's key
@@ -156,7 +156,7 @@ public final class EventDispatcher<K, V> {
   }
 
   /**
-   * Publishes a expire event for the entry to all of the interested listeners.
+   * Publishes an expiration event for the entry to the interested listeners.
    *
    * @param cache the cache where the entry expired
    * @param key the entry's key
@@ -168,8 +168,8 @@ public final class EventDispatcher<K, V> {
   }
 
   /**
-   * Publishes a expire event for the entry to all of the interested listeners. This method does
-   * not register the synchronous listener's future with {@link #awaitSynchronous()}.
+   * Publishes an expiration event for the entry to the interested listeners. This method does not
+   * register the synchronous listener's future with {@link #awaitSynchronous()}.
    *
    * @param cache the cache where the entry expired
    * @param key the entry's key
@@ -206,7 +206,7 @@ public final class EventDispatcher<K, V> {
     pending.get().clear();
   }
 
-  /** Broadcasts the event to all of the interested listener's dispatch queues. */
+  /** Broadcasts the event to the interested listener's dispatch queues. */
   private void publish(Cache<K, V> cache, EventType eventType, K key,
       boolean hasOldValue, @Nullable V oldValue, @Nullable V newValue, boolean quiet) {
     if (dispatchQueues.isEmpty()) {

@@ -52,7 +52,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Returns the map of in-flight refresh operations. */
   ConcurrentMap<Object, CompletableFuture<?>> refreshes();
 
-  /** Returns whether the cache captures the write time of the entry. */
+  /** Returns whether the cache captures the write-time of the entry. */
   boolean hasWriteTime();
 
   /** Returns the {@link Expiry} used by this cache. */
@@ -69,14 +69,14 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   /**
    * See {@link Cache#getIfPresent(K)}. This method differs by accepting a parameter of whether
-   * to record the hit and miss statistics based on the success of this operation.
+   * to record the hit-and-miss statistics based on the success of this operation.
    */
   @Nullable
   V getIfPresent(K key, boolean recordStats);
 
   /**
    * See {@link Cache#getIfPresent(K)}. This method differs by not recording the access with
-   * the statistics nor the eviction policy, and populates the write time if known.
+   * the statistics nor the eviction policy, and populates the write-time if known.
    */
   @Nullable
   V getIfPresentQuietly(K key, long[/* 1 */] writeTime);

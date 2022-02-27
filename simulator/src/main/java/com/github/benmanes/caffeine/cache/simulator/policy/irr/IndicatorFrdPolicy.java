@@ -287,8 +287,8 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
   }
 
   enum StackType {
-    FILTER, // holds all of the resident filter blocks
-    MAIN,   // holds all of the resident and non-resident blocks
+    FILTER, // holds the resident filter blocks
+    MAIN,   // holds the resident and non-resident blocks
   }
 
   final class Node {

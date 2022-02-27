@@ -51,7 +51,7 @@ public abstract class AbstractLincheckCacheTest extends VerifierState {
    * This test checks linearizability with bounded model checking. Unlike stress testing, this
    * approach can also provide a trace of an incorrect execution. However, it uses sequential
    * consistency model, so it can not find any low-level bugs (e.g., missing 'volatile'), and thus,
-   * it it recommended to have both test modes.
+   * it is recommended to have both test modes.
    * <p>
    * This test requires the following JVM arguments,
    * <ul>

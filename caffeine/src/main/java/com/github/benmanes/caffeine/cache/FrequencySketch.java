@@ -124,7 +124,7 @@ final class FrequencySketch<E> {
 
   /**
    * Increments the popularity of the element if it does not exceed the maximum (15). The popularity
-   * of all elements will be periodically down sampled when the observed events exceeds a threshold.
+   * of all elements will be periodically down sampled when the observed events exceed a threshold.
    * This process provides a frequency aging to allow expired long term entries to fade away.
    *
    * @param e the element to add

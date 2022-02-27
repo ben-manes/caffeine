@@ -2122,7 +2122,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(refreshKey + suffix, map.get(refreshKey));
   }
 
-  // ConcurrentHashMap does not support this, as it must return back the removed entry
+  // ConcurrentHashMap does not support this, as it returns the removed entry
   public void disabled_testInvalidateDuringLoading() throws InterruptedException {
     // computation starts; invalidate() is called on the key being computed, computation finishes
     final CountDownLatch computationStarted = new CountDownLatch(2);
@@ -2174,7 +2174,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(2, cache.size());
   }
 
-  // ConcurrentHashMap does not support this, as it must return back the removed entry
+  // ConcurrentHashMap does not support this, as it returns the removed entry
   public void disabled_testInvalidateAndReloadDuringLoading()
       throws InterruptedException, ExecutionException {
     // computation starts; clear() is called, computation finishes

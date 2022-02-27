@@ -1045,7 +1045,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(4);
 
-    // If the expire time reduces by more than the tolerance, treat the update as a write
+    // If the expiration time reduces by more than the tolerance, treat the update as a write
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
     cache.put(Int.valueOf(1), Int.valueOf(4));
@@ -1053,7 +1053,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(6);
 
-    // If the expire time increases by more than the tolerance, treat the update as a write
+    // If the expiration time increases by more than the tolerance, treat the update as a write
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenReturn(Expire.FOREVER.timeNanos());
     cache.put(Int.valueOf(1), Int.valueOf(4));

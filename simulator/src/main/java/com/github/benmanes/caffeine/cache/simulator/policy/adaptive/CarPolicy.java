@@ -31,7 +31,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 /**
  * Clock with Adaptive Replacement policy. This algorithm differs from ARC by replacing the LRU
  * policy with the Clock (Second Chance) policy. This allows cache hits to be performed concurrently
- * at the cost of a global lock on a miss and a worst case O(2n) eviction as the queues are scanned.
+ * at the cost of a global lock on a miss and has the worst case time of O(2n) on eviction due to
+ * queues being scanned.
  * <p>
  * This implementation is based on the pseudo code provided by the authors in their paper <a href=
  * "https://www.usenix.org/legacy/publications/library/proceedings/fast04/tech/full_papers/bansal/bansal.pdf">

@@ -56,8 +56,8 @@ public enum CacheType {
   },
   NonBlockingHashMap {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      // Note that writes that update an entry to the same reference are short circuited
-      // and do not mutate the hash table. This makes those writes equal to a read.
+      // Note that writes that update an entry to the same reference are short-circuited
+      // and do not mutate the hash table. This causes those writes to be equivalent to a read.
       return new ConcurrentMapCache<>(new NonBlockingHashMap<>(maximumSize));
     }
   },
@@ -132,7 +132,7 @@ public enum CacheType {
 
   /**
    * Creates the cache with the maximum size. Note that some implementations may evict prior to
-   * this threshold and it is the caller's responsibility to adjust accordingly.
+   * this threshold, and it is the caller's responsibility to adjust accordingly.
    */
   public abstract <K, V> BasicCache<K, V> create(int maximumSize);
 }

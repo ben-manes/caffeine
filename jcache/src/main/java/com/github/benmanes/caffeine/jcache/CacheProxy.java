@@ -280,7 +280,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     future.whenComplete((r, e) -> inFlight.remove(future));
   }
 
-  /** Performs the bulk load where the existing entries are replace. */
+  /** Performs the bulk load where the existing entries are replaced. */
   private void loadAllAndReplaceExisting(Set<? extends K> keys) {
     int[] ignored = { 0 };
     @SuppressWarnings("NullAway")
@@ -809,7 +809,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return castedResult;
   }
 
-  /** Returns the updated expirable value after performing the post processing actions. */
+  /** Returns the updated expirable value after performing the post-processing actions. */
   @SuppressWarnings({"fallthrough", "PMD.MissingBreakInSwitch",
     "PMD.SwitchStmtsShouldHaveDefault", "NullAway"})
   private @Nullable Expirable<V> postProcess(Expirable<V> expirable,
@@ -1178,7 +1178,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   /**
    * Returns the time when the entry will expire.
    *
-   * @param created if the write is an insert or update
+   * @param created if the write operation is an insert or an update
    * @return the time when the entry will expire, zero if it should expire immediately,
    *         Long.MIN_VALUE if it should not be changed, or Long.MAX_VALUE if eternal
    */

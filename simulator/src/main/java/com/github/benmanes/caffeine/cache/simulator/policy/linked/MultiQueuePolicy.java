@@ -41,10 +41,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectSortedMap;
  * frequency and be eagerly promoted.
  * <p>
  * This policy is designed for second-level caches where a hit in this cache was a miss at the first
- * level. Thus the first-level cache captures most of the recency information and the second-level
+ * level. Thus, the first-level cache captures most of the recency information and the second-level
  * cache access is dominated by usage frequency.
  * <p>
- * This implementation is based on the pseudo code provided by the authors in their paper
+ * This implementation is based on the pseudocode provided by the authors in their paper
  * <a href="https://www.usenix.org/legacy/event/usenix01/full_papers/zhou/zhou.pdf">The Multi-Queue
  * Replacement Algorithm for Second Level. Buffer Caches</a>.
  *

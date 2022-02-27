@@ -136,7 +136,7 @@ final class FastFlowHeader {
     long p50, p51, p52, p53, p54, p55, p56, p57;
   }
 
-  /** Enforces a memory layout to avoid false sharing by padding the write count. */
+  /** Enforces a memory layout to avoid false sharing by padding the write counter. */
   abstract static class ReadAndWriteCounterRef<E> extends PadWriteCounter<E> {
     static final long WRITE_OFFSET =
         UnsafeAccess.fieldOffset(ReadAndWriteCounterRef.class, "writeCounter");

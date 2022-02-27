@@ -126,8 +126,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * removal followed by its addition. The state of the entry is encoded using the key field to
    * avoid additional memory. An entry is "alive" if it is in both the hash table and the page
    * replacement policy. It is "retired" if it is not in the hash table and is pending removal from
-   * the page replacement policy. Finally an entry transitions to the "dead" state when it is not in
-   * the hash table nor the page replacement policy. Both the retired and dead states are
+   * the page replacement policy. Finally, an entry transitions to the "dead" state when it is not
+   * in the hash table nor the page replacement policy. Both the retired and dead states are
    * represented by a sentinel key that should not be used for map operations.
    *
    * Eviction:
@@ -174,7 +174,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * the penalty of sorting to achieve a similar algorithmic cost.
    *
    * The expiration updates are applied in a best effort fashion. The reordering of variable or
-   * access-order expiration may be discarded by the read buffer if full or contended on. Similarly
+   * access-order expiration may be discarded by the read buffer if full or contended on. Similarly,
    * the reordering of write expiration may be ignored for an entry if the last update was within a
    * short time window in order to avoid overwhelming the write buffer.
    *
@@ -449,7 +449,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  /** Returns if the cache expires entries after an write time threshold. */
+  /** Returns if the cache expires entries after a write time threshold. */
   protected boolean expiresAfterWrite() {
     return false;
   }
@@ -463,7 +463,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  /** Returns if the cache refreshes entries after an write time threshold. */
+  /** Returns if the cache refreshes entries after a write time threshold. */
   protected boolean refreshAfterWrite() {
     return false;
   }
@@ -1049,7 +1049,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       statsCounter().recordEviction(node.getWeight(), actualCause[0]);
 
       // Notify the listener only if the entry was evicted. This must be performed as the last
-      // step during eviction to safe guard against the executor rejecting the notification task.
+      // step during eviction to safeguard against the executor rejecting the notification task.
       notifyRemoval(key, value[0], actualCause[0]);
     } else {
       // Eagerly decrement the size to potentially avoid an additional eviction, rather than wait
@@ -1476,7 +1476,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     // maintenance task is scheduled but not running. That might occur due to all of the executor's
     // threads being busy (perhaps writing into this cache), the write rate greatly exceeds the
     // consuming rate, priority inversion, or if the executor silently discarded the maintenance
-    // task. Unfortunately this cannot resolve when the eviction is blocked waiting on a long
+    // task. Unfortunately this cannot resolve when the eviction is blocked waiting on a long-
     // running computation due to an eviction listener, the victim being computed on by other write,
     // or the victim residing in the same hash bin as a computing entry. In those cases a warning is
     // logged to encourage the application to decouple these computations from the map operations.
@@ -2579,7 +2579,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
-    // A optimistic fast path to avoid unnecessary locking
+    // An optimistic fast path to avoid unnecessary locking
     Object lookupKey = nodeFactory.newLookupKey(key);
     @Nullable Node<K, V> node = data.get(lookupKey);
     long now;

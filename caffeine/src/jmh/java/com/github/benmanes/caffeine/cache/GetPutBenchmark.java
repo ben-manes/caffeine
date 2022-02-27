@@ -82,7 +82,7 @@ public class GetPutBenchmark {
     cache.clear();
     cache.cleanUp();
 
-    // Populate with a realistic access distribution
+    // Populate using a realistic access distribution
     NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextValue().intValue();

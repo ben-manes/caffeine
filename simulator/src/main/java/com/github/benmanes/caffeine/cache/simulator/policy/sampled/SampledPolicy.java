@@ -44,7 +44,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 /**
  * A cache that uses a sampled array of entries to implement simple page replacement algorithms.
  * <p>
- * The sampling approach for an approximate of classical policies is described
+ * The sampling approach for an approximation of classical policies is described
  * <a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.110.8469">Efficient Randomized Web
  * Cache Replacement Schemes Using Samples from Past Eviction Times</a>. The Hyperbolic algorithm is
  * a newer addition to this family and is described in

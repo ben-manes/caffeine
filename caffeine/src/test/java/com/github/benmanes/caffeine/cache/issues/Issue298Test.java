@@ -40,7 +40,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
  * <p>
  * When a future value in an AsyncCache is in-flight, the entry has an infinite expiration time to
  * disable eviction. When it completes, a callback performs a no-op write into the cache to
- * update its metadata (expiration, weight, etc). This may race with a reader who obtains a
+ * update its metadata (expiration, weight, etc.). This may race with a reader who obtains a
  * completed future, reads the current duration as infinite, and tries to set the expiration time
  * accordingly (to indicate no change). If the writer completes before the reader updates, then we
  * encounter an ABA problem where the entry is set to never expire.

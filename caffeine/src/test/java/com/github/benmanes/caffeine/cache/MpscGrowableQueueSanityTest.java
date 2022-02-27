@@ -35,10 +35,10 @@ public final class MpscGrowableQueueSanityTest extends QueueSanityTest {
   @Parameterized.Parameters
   public static List<Object[]> parameters() {
     var list = new ArrayList<Object[]>();
-    // MPSC size 1
+    // MPSC size: 1
     list.add(makeQueue(0, 1, 4, org.jctools.queues.spec.Ordering.FIFO,
         new MpscGrowableArrayQueue<>(2, 4)));
-    // MPSC size SIZE
+    // MPSC size: SIZE
     list.add(makeQueue(0, 1, SIZE, org.jctools.queues.spec.Ordering.FIFO,
         new MpscGrowableArrayQueue<>(8, SIZE)));
     return list;

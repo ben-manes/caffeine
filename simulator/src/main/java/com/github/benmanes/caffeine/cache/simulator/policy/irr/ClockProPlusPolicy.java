@@ -35,7 +35,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * CLOCK-Pro cache replacement with utility-driven adaptation</a>.
  *
  * Implementation here differs from ClockProPolicy only in adjusting coldTarget and tracking for
- * demoted status part. Below is a summarize of coldTarget adjusting differences between ClockPro
+ * demoted status part. Below is a summary of coldTarget adjusting differences between ClockPro
  * and ClockPro+.
  * <pre>
  * {@literal
@@ -268,11 +268,11 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
     checkState(handCold.isResidentCold());
 
     if (handCold.marked) {
-      // If its bit is set and it is in its test period, we turn the cold page into a hot page,
+      // If its bit is set, and it is in its test period, we turn the cold page into a hot page
       // and ask HAND for its actions, because an access during the test period indicates a
-      // competitively small reuse distance. If its bit is set but it is not in its test period,
-      // there are no status change as well as HAND actions. Its reference bit is reset, and we
-      // move it to the list head.
+      // competitively small reuse distance. If its bit is set, but it is not in its test period,
+      // then there is no status changes or HAND actions. Its reference bit is reset, and we move it
+      // to the list head.
       if (handCold.isInTest()) {
         if (canPromote(handCold)) {
           handCold.moveToHead(Status.HOT);
@@ -355,7 +355,7 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
         terminateTestPeriod(handHot.next);
       }
     }
-    // Finally the hand stops at a hot page.
+    // Finally, the hand stops at a hot page.
     nextHandHot();
     return demoted;
   }

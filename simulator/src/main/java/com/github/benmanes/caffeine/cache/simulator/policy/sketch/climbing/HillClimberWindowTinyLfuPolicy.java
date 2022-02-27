@@ -47,7 +47,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * The Window TinyLfu algorithm where the size of the admission window is adjusted using the a hill
+ * The Window TinyLfu algorithm where the size of the admission window is adjusted using a hill
  * climbing algorithm.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -175,7 +175,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  /** Moves the entry to the MRU position, if it falls outside of the fast-path threshold. */
+  /** Moves the entry to the MRU position if it falls outside of the fast-path threshold. */
   private void onProtectedHit(Node node) {
     node.moveToTail(headProtected);
   }

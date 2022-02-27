@@ -36,7 +36,7 @@ import com.jakewharton.fliptables.FlipTable;
 /**
  * A non-JMH benchmark to compare the memory overhead of different cache implementations. Note that
  * the measurements estimate based on the current JVM configuration, e.g. 64-bit with compressed
- * references if the benchmark is executed with a heap under 32GB. This can means that object
+ * references if the benchmark is executed with a heap under 32GB. This can mean that object
  * padding may or may not have a visible effect.
  * <p>
  * This benchmark requires a JavaAgent to evaluate the object sizes and can be executed using

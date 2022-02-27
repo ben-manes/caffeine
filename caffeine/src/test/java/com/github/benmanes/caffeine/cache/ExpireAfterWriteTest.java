@@ -57,7 +57,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
 /**
- * The test cases for caches that support the expire after write (time-to-live) policy.
+ * The test cases for caches that support the expire-after-write (time-to-live) policy.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

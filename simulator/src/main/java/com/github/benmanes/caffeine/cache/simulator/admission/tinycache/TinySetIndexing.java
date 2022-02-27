@@ -17,8 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 
 /**
  * An implementation of TinySet's indexing method. A method to index a succinct hash table that is
- * only 2 bits from theoretical lower bound. This is only the indexing technique and it helps
- * calculate offsets in array using two indexes. chainIndex - (set bit for non empty chain/unset for
+ * only 2 bits from theoretical lower bound. This is only the indexing technique, and it helps
+ * calculate offsets in array using two indexes. chainIndex - (set bit for non-empty chain/unset for
  * empty) isLastIndex (set bit for last in chain/empty bit for not last in chain). Both indexes are
  * assumed to be 64 bits, (longs) for efficiency and simplicity. The technique update the indexes
  * upon addition/removal.

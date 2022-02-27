@@ -120,10 +120,10 @@ public final class Synthetic {
 
   /**
    * Returns a sequence of events resembling a hotspot distribution where x% of operations access y%
-   * of data items. The parameters specify the bounds for the numbers, the percentage of the of the
+   * of data items. The parameters specify the bounds for the numbers, the percentage of the
    * interval which comprises the hot set and the percentage of operations that access the hot set.
    * Numbers of the hot set are always smaller than any number in the cold set. Elements from the
-   * hot set and the cold set are chose using a uniform distribution.
+   * hot set and the cold set are chosen using a uniform distribution.
    *
    * @param lowerBound lower bound of the distribution
    * @param upperBound upper bound of the distribution

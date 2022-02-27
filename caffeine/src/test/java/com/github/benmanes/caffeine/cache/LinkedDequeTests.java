@@ -46,8 +46,8 @@ public final class LinkedDequeTests extends TestCase {
   static final LinkedValue d = new LinkedValue("d");
   static final LinkedValue e = new LinkedValue("e");
 
-  // Due to stateful elements, tests calling resetCollection() for an comparable iterator will
-  // cause unexpected mutations. Instead a different collection type should be used for comparison
+  // Due to stateful elements, tests calling resetCollection() for a comparable iterator will
+  // cause unexpected mutations. Instead, a different collection type should be used for comparison
   static final ThreadLocal<Boolean> useTarget = ThreadLocal.withInitial(() -> false);
 
   public static Test suite() throws Exception {

@@ -100,8 +100,8 @@ public final class ClimberResetCountMin4 extends CountMin4 {
 
   @Override
   public void reportMiss() {
-    // Each time there is a miss, TinyLFU invokes the reportMiss function and we can
-    // make decisions
+    // Each time there is a miss, TinyLFU will invoke the reportMiss function to allow us to make a
+    // decision
     misses++;
 
     if (eventsToCount <= 0) {

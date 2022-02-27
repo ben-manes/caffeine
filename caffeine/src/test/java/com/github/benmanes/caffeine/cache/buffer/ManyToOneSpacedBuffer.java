@@ -117,7 +117,7 @@ final class ManyToOneSpacedHeader {
     long p30, p31, p32, p33, p34, p35, p36, p37;
   }
 
-  /** Enforces a memory layout to avoid false sharing by padding the write count. */
+  /** Enforces a memory layout to avoid false sharing by padding the write counter. */
   abstract static class ReadAndWriteCounterRef<E> extends PadWriteCounter<E> {
     static final long WRITE_OFFSET =
         UnsafeAccess.fieldOffset(ReadAndWriteCounterRef.class, "writeCounter");

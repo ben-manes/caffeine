@@ -54,7 +54,7 @@ final class CacheFactory {
   private CacheFactory() {}
 
   /**
-   * Returns a if the cache definition is found in the external settings file.
+   * Returns if the cache definition is found in the external settings file.
    *
    * @param cacheName the name of the cache
    * @return {@code true} if a definition exists
@@ -239,7 +239,7 @@ final class CacheFactory {
       return config.getMaximumWeight().isPresent();
     }
 
-    /** Configures the write expiration and returns if set. */
+    /** Configures write expiration and returns if set. */
     @SuppressWarnings("PreferJavaTimeOverload")
     private boolean configureExpireAfterWrite() {
       if (config.getExpireAfterWrite().isEmpty()) {
@@ -249,7 +249,7 @@ final class CacheFactory {
       return true;
     }
 
-    /** Configures the access expiration and returns if set. */
+    /** Configures access expiration and returns if set. */
     @SuppressWarnings("PreferJavaTimeOverload")
     private boolean configureExpireAfterAccess() {
       if (config.getExpireAfterAccess().isEmpty()) {

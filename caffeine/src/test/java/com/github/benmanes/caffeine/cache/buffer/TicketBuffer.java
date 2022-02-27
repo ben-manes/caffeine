@@ -26,8 +26,8 @@ import com.github.benmanes.caffeine.cache.ReadBuffer;
  * strict sequence and backing off on contention or when full. It uses a PTL scheme where the empty
  * slot is the next write counter value.
  * <p>
- * The negatives of this algorithm is that it uses a boxed instance of the write index to
- * track if the slot is free. This allows the buffer to be non-blocking, whereas PTL is blocking.
+ * The negatives of this algorithm is that it uses a boxed instance of the write index to track if
+ * the slot is free. This allows the buffer to be non-blocking, whereas PTL is blocking.
  *
  * https://blogs.oracle.com/dave/entry/ptlqueue_a_scalable_bounded_capacity
  *

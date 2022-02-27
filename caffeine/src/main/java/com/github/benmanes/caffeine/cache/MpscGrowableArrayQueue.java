@@ -455,7 +455,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   public final boolean isEmpty() {
     // Order matters!
     // Loading consumer before producer allows for producer increments after consumer index is read.
-    // This ensures this method is conservative in it's estimate. Note that as this is an MPMC there
+    // This ensures this method is conservative in its estimate. Note that as this is an MPMC there
     // is nothing we can do to make this an exact method.
     return (lvConsumerIndex(this) == lvProducerIndex(this));
   }

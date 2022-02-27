@@ -68,10 +68,7 @@ public @interface CacheSpec {
 
   /* --------------- Compute --------------- */
 
-  /**
-   * Indicates whether the test supports a cache allowing for asynchronous computations. This is
-   * for implementation specific tests that may inspect the internal state of a down casted cache.
-   */
+  /** Indicates whether the test supports a cache allowing for asynchronous computations. */
   Compute[] compute() default {
     Compute.ASYNC,
     Compute.SYNC
@@ -363,12 +360,12 @@ public @interface CacheSpec {
     /** Prevents referent from being reclaimed by the garbage collector. */
     STRONG,
 
-    /** Referent reclaimed when no strong or soft references exist. */
+    /** The referent is reclaimed when there are no strong or soft references. */
     WEAK,
 
     /**
-     * Referent reclaimed in an LRU fashion when the VM runs low on memory and no strong
-     * references exist.
+     * The referent is reclaimed in an LRU fashion when the JVM runs low on memory and there are no
+     * strong references.
      */
     SOFT
   }
@@ -527,7 +524,7 @@ public @interface CacheSpec {
         return Map.of();
       }
     },
-    /** A async bulk loader that tries to modify the keys. */
+    /** An async bulk loader that tries to modify the keys. */
     ASYNC_BULK_MODIFY_KEYS {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
@@ -538,7 +535,7 @@ public @interface CacheSpec {
         return CompletableFuture.completedFuture(Map.of());
       }
     },
-    /** A async loader returns a incomplete future. */
+    /** An async loader that returns a incomplete future. */
     ASYNC_INCOMPLETE {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();

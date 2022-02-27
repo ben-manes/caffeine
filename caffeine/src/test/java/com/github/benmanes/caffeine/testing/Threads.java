@@ -44,7 +44,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * Shared utilities for multi-threaded tests.
+ * Shared utilities for multithreaded tests.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

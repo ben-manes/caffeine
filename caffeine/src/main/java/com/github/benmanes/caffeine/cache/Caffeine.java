@@ -63,7 +63,7 @@ import com.google.errorprone.annotations.FormatMethod;
  *   <li>accumulation of cache access statistics
  * </ul>
  * <p>
- * These features are all optional; caches can be created using all or none of them. By default
+ * These features are all optional; caches can be created using all or none of them. By default,
  * cache instances created by {@code Caffeine} will not perform any type of eviction.
  * <p>
  * Usage example:
@@ -820,11 +820,11 @@ public final class Caffeine<K extends Object, V extends Object> {
    * Specifies a listener instance that caches should notify each time an entry is evicted. The
    * cache will invoke this listener during the atomic operation to remove the entry. In the case of
    * expiration or reference collection, the entry may be pending removal and will be discarded as
-   * as part of the routine maintenance described in the class documentation above. For a more
-   * prompt notification on expiration a {@link #scheduler(Scheduler)} may be configured. A
+   * part of the routine maintenance described in the class documentation above. For a more prompt
+   * notification on expiration a {@link #scheduler(Scheduler)} may be configured. A
    * {@link #removalListener(RemovalListener)} may be preferred when the listener should be invoked
    * for any {@linkplain RemovalCause reason}, be performed outside of the atomic operation to
-   * remove the entry, and delegated to the configured {@link #executor(Executor)}.
+   * remove the entry, or be delegated to the configured {@link #executor(Executor)}.
    * <p>
    * <b>Important note:</b> after invoking this method, do not continue to use <i>this</i> cache
    * builder reference; instead use the reference this method <i>returns</i>. At runtime, these
@@ -875,8 +875,8 @@ public final class Caffeine<K extends Object, V extends Object> {
    * {@linkplain RemovalCause reason}. The cache will invoke this listener on the configured
    * {@link #executor(Executor)} after the entry's removal operation has completed. In the case of
    * expiration or reference collection, the entry may be pending removal and will be discarded as
-   * as part of the routine maintenance described in the class documentation above. For a more
-   * prompt notification on expiration a {@link #scheduler(Scheduler)} may be configured. An
+   * part of the routine maintenance described in the class documentation above. For a more prompt
+   * notification on expiration a {@link #scheduler(Scheduler)} may be configured. An
    * {@link #evictionListener(RemovalListener)} may be preferred when the listener should be invoked
    * as part of the atomic operation to remove the entry.
    * <p>

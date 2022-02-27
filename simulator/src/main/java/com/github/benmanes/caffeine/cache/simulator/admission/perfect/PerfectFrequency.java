@@ -24,7 +24,7 @@ import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
 /**
- * A the perfect frequency with aging performed using a periodic reset.
+ * A perfect frequency with aging performed using a periodic reset.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

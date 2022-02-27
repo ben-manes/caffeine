@@ -31,7 +31,7 @@ public interface Membership {
    */
   boolean mightContain(long e);
 
-  /** Removes all of the elements from this collection. */
+  /** Removes the elements from this collection. */
   void clear();
 
   /**

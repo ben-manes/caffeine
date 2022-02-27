@@ -213,7 +213,7 @@ public interface Policy<K extends Object, V extends Object> {
      *
      * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
      *        the limit)
-     * @return a snapshot view of the cache from coldest entry to the hottest
+     * @return a snapshot view of the cache from the coldest entry to the hottest
      */
     Map<K, V> coldest(@NonNegative int limit);
 
@@ -230,7 +230,7 @@ public interface Policy<K extends Object, V extends Object> {
      *
      * @param weightLimit the maximum weight of the returned map (use {@link Long#MAX_VALUE} to
      *        disregard the limit)
-     * @return a snapshot view of the cache from coldest entry to the hottest
+     * @return a snapshot view of the cache from the coldest entry to the hottest
      */
     default Map<K, V> coldestWeighted(@NonNegative long weightLimit) {
       // This method was added & implemented in version 3.0.4
@@ -278,7 +278,7 @@ public interface Policy<K extends Object, V extends Object> {
      *
      * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
      *        the limit)
-     * @return a snapshot view of the cache from hottest entry to the coldest
+     * @return a snapshot view of the cache from the hottest entry to the coldest
      */
     Map<K, V> hottest(@NonNegative int limit);
 
@@ -295,7 +295,7 @@ public interface Policy<K extends Object, V extends Object> {
      *
      * @param weightLimit the maximum weight of the returned map (use {@link Long#MAX_VALUE} to
      *        disregard the limit)
-     * @return a snapshot view of the cache from hottest entry to the coldest
+     * @return a snapshot view of the cache from the hottest entry to the coldest
      */
     default Map<K, V> hottestWeighted(@NonNegative long weightLimit) {
       // This method was added & implemented in version 3.0.4
@@ -429,7 +429,7 @@ public interface Policy<K extends Object, V extends Object> {
      *
      * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
      *        the limit)
-     * @return a snapshot view of the cache from oldest entry to the youngest
+     * @return a snapshot view of the cache from the oldest entry to the youngest
      */
     Map<K, V> oldest(@NonNegative int limit);
 
@@ -472,7 +472,7 @@ public interface Policy<K extends Object, V extends Object> {
      *
      * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
      *        the limit)
-     * @return a snapshot view of the cache from youngest entry to the oldest
+     * @return a snapshot view of the cache from the youngest entry to the oldest
      */
     Map<K, V> youngest(@NonNegative int limit);
 
@@ -670,7 +670,7 @@ public interface Policy<K extends Object, V extends Object> {
      *
      * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
      *        the limit)
-     * @return a snapshot view of the cache from oldest entry to the youngest
+     * @return a snapshot view of the cache from the oldest entry to the youngest
      */
     Map<K, V> oldest(@NonNegative int limit);
 
@@ -713,7 +713,7 @@ public interface Policy<K extends Object, V extends Object> {
      *
      * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
      *        the limit)
-     * @return a snapshot view of the cache from youngest entry to the oldest
+     * @return a snapshot view of the cache from the youngest entry to the oldest
      */
     Map<K, V> youngest(@NonNegative int limit);
 
@@ -832,7 +832,7 @@ public interface Policy<K extends Object, V extends Object> {
   }
 
   /**
-   * A key-value pair that may includes policy metadata for the cached entry. Unless otherwise
+   * A key-value pair that may include policy metadata for the cached entry. Unless otherwise
    * specified, this is a value-based class, it can be assumed that the implementation is an
    * immutable snapshot of the cached data at the time of this entry's creation, and it will not
    * reflect changes afterwards.

@@ -34,7 +34,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * monitored (OUT). The maximum size of the IN and OUT queues must be tuned with the authors
  * recommending 20% and 50% of the maximum size, respectively.
  * <p>
- * This implementation is based on the pseudo code provided by the authors in their paper
+ * This implementation is based on the pseudocode provided by the authors in their paper
  * <a href="http://www.vldb.org/conf/1994/P439.PDF">2Q: A Low Overhead High Performance Buffer
  * Management Replacement Algorithm</a>. For consistency with other policies, this version places
  * the next item to be removed at the head and most recently added at the tail of the queue.

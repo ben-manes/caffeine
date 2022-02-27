@@ -34,7 +34,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * and pages that are re-requested outside the window are of long-term utility. The temporal
  * locality window is an adaptable parameter of the algorithm.
  * <p>
- * This implementation is based on the pseudo code provided by the authors in their paper <a href=
+ * This implementation is based on the pseudocode provided by the authors in their paper<a href=
  * "https://www.usenix.org/legacy/publications/library/proceedings/fast04/tech/full_papers/bansal/bansal.pdf">
  * CAR: Clock with Adaptive Replacement</a> and is further described in their paper,
  * <p>
@@ -209,7 +209,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
   }
 
   private void demote() {
-    // while (the page reference bit of the head page in T2 is 1)) then
+    // while (the page reference bit of the head page in T2 is 1) then
     //   Move the head page in T2 to tail position in T1
     //   Reset the page reference bit
     //   if (|T2|+|B2|+|T1|−nS ≥ c) then

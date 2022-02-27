@@ -22,7 +22,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
  * @author gilga1983@gmail.com (Gil Einziger)
  */
 public final class HashFunctionParser {
-  // currently chain is bounded to be 64.
+  // currently, chain is bounded to be 64.
   private static final int fpSize = 8; // this implementation assumes byte.
   private static final byte fpMask = (byte) 255; // (all bits in byte are 1, (logical value of -1));
   private static final long chainMask = 63L; // (6 first bit are set to 1).

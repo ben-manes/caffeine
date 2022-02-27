@@ -44,8 +44,8 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.typesafe.config.ConfigFactory;
 
 /**
- * A provider that produces a JCache implementation backed by Caffeine. Typically this provider is
- * instantiated using {@link Caching#getCachingProvider()}, which discovers this implementation
+ * A provider that produces a JCache implementation backed by Caffeine. Typically, this provider is
+ * instantiated using {@link Caching#getCachingProvider()} which discovers this implementation
  * through a {@link java.util.ServiceLoader}.
  * <p>
  * This provider is expected to be used for application life cycle events, like initialization. It

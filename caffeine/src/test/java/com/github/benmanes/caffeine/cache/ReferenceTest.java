@@ -888,7 +888,7 @@ public final class ReferenceTest {
     assertThat(map.entrySet().contains(entry)).isFalse();
   }
 
-  /** Ensures that that all the pending work is performed (Guava limits work per cycle). */
+  /** Ensures that all of the pending work is performed (Guava limits work per cycle). */
   private static void awaitFullCleanup(Cache<?, ?> cache) {
     int attempts = 0;
     for (;;) {

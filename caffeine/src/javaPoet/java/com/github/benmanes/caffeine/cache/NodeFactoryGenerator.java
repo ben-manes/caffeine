@@ -97,8 +97,8 @@ import com.squareup.javapoet.TypeSpec;
  * </ul>
  * <p>
  * If the cache has either a maximum size or expires after access, then the entry will also contain
- * prev/next references on a access ordered queue. If the cache expires after write, then the entry
- * will also contain prev/next on a write ordered queue.
+ * prev/next references for an access-ordered queue. If the cache expires after write, then the
+ * entry will also contain prev/next for a write-ordered queue.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

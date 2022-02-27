@@ -93,6 +93,6 @@ public final class Issue193Test {
     assertThat(cache).doesNotContainKey(key); // Value in cache (bad)
 
     // FIXME: Maybe? This is what I wanted to actually test :)
-    assertThat(removed).containsExactly(0L, 1L).inOrder(); // 1L was sent to removalListener anyways
+    assertThat(removed).containsExactly(0L, 1L).inOrder(); // 1L was sent to removalListener anyway
   }
 }

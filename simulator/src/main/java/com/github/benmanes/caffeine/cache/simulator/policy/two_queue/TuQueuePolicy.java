@@ -43,7 +43,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * hand, we have a cache hit on a cold buffer, it turns into a warm buffer and goes to the front of
  * the warm queue. Then as the warm queue lengthens, buffers start slipping from the end onto the
  * cold queue. Both the hot and warm queues are capped at one third of memory each to ensure
- * balance."
+ * balance.
  * <p>
  * Scan resistance is achieved by means of the warm queue. Transient data will pass from hot queue
  * to cold queue and be recycled. Responsiveness is maintained by making the warm queue LRU so that

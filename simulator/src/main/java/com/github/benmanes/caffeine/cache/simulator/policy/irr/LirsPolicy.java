@@ -340,8 +340,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   }
 
   // S holds three types of blocks, LIR blocks, resident HIR blocks, non-resident HIR blocks
-  // Q holds all of the resident HIR blocks
-  // NR holds all of the non-resident HIR blocks
+  // Q holds the resident HIR blocks
+  // NR holds the non-resident HIR blocks
   enum StackType {
     // We store LIR blocks and HIR blocks with their recencies less than the maximum recency of the
     // LIR blocks in a stack called LIRS stack S. S is similar to the LRU stack in operation but has

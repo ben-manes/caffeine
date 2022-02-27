@@ -159,7 +159,7 @@ final class BBHeader {
     byte p232, p233, p234, p235, p236, p237, p238, p239;
   }
 
-  /** Enforces a memory layout to avoid false sharing by padding the write count. */
+  /** Enforces a memory layout to avoid false sharing by padding the write counter. */
   abstract static class ReadAndWriteCounterRef extends PadWriteCounter {
     static final VarHandle READ, WRITE;
 

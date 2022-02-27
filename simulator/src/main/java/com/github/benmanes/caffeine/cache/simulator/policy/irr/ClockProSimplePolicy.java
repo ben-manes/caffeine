@@ -31,7 +31,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 /**
  * The ClockPro algorithm. This algorithm differs from LIRS by replacing the LRU stacks with Clock
  * (Second Chance) policy. This allows cache hits to be performed concurrently at the cost of a
- * global lock on a miss and a worst case O(n) eviction when the queue is scanned.
+ * global lock on a miss and has the worst case time of O(n) on eviction due to queues being
+ * scanned.
  * <p>
  * ClockPro uses three hands that scan the queue. The hot hand points to the largest recency, the
  * cold hand to the cold entry furthest from the hot hand, and the test hand to the last cold entry
@@ -230,11 +231,11 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
     Node victim = headCold.prev;
     victim.unlink();
     if (victim.marked) {
-      // If its bit is set and it is in its test period, we consider this entry as a candidate for
+      // If its bit is set, and it is in its test period, we consider this entry as a candidate for
       // promotion to hot, because an access during the test period indicates a competitively
-      // small reuse distance. We scans hot entries for finding a hot entry with a longer reuse
-      // distance than the candidate cold entry. If we failed to find a hot entry with a longer
-      // reuse distance than the candidate, or the candidate test period is expired, we reset its
+      // small reuse distance. We scan hot entries to find a hot entry with a longer reuse distance
+      // than the candidate cold entry. If we failed to find a hot entry with a longer reuse
+      // distance than the candidate, or the candidate test period is expired, we reset its
       // reference bit and move it to the list head, and grant a new test period by renewing the
       // epoch.
       victim.marked = false;
