@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCES
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WARN_AFTER_LOCK_WAIT_NANOS;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
 import static com.github.benmanes.caffeine.cache.RemovalCause.COLLECTED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
@@ -41,6 +42,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
 
 import java.lang.Thread.State;
 import java.lang.ref.Reference;
@@ -74,6 +76,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
@@ -81,8 +84,11 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
+import com.github.valfirst.slf4jtest.TestLogger;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.GcFinalization;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * The test cases for the implementation details of {@link BoundedLocalCache}.
@@ -1054,6 +1060,52 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(8);
+  }
+
+  @Test(dataProvider = "caches", groups = "slow")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.DISABLED, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
+      compute = Compute.SYNC, loader = Loader.DISABLED, stats = Stats.DISABLED,
+      removalListener = Listener.DEFAULT, evictionListener = Listener.DEFAULT,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  public void put_warnIfEvictionBlocked(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var testLogger = new AtomicReference<TestLogger>();
+    var thread = new AtomicReference<Thread>();
+    var done = new AtomicBoolean();
+    cache.evictionLock.lock();
+    try {
+      ConcurrentTestHarness.execute(() -> {
+        var logger = TestLoggerFactory.getTestLogger(BoundedLocalCache.class);
+        logger.setEnabledLevels(WARN_LEVELS);
+        thread.set(Thread.currentThread());
+        testLogger.set(logger);
+
+        for (int i = 0; true; i++) {
+          if (done.get()) {
+            return;
+          }
+          cache.put(Int.valueOf(i), Int.valueOf(i));
+        }
+      });
+
+      var halfWaitTime = Duration.ofNanos(WARN_AFTER_LOCK_WAIT_NANOS / 2);
+      await().until(cache.evictionLock::hasQueuedThreads);
+      thread.get().interrupt();
+
+      Uninterruptibles.sleepUninterruptibly(halfWaitTime);
+      assertThat(cache.evictionLock.hasQueuedThreads()).isTrue();
+      assertThat(testLogger.get().getAllLoggingEvents()).isEmpty();
+
+      Uninterruptibles.sleepUninterruptibly(halfWaitTime);
+      await().until(() -> !testLogger.get().getAllLoggingEvents().isEmpty());
+
+      assertThat(cache.evictionLock.hasQueuedThreads()).isTrue();
+    } finally {
+      done.set(true);
+      cache.evictionLock.unlock();
+    }
   }
 
   @Test(dataProvider = "caches")

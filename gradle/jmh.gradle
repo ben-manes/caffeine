@@ -1,6 +1,8 @@
 /**
  * Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin
  */
+import org.gradle.plugins.ide.eclipse.model.Library
+
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'io.morethan.jmhreport'
 apply plugin: 'me.champeau.jmh'
@@ -11,6 +13,7 @@ idea.module {
 
 eclipse.classpath.file.whenMerged {
   entries.find { it.path == 'src/jmh/java' }.entryAttributes['test'] = 'true'
+  entries.removeIf { (it instanceof Library) && (it.moduleVersion?.name == 'slf4j-nop') }
 }
 
 configurations {

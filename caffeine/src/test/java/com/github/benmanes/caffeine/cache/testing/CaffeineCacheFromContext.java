@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 
@@ -99,14 +100,14 @@ public final class CaffeineCacheFromContext {
       builder.evictionListener(context.evictionListener());
     }
     if (context.isAsync()) {
-      if (context.loader() == null) {
+      if (context.loader() == Loader.DISABLED) {
         context.asyncCache = builder.buildAsync();
       } else {
         context.asyncCache = builder.buildAsync(
-            context.isAsyncLoading() ? context.loader().async() : context.loader());
+            context.isAsyncLoader() ? context.loader().async() : context.loader());
       }
       context.cache = context.asyncCache.synchronous();
-    } else if (context.loader() == null) {
+    } else if (context.loader() == Loader.DISABLED) {
       context.cache = builder.build();
     } else {
       context.cache = builder.build(context.loader());

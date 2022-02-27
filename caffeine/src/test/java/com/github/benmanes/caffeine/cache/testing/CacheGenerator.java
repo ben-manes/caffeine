@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +88,8 @@ public final class CacheGenerator {
 
   /** Returns the Cartesian set of the possible cache configurations. */
   private Set<List<Object>> combinations() {
-    var asyncLoading = ImmutableSet.of(true, false);
+    var asyncLoader = ImmutableSet.of(true, false);
+    var loaders = ImmutableSet.copyOf(cacheSpec.loader());
     var keys = filterTypes(options.keys(), cacheSpec.keys());
     var values = filterTypes(options.values(), cacheSpec.values());
     var statistics = filterTypes(options.stats(), cacheSpec.stats());
@@ -101,15 +100,17 @@ public final class CacheGenerator {
       values = values.contains(ReferenceType.STRONG)
           ? ImmutableSet.of(ReferenceType.STRONG)
           : ImmutableSet.of();
-      computations = Sets.filter(computations, Compute.ASYNC::equals);
+      computations = Sets.intersection(computations, Set.of(Compute.ASYNC));
     }
     if (!isGuavaCompatible || isAsyncOnly || computations.equals(ImmutableSet.of(Compute.ASYNC))) {
-      implementations = implementations.stream()
-          .filter(implementation -> implementation != Implementation.Guava)
-          .collect(toImmutableSet());
+      implementations = Sets.difference(implementations, Set.of(Implementation.Guava));
     }
     if (computations.equals(ImmutableSet.of(Compute.SYNC))) {
-      asyncLoading = ImmutableSet.of(false);
+      asyncLoader = ImmutableSet.of(false);
+    }
+
+    if (isLoadingOnly) {
+      loaders = Sets.difference(loaders, Set.of(Loader.DISABLED)).immutableCopy();
     }
 
     if (computations.isEmpty() || implementations.isEmpty()
@@ -132,17 +133,16 @@ public final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.removalListener()),
         ImmutableSet.copyOf(cacheSpec.evictionListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
-        ImmutableSet.of(true, isLoadingOnly),
-        ImmutableSet.copyOf(asyncLoading),
+        ImmutableSet.copyOf(asyncLoader),
         ImmutableSet.copyOf(computations),
-        ImmutableSet.copyOf(cacheSpec.loader()),
+        ImmutableSet.copyOf(loaders),
         ImmutableSet.copyOf(implementations));
   }
 
   /** Returns the set of options filtered if a specific type is specified. */
   private static <T> Set<T> filterTypes(Optional<T> type, T[] options) {
     return type.isPresent()
-        ? type.filter(List.of(options)::contains).stream().collect(toImmutableSet())
+        ? Sets.intersection(Set.of(options), Set.of(type.orElseThrow()))
         : ImmutableSet.copyOf(options);
   }
 
@@ -166,7 +166,6 @@ public final class CacheGenerator {
         (Listener) combination.get(index++),
         (Population) combination.get(index++),
         (Boolean) combination.get(index++),
-        (Boolean) combination.get(index++),
         (Compute) combination.get(index++),
         (Loader) combination.get(index++),
         (Implementation) combination.get(index++),
@@ -177,7 +176,7 @@ public final class CacheGenerator {
   private boolean isCompatible(CacheContext context) {
     boolean asyncIncompatible = context.isAsync()
         && (!context.isCaffeine() || !context.isStrongValues());
-    boolean asyncLoaderIncompatible = context.isAsyncLoading()
+    boolean asyncLoaderIncompatible = context.isAsyncLoader()
         && (!context.isAsync() || !context.isLoading());
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
     boolean weigherIncompatible = context.isUnbounded() && context.isWeighted();

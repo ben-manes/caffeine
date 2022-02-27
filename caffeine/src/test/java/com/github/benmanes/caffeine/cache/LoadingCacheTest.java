@@ -710,7 +710,7 @@ public final class LoadingCacheTest {
     LoadingCache<Int, Int> cache = context.isAsync()
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
-    TestLoggerFactory.getAllTestLoggers().values().stream()
+    TestLoggerFactory.getAllTestLoggers().values()
         .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
 
     cache.refresh(context.absentKey());
@@ -734,7 +734,7 @@ public final class LoadingCacheTest {
     LoadingCache<Int, Int> cache = context.isAsync()
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
-    TestLoggerFactory.getAllTestLoggers().values().stream()
+    TestLoggerFactory.getAllTestLoggers().values()
         .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
 
     cache.refresh(context.absentKey());
@@ -749,7 +749,7 @@ public final class LoadingCacheTest {
     LoadingCache<Int, Int> cache = context.isAsync()
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
-    TestLoggerFactory.getAllTestLoggers().values().stream()
+    TestLoggerFactory.getAllTestLoggers().values()
         .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
 
     cache.refresh(context.absentKey());

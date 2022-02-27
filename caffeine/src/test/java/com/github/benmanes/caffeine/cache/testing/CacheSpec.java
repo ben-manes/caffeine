@@ -411,11 +411,18 @@ public @interface CacheSpec {
   /* --------------- CacheLoader --------------- */
 
   Loader[] loader() default {
+    Loader.DISABLED,
     Loader.NEGATIVE,
   };
 
   /** The {@link CacheLoader} for constructing the {@link LoadingCache}. */
   enum Loader implements CacheLoader<Int, Int> {
+    /** A flag indicating that a loader should not be configured. */
+    DISABLED {
+      @Override public Int load(Int key) {
+        throw new AssertionError();
+      }
+    },
     /** A loader that always returns null (no mapping). */
     NULL {
       @Override public Int load(Int key) {

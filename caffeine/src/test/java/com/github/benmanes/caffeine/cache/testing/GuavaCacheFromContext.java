@@ -47,6 +47,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.testing.Int;
@@ -123,7 +124,7 @@ public final class GuavaCacheFromContext {
       builder.removalListener(new GuavaRemovalListener<>(
           translateZeroExpire, context.removalListener()));
     }
-    if (context.loader() == null) {
+    if (context.loader() == Loader.DISABLED) {
       context.cache = new GuavaCache<>(builder.<Int, Int>build(), context);
     } else if (context.loader().isBulk()) {
       var loader = new BulkLoader<Int, Int>(context.loader());

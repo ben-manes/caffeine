@@ -103,7 +103,7 @@ public final class CacheContext {
   final Loader loader;
   final Stats stats;
 
-  final boolean isAsyncLoading;
+  final boolean isAsyncLoader;
 
   CacheBuilder<Object, Object> guava;
   Caffeine<Object, Object> caffeine;
@@ -125,9 +125,8 @@ public final class CacheContext {
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
       Expire refresh, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, CacheScheduler cacheScheduler, Listener removalListenerType,
-      Listener evictionListenerType, Population population, boolean isLoading,
-      boolean isAsyncLoading, Compute compute, Loader loader, Implementation implementation,
-      CacheSpec cacheSpec) {
+      Listener evictionListenerType, Population population, boolean isAsyncLoader, Compute compute,
+      Loader loader, Implementation implementation, CacheSpec cacheSpec) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = requireNonNull(weigher);
@@ -146,8 +145,8 @@ public final class CacheContext {
     this.evictionListenerType = evictionListenerType;
     this.evictionListener = evictionListenerType.create();
     this.population = requireNonNull(population);
-    this.loader = isLoading ? requireNonNull(loader) : null;
-    this.isAsyncLoading = isAsyncLoading;
+    this.loader = requireNonNull(loader);
+    this.isAsyncLoader = isAsyncLoader;
     this.ticker = new SerializableFakeTicker();
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
@@ -345,11 +344,11 @@ public final class CacheContext {
   }
 
   public boolean isLoading() {
-    return (loader != null);
+    return (loader != Loader.DISABLED);
   }
 
-  public boolean isAsyncLoading() {
-    return isAsyncLoading;
+  public boolean isAsyncLoader() {
+    return isAsyncLoader;
   }
 
   public Loader loader() {
@@ -494,7 +493,7 @@ public final class CacheContext {
         .add("valueStrength", valueStrength)
         .add("compute", compute)
         .add("loader", loader)
-        .add("isAsyncLoading", isAsyncLoading)
+        .add("isAsyncLoader", isAsyncLoader)
         .add("cacheExecutor", cacheExecutor)
         .add("cacheScheduler", cacheScheduler)
         .add("removalListener", removalListenerType)

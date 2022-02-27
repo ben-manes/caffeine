@@ -271,7 +271,7 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    TestLoggerFactory.getAllTestLoggers().values().stream()
+    TestLoggerFactory.getAllTestLoggers().values()
         .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
     context.ticker().advance(2, TimeUnit.MINUTES);
 
@@ -299,7 +299,7 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    TestLoggerFactory.getAllTestLoggers().values().stream()
+    TestLoggerFactory.getAllTestLoggers().values()
         .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
     context.ticker().advance(2, TimeUnit.MINUTES);
 
@@ -317,7 +317,7 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    TestLoggerFactory.getAllTestLoggers().values().stream()
+    TestLoggerFactory.getAllTestLoggers().values()
         .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
     context.ticker().advance(2, TimeUnit.MINUTES);
 

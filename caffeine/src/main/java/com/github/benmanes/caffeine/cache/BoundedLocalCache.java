@@ -218,6 +218,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
   /** The maximum duration before an entry expires. */
   static final long MAXIMUM_EXPIRY = (Long.MAX_VALUE >> 1); // 150 years
+  /** The duration to wait on the eviction lock before warning that of a possible misuse. */
+  static final long WARN_AFTER_LOCK_WAIT_NANOS = TimeUnit.SECONDS.toNanos(30);
   /** The handle for the in-flight refresh operations. */
   static final VarHandle REFRESHES;
 
@@ -1469,15 +1471,43 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       scheduleDrainBuffers();
     }
 
-    // The maintenance task may be scheduled but not running. This might occur due to all of the
-    // executor's threads being busy (perhaps writing into this cache), the write rate greatly
-    // exceeds the consuming rate, priority inversion, or if the executor silently discarded the
-    // maintenance task. In these scenarios then the writing threads cannot make progress and
-    // instead writers provide assistance by performing this work directly.
+    // In scenarios where the writing threads cannot make progress then they attempt to provide
+    // assistance by performing the eviction work directly. This can resolve cases where the
+    // maintenance task is scheduled but not running. That might occur due to all of the executor's
+    // threads being busy (perhaps writing into this cache), the write rate greatly exceeds the
+    // consuming rate, priority inversion, or if the executor silently discarded the maintenance
+    // task. Unfortunately this cannot resolve when the eviction is blocked waiting on a long
+    // running computation due to an eviction listener, the victim being computed on by other write,
+    // or the victim residing in the same hash bin as a computing entry. In those cases a warning is
+    // logged to encourage the application to decouple these computations from the map operations.
+    lock();
     try {
-      performCleanUp(task);
+      maintenance(task);
     } catch (RuntimeException e) {
       logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", e);
+    } finally {
+      evictionLock.unlock();
+    }
+  }
+
+  /** Acquires the eviction lock. */
+  void lock() {
+    long remainingNanos = WARN_AFTER_LOCK_WAIT_NANOS;
+    long end = System.nanoTime() + remainingNanos;
+    for (;;) {
+      try {
+        if (evictionLock.tryLock(remainingNanos, TimeUnit.NANOSECONDS)) {
+          return;
+        }
+        logger.log(Level.WARNING, "The cache is experiencing excessive wait times for acquiring "
+            + "the eviction lock. This may indicate that a long-running computation has halted "
+            + "eviction when trying to remove the victim entry. Consider using AsyncCache to "
+            + "decouple the computation from the map operation.", new TimeoutException());
+        evictionLock.lock();
+        return;
+      } catch (InterruptedException e) {
+        remainingNanos = end - System.nanoTime();
+      }
     }
   }
 
