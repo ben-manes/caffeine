@@ -42,7 +42,7 @@ ext {
     fastutil: '8.5.8',
     flipTables: '1.1.0',
     googleJavaFormat: '1.14.0',
-    guava: '31.0.1-jre',
+    guava: '31.1-jre',
     jackrabbit: '1.42.0',
     jamm: '0.3.3',
     javaObjectLayout: '0.16',
@@ -86,7 +86,7 @@ ext {
   ]
   pluginVersions = [
     bnd: '6.2.0',
-    checkstyle: '9.3',
+    checkstyle: '10.0',
     coveralls: '2.12.0',
     errorprone: '2.0.2',
     findsecbugs: '1.11.0',

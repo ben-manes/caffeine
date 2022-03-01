@@ -85,10 +85,11 @@ public class MapSubject extends com.google.common.truth.MapSubject {
    * methods.
    */
   public void isExhaustivelyEmpty() {
-    isEmpty();
-    hasSize(0);
     isEqualTo(Map.of());
-    check("isEmpty()").that(actual).isEmpty();
+    hasSize(0);
+    isEmpty();
+
+    check("isEmpty()").that(actual.isEmpty()).isTrue();
     check("toString()").that(actual.toString()).isEqualTo(Map.of().toString());
     check("hashCode()").that(actual.hashCode()).isEqualTo(Map.of().hashCode());
     check("keySet()").about(collection()).that(actual.keySet()).isExhaustivelyEmpty();

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static com.github.benmanes.caffeine.cache.LocalCacheSubject.syncLocal;
 import static com.github.benmanes.caffeine.cache.ReserializableSubject.syncReserializable;
+import static com.github.benmanes.caffeine.cache.testing.CacheSubject.CleanUpSubject.CLEANUP_FACTORY;
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.truth.Truth.assertAbout;
@@ -140,6 +141,11 @@ public final class CacheSubject extends Subject {
     check("cache").about(syncLocal()).that(actual).isValid();
   }
 
+  /** Propositions for the cache's size after fully cleaned up. */
+  public CleanUpSubject whenCleanedUp() {
+    return check("cleanUp()").about(CLEANUP_FACTORY).that(actual);
+  }
+
   private static boolean tolerantEquals(Object o1, Object o2) {
     if ((o1 instanceof Integer) && (o2 instanceof Long)) {
       return ((Integer) o1).longValue() == ((Long) o2).longValue();
@@ -147,5 +153,36 @@ public final class CacheSubject extends Subject {
       return ((Long) o1).longValue() == ((Integer) o2).longValue();
     }
     return Objects.equals(o1, o2);
+  }
+
+  public static final class CleanUpSubject extends Subject {
+    static final Factory<CleanUpSubject, Cache<?, ?>> CLEANUP_FACTORY = CleanUpSubject::new;
+
+    private final Cache<?, ?> actual;
+
+    private CleanUpSubject(FailureMetadata metadata, Cache<?, ?> cache) {
+      super(metadata, cache.asMap());
+      this.actual = cache;
+    }
+
+    public void isEmpty() {
+      hasSize(0);
+      check("cache").about(cache()).that(actual).isEmpty();
+    }
+
+    public void hasSize(long expectedSize) {
+      // Ensures that all of the pending work is performed (Guava limits work per cycle)
+      for (int i = 0; i < 100; i++) {
+        actual.cleanUp();
+
+        long size = actual.estimatedSize();
+        if (size == expectedSize) {
+          return;
+        } else if (size < expectedSize) {
+          failWithActual("After cleanup expected size to be at least", expectedSize);
+        }
+      }
+      check("cache").about(cache()).that(actual).hasSize(expectedSize);
+    }
   }
 }

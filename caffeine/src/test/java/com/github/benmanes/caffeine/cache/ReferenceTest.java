@@ -16,8 +16,10 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.RemovalCause.COLLECTED;
+import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
@@ -25,6 +27,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -86,13 +89,13 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       evictionListener = Listener.MOCKITO)
-  public void collect_evictionListenerFails(Cache<Int, Int> cache, CacheContext context) {
+  public void collect_evictionListenerFails(CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
 
     doThrow(RuntimeException.class)
         .when(context.evictionListener()).onRemoval(any(), any(), any());
-    awaitFullCleanup(cache);
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
     verify(context.evictionListener(), times((int) context.initialSize()))
         .onRemoval(any(), any(), any());
   }
@@ -124,11 +127,9 @@ public final class ReferenceTest {
     GcFinalization.awaitFullGc();
     assertThat(cache.get(key, k -> context.absentValue())).isEqualTo(context.absentValue());
 
-    awaitFullCleanup(cache);
+    assertThat(cache).whenCleanedUp().hasSize(1);
     long count = context.initialSize() - cache.estimatedSize() + 1;
-    assertThat(count).isGreaterThan(1);
-
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    assertThat(context).notifications().withCause(COLLECTED).hasSize(count).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -154,14 +155,17 @@ public final class ReferenceTest {
     context.clear();
 
     GcFinalization.awaitFullGc();
-    awaitFullCleanup(cache);
-
     assertThat(cache.getAll(keys, keysToLoad -> Maps.asMap(keysToLoad, Int::negate)))
         .containsExactlyEntriesIn(Maps.toMap(keys, Int::negate));
-    long count = context.initialSize() - (context.isStrongValues() ? keys.size() : 0);
+    assertThat(cache).whenCleanedUp().hasSize(keys.size());
 
-    assertThat(cache).hasSize(keys.size());
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize() - keys.size()).exclusively();
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -170,18 +174,20 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void put(Cache<Int, Int> cache, CacheContext context) {
-    cache.put(context.firstKey(), context.absentValue());
-    cache.put(context.absentKey(), context.absentValue());
-    context.clearRemovalNotifications();
-
+    var firstKey = intern(context.firstKey());
     context.clear();
+
     GcFinalization.awaitFullGc();
+    cache.put(firstKey, context.absentValue());
+    assertThat(cache).whenCleanedUp().hasSize(1);
 
-    awaitFullCleanup(cache);
-    assertThat(cache).isEmpty();
-
-    long count = context.initialSize() + 1;
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().hasRemovalCauses(Map.of(
+          COLLECTED, context.initialSize() - 1, REPLACED, 1));
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -193,15 +199,14 @@ public final class ReferenceTest {
   public void putAll(Cache<Int, Int> cache, CacheContext context) {
     var entries = Map.of(context.firstKey(), context.absentValue(),
         context.middleKey(), context.absentValue(), context.absentKey(), context.absentValue());
-    cache.putAll(entries);
     context.clear();
 
     GcFinalization.awaitFullGc();
-    awaitFullCleanup(cache);
-    assertThat(cache).hasSize(3);
+    cache.putAll(entries);
 
-    long count = context.initialSize() - 2;
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    assertThat(context.cache()).whenCleanedUp().hasSize(entries.size());
+    assertThat(context).notifications().withCause(COLLECTED)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -215,15 +220,13 @@ public final class ReferenceTest {
     context.clear();
 
     GcFinalization.awaitFullGc();
-    awaitFullCleanup(cache);
-    assertThat(cache).hasSize(1);
+    assertThat(cache).whenCleanedUp().hasSize(1);
 
     cache.invalidate(key);
-    assertThat(value).isNotNull();
     assertThat(cache).isEmpty();
-
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    assertThat(value).isNotNull();
+    assertThat(context).notifications().hasRemovalCauses(Map.of(
+        COLLECTED, context.initialSize() - 1, EXPLICIT, 1));
   }
 
   @Test(dataProvider = "caches")
@@ -237,12 +240,16 @@ public final class ReferenceTest {
     context.clear();
 
     GcFinalization.awaitFullGc();
-    awaitFullCleanup(cache);
     cache.invalidateAll(keys);
-    assertThat(cache).isEmpty();
+    assertThat(cache).whenCleanedUp().isEmpty();
 
-    long count = context.initialSize() - (context.isWeakKeys() ? keys.size() : 0);
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().hasRemovalCauses(Map.of(
+          COLLECTED, context.initialSize() - keys.size(), EXPLICIT, keys.size()));
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -251,14 +258,19 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidateAll_full(Cache<Int, Int> cache, CacheContext context) {
+    var keys = context.firstMiddleLastKeys();
     context.clear();
+
     GcFinalization.awaitFullGc();
-
-    awaitFullCleanup(cache);
-    assertThat(cache).isEmpty();
-
     cache.invalidateAll();
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(context.initialSize());
+
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().hasRemovalCauses(Map.of(
+          COLLECTED, context.initialSize() - keys.size(), EXPLICIT, keys.size()));
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -266,15 +278,13 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void cleanUp(Cache<Int, Int> cache, CacheContext context) {
+  public void cleanUp(CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
-
-    awaitFullCleanup(cache);
-    assertThat(cache).isEmpty();
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
 
     long count = context.initialSize();
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    assertThat(context).notifications().withCause(COLLECTED).hasSize(count).exclusively();
   }
 
   /* --------------- LoadingCache --------------- */
@@ -290,11 +300,10 @@ public final class ReferenceTest {
     context.clear();
 
     GcFinalization.awaitFullGc();
-    awaitFullCleanup(cache);
+    assertThat(cache).whenCleanedUp().hasSize(1);
     assertThat(cache.get(key)).isEqualTo(value);
-
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    assertThat(context).notifications().withCause(COLLECTED)
+        .hasSize(context.initialSize() - 1).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -308,13 +317,16 @@ public final class ReferenceTest {
     context.clear();
 
     GcFinalization.awaitFullGc();
-    awaitFullCleanup(cache);
-
     assertThat(cache.getAll(keys)).containsExactlyEntriesIn(Maps.toMap(keys, Int::negate));
-    long count = context.initialSize() - (context.isStrongValues() ? keys.size() : 0);
+    assertThat(cache).whenCleanedUp().hasSize(keys.size());
 
-    assertThat(cache).hasSize(keys.size());
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize() - keys.size()).exclusively();
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -328,14 +340,11 @@ public final class ReferenceTest {
     context.clear();
 
     GcFinalization.awaitFullGc();
-    awaitFullCleanup(cache);
+    assertThat(context.cache()).whenCleanedUp().hasSize(1);
     assertThat(cache.refresh(key)).succeedsWith(key);
     assertThat(cache).doesNotContainEntry(key, value);
-    assertThat(cache).hasSize(1);
-
-    long count = context.initialSize() - 1;
-    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(1);
-    assertThat(context).evictionNotifications().withCause(COLLECTED).hasSize(count);
+    assertThat(context).notifications().hasRemovalCauses(Map.of(
+        COLLECTED, context.initialSize() - 1, REPLACED, 1));
   }
 
   /* --------------- AsyncCache --------------- */
@@ -351,12 +360,12 @@ public final class ReferenceTest {
     context.clear();
 
     GcFinalization.awaitFullGc();
-    awaitFullCleanup(cache.synchronous());
+    assertThat(cache.synchronous()).whenCleanedUp().hasSize(1);
     assertThat(cache.synchronous().getIfPresent(key)).isEqualTo(value);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -371,24 +380,23 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getAll_async(AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = Set.of(context.firstKey(), context.lastKey(), context.absentKey());
     context.clear();
+
     GcFinalization.awaitFullGc();
     assertThat(cache.getAll(keys, keysToLoad -> Maps.asMap(keysToLoad, Int::negate)).join())
         .containsExactlyEntriesIn(Maps.asMap(keys, Int::negate));
-
-    long count = context.initialSize() - cache.synchronous().estimatedSize() + 1;
-    assertThat(count).isGreaterThan(keys.size());
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    assertThat(context).notifications().withCause(COLLECTED)
+        .hasSize(context.initialSize() - 2).exclusively();
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED,  removalListener = Listener.CONSUMING)
@@ -399,8 +407,8 @@ public final class ReferenceTest {
     cache.put(key, context.absentValue().asFuture());
 
     assertThat(cache).hasSize(1);
-    long count = context.initialSize();
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    assertThat(context).notifications().withCause(COLLECTED)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   /* --------------- Map --------------- */
@@ -414,9 +422,7 @@ public final class ReferenceTest {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map).isNotEmpty();
-
-    awaitFullCleanup(context.cache());
-    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -428,9 +434,7 @@ public final class ReferenceTest {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map).hasSize(context.initialSize());
-
-    awaitFullCleanup(context.cache());
-    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -469,13 +473,15 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void clear(Map<Int, Int> map, CacheContext context) {
+    var retained = context.firstMiddleLastKeys().stream()
+        .collect(toMap(identity(), key -> context.original().get(key)));
     context.clear();
-    GcFinalization.awaitFullGc();
-    awaitFullCleanup(context.cache());
-    long count = context.initialSize();
 
-    assertThat(map).isExhaustivelyEmpty();
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    GcFinalization.awaitFullGc();
+    map.clear();
+
+    assertThat(context).notifications().hasRemovalCauses(Map.of(
+        COLLECTED, context.initialSize() - retained.size(), EXPLICIT, retained.size()));
   }
 
   @Test(dataProvider = "caches")
@@ -494,13 +500,16 @@ public final class ReferenceTest {
     } else {
       assertThat(value).isNull();
     }
-
-    awaitFullCleanup(context.cache());
+    assertThat(context.cache()).whenCleanedUp().hasSize(1);
     assertThat(map).containsKey(key);
-    assertThat(map).hasSize(1);
 
-    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize() - 1).exclusively();
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -520,12 +529,16 @@ public final class ReferenceTest {
       assertThat(value).isNull();
     }
 
-    awaitFullCleanup(context.cache());
+    assertThat(context.cache()).whenCleanedUp().hasSize(1);
     assertThat(map).containsKey(key);
-    assertThat(map).hasSize(1);
 
-    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().hasRemovalCauses(Map.of(
+          COLLECTED, context.initialSize() - 1, REPLACED, 1));
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -576,12 +589,15 @@ public final class ReferenceTest {
     } else {
       assertThat(value).isNull();
     }
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
 
-    awaitFullCleanup(context.cache());
-    assertThat(map).isExhaustivelyEmpty();
-
-    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().hasRemovalCauses(Map.of(
+          COLLECTED, context.initialSize() - 1, EXPLICIT, 1));
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -596,12 +612,9 @@ public final class ReferenceTest {
 
     GcFinalization.awaitFullGc();
     assertThat(map.remove(key, value)).isTrue();
-
-    awaitFullCleanup(context.cache());
-    assertThat(map).isExhaustivelyEmpty();
-
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
+    assertThat(context).notifications().hasRemovalCauses(Map.of(
+        COLLECTED, context.initialSize() - 1, EXPLICIT, 1));
   }
 
   @Test(dataProvider = "caches")
@@ -615,17 +628,16 @@ public final class ReferenceTest {
 
     GcFinalization.awaitFullGc();
     Int value = map.computeIfAbsent(key, k -> context.absentValue());
+    assertThat(context.cache()).whenCleanedUp().hasSize(1);
     if (context.isStrongValues()) {
       assertThat(value).isNotEqualTo(context.absentValue());
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize() - 1).exclusively();;
     } else {
       assertThat(value).isEqualTo(context.absentValue());
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();;
     }
-
-    awaitFullCleanup(context.cache());
-    assertThat(map).hasSize(1);
-
-    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
   }
 
   @Test(dataProvider = "caches")
@@ -641,19 +653,15 @@ public final class ReferenceTest {
     Int value = map.computeIfPresent(key, (k, v) -> context.absentValue());
     if (context.isStrongValues()) {
       assertThat(value).isEqualTo(context.absentValue());
+      assertThat(context.cache()).whenCleanedUp().hasSize(1);
+      assertThat(context).notifications().hasRemovalCauses(Map.of(
+          COLLECTED, context.initialSize() - 1, REPLACED, 1));
     } else {
       assertThat(value).isNull();
+      assertThat(context.cache()).whenCleanedUp().isEmpty();
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
     }
-
-    awaitFullCleanup(context.cache());
-    if (context.isStrongValues()) {
-      assertThat(map).hasSize(1);
-    } else {
-      assertThat(map).isExhaustivelyEmpty();
-    }
-
-    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
   }
 
   @Test(dataProvider = "caches")
@@ -675,12 +683,15 @@ public final class ReferenceTest {
       return context.absentValue();
     });
     assertThat(value).isEqualTo(context.absentValue());
+    assertThat(context.cache()).whenCleanedUp().hasSize(1);
 
-    awaitFullCleanup(context.cache());
-    assertThat(map).hasSize(1);
-
-    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().hasRemovalCauses(Map.of(
+          COLLECTED, context.initialSize() - 1, REPLACED, 1));
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -700,12 +711,15 @@ public final class ReferenceTest {
       return context.absentValue();
     });
     assertThat(value).isEqualTo(context.absentValue());
+    assertThat(context.cache()).whenCleanedUp().hasSize(1);
 
-    awaitFullCleanup(context.cache());
-    assertThat(map).hasSize(1);
-
-    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(context).notifications().withCause(COLLECTED).hasSize(count);
+    if (context.isStrongValues()) {
+      assertThat(context).notifications().hasRemovalCauses(Map.of(
+          COLLECTED, context.initialSize() - 1, REPLACED, 1));
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .hasSize(context.initialSize()).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -886,20 +900,5 @@ public final class ReferenceTest {
 
     GcFinalization.awaitFullGc();
     assertThat(map.entrySet().contains(entry)).isFalse();
-  }
-
-  /** Ensures that all of the pending work is performed (Guava limits work per cycle). */
-  private static void awaitFullCleanup(Cache<?, ?> cache) {
-    int attempts = 0;
-    for (;;) {
-      long size = cache.estimatedSize();
-      cache.cleanUp();
-      attempts++;
-
-      if (size == cache.estimatedSize()) {
-        break;
-      }
-      assertThat(attempts).isLessThan(100);
-    }
   }
 }

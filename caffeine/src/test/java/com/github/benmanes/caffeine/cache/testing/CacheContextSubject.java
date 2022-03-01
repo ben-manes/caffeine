@@ -22,11 +22,13 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.Sta
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.cache;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableMultiset.toImmutableMultiset;
 import static com.google.common.truth.OptionalLongSubject.optionalLongs;
 import static com.google.common.truth.StreamSubject.streams;
 import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -47,8 +49,10 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableMultiset;
 import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
+import com.google.common.truth.StandardSubjectBuilder;
 import com.google.common.truth.Subject;
 import com.google.errorprone.annotations.CheckReturnValue;
 
@@ -256,11 +260,11 @@ public final class CacheContextSubject extends Subject {
     static final Factory<ListenerSubject, CacheContext> LISTENERS_FACTORY =
         factoryOf(RemovalListenerType.values());
 
-    private final Map<String, RemovalListener<Int, Int>> actual;
+    private final Map<RemovalListenerType, RemovalListener<Int, Int>> actual;
     private final boolean isDirect;
 
     private ListenerSubject(FailureMetadata metadata, CacheContext context,
-        Map<String, RemovalListener<Int, Int>> subject) {
+        Map<RemovalListenerType, RemovalListener<Int, Int>> subject) {
       super(metadata, subject);
       this.actual = subject;
       this.isDirect = (context.executorType() == CacheExecutor.DIRECT);
@@ -271,7 +275,7 @@ public final class CacheContextSubject extends Subject {
       return (metadata, context) -> {
         var subject = Stream.of(removalListenerTypes)
             .filter(listener -> listener.isConsumingListener(context))
-            .collect(toMap(RemovalListenerType::label, listener -> listener.instance(context)));
+            .collect(toMap(identity(), listener -> listener.instance(context)));
         return new ListenerSubject(metadata, context, subject);
       };
     }
@@ -294,6 +298,7 @@ public final class CacheContextSubject extends Subject {
       });
     }
 
+    /** Fails if the notifications do not have the given values. */
     public void containsExactlyValues(Object... values) {
       awaitUntil((type, listener) -> {
         var stream = listener.removed().stream().map(RemovalNotification::getValue);
@@ -301,7 +306,26 @@ public final class CacheContextSubject extends Subject {
       });
     }
 
-    private <T> void awaitUntil(BiConsumer<String, ConsumingRemovalListener<Int, Int>> consumer) {
+    /**
+     * Fails if the number of notifications per removal cause do not have the given sizes. The
+     * expected, explicit removals are ignored when checking the eviction listener's notifications.
+     */
+    public void hasRemovalCauses(Map<RemovalCause, ? extends Number> expectedRemovals) {
+      awaitUntil((type, listener) -> {
+        var consumed = listener.removed().stream()
+            .map(RemovalNotification::getCause)
+            .collect(toImmutableMultiset());
+        var expected = expectedRemovals.entrySet().stream()
+            .filter(entry -> entry.getKey().wasEvicted()
+                || (type == RemovalListenerType.REMOVAL_LISTENER))
+            .collect(toImmutableMultiset(Entry::getKey,
+                entry -> Ints.checkedCast(entry.getValue().longValue())));
+        check(type).that(consumed).isEqualTo(expected);
+      });
+    }
+
+    private <T> void awaitUntil(
+        BiConsumer<RemovalListenerType, ConsumingRemovalListener<Int, Int>> consumer) {
       actual.forEach((type, listener) -> {
         if (!(listener instanceof ConsumingRemovalListener<?, ?>)) {
           return;
@@ -313,6 +337,10 @@ public final class CacheContextSubject extends Subject {
           await().untilAsserted(() -> consumer.accept(type, consuming));
         }
       });
+    }
+
+    private StandardSubjectBuilder check(RemovalListenerType type) {
+      return check(type.toString());
     }
 
     public final class WithCause {
@@ -372,7 +400,11 @@ public final class CacheContextSubject extends Subject {
         /** Fails if there are notifications with a different cause. */
         public void exclusively() {
           awaitUntil((type, listener) -> {
-            check(type).that(listener.removed()).hasSize(Ints.checkedCast(expectedSize));
+            var causes = listener.removed().stream()
+                .map(RemovalNotification::getCause)
+                .collect(toImmutableMultiset());
+            check(type).that(causes).isEqualTo(ImmutableMultiset.builder()
+                .addCopies(cause, Ints.checkedCast(expectedSize)).build());
           });
         }
       }
@@ -386,22 +418,21 @@ public final class CacheContextSubject extends Subject {
 
     private final Function<CacheContext, RemovalListener<Int, Int>> instance;
     private final Function<CacheContext, Listener> listener;
-    private final String label;
 
     RemovalListenerType(Function<CacheContext, Listener> listener,
         Function<CacheContext, RemovalListener<Int, Int>> instance) {
-      this.label = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name());
       this.listener = listener;
       this.instance = instance;
-    }
-    public String label() {
-      return label;
     }
     public boolean isConsumingListener(CacheContext context) {
       return listener.apply(context) == Listener.CONSUMING;
     }
     public RemovalListener<Int, Int> instance(CacheContext context) {
       return instance.apply(context);
+    }
+    @Override
+    public String toString() {
+      return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name());
     }
   }
 }
