@@ -1593,8 +1593,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /**
    * Performs the pending maintenance work and sets the state flags during processing to avoid
-   * excess scheduling attempts. The read buffer, write buffer, and reference queues are
-   * drained, followed by expiration, and size-based eviction.
+   * excess scheduling attempts. The read buffer, write buffer, and reference queues are drained,
+   * followed by expiration, and size-based eviction.
    *
    * @param task an additional pending task to run, or {@code null} if not present
    */

@@ -1,10 +1,9 @@
 name: Qodana
+permissions: read-all
 on: [ push, pull_request ]
-permissions:
-  actions: read
-  contents: read
-  pull-requests: read
-  security-events: write
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   ORG_GRADLE_PROJECT_checksumFailOn: never
@@ -15,6 +14,10 @@ env:
 jobs:
   qodana:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v3
       - name: Set up JDK ${{ env.JAVA_VERSION }}

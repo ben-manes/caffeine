@@ -4,6 +4,7 @@ apply plugin: 'io.github.gradle-nexus.publish-plugin'
 apply plugin: 'io.snyk.gradle.plugin.snykplugin'
 apply plugin: 'org.kordamp.gradle.source-stats'
 apply plugin: 'com.github.ben-manes.versions'
+apply plugin: 'org.owasp.dependencycheck'
 
 apply from: "${rootDir}/gradle/coveralls.gradle"
 
@@ -97,6 +98,11 @@ nexusPublishing {
     }
   }
 }
+
+dependencyCheck {
+  formats = ['html', 'sarif']
+}
+dependencyCheckAggregate.dependsOn(subprojects*.tasks.jar)
 
 snyk {
   api = System.env.SNYK_TOKEN

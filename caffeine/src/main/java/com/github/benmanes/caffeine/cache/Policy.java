@@ -315,7 +315,7 @@ public interface Policy<K extends Object, V extends Object> {
      * }</pre>
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
-     * computation should be short, simple. While the computation is in progress further eviction
+     * computation should be short and simple. While the computation is in progress further eviction
      * maintenance will be halted.
      *
      * @param <T> the type of the result of the mappingFunction

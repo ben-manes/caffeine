@@ -1,22 +1,21 @@
 name: Semgrep
+permissions: read-all
 on:
   pull_request: {}
   push:
-    branches:
-      - main
-      - master
-      - v2.dev
-      - v3.dev
-permissions:
-  actions: read
-  contents: read
-  pull-requests: read
-  security-events: write
+    branches: [master, v2.dev, v3.dev]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   semgrep:
     name: Scan
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     if: (github.actor != 'dependabot[bot]')
     steps:
       - uses: actions/checkout@v3

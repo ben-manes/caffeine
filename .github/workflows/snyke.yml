@@ -1,6 +1,12 @@
 name: snyke
-on: [ push, pull_request ]
+on:
+  push:
+    branches: [ master, v2.dev, v2.dev ]
 permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   ORG_GRADLE_PROJECT_checksumFailOn: never

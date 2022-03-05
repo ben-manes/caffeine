@@ -27,7 +27,7 @@ ext {
   versions = [
     akka: '2.6.18',
     cache2k: '2.6.1.Final',
-    checkerFramework: '3.21.2',
+    checkerFramework: '3.21.3',
     coherence: '20.06',
     commonsCompress: '1.21',
     commonsLang3: '3.12.0',
@@ -35,7 +35,7 @@ ext {
     commonsIo: '2.11.0',
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.2',
-    ehcache3: '3.10.0-alpha0',
+    ehcache3: '3.10.0-alpha1',
     errorprone: '2.11.0',
     expiringMap: '0.5.10',
     fastfilter: '1.0.2',
@@ -65,7 +65,7 @@ ext {
     zstd: '1.5.2-2',
   ]
   testVersions = [
-    awaitility: '4.1.1',
+    awaitility: '4.2.0',
     commonsCollectionsTests: '4.4',
     eclipseCollections: '11.0.0',
     guice: '5.1.0',
@@ -88,6 +88,7 @@ ext {
     bnd: '6.2.0',
     checkstyle: '10.0',
     coveralls: '2.12.0',
+    dependencyCheck: '7.0.0',
     errorprone: '2.0.2',
     findsecbugs: '1.11.0',
     jacoco: '0.8.7',
@@ -206,6 +207,7 @@ ext {
       transitive = false
     },
     coveralls: "gradle.plugin.org.kt3k.gradle.plugin:coveralls-gradle-plugin:${pluginVersions.coveralls}",
+    dependencyCheck: "org.owasp:dependency-check-gradle:${pluginVersions.dependencyCheck}",
     errorprone: "net.ltgt.gradle:gradle-errorprone-plugin:${pluginVersions.errorprone}",
     findsecbugs: "com.h3xstream.findsecbugs:findsecbugs-plugin:${pluginVersions.findsecbugs}",
     jmh: [
