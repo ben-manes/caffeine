@@ -579,8 +579,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void removeConditionally_presentKeyAndValue(Map<Int, Int> map,
-      CacheContext context) {
+  public void removeConditionally_presentKeyAndValue(Map<Int, Int> map, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
       assertThat(map.remove(key, value)).isTrue();
@@ -1157,8 +1156,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DEFAULT, Listener.REJECTING})
-  public void computeIfPresent_async_null(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void computeIfPresent_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     Int newValue = context.absentValue();
     var future = new CompletableFuture<Int>();

@@ -1,9 +1,6 @@
 name: lincheck
 permissions: read-all
 on: [ push, pull_request ]
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 env:
   ORG_GRADLE_PROJECT_checksumFailOn: never

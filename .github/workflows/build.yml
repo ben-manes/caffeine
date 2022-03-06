@@ -1,9 +1,6 @@
 name: build
 permissions: read-all
 on: [ push, pull_request ]
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 env:
   ORG_GRADLE_PROJECT_checksumFailOn: never
@@ -31,6 +28,12 @@ jobs:
       - uses: gradle/gradle-build-action@v2
       - name: Run tests
         run: ./.github/scripts/test.sh
+      - uses: actions/upload-artifact@v3
+        if: (matrix.java == env.MAX_JVM) && always()
+        with:
+          retention-days: 1
+          name: test-results
+          path: '**/results/*.xml'
       - name: Publish Coverage
         if: >
           matrix.java == env.MIN_JVM
@@ -61,3 +64,13 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
         run: ./gradlew publishToSonatype
+
+  event_file:
+    name: "Event File"
+    runs-on: ubuntu-latest
+    steps:
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      with:
+        name: Event File
+        path: ${{ github.event_path }}

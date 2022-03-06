@@ -4,9 +4,6 @@ on:
   pull_request: {}
   push:
     branches: [master, v2.dev, v3.dev]
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   semgrep:
