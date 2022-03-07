@@ -26,14 +26,12 @@ jobs:
           gh api $url > "$name.zip"
           unzip -d "$name" "$name.zip"
         done
-    - name: Truncate test results
-      run: find . -type f -name '*.xml' -exec sh -c 'grep testsuite {} > {}.out && mv {}.out {}' \;
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
       with:
         commit: ${{ github.event.workflow_run.head_sha }}
         event_name: ${{ github.event.workflow_run.event }}
         event_file: artifacts/Event File/event.json
-        check_run_annotations: none
         comment_mode: off
+        ignore_runs: true
         files: '**/*.xml'
