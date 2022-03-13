@@ -335,6 +335,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void ageOf_absent(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    assertThat(expireAfterAccess.ageOf(context.absentKey())).isEmpty();
     assertThat(expireAfterAccess.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 

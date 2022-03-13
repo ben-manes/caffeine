@@ -93,6 +93,7 @@ jobs:
       image: ubuntu-2004:202101-01
     environment:
       JAVA_VERSION: << pipeline.parameters.java_version >>
+      TERM: dumb
     steps:
       - run_tests:
           cache_key: strong_keys
@@ -115,6 +116,7 @@ jobs:
       image: ubuntu-2004:202101-01
     environment:
       JAVA_VERSION: << pipeline.parameters.java_version >>
+      TERM: dumb
     steps:
       - run_tests:
           cache_key: weak_keys
@@ -137,6 +139,7 @@ jobs:
       image: ubuntu-2004:202101-01
     environment:
       JAVA_VERSION: << pipeline.parameters.java_version >>
+      TERM: dumb
     steps:
       - run_tests:
           cache_key: isolated

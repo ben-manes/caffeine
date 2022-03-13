@@ -1,28 +1,6 @@
-// See https://github.com/vlsi/vlsi-release-plugins
-buildscript {
-  dependencies {
-    classpath('com.github.vlsi.gradle:checksum-dependency-plugin:1.78') {
-      // Gradle ships kotlin-stdlib which is good enough
-      exclude(group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib')
-    }
-    classpath 'org.bouncycastle:bcprov-jdk15on:1.69'
-    classpath 'org.bouncycastle:bcpg-jdk15on:1.69'
-  }
-  repositories {
-    gradlePluginPortal()
-  }
-}
-
 plugins {
   id 'com.gradle.enterprise' version '3.7.1'
 }
-
-rootProject.name = 'caffeine'
-
-include 'caffeine'
-include 'guava'
-include 'jcache'
-include 'simulator'
 
 gradleEnterprise.buildScan {
   if (System.env.'CI') {
@@ -34,41 +12,13 @@ gradleEnterprise.buildScan {
   termsOfServiceUrl = 'https://gradle.com/terms-of-service'
 }
 
-// Note: we need to verify the checksum for checksum-dependency-plugin itself
-def expectedSha512 = [
-  '5EC9186DAA4F484B8BD4616E897912DD481CEFD34CA3B2B789824A61F46283B04CF98BEC7A16FB11354175651F5584640E249BFF915A61DE4C43008A98937FBD':
-    'gradle-enterprise-gradle-plugin-3.7.1.jar',
-  '9E843A1C24CEDFB3BF26810E524AD669BCFB287F4B673F6DFB488679616936FFC8AB8F5A127BCD932108B8C0A6A5B9F61F701BB45F76F57332D4BCC1550416D2':
-    'bcpg-jdk15on-1.69.jar',
-  '9C9E9DC57E55762AFE1E7C72290FF8016E42AA368C735429A974AB519A6B22859CE371006764326C9672DD37A86F3755DDCFD703C23FCE3631D28779DE172D48':
-    'bcprov-jdk15on-1.69.jar',
-  '17DAAF511BE98F99007D7C6B3762C9F73ADD99EAB1D222985018B0258EFBE12841BBFB8F213A78AA5300F7A3618ACF252F2EEAD196DF3F8115B9F5ED888FE827':
-    'okhttp-4.1.0.jar',
-  '93E7A41BE44CC17FB500EA5CD84D515204C180AEC934491D11FC6A71DAEA761FB0EECEF865D6FD5C3D88AAF55DCE3C2C424BE5BA5D43BEBF48D05F1FA63FA8A7':
-    'okio-2.2.2.jar',
-  'C297874DB24FADAACD097C4BF3BC2E4A1F684D04EAD286B6FED9919C563AB9BC5BF86B679156D72B700C2BEC429633291DFF680253088151D702CD6B4DD3A4EE':
-    'checksum-dependency-plugin-1.78.jar',
-]
-
-def sha512(File file) {
-  def md = java.security.MessageDigest.getInstance('SHA-512')
-  file.eachByte(8192) { buffer, length ->
-     md.update(buffer, 0, length)
-  }
-  new BigInteger(1, md.digest()).toString(16).toUpperCase()
+dependencyResolutionManagement.repositories {
+  mavenCentral()
 }
 
-def violations =
-  buildscript.configurations.classpath
-    .resolve()
-    .sort { it.name }
-    .collectEntries { [(it): sha512(it)] }
-    .findAll { !expectedSha512.containsKey(it.value) }
-    .collect { file, sha512 ->  "SHA-512(${file.name}) = $sha512 ($file)" }
-    .join('\n  ')
+rootProject.name = 'caffeine'
 
-if (!violations.isBlank()) {
-  throw new GradleException("Buildscript classpath has non-whitelisted files:\n  $violations")
-}
-
-apply plugin: 'com.github.vlsi.checksum-dependency'
+include 'caffeine'
+include 'guava'
+include 'jcache'
+include 'simulator'

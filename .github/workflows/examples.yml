@@ -2,11 +2,6 @@ name: examples
 permissions: read-all
 on: [ push, pull_request ]
 
-env:
-  ORG_GRADLE_PROJECT_checksumFailOn: never
-  ORG_GRADLE_PROJECT_checksumIgnore: false
-  ORG_GRADLE_PROJECT_checksumPrint: true
-
 jobs:
   examples:
     runs-on: ubuntu-latest

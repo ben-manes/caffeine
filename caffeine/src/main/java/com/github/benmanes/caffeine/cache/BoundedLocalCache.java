@@ -390,7 +390,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /* --------------- Eviction Listener Support --------------- */
 
-  private void notifyEviction(@Nullable K key, @Nullable V value, RemovalCause cause) {
+  void notifyEviction(@Nullable K key, @Nullable V value, RemovalCause cause) {
     if (evictionListener == null) {
       return;
     }
@@ -914,7 +914,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /** Returns the duration until the next item expires, or {@link Long.MAX_VALUE} if none. */
   @GuardedBy("evictionLock")
-  private long getExpirationDelay(long now) {
+  long getExpirationDelay(long now) {
     long delay = Long.MAX_VALUE;
     if (expiresAfterAccess()) {
       Node<K, V> node = accessOrderWindowDeque().peekFirst();

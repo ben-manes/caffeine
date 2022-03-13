@@ -22,6 +22,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.Immutable;
 
 /**
@@ -295,6 +296,7 @@ public final class CacheStats {
    * @param other the statistics to subtract with
    * @return the difference between this instance and {@code other}
    */
+  @CheckReturnValue
   public CacheStats minus(CacheStats other) {
     return CacheStats.of(
         Math.max(0L, saturatedSubtract(hitCount, other.hitCount)),
@@ -317,6 +319,7 @@ public final class CacheStats {
    * @param other the statistics to add with
    * @return the sum of the statistics
    */
+  @CheckReturnValue
   public CacheStats plus(CacheStats other) {
     return CacheStats.of(
         saturatedAdd(hitCount, other.hitCount),

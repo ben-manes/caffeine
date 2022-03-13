@@ -25,10 +25,6 @@ allprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply from: "${rootDir}/gradle/eclipse.gradle"
 
-  repositories {
-    mavenCentral()
-  }
-
   group = 'com.github.ben-manes.caffeine'
   version.with {
     major = 3 // incompatible API changes

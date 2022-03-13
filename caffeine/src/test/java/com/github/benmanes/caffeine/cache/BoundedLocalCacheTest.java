@@ -86,7 +86,9 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLogger;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Range;
 import com.google.common.testing.GcFinalization;
 import com.google.common.util.concurrent.Uninterruptibles;
 
@@ -1155,6 +1157,139 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.pacer().nextFireTime).isEqualTo(0);
     assertThat(cache.pacer().future).isNull();
   }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
+      maximumSize = {Maximum.DISABLED, Maximum.FULL}, weigher = CacheWeigher.DEFAULT)
+  public void expirationDelay_window(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    int maximum = cache.evicts() ? (int) context.maximumSize() : 100;
+    long stepSize = context.expireAfterAccess().timeNanos() / (2 * maximum);
+    for (int i = 0; i < maximum; i++) {
+      var key = CacheContext.intern(Int.valueOf(i));
+      cache.put(key, key);
+      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    }
+
+    if (cache.evicts()) {
+      for (var node : List.copyOf(cache.accessOrderProbationDeque())) {
+        node.setAccessTime(context.ticker().read());
+      }
+      for (var node : List.copyOf(cache.accessOrderProtectedDeque())) {
+        node.setAccessTime(context.ticker().read());
+      }
+      for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
+        cache.get(node.getKey());
+      }
+      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+      cache.cleanUp();
+    }
+
+    var expectedDelay = context.expireAfterAccess().timeNanos()
+        - (context.ticker().read() - cache.accessOrderWindowDeque().getFirst().getAccessTime());
+    assertThat(cache.getExpirationDelay(context.ticker().read())).isEqualTo(expectedDelay);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+  public void expirationDelay_probation(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
+    for (int i = 0; i < (int) context.maximumSize(); i++) {
+      var key = CacheContext.intern(Int.valueOf(i));
+      cache.put(key, key);
+      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    }
+
+    for (var node : List.copyOf(cache.accessOrderWindowDeque())) {
+      node.setAccessTime(context.ticker().read());
+    }
+    for (var node : List.copyOf(cache.accessOrderProtectedDeque())) {
+      node.setAccessTime(context.ticker().read());
+    }
+    for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
+      cache.get(node.getKey());
+    }
+    context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    cache.cleanUp();
+
+    var expectedDelay = context.expireAfterAccess().timeNanos()
+        - (context.ticker().read() - cache.accessOrderProbationDeque().getFirst().getAccessTime());
+    assertThat(cache.getExpirationDelay(context.ticker().read())).isEqualTo(expectedDelay);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+  public void expirationDelay_protected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
+    for (int i = 0; i < (int) context.maximumSize(); i++) {
+      var key = CacheContext.intern(Int.valueOf(i));
+      cache.put(key, key);
+      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    }
+
+    for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
+      cache.get(node.getKey());
+    }
+    context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    cache.cleanUp();
+
+
+    for (var node : List.copyOf(cache.accessOrderWindowDeque())) {
+      node.setAccessTime(context.ticker().read());
+    }
+    for (var node : List.copyOf(cache.accessOrderProbationDeque())) {
+      node.setAccessTime(context.ticker().read());
+    }
+
+    var expectedDelay = context.expireAfterAccess().timeNanos()
+        - (context.ticker().read() - cache.accessOrderProtectedDeque().getFirst().getAccessTime());
+    assertThat(cache.getExpirationDelay(context.ticker().read())).isEqualTo(expectedDelay);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+  public void expirationDelay_writeOrder(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    long stepSize = context.expireAfterWrite().timeNanos() / (2 * context.maximumSize());
+    for (int i = 0; i < (int) context.maximumSize(); i++) {
+      var key = CacheContext.intern(Int.valueOf(i));
+      cache.put(key, key);
+      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    }
+    for (var key : cache.keySet()) {
+      cache.get(key);
+    }
+    cache.cleanUp();
+
+    var expectedDelay = context.expireAfterWrite().timeNanos()
+        - (context.ticker().read() - cache.writeOrderDeque().getFirst().getWriteTime());
+    assertThat(cache.getExpirationDelay(context.ticker().read())).isEqualTo(expectedDelay);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, maximumSize = {Maximum.DISABLED, Maximum.FULL},
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void expirationDelay_varTime(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    long startTime = context.ticker().read();
+    int maximum = cache.evicts() ? (int) context.maximumSize() : 100;
+    long stepSize = context.expiryTime().timeNanos() / (2 * maximum);
+    for (int i = 0; i < maximum; i++) {
+      var key = CacheContext.intern(Int.valueOf(i));
+      cache.put(key, key);
+      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    }
+    for (var key : cache.keySet()) {
+      cache.get(key);
+    }
+    cache.cleanUp();
+
+    var expectedDelay = context.expiryTime().timeNanos() - (context.ticker().read() - startTime);
+    assertThat(cache.getExpirationDelay(context.ticker().read())).isIn(
+        Range.closed(expectedDelay - TimerWheel.SPANS[0], expectedDelay));
+  }
+
+  /* --------------- Refresh --------------- */
 
   @Test(dataProvider = "caches", groups = "isolated")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,

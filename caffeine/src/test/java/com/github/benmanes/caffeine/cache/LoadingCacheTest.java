@@ -143,9 +143,7 @@ public final class LoadingCacheTest {
     assertThat(context).stats().hits(0).misses(0);
   }
 
-  // TODO(ben): Update for Guava's fix
-  // https://github.com/google/guava/issues/5810
-  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.BULK_MODIFY_KEYS)
+  @CacheSpec(loader = Loader.BULK_MODIFY_KEYS)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_keys(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(context.absentKeys());

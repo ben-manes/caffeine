@@ -733,6 +733,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
   public void ageOf_absent(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+    assertThat(refreshAfterWrite.ageOf(context.absentKey())).isEmpty();
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 

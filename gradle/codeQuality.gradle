@@ -31,6 +31,8 @@ dependencies {
 tasks.register('downloadCaffeineLocal') {
   def local = file("${buildDir}/libs/caffeine-local.jar")
   outputs.upToDateWhen { local.exists() }
+  outputs.cacheIf { true }
+  outputs.file local
 
   doFirst {
     def version = '3.0.5'
