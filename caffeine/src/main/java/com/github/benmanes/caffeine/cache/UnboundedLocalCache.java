@@ -130,6 +130,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  public @Nullable V getIfPresentQuietly(Object key) {
+    return data.get(key);
+  }
+
+  @Override
   public @Nullable V getIfPresentQuietly(K key, long[/* 1 */] writeTime) {
     return data.get(key);
   }
@@ -535,7 +540,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public boolean equals(Object o) {
-    return data.equals(o);
+    return (o == this) || data.equals(o);
   }
 
   @Override
@@ -545,7 +550,16 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public String toString() {
-    return data.toString();
+    var result = new StringBuilder().append('{');
+    data.forEach((key, value) -> {
+      if (result.length() != 1) {
+        result.append(',').append(' ');
+      }
+      result.append((key == this) ? "(this Map)" : key);
+      result.append('=');
+      result.append((value == this) ? "(this Map)" : value);
+    });
+    return result.append('}').toString();
   }
 
   @Override
@@ -977,7 +991,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public CacheLoader<? super K, V> cacheLoader() {
+    public AsyncCacheLoader<? super K, V> cacheLoader() {
       return cacheLoader;
     }
 

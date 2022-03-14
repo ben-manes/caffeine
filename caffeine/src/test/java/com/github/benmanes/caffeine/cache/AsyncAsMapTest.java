@@ -58,6 +58,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Maps;
 
 /**
  * The test cases for the {@link AsyncCache#asMap()} view and its serializability. These tests do
@@ -1304,6 +1306,16 @@ public final class AsyncAsMapTest {
     var map = Map.copyOf(cache.asMap());
     assertThat(cache.asMap().equals(map)).isTrue();
     assertThat(map.equals(cache.asMap())).isTrue();
+
+    var absent = Maps.asMap(context.absentKeys(), CompletableFuture::completedFuture);
+    assertThat(cache.asMap().equals(absent)).isFalse();
+    assertThat(absent.equals(cache.asMap())).isFalse();
+
+    if (!cache.asMap().isEmpty()) {
+      var other = Maps.asMap(cache.asMap().keySet(), CompletableFuture::completedFuture);
+      assertThat(cache.asMap().equals(other)).isFalse();
+      assertThat(other.equals(cache.asMap())).isFalse();
+    }
   }
 
   @CheckNoStats
@@ -1354,12 +1366,13 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void toString(AsyncCache<Int, Int> cache, CacheContext context) {
-    String toString = cache.asMap().toString();
-    if (!context.original().toString().equals(toString)) {
-      cache.asMap().forEach((key, value) -> {
-        assertThat(toString).contains(key + "=" + value);
-      });
-    }
+    assertThat(parseToString(cache.asMap()))
+        .containsExactlyEntriesIn(parseToString(Map.copyOf(cache.asMap())));
+  }
+
+  private static Map<String, String> parseToString(Map<Int, CompletableFuture<Int>> map) {
+    return Splitter.on(',').trimResults().omitEmptyStrings().withKeyValueSeparator("=")
+        .split(map.toString().replaceAll("\\{|\\}", ""));
   }
 
   /* ---------------- Key Set -------------- */
@@ -1367,14 +1380,14 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void keySetToArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_toArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().keySet().toArray((Int[]) null);
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void keySetToArray(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
     var ints = cache.asMap().keySet().toArray(new Int[0]);
     assertThat(ints).asList().containsExactlyElementsIn(context.original().keySet());
 
@@ -1536,14 +1549,14 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void valuesToArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void values_toArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().values().toArray((CompletableFuture<Int>[]) null);
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void valuesToArray(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void values_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
     var futures = cache.asMap().values().toArray(new CompletableFuture<?>[0]);
     var values1 = Stream.of(futures).map(CompletableFuture::join).collect(toList());
     assertThat(values1).containsExactlyElementsIn(context.original().values());
@@ -1733,14 +1746,14 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void entrySetToArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySet_toArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().entrySet().toArray((Map.Entry<?, ?>[]) null);
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void entriesToArray(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySet_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
     @SuppressWarnings("unchecked")
     var entries = (Map.Entry<Int, CompletableFuture<Int>>[])
         cache.asMap().entrySet().toArray(new Map.Entry<?, ?>[0]);

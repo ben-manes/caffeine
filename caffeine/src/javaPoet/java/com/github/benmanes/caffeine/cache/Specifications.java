@@ -76,10 +76,10 @@ public final class Specifications {
       ClassName.get(PACKAGE_NAME, "BoundedLocalCache"), kTypeVar, vTypeVar);
   public static final TypeName NODE = ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar);
 
-  public static final ParameterizedTypeName CACHE_LOADER = ParameterizedTypeName.get(
-      ClassName.get(PACKAGE_NAME, "CacheLoader"), TypeVariableName.get("? super K"), vTypeVar);
-  public static final ParameterSpec CACHE_LOADER_PARAM =
-      ParameterSpec.builder(CACHE_LOADER, "cacheLoader").build();
+  public static final ParameterizedTypeName ASYNC_CACHE_LOADER = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "AsyncCacheLoader"), TypeVariableName.get("? super K"), vTypeVar);
+  public static final ParameterSpec ASYNC_CACHE_LOADER_PARAM =
+      ParameterSpec.builder(ASYNC_CACHE_LOADER, "cacheLoader").build();
 
   public static final TypeName REMOVAL_LISTENER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "RemovalListener"), kTypeVar, vTypeVar);

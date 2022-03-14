@@ -56,6 +56,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
 import com.google.common.testing.GcFinalization;
 
@@ -829,7 +830,7 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void keySetToArray(Map<Int, Int> map, CacheContext context) {
+  public void keySet_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.keySet().toArray()).isEmpty();
@@ -850,7 +851,7 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void valuesToArray(Map<Int, Int> map, CacheContext context) {
+  public void values_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.values().toArray()).isEmpty();
@@ -872,7 +873,7 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void entrySetToArray(Map<Int, Int> map, CacheContext context) {
+  public void entrySet_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.entrySet().toArray()).isEmpty();
@@ -900,5 +901,70 @@ public final class ReferenceTest {
 
     GcFinalization.awaitFullGc();
     assertThat(map.entrySet().contains(entry)).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void entrySet_equals(Map<Int, Int> map, CacheContext context) {
+    var expected = context.absent();
+    map.putAll(expected);
+    context.clear();
+
+    GcFinalization.awaitFullGc();
+    assertThat(map.entrySet().equals(expected.entrySet())).isFalse();
+    assertThat(expected.entrySet().equals(map.entrySet())).isFalse();
+
+    assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
+    assertThat(map.entrySet().equals(expected.entrySet())).isTrue();
+    assertThat(expected.entrySet().equals(map.entrySet())).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void equals(Map<Int, Int> map, CacheContext context) {
+    var expected = context.absent();
+    map.putAll(expected);
+    context.clear();
+
+    GcFinalization.awaitFullGc();
+    assertThat(map.equals(expected)).isFalse();
+    assertThat(expected.equals(map)).isFalse();
+
+    assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
+    assertThat(map.equals(expected)).isTrue();
+    assertThat(expected.equals(map)).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void hashCode(Map<Int, Int> map, CacheContext context) {
+    var expected = context.absent();
+    map.putAll(expected);
+    context.clear();
+
+    GcFinalization.awaitFullGc();
+    assertThat(map.hashCode()).isEqualTo(expected.hashCode());
+
+    assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
+    assertThat(map.hashCode()).isEqualTo(expected.hashCode());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void toString(Map<Int, Int> map, CacheContext context) {
+    var expected = context.absent();
+    map.putAll(expected);
+    context.clear();
+
+    GcFinalization.awaitFullGc();
+    assertThat(parseToString(map)).containsExactlyEntriesIn(parseToString(expected));
+
+    assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
+    assertThat(parseToString(map)).containsExactlyEntriesIn(parseToString(expected));
+  }
+
+  private static Map<String, String> parseToString(Map<Int, Int> map) {
+    return Splitter.on(',').trimResults().omitEmptyStrings().withKeyValueSeparator("=")
+        .split(map.toString().replaceAll("\\{|\\}", ""));
   }
 }

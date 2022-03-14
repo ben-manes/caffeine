@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
@@ -89,7 +90,7 @@ final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
   @Override
   public int weigh(K key, V value) {
     int weight = delegate.weigh(key, value);
-    Caffeine.requireArgument(weight >= 0);
+    requireArgument(weight >= 0);
     return weight;
   }
 

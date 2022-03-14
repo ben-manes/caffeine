@@ -68,6 +68,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.Futures;
@@ -1232,6 +1233,100 @@ public final class ExpirationTest {
     assertThat(map).containsKey(key);
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void entrySet_equals(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    map.putAll(context.absent());
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(map.entrySet().equals(context.absent().entrySet())).isFalse();
+    assertThat(context.absent().entrySet().equals(map.entrySet())).isFalse();
+
+    context.cleanUp();
+    assertThat(map.entrySet().equals(context.absent().entrySet())).isTrue();
+    assertThat(context.absent().entrySet().equals(map.entrySet())).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void entrySet_hashCode(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    map.putAll(context.absent());
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(map.hashCode()).isEqualTo(context.absent().hashCode());
+
+    context.cleanUp();
+    assertThat(map.hashCode()).isEqualTo(context.absent().hashCode());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void equals(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    map.putAll(context.absent());
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(map.equals(context.absent())).isFalse();
+    assertThat(context.absent().equals(map)).isFalse();
+
+    context.cleanUp();
+    assertThat(map.equals(context.absent())).isTrue();
+    assertThat(context.absent().equals(map)).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void hashCode(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    map.putAll(context.absent());
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(map.hashCode()).isEqualTo(context.absent().hashCode());
+
+    context.cleanUp();
+    assertThat(map.hashCode()).isEqualTo(context.absent().hashCode());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void toString(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    map.putAll(context.absent());
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(parseToString(map)).containsExactlyEntriesIn(parseToString(context.absent()));
+
+    context.cleanUp();
+    assertThat(parseToString(map)).containsExactlyEntriesIn(parseToString(context.absent()));
+  }
+
+  private static Map<String, String> parseToString(Map<Int, Int> map) {
+    return Splitter.on(',').trimResults().omitEmptyStrings().withKeyValueSeparator("=")
+        .split(map.toString().replaceAll("\\{|\\}", ""));
+  }
+
   /* --------------- Weights --------------- */
 
   @Test(dataProvider = "caches")
@@ -1329,7 +1424,7 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
-  public void keySetToArray(Map<Int, Int> map, CacheContext context) {
+  public void keySet_toArray(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(2 * context.expiryTime().timeNanos(), TimeUnit.NANOSECONDS);
     assertThat(map.keySet().toArray(new Int[0])).isEmpty();
     assertThat(map.keySet().toArray(Int[]::new)).isEmpty();
@@ -1394,7 +1489,7 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
-  public void valuesToArray(Map<Int, Int> map, CacheContext context) {
+  public void values_toArray(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(2 * context.expiryTime().timeNanos(), TimeUnit.NANOSECONDS);
     assertThat(map.values().toArray(new Int[0])).isEmpty();
     assertThat(map.values().toArray(Int[]::new)).isEmpty();
@@ -1459,7 +1554,7 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
-  public void entrySetToArray(Map<Int, Int> map, CacheContext context) {
+  public void entrySet_toArray(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(2 * context.expiryTime().timeNanos(), TimeUnit.NANOSECONDS);
     assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0])).isEmpty();
     assertThat(map.entrySet().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
@@ -1518,17 +1613,6 @@ public final class ExpirationTest {
     future.complete(null);
   }
 
-  /**
-   * Ensures that variable expiration is run, as it may not have due to expiring in coarse batches.
-   */
-  private static void runVariableExpiration(CacheContext context) {
-    if (context.expiresVariably()) {
-      // Variable expires in coarse buckets at a time
-      context.ticker().advance(2, TimeUnit.SECONDS);
-      context.cleanUp();
-    }
-  }
-
   /* --------------- Policy --------------- */
 
   @CheckNoStats
@@ -1542,5 +1626,16 @@ public final class ExpirationTest {
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNotNull();
     context.ticker().advance(10, TimeUnit.MINUTES);
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNull();
+  }
+
+  /**
+   * Ensures that variable expiration is run, as it may not have due to expiring in coarse batches.
+   */
+  private static void runVariableExpiration(CacheContext context) {
+    if (context.expiresVariably()) {
+      // Variable expires in coarse buckets at a time
+      context.ticker().advance(2, TimeUnit.SECONDS);
+      context.cleanUp();
+    }
   }
 }

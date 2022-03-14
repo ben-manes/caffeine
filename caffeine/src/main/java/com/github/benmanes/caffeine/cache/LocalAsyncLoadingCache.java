@@ -222,7 +222,7 @@ abstract class LocalAsyncLoadingCache<K, V>
       }
 
       // If the entry is absent then perform a new load, else if in-flight then return it
-      var oldValueFuture = asyncCache.cache().getIfPresentQuietly(key, /* writeTime */ new long[1]);
+      var oldValueFuture = asyncCache.cache().getIfPresentQuietly(key);
       if ((oldValueFuture == null)
           || (oldValueFuture.isDone() && oldValueFuture.isCompletedExceptionally())) {
         if (oldValueFuture != null) {

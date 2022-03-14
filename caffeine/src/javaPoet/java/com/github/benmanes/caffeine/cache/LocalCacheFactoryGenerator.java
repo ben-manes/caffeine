@@ -18,8 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
-import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.ASYNC_CACHE_LOADER;
+import static com.github.benmanes.caffeine.cache.Specifications.ASYNC_CACHE_LOADER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -90,7 +90,7 @@ public final class LocalCacheFactoryGenerator {
       .build();
   static final FieldSpec FACTORY = FieldSpec.builder(MethodType.class, "FACTORY")
       .initializer("$T.methodType($T.class, $T.class, $T.class, $T.class)",
-          MethodType.class, void.class, BUILDER, CACHE_LOADER.rawType, TypeName.BOOLEAN)
+          MethodType.class, void.class, BUILDER, ASYNC_CACHE_LOADER.rawType, TypeName.BOOLEAN)
       .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
       .build();
 
@@ -136,7 +136,7 @@ public final class LocalCacheFactoryGenerator {
         .addModifiers(Modifier.STATIC)
         .addCode(LocalCacheSelectorCode.get())
         .addParameter(BUILDER_PARAM)
-        .addParameter(CACHE_LOADER_PARAM.toBuilder().addAnnotation(Nullable.class).build())
+        .addParameter(ASYNC_CACHE_LOADER_PARAM.toBuilder().addAnnotation(Nullable.class).build())
         .addParameter(boolean.class, "async")
         .addJavadoc("Returns a cache optimized for this configuration.\n")
         .build());

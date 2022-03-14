@@ -29,6 +29,7 @@ import static java.util.Spliterator.DISTINCT;
 import static java.util.Spliterator.IMMUTABLE;
 import static java.util.Spliterator.NONNULL;
 import static java.util.Spliterator.ORDERED;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
 import java.io.InvalidObjectException;
@@ -43,7 +44,6 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.util.AbstractCollection;
-import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -99,7 +99,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
+abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     implements LocalCache<K, V> {
 
   /*
@@ -224,7 +224,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final VarHandle REFRESHES;
 
   final @Nullable RemovalListener<K, V> evictionListener;
-  final @Nullable CacheLoader<K, V> cacheLoader;
+  final @Nullable AsyncCacheLoader<K, V> cacheLoader;
 
   final MpscGrowableArrayQueue<Runnable> writeBuffer;
   final ConcurrentHashMap<Object, Node<K, V>> data;
@@ -246,7 +246,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /** Creates an instance based on the builder's configuration. */
   protected BoundedLocalCache(Caffeine<K, V> builder,
-      @Nullable CacheLoader<K, V> cacheLoader, boolean isAsync) {
+      @Nullable AsyncCacheLoader<K, V> cacheLoader, boolean isAsync) {
     this.isAsync = isAsync;
     this.cacheLoader = cacheLoader;
     executor = builder.getExecutor();
@@ -2070,6 +2070,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @Override
+  public @Nullable V getIfPresentQuietly(Object key) {
+    V value;
+    Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
+    if ((node == null) || ((value = node.getValue()) == null)
+        || hasExpired(node, expirationTicker().read())) {
+      return null;
+    }
+    return value;
+  }
+
+  @Override
   public @Nullable V getIfPresentQuietly(K key, long[/* 1 */] writeTime) {
     V value;
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
@@ -2114,6 +2125,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @SuppressWarnings("unchecked")
     Map<K, V> castedResult = (Map<K, V>) result;
     return Collections.unmodifiableMap(castedResult);
+  }
+
+  @Override
+  public void putAll(Map<? extends K, ? extends V> map) {
+    map.forEach(this::put);
   }
 
   @Override
@@ -2779,6 +2795,98 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
+   * Object equality requires reflexive, symmetric, transitive, and consistent properties. Of these,
+   * symmetry and consistency requires further clarification for how it is upheld.
+   * <p>
+   * The <i>consistency</i> property between invocations requires that the results are the same if
+   * there are no modifications to the information used. Therefore, usages should expect that this
+   * operation may return misleading results if either the map or the data held by them is modified
+   * during the execution of this method. This characteristic allows for comparing the map sizes and
+   * assuming stable mappings, as done by {@link AbstractMap}-based maps.
+   * <p>
+   * The <i>symmetric</i> property requires that the result is the same for all implementations of
+   * {@link Map#equals(Object)}. That contract is defined in terms of the stable mappings provided
+   * by {@link #entrySet()}, meaning that the {@link #size()} optimization forces that count be
+   * consistent with the mappings when used for an equality check.
+   * <p>
+   * The cache's {@link #size()} method may include entries that have expired or have been reference
+   * collected, but have not yet been removed from the backing map. An iteration over the map may
+   * trigger the removal of these dead entries when skipped over during traversal. To honor both
+   * consistency and symmetry, usages should call {@link #cleanUp()} prior to the comparison. This
+   * is not done implicitly by {@link #size()} as many usages assume it to be instantaneous and
+   * lock-free.
+   */
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    } else if (!(o instanceof Map)) {
+      return false;
+    }
+
+    var map = (Map<?, ?>) o;
+    if (size() != map.size()) {
+      return false;
+    }
+
+    long now = expirationTicker().read();
+    for (var node : data.values()) {
+      K key = node.getKey();
+      V value = node.getValue();
+      if ((key == null) || (value == null)
+          || !node.isAlive() || hasExpired(node, now)) {
+        scheduleDrainBuffers();
+      } else {
+        var val = map.get(key);
+        if ((val == null) || ((val != value) && !val.equals(value))) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  @Override
+  @SuppressWarnings("NullAway")
+  public int hashCode() {
+    int hash = 0;
+    long now = expirationTicker().read();
+    for (var node : data.values()) {
+      K key = node.getKey();
+      V value = node.getValue();
+      if ((key == null) || (value == null)
+          || !node.isAlive() || hasExpired(node, now)) {
+        scheduleDrainBuffers();
+      } else {
+        hash += key.hashCode() ^ value.hashCode();
+      }
+    }
+    return hash;
+  }
+
+  @Override
+  public String toString() {
+    var result = new StringBuilder().append('{');
+    long now = expirationTicker().read();
+    for (var node : data.values()) {
+      K key = node.getKey();
+      V value = node.getValue();
+      if ((key == null) || (value == null)
+          || !node.isAlive() || hasExpired(node, now)) {
+        scheduleDrainBuffers();
+      } else {
+        if (result.length() != 1) {
+          result.append(',').append(' ');
+        }
+        result.append((key == this) ? "(this Map)" : key);
+        result.append('=');
+        result.append((value == this) ? "(this Map)" : value);
+      }
+    }
+    return result.append('}').toString();
+  }
+
+  /**
    * Returns the computed result from the ordered traversal of the cache entries.
    *
    * @param hottest the coldest or hottest iteration order
@@ -3313,7 +3421,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           value = next.getValue();
           key = next.getKey();
 
-          boolean evictable = cache.hasExpired(next, now) || (key == null) || (value == null);
+          boolean evictable = (key == null) || (value == null) || cache.hasExpired(next, now);
           if (evictable || !next.isAlive()) {
             if (evictable) {
               cache.scheduleDrainBuffers();
@@ -3360,7 +3468,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         throw new NoSuchElementException();
       }
       @SuppressWarnings("NullAway")
-      Entry<K, V> entry = new WriteThroughEntry<>(cache, key, value);
+      var entry = new WriteThroughEntry<>(cache, key, value);
       removalKey = key;
       value = null;
       next = null;
@@ -3510,6 +3618,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (cache.expiresVariable()) {
       proxy.expiry = cache.expiry();
     }
+    if (cache.refreshAfterWrite()) {
+      proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
+    }
     if (cache.evicts()) {
       if (cache.isWeighted) {
         proxy.weigher = cache.weigher;
@@ -3518,6 +3629,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         proxy.maximumSize = cache.maximum();
       }
     }
+    proxy.cacheLoader = cache.cacheLoader;
+    proxy.async = cache.isAsync;
     return proxy;
   }
 
@@ -3545,9 +3658,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public Policy<K, V> policy() {
-      return (policy == null)
-          ? (policy = new BoundedPolicy<>(cache, Function.identity(), cache.isWeighted))
-          : policy;
+      var p = policy;
+      return (p == null) ? (policy = new BoundedPolicy<>(cache, identity(), cache.isWeighted)) : p;
     }
 
     @SuppressWarnings("UnusedVariable")
@@ -3555,7 +3667,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       throw new InvalidObjectException("Proxy required");
     }
 
-    Object writeReplace() {
+    private Object writeReplace() {
       return makeSerializationProxy(cache);
     }
   }
@@ -3581,11 +3693,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return cache.isRecordingStats();
     }
     @Override public @Nullable V getIfPresentQuietly(K key) {
-      Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
-      if ((node == null) || cache.hasExpired(node, cache.expirationTicker().read())) {
-        return null;
-      }
-      return transformer.apply(node.getValue());
+      return transformer.apply(cache.getIfPresentQuietly(key));
     }
     @Override public @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
@@ -3929,9 +4037,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
         @SuppressWarnings({"unchecked", "rawtypes"})
         V[] newValue = (V[]) new Object[1];
-        long[] writeTime = new long[1];
         for (;;) {
-          Async.getWhenSuccessful(delegate.getIfPresentQuietly(key, writeTime));
+          Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
           CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
             if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
@@ -4033,7 +4140,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     @SuppressWarnings("NullAway")
-    public CacheLoader<? super K, V> cacheLoader() {
+    public AsyncCacheLoader<? super K, V> cacheLoader() {
       return cache.cacheLoader;
     }
 
@@ -4052,15 +4159,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       throw new InvalidObjectException("Proxy required");
     }
 
-    @Override
-    Object writeReplace() {
-      @SuppressWarnings("unchecked")
-      SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
-      if (cache.refreshAfterWrite()) {
-        proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
-      }
-      proxy.cacheLoader = cache.cacheLoader;
-      return proxy;
+    private Object writeReplace() {
+      return makeSerializationProxy(cache);
     }
   }
 
@@ -4116,13 +4216,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       throw new InvalidObjectException("Proxy required");
     }
 
-    Object writeReplace() {
-      SerializationProxy<K, V> proxy = makeSerializationProxy(cache);
-      if (cache.refreshAfterWrite()) {
-        proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
-      }
-      proxy.async = true;
-      return proxy;
+    private Object writeReplace() {
+      return makeSerializationProxy(cache);
     }
   }
 
@@ -4143,7 +4238,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       super(loader);
       isWeighted = builder.isWeighted();
       cache = (BoundedLocalCache<K, CompletableFuture<V>>) LocalCacheFactory
-          .newBoundedLocalCache(builder, new AsyncLoader<>(loader, builder), /* async */ true);
+          .newBoundedLocalCache(builder, loader, /* async */ true);
     }
 
     @Override
@@ -4174,39 +4269,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       throw new InvalidObjectException("Proxy required");
     }
 
-    Object writeReplace() {
-      SerializationProxy<K, V> proxy = makeSerializationProxy(cache);
-      if (cache.refreshAfterWrite()) {
-        proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
-      }
-      proxy.cacheLoader = cacheLoader;
-      proxy.async = true;
-      return proxy;
-    }
-
-    static final class AsyncLoader<K, V> implements CacheLoader<K, V> {
-      final AsyncCacheLoader<? super K, V> loader;
-      final Executor executor;
-
-      AsyncLoader(AsyncCacheLoader<? super K, V> loader, Caffeine<?, ?> builder) {
-        this.executor = requireNonNull(builder.getExecutor());
-        this.loader = requireNonNull(loader);
-      }
-
-      @Override public V load(K key) throws Exception {
-        @SuppressWarnings("unchecked")
-        V newValue = (V) loader.asyncLoad(key, executor);
-        return newValue;
-      }
-      @Override public V reload(K key, V oldValue) throws Exception {
-        @SuppressWarnings("unchecked")
-        V newValue = (V) loader.asyncReload(key, oldValue, executor);
-        return newValue;
-      }
-      @Override public CompletableFuture<? extends V> asyncReload(
-          K key, V oldValue, Executor executor) throws Exception {
-        return loader.asyncReload(key, oldValue, executor);
-      }
+    private Object writeReplace() {
+      return makeSerializationProxy(cache);
     }
   }
 }
@@ -4214,7 +4278,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 /** The namespace for field padding through inheritance. */
 final class BLCHeader {
 
-  abstract static class PadDrainStatus<K, V> extends AbstractMap<K, V> {
+  static class PadDrainStatus {
     byte p000, p001, p002, p003, p004, p005, p006, p007;
     byte p008, p009, p010, p011, p012, p013, p014, p015;
     byte p016, p017, p018, p019, p020, p021, p022, p023;
@@ -4233,7 +4297,7 @@ final class BLCHeader {
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the drain status. */
-  abstract static class DrainStatusRef<K, V> extends PadDrainStatus<K, V> {
+  abstract static class DrainStatusRef extends PadDrainStatus {
     static final VarHandle DRAIN_STATUS;
 
     /** A drain is not taking place. */

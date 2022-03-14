@@ -42,8 +42,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K, V> {
   Logger logger = System.getLogger(LocalLoadingCache.class.getName());
 
-  /** Returns the {@link CacheLoader} used by this cache. */
-  CacheLoader<? super K, V> cacheLoader();
+  /** Returns the {@link AsyncCacheLoader} used by this cache. */
+  AsyncCacheLoader<? super K, V> cacheLoader();
 
   /** Returns the {@link CacheLoader#load} as a mapping function. */
   Function<K, V> mappingFunction();

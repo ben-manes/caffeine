@@ -76,6 +76,13 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   /**
    * See {@link Cache#getIfPresent(K)}. This method differs by not recording the access with
+   * the statistics nor the eviction policy.
+   */
+  @Nullable
+  V getIfPresentQuietly(Object key);
+
+  /**
+   * See {@link Cache#getIfPresent(K)}. This method differs by not recording the access with
    * the statistics nor the eviction policy, and populates the write-time if known.
    */
   @Nullable

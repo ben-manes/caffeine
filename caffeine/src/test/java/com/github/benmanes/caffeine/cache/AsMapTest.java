@@ -39,6 +39,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -60,6 +61,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Maps;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -1551,6 +1554,15 @@ public final class AsMapTest {
   public void equals(Map<Int, Int> map, CacheContext context) {
     assertThat(map.equals(context.original())).isTrue();
     assertThat(context.original().equals(map)).isTrue();
+
+    assertThat(map.equals(context.absent())).isFalse();
+    assertThat(context.absent().equals(map)).isFalse();
+
+    if (!map.isEmpty()) {
+      var other = Maps.asMap(map.keySet(), CompletableFuture::completedFuture);
+      assertThat(map.equals(other)).isFalse();
+      assertThat(other.equals(map)).isFalse();
+    }
   }
 
   @CheckNoStats
@@ -1600,12 +1612,19 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void toString(Map<Int, Int> map, CacheContext context) {
-    var toString = map.toString();
-    if (!context.original().toString().equals(toString)) {
-      map.forEach((key, value) -> {
-        assertThat(toString).contains(key + "=" + value);
-      });
-    }
+    assertThat(parseToString(map)).containsExactlyEntriesIn(parseToString(context.original()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine)
+  public void toString_self(Map<Object, Object> map, CacheContext context) {
+    map.put(context.absentKey(), map);
+    assertThat(map.toString()).contains(context.absentKey() + "=(this Map)");
+  }
+
+  private static Map<String, String> parseToString(Map<Int, Int> map) {
+    return Splitter.on(',').trimResults().omitEmptyStrings().withKeyValueSeparator("=")
+        .split(map.toString().replaceAll("\\{|\\}", ""));
   }
 
   /* --------------- Key Set --------------- */
@@ -1613,14 +1632,14 @@ public final class AsMapTest {
   @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void keySetToArray_null(Map<Int, Int> map, CacheContext context) {
+  public void keySet_toArray_null(Map<Int, Int> map, CacheContext context) {
     map.keySet().toArray((Int[]) null);
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void keySetToArray(Map<Int, Int> map, CacheContext context) {
+  public void keySet_toArray(Map<Int, Int> map, CacheContext context) {
     var array = map.keySet().toArray();
     assertThat(array).asList().containsExactlyElementsIn(context.original().keySet());
 
@@ -1782,14 +1801,14 @@ public final class AsMapTest {
   @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void valuesToArray_null(Map<Int, Int> map, CacheContext context) {
+  public void values_toArray_null(Map<Int, Int> map, CacheContext context) {
     map.values().toArray((Int[]) null);
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void valuesToArray(Map<Int, Int> map, CacheContext context) {
+  public void values_toArray(Map<Int, Int> map, CacheContext context) {
     var array = map.values().toArray();
     assertThat(array).asList().containsExactlyElementsIn(context.original().values());
 
@@ -1976,14 +1995,14 @@ public final class AsMapTest {
   @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void entrySetToArray_null(Map<Int, Int> map, CacheContext context) {
+  public void entrySet_toArray_null(Map<Int, Int> map, CacheContext context) {
     map.entrySet().toArray((Map.Entry<?, ?>[]) null);
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void entriesToArray(Map<Int, Int> map, CacheContext context) {
+  public void entrySet_toArray(Map<Int, Int> map, CacheContext context) {
     var array = map.entrySet().toArray();
     assertThat(array).asList().containsExactlyElementsIn(context.original().entrySet());
 
@@ -2229,6 +2248,21 @@ public final class AsMapTest {
     var entry = map.entrySet().iterator().next();
     var copy = SerializableTester.reserialize(entry);
     assertThat(entry).isEqualTo(copy);
+  }
+
+  @Test
+  public void writeThroughEntry_equals_hashCode_toString() {
+    var map = new ConcurrentHashMap<>();
+    var entry = new WriteThroughEntry<>(map, 1, 2);
+
+    assertThat(entry.equals(Map.entry(1, 2))).isTrue();
+    assertThat(entry.hashCode()).isEqualTo(Map.entry(1, 2).hashCode());
+    assertThat(entry.toString()).isEqualTo(Map.entry(1, 2).toString());
+
+    var other = new WriteThroughEntry<>(map, 3, 4);
+    assertThat(entry.equals(other)).isFalse();
+    assertThat(entry.hashCode()).isNotEqualTo(other.hashCode());
+    assertThat(entry.toString()).isNotEqualTo(other.toString());
   }
 
   @SuppressWarnings("serial")

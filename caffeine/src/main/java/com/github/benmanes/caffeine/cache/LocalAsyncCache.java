@@ -15,13 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.AbstractCollection;
-import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -590,7 +590,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
   }
 
-  final class AsMapView<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
+  final class AsMapView<K, V> implements ConcurrentMap<K, V> {
     final LocalCache<K, CompletableFuture<V>> delegate;
 
     @Nullable Collection<V> values;
@@ -643,11 +643,10 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       // Keep in sync with BoundedVarExpiration.putIfAbsentAsync(key, value, duration, unit)
       CompletableFuture<V> priorFuture = null;
-      long[] writeTime = new long[1];
       for (;;) {
         priorFuture = (priorFuture == null)
             ? delegate.get(key)
-            : delegate.getIfPresentQuietly(key, writeTime);
+            : delegate.getIfPresentQuietly(key);
         if (priorFuture != null) {
           if (!priorFuture.isDone()) {
             Async.getWhenSuccessful(priorFuture);
@@ -680,6 +679,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    public void putAll(Map<? extends K, ? extends V> map) {
+      map.forEach(this::put);
+    }
+
+    @Override
     public @Nullable V put(K key, V value) {
       requireNonNull(value);
       CompletableFuture<V> oldValueFuture =
@@ -704,12 +708,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       K castedKey = (K) key;
       boolean[] done = { false };
       boolean[] removed = { false };
-      long[] writeTime = new long[1];
       CompletableFuture<V> future = null;
       for (;;) {
         future = (future == null)
             ? delegate.get(key)
-            : delegate.getIfPresentQuietly(castedKey, writeTime);
+            : delegate.getIfPresentQuietly(castedKey);
         if ((future == null) || future.isCompletedExceptionally()) {
           return false;
         }
@@ -743,9 +746,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @SuppressWarnings({"unchecked", "rawtypes"})
       V[] oldValue = (V[]) new Object[1];
       boolean[] done = { false };
-      long[] writeTime = new long[1];
       for (;;) {
-        CompletableFuture<V> future = delegate.getIfPresentQuietly(key, writeTime);
+        CompletableFuture<V> future = delegate.getIfPresentQuietly(key);
         if ((future == null) || future.isCompletedExceptionally()) {
           return null;
         }
@@ -778,9 +780,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       boolean[] done = { false };
       boolean[] replaced = { false };
-      long[] writeTime = new long[1];
       for (;;) {
-        CompletableFuture<V> future = delegate.getIfPresentQuietly(key, writeTime);
+        CompletableFuture<V> future = delegate.getIfPresentQuietly(key);
         if ((future == null) || future.isCompletedExceptionally()) {
           return false;
         }
@@ -810,12 +811,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     public @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
       requireNonNull(mappingFunction);
 
-      long[] writeTime = new long[1];
       CompletableFuture<V> priorFuture = null;
       for (;;) {
         priorFuture = (priorFuture == null)
             ? delegate.get(key)
-            : delegate.getIfPresentQuietly(key, writeTime);
+            : delegate.getIfPresentQuietly(key);
         if (priorFuture != null) {
           if (!priorFuture.isDone()) {
             Async.getWhenSuccessful(priorFuture);
@@ -860,9 +860,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @SuppressWarnings({"unchecked", "rawtypes"})
       V[] newValue = (V[]) new Object[1];
-      long[] writeTime = new long[1];
       for (;;) {
-        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key, writeTime));
+        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
         CompletableFuture<V> valueFuture = delegate.computeIfPresent(key, (k, oldValueFuture) -> {
           if (!oldValueFuture.isDone()) {
@@ -894,9 +893,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @SuppressWarnings({"unchecked", "rawtypes"})
       V[] newValue = (V[]) new Object[1];
-      long[] writeTime = new long[1];
       for (;;) {
-        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key, writeTime));
+        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
         CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
           if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
@@ -928,9 +926,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       CompletableFuture<V> newValueFuture = CompletableFuture.completedFuture(value);
       boolean[] merged = { false };
-      long[] writeTime = new long[1];
       for (;;) {
-        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key, writeTime));
+        Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
         CompletableFuture<V> mergedValueFuture = delegate.merge(
             key, newValueFuture, (oldValueFuture, valueFuture) -> {
@@ -973,6 +970,56 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override
     public Set<Entry<K, V>> entrySet() {
       return (entries == null) ? (entries = new EntrySet()) : entries;
+    }
+
+    /** See {@link BoundedLocalCache#equals(Object)} for semantics. */
+    @Override
+    public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      } else if (!(o instanceof Map)) {
+        return false;
+      }
+
+      var map = (Map<?, ?>) o;
+      if (size() != map.size()) {
+        return false;
+      }
+
+      for (var iterator = new EntryIterator(); iterator.hasNext();) {
+        var entry = iterator.next();
+        var value = map.get(entry.getKey());
+        if ((value == null) || ((value != entry.getValue()) && !value.equals(entry.getValue()))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int hash = 0;
+      for (var iterator = new EntryIterator(); iterator.hasNext();) {
+        var entry = iterator.next();
+        hash += entry.hashCode();
+      }
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      var result = new StringBuilder().append('{');
+      for (var iterator = new EntryIterator(); iterator.hasNext();) {
+        var entry = iterator.next();
+        result.append((entry.getKey() == this) ? "(this Map)" : entry.getKey());
+        result.append('=');
+        result.append((entry.getValue() == this) ? "(this Map)" : entry.getValue());
+
+        if (iterator.hasNext()) {
+          result.append(',').append(' ');
+        }
+      }
+      return result.append('}').toString();
     }
 
     private final class Values extends AbstractCollection<V> {
@@ -1063,43 +1110,49 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @Override
       public Iterator<Entry<K, V>> iterator() {
-        return new Iterator<Entry<K, V>>() {
-          Iterator<Entry<K, CompletableFuture<V>>> iterator = delegate.entrySet().iterator();
-          @Nullable Entry<K, V> cursor;
-          @Nullable K removalKey;
+        return new EntryIterator();
+      }
+    }
 
-          @Override
-          public boolean hasNext() {
-            while ((cursor == null) && iterator.hasNext()) {
-              Entry<K, CompletableFuture<V>> entry = iterator.next();
-              V value = Async.getIfReady(entry.getValue());
-              if (value != null) {
-                cursor = new WriteThroughEntry<>(AsMapView.this, entry.getKey(), value);
-              }
-            }
-            return (cursor != null);
-          }
+    private final class EntryIterator implements Iterator<Entry<K, V>> {
+      Iterator<Entry<K, CompletableFuture<V>>> iterator;
+      @Nullable Entry<K, V> cursor;
+      @Nullable K removalKey;
 
-          @Override
-          public Entry<K, V> next() {
-            if (!hasNext()) {
-              throw new NoSuchElementException();
-            }
-            @SuppressWarnings("NullAway")
-            K key = cursor.getKey();
-            Entry<K, V> entry = cursor;
-            removalKey = key;
-            cursor = null;
-            return entry;
-          }
+      EntryIterator() {
+        iterator = delegate.entrySet().iterator();
+      }
 
-          @Override
-          public void remove() {
-            Caffeine.requireState(removalKey != null);
-            delegate.remove(removalKey);
-            removalKey = null;
+      @Override
+      public boolean hasNext() {
+        while ((cursor == null) && iterator.hasNext()) {
+          Entry<K, CompletableFuture<V>> entry = iterator.next();
+          V value = Async.getIfReady(entry.getValue());
+          if (value != null) {
+            cursor = new WriteThroughEntry<>(AsMapView.this, entry.getKey(), value);
           }
-        };
+        }
+        return (cursor != null);
+      }
+
+      @Override
+      public Entry<K, V> next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        @SuppressWarnings("NullAway")
+        K key = cursor.getKey();
+        Entry<K, V> entry = cursor;
+        removalKey = key;
+        cursor = null;
+        return entry;
+      }
+
+      @Override
+      public void remove() {
+        requireState(removalKey != null);
+        delegate.remove(removalKey);
+        removalKey = null;
       }
     }
   }
