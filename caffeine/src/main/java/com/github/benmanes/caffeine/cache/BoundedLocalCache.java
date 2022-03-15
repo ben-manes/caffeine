@@ -2800,7 +2800,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * <p>
    * The <i>consistency</i> property between invocations requires that the results are the same if
    * there are no modifications to the information used. Therefore, usages should expect that this
-   * operation may return misleading results if either the map or the data held by them is modified
+   * operation may return misleading results if either map or the data held by them is modified
    * during the execution of this method. This characteristic allows for comparing the map sizes and
    * assuming stable mappings, as done by {@link AbstractMap}-based maps.
    * <p>

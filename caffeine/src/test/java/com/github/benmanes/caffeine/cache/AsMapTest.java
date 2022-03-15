@@ -28,6 +28,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
+import static java.util.stream.Collectors.toMap;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -62,7 +63,6 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
-import com.google.common.collect.Maps;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -1559,7 +1559,8 @@ public final class AsMapTest {
     assertThat(context.absent().equals(map)).isFalse();
 
     if (!map.isEmpty()) {
-      var other = Maps.asMap(map.keySet(), CompletableFuture::completedFuture);
+      var other = map.entrySet().stream().collect(toMap(
+          entry -> entry.getKey(), entry -> entry.getValue().negate()));
       assertThat(map.equals(other)).isFalse();
       assertThat(other.equals(map)).isFalse();
     }
