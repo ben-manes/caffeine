@@ -29,7 +29,7 @@ allprojects {
   version.with {
     major = 3 // incompatible API changes
     minor = 0 // backwards-compatible additions
-    patch = 6 // backwards-compatible bug fixes
+    patch = 7 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
 }
