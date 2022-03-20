@@ -19,6 +19,8 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.schedul
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -53,6 +55,7 @@ import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.testing.TestingExecutors;
 
@@ -506,6 +509,15 @@ public @interface CacheSpec {
           result.put(key, interner.get().computeIfAbsent(key, k -> -k));
         }
         return result;
+      }
+    },
+    /** A bulk-only loader that loads only keys that were not requested. */
+    BULK_DIFFERENT {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        return Streams.stream(keys).collect(toMap(k -> -k, identity()));
       }
     },
     /** A bulk-only loader that loads more than requested. */

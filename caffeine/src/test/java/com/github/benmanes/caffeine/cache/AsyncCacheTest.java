@@ -21,11 +21,14 @@ import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifySta
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static com.google.common.collect.Streams.stream;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
 import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -42,6 +45,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -453,6 +457,21 @@ public final class AsyncCacheTest {
     verifyStats(context, verifier -> verifier.hits(0).misses(result.size()).success(1).failures(0));
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllFunction_different(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> actual = context.absentKeys().stream()
+        .collect(toMap(k -> -k, identity()));
+    Map<Integer, Integer> result = cache.getAll(context.absentKeys(), keys -> actual).join();
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    Entry<Integer, Integer>[] array = actual.entrySet().toArray(new Map.Entry[0]);
+
+    assertThat(result, is(anEmptyMap()));
+    assertThat(cache.synchronous().asMap().entrySet(), hasItems(array));
+    assertThat(cache.asMap(), aMapWithSize(context.original().size() + actual.size()));
+    verifyStats(context, verifier -> verifier.hits(0).misses(actual.size()).success(1).failures(0));
+  }
+
   @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -717,6 +736,23 @@ public final class AsyncCacheTest {
     assertThat(cache.synchronous().estimatedSize(),
         is(greaterThan(context.initialSize() + context.absentKeys().size())));
     verifyStats(context, verifier -> verifier.hits(0).misses(result.size()).success(1).failures(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllBifunction_different(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> actual = context.absentKeys().stream()
+        .collect(toMap(k -> -k, identity()));
+    Map<Integer, Integer> result = cache.getAll(context.absentKeys(), (keys, executor) -> {
+      return CompletableFuture.completedFuture(actual);
+    }).join();
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    Entry<Integer, Integer>[] array = actual.entrySet().toArray(new Map.Entry[0]);
+
+    assertThat(result, is(anEmptyMap()));
+    assertThat(cache.synchronous().asMap().entrySet(), hasItems(array));
+    assertThat(cache.asMap(), is(aMapWithSize(context.original().size() + actual.size())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(actual.size()).success(1).failures(0));
   }
 
   @CheckNoWriter

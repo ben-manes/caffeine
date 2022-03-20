@@ -20,8 +20,10 @@ import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifySta
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
@@ -31,6 +33,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -235,6 +238,21 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().estimatedSize(),
         is(greaterThan(context.initialSize() + context.absentKeys().size())));
     verifyStats(context, verifier -> verifier.hits(0).misses(result.size()).success(1).failures(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.BULK_DIFFERENT,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_different(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> result = cache.getAll(context.absentKeys()).join();
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    Entry<Integer, CompletableFuture<Integer>>[] expected =
+        result.entrySet().toArray(new Map.Entry[0]);
+
+    assertThat(result, is(anEmptyMap()));
+    assertThat(cache.asMap().entrySet(), hasItems(expected));
+    verifyStats(context, verifier ->
+        verifier.hits(0).misses(context.absent().size()).success(1).failures(0));
   }
 
   @CheckNoWriter
