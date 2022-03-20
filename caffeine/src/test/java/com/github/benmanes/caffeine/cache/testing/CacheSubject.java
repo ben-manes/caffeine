@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.google.common.testing.GcFinalization;
 import com.google.common.truth.Correspondence;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Ordered;
@@ -173,6 +174,9 @@ public final class CacheSubject extends Subject {
     public void hasSize(long expectedSize) {
       // Ensures that all of the pending work is performed (Guava limits work per cycle)
       for (int i = 0; i < 100; i++) {
+        if ((i > 0) && ((i % 10) == 0)) {
+          GcFinalization.awaitFullGc();
+        }
         actual.cleanUp();
 
         long size = actual.estimatedSize();

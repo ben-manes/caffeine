@@ -1258,15 +1258,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long writeTime = node.getWriteTime();
     long refreshWriteTime = writeTime | 1L;
     Object keyReference = node.getKeyReference();
+    ConcurrentMap<Object, CompletableFuture<?>> refreshes;
     if (((now - writeTime) > refreshAfterWriteNanos()) && (keyReference != null)
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
-        && ((writeTime & 1L) == 0L) && !refreshes().containsKey(keyReference)
+        && ((writeTime & 1L) == 0L) && !(refreshes = refreshes()).containsKey(keyReference)
         && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
       @SuppressWarnings({"unchecked", "rawtypes"})
       CompletableFuture<? extends V>[] refreshFuture = new CompletableFuture[1];
       try {
-        refreshes().computeIfAbsent(keyReference, k -> {
+        refreshes.computeIfAbsent(keyReference, k -> {
           try {
             startTime[0] = statsTicker().read();
             if (isAsync) {
@@ -1306,7 +1307,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
               logger.log(Level.WARNING, "Exception thrown during refresh", error);
             }
-            refreshes().remove(keyReference, refreshFuture[0]);
+            refreshes.remove(keyReference, refreshFuture[0]);
             statsCounter().recordLoadFailure(loadTime);
             return;
           }
@@ -1346,7 +1347,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             statsCounter().recordLoadSuccess(loadTime);
           }
 
-          refreshes().remove(keyReference, refreshFuture[0]);
+          refreshes.remove(keyReference, refreshFuture[0]);
         });
       }
     }

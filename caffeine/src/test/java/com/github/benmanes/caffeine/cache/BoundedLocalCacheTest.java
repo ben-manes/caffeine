@@ -1301,6 +1301,7 @@ public final class BoundedLocalCacheTest {
   public void refreshIfNeeded_softLock(CacheContext context) {
     var refresh = new AtomicBoolean();
     var reloading = new AtomicBoolean();
+    var future = new CompletableFuture<Int>();
     var newValue = context.absentValue().add(1);
     var cache = context.build(new CacheLoader<Int, Int>() {
       @Override public Int load(Int key) {
@@ -1310,13 +1311,14 @@ public final class BoundedLocalCacheTest {
       public CompletableFuture<Int> asyncReload(Int key, Int oldValue, Executor executor) {
         reloading.set(true);
         await().untilTrue(refresh);
-        return newValue.asFuture();
+        return future;
       }
     });
     var localCache = asBoundedLocalCache(cache);
     cache.put(context.absentKey(), context.absentValue());
     var lookupKey = localCache.nodeFactory.newLookupKey(context.absentKey());
     var node = localCache.data.get(lookupKey);
+    var refreshes = localCache.refreshes();
 
     context.ticker().advance(2, TimeUnit.MINUTES);
     ConcurrentTestHarness.execute(() -> cache.get(context.absentKey()));
@@ -1326,10 +1328,14 @@ public final class BoundedLocalCacheTest {
 
     localCache.refreshes = null;
     cache.get(context.absentKey());
-    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(localCache.refreshes).isNull();
 
     refresh.set(true);
+    await().untilAsserted(() -> assertThat(refreshes).isNotEmpty());
     await().untilAsserted(() -> assertThat(node.getWriteTime() & 1L).isEqualTo(0));
+
+    future.complete(newValue);
+    await().untilAsserted(() -> assertThat(refreshes).isEmpty());
     await().untilAsserted(() -> assertThat(cache).containsEntry(context.absentKey(), newValue));
   }
 
