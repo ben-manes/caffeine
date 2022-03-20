@@ -2795,8 +2795,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /**
-   * Object equality requires reflexive, symmetric, transitive, and consistent properties. Of these,
-   * symmetry and consistency requires further clarification for how it is upheld.
+   * Object equality requires reflexive, symmetric, transitive, and consistency properties. Of
+   * these, symmetry and consistency require further clarification for how they are upheld.
    * <p>
    * The <i>consistency</i> property between invocations requires that the results are the same if
    * there are no modifications to the information used. Therefore, usages should expect that this
@@ -2806,14 +2806,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * <p>
    * The <i>symmetric</i> property requires that the result is the same for all implementations of
    * {@link Map#equals(Object)}. That contract is defined in terms of the stable mappings provided
-   * by {@link #entrySet()}, meaning that the {@link #size()} optimization forces that count be
+   * by {@link #entrySet()}, meaning that the {@link #size()} optimization forces that the count is
    * consistent with the mappings when used for an equality check.
    * <p>
    * The cache's {@link #size()} method may include entries that have expired or have been reference
    * collected, but have not yet been removed from the backing map. An iteration over the map may
-   * trigger the removal of these dead entries when skipped over during traversal. To honor both
-   * consistency and symmetry, usages should call {@link #cleanUp()} prior to the comparison. This
-   * is not done implicitly by {@link #size()} as many usages assume it to be instantaneous and
+   * trigger the removal of these dead entries when skipped over during traversal. To ensure
+   * consistency and symmetry, usages should call {@link #cleanUp()} before {@link #equals(Object)}.
+   * This is not done implicitly by {@link #size()} as many usages assume it to be instantaneous and
    * lock-free.
    */
   @Override
