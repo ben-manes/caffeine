@@ -1,0 +1,28 @@
+name: DevSkim
+permissions: read-all
+
+on:
+  push:
+    branches: [master, v2.dev, v3.dev]
+  pull_request:
+    branches: [master, v2.dev, v3.dev]
+  schedule:
+    - cron: '40 22 * * 0'
+
+jobs:
+  lint:
+    name: DevSkim
+    runs-on: ubuntu-20.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run DevSkim scanner
+        uses: microsoft/DevSkim-Action@v1
+      - name: Upload DevSkim scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: devskim-results.sarif

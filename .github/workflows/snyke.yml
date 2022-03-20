@@ -1,7 +1,7 @@
 name: snyke
 on:
   push:
-    branches: [ master, v2.dev, v2.dev ]
+    branches: [master, v2.dev, v3.dev]
 permissions: read-all
 
 env:
