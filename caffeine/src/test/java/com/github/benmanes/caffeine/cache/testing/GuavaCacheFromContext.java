@@ -492,7 +492,7 @@ public final class GuavaCacheFromContext {
         }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {
-        throw new CompletionException(e);
+        throw new CompletionException(e.getCause());
       } catch (ExecutionError e) {
         throw (Error) e.getCause();
       }
@@ -515,7 +515,7 @@ public final class GuavaCacheFromContext {
         }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {
-        throw new CompletionException(e);
+        throw new CompletionException(e.getCause());
       } catch (ExecutionError e) {
         throw (Error) e.getCause();
       }
@@ -529,6 +529,8 @@ public final class GuavaCacheFromContext {
       var e = error.get();
       if (e == null) {
         return CompletableFuture.completedFuture(cache.asMap().get(key));
+      } else if (e instanceof InterruptedException) {
+        throw new CompletionException(e);
       } else if (e instanceof CacheMissException) {
         return CompletableFuture.completedFuture(null);
       }

@@ -97,7 +97,7 @@ public interface CacheLoader<K extends Object, V extends Object> extends AsyncCa
    * @return the future value associated with {@code key}
    */
   @Override
-  default CompletableFuture<? extends V> asyncLoad(K key, Executor executor) {
+  default CompletableFuture<? extends V> asyncLoad(K key, Executor executor) throws Exception {
     requireNonNull(key);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {
@@ -133,7 +133,7 @@ public interface CacheLoader<K extends Object, V extends Object> extends AsyncCa
    */
   @Override
   default CompletableFuture<? extends Map<? extends K, ? extends V>> asyncLoadAll(
-      Set<? extends K> keys, Executor executor) {
+      Set<? extends K> keys, Executor executor) throws Exception {
     requireNonNull(keys);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {

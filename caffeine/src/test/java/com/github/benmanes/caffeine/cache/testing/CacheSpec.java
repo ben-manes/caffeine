@@ -34,6 +34,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
@@ -440,10 +441,22 @@ public @interface CacheSpec {
         return CacheContext.intern(key, k -> new Int(-k.intValue()));
       }
     },
-    /** A loader that always throws an exception. */
+    /** A loader that always throws a runtime exception. */
     EXCEPTIONAL {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
+      }
+    },
+    /** A loader that always throws a checked exception. */
+    CHECKED_EXCEPTIONAL {
+      @Override public Int load(Int key) throws Exception {
+        throw new ExecutionException(null);
+      }
+    },
+    /** A loader that always throws an interrupted exception. */
+    INTERRUPTED {
+      @Override public Int load(Int key) throws Exception {
+        throw new InterruptedException();
       }
     },
 
@@ -505,13 +518,31 @@ public @interface CacheSpec {
         return BULK_NEGATIVE.loadAll(moreKeys);
       }
     },
-    /** A bulk-only loader that always throws an exception. */
+    /** A bulk-only loader that always throws a runtime exception. */
     BULK_EXCEPTIONAL {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
         throw new IllegalStateException();
+      }
+    },
+    /** A bulk-only loader that always throws a checked exception. */
+    BULK_CHECKED_EXCEPTIONAL {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws Exception {
+        throw new ExecutionException(null);
+      }
+    },
+    /** A bulk-only loader that always throws an interrupted exception. */
+    BULK_INTERRUPTED {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws InterruptedException {
+        throw new InterruptedException();
       }
     },
     /** A bulk loader that tries to modify the keys. */
@@ -524,15 +555,24 @@ public @interface CacheSpec {
         return Map.of();
       }
     },
-    /** An async bulk loader that tries to modify the keys. */
-    ASYNC_BULK_MODIFY_KEYS {
+
+    /** A loader that always throws a runtime exception. */
+    ASYNC_EXCEPTIONAL {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
-          Set<? extends Int> keys, Executor executor) {
-        keys.clear();
-        return CompletableFuture.completedFuture(Map.of());
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        throw new IllegalStateException();
+      }
+    },
+    /** A loader that always throws a checked exception. */
+    ASYNC_CHECKED_EXCEPTIONAL {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(
+          Int key, Executor executor) throws Exception {
+        throw new ExecutionException(null);
       }
     },
     /** An async loader that returns a incomplete future. */
@@ -548,6 +588,99 @@ public @interface CacheSpec {
           Int key, Int oldValue, Executor executor) {
         executor.execute(() -> {});
         return new CompletableFuture<>();
+      }
+    },
+    /** A loader that always throws an interrupted exception. */
+    ASYNC_INTERRUPTED {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(
+          Int key, Executor executor) throws Exception {
+        throw new InterruptedException();
+      }
+    },
+    /** A loader that always throws a runtime exception. */
+    ASYNC_BULK_EXCEPTIONAL {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
+          Set<? extends Int> keys, Executor executor) {
+        throw new IllegalStateException();
+      }
+    },
+    /** A loader that always throws a checked exception. */
+    ASYNC_BULK_CHECKED_EXCEPTIONAL {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
+          Set<? extends Int> keys, Executor executor) throws Exception {
+        throw new ExecutionException(null);
+      }
+    },
+    /** An async bulk loader that tries to modify the keys. */
+    ASYNC_BULK_MODIFY_KEYS {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
+          Set<? extends Int> keys, Executor executor) {
+        keys.clear();
+        return CompletableFuture.completedFuture(Map.of());
+      }
+    },
+    /** A loader that always throws an interrupted exception. */
+    ASYNC_BULK_INTERRUPTED {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
+          Set<? extends Int> keys, Executor executor) throws Exception {
+        throw new InterruptedException();
+      }
+    },
+
+    /** A loader that always throws a runtime exception. */
+    REFRESH_EXCEPTIONAL {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        throw new IllegalStateException();
+      }
+    },
+    /** A loader that always throws a checked exception. */
+    REFRESH_CHECKED_EXCEPTIONAL {
+      @Override public Int load(Int key) throws Exception {
+        throw new ExecutionException(null);
+      }
+      @Override public CompletableFuture<Int> asyncLoad(
+          Int key, Executor executor) throws Exception {
+        throw new ExecutionException(null);
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) throws Exception {
+        throw new ExecutionException(null);
+      }
+    },
+    /** A loader that always throws an interrupted exception. */
+    REFRESH_INTERRUPTED {
+      @Override public Int load(Int key) throws Exception {
+        throw new InterruptedException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(
+          Int key, Executor executor) throws Exception {
+        throw new InterruptedException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) throws Exception {
+        throw new InterruptedException();
       }
     };
 
@@ -580,7 +713,8 @@ public @interface CacheSpec {
         this.loader = loader;
       }
       @Override
-      public CompletableFuture<? extends Int> asyncLoad(Int key, Executor executor) {
+      public CompletableFuture<? extends Int> asyncLoad(
+          Int key, Executor executor) throws Exception {
         return loader.asyncLoad(key, executor);
       }
       private Object readResolve() {
@@ -599,7 +733,7 @@ public @interface CacheSpec {
       }
       @Override
       public CompletableFuture<? extends Map<? extends Int, ? extends Int>> asyncLoadAll(
-          Set<? extends Int> keys, Executor executor) {
+          Set<? extends Int> keys, Executor executor) throws Exception {
         return loader.asyncLoadAll(keys, executor);
       }
     }

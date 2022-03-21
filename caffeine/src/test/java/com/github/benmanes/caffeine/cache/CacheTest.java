@@ -56,6 +56,8 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -139,8 +141,15 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @Test(dataProvider = "caches")
+  public void get_absent_null(Cache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.get(context.absentKey(), k -> null)).isNull();
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
+  }
+
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
-  public void get_throwsException(Cache<Int, Int> cache, CacheContext context) {
+  public void get_absent_throwsException(Cache<Int, Int> cache, CacheContext context) {
     try {
       cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
     } finally {
@@ -149,10 +158,13 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void get_absent_null(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.get(context.absentKey(), k -> null)).isNull();
-    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
+  @Test(dataProvider = "caches", expectedExceptions = UnknownError.class)
+  public void get_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
+    try {
+      cache.get(context.absentKey(), key -> { throw new UnknownError(); });
+    } finally {
+      assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
+    }
   }
 
   @CacheSpec
@@ -324,7 +336,12 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_function_nullValue(Cache<Int, Int> cache, CacheContext context) {
-    cache.getAll(context.absentKeys(), keys -> null);
+    try {
+      cache.getAll(context.absentKeys(), keys -> null);
+    } finally {
+      int misses = context.loader().isBulk() ? 1 : context.absentKeys().size();
+      assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
+    }
   }
 
   @CacheSpec
@@ -345,7 +362,7 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
-  public void getAll_absent_failure(Cache<Int, Int> cache, CacheContext context) {
+  public void getAll_absent_throwsException(Cache<Int, Int> cache, CacheContext context) {
     try {
       cache.getAll(context.absentKeys(), keys -> { throw new IllegalStateException(); });
     } finally {
@@ -354,8 +371,19 @@ public final class CacheTest {
     }
   }
 
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = UnknownError.class)
+  public void getAll_function_throwsError(Cache<Int, Int> cache, CacheContext context) {
+    try {
+      cache.getAll(context.absentKeys(), keys -> { throw new UnknownError(); });
+    } finally {
+      int misses = context.absentKeys().size();
+      assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
+    }
+  }
+
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_absent(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), bulkMappingFunction());
 
@@ -720,6 +748,16 @@ public final class CacheTest {
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void invalidateAll_null(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll(null);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
+      executor = CacheExecutor.REJECTING, removalListener = Listener.CONSUMING)
+  public void removalListener_rejected(Cache<Int, Int> cache, CacheContext context) {
+    cache.invalidateAll();
+    assertThat(context).removalNotifications()
+        .withCause(EXPLICIT).hasSize(context.initialSize()).exclusively();
   }
 
   /* --------------- cleanup --------------- */

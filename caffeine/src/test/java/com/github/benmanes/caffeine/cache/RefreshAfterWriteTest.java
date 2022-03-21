@@ -147,6 +147,16 @@ public final class RefreshAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      loader = Loader.REFRESH_INTERRUPTED, refreshAfterWrite = Expire.ONE_MINUTE,
+      executor = CacheExecutor.DIRECT)
+  public void refreshIfNeeded_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    cache.get(context.firstKey());
+    assertThat(Thread.interrupted()).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING)
   public void refreshIfNeeded_replace(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentKey());

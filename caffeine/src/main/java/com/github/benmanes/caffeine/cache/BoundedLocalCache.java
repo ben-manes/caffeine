@@ -1495,19 +1495,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   void lock() {
     long remainingNanos = WARN_AFTER_LOCK_WAIT_NANOS;
     long end = System.nanoTime() + remainingNanos;
-    for (;;) {
-      try {
-        if (evictionLock.tryLock(remainingNanos, TimeUnit.NANOSECONDS)) {
+    boolean interrupted = false;
+    try {
+      for (;;) {
+        try {
+          if (evictionLock.tryLock(remainingNanos, TimeUnit.NANOSECONDS)) {
+            return;
+          }
+          logger.log(Level.WARNING, "The cache is experiencing excessive wait times for acquiring "
+              + "the eviction lock. This may indicate that a long-running computation has halted "
+              + "eviction when trying to remove the victim entry. Consider using AsyncCache to "
+              + "decouple the computation from the map operation.", new TimeoutException());
+          evictionLock.lock();
           return;
+        } catch (InterruptedException e) {
+          remainingNanos = end - System.nanoTime();
+          interrupted = true;
         }
-        logger.log(Level.WARNING, "The cache is experiencing excessive wait times for acquiring "
-            + "the eviction lock. This may indicate that a long-running computation has halted "
-            + "eviction when trying to remove the victim entry. Consider using AsyncCache to "
-            + "decouple the computation from the map operation.", new TimeoutException());
-        evictionLock.lock();
-        return;
-      } catch (InterruptedException e) {
-        remainingNanos = end - System.nanoTime();
+      }
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
       }
     }
   }

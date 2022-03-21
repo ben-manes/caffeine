@@ -22,7 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
@@ -111,10 +110,6 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
         }
       }
       success = !loaded.isEmpty();
-    } catch (RuntimeException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new CompletionException(e);
     } finally {
       long loadTime = cache().statsTicker().read() - startTime;
       if (success) {

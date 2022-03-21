@@ -35,9 +35,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
@@ -520,21 +518,18 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @SuppressWarnings({"PMD.AvoidThrowingNullPointerException", "PMD.PreserveStackTrace"})
-    protected static <T> T resolve(Future<T> future) {
+    protected static <T> T resolve(CompletableFuture<T> future) {
       try {
-        return future.get();
-      } catch (ExecutionException e) {
-        if (e.getCause() instanceof NullMapCompletionException) {
-          throw new NullPointerException("null map");
-        } else if (e.getCause() instanceof RuntimeException) {
+        return future.join();
+      } catch (NullMapCompletionException e) {
+        throw new NullPointerException("null map");
+      } catch (CompletionException e) {
+        if (e.getCause() instanceof RuntimeException) {
           throw (RuntimeException) e.getCause();
         } else if (e.getCause() instanceof Error) {
           throw (Error) e.getCause();
         }
-        throw new CompletionException(e.getCause());
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new CompletionException(e);
+        throw e;
       }
     }
 

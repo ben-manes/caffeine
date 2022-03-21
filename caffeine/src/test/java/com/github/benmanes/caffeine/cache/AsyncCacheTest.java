@@ -251,6 +251,17 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = UnknownError.class)
+  public void getBiFunc_throwsError(AsyncCache<Int, Int> cache, CacheContext context) {
+    try {
+      cache.get(context.absentKey(), (key, executor) -> { throw new UnknownError(); });
+    } finally {
+      assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.get(context.absentKey(), (k, executor) -> null);
@@ -617,6 +628,33 @@ public final class AsyncCacheTest {
     assertThat(future).failsWith(CompletionException.class)
         .hasCauseThat().isInstanceOf(IllegalStateException.class);
     assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void getAllBifunction_absent_throwsException(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    try {
+      cache.getAll(context.absentKeys(),
+          (keys, executor) -> { throw new IllegalStateException(); });
+    } finally {
+      int misses = context.absentKeys().size();
+      assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = UnknownError.class)
+  public void getAllBifunction_absent_throwsError(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    try {
+      cache.getAll(context.absentKeys(), (keys, executor) -> { throw new UnknownError(); });
+    } finally {
+      int misses = context.absentKeys().size();
+      assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
   }
 
   @Test(dataProvider = "caches")
