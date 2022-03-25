@@ -30,7 +30,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
+abstract class Node<K, V> extends NodeAccessInfo implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
   @Nullable
@@ -153,50 +153,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   }
 
   /* --------------- Access order --------------- */
-
-  public static final int WINDOW = 0;
-  public static final  int PROBATION = 1;
-  public static final  int PROTECTED = 2;
-
-  /** Returns if the entry is in the Window or Main space. */
-  public boolean inWindow() {
-    return getQueueType() == WINDOW;
-  }
-
-  /** Returns if the entry is in the Main space's probation queue. */
-  public boolean inMainProbation() {
-    return getQueueType() == PROBATION;
-  }
-
-  /** Returns if the entry is in the Main space's protected queue. */
-  public boolean inMainProtected() {
-    return getQueueType() == PROTECTED;
-  }
-
-  /** Sets the status to the Window queue. */
-  public void makeWindow() {
-    setQueueType(WINDOW);
-  }
-
-  /** Sets the status to the Main space's probation queue. */
-  public void makeMainProbation() {
-    setQueueType(PROBATION);
-  }
-
-  /** Sets the status to the Main space's protected queue. */
-  public void makeMainProtected() {
-    setQueueType(PROTECTED);
-  }
-
-  /** Returns the queue that the entry's resides in (window, probation, or protected). */
-  public int getQueueType() {
-    return WINDOW;
-  }
-
-  /** Set queue that the entry resides in (window, probation, or protected). */
-  public void setQueueType(int queueType) {
-    throw new UnsupportedOperationException();
-  }
+  /* Extracted Access order information from here as the class is bloating */
 
   /** Returns the time that this entry was last accessed, in ns. */
   public long getAccessTime() {
