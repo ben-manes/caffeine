@@ -280,8 +280,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       });
     }
 
-    static final class NullMapCompletionException extends CompletionException {
-      private static final long serialVersionUID = 1L;
+    static final class NullMapCompletionException extends CompletionException implements serialVersionUID{
+      // the serialVersionUID variable has been extracted to serialVersionUID interface which could be used when that variable is needed
     }
   }
 
@@ -453,8 +453,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   }
 
   /* --------------- Synchronous view --------------- */
-  final class CacheView<K, V> extends AbstractCacheView<K, V> {
-    private static final long serialVersionUID = 1L;
+  final class CacheView<K, V> extends AbstractCacheView<K, V> implements serialVersionUID {
+    // the serialVersionUID variable has been extracted to serialVersionUID interface which could be used when that variable is needed
 
     final LocalAsyncCache<K, V> asyncCache;
 
@@ -466,8 +466,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
   }
 
-  abstract class AbstractCacheView<K, V> implements Cache<K, V>, Serializable {
-    private static final long serialVersionUID = 1L;
+  abstract class AbstractCacheView<K, V> implements Cache<K, V>, Serializable, serialVersionUID {
+    // the serialVersionUID variable has been extracted to serialVersionUID interface which could be used when that variable is needed
 
     transient @Nullable AsMapView<K, V> asMapView;
 
@@ -1151,4 +1151,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
     }
   }
+}
+
+interface serialVersionUID {
+  // this variable has been duplicated in multiple classes, hence I moved this variable to this interface which could be used based on requirements
+  long serialVersionUID = 1L;
 }
