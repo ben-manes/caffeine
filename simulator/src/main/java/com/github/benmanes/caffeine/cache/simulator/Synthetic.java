@@ -22,7 +22,7 @@ import java.util.stream.LongStream;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.UniformSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.TraceSettings;
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.KeyOnlyTraceReader;
 
 import site.ycsb.generator.CounterGenerator;
 import site.ycsb.generator.ExponentialGenerator;

@@ -14,7 +14,6 @@
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import java.util.Set;
-import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -43,16 +42,15 @@ public interface TraceReader {
   Stream<AccessEvent> events();
 
   /** A trace reader that that does not contain external event metadata. */
-  interface KeyOnlyTraceReader extends TraceReader {
+  interface KeyTraceReader extends TraceReader {
 
     @Override default Set<Characteristic> characteristics() {
       return ImmutableSet.of();
     }
 
     @Override default Stream<AccessEvent> events() {
-      return keys().mapToObj(AccessEvent::forKey);
+      return null;
     }
 
-    LongStream keys();
   }
 }

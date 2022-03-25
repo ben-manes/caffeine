@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.KeyOnlyTraceReader;
 
 /**
  * A reader for the trace files provided by the authors of the LIRS algorithm.

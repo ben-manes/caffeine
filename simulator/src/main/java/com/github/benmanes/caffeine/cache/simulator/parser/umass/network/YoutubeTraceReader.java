@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser.umass.network;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.KeyOnlyTraceReader;
 import com.google.common.hash.Hashing;
 
 /**

@@ -19,7 +19,7 @@ import java.math.RoundingMode;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.KeyOnlyTraceReader;
 import com.google.common.math.IntMath;
 
 /**
