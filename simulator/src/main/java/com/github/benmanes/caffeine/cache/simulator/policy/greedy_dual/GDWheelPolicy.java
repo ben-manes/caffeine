@@ -91,7 +91,7 @@ public final class GDWheelPolicy implements Policy {
   private void evict(AccessEvent event) {
     // while there is not enough room in memory for p
     while ((size + event.weight()) > maximumSize) {
-      // C[1] ← index of next non-empty queue in level 1 Cost Wheel
+      // C[1] <- index of next non-empty queue in level 1 Cost Wheel
       int hand = findNextQueue();
       if (hand >= 0) {
         // Evict q at the tail of the C[1]th queue in level 1 Cost Wheel
@@ -117,7 +117,7 @@ public final class GDWheelPolicy implements Policy {
   }
 
   private void migrate(int level) {
-    // C[idx] ← (C[idx] + 1) mod NQ
+    // C[idx] <- (C[idx] + 1) mod NQ
     int hand = (clockHand[level] + 1) % wheel[level].length;
     clockHand[level] = hand;
 
@@ -134,10 +134,10 @@ public final class GDWheelPolicy implements Policy {
         var node = sentinel.next;
         node.remove();
 
-        // Cost Remainder ← c(p) mod NQ^(idx-1)
+        // Cost Remainder <- c(p) mod NQ^(idx-1)
         double remainder = (node.cost % cost[level]);
 
-        // Q ← (round(Cost Remainder / NQ^(idx-2)) + C[idx-1]) mod NQ
+        // Q <- (round(Cost Remainder / NQ^(idx-2)) + C[idx-1]) mod NQ
         int index = (int) ((Math.round(remainder / cost[level - 1]) + hand) % wheel[level].length);
 
         // Insert p to the head of Qth queue in the level (idx−1) Cost Wheel
@@ -159,7 +159,7 @@ public final class GDWheelPolicy implements Policy {
   }
 
   private void add(AccessEvent event, Node node) {
-    // W ← max { i | 0 < i ≤ NW and round(c(p) / NQ^(i-1)) > 0 }
+    // W <- max { i | 0 < i ≤ NW and round(c(p) / NQ^(i-1)) > 0 }
     int wheelHand = 0;
     int wheelIndex = 0;
     long relativeCost = 0;
@@ -172,7 +172,7 @@ public final class GDWheelPolicy implements Policy {
       }
     }
 
-    // Q ← (round( c(p) / NQ^(W-1) ) + C[W]) mod NQ
+    // Q <- (round( c(p) / NQ^(W-1) ) + C[W]) mod NQ
     int queueIndex = (int) ((relativeCost + wheelHand) % wheel.length);
     var sentinel = wheel[wheelIndex][queueIndex];
 

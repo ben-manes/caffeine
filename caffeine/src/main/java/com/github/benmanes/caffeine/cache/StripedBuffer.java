@@ -211,7 +211,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   }
 
   /* Extracted method to reduce the cyclomatic complexity and size of the parent method */
-  private boolean isInit(E e, Buffer<E>[] buffers) {
+  private boolean isInit(E e, Buffer<E> @Nullable [] buffers) {
     boolean init = false;
     try { // Initialize table
       if (table == buffers) {
