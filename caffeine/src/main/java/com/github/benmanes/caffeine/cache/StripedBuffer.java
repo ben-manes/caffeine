@@ -31,7 +31,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A base class providing the mechanics for supporting dynamic striping of bounded buffers. This
- * implementation is an adaption of the numeric 64-bit { @link java.util.concurrent.atomic.Striped64 }
+ * implementation is an adaption of the numeric 64-bit {@link java.util.concurrent.atomic.Striped64}
  * class, which is used by atomic counters. The approach was modified to lazily grow an array of
  * buffers in order to minimize memory usage for caches that are not heavily contended on.
  *
@@ -115,11 +115,9 @@ abstract class StripedBuffer<E> implements Buffer<E> {
 
   @Override
   public int offer(E e) {
-    /* refactored variable name from z to threadID as z was not giving much information about its value */
-    long threadID = mix64(Thread.currentThread().getId());
-    int increment = (int) (threadID >>> 32) | 1;
-    /* refactored variable name from h to modifiedThreadID as h was not giving much information about its value */
-    int modifiedThreadID = (int) threadID;
+    long z = mix64(Thread.currentThread().getId());
+    int increment = (int) (z >>> 32) | 1;
+    int h = (int) z;
 
     int mask;
     int result;
@@ -128,9 +126,9 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     Buffer<E>[] buffers = table;
     if ((buffers == null)
         || ((mask = buffers.length - 1) < 0)
-        || ((buffer = buffers[modifiedThreadID & mask]) == null)
+        || ((buffer = buffers[h & mask]) == null)
         || !(uncontended = ((result = buffer.offer(e)) != Buffer.FAILED))) {
-      return expandOrRetry(e, modifiedThreadID, increment, uncontended);
+      return expandOrRetry(e, h, increment, uncontended);
     }
     return result;
   }
@@ -156,8 +154,19 @@ abstract class StripedBuffer<E> implements Buffer<E> {
       if (((buffers = table) != null) && ((n = buffers.length) > 0)) {
         if ((buffer = buffers[(n - 1) & h]) == null) {
           if ((tableBusy == 0) && casTableBusy()) { // Try to attach new Buffer
-            /* Extracted implementation to a method to reduce the cyclomatic complexity and size for readability of this method */
-            if (isCreated(e, h)) {
+            boolean created = false;
+            try { // Recheck under lock
+              Buffer<E>[] rs;
+              int mask, j;
+              if (((rs = table) != null) && ((mask = rs.length) > 0)
+                  && (rs[j = (mask - 1) & h] == null)) {
+                rs[j] = create(e);
+                created = true;
+              }
+            } finally {
+              tableBusy = 0;
+            }
+            if (created) {
               break;
             }
             continue; // Slot is now non-empty
@@ -184,47 +193,24 @@ abstract class StripedBuffer<E> implements Buffer<E> {
         }
         h += increment;
       } else if ((tableBusy == 0) && (table == buffers) && casTableBusy()) {
-        /* Extracted implementation to a method to reduce the cyclomatic complexity and size for readability of this method */
-        if (isInit(e, buffers)) {
+        boolean init = false;
+        try { // Initialize table
+          if (table == buffers) {
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            Buffer<E>[] rs = new Buffer[1];
+            rs[0] = create(e);
+            table = rs;
+            init = true;
+          }
+        } finally {
+          tableBusy = 0;
+        }
+        if (init) {
           break;
         }
       }
     }
     return result;
-  }
-
-  /* Extracted method to reduce the cyclomatic complexity and size of the parent method */
-  private boolean isCreated(E e, int h) {
-    boolean created = false;
-    try { // Recheck under lock
-      Buffer<E>[] rs;
-      int mask, j;
-      if (((rs = table) != null) && ((mask = rs.length) > 0)
-          && (rs[j = (mask - 1) & h] == null)) {
-        rs[j] = create(e);
-        created = true;
-      }
-    } finally {
-      tableBusy = 0;
-    }
-    return created;
-  }
-
-  /* Extracted method to reduce the cyclomatic complexity and size of the parent method */
-  private boolean isInit(E e, Buffer<E> @Nullable [] buffers) {
-    boolean init = false;
-    try { // Initialize table
-      if (table == buffers) {
-        @SuppressWarnings({"unchecked", "rawtypes"})
-        Buffer<E>[] rs = new Buffer[1];
-        rs[0] = create(e);
-        table = rs;
-        init = true;
-      }
-    } finally {
-      tableBusy = 0;
-    }
-    return init;
   }
 
   @Override
@@ -271,11 +257,10 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   }
 
   /** Computes Stafford variant 13 of 64-bit mix function. */
-  /* refactored variable name from z to threadID as z was not giving much information about its value */
-  static long mix64(long threadID) {
-    threadID = (threadID ^ (threadID >>> 30)) * 0xbf58476d1ce4e5b9L;
-    threadID = (threadID ^ (threadID >>> 27)) * 0x94d049bb133111ebL;
-    return threadID ^ (threadID >>> 31);
+  static long mix64(long z) {
+    z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9L;
+    z = (z ^ (z >>> 27)) * 0x94d049bb133111ebL;
+    return z ^ (z >>> 31);
   }
 
   static {
