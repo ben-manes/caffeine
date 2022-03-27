@@ -63,6 +63,8 @@ import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ExecutionError;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
 /**
@@ -71,7 +73,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 @SuppressWarnings("PreferJavaTimeOverload")
 public final class GuavaCacheFromContext {
   private GuavaCacheFromContext() {}
-  private static final ThreadLocal<Exception> error = new ThreadLocal<>();
+  private static final ThreadLocal<Throwable> error = new ThreadLocal<>();
 
   /** Returns a Guava-backed cache. */
   @SuppressWarnings("CheckReturnValue")
@@ -626,6 +628,22 @@ public final class GuavaCacheFromContext {
         error.set(e);
         throw e;
       }
+    }
+
+    @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
+    public ListenableFuture<V> reload(K key, V oldValue) throws Exception {
+      error.set(null);
+      var future = SettableFuture.<V>create();
+      delegate.asyncReload(key, oldValue, Runnable::run).whenComplete((r, e) -> {
+        if (e == null) {
+          future.set(r);
+        } else {
+          future.setException(e);
+          error.set(e);
+        }
+      });
+      return future;
     }
   }
 

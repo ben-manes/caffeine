@@ -462,24 +462,10 @@ public class JSR166TestCase extends TestCase {
         }
     }
 
-    public static final double JAVA_CLASS_VERSION;
-    public static final String JAVA_SPECIFICATION_VERSION;
-    static {
-        try {
-            JAVA_CLASS_VERSION = java.security.AccessController.doPrivileged(
-                new java.security.PrivilegedAction<Double>() {
-                @Override
-                public Double run() {
-                    return Double.valueOf(System.getProperty("java.class.version"));}});
-            JAVA_SPECIFICATION_VERSION = java.security.AccessController.doPrivileged(
-                new java.security.PrivilegedAction<String>() {
-                @Override
-                public String run() {
-                    return System.getProperty("java.specification.version");}});
-        } catch (Throwable t) {
-            throw new Error(t);
-        }
-    }
+    public static final double JAVA_CLASS_VERSION =
+        Double.valueOf(System.getProperty("java.class.version"));
+    public static final String JAVA_SPECIFICATION_VERSION =
+        System.getProperty("java.specification.version");
 
     public static boolean atLeastJava6()  { return JAVA_CLASS_VERSION >= 50.0; }
     public static boolean atLeastJava7()  { return JAVA_CLASS_VERSION >= 51.0; }
@@ -1097,8 +1083,6 @@ public class JSR166TestCase extends TestCase {
                     pool.awaitTermination(MEDIUM_DELAY_MS, MILLISECONDS);
                 }
             }
-        } catch (SecurityException ok) {
-            // Allowed in case test doesn't have privs
         } catch (InterruptedException fail) {
             threadFail("Unexpected InterruptedException");
         }
@@ -1181,15 +1165,6 @@ public class JSR166TestCase extends TestCase {
      * Uninteresting threads are filtered out.
      */
     static void dumpTestThreads() {
-        SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            try {
-                System.setSecurityManager(null);
-            } catch (SecurityException giveUp) {
-                return;
-            }
-        }
-
         System.err.println("------ stacktrace dump start ------");
         for (ThreadInfo info : THREAD_MXBEAN.dumpAllThreads(true, true)) {
           if (threadOfInterest(info)) {
@@ -1197,10 +1172,6 @@ public class JSR166TestCase extends TestCase {
           }
         }
         System.err.println("------ stacktrace dump end ------");
-
-        if (sm != null) {
-          System.setSecurityManager(sm);
-        }
     }
 
     /**

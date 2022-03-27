@@ -63,6 +63,7 @@ import picocli.CommandLine.TypeConversionException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.ImmutableField")
 @Command(mixinStandardHelpOptions = true)
 public final class PlotCsv implements Runnable {
   @Option(names = "--inputFile", required = true, description = "The csv file path")
