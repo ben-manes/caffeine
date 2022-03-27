@@ -103,9 +103,25 @@ tasks.withType(Test).configureEach {
   }
 }
 
-tasks.register('stress', JavaExec) {
+class Stresser extends DefaultTask {
+  @Input @Optional @Option(option = 'workload', description = 'The workload type')
+  String operation
+
+  @TaskAction def run() {
+    project.javaexec {
+      mainClass = 'com.github.benmanes.caffeine.cache.Stresser'
+      classpath project.sourceSets.test.runtimeClasspath
+      if (operation) {
+        args '--workload', operation
+      } else {
+        args '--help'
+      }
+    }
+  }
+}
+tasks.register('stress', Stresser) {
   group = 'Cache tests'
   description = 'Executes a stress test'
-  mainClass = 'com.github.benmanes.caffeine.cache.Stresser'
-  classpath sourceSets.test.runtimeClasspath
+  outputs.upToDateWhen { false }
+  dependsOn compileTestJava
 }

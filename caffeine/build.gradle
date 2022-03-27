@@ -38,6 +38,7 @@ dependencies {
   testImplementation libraries.joor
   testImplementation libraries.ycsb
   testImplementation libraries.guava
+  testImplementation libraries.picocli
   testImplementation libraries.fastutil
   testImplementation testLibraries.junit
   testImplementation testLibraries.testng

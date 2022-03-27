@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Locale.US;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.time.LocalTime;
@@ -23,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -30,13 +32,23 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Help;
+import picocli.CommandLine.Option;
+
 /**
  * A stress test to observe if the cache is able to drain the buffers fast enough under a synthetic
  * load.
+ * <p>
+ * <pre>{@code
+ *   ./gradlew :caffeine:stress --workload=[read, write, refresh]
+ * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Stresser {
+@Command(mixinStandardHelpOptions = true)
+public final class Stresser implements Runnable {
   private static final String[] STATUS =
     { "Idle", "Required", "Processing -> Idle", "Processing -> Required" };
   private static final int MAX_THREADS = 2 * Runtime.getRuntime().availableProcessors();
@@ -45,29 +57,24 @@ public final class Stresser {
   private static final int MASK = TOTAL_KEYS - 1;
   private static final int STATUS_INTERVAL = 5;
 
-  private final BoundedLocalCache<Integer, Integer> local;
-  private final LoadingCache<Integer, Integer> cache;
-  private final Stopwatch stopwatch;
-  private final Integer[] ints;
+  @Option(names = "--workload", required = true,
+      description = "The workload type: ${COMPLETION-CANDIDATES}")
+  private Workload workload;
 
-  private enum Operation {
-    READ(MAX_THREADS, TOTAL_KEYS),
-    WRITE(MAX_THREADS, WRITE_MAX_SIZE),
-    REFRESH(1, WRITE_MAX_SIZE);
+  private BoundedLocalCache<Integer, Integer> local;
+  private LoadingCache<Integer, Integer> cache;
+  private LongAdder pendingReloads;
+  private Stopwatch stopwatch;
+  private Integer[] ints;
 
-    private final int maxThreads;
-    private final int maxEntries;
-
-    Operation(int maxThreads, int maxEntries) {
-      this.maxThreads = maxThreads;
-      this.maxEntries = maxEntries;
-    }
+  @Override
+  public void run() {
+    initialize();
+    execute();
   }
 
-  private static final Operation operation = Operation.REFRESH;
-
   @SuppressWarnings("FutureReturnValueIgnored")
-  public Stresser() {
+  private void initialize() {
     var threadFactory = new ThreadFactoryBuilder()
         .setPriority(Thread.MAX_PRIORITY)
         .setDaemon(true)
@@ -75,10 +82,11 @@ public final class Stresser {
     Executors.newSingleThreadScheduledExecutor(threadFactory)
         .scheduleAtFixedRate(this::status, STATUS_INTERVAL, STATUS_INTERVAL, SECONDS);
     cache = Caffeine.newBuilder()
-        .maximumSize(operation.maxEntries)
+        .maximumSize(workload.maxEntries)
         .recordStats()
         .build(key -> key);
     local = (BoundedLocalCache<Integer, Integer>) cache.asMap();
+    pendingReloads = new LongAdder();
     ints = new Integer[TOTAL_KEYS];
     Arrays.setAll(ints, key -> {
       cache.put(key, key);
@@ -90,12 +98,12 @@ public final class Stresser {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void run() throws InterruptedException {
-    ConcurrentTestHarness.timeTasks(operation.maxThreads, () -> {
+  private void execute() {
+    ConcurrentTestHarness.timeTasks(workload.maxThreads, () -> {
       int index = ThreadLocalRandom.current().nextInt();
       for (;;) {
         Integer key = ints[index++ & MASK];
-        switch (operation) {
+        switch (workload) {
           case READ:
             cache.getIfPresent(key);
             break;
@@ -103,7 +111,8 @@ public final class Stresser {
             cache.put(key, key);
             break;
           case REFRESH:
-            cache.refresh(key);
+            pendingReloads.increment();
+            cache.refresh(key).thenRun(pendingReloads::decrement);
             break;
         }
       }
@@ -126,9 +135,10 @@ public final class Stresser {
     System.out.printf("Pending reads: %,d; writes: %,d%n", local.readBuffer.size(), pendingWrites);
     System.out.printf("Drain status = %s (%s)%n", STATUS[drainStatus], drainStatus);
     System.out.printf("Evictions = %,d%n", cache.stats().evictionCount());
-    System.out.printf("Size = %,d (max: %,d)%n", local.data.mappingCount(), operation.maxEntries);
+    System.out.printf("Size = %,d (max: %,d)%n", local.data.mappingCount(), workload.maxEntries);
     System.out.printf("Lock = [%s%n", StringUtils.substringAfter(
         local.evictionLock.toString(), "["));
+    System.out.printf("Pending reloads = %,d%n", pendingReloads.sum());
     System.out.printf("Pending tasks = %,d%n",
         ForkJoinPool.commonPool().getQueuedSubmissionCount());
 
@@ -142,7 +152,28 @@ public final class Stresser {
     System.out.println();
   }
 
-  public static void main(String[] args) throws Exception {
-    new Stresser().run();
+  public static void main(String[] args) {
+    new CommandLine(Stresser.class)
+        .setCommandName(Stresser.class.getSimpleName())
+        .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
+        .setCaseInsensitiveEnumValuesAllowed(true)
+        .execute(args);
+  }
+
+  private enum Workload {
+    READ(MAX_THREADS, TOTAL_KEYS),
+    WRITE(MAX_THREADS, WRITE_MAX_SIZE),
+    REFRESH(1, WRITE_MAX_SIZE);
+
+    private final int maxThreads;
+    private final int maxEntries;
+
+    Workload(int maxThreads, int maxEntries) {
+      this.maxThreads = maxThreads;
+      this.maxEntries = maxEntries;
+    }
+    @Override public String toString() {
+      return name().toLowerCase(US);
+    }
   }
 }
