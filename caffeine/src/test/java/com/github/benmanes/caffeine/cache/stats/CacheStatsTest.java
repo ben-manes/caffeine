@@ -94,6 +94,13 @@ public final class CacheStatsTest {
         Long.MAX_VALUE, Long.MAX_VALUE);
   }
 
+  @Test
+  public void underflow() {
+    var max = CacheStats.of(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE,
+        Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
+    assertThat(CacheStats.empty().minus(max)).isEqualTo(CacheStats.empty());
+  }
+
   private static void checkStats(CacheStats stats, long requestCount, long hitCount,
       double hitRate, long missCount, double missRate, long loadSuccessCount,
       long loadFailureCount, double loadFailureRate, long loadCount, long totalLoadTime,
