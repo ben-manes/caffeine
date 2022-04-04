@@ -697,8 +697,8 @@ public final class Caffeine<K extends Object, V extends Object> {
    * the future.
    *
    * @param expiry the expiry to use in calculating the expiration time of cache entries
-   * @param <K1> key type of the weigher
-   * @param <V1> value type of the weigher
+   * @param <K1> key type of the expiry
+   * @param <V1> value type of the expiry
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if expiration was already set
    */
@@ -731,12 +731,13 @@ public final class Caffeine<K extends Object, V extends Object> {
   /**
    * Specifies that active entries are eligible for automatic refresh once a fixed duration has
    * elapsed after the entry's creation, or the most recent replacement of its value. The semantics
-   * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling {@link
-   * CacheLoader#reload}.
+   * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
+   * {@link AsyncCacheLoader#asyncLoad}.
    * <p>
    * Automatic refreshes are performed when the first stale request for an entry occurs. The request
-   * triggering refresh will make an asynchronous call to {@link CacheLoader#reload} and immediately
-   * return the old value.
+   * triggering the refresh will make a synchronous call to {@link AsyncCacheLoader#asyncLoad} to
+   * obtain a future of the new value. If the returned future is already complete, it is returned
+   * immediately. Otherwise, the old value is returned.
    * <p>
    * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
    *
@@ -755,11 +756,12 @@ public final class Caffeine<K extends Object, V extends Object> {
    * Specifies that active entries are eligible for automatic refresh once a fixed duration has
    * elapsed after the entry's creation, or the most recent replacement of its value. The semantics
    * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
-   * {@link CacheLoader#reload}.
+   * {@link AsyncCacheLoader#asyncLoad}.
    * <p>
    * Automatic refreshes are performed when the first stale request for an entry occurs. The request
-   * triggering refresh will make an asynchronous call to {@link CacheLoader#reload} and immediately
-   * return the old value.
+   * triggering the refresh will make a synchronous call to {@link AsyncCacheLoader#asyncLoad} to
+   * obtain a future of the new value. If the returned future is already complete, it is returned
+   * immediately. Otherwise, the old value is returned.
    * <p>
    * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
    * <p>

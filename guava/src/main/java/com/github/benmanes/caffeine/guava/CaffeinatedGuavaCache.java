@@ -239,7 +239,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     CacheLoaderException(Exception e) {
       super(e);
     }
-    @SuppressWarnings("UnsynchronizedOverridesSynchronized")
+    @SuppressWarnings({"UnsynchronizedOverridesSynchronized", "lgtm [java/non-sync-override]"})
     @Override public Throwable fillInStackTrace() {
       return this;
     }
