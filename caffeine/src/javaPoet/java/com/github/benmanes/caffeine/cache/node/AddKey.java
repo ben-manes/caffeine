@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
 
 import java.util.List;
 
@@ -78,7 +78,7 @@ public final class AddKey extends NodeRule {
     if (isStrongKeys()) {
       getKey.addStatement("return ($T) valueRef.getKeyReference()", kTypeVar);
     } else {
-      getKey.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceKeyType);
+      getKey.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceType);
       getKey.addStatement("return keyRef.get()");
     }
     context.nodeSubtype.addMethod(getKey.build());

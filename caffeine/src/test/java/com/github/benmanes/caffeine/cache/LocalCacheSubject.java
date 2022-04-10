@@ -30,6 +30,7 @@ import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncCac
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalManualCache;
 import com.github.benmanes.caffeine.cache.LocalAsyncLoadingCache.LoadingCacheView;
+import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncCache;
@@ -341,7 +342,8 @@ public final class LocalCacheSubject extends Subject {
       if ((key != null) && (value != null)) {
         check("bounded").that(bounded).containsKey(key);
       }
-      check("keyReference").that(node.getKeyReference()).isInstanceOf(WeakKeyReference.class);
+      var clazz = node instanceof Interned ? WeakKeyEqualsReference.class : WeakKeyReference.class;
+      check("keyReference").that(node.getKeyReference()).isInstanceOf(clazz);
     } else {
       check("key").that(key).isNotNull();
     }

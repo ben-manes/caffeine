@@ -30,7 +30,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
 import static com.github.benmanes.caffeine.cache.Specifications.lookupKeyType;
 import static com.github.benmanes.caffeine.cache.Specifications.rawReferenceKeyType;
-import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
@@ -246,7 +246,7 @@ public final class NodeFactoryGenerator {
     return MethodSpec.methodBuilder("newReferenceKey")
         .addJavadoc("Returns a key suitable for inserting into the cache. If the cache holds "
             + "keys strongly then\nthe key is returned. If the cache holds keys weakly "
-            + "then a {@link $T}\nholding the key argument is returned.\n", referenceKeyType)
+            + "then a {@link $T}\nholding the key argument is returned.\n", referenceType)
         .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
         .addParameter(kTypeVar, "key")
         .addParameter(kRefQueueType, "referenceQueue")

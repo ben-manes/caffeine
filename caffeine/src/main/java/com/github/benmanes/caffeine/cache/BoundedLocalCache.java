@@ -2109,6 +2109,26 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     return value;
   }
 
+  /**
+   * Returns the key associated with the mapping in this cache, or {@code null} if there is none.
+   *
+   * @param key the key whose canonical instance is to be returned
+   * @return the key used by the mapping, or {@code null} if this cache does not contain a mapping
+   *         for the key
+   * @throws NullPointerException if the specified key is null
+   */
+  public @Nullable K getKey(K key) {
+    Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
+    if (node == null) {
+      if (drainStatus() == REQUIRED) {
+        scheduleDrainBuffers();
+      }
+      return null;
+    }
+    afterRead(node, /* now */ 0L, /* recordStats */ false);
+    return node.getKey();
+  }
+
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
     var result = new LinkedHashMap<Object, Object>();

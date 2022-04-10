@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 
 import com.squareup.javapoet.ClassName;
@@ -46,6 +47,8 @@ public final class Specifications {
   public static final ClassName nodeType = ClassName.get(PACKAGE_NAME, "Node");
   public static final TypeName lookupKeyType =
       ClassName.get(PACKAGE_NAME + ".References", "LookupKeyReference");
+  public static final TypeName referenceType = ParameterizedTypeName.get(
+      ClassName.get(Reference.class), kTypeVar);
   public static final TypeName referenceKeyType = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
   public static final TypeName rawReferenceKeyType = ParameterizedTypeName.get(

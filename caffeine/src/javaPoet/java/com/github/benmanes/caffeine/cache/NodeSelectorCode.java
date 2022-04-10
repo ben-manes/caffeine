@@ -32,6 +32,9 @@ public final class NodeSelectorCode {
 
   private NodeSelectorCode() {
     block = CodeBlock.builder()
+        .beginControlFlow("if (builder.interner)")
+            .addStatement("return new Interned<>()")
+        .endControlFlow()
         .addStatement("$1T sb = new $1T(\"$2N.\")",
             StringBuilder.class, NODE_FACTORY.rawType.packageName());
   }

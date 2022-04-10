@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -56,7 +57,7 @@ final class References {
     Object getKeyReference();
 
     /**
-     * Returns {@code true} if the arguments is an {@linkplain InternalReference} that holds the
+     * Returns {@code true} if the arguments is a {@linkplain InternalReference} that holds the
      * same element. A weakly or softly held element is compared using identity equality.
      *
      * @param object the reference object with which to compare
@@ -71,6 +72,24 @@ final class References {
       }
       return false;
     }
+
+    /**
+     * Returns {@code true} if the arguments is a {@linkplain InternalReference} that holds an
+     * equivalent element as determined by {@link Object#equals}.
+     *
+     * @param object the reference object with which to compare
+     * @return {@code true} if this object is equivalent by {@link Object#equals} as the argument;
+     *         {@code false} otherwise
+     */
+    default boolean objectEquals(Object object) {
+      if (object == this) {
+        return true;
+      } else if (object instanceof InternalReference<?>) {
+        InternalReference<?> referent = (InternalReference<?>) object;
+        return Objects.equals(get(), referent.get());
+      }
+      return false;
+    }
   }
 
   /**
@@ -78,18 +97,18 @@ final class References {
    * This {@linkplain InternalReference} implementation is not suitable for storing in the cache as
    * the key is strongly held.
    */
-  static final class LookupKeyReference<E> implements InternalReference<E> {
+  static final class LookupKeyReference<K> implements InternalReference<K> {
     private final int hashCode;
-    private final E e;
+    private final K key;
 
-    public LookupKeyReference(E e) {
-      this.hashCode = System.identityHashCode(e);
-      this.e = requireNonNull(e);
+    public LookupKeyReference(K key) {
+      this.hashCode = System.identityHashCode(key);
+      this.key = requireNonNull(key);
     }
 
     @Override
-    public E get() {
-      return e;
+    public K get() {
+      return key;
     }
 
     @Override
@@ -109,7 +128,47 @@ final class References {
 
     @Override
     public String toString() {
-      return String.format("%s{e=%s, hashCode=%d}", getClass().getSimpleName(), e, hashCode);
+      return String.format("%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
+    }
+  }
+
+  /**
+   * A short-lived adapter used for looking up an entry in the cache where the keys are weakly held.
+   * This {@linkplain InternalReference} implementation is not suitable for storing in the cache as
+   * the key is strongly held.
+   */
+  static final class LookupKeyEqualsReference<K> implements InternalReference<K> {
+    private final int hashCode;
+    private final K key;
+
+    public LookupKeyEqualsReference(K key) {
+      this.hashCode = key.hashCode();
+      this.key = requireNonNull(key);
+    }
+
+    @Override
+    public K get() {
+      return key;
+    }
+
+    @Override
+    public Object getKeyReference() {
+      return this;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+      return objectEquals(object);
+    }
+
+    @Override
+    public int hashCode() {
+      return hashCode;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
     }
   }
 
@@ -118,7 +177,7 @@ final class References {
    * the advent that the key is reclaimed so that the entry can be removed from the cache in
    * constant time.
    */
-  static class WeakKeyReference<K> extends WeakReference<K> implements InternalReference<K> {
+  static final class WeakKeyReference<K> extends WeakReference<K> implements InternalReference<K> {
     private final int hashCode;
 
     public WeakKeyReference(@Nullable K key, @Nullable ReferenceQueue<K> queue) {
@@ -143,7 +202,42 @@ final class References {
 
     @Override
     public String toString() {
-      return String.format("%s{hashCode=%d}", getClass().getSimpleName(), hashCode);
+      return String.format("%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
+    }
+  }
+
+  /**
+   * The key in a cache that holds the key weakly and uses equals equivalence. This class retains
+   * the key's hash code in the advent that the key is reclaimed so that the entry can be removed
+   * from the cache in constant time.
+   */
+  static final class WeakKeyEqualsReference<K>
+      extends WeakReference<K> implements InternalReference<K> {
+    private final int hashCode;
+
+    public WeakKeyEqualsReference(K key, @Nullable ReferenceQueue<K> queue) {
+      super(key, queue);
+      hashCode = key.hashCode();
+    }
+
+    @Override
+    public Object getKeyReference() {
+      return this;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+      return objectEquals(object);
+    }
+
+    @Override
+    public int hashCode() {
+      return hashCode;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
     }
   }
 

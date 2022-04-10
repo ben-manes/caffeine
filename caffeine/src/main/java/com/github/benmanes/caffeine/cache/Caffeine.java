@@ -147,6 +147,7 @@ public final class Caffeine<K extends Object, V extends Object> {
   static final int DEFAULT_REFRESH_NANOS = 0;
 
   boolean strictParsing = true;
+  boolean interner;
 
   long maximumSize = UNSET_INT;
   long maximumWeight = UNSET_INT;
@@ -224,6 +225,14 @@ public final class Caffeine<K extends Object, V extends Object> {
   @CheckReturnValue
   public static Caffeine<Object, Object> newBuilder() {
     return new Caffeine<>();
+  }
+
+  /** Returns a cache that is optimized for weak reference interning (see {@link Interner}). */
+  @CheckReturnValue
+  static <K> BoundedLocalCache<K, Boolean> newWeakInterner() {
+    var builder = new Caffeine<K, Boolean>().executor(Runnable::run).weakKeys();
+    builder.interner = true;
+    return LocalCacheFactory.newBoundedLocalCache(builder, /* loader */ null, /* async */ false);
   }
 
   /**

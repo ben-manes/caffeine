@@ -19,7 +19,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
 
 import com.squareup.javapoet.MethodSpec;
 
@@ -67,6 +67,9 @@ public final class AddHealth extends NodeRule {
     var action = MethodSpec.methodBuilder(actionName)
         .addModifiers(context.publicFinalModifiers());
     if (valueStrength() == Strength.STRONG) {
+      if (keyStrength() != Strength.STRONG) {
+        action.addStatement("key.clear()");
+      }
       // Set the value to null only when dead, as otherwise the explicit removal of an expired async
       // value will be notified as explicit rather than expired due to the isComputingAsync() check
       if (finalized) {
@@ -77,7 +80,7 @@ public final class AddHealth extends NodeRule {
       action.addStatement("$1T valueRef = ($1T) $2L.get(this)",
           valueReferenceType(), varHandleName("value"));
       if (keyStrength() != Strength.STRONG) {
-        action.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceKeyType);
+        action.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceType);
         action.addStatement("keyRef.clear()");
       }
       action.addStatement("valueRef.setKeyReference($N)", arg);

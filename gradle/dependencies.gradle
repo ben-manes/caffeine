@@ -90,7 +90,7 @@ ext {
     coveralls: '2.12.0',
     dependencyCheck: '7.0.4.1',
     errorprone: '2.0.2',
-    findsecbugs: '1.11.0',
+    findsecbugs: '1.12.0',
     jacoco: '0.8.7',
     jmh: '0.6.6',
     jmhReport: '0.9.0',
@@ -195,7 +195,7 @@ ext {
     testng: [
       "org.testng:testng:${testVersions.testng}",
       "com.google.inject:guice:${testVersions.guice}",
-      'org.ow2.asm:asm:9.2',
+      'org.ow2.asm:asm:9.3',
     ],
     truth: [
       "com.google.truth:truth:${testVersions.truth}",
