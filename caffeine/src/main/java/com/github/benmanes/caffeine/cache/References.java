@@ -271,9 +271,14 @@ final class References {
     }
 
     @Override
-    @SuppressWarnings("PMD.UselessOverridingMethod")
     public int hashCode() {
-      return super.hashCode();
+      V value = get();
+      return (value == null) ? 0 : value.hashCode();
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%s{value=%s}", getClass().getSimpleName(), get());
     }
   }
 
@@ -307,9 +312,14 @@ final class References {
     }
 
     @Override
-    @SuppressWarnings("PMD.UselessOverridingMethod")
     public int hashCode() {
-      return super.hashCode();
+      V value = get();
+      return (value == null) ? 0 : value.hashCode();
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%s{value=%s}", getClass().getSimpleName(), get());
     }
   }
 }

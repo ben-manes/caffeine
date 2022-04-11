@@ -198,7 +198,11 @@ public final class CaffeineCachingProvider implements CachingProvider {
       if ((parentClassLoader != null)
           && (parentClassLoader != classClassLoader)
           && (parentClassLoader != contextClassLoader)) {
-        return parentClassLoader.loadClass(name);
+        try {
+          return parentClassLoader.loadClass(name);
+        } catch (ClassNotFoundException e) {
+          error = e;
+        }
       }
       throw (error == null) ? new ClassNotFoundException(name) : error;
     }
@@ -225,7 +229,10 @@ public final class CaffeineCachingProvider implements CachingProvider {
       if ((parentClassLoader != null)
           && (parentClassLoader != classClassLoader)
           && (parentClassLoader != contextClassLoader)) {
-        return parentClassLoader.getResource(name);
+        URL resource = parentClassLoader.getResource(name);
+        if (resource != null) {
+          return resource;
+        }
       }
 
       return null;

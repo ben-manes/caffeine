@@ -1339,6 +1339,22 @@ public final class BoundedLocalCacheTest {
     await().untilAsserted(() -> assertThat(cache).containsEntry(context.absentKey(), newValue));
   }
 
+  /* --------------- Node --------------- */
+
+  @Test(dataProviderClass = CacheProvider.class, dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
+      initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL}, compute = Compute.SYNC)
+  public void string(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = cache.data.values().iterator().next();
+    var description = node.toString();
+    assertThat(description).contains("key=" + node.getKey());
+    assertThat(description).contains("value=" + node.getValue());
+    assertThat(description).contains("weight=" + node.getWeight());
+    assertThat(description).contains(String.format("accessTimeNS=%,d", node.getAccessTime()));
+    assertThat(description).contains(String.format("writeTimeNS=%,d", node.getWriteTime()));
+    assertThat(description).contains(String.format("varTimeNs=%,d", node.getVariableTime()));
+  }
+
   static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {
     return (BoundedLocalCache<K, V>) cache.asMap();
   }

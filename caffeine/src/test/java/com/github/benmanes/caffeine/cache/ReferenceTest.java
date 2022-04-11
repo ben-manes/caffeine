@@ -39,9 +39,17 @@ import java.util.Map;
 import java.util.Set;
 
 import org.testng.Assert;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.References.InternalReference;
+import com.github.benmanes.caffeine.cache.References.LookupKeyEqualsReference;
+import com.github.benmanes.caffeine.cache.References.LookupKeyReference;
+import com.github.benmanes.caffeine.cache.References.SoftValueReference;
+import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
+import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
+import com.github.benmanes.caffeine.cache.References.WeakValueReference;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -58,6 +66,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
+import com.google.common.testing.EqualsTester;
 import com.google.common.testing.GcFinalization;
 
 /**
@@ -514,6 +523,25 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
+  public void put_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, Int.listOf(1));
+    GcFinalization.awaitFullGc();
+
+    var value = cache.asMap().put(key, Int.listOf(1, 2, 3));
+    if (context.isStrongValues()) {
+      assertThat(value).isEqualTo(Int.listOf(1));
+    } else {
+      assertThat(value).isNull();
+    }
+    assertThat(context).hasWeightedSize(3);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
@@ -642,6 +670,24 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
+  public void computeIfAbsent_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, Int.listOf(1));
+    GcFinalization.awaitFullGc();
+
+    cache.asMap().computeIfAbsent(key, k -> Int.listOf(1, 2, 3));
+    if (context.isStrongValues()) {
+      assertThat(context).hasWeightedSize(1);
+    } else {
+      assertThat(context).hasWeightedSize(3);
+    }
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
@@ -696,6 +742,20 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
+  public void compute_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, Int.listOf(1));
+    GcFinalization.awaitFullGc();
+
+    cache.asMap().compute(key, (k, v) -> Int.listOf(1, 2, 3));
+    assertThat(context).hasWeightedSize(3);
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
@@ -724,89 +784,6 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true)
-  public void iterators(Map<Int, Int> map, CacheContext context) {
-    context.clear();
-    GcFinalization.awaitFullGc();
-    assertThat(map.keySet().iterator().hasNext()).isFalse();
-    assertThat(map.values().iterator().hasNext()).isFalse();
-    assertThat(map.entrySet().iterator().hasNext()).isFalse();
-  }
-
-  /* --------------- Weights --------------- */
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void putIfAbsent_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
-    Int key = context.absentKey();
-    cache.put(key, Int.listOf(1));
-    GcFinalization.awaitFullGc();
-
-    var value = cache.asMap().putIfAbsent(key, Int.listOf(1, 2, 3));
-    if (context.isStrongValues()) {
-      assertThat(value).isEqualTo(Int.listOf(1));
-      assertThat(context).hasWeightedSize(1);
-    } else {
-      assertThat(value).isNull();
-      assertThat(context).hasWeightedSize(3);
-    }
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void put_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
-    Int key = context.absentKey();
-    cache.put(key, Int.listOf(1));
-    GcFinalization.awaitFullGc();
-
-    var value = cache.asMap().put(key, Int.listOf(1, 2, 3));
-    if (context.isStrongValues()) {
-      assertThat(value).isEqualTo(Int.listOf(1));
-    } else {
-      assertThat(value).isNull();
-    }
-    assertThat(context).hasWeightedSize(3);
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void computeIfAbsent_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
-    Int key = context.absentKey();
-    cache.put(key, Int.listOf(1));
-    GcFinalization.awaitFullGc();
-
-    cache.asMap().computeIfAbsent(key, k -> Int.listOf(1, 2, 3));
-    if (context.isStrongValues()) {
-      assertThat(context).hasWeightedSize(1);
-    } else {
-      assertThat(context).hasWeightedSize(3);
-    }
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
-      stats = Stats.ENABLED, removalListener = Listener.DEFAULT)
-  public void compute_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
-    Int key = context.absentKey();
-    cache.put(key, Int.listOf(1));
-    GcFinalization.awaitFullGc();
-
-    cache.asMap().compute(key, (k, v) -> Int.listOf(1, 2, 3));
-    assertThat(context).hasWeightedSize(3);
-  }
-
-  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
@@ -823,6 +800,16 @@ public final class ReferenceTest {
       return v;
     });
     assertThat(context).hasWeightedSize(3);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(requiresWeakOrSoft = true)
+  public void iterators(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.keySet().iterator().hasNext()).isFalse();
+    assertThat(map.values().iterator().hasNext()).isFalse();
+    assertThat(map.entrySet().iterator().hasNext()).isFalse();
   }
 
   @Test(dataProvider = "caches")
@@ -966,5 +953,56 @@ public final class ReferenceTest {
   private static Map<String, String> parseToString(Map<Int, Int> map) {
     return Splitter.on(',').trimResults().omitEmptyStrings().withKeyValueSeparator("=")
         .split(map.toString().replaceAll("\\{|\\}", ""));
+  }
+
+  /* --------------- Reference --------------- */
+
+  @Test(dataProviderClass = ReferenceTest.class, dataProvider = "references")
+  public void reference(InternalReference<Int> reference,
+      Int item, boolean identity, boolean isKey) {
+    assertThat(reference.get()).isSameInstanceAs(item);
+    if (isKey) {
+      int hash = identity ? System.identityHashCode(item) : item.hashCode();
+      assertThat(reference.getKeyReference()).isSameInstanceAs(reference);
+      assertThat(reference.toString()).contains("key=" + item);
+      assertThat(reference.hashCode()).isEqualTo(hash);
+    } else {
+      assertThat(reference.getKeyReference()).isSameInstanceAs(item);
+      assertThat(reference.toString()).contains("value=" + item);
+    }
+  }
+
+  @Test
+  public void reference_equality() {
+    var first = new Int(1);
+    var second = new Int(1);
+    new EqualsTester()
+        .addEqualityGroup(new LookupKeyReference<>(first), new WeakKeyReference<>(first, null))
+        .addEqualityGroup(new LookupKeyReference<>(second), new WeakKeyReference<>(second, null))
+        .testEquals();
+    new EqualsTester()
+        .addEqualityGroup(
+            new LookupKeyEqualsReference<>(first), new WeakKeyEqualsReference<>(first, null),
+            new LookupKeyEqualsReference<>(second), new WeakKeyEqualsReference<>(second, null))
+        .testEquals();
+    new EqualsTester()
+        .addEqualityGroup(new WeakValueReference<>(first, first, null),
+            new SoftValueReference<>(first, first, null))
+        .addEqualityGroup(new WeakValueReference<>(second, second, null),
+            new SoftValueReference<>(second, second, null))
+        .testEquals();
+  }
+
+  @DataProvider(name = "references")
+  public Object[][] providesReferences() {
+    var item = new Int(1);
+    return new Object[][] {
+      new Object[] {new LookupKeyReference<>(item), item, true, true},
+      new Object[] {new WeakKeyReference<>(item, null), item, true, true},
+      new Object[] {new LookupKeyEqualsReference<>(item), item, false, true},
+      new Object[] {new WeakKeyEqualsReference<>(item, null), item, false, true},
+      new Object[] {new WeakValueReference<>(item, item, null), item, true, false},
+      new Object[] {new SoftValueReference<>(item, item, null), item, true, false},
+    };
   }
 }

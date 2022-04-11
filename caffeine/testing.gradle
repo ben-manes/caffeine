@@ -83,6 +83,7 @@ tasks.withType(Test).configureEach {
       options.includeGroups = ['slow']
     } else if (name.startsWith('isolated')) {
       options.includeGroups = ['isolated']
+      maxHeapSize = '3g'
     } else if (name.startsWith('lincheck')) {
       options.includeGroups = ['lincheck']
       jvmArgs += [

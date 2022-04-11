@@ -32,6 +32,16 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.github.benmanes.caffeine.cache.testing.CacheContext;
+import com.github.benmanes.caffeine.cache.testing.CacheProvider;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.google.common.testing.FakeTicker;
 import com.google.common.testing.NullPointerTester;
 
@@ -118,6 +128,50 @@ public final class CaffeineTest {
   @Test
   public void fromString() {
     assertThat(Caffeine.from("")).isNotNull();
+  }
+
+  @Test(dataProviderClass = CacheProvider.class, dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL}, compute = Compute.SYNC)
+  public void string(CacheContext context) {
+    var description = context.caffeine().toString();
+    if (context.initialCapacity() != InitialCapacity.DEFAULT) {
+      assertThat(description).contains("initialCapacity=" + context.initialCapacity().size());
+    }
+    if (context.maximum() != Maximum.DISABLED) {
+      String key = context.isWeighted() ? "maximumWeight" : "maximumSize";
+      assertThat(description).contains(key + "=" + context.maximumWeightOrSize());
+    }
+    if (context.expireAfterWrite() != Expire.DISABLED) {
+      assertThat(description).contains(
+          "expireAfterWrite=" + context.expireAfterWrite().timeNanos() + "ns");
+    }
+    if (context.expireAfterAccess() != Expire.DISABLED) {
+      assertThat(description).contains(
+          "expireAfterAccess=" + context.expireAfterAccess().timeNanos() + "ns");
+    }
+    if (context.expiresVariably()) {
+      assertThat(description).contains("expiry");
+    }
+    if (context.refreshAfterWrite() != Expire.DISABLED) {
+      assertThat(description).contains(
+          "refreshAfterWrite=" + context.refreshAfterWrite().timeNanos() + "ns");
+    }
+    if (context.isWeakKeys()) {
+      assertThat(description).contains("keyStrength=weak");
+    }
+    if (context.isWeakValues()) {
+      assertThat(description).contains("valueStrength=weak");
+    }
+    if (context.isSoftValues()) {
+      assertThat(description).contains("valueStrength=soft");
+    }
+    if (context.evictionListenerType() != Listener.DEFAULT) {
+      assertThat(description).contains("evictionListener");
+    }
+    if (context.removalListenerType() != Listener.DEFAULT) {
+      assertThat(description).contains("removalListener");
+    }
   }
 
   /* --------------- loading --------------- */
@@ -622,7 +676,14 @@ public final class CaffeineTest {
   }
 
   @Test
-  public void scheduler() {
+  public void scheduler_system() {
+    var builder = Caffeine.newBuilder().scheduler(Scheduler.systemScheduler());
+    assertThat(builder.getScheduler()).isSameInstanceAs(Scheduler.systemScheduler());
+    builder.build();
+  }
+
+  @Test
+  public void scheduler_custom() {
     Scheduler scheduler = (executor, task, delay, unit) -> DisabledFuture.INSTANCE;
     var builder = Caffeine.newBuilder().scheduler(scheduler);
     assertThat(((GuardedScheduler) builder.getScheduler()).delegate).isSameInstanceAs(scheduler);

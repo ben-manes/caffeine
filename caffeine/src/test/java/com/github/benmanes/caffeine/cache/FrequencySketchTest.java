@@ -58,6 +58,15 @@ public final class FrequencySketchTest {
     assertThat(sketch.sampleSize).isEqualTo(10 * 2 * size);
   }
 
+  @Test(dataProvider = "sketch", groups = "isolated")
+  public void ensureCapacity_maximum(FrequencySketch<Integer> sketch) {
+    int size = Integer.MAX_VALUE / 10 + 1;
+    sketch.ensureCapacity(size);
+    assertThat(sketch.table).hasLength(Caffeine.ceilingPowerOfTwo(size));
+    assertThat(sketch.tableMask).isEqualTo(sketch.table.length - 1);
+    assertThat(sketch.sampleSize).isEqualTo(Integer.MAX_VALUE);
+  }
+
   @Test(dataProvider = "sketch")
   public void increment_once(FrequencySketch<Integer> sketch) {
     sketch.increment(item);

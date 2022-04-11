@@ -1188,7 +1188,7 @@ public final class Caffeine<K extends Object, V extends Object> {
       s.append("expiry, ");
     }
     if (refreshAfterWriteNanos != UNSET_INT) {
-      s.append("refreshAfterWriteNanos=").append(refreshAfterWriteNanos).append("ns, ");
+      s.append("refreshAfterWrite=").append(refreshAfterWriteNanos).append("ns, ");
     }
     if (keyStrength != null) {
       s.append("keyStrength=").append(keyStrength.toString().toLowerCase(US)).append(", ");
@@ -1203,7 +1203,7 @@ public final class Caffeine<K extends Object, V extends Object> {
       s.append("removalListener, ");
     }
     if (s.length() > baseLength) {
-      s.deleteCharAt(s.length() - 2);
+      s.delete(s.length() - 2, s.length());
     }
     return s.append('}').toString();
   }
