@@ -136,15 +136,15 @@ tasks.withType(JavaCompile).configureEach {
       'FieldCanBeFinal', 'FieldCanBeLocal', 'FieldCanBeStatic', 'ForEachIterable',
       'FuzzyEqualsShouldNotBeUsedInEqualsMethod', 'FunctionalInterfaceClash', 'HashCodeToString',
       'IterablePathParameter', 'LockMethodChecker', 'LongLiteralLowerCaseSuffix', 'MissingBraces',
-      'MissingDefault', 'MixedArrayDimensions', 'MissingDefault', 'NoAllocation', 'NumericEquality',
-      'PackageLocation', 'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports',
-      'ReturnsNullCollection', 'StringEquality', 'StronglyTypeByteString', 'StronglyTypeTime',
-      'SwitchDefault', 'TimeUnitMismatch', 'TransientMisuse', 'UnlockMethod',
-      'UnnecessarilyVisible', 'UnnecessaryAnonymousClass', 'UnnecessaryOptionalGet',
-      'UnsafeLocaleUsage', 'UsingJsr305CheckReturnValue']
+      'MissingDefault', 'MixedArrayDimensions', 'MissingDefault', 'NoAllocation', 'PackageLocation',
+      'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports', 'ReturnsNullCollection',
+      'StronglyTypeByteString', 'StronglyTypeTime', 'SwitchDefault', 'TimeUnitMismatch',
+      'TransientMisuse', 'UnlockMethod', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass',
+      'UnnecessaryOptionalGet', 'UnsafeLocaleUsage', 'UsingJsr305CheckReturnValue']
     enabledChecks.each { enable(it) }
 
-    def disabledChecks = [ 'AutoValueSubclassLeaked', 'EmptyCatch', 'MissingSummary' ]
+    def disabledChecks = [
+      'AutoValueSubclassLeaked', 'EmptyCatch', 'FieldCanBeFinal', 'MissingSummary']
     disabledChecks.each { disable(it) }
 
     def errorChecks = [ 'NullAway' ]
