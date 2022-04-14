@@ -22,19 +22,45 @@ import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.lang.ref.WeakReference;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Set;
 
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.collect.testing.SetTestSuiteBuilder;
+import com.google.common.collect.testing.TestStringSetGenerator;
+import com.google.common.collect.testing.features.CollectionFeature;
+import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.testing.GcFinalization;
 import com.google.common.testing.NullPointerTester;
+
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class InternerTest {
+public final class InternerTest extends TestCase {
+
+  public static TestSuite suite() {
+    return SetTestSuiteBuilder
+        .using(new TestStringSetGenerator() {
+          @Override protected Set<String> create(String[] elements) {
+            var set = Collections.newSetFromMap(new WeakInterner<String>().cache);
+            set.addAll(Arrays.asList(elements));
+            return set;
+          }
+        })
+        .named("Interner")
+        .withFeatures(
+            CollectionSize.ANY,
+            CollectionFeature.GENERAL_PURPOSE)
+        .createTestSuite();
+  }
 
   @Test(dataProvider = "interners", expectedExceptions = NullPointerException.class)
   public void intern_null(Interner<Int> interner) {
