@@ -202,8 +202,8 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
 
       final int taken = maxLoadSize - counter;
       if (taken > 0) {
-        bulkLoader.accept(toLoad);
         size.updateAndGet(oldSize -> oldSize - taken);
+        bulkLoader.accept(toLoad);
       }
 
     } while (size.get() >= maxLoadSize);
