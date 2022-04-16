@@ -14,7 +14,7 @@ import java.io.Serializable;
 /**
  * Ported from Eclipse Collections 11.0.
  */
-@SuppressWarnings({"EqualsGetClass", "HashCodeToString"})
+@SuppressWarnings("EqualsGetClass")
 public class CollidingInt implements Serializable, Comparable<CollidingInt> {
   private static final long serialVersionUID = 1L;
   private final int value;

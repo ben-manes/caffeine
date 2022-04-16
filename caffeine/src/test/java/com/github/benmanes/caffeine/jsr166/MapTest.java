@@ -21,7 +21,7 @@ import junit.framework.Test;
 /**
  * Contains tests applicable to all Map implementations.
  */
-@SuppressWarnings({"rawtypes", "unchecked", "HashCodeToString", "UnnecessaryParentheses"})
+@SuppressWarnings({"rawtypes", "unchecked", "UnnecessaryParentheses"})
 public class MapTest extends JSR166TestCase {
     final MapImplementation impl;
 

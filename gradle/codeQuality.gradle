@@ -134,7 +134,7 @@ tasks.withType(JavaCompile).configureEach {
       'AssertFalse', 'CatchingUnchecked', 'CheckedExceptionNotThrown', 'ClassName',
       'ComparisonContractViolated', 'DepAnn', 'DivZero', 'EmptyIf', 'EqualsBrokenForNull',
       'FieldCanBeFinal', 'FieldCanBeLocal', 'FieldCanBeStatic', 'ForEachIterable',
-      'FuzzyEqualsShouldNotBeUsedInEqualsMethod', 'FunctionalInterfaceClash', 'HashCodeToString',
+      'FuzzyEqualsShouldNotBeUsedInEqualsMethod', 'FunctionalInterfaceClash',
       'IterablePathParameter', 'LockMethodChecker', 'LongLiteralLowerCaseSuffix', 'MissingBraces',
       'MissingDefault', 'MixedArrayDimensions', 'MissingDefault', 'NoAllocation', 'PackageLocation',
       'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports', 'ReturnsNullCollection',

@@ -30,7 +30,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("HashCodeToString")
 public final class JCacheExpiryPolicy implements ExpiryPolicy, Serializable {
   private static final long serialVersionUID = 1L;
 

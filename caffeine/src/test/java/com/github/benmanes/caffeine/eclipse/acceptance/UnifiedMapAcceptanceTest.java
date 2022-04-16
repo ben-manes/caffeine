@@ -32,8 +32,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Ported from Eclipse Collections 11.0.
  */
-@SuppressWarnings({"deprecation", "rawtypes", "unchecked",
-  "CatchFail", "HashCodeToString", "ThreadPriorityCheck"})
+@SuppressWarnings({"deprecation", "rawtypes", "unchecked", "CatchFail", "ThreadPriorityCheck"})
 public abstract class UnifiedMapAcceptanceTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(UnifiedMapAcceptanceTest.class);
 

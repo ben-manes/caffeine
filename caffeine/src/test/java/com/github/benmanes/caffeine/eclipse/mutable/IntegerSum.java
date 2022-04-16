@@ -15,7 +15,7 @@ package com.github.benmanes.caffeine.eclipse.mutable;
  * @deprecated Don't use in new tests
  */
 @Deprecated
-@SuppressWarnings({"all", "EqualsUnsafeCast", "EqualsBrokenForNull", "HashCodeToString"})
+@SuppressWarnings({"all", "EqualsUnsafeCast", "EqualsBrokenForNull"})
 public final class IntegerSum implements Sum {
   private static final long serialVersionUID = 1L;
 

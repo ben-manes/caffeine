@@ -285,7 +285,6 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void getAllPresent_jdk8186171(Cache<Object, Int> cache, CacheContext context) {
-    @SuppressWarnings("HashCodeToString")
     class Key {
       @Override public int hashCode() {
         return 0; // to put keys in one bucket
@@ -512,7 +511,6 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void getAll_jdk8186171(CacheContext context) {
-    @SuppressWarnings("HashCodeToString")
     class Key {
       @Override public int hashCode() {
         return 0; // to put keys in one bucket

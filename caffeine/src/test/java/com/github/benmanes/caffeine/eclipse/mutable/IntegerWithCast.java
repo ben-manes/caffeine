@@ -12,7 +12,7 @@ package com.github.benmanes.caffeine.eclipse.mutable;
 /**
  * Ported from Eclipse Collections 11.0.
  */
-@SuppressWarnings({"all", "EqualsUnsafeCast", "HashCodeToString"})
+@SuppressWarnings({"all", "EqualsUnsafeCast"})
 public final class IntegerWithCast {
   private final int value;
 
