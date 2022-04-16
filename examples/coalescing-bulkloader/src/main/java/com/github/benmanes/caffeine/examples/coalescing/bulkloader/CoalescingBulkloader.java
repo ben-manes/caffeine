@@ -31,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -53,7 +54,7 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
   private final long maxDelay; // maximum time between request of a value and loading it
   private final Queue<WaitingKey<Key, Value>> waitingKeys = new ConcurrentLinkedQueue<>();
   private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
-  private ScheduledFuture<?> schedule;
+  private final AtomicReference<ScheduledFuture<?>> schedule = new AtomicReference<>();
   // Queue.size() is expensive, so here we keep track of the queue size separately
   private final AtomicInteger size = new AtomicInteger(0);
 
@@ -175,16 +176,21 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
 
     if (size.incrementAndGet() >= maxLoadSize) {
       doLoad();
-    } else if (schedule == null || schedule.isDone()) {
-      startWaiting();
+    } else {
+      ScheduledFuture<?> existingSchedule = schedule.get();
+      if (existingSchedule == null || existingSchedule.isDone()) {
+        startWaiting();
+      }
     }
 
     return waitingKey.future;
   }
 
-  private synchronized void startWaiting() {
-    if (schedule != null) schedule.cancel(false);
-    schedule = timer.schedule(this::doLoad, maxDelay, MILLISECONDS);
+  private void startWaiting() {
+    ScheduledFuture<?> oldSchedule = schedule.getAndSet(timer.schedule(this::doLoad, maxDelay, MILLISECONDS));
+    if (oldSchedule != null) {
+      oldSchedule.cancel(false);
+    }
   }
 
   private synchronized void doLoad() {
@@ -209,11 +215,10 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
     } while (size.get() >= maxLoadSize);
     final WaitingKey<Key, Value> nextWaitingKey = waitingKeys.peek();
     if (nextWaitingKey != null) {
-      schedule =
-          timer.schedule(
+      schedule.set(timer.schedule(
               this::doLoad,
               nextWaitingKey.waitingSince + maxDelay - System.currentTimeMillis(),
-              MILLISECONDS);
+              MILLISECONDS));
     }
   }
 }
