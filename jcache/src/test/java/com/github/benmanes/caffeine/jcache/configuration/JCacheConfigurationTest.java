@@ -30,6 +30,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
+import com.google.common.testing.EqualsTester;
 
 /**
  * @author Nick Robison (github.com/nickrobison)
@@ -49,6 +50,15 @@ public final class JCacheConfigurationTest {
     cacheConfig = new MutableConfiguration<>();
     cacheConfig.setTypes(String.class, String.class);
     cacheConfig.setStatisticsEnabled(true);
+  }
+
+  @Test
+  public void equality() {
+    new EqualsTester()
+        .addEqualityGroup(cacheConfig,
+            new MutableConfiguration<>(new CaffeineConfiguration<>(cacheConfig)))
+        .addEqualityGroup(new CaffeineConfiguration<>(cacheConfig))
+    .testEquals();
   }
 
   @Test

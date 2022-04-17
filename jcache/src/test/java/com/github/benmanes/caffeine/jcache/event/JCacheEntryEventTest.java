@@ -17,15 +17,20 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.util.Iterator;
 import java.util.Map;
 
 import javax.cache.Cache;
+import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.EventType;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
+
+import com.google.common.collect.testing.IteratorFeature;
+import com.google.common.collect.testing.IteratorTester;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -65,5 +70,18 @@ public final class JCacheEntryEventTest {
   @Test
   public void getOldValue() {
     assertThat(event.getOldValue()).isEqualTo(2);
+  }
+
+  @Test
+  public void iterable() {
+    var tester = new IteratorTester<CacheEntryEvent<? extends Integer, ? extends Integer>>(
+        6, IteratorFeature.UNMODIFIABLE, event, IteratorTester.KnownOrder.KNOWN_ORDER) {
+      @Override
+      protected Iterator<CacheEntryEvent<? extends Integer, ? extends Integer>> newTargetIterator() {
+        return event.iterator();
+      }
+    };
+    tester.test();
+    tester.testForEachRemaining();
   }
 }

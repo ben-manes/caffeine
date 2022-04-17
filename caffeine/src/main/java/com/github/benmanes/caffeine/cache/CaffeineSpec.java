@@ -115,8 +115,6 @@ public final class CaffeineSpec {
         builder.weakValues();
       } else if (valueStrength == Strength.SOFT) {
         builder.softValues();
-      } else {
-        throw new IllegalStateException();
       }
     }
     if (expireAfterWrite != null) {

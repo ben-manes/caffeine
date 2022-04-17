@@ -1064,7 +1064,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(8);
   }
 
-  @Test(dataProvider = "caches", groups = "slow")
+  @Test(dataProvider = "caches", groups = "isolated")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.DISABLED, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED,
@@ -1100,7 +1100,7 @@ public final class BoundedLocalCacheTest {
       assertThat(cache.evictionLock.hasQueuedThreads()).isTrue();
       assertThat(testLogger.get().getAllLoggingEvents()).isEmpty();
 
-      Uninterruptibles.sleepUninterruptibly(halfWaitTime);
+      Uninterruptibles.sleepUninterruptibly(halfWaitTime.plusMillis(500));
       await().until(() -> !testLogger.get().getAllLoggingEvents().isEmpty());
 
       assertThat(cache.evictionLock.hasQueuedThreads()).isTrue();

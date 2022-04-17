@@ -59,6 +59,25 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
+  public void cacheNames() {
+    assertThat(TypesafeConfigurator.cacheNames(ConfigFactory.empty())).isEmpty();;
+
+    var names = TypesafeConfigurator.cacheNames(ConfigFactory.load());
+    assertThat(names).containsExactly("default", "listeners", "osgi-cache",
+        "invalid-cache", "test-cache", "test-cache-2", "guice");
+  }
+
+  @Test
+  public void illegalPath() {
+    assertThat(TypesafeConfigurator.from(ConfigFactory.load(), "#")).isEmpty();
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void invalidCache() {
+    TypesafeConfigurator.from(ConfigFactory.load(), "invalid-cache");
+  }
+
+  @Test
   public void testCache() {
     Optional<CaffeineConfiguration<Integer, Integer>> config =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
@@ -78,7 +97,9 @@ public final class TypesafeConfigurationTest {
     assertThat(config2.get().getKeyType()).isAssignableTo(String.class);
     assertThat(config2.get().getValueType()).isAssignableTo(Integer.class);
     assertThat(config2.get().isNativeStatisticsEnabled()).isFalse();
+    assertThat(config2.get().getExpiryFactory().get().create()).isInstanceOf(TestExpiry.class);
     assertThat(config2.get().getExecutorFactory().create()).isEqualTo(ForkJoinPool.commonPool());
+    assertThat(config2.get().getCacheWriter()).isNull();
   }
 
   @Test

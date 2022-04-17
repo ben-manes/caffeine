@@ -16,52 +16,65 @@
 package com.github.benmanes.caffeine.jcache.integration;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyIterable;
+import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.Set;
 
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 
+import org.mockito.Mockito;
 import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheLoaderTest extends AbstractJCacheTest {
-  private Supplier<Map<Integer, Integer>> loadAllSupplier;
-  private Supplier<Integer> loadSupplier;
-
-  @BeforeMethod
-  public void beforeMethod() {
-    loadSupplier = () -> { throw new UnsupportedOperationException(); };
-    loadAllSupplier = () -> { throw new UnsupportedOperationException(); };
-  }
+  private CacheLoader<Integer, Integer> cacheLoader;
+  private ExpiryPolicy expiry;
 
   @Test
   public void load() {
-    loadSupplier = () -> -1;
+    when(cacheLoader.load(any())).thenReturn(-1);
     assertThat(jcacheLoading.get(1)).isEqualTo(-1);
   }
 
   @Test
   public void load_null() {
-    loadSupplier = () -> null;
+    when(cacheLoader.load(any())).thenReturn(null);
     assertThat(jcacheLoading.get(1)).isNull();
   }
 
-  @Test
-  public void load_failure() {
+  @Test(dataProvider = "throwables")
+  public void load_failure(Throwable throwable) {
     try {
-      loadSupplier = () -> { throw new IllegalStateException(); };
+      when(cacheLoader.load(any())).thenThrow(throwable);
+      jcacheLoading.get(1);
+      Assert.fail();
+    } catch (CacheLoaderException e) {
+      if (e != throwable) {
+        assertThat(e).hasCauseThat().isSameInstanceAs(throwable);
+      }
+    }
+  }
+
+  @Test
+  public void load_failure_expiry() {
+    try {
+      when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
+      when(cacheLoader.load(any())).thenReturn(-1);
       jcacheLoading.get(1);
       Assert.fail();
     } catch (CacheLoaderException e) {
@@ -71,36 +84,69 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
 
   @Test
   public void loadAll() {
-    loadAllSupplier = () -> ImmutableMap.of(1, -1, 2, -2, 3, -3);
-    var result = jcacheLoading.getAll(ImmutableSet.of(1, 2, 3));
-    assertThat(result).containsExactlyEntriesIn(loadAllSupplier.get());
+    when(cacheLoader.loadAll(anyIterable())).then(answer -> {
+      Iterable<Integer> keys = answer.getArgument(0);
+      return Maps.toMap(keys, key -> -key);
+    });
+    var result = jcacheLoading.getAll(Set.of(1, 2, 3));
+    assertThat(result).containsExactly(1, -1, 2, -2, 3, -3);
   }
 
   @Test(expectedExceptions = CacheLoaderException.class)
   public void loadAll_null() {
-    loadAllSupplier = () -> null;
-    jcacheLoading.getAll(ImmutableSet.of(1, 2, 3));
+    when(cacheLoader.loadAll(anyIterable())).thenReturn(null);
+    jcacheLoading.getAll(Set.of(1, 2, 3));
   }
 
   @Test
   public void loadAll_nullMapping() {
-    loadAllSupplier = () -> Collections.singletonMap(1, null);
-    var result = jcacheLoading.getAll(ImmutableSet.of(1, 2, 3));
+    when(cacheLoader.loadAll(anyIterable())).thenReturn(Collections.singletonMap(1, null));
+    var result = jcacheLoading.getAll(Set.of(1, 2, 3));
     assertThat(result).isEmpty();
   }
 
+  @Test(dataProvider = "throwables")
+  public void loadAll_failure(Throwable throwable) {
+    try {
+      when(cacheLoader.loadAll(any())).thenThrow(throwable);
+      jcacheLoading.getAll(Set.of(1, 2, 3));
+      Assert.fail();
+    } catch (CacheLoaderException e) {
+      if (e != throwable) {
+        assertThat(e).hasCauseThat().isSameInstanceAs(throwable);
+      }
+    }
+  }
+
+  @Test
+  public void loadAll_failure_expiry() {
+    try {
+      when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
+      when(cacheLoader.loadAll(anyIterable())).thenReturn(Map.of(1, 1, 2, 2));
+      jcacheLoading.getAll(Set.of(1, 2, 3));
+      Assert.fail();
+    } catch (CacheLoaderException e) {
+      assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
+    }
+  }
+
+  @DataProvider(name = "throwables")
+  Object[] providesThrowables() {
+    return new Object[] { new IllegalStateException(), new CacheLoaderException() };
+  }
+
+  @SuppressWarnings("unchecked")
   @Override protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    return new CaffeineConfiguration<>();
+    expiry = Mockito.mock(ExpiryPolicy.class, answer -> Duration.ZERO);
+    cacheLoader = Mockito.mock(CacheLoader.class);
+
+    var configuration = new CaffeineConfiguration<Integer, Integer>();
+    configuration.setExpiryPolicyFactory(() -> expiry);
+    configuration.setStatisticsEnabled(true);
+    return configuration;
   }
 
   @Override protected CacheLoader<Integer, Integer> getCacheLoader() {
-    return new CacheLoader<Integer, Integer>() {
-      @Override public Integer load(Integer key) {
-        return loadSupplier.get();
-      }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-        return loadAllSupplier.get();
-      }
-    };
+    return cacheLoader;
   }
 }

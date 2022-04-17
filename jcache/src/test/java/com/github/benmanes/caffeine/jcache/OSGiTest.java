@@ -69,7 +69,7 @@ public final class OSGiTest {
         "com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider",
         getClass().getClassLoader());
     var cache = cachingProvider.getCacheManager()
-        .getCache("test-cache-2", String.class, Integer.class);
+        .getCache("osgi-cache", String.class, Integer.class);
     assertNull(cache.get("a"));
   }
 
