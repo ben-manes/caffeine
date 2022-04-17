@@ -33,7 +33,7 @@ jobs:
           path: '**/results/*.xml'
       - name: Publish Coverage
         if: >
-          matrix.java == env.MIN_JVM
+          matrix.java == env.MAX_JVM
           && github.event_name == 'push'
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
@@ -47,7 +47,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonarqube -S
+        run: |
+          git fetch --unshallow
+          ./gradlew sonarqube -S
         continue-on-error: true
       - name: Publish Snapshot
         if: >

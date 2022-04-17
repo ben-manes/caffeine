@@ -96,12 +96,6 @@ tasks.named('jar').configure {
   }
 }
 
-sonarqube {
-  properties {
-    property 'sonar.exclusions', '**/NodeFactory.java, **/LocalCacheFactory.java'
-  }
-}
-
 def generateLocalCaches = tasks.register('generateLocalCaches', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
