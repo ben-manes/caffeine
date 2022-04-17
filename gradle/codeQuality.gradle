@@ -93,15 +93,6 @@ jacocoTestReport {
   }
 }
 
-sonarqube {
-  properties {
-    property 'sonar.organization', 'caffeine'
-    property 'sonar.projectKey', 'caffeine:caffeine'
-    property 'sonar.login', System.env.'SONAR_TOKEN'
-    property 'sonar.host.url', 'https://sonarcloud.io'
-  }
-}
-
 def JVM_ARGS_STRONG_ENCAPSULATION = [
   '--add-exports', 'jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
   '--add-exports', 'jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
