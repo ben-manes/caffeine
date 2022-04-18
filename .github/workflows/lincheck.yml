@@ -16,6 +16,7 @@ jobs:
           cache: 'gradle'
           distribution: 'zulu'
           java-version: ${{ env.JAVA_VERSION }}
-      - uses: gradle/gradle-build-action@v2
       - name: Run lincheck
-        run: ./gradlew lincheckTest
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: lincheckTest

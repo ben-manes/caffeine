@@ -117,3 +117,4 @@ sonarqube {
       "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
   }
 }
+tasks.sonarqube.dependsOn(jacocoFullReport)

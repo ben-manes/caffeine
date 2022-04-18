@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eux
 
-./gradlew pmdJavaPoet pmdMain -Dpmd
-./gradlew spotbugsJavaPoet spotbugsMain spotbugsJmh -Dspotbugs
+./gradlew --daemon \
+    pmdJavaPoet pmdMain -Dpmd \
+    spotbugsJavaPoet spotbugsMain spotbugsJmh -Dspotbugs

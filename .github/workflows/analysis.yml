@@ -21,3 +21,6 @@ jobs:
       - uses: gradle/gradle-build-action@v2
       - name: Run analyzers
         run: ./.github/scripts/analyze.sh
+      - name: Stop Gradle daemon
+        if: always()
+        run: ./gradlew --stop

@@ -22,8 +22,10 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
       - uses: gradle/gradle-build-action@v2
       - name: Run dependency-check
-        run: ./gradlew dependencyCheckAggregate
+        uses: gradle/gradle-build-action@v2
         continue-on-error: true
+        with:
+          arguments: dependencyCheckAggregate
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v1
         continue-on-error: true
