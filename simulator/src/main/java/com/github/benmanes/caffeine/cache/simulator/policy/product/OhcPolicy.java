@@ -132,5 +132,5 @@ public final class OhcPolicy implements KeyOnlyPolicy {
     @Override public int serializedSize(Long value) {
       return Long.BYTES;
     }
-  };
+  }
 }

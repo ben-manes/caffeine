@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
@@ -28,13 +29,13 @@ import com.typesafe.config.Config;
  */
 @SuppressWarnings("ImmutableEnumChecker")
 public enum Admission {
-  ALWAYS((config, policyStats) -> Admittor.always(), Function.identity()),
+  ALWAYS((config, policyStats) -> Admittor.always(), UnaryOperator.identity()),
   TINYLFU(TinyLfu::new, name -> name + "_TinyLfu");
 
   private final BiFunction<Config, PolicyStats, Admittor> factory;
   private final Function<String, String> formatter;
 
-  Admission(BiFunction<Config, PolicyStats, Admittor> factory, Function<String, String> formatter) {
+  Admission(BiFunction<Config, PolicyStats, Admittor> factory, UnaryOperator<String> formatter) {
     this.formatter = formatter;
     this.factory = factory;
   }

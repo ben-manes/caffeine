@@ -210,7 +210,7 @@ public final class PlotCsv implements Runnable {
   }
 
   @AutoValue @AutoBuilder
-  static abstract class ChartStyle {
+  abstract static class ChartStyle {
     abstract RectangleInsets axisOffset();
 
     abstract Color title();

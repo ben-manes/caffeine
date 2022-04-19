@@ -3743,7 +3743,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       var refreshes = cache.refreshes;
       if ((refreshes == null) || refreshes.isEmpty()) {
         return Map.of();
-      } if (cache.collectKeys()) {
+      } else if (cache.collectKeys()) {
         var inFlight = new IdentityHashMap<K, CompletableFuture<V>>(refreshes.size());
         for (var entry : refreshes.entrySet()) {
           @SuppressWarnings("unchecked")

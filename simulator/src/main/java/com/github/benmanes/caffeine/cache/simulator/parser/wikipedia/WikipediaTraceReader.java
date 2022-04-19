@@ -133,7 +133,7 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
   }
 
   @AutoValue
-  static abstract class Replacement {
+  abstract static class Replacement {
     abstract String search();
     abstract String replace();
 

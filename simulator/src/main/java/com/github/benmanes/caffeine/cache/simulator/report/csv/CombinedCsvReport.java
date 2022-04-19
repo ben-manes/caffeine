@@ -63,7 +63,7 @@ public final class CombinedCsvReport implements Runnable {
 
   /** Normalizes the input parameters. */
   private void normalize() {
-    metric = metric.replaceAll("_", " ");
+    metric = metric.replace('_', ' ');
     inputFiles = new TreeMap<>(inputFiles);
   }
 

@@ -204,7 +204,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   // No post padding here, subclasses must add
 
-  private final static Object JUMP = new Object();
+  private static final Object JUMP = new Object();
 
   /**
    * @param initialCapacity the queue initial capacity. If chunk size is fixed this will be the
