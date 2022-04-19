@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
 import static java.util.Objects.requireNonNull;
 
@@ -140,7 +141,7 @@ abstract class LocalAsyncLoadingCache<K, V>
     }
 
     Function<K, CompletableFuture<V>> mappingFunction = this::get;
-    var result = new LinkedHashMap<K, CompletableFuture<V>>();
+    var result = new LinkedHashMap<K, CompletableFuture<V>>(calculateHashMapCapacity(keys));
     for (K key : keys) {
       var future = result.computeIfAbsent(key, mappingFunction);
       requireNonNull(future);
@@ -200,7 +201,7 @@ abstract class LocalAsyncLoadingCache<K, V>
 
     @Override
     public CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-      var result = new LinkedHashMap<K, CompletableFuture<V>>();
+      var result = new LinkedHashMap<K, CompletableFuture<V>>(calculateHashMapCapacity(keys));
       for (K key : keys) {
         result.computeIfAbsent(key, this::refresh);
       }

@@ -866,7 +866,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys,
       EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
-    Map<K, EntryProcessorResult<T>> results = new HashMap<>(keys.size());
+    Map<K, EntryProcessorResult<T>> results = new HashMap<>(keys.size(), 1.0f);
     for (K key : keys) {
       try {
         T result = invoke(key, entryProcessor, arguments);

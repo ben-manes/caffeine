@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -172,6 +173,13 @@ public final class CaffeineTest {
     if (context.removalListenerType() != Listener.DEFAULT) {
       assertThat(description).contains("removalListener");
     }
+  }
+
+  @Test
+  public void calculateHashMapCapacity() {
+    Iterable<Integer> iterable = List.of(1, 2, 3)::iterator;
+    assertThat(Caffeine.calculateHashMapCapacity(iterable)).isEqualTo(16);
+    assertThat(Caffeine.calculateHashMapCapacity(List.of(1, 2, 3))).isEqualTo(4);
   }
 
   /* --------------- loading --------------- */

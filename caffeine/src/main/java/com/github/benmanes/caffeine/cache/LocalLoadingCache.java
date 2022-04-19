@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
 import static java.util.Objects.requireNonNull;
 
@@ -67,7 +68,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   /** Sequentially loads each missing entry. */
   default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, V>();
+    var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(keys));
     for (K key : keys) {
       result.put(key, null);
     }
@@ -183,7 +184,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   @Override
   default CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, CompletableFuture<V>>();
+    var result = new LinkedHashMap<K, CompletableFuture<V>>(calculateHashMapCapacity(keys));
     for (K key : keys) {
       result.computeIfAbsent(key, this::refresh);
     }

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Objects.requireNonNull;
 
@@ -114,8 +115,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     requireNonNull(mappingFunction);
     requireNonNull(keys);
 
-    var futures = new LinkedHashMap<K, CompletableFuture<V>>();
-    var proxies = new HashMap<K, CompletableFuture<V>>();
+    int initialCapacity = calculateHashMapCapacity(keys);
+    var futures = new LinkedHashMap<K, CompletableFuture<V>>(initialCapacity);
+    var proxies = new HashMap<K, CompletableFuture<V>>(initialCapacity);
     for (K key : keys) {
       if (futures.containsKey(key)) {
         continue;
@@ -161,7 +163,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @SuppressWarnings("rawtypes")
     CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
     return CompletableFuture.allOf(array).thenApply(ignored -> {
-      var result = new LinkedHashMap<K, V>(futures.size());
+      var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(futures.size()));
       futures.forEach((key, future) -> {
         V value = future.getNow(null);
         if (value != null) {
@@ -481,7 +483,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-      var result = new LinkedHashMap<Object, Object>();
+      var result = new LinkedHashMap<Object, Object>(calculateHashMapCapacity(keys));
       for (Object key : keys) {
         result.put(key, null);
       }

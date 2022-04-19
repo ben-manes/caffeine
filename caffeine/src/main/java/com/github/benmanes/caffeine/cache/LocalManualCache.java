@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -71,9 +72,10 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);
 
-    Set<K> keysToLoad = new LinkedHashSet<>();
-    Map<K, V> found = cache().getAllPresent(keys);
-    Map<K, V> result = new LinkedHashMap<>(found.size());
+    var found = cache().getAllPresent(keys);
+    int initialCapacity = calculateHashMapCapacity(keys);
+    var result = new LinkedHashMap<K, V>(initialCapacity);
+    var keysToLoad = new LinkedHashSet<K>(initialCapacity);
     for (K key : keys) {
       V value = found.get(key);
       if (value == null) {

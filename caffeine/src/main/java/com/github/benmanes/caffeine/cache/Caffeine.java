@@ -23,7 +23,9 @@ import java.lang.System.Logger.Level;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.ConcurrentModificationException;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -136,8 +138,9 @@ import com.google.errorprone.annotations.FormatMethod;
  *     #removalListener}
  */
 public final class Caffeine<K extends Object, V extends Object> {
-  static final Logger logger = System.getLogger(Caffeine.class.getName());
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
+  static final Logger logger = System.getLogger(Caffeine.class.getName());
+  static final double DEFAULT_LOAD_FACTOR = 0.75;
 
   enum Strength { WEAK, SOFT }
   static final int UNSET_INT = -1;
@@ -211,6 +214,30 @@ public final class Caffeine<K extends Object, V extends Object> {
   static long ceilingPowerOfTwo(long x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
     return 1L << -Long.numberOfLeadingZeros(x - 1);
+  }
+
+  /**
+   * Calculate initial capacity for {@link HashMap}-based classes, from expected size and default
+   * load factor (0.75).
+   *
+   * @param numMappings the expected number of mappings
+   * @return initial capacity for HashMap based classes
+   */
+  static int calculateHashMapCapacity(int numMappings) {
+    return (int) Math.ceil(numMappings / DEFAULT_LOAD_FACTOR);
+  }
+
+  /**
+   * Calculate initial capacity for {@link HashMap}-based classes, from expected size and default
+   * load factor (0.75).
+   *
+   * @param iterable the expected number of mappings
+   * @return initial capacity for HashMap based classes
+   */
+  static int calculateHashMapCapacity(Iterable<?> iterable) {
+    return (iterable instanceof Collection)
+        ? calculateHashMapCapacity(((Collection<?>) iterable).size())
+        : /* DEFAULT_INITIAL_CAPACITY */ 16;
   }
 
   /**

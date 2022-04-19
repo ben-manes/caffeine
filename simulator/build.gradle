@@ -52,10 +52,6 @@ if (!(gradle.startParameter.taskNames ==~ /.*uploadArchives.*/)) {
   }
 }
 
-sonarqube {
-  skipProject = true
-}
-
 tasks.named('jar').configure {
   manifest {
     attributes 'Bundle-SymbolicName': 'com.github.benmanes.caffeine.simulator'

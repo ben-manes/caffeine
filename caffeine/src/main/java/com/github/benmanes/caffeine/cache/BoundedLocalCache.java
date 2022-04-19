@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
+import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.saturatedToNanos;
@@ -2131,7 +2132,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<Object, Object>();
+    var result = new LinkedHashMap<Object, Object>(calculateHashMapCapacity(keys));
     for (Object key : keys) {
       result.put(key, null);
     }
@@ -3061,9 +3062,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     private final Map<K, V> map;
     private final long limit;
 
-    SizeLimiter(int initialCapacity, long limit) {
+    SizeLimiter(int expectedSize, long limit) {
       requireArgument(limit >= 0);
-      this.map = new LinkedHashMap<>(initialCapacity);
+      this.map = new LinkedHashMap<>(calculateHashMapCapacity(expectedSize));
       this.limit = limit;
     }
 
@@ -3843,8 +3844,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
       }
       @Override public Map<K, V> coldest(int limit) {
-        int initialCapacity = Math.min(limit, cache.size());
-        var limiter = new SizeLimiter<K, V>(initialCapacity, limit);
+        int expectedSize = Math.min(limit, cache.size());
+        var limiter = new SizeLimiter<K, V>(expectedSize, limit);
         return cache.evictionOrder(/* hottest */ false, transformer, limiter);
       }
       @Override public Map<K, V> coldestWeighted(long weightLimit) {
@@ -3857,8 +3858,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return cache.evictionOrder(/* hottest */ false, transformer, mappingFunction);
       }
       @Override public Map<K, V> hottest(int limit) {
-        int initialCapacity = Math.min(limit, cache.size());
-        var limiter = new SizeLimiter<K, V>(initialCapacity, limit);
+        int expectedSize = Math.min(limit, cache.size());
+        var limiter = new SizeLimiter<K, V>(expectedSize, limit);
         return cache.evictionOrder(/* hottest */ true, transformer, limiter);
       }
       @Override public Map<K, V> hottestWeighted(long weightLimit) {

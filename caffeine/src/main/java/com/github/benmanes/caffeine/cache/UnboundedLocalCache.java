@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static java.util.Objects.requireNonNull;
@@ -146,7 +147,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<Object, Object>();
+    var result = new LinkedHashMap<Object, Object>(calculateHashMapCapacity(keys));
     for (Object key : keys) {
       result.put(key, null);
     }
