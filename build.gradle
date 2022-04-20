@@ -5,9 +5,9 @@ apply plugin: 'io.snyk.gradle.plugin.snykplugin'
 apply plugin: 'org.kordamp.gradle.source-stats'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'org.owasp.dependencycheck'
-apply plugin: 'org.sonarqube'
 
 apply from: "${rootDir}/gradle/coveralls.gradle"
+apply from: "${rootDir}/gradle/sonarqube.gradle"
 
 buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
@@ -107,15 +107,3 @@ snyk {
   autoDownload = true
   autoUpdate = true
 }
-
-sonarqube {
-  properties {
-    property 'sonar.organization', 'caffeine'
-    property 'sonar.login', System.env.'SONAR_TOKEN'
-    property 'sonar.host.url', 'https://sonarcloud.io'
-    property 'sonar.coverage.exclusions', '**/simulator/**'
-    property 'sonar.coverage.jacoco.xmlReportPaths',
-      "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
-  }
-}
-tasks.sonarqube.dependsOn(jacocoFullReport)

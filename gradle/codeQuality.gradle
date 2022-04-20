@@ -6,7 +6,6 @@ import static org.gradle.util.GradleVersion.version
 apply plugin: 'com.github.spotbugs'
 apply plugin: 'net.ltgt.errorprone'
 apply plugin: 'net.ltgt.nullaway'
-apply plugin: 'org.sonarqube'
 apply plugin: 'java-library'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'

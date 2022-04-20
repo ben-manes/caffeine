@@ -49,7 +49,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           git fetch --unshallow
-          ./gradlew --daemon sonarqube -S
+          ./gradlew --daemon sonarqube -S -Dsonar.branch.name=${GITHUB_REF##*/}
         continue-on-error: true
       - name: Publish Snapshot
         if: >
