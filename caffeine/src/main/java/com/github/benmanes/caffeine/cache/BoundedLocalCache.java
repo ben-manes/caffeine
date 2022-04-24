@@ -1341,8 +1341,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           // Otherwise, a write invalidated the refresh so discard it and notify the listener
           discard[0] = true;
           return currentValue;
-        }, expiry(), /* recordMiss */ false,
-            /* recordLoad */ false, /* recordLoadFailure */ true);
+        }, expiry(), /* recordLoad */ false, /* recordLoadFailure */ true);
 
         if (discard[0]) {
           notifyRemoval(key, value, RemovalCause.REPLACED);
@@ -2362,7 +2361,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       synchronized (node) {
         oldKey[0] = node.getKey();
         oldValue[0] = node.getValue();
-        if (oldKey[0] == null) {
+        if ((oldKey[0] == null) || (oldValue[0] == null)) {
           cause[0] = RemovalCause.COLLECTED;
         } else if (hasExpired(node, expirationTicker().read())) {
           cause[0] = RemovalCause.EXPIRED;
@@ -2594,21 +2593,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     });
 
+    if (cause[0] != null) {
+      if (cause[0].wasEvicted()) {
+        statsCounter().recordEviction(weight[0], cause[0]);
+      }
+      notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
+    }
     if (node == null) {
       if (removed[0] != null) {
         afterWrite(new RemovalTask(removed[0]));
       }
       return null;
-    }
-    if (cause[0] != null) {
-      if (cause[0] == RemovalCause.REPLACED) {
-        notifyOnReplace(key, oldValue[0], newValue[0]);
-      } else {
-        if (cause[0].wasEvicted()) {
-          statsCounter().recordEviction(weight[0], cause[0]);
-        }
-        notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
-      }
     }
     if (newValue[0] == null) {
       if (!isComputingAsync(node)) {
@@ -2647,8 +2642,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
-        statsAware(remappingFunction, /* recordMiss */ false,
-            /* recordLoad */ true, /* recordLoadFailure */ true);
+        statsAware(remappingFunction, /* recordLoad */ true, /* recordLoadFailure */ true);
     return remap(key, lookupKey, statsAwareRemappingFunction,
         expiry(), new long[] { now }, /* computeIfAbsent */ false);
   }
@@ -2656,15 +2650,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @Override
   @SuppressWarnings("NullAway")
   public @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      @Nullable Expiry<? super K, ? super V> expiry, boolean recordMiss,
-      boolean recordLoad, boolean recordLoadFailure) {
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
+      boolean recordLoadFailure) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
     long[] now = { expirationTicker().read() };
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
-        statsAware(remappingFunction, recordMiss, recordLoad, recordLoadFailure);
+        statsAware(remappingFunction, recordLoad, recordLoadFailure);
     return remap(key, keyRef, statsAwareRemappingFunction,
         expiry, now, /* computeIfAbsent */ true);
   }
@@ -2740,7 +2734,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         oldValue[0] = n.getValue();
         if ((nodeKey[0] == null) || (oldValue[0] == null)) {
           cause[0] = RemovalCause.COLLECTED;
-        } else if (hasExpired(n, now[0])) {
+        } else if (hasExpired(n, expirationTicker().read())) {
           cause[0] = RemovalCause.EXPIRED;
         }
         if (cause[0] != null) {
@@ -2876,6 +2870,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if ((key == null) || (value == null)
           || !node.isAlive() || hasExpired(node, now)) {
         scheduleDrainBuffers();
+        return false;
       } else {
         var val = map.get(key);
         if ((val == null) || ((val != value) && !val.equals(value))) {
@@ -4032,7 +4027,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             added[0] = (oldValueFuture == null)
                 || (oldValueFuture.isDone() && (Async.getIfReady(oldValueFuture) == null));
             return added[0] ? asyncValue : oldValue;
-          }, expiry, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+          }, expiry, /* recordLoad */ false, /* recordLoadFailure */ false);
 
           if (added[0]) {
             return null;
@@ -4065,7 +4060,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         return cache.isAsync
             ? computeAsync(key, remappingFunction, expiry)
-            : cache.compute(key, remappingFunction, expiry, /* recordMiss */ false,
+            : cache.compute(key, remappingFunction, expiry,
                 /* recordLoad */ true, /* recordLoadFailure */ true);
       }
       @Nullable V computeAsync(K key,
@@ -4087,12 +4082,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
             V oldValue = Async.getIfReady(oldValueFuture);
             BiFunction<? super K, ? super V, ? extends V> function = delegate.statsAware(
-                remappingFunction, /* recordMiss */ false, /* recordLoad */ true,
-                /* recordLoadFailure */ true);
+                remappingFunction, /* recordLoad */ true, /* recordLoadFailure */ true);
             newValue[0] = function.apply(key, oldValue);
             return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
-          }, new AsyncExpiry<>(expiry), /* recordMiss */ false,
-              /* recordLoad */ false, /* recordLoadFailure */ false);
+          }, new AsyncExpiry<>(expiry), /* recordLoad */ false, /* recordLoadFailure */ false);
 
           if (newValue[0] != null) {
             return newValue[0];

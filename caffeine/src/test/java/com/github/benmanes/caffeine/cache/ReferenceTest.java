@@ -55,6 +55,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
@@ -634,7 +635,7 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void removeConditionally(Map<Int, Int> map, CacheContext context) {
+  public void removeConditionally_found(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.original().get(key);
     context.clear();
@@ -644,6 +645,22 @@ public final class ReferenceTest {
     assertThat(context.cache()).whenCleanedUp().isEmpty();
     assertThat(context).notifications().hasRemovalCauses(Map.of(
         COLLECTED, context.initialSize() - 1, EXPLICIT, 1));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  public void removeConditionally_notFound(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    context.clear();
+
+    GcFinalization.awaitFullGc();
+    assertThat(map.remove(key, context.absentValue())).isFalse();
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
+    assertThat(context).notifications().withCause(COLLECTED)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -661,12 +678,28 @@ public final class ReferenceTest {
     if (context.isStrongValues()) {
       assertThat(value).isNotEqualTo(context.absentValue());
       assertThat(context).notifications().withCause(COLLECTED)
-          .hasSize(context.initialSize() - 1).exclusively();;
+          .hasSize(context.initialSize() - 1).exclusively();
     } else {
       assertThat(value).isEqualTo(context.absentValue());
       assertThat(context).notifications().withCause(COLLECTED)
-          .hasSize(context.initialSize()).exclusively();;
+          .hasSize(context.initialSize()).exclusively();
     }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  public void computeIfAbsent_nullValue(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    context.clear();
+
+    GcFinalization.awaitFullGc();
+    assertThat(map.computeIfAbsent(key, k -> null)).isNull();
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
+    assertThat(context).notifications().withCause(COLLECTED)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -739,6 +772,25 @@ public final class ReferenceTest {
       assertThat(context).notifications().withCause(COLLECTED)
           .hasSize(context.initialSize()).exclusively();
     }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  public void compute_nullValue(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    context.clear();
+
+    GcFinalization.awaitFullGc();
+    assertThat(map.compute(key, (k, v) -> {
+      assertThat(v).isNull();
+      return null;
+    })).isNull();
+    assertThat(context.cache()).whenCleanedUp().isEmpty();
+    assertThat(context).notifications().withCause(COLLECTED)
+        .hasSize(context.initialSize()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -920,6 +972,19 @@ public final class ReferenceTest {
     assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
     assertThat(map.equals(expected)).isTrue();
     assertThat(expected.equals(map)).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, requiresWeakOrSoft = true)
+  public void equals_cleanUp(Map<Int, Int> map, CacheContext context) {
+    var copy = context.original().entrySet().stream()
+        .collect(toMap(entry -> new Int(entry.getKey()), entry -> new Int(entry.getValue())));
+    context.clear();
+
+    GcFinalization.awaitFullGc();
+    assertThat(map.equals(copy)).isFalse();
+    assertThat(context.cache()).isEmpty();
   }
 
   @Test(dataProvider = "caches")

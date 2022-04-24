@@ -95,16 +95,15 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   default @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     return compute(key, remappingFunction, expiry(),
-        /* recordMiss */ false, /* recordLoad */ true, /* recordLoadFailure */ true);
+        /* recordLoad */ true, /* recordLoadFailure */ true);
   }
 
   /**
    * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
-   * whether to record miss and load statistics based on the success of this operation.
+   * whether to record load statistics based on the success of this operation.
    */
   @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      @Nullable Expiry<? super K, ? super V> expiry, boolean recordMiss,
-      boolean recordLoad, boolean recordLoadFailure);
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad, boolean recordLoadFailure);
 
   @Override
   default @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
@@ -183,22 +182,18 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Decorates the remapping function to record statistics if enabled. */
   default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
-    return statsAware(remappingFunction, /* recordMiss */ true,
-        /* recordLoad */ true, /* recordLoadFailure */ true);
+    return statsAware(remappingFunction, /* recordLoad */ true, /* recordLoadFailure */ true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
   default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction,
-      boolean recordMiss, boolean recordLoad, boolean recordLoadFailure) {
+      boolean recordLoad, boolean recordLoadFailure) {
     if (!isRecordingStats()) {
       return remappingFunction;
     }
     return (t, u) -> {
       R result;
-      if ((u == null) && recordMiss) {
-        statsCounter().recordMisses(1);
-      }
       long startTime = statsTicker().read();
       try {
         result = remappingFunction.apply(t, u);

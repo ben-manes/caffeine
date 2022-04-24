@@ -97,6 +97,7 @@ public final class TypesafeConfigurationTest {
     assertThat(config2.get().getKeyType()).isAssignableTo(String.class);
     assertThat(config2.get().getValueType()).isAssignableTo(Integer.class);
     assertThat(config2.get().isNativeStatisticsEnabled()).isFalse();
+    assertThat(config2.get().getExpiryPolicyFactory().create().getExpiryForAccess()).isNull();
     assertThat(config2.get().getExpiryFactory().get().create()).isInstanceOf(TestExpiry.class);
     assertThat(config2.get().getExecutorFactory().create()).isEqualTo(ForkJoinPool.commonPool());
     assertThat(config2.get().getCacheWriter()).isNull();

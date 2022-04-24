@@ -61,7 +61,7 @@ public class MapSubject extends com.google.common.truth.MapSubject {
 
   /** Fails if the map's size is not in {@code range}. */
   public void hasSizeIn(Range<Integer> range) {
-    check("size()").that(actual.size()).isIn(range);;
+    check("size()").that(actual.size()).isIn(range);
   }
 
   /** Fails if the map does not contain the given keys, where duplicate keys are ignored. */

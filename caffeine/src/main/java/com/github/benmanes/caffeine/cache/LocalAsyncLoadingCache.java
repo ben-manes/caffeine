@@ -318,8 +318,7 @@ abstract class LocalAsyncLoadingCache<K, V>
             // Otherwise, a write invalidated the refresh so discard it and notify the listener
             discard[0] = true;
             return currentValue;
-          }, asyncCache.cache().expiry(), /* recordMiss */ false,
-              /* recordLoad */ false, /* recordLoadFailure */ true);
+          }, asyncCache.cache().expiry(), /* recordLoad */ false, /* recordLoadFailure */ true);
 
           if (discard[0] && (newValue != null)) {
             var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;

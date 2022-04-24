@@ -29,8 +29,8 @@ import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -50,6 +50,7 @@ import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemo
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMultiset;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.StandardSubjectBuilder;
@@ -383,11 +384,11 @@ public final class CacheContextSubject extends Subject {
         awaitUntil((type, listener) -> {
           var notifications = Stream.of(entries)
               .map(entry -> new RemovalNotification<>(entry.getKey(), entry.getValue(), cause))
-              .collect(toList());
+              .collect(toSet());
           check(type).withMessage("%s", cause)
               .that(listener.removed()).containsAtLeastElementsIn(notifications);
         });
-        return new Exclusive(entries.length);
+        return new Exclusive(ImmutableSet.copyOf(entries).size());
       }
 
       public final class Exclusive {

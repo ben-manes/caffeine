@@ -486,6 +486,16 @@ public final class ExpireAfterAccessTest {
     }
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldestFunc_metadata_expiresInTraversal(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
+    var entries = expireAfterAccess.oldest(stream -> stream.collect(toList()));
+    assertThat(context.cache()).hasSize(context.initialSize());
+    assertThat(entries).hasSize(1);
+  }
+
   /* --------------- Policy: youngest --------------- */
 
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
@@ -623,5 +633,15 @@ public final class ExpireAfterAccessTest {
     for (var entry : entries) {
       assertThat(context).containsEntry(entry);
     }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngestFunc_metadata_expiresInTraversal(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
+    var entries = expireAfterAccess.youngest(stream -> stream.collect(toList()));
+    assertThat(context.cache()).hasSize(context.initialSize());
+    assertThat(entries).hasSize(1);
   }
 }

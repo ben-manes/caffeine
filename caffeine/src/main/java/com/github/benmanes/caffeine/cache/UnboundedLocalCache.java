@@ -319,7 +319,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     boolean[] replaced = new boolean[1];
     V nv = data.computeIfPresent(key, (K k, V value) -> {
       BiFunction<? super K, ? super V, ? extends V> function = statsAware(remappingFunction,
-          /* recordMiss */ false, /* recordLoad */ true, /* recordLoadFailure */ true);
+          /* recordLoad */ true, /* recordLoadFailure */ true);
       V newValue = function.apply(k, value);
 
       replaced[0] = (newValue != null);
@@ -340,10 +340,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      @Nullable Expiry<? super K, ? super V> expiry, boolean recordMiss,
-      boolean recordLoad, boolean recordLoadFailure) {
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
+      boolean recordLoadFailure) {
     requireNonNull(remappingFunction);
-    return remap(key, statsAware(remappingFunction, recordMiss, recordLoad, recordLoadFailure));
+    return remap(key, statsAware(remappingFunction, recordLoad, recordLoadFailure));
   }
 
   @Override
@@ -511,7 +511,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     });
 
     if ((oldValue[0] != null) && (oldValue[0] != value)) {
-      notifyRemoval(key, value, RemovalCause.REPLACED);
+      notifyRemoval(key, oldValue[0], RemovalCause.REPLACED);
     }
     return oldValue[0];
   }

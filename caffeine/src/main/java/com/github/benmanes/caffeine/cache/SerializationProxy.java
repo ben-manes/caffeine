@@ -24,8 +24,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Serializes the configuration of the cache, reconsitituting it as a {@link Cache},
- * {@link LoadingCache}, or {@link AsyncLoadingCache} using {@link Caffeine} upon
- * deserialization. The data held by the cache is not retained.
+ * {@link LoadingCache}, {@link AsyncCache}, or {@link AsyncLoadingCache} using {@link Caffeine}
+ * upon deserialization. The data held by the cache is not retained.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

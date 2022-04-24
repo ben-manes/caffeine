@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
+import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
@@ -23,6 +24,7 @@ import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
@@ -940,6 +942,23 @@ public final class AsyncCacheTest {
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache).hasSize(context.initialSize() - count);
     assertThat(context).removalNotifications().withCause(EXPLICIT).hasSize(count).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void put_replace_differentValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
+      var newValue = context.absentValue().asFuture();
+      cache.put(key, newValue);
+      assertThat(cache).containsEntry(key, newValue);
+    }
+
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.middleKey(), context.original().get(context.middleKey())),
+            entry(context.lastKey(), context.original().get(context.lastKey())))
+        .exclusively();
   }
 
   /* --------------- misc --------------- */

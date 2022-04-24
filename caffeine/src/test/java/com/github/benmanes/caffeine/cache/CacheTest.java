@@ -23,9 +23,13 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -58,6 +62,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -557,9 +562,12 @@ public final class CacheTest {
       cache.put(key, intern(new Int(value)));
       assertThat(cache).containsEntry(key, value);
     }
-    int count = context.firstMiddleLastKeys().size();
     assertThat(cache).hasSize(context.initialSize());
-    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.middleKey(), context.original().get(context.middleKey())),
+            entry(context.lastKey(), context.original().get(context.lastKey())))
+        .exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -588,9 +596,11 @@ public final class CacheTest {
       assertThat(cache).containsEntry(key, context.absentValue());
     }
     assertThat(cache).hasSize(context.initialSize());
-
-    int count = context.firstMiddleLastKeys().size();
-    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.middleKey(), context.original().get(context.middleKey())),
+            entry(context.lastKey(), context.original().get(context.lastKey())))
+        .exclusively();
   }
 
   @CheckNoStats
@@ -636,7 +646,8 @@ public final class CacheTest {
     cache.putAll(entries);
     assertThat(cache).containsExactlyEntriesIn(entries);
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .hasSize(entries.size()).exclusively();
+        .contains(context.original().entrySet().toArray(Map.Entry[]::new))
+        .exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -655,8 +666,12 @@ public final class CacheTest {
     cache.putAll(entries);
     assertThat(cache).containsExactlyEntriesIn(entries);
     var expect = context.isGuava() ? entries : replaced;
+    for (var entry : expect.entrySet()) {
+      entry.setValue(context.original().get(entry.getKey()));
+    }
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .hasSize(expect.size()).exclusively();
+        .contains(expect.entrySet().toArray(Map.Entry[]::new))
+        .exclusively();
   }
 
   @CheckNoStats
@@ -774,6 +789,22 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void serialize(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache).isReserialize();
+  }
+
+  @CheckNoStats
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  @Test(dataProvider = "caches", expectedExceptions = InvalidObjectException.class,
+      expectedExceptionsMessageRegExp = "Proxy required")
+  public void readObject(CacheContext context) throws Throwable {
+    var cache = context.isAsync() ? context.asyncCache() : context.cache();
+    var readObject = cache.getClass().getDeclaredMethod("readObject", ObjectInputStream.class);
+    readObject.setAccessible(true);
+
+    try {
+      readObject.invoke(cache, new ObjectInputStream() {});
+    } catch (InvocationTargetException e) {
+      throw e.getTargetException();
+    }
   }
 
   /* --------------- null parameter --------------- */
