@@ -158,6 +158,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       }
       checkNoStats(testResult, context);
       checkExecutor(testResult, context);
+      checkNoEvictions(testResult, context);
     }
   }
 
@@ -223,13 +224,28 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   /** Checks the statistics if {@link CheckNoStats} is found. */
   private static void checkNoStats(ITestResult testResult, CacheContext context) {
     var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class);
+    boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class)
+        || testResult.getTestClass().getRealClass().isAnnotationPresent(CheckNoStats.class);
     if (!checkNoStats) {
       return;
     }
 
     assertWithMessage("Test requires CacheContext param for validation").that(context).isNotNull();
     assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
+  }
+
+  /** Checks the statistics if {@link CheckNoEvictions} is found. */
+  private static void checkNoEvictions(ITestResult testResult, CacheContext context) {
+    var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+    boolean checkNoEvictions = testMethod.isAnnotationPresent(CheckNoEvictions.class)
+        || testResult.getTestClass().getRealClass().isAnnotationPresent(CheckNoEvictions.class);
+    if (!checkNoEvictions) {
+      return;
+    }
+
+    assertWithMessage("Test requires CacheContext param for validation").that(context).isNotNull();
+    assertThat(context).removalNotifications().hasNoEvictions();
+    assertThat(context).evictionNotifications().isEmpty();
   }
 
   /** Free memory by clearing unused resources after test execution. */

@@ -67,6 +67,7 @@ jobs:
         if: always()
         run: ./gradlew --stop
       - uses: andymckay/cancel-action@0.2
+        continue-on-error: true
         if: failure()
 
   guava:
@@ -98,6 +99,7 @@ jobs:
         if: always()
         run: ./gradlew --stop
       - uses: andymckay/cancel-action@0.2
+        continue-on-error: true
         if: failure()
 
   event_file:

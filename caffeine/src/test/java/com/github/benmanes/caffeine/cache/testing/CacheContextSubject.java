@@ -49,8 +49,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.StandardSubjectBuilder;
@@ -307,21 +307,10 @@ public final class CacheContextSubject extends Subject {
       });
     }
 
-    /**
-     * Fails if the number of notifications per removal cause do not have the given sizes. The
-     * expected, explicit removals are ignored when checking the eviction listener's notifications.
-     */
-    public void hasRemovalCauses(Map<RemovalCause, ? extends Number> expectedRemovals) {
+    public void hasNoEvictions() {
       awaitUntil((type, listener) -> {
-        var consumed = listener.removed().stream()
-            .map(RemovalNotification::getCause)
-            .collect(toImmutableMultiset());
-        var expected = expectedRemovals.entrySet().stream()
-            .filter(entry -> entry.getKey().wasEvicted()
-                || (type == RemovalListenerType.REMOVAL_LISTENER))
-            .collect(toImmutableMultiset(Entry::getKey,
-                entry -> Ints.checkedCast(entry.getValue().longValue())));
-        check(type).that(consumed).isEqualTo(expected);
+        var stream = listener.removed().stream().filter(entry -> entry.getCause().wasEvicted());
+        check(type).about(streams()).that(stream).isEmpty();
       });
     }
 
@@ -351,33 +340,16 @@ public final class CacheContextSubject extends Subject {
         this.cause = requireNonNull(cause);
       }
 
-      /** Fails if there are notifications with the given cause. */
-      public void isEmpty() {
-        awaitUntil((type, listener) -> {
-          var notifications = listener.removed().stream()
-              .filter(notification -> cause == notification.getCause());
-          check(type).withMessage("%s(%s)", cause, listener.removed()).about(streams())
-              .that(notifications).isEmpty();
-        });
-      }
-
-      /** Fails if the number of notifications of the given cause does not have the given size. */
-      public Exclusive hasSize(long expectedSize) {
-        awaitUntil((type, listener) -> {
-          var notifications = listener.removed().stream()
-              .filter(notification -> cause == notification.getCause());
-          check(type).withMessage("%s(%s)", cause, listener.removed()).about(streams())
-              .that(notifications).hasSize(Ints.checkedCast(expectedSize));
-        });
-        return new Exclusive(expectedSize);
-      }
-
       public Exclusive contains(Int key, Int value) {
         awaitUntil((type, listener) -> {
           check(type).withMessage("%s", cause)
               .that(listener.removed()).contains(new RemovalNotification<>(key, value, cause));
         });
         return new Exclusive(1);
+      }
+
+      public Exclusive contains(Map<Int, Int> map) {
+        return contains(map.entrySet().toArray(Map.Entry[]::new));
       }
 
       public Exclusive contains(Entry<?, ?>... entries) {
@@ -388,7 +360,7 @@ public final class CacheContextSubject extends Subject {
           check(type).withMessage("%s", cause)
               .that(listener.removed()).containsAtLeastElementsIn(notifications);
         });
-        return new Exclusive(ImmutableSet.copyOf(entries).size());
+        return new Exclusive(ImmutableList.copyOf(entries).size());
       }
 
       public final class Exclusive {

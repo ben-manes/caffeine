@@ -28,6 +28,7 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executo
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static java.util.Map.entry;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ConcurrentModificationException;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 
 /**
@@ -106,9 +109,14 @@ public final class EvictionTest {
     } else {
       assertThat(cache).hasSize(context.maximumSize());
     }
-    int count = context.absentKeys().size();
-    assertThat(context).stats().evictions(count);
-    assertThat(context).notifications().withCause(SIZE).hasSize(count).exclusively();
+
+    var evicted = new HashMap<Int, Int>();
+    evicted.putAll(Maps.difference(context.original(), cache.asMap()).entriesOnlyOnLeft());
+    evicted.putAll(Maps.difference(context.absent(), cache.asMap()).entriesOnlyOnLeft());
+    assertThat(context).stats().evictions(evicted.size());
+    assertThat(evicted).hasSize(context.absentKeys().size());
+    assertThat(context).notifications().withCause(SIZE)
+        .contains(evicted).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -219,7 +227,8 @@ public final class EvictionTest {
     await().untilAsserted(() -> assertThat(context).hasWeightedSize(10));
 
     assertThat(context).stats().evictionWeight(5);
-    assertThat(context).notifications().withCause(SIZE).hasSize(1).exclusively();
+    assertThat(context).notifications().withCause(SIZE)
+        .contains(Int.valueOf(5), Int.valueOf(5)).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -242,7 +251,9 @@ public final class EvictionTest {
     ready.set(true);
     await().untilTrue(done);
     await().untilAsserted(() -> assertThat(cache).isEmpty());
-    assertThat(context).notifications().withCause(SIZE).hasSize(1).exclusively();
+    assertThat(context).notifications().withCause(SIZE)
+        .contains(entry(context.absentKey(), Int.listOf(1, 2, 3, 4, 5)))
+        .exclusively();
   }
 
   @CheckNoStats
@@ -519,7 +530,9 @@ public final class EvictionTest {
         assertThat(context).notifications().isEmpty();
       } else {
         assertThat(cache).hasSize(newSize);
-        assertThat(context).notifications().withCause(SIZE).hasSize(newSize).exclusively();
+        assertThat(context).notifications().withCause(SIZE)
+            .contains(Maps.difference(context.original(), cache.asMap()).entriesOnlyOnLeft())
+            .exclusively();
       }
     }
   }
@@ -535,7 +548,7 @@ public final class EvictionTest {
       assertThat(cache).hasSize(expectedSize);
     }
     assertThat(context).notifications().withCause(SIZE)
-        .hasSize(context.initialSize()).exclusively();
+        .contains(context.original()).exclusively();
   }
 
   @CacheSpec(maximumSize = Maximum.FULL)

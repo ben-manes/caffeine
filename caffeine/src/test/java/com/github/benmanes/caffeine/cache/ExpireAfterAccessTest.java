@@ -31,6 +31,7 @@ import static java.util.stream.Collectors.toMap;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -82,8 +83,10 @@ public final class ExpireAfterAccessTest {
     cache.cleanUp();
     assertThat(cache).hasSize(1);
 
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(expected).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -101,8 +104,10 @@ public final class ExpireAfterAccessTest {
     cache.cleanUp();
     assertThat(cache).hasSize(2);
 
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(expected).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -118,8 +123,10 @@ public final class ExpireAfterAccessTest {
     cache.cleanUp();
     assertThat(cache).hasSize(3);
 
-    long count = context.initialSize() - 3;
-    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+    var expected = new HashMap<>(context.original());
+    expected.keySet().removeAll(context.firstMiddleLastKeys());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(expected).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -148,8 +155,10 @@ public final class ExpireAfterAccessTest {
         context.absentKey(), context.absentKey());
     assertThat(cache).hasSize(3);
 
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(expected).exclusively();
   }
 
   /* --------------- LoadingCache --------------- */
@@ -168,10 +177,10 @@ public final class ExpireAfterAccessTest {
 
     context.ticker().advance(45, TimeUnit.SECONDS);
     cache.cleanUp();
-    assertThat(cache).hasSize(1);
 
-    long count = context.initialSize();
-    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+    assertThat(cache).hasSize(1);
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -198,8 +207,10 @@ public final class ExpireAfterAccessTest {
             context.absentKey(), context.absentKey());
     assertThat(cache).hasSize(3);
 
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(expected).exclusively();
   }
 
   /* --------------- AsyncCache --------------- */
@@ -217,8 +228,11 @@ public final class ExpireAfterAccessTest {
 
     context.cleanUp();
     assertThat(cache).hasSize(1);
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(expected).exclusively();
   }
 
   /* --------------- Map --------------- */
@@ -235,8 +249,10 @@ public final class ExpireAfterAccessTest {
     assertThat(map.putIfAbsent(context.lastKey(), context.absentValue())).isNull();
 
     assertThat(map).hasSize(2);
-    long count = context.initialSize() - 1;
-    assertThat(context).notifications().withCause(EXPIRED).hasSize(count).exclusively();
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(expected).exclusively();
   }
 
   /* --------------- Policy --------------- */

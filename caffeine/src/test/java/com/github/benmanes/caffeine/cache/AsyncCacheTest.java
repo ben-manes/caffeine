@@ -24,7 +24,6 @@ import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
-import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,6 +57,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableSet;
@@ -69,6 +69,7 @@ import com.google.common.primitives.Ints;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckNoEvictions
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 @SuppressWarnings("FutureReturnValueIgnored")
@@ -934,31 +935,33 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    var removed = new HashMap<Int, Int>();
     var value = CompletableFuture.completedFuture((Int) null);
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, value);
       assertThat(cache).doesNotContainKey(key);
+      removed.put(key, context.original().get(key));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache).hasSize(context.initialSize() - count);
-    assertThat(context).removalNotifications().withCause(EXPLICIT).hasSize(count).exclusively();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(removed).exclusively();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_differentValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       var newValue = context.absentValue().asFuture();
       cache.put(key, newValue);
       assertThat(cache).containsEntry(key, newValue);
+      replaced.put(key, context.original().get(key));
     }
 
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(context.firstKey(), context.original().get(context.firstKey())),
-            entry(context.middleKey(), context.original().get(context.middleKey())),
-            entry(context.lastKey(), context.original().get(context.lastKey())))
-        .exclusively();
+        .contains(replaced).exclusively();
   }
 
   /* --------------- misc --------------- */

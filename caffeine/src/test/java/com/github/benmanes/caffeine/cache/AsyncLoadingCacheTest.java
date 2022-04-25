@@ -56,6 +56,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableSet;
@@ -67,6 +68,7 @@ import com.google.common.primitives.Ints;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckNoEvictions
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 @SuppressWarnings({"FutureReturnValueIgnored", "PreferJavaTimeOverload"})
@@ -408,15 +410,16 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var replaced = new HashMap<Int, Int>();
     var value = context.absentValue().asFuture();
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, value);
       assertThat(cache.get(key)).succeedsWith(context.absentValue());
+      replaced.put(key, context.original().get(key));
     }
     assertThat(cache).hasSize(context.initialSize());
-
-    int count = context.firstMiddleLastKeys().size();
-    assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(replaced).exclusively();
   }
 
   /* --------------- refresh --------------- */

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -431,14 +432,14 @@ public @interface CacheSpec {
     IDENTITY {
       @Override public Int load(Int key) {
         requireNonNull(key);
-        return key;
+        return intern(key);
       }
     },
     /** A loader that returns the key's negation. */
     NEGATIVE {
       @Override public Int load(Int key) {
         // Intern the loader's return value so that it is retained on a refresh
-        return CacheContext.intern(key, k -> new Int(-k.intValue()));
+        return intern(key, k -> new Int(-k.intValue()));
       }
     },
     /** A loader that always throws a runtime exception. */
@@ -478,6 +479,7 @@ public @interface CacheSpec {
         var result = new HashMap<Int, Int>(keys.size());
         for (Int key : keys) {
           result.put(key, key);
+          intern(key);
         }
         return result;
       }
@@ -490,6 +492,7 @@ public @interface CacheSpec {
         var result = new HashMap<Int, Int>(keys.size());
         for (Int key : keys) {
           result.put(key, NEGATIVE.load(key));
+          intern(key);
         }
         return result;
       }
@@ -500,7 +503,7 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
-        return keys.stream().collect(toMap(Int::negate, identity()));
+        return keys.stream().collect(toMap(key -> intern(intern(key).negate()), identity()));
       }
     },
     /** A bulk-only loader that loads more than requested. */

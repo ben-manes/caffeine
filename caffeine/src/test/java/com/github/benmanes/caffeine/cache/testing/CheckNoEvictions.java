@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Ben Manes. All Rights Reserved.
+ * Copyright 2022 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * A test method with this annotation has indicated that no statistics should have been recorded
- * and the {@link CacheValidationListener} should verify that expectation.
+ * A test class or method with this annotation has indicated that no eviction notifications should
+ * have been recorded and the {@link CacheValidationListener} should verify that expectation.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Target({TYPE, METHOD}) @Retention(RUNTIME)
-public @interface CheckNoStats {}
+public @interface CheckNoEvictions {}

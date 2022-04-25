@@ -23,7 +23,6 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
-import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
@@ -66,6 +65,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableMap;
@@ -83,6 +83,7 @@ import com.google.common.testing.NullPointerTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckNoEvictions
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class CacheTest {
@@ -436,7 +437,8 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_different(Cache<Int, Int> cache, CacheContext context) {
-    var actual = context.absentKeys().stream().collect(toMap(Int::negate, identity()));
+    var actual = context.absentKeys().stream()
+        .collect(toMap(key -> intern(key.negate()), identity()));
     var result = cache.getAll(context.absentKeys(), keys -> actual);
 
     assertThat(result).isEmpty();
@@ -525,7 +527,7 @@ public final class CacheTest {
 
     var keys = new ArrayList<Key>();
     for (int i = 0; i < Population.FULL.size(); i++) {
-      keys.add(new Key());
+      keys.add(intern(new Key()));
     }
     Key key = Iterables.getLast(keys);
     Int value = context.absentValue();
@@ -557,50 +559,50 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_sameValue(Cache<Int, Int> cache, CacheContext context) {
+    var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
       cache.put(key, intern(new Int(value)));
       assertThat(cache).containsEntry(key, value);
+      replaced.put(key, value);
     }
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(context.firstKey(), context.original().get(context.firstKey())),
-            entry(context.middleKey(), context.original().get(context.middleKey())),
-            entry(context.lastKey(), context.original().get(context.lastKey())))
-        .exclusively();
+        .contains(replaced).exclusively();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_sameInstance(Cache<Int, Int> cache, CacheContext context) {
+    var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
       cache.put(key, value);
       assertThat(cache).containsEntry(key, value);
+      replaced.put(key, value);
     }
     assertThat(cache).hasSize(context.initialSize());
 
     if (context.isGuava()) {
-      int count = context.firstMiddleLastKeys().size();
-      assertThat(context).removalNotifications().withCause(REPLACED).hasSize(count).exclusively();
+      assertThat(context).removalNotifications().withCause(REPLACED)
+          .contains(replaced).exclusively();
     } else {
-      assertThat(context).removalNotifications().withCause(REPLACED).isEmpty();
+      assertThat(context).removalNotifications().isEmpty();
     }
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_differentValue(Cache<Int, Int> cache, CacheContext context) {
+    var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, context.absentValue());
       assertThat(cache).containsEntry(key, context.absentValue());
+      replaced.put(key, context.original().get(key));
     }
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(context.firstKey(), context.original().get(context.firstKey())),
-            entry(context.middleKey(), context.original().get(context.middleKey())),
-            entry(context.lastKey(), context.original().get(context.lastKey())))
-        .exclusively();
+        .contains(replaced).exclusively();
   }
 
   @CheckNoStats
@@ -642,12 +644,11 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void putAll_replace(Cache<Int, Int> cache, CacheContext context) {
     var entries = new HashMap<>(context.original());
-    entries.replaceAll((key, value) -> value.add(1));
+    entries.replaceAll((key, value) -> intern(value.add(1)));
     cache.putAll(entries);
     assertThat(cache).containsExactlyEntriesIn(entries);
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(context.original().entrySet().toArray(Map.Entry[]::new))
-        .exclusively();
+        .contains(context.original()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -657,7 +658,7 @@ public final class CacheTest {
     var replaced = new HashMap<Int, Int>();
     context.original().forEach((key, value) -> {
       if ((key.intValue() % 2) == 0) {
-        value = value.add(1);
+        value = intern(value.add(1));
         replaced.put(key, value);
       }
       entries.put(key, value);
@@ -670,8 +671,7 @@ public final class CacheTest {
       entry.setValue(context.original().get(entry.getKey()));
     }
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(expect.entrySet().toArray(Map.Entry[]::new))
-        .exclusively();
+        .contains(expect).exclusively();
   }
 
   @CheckNoStats
@@ -702,12 +702,15 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void invalidate_present(Cache<Int, Int> cache, CacheContext context) {
+    var removed = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       cache.invalidate(key);
+      removed.put(key, context.original().get(key));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache).hasSize(context.initialSize() - count);
-    assertThat(context).removalNotifications().withCause(EXPLICIT).hasSize(count).exclusively();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(removed).exclusively();
   }
 
   @CheckNoStats
@@ -725,7 +728,7 @@ public final class CacheTest {
     cache.invalidateAll();
     assertThat(cache).isEmpty();
     assertThat(context).removalNotifications().withCause(EXPLICIT)
-        .hasSize(context.initialSize()).exclusively();
+        .contains(context.original()).exclusively();
   }
 
   @CheckNoStats
@@ -738,13 +741,13 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL })
   public void invalidateAll_partial(Cache<Int, Int> cache, CacheContext context) {
-    var keys = cache.asMap().keySet().stream()
-        .filter(i -> ((i.intValue() % 2) == 0))
-        .collect(Collectors.toList());
-    cache.invalidateAll(keys);
-    assertThat(cache).hasSize(context.initialSize() - keys.size());
+    var removals = cache.asMap().entrySet().stream()
+        .filter(entry -> ((entry.getKey().intValue() % 2) == 0))
+        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+    cache.invalidateAll(removals.keySet());
+    assertThat(cache).hasSize(context.initialSize() - removals.size());
     assertThat(context).removalNotifications().withCause(EXPLICIT)
-        .hasSize(keys.size()).exclusively();
+        .contains(removals).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -753,7 +756,7 @@ public final class CacheTest {
     cache.invalidateAll(context.original().keySet());
     assertThat(cache).isEmpty();
     assertThat(context).removalNotifications().withCause(EXPLICIT)
-        .hasSize(context.initialSize()).exclusively();
+        .contains(context.original()).exclusively();
   }
 
   @CacheSpec
@@ -769,8 +772,8 @@ public final class CacheTest {
       executor = CacheExecutor.REJECTING, removalListener = Listener.CONSUMING)
   public void removalListener_rejected(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
-    assertThat(context).removalNotifications()
-        .withCause(EXPLICIT).hasSize(context.initialSize()).exclusively();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
   }
 
   /* --------------- cleanup --------------- */
