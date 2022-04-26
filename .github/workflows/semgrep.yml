@@ -25,7 +25,7 @@ jobs:
             p/semgrep-rule-lints
             p/semgrep-misconfigurations
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: semgrep.sarif
         if: always()

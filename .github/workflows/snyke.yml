@@ -29,7 +29,7 @@ jobs:
         continue-on-error: true
         run: ./gradlew snyk-test
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: snyk.sarif
       - name: Run Snyk monitor
