@@ -83,14 +83,14 @@ Powering infrastructure near you:
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-implementation 'com.github.ben-manes.caffeine:caffeine:3.0.6'
+implementation 'com.github.ben-manes.caffeine:caffeine:3.1.0'
 
 // Optional extensions
-implementation 'com.github.ben-manes.caffeine:guava:3.0.6'
-implementation 'com.github.ben-manes.caffeine:jcache:3.0.6'
+implementation 'com.github.ben-manes.caffeine:guava:3.1.0'
+implementation 'com.github.ben-manes.caffeine:jcache:3.1.0'
 ```
 
-For Java 11 or above, use `3.0.x` otherwise use `2.9.x`.
+For Java 11 or above, use `3.1.x` otherwise use `2.9.x`.
 
 See the [release notes][releases] for details of the changes.
 
