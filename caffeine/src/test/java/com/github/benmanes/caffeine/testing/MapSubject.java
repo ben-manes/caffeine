@@ -50,7 +50,7 @@ public class MapSubject extends com.google.common.truth.MapSubject {
 
   /** Fails if the map does not have the given size. */
   public final void hasSize(long expectedSize) {
-    hasSize(Ints.checkedCast(expectedSize));
+    super.hasSize(Ints.checkedCast(expectedSize));
   }
 
   /** Fails if the map does not have less than the given size. */

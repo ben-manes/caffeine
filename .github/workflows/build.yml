@@ -3,12 +3,32 @@ permissions: read-all
 on: [ push, pull_request ]
 
 env:
+  ALLOWED_ENDPOINTS: >
+    1k4dacprodeus2file4.blob.core.windows.net:443
+    artifactcache.actions.githubusercontent.com:443
+    api.github.com:443
+    api.azul.com:443
+    cdn.azul.com:443
+    checkerframework.org:443
+    coveralls.io:443
+    docs.oracle.com:443
+    github.com:443
+    guava.dev:443
+    lightbend.github.io:443
+    oss.sonatype.org:443
+    pipelines.actions.githubusercontent.com:443
+    plugins.gradle.org:443
+    repo.maven.apache.org:443
+    repo1.maven.org:443
+    scans-in.gradle.com:443
+    services.gradle.org:443
+    sonarcloud.io:443
   MIN_JVM: 11
   MAX_JVM: 17
 
 jobs:
   caffeine:
-    name: "Caffeine Tests"
+    name: Caffeine Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -16,17 +36,25 @@ jobs:
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Harden Runner
+        uses: step-security/harden-runner@34cbc43f0b10c9dda284e663cf43c2ebaf83e956
+        with:
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v3
         with:
           cache: 'gradle'
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
-      - uses: gradle/gradle-build-action@v2
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
       - name: Run tests
         run: ./.github/scripts/test.sh --caffeine
-      - uses: actions/upload-artifact@v3
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
         if: (matrix.java == env.MAX_JVM) && always()
         with:
           retention-days: 1
@@ -66,12 +94,13 @@ jobs:
       - name: Stop Gradle daemon
         if: always()
         run: ./gradlew --stop
-      - uses: andymckay/cancel-action@0.2
+      - name: Cancel if failed
+        uses: andymckay/cancel-action@0.2
         continue-on-error: true
         if: failure()
 
   guava:
-    name: "Guava Compatibility Tests"
+    name: Guava Compatibility Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -79,17 +108,25 @@ jobs:
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Harden Runner
+        uses: step-security/harden-runner@34cbc43f0b10c9dda284e663cf43c2ebaf83e956
+        with:
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v3
         with:
           cache: 'gradle'
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
-      - uses: gradle/gradle-build-action@v2
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
       - name: Run tests
         run: ./.github/scripts/test.sh --guava
-      - uses: actions/upload-artifact@v3
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
         if: (matrix.java == env.MAX_JVM) && always()
         with:
           retention-days: 1
@@ -98,12 +135,13 @@ jobs:
       - name: Stop Gradle daemon
         if: always()
         run: ./gradlew --stop
-      - uses: andymckay/cancel-action@0.2
+      - name: Cancel if failed
+        uses: andymckay/cancel-action@0.2
         continue-on-error: true
         if: failure()
 
   event_file:
-    name: "Event File"
+    name: Event File
     runs-on: ubuntu-latest
     steps:
     - name: Upload

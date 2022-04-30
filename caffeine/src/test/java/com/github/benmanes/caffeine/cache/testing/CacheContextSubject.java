@@ -49,7 +49,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.CaseFormat;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
@@ -360,7 +359,7 @@ public final class CacheContextSubject extends Subject {
           check(type).withMessage("%s", cause)
               .that(listener.removed()).containsAtLeastElementsIn(notifications);
         });
-        return new Exclusive(ImmutableList.copyOf(entries).size());
+        return new Exclusive(entries.length);
       }
 
       public final class Exclusive {

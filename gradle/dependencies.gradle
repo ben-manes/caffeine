@@ -96,7 +96,7 @@ ext {
     jmhReport: '0.9.0',
     nexusPublish: '1.1.0',
     nullaway: '1.3.0',
-    pmd: '6.44.0',
+    pmd: '6.45.0',
     semanticVersioning: '1.1.0',
     shadow: '7.1.2',
     snyke: '0.4',
