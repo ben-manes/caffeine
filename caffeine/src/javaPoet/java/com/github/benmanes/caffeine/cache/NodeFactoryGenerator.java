@@ -15,32 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.NODE;
-import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
-import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
-import static com.github.benmanes.caffeine.cache.Specifications.lookupKeyType;
-import static com.github.benmanes.caffeine.cache.Specifications.rawReferenceKeyType;
-import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,8 +36,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
-import javax.lang.model.element.Modifier;
-
 import com.github.benmanes.caffeine.cache.node.AddConstructors;
 import com.github.benmanes.caffeine.cache.node.AddDeques;
 import com.github.benmanes.caffeine.cache.node.AddExpiration;
@@ -68,8 +48,6 @@ import com.github.benmanes.caffeine.cache.node.AddValue;
 import com.github.benmanes.caffeine.cache.node.Finalize;
 import com.github.benmanes.caffeine.cache.node.NodeContext;
 import com.github.benmanes.caffeine.cache.node.NodeRule;
-import com.google.common.base.CaseFormat;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -77,81 +55,51 @@ import com.google.common.io.Resources;
 import com.google.googlejavaformat.java.Formatter;
 import com.google.googlejavaformat.java.FormatterException;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 /**
- * Generates the cache entry factory and specialized types. These entries are optimized for the
- * configuration to minimize memory use. An entry may have any of the following properties:
+ * Generates the cache entry's specialized type. These entries are optimized for the configuration
+ * to minimize memory use. An entry may have any of the following properties:
  * <ul>
- *   <li>strong or weak keys
- *   <li>strong, weak, or soft values
+ *   <li>strong or weak key
+ *   <li>strong, weak, or soft value
  *   <li>access timestamp
  *   <li>write timestamp
+ *   <li>size queue type
+ *   <li>list references
  *   <li>weight
  * </ul>
- * <p>
- * If the cache has either a maximum size or expires after access, then the entry will also contain
- * prev/next references for an access-ordered queue. If the cache expires after write, then the
- * entry will also contain prev/next for a write-ordered queue.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class NodeFactoryGenerator {
-  static final FieldSpec LOOKUP = FieldSpec.builder(MethodHandles.Lookup.class, "LOOKUP")
-      .initializer("$T.lookup()", MethodHandles.class)
-      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-      .build();
-  static final FieldSpec FACTORY = FieldSpec.builder(MethodType.class, "FACTORY")
-      .initializer("$T.methodType($T.class)", MethodType.class, void.class)
-      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-      .build();
-
-  final List<NodeRule> rules = List.of(new AddSubtype(), new AddConstructors(),
+  private final List<NodeRule> rules = List.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
       new AddFactoryMethods(),  new AddHealth(), new Finalize());
-  final Feature[] featureByIndex = { null, null, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE,
-      Feature.REFRESH_WRITE, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
-  final ZoneId timeZone = ZoneId.of("America/Los_Angeles");
-  final Path directory;
-
-  TypeSpec.Builder nodeFactory;
-
+  private final Feature[] featureByIndex = { null, null, Feature.EXPIRE_ACCESS,
+      Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
   private final List<TypeSpec> nodeTypes;
+  private final Path directory;
 
   @SuppressWarnings("NullAway.Init")
-  NodeFactoryGenerator(Path directory) {
+  private NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
     this.nodeTypes = new ArrayList<>();
   }
 
-  void generate() throws FormatterException, IOException {
-    nodeFactory = TypeSpec.interfaceBuilder("NodeFactory")
-        .addTypeVariable(kTypeVar)
-        .addTypeVariable(vTypeVar);
-    addClassJavaDoc();
-    addConstants();
-    addKeyMethods();
+  private void generate() throws FormatterException, IOException {
     generatedNodes();
-    addNewFactoryMethods();
     writeJavaFile();
     reformat();
   }
 
   private void writeJavaFile() throws IOException {
     String header = Resources.toString(Resources.getResource("license.txt"), UTF_8).trim();
-    JavaFile.builder(getClass().getPackage().getName(), nodeFactory.build())
-        .addFileComment(header, Year.now(timeZone))
-        .indent("  ")
-        .build()
-        .writeTo(directory);
-
+    ZoneId timeZone = ZoneId.of("America/Los_Angeles");
     for (TypeSpec node : nodeTypes) {
       JavaFile.builder(getClass().getPackage().getName(), node)
           .addFileComment(header, Year.now(timeZone))
@@ -173,111 +121,6 @@ public final class NodeFactoryGenerator {
         Files.writeString(file, formatted);
       }
     }
-  }
-
-  private void addClassJavaDoc() {
-    nodeFactory.addJavadoc("<em>WARNING: GENERATED CODE</em>\n\n")
-        .addJavadoc("A factory for cache nodes optimized for a particular configuration.\n")
-        .addJavadoc("\n@author ben.manes@gmail.com (Ben Manes)\n");
-  }
-
-  private void addConstants() {
-    var constants = List.of("key", "value", "accessTime", "writeTime");
-    for (String constant : constants) {
-      String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
-      nodeFactory.addField(FieldSpec.builder(String.class, name)
-          .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-          .initializer("$S", constant)
-          .build());
-    }
-
-    Modifier[] modifiers = { Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL };
-    nodeFactory.addField(FieldSpec.builder(Object.class, RETIRED_STRONG_KEY, modifiers)
-        .initializer("new Object()")
-        .build());
-    nodeFactory.addField(FieldSpec.builder(Object.class, DEAD_STRONG_KEY, modifiers)
-        .initializer("new Object()")
-        .build());
-    nodeFactory.addField(FieldSpec.builder(rawReferenceKeyType, RETIRED_WEAK_KEY, modifiers)
-        .initializer("new $T(null, null)", rawReferenceKeyType)
-        .build());
-    nodeFactory.addField(FieldSpec.builder(rawReferenceKeyType, DEAD_WEAK_KEY, modifiers)
-        .initializer("new $T(null, null)", rawReferenceKeyType)
-        .build());
-
-    nodeFactory.addField(FACTORY);
-    nodeFactory.addField(LOOKUP);
-  }
-
-  private void addKeyMethods() {
-    nodeFactory
-        .addMethod(newNodeMethod(keySpec, keyRefQueueSpec))
-        .addMethod(newNodeMethod(keyRefSpec))
-        .addMethod(newReferenceKeyMethod())
-        .addMethod(newLookupKeyMethod());
-  }
-
-  private MethodSpec newNodeMethod(ParameterSpec... keyParams) {
-    return MethodSpec.methodBuilder("newNode")
-        .addJavadoc("Returns a node optimized for the specified features.\n")
-        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-        .addParameters(ImmutableList.copyOf(keyParams))
-        .addParameter(valueSpec)
-        .addParameter(valueRefQueueSpec)
-        .addParameter(int.class, "weight")
-        .addParameter(long.class, "now")
-        .returns(NODE)
-        .build();
-  }
-
-  private MethodSpec newLookupKeyMethod() {
-    return MethodSpec.methodBuilder("newLookupKey")
-        .addJavadoc("Returns a key suitable for looking up an entry in the cache. If the cache "
-            + "holds keys strongly\nthen the key is returned. If the cache holds keys weakly "
-            + "then a {@link $T}\nholding the key argument is returned.\n", lookupKeyType)
-        .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
-        .addParameter(Object.class, "key")
-        .addStatement("return key")
-        .returns(Object.class)
-        .build();
-  }
-
-  private MethodSpec newReferenceKeyMethod() {
-    return MethodSpec.methodBuilder("newReferenceKey")
-        .addJavadoc("Returns a key suitable for inserting into the cache. If the cache holds "
-            + "keys strongly then\nthe key is returned. If the cache holds keys weakly "
-            + "then a {@link $T}\nholding the key argument is returned.\n", referenceType)
-        .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
-        .addParameter(kTypeVar, "key")
-        .addParameter(kRefQueueType, "referenceQueue")
-        .addStatement("return $L", "key")
-        .returns(Object.class)
-        .build();
-  }
-
-  private void addNewFactoryMethods() {
-    nodeFactory.addMethod(MethodSpec.methodBuilder("newFactory")
-        .addJavadoc("Returns a factory optimized for the specified features.\n")
-        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-        .addTypeVariable(kTypeVar)
-        .addTypeVariable(vTypeVar)
-        .addParameter(BUILDER_PARAM)
-        .addParameter(boolean.class, "isAsync")
-        .addCode(NodeSelectorCode.get())
-        .returns(NODE_FACTORY)
-        .build());
-    nodeFactory.addMethod(MethodSpec.methodBuilder("weakValues")
-        .addJavadoc("Returns whether this factory supports weak values.\n")
-        .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
-        .addStatement("return false")
-        .returns(boolean.class)
-        .build());
-    nodeFactory.addMethod(MethodSpec.methodBuilder("softValues")
-        .addJavadoc("Returns whether this factory supports soft values.\n")
-        .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
-        .addStatement("return false")
-        .returns(boolean.class)
-        .build());
   }
 
   private void generatedNodes() {

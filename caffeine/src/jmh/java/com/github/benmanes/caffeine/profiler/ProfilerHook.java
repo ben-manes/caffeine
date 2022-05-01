@@ -28,8 +28,8 @@ import com.google.common.base.Stopwatch;
  * @author Ben Manes (ben.manes@gmail.com)
  */
 public abstract class ProfilerHook {
-  static int DISPLAY_DELAY_SEC = 5;
-  static int NUM_THREADS = 8;
+  static final int DISPLAY_DELAY_SEC = 5;
+  static final int NUM_THREADS = 8;
 
   protected final LongAdder calls;
 

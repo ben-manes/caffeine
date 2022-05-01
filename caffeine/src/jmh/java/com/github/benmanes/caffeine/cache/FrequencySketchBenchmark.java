@@ -36,7 +36,7 @@ public class FrequencySketchBenchmark {
   private static final int MASK = SIZE - 1;
   private static final int ITEMS = SIZE / 3;
 
-  int index = 0;
+  int index;
   Integer[] ints;
   FrequencySketch<Integer> sketch;
 

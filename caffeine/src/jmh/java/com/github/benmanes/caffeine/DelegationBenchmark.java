@@ -32,6 +32,7 @@ import com.google.common.collect.ForwardingMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
+@SuppressWarnings("PMD.MethodNamingConventions")
 public class DelegationBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

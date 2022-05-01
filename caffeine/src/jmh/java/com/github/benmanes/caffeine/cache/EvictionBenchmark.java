@@ -34,6 +34,7 @@ import org.openjdk.jmh.annotations.TearDown;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
+@SuppressWarnings("PMD.JUnit4TestShouldUseAfterAnnotation")
 public class EvictionBenchmark {
 
   @Param({
@@ -50,7 +51,7 @@ public class EvictionBenchmark {
 
   @State(Scope.Thread)
   public static class ThreadState {
-    int key = 0;
+    int key;
   }
 
   @Setup

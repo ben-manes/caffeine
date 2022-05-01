@@ -2,5 +2,5 @@
 set -eux
 
 ./gradlew --daemon \
-    pmdJavaPoet pmdMain -Dpmd \
-    spotbugsJavaPoet spotbugsMain spotbugsJmh -Dspotbugs
+    pmdJavaPoet pmdMain pmdCodeGen pmdJmh -Dpmd \
+    spotbugsJavaPoet spotbugsMain spotbugsCodeGen spotbugsJmh -Dspotbugs

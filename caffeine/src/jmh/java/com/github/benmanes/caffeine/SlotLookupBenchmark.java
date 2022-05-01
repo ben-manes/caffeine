@@ -48,6 +48,7 @@ import org.openjdk.jmh.infra.Blackhole;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
+@SuppressWarnings("PMD.MethodNamingConventions")
 public class SlotLookupBenchmark {
   static final int SPARSE_SIZE = 2 << 14;
   static final int ARENA_SIZE = 2 << 6;

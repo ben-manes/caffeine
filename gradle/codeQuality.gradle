@@ -34,7 +34,7 @@ tasks.register('downloadCaffeineLocal') {
   outputs.file local
 
   doFirst {
-    def version = '3.0.5'
+    def version = '3.1.0'
     def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/' +
       "${version}/caffeine-${version}.jar"
     if (!local.exists()) {

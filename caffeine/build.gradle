@@ -7,11 +7,9 @@ sourceSets {
   javaPoet {
     java.srcDir 'src/javaPoet/java'
   }
-  main {
-    java.srcDir "${buildDir}/generated-sources/"
-  }
   codeGen {
-    java.srcDir "${buildDir}/generated-sources/"
+    java.srcDir "${buildDir}/generated-sources/local"
+    java.srcDir "${buildDir}/generated-sources/nodes"
   }
 }
 
@@ -71,19 +69,17 @@ dependencies {
 }
 
 tasks.named('compileCodeGenJava').configure {
-  onlyIf { System.env.'CI' }
+  classpath = sourceSets.main.runtimeClasspath + sourceSets.main.output
+  options.debug = false
   dependsOn compileJava
 
   doFirst {
     options.compilerArgs += [ '--module-path', classpath.asPath ]
   }
-  options.debug = false
-  options.incremental = false
-  destinationDirectory = compileJava.destinationDirectory
-  classpath = sourceSets.main.runtimeClasspath + sourceSets.main.output
 }
 
 tasks.named('jar').configure {
+  from sourceSets.main.output + sourceSets.codeGen.output
   dependsOn compileCodeGenJava
   manifest {
     attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine'
@@ -99,37 +95,43 @@ tasks.named('jar').configure {
 def generateLocalCaches = tasks.register('generateLocalCaches', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
-  outputs.dir "${buildDir}/generated-sources/"
-  args "${buildDir}/generated-sources/"
+  outputs.dir "${buildDir}/generated-sources/local"
+  args "${buildDir}/generated-sources/local"
+  inputs.files sourceSets.javaPoet.output
   dependsOn compileJavaPoetJava
+  outputs.cacheIf { true }
 }
 
 def generateNodes = tasks.register('generateNodes', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.NodeFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
-  outputs.dir "${buildDir}/generated-sources/"
-  args "${buildDir}/generated-sources/"
+  outputs.dir "${buildDir}/generated-sources/nodes"
+  args "${buildDir}/generated-sources/nodes"
+  inputs.files sourceSets.javaPoet.output
   dependsOn compileJavaPoetJava
+  outputs.cacheIf { true }
 }
 
+tasks.named('compileJavaPoetJava').configure {
+  finalizedBy generateLocalCaches, generateNodes
+}
 tasks.named('compileJava').configure {
   dependsOn generateLocalCaches, generateNodes
   finalizedBy compileCodeGenJava
 }
-tasks.named('compileJavaPoetJava').configure {
-  finalizedBy generateLocalCaches, generateNodes
-}
 tasks.named('compileTestJava').configure {
-  dependsOn(jar)
-}
-['compileTestJava', 'pmdMain', 'spotbugsMain'].collect { tasks.named(it) }*.configure {
   dependsOn compileCodeGenJava
+  dependsOn(jar)
 }
 tasks.named('sourcesJar').configure {
   dependsOn generateLocalCaches, generateNodes
 }
 tasks.javadoc.mustRunAfter(compileCodeGenJava)
 tasks.shadowJar.mustRunAfter(compileCodeGenJava)
+
+tasks.withType(Test).configureEach {
+  classpath += sourceSets.codeGen.runtimeClasspath
+}
 
 tasks.register('memoryOverhead', JavaExec) {
   group = 'Benchmarks'

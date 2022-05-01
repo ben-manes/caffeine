@@ -1,8 +1,13 @@
 /** Cache simulator using tracing data and a family of eviction policy options. */
 import net.ltgt.gradle.errorprone.CheckSeverity
 
-apply from: "${rootDir}/gradle/autoValue.gradle"
 apply plugin:'application'
+
+eclipse {
+  sourceSets.main {
+    java.srcDir "${buildDir}/generated/sources/annotationProcessor/java/main"
+  }
+}
 
 dependencies {
   implementation project(':caffeine')
@@ -31,6 +36,9 @@ dependencies {
   implementation libraries.univocityParsers
 
   testImplementation testLibraries.testng
+
+  annotationProcessor annotationProcessors.values()
+  compileOnly annotationProcessors.values()
 }
 
 tasks.named('compileJava').configure {

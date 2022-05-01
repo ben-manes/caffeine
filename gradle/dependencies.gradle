@@ -125,7 +125,9 @@ ext {
     config: "com.typesafe:config:${versions.config}",
     ehcache3: "org.ehcache:ehcache:${versions.ehcache3}",
     errorproneAnnotations: "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
-    errorproneCore: "com.google.errorprone:error_prone_core:${versions.errorprone}",
+    errorproneCore: dependencies.create("com.google.errorprone:error_prone_core:${versions.errorprone}") {
+      exclude group: 'com.github.ben-manes.caffeine'
+    },
     expiringMap: "net.jodah:expiringmap:${versions.expiringMap}",
     fastfilter: "io.github.fastfilter:fastfilter:${versions.fastfilter}",
     fastutil: "it.unimi.dsi:fastutil-core:${versions.fastutil}",

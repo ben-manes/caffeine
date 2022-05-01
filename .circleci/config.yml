@@ -110,6 +110,7 @@ jobs:
                   :caffeine:strongKeysAndStrongValuesSyncCaffeineTest
                   :caffeine:strongKeysAndWeakValuesStatsSyncCaffeineTest
                   :caffeine:strongKeysAndWeakValuesSyncCaffeineTest
+                no_output_timeout: 1h
   weak_keys:
     resource_class: arm.medium
     machine:
@@ -133,6 +134,7 @@ jobs:
                   :caffeine:weakKeysAndStrongValuesSyncCaffeineTest
                   :caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest
                   :caffeine:weakKeysAndWeakValuesSyncCaffeineTest
+                no_output_timeout: 1h
   isolated:
     resource_class: arm.medium
     machine:
@@ -157,6 +159,7 @@ jobs:
             - run:
                 name: Run isolated tests
                 command: ./gradlew :caffeine:isolatedTest
+                no_output_timeout: 1h
 
 workflows:
   version: 2
