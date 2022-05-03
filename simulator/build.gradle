@@ -1,12 +1,12 @@
 /** Cache simulator using tracing data and a family of eviction policy options. */
+import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import net.ltgt.gradle.errorprone.CheckSeverity
 
 apply plugin:'application'
 
-eclipse {
-  sourceSets.main {
-    java.srcDir "${buildDir}/generated/sources/annotationProcessor/java/main"
-  }
+eclipse.classpath.file.beforeMerged {
+  entries.add(new SourceFolder(
+    "${buildDir.name}/generated/sources/annotationProcessor/java/main", 'bin/main'))
 }
 
 dependencies {

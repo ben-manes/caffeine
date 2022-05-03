@@ -12,6 +12,7 @@ env:
     checkerframework.org:443
     coveralls.io:443
     docs.oracle.com:443
+    downloads.gradle-dn.com:443
     github.com:443
     guava.dev:443
     lightbend.github.io:443
@@ -19,6 +20,7 @@ env:
     pipelines.actions.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443
+    repo.gradle.org:443
     repo.maven.apache.org:443
     repo1.maven.org:443
     scans-in.gradle.com:443

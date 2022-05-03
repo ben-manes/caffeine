@@ -28,6 +28,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
@@ -524,7 +525,8 @@ public final class BoundedLocalCacheTest {
       weigher = CacheWeigher.COLLECTION)
   public void evict_resurrect_weight(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = Int.valueOf(1);
-    cache.put(key, List.of(key));
+    var value = intern(List.of(key));
+    cache.put(key, value);
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
@@ -547,7 +549,7 @@ public final class BoundedLocalCacheTest {
 
     assertThat(cache).containsEntry(key, List.of());
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(key, List.of(key))).exclusively();
+        .contains(entry(key, value)).exclusively();
   }
 
   @Test(dataProvider = "caches")
