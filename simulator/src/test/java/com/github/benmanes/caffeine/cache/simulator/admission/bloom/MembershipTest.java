@@ -54,8 +54,9 @@ public class MembershipTest {
       capacities.add(capacity);
     }
 
+    Random random = new Random();
     for (int capacity : capacities) {
-      long[] input = new Random().longs(capacity).distinct().toArray();
+      long[] input = random.longs(capacity).distinct().toArray();
       Config config = getConfig(filterType, capacity);
       List<String[]> rows = new ArrayList<>();
 

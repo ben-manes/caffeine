@@ -6,8 +6,8 @@ env:
   ALLOWED_ENDPOINTS: >
     1k4dacprodeus2file4.blob.core.windows.net:443
     artifactcache.actions.githubusercontent.com:443
-    api.github.com:443
     api.azul.com:443
+    api.github.com:443
     cdn.azul.com:443
     checkerframework.org:443
     coveralls.io:443

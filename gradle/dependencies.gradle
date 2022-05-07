@@ -101,7 +101,7 @@ ext {
     shadow: '7.1.2',
     snyke: '0.4',
     sonarqube: '3.3',
-    spotbugs: '4.6.0',
+    spotbugs: '4.7.0',
     spotbugsContrib: '7.4.7',
     spotbugsPlugin: '5.0.6',
     stats: '0.47.0',
