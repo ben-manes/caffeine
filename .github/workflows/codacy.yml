@@ -1,0 +1,27 @@
+name: Codacy
+permissions: read-all
+on: [ push, pull_request ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@main
+      - name: Run Codacy Analysis
+        uses: codacy/codacy-analysis-cli-action@master
+        continue-on-error: true
+        with:
+          format: sarif
+          output: results.sarif
+          gh-code-scanning-compat: true
+          max-allowed-issues: 2147483647
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        continue-on-error: true
+        with:
+          sarif_file: results.sarif

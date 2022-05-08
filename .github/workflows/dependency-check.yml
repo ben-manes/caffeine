@@ -1,5 +1,9 @@
 name: dependency-check
-on: [ push, pull_request ]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 4'
 permissions: read-all
 
 env:
@@ -20,7 +24,6 @@ jobs:
           cache: 'gradle'
           distribution: 'zulu'
           java-version: ${{ env.JAVA_VERSION }}
-      - uses: gradle/gradle-build-action@v2
       - name: Run dependency-check
         uses: gradle/gradle-build-action@v2
         continue-on-error: true
