@@ -52,7 +52,7 @@ ext {
     jmh: '1.35',
     joor: '0.9.14',
     jsr330: '1',
-    nullaway: '0.9.6',
+    nullaway: '0.9.7',
     ohc: '0.6.1',
     osgiComponentAnnotations: '1.5.0',
     picocli: '4.6.3',

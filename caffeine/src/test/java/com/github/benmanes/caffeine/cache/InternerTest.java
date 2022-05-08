@@ -30,6 +30,7 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.testing.SetTestSuiteBuilder;
 import com.google.common.collect.testing.TestStringSetGenerator;
@@ -133,6 +134,19 @@ public final class InternerTest extends TestCase {
   @Test
   public void nullPointerExceptions() {
     new NullPointerTester().testAllPublicStaticMethods(Interner.class);
+  }
+
+  @Test
+  public void interned() {
+    var node = new Interned<Object, Boolean>();
+    assertThat(node.getValue()).isTrue();
+    assertThat(node.getValueReference()).isTrue();
+    assertThat(node.newNode(null, null, null, 1, 1)).isInstanceOf(Interned.class);
+    assertThat(node.newReferenceKey(new Object(), null)).isInstanceOf(WeakKeyEqualsReference.class);
+    assertThat(node.isRetired()).isFalse();
+
+    node.retire();
+    assertThat(node.isRetired()).isTrue();
   }
 
   private void checkSize(Interner<Int> interner, int size) {

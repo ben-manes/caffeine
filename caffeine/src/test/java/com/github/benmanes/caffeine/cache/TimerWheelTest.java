@@ -54,6 +54,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.google.common.collect.Streams;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -467,6 +468,33 @@ public final class TimerWheelTest {
         .limit(range + 1).map(Node::getKey).collect(toList());
     assertThat(descending).containsExactlyElementsIn(snapshot(/* ascending */ false)).inOrder();
     assertThat(descending).containsExactlyElementsIn(input);
+  }
+
+  @Test
+  public void sentinel_ignored() {
+    var node = new Sentinel<>();
+    node.setValue(new Object(), null);
+    node.retire();
+    node.die();
+
+    assertThat(node.getKey()).isNull();
+    assertThat(node.getValue()).isNull();
+    assertThat(node.containsValue(new Object())).isFalse();
+    assertThat(node.isAlive()).isFalse();
+    assertThat(node.isRetired()).isFalse();
+    assertThat(node.isDead()).isFalse();
+  }
+
+  @Test
+  public void sentinel_unsupported() {
+    var node = new Sentinel<>();
+    List<Runnable> methods = List.of(() -> node.getKeyReference(), () -> node.getValueReference());
+    for (var method : methods) {
+      try {
+        method.run();
+        Assert.fail();
+      } catch (UnsupportedOperationException expected) {}
+    }
   }
 
   /** Returns a snapshot roughly ordered by the expiration time. */

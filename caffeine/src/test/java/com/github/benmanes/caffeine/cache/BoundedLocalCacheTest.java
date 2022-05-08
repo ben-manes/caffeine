@@ -39,6 +39,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.util.Map.entry;
+import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -61,10 +62,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.BoundedLocalCache.PerformCleanupTask;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
+import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
+import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
@@ -1361,12 +1367,50 @@ public final class BoundedLocalCacheTest {
     await().untilAsserted(() -> assertThat(cache).containsEntry(context.absentKey(), newValue));
   }
 
-  /* --------------- Node --------------- */
+  /* --------------- Miscellaneous --------------- */
+
+  @Test
+  public void unsupported() {
+    var cache = Mockito.mock(BoundedLocalCache.class, InvocationOnMock::callRealMethod);
+    List<Runnable> methods = List.of(() -> cache.accessOrderWindowDeque(),
+        () -> cache.accessOrderProbationDeque(), () -> cache.accessOrderProtectedDeque(),
+        () -> cache.writeOrderDeque(), () -> cache.expiresAfterAccessNanos(),
+        () -> cache.setExpiresAfterAccessNanos(1L), () -> cache.expiresAfterWriteNanos(),
+        () -> cache.setExpiresAfterWriteNanos(1L), () -> cache.refreshAfterWriteNanos(),
+        () -> cache.setRefreshAfterWriteNanos(1L), () -> cache.timerWheel(),
+        () -> cache.frequencySketch(), () -> cache.maximum(), () -> cache.windowMaximum(),
+        () -> cache.mainProtectedMaximum(), () -> cache.setMaximum(1L),
+        () -> cache.setWindowMaximum(1L), () -> cache.setMainProtectedMaximum(1L),
+        () -> cache.weightedSize(), () -> cache.windowWeightedSize(),
+        () -> cache.mainProtectedWeightedSize(), () -> cache.setWeightedSize(1L),
+        () -> cache.setWindowWeightedSize(0), () -> cache.setMainProtectedWeightedSize(1L),
+        () -> cache.hitsInSample(), () -> cache.missesInSample(), () -> cache.sampleCount(),
+        () -> cache.stepSize(), () -> cache.previousSampleHitRate(), () -> cache.adjustment(),
+        () -> cache.setHitsInSample(1), () -> cache.setMissesInSample(1),
+        () -> cache.setSampleCount(1), () -> cache.setStepSize(1.0),
+        () -> cache.setPreviousSampleHitRate(1.0), () -> cache.setAdjustment(1L));
+    for (var method : methods) {
+      try {
+        method.run();
+        Assert.fail();
+      } catch (UnsupportedOperationException expected) {}
+    }
+  }
+
+  @Test
+  public void cleanupTask_ignore() {
+    var task = new PerformCleanupTask(null);
+    assertThat(task.getRawResult()).isNull();
+    task.completeExceptionally(null);
+    task.setRawResult(null);
+    task.complete(null);
+    task.cancel(true);
+  }
 
   @Test(dataProviderClass = CacheProvider.class, dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, compute = Compute.SYNC,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL})
-  public void string(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  public void node_string(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.values().iterator().next();
     var description = node.toString();
     assertThat(description).contains("key=" + node.getKey());
@@ -1375,6 +1419,56 @@ public final class BoundedLocalCacheTest {
     assertThat(description).contains(String.format("accessTimeNS=%,d", node.getAccessTime()));
     assertThat(description).contains(String.format("writeTimeNS=%,d", node.getWriteTime()));
     assertThat(description).contains(String.format("varTimeNs=%,d", node.getVariableTime()));
+  }
+
+  @Test
+  public void node_unsupported() {
+    @SuppressWarnings("unchecked")
+    Node<Object, Object> node = Mockito.mock(Node.class, InvocationOnMock::callRealMethod);
+    List<Runnable> methods = List.of(() -> node.casVariableTime(1L, 2L),
+        () -> node.getPreviousInVariableOrder(), () -> node.setPreviousInVariableOrder(node),
+        () -> node.getNextInVariableOrder(), () -> node.setNextInVariableOrder(node),
+        () -> node.setQueueType(Node.WINDOW), () -> node.setPreviousInAccessOrder(node),
+        () -> node.setNextInAccessOrder(node), () -> node.casWriteTime(1L, 2L),
+        () -> node.setPreviousInWriteOrder(node), () -> node.setNextInWriteOrder(node));
+    for (var method : methods) {
+      try {
+        method.run();
+        Assert.fail();
+      } catch (UnsupportedOperationException expected) {}
+    }
+  }
+
+  @Test
+  public void node_ignored() {
+    var node = Mockito.mock(Node.class, InvocationOnMock::callRealMethod);
+    List<Runnable> methods = List.of(() -> node.setVariableTime(1L),
+        () -> node.setAccessTime(1L), () -> node.setWriteTime(1L));
+    for (var method : methods) {
+      method.run();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void policy_unsupported() {
+    Policy<Object, Object> policy = Mockito.mock(
+        Policy.class, invocation -> invocation.callRealMethod());
+    var eviction = Mockito.mock(Eviction.class, InvocationOnMock::callRealMethod);
+    var fixedExpiration = Mockito.mock(FixedExpiration.class, InvocationOnMock::callRealMethod);
+    var varExpiration = Mockito.mock(VarExpiration.class, InvocationOnMock::callRealMethod);
+    List<Runnable> methods = List.of(() -> policy.getEntryIfPresentQuietly(new Object()),
+        () -> eviction.coldestWeighted(1L), () -> eviction.coldest(identity()),
+        () -> eviction.hottestWeighted(1L), () -> eviction.hottest(identity()),
+        () -> fixedExpiration.oldest(identity()), () -> fixedExpiration.youngest(identity()),
+        () -> varExpiration.compute(new Object(), (k, v) -> v, Duration.ZERO),
+        () -> varExpiration.oldest(identity()), () -> varExpiration.youngest(identity()));
+    for (var method : methods) {
+      try {
+        method.run();
+        Assert.fail();
+      } catch (UnsupportedOperationException expected) {}
+    }
   }
 
   static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {
