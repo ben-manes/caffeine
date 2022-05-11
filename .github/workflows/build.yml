@@ -3,11 +3,13 @@ permissions: read-all
 on: [ push, pull_request ]
 
 env:
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >
     1k4dacprodeus2file4.blob.core.windows.net:443
     artifactcache.actions.githubusercontent.com:443
     api.azul.com:443
     api.github.com:443
+    caffeine.gradle-enterprise.cloud:443
     cdn.azul.com:443
     checkerframework.org:443
     coveralls.io:443
@@ -55,7 +57,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Run tests
-        run: ./.github/scripts/test.sh --caffeine
+        run: ./.github/scripts/test.sh --caffeine=strongKeys --caffeine=weakKeys --caffeine=check
       - name: Upload test results
         uses: actions/upload-artifact@v3
         if: (matrix.java == env.MAX_JVM) && always()
@@ -127,7 +129,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Run tests
-        run: ./.github/scripts/test.sh --guava
+        run: ./.github/scripts/test.sh --guava=strongKeys --guava=weakKeys --guava=check
       - name: Upload test results
         uses: actions/upload-artifact@v3
         if: (matrix.java == env.MAX_JVM) && always()

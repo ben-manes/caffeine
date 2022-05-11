@@ -2,6 +2,9 @@ name: analysis
 permissions: read-all
 on: [ push, pull_request ]
 
+env:
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+
 jobs:
   analyze:
     runs-on: ubuntu-latest

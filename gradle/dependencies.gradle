@@ -62,7 +62,7 @@ ext {
     univocityParsers: '2.9.1',
     ycsb: '0.17.0',
     xz: '1.9',
-    zstd: '1.5.2-2',
+    zstd: '1.5.2-3',
   ]
   testVersions = [
     awaitility: '4.2.0',
@@ -103,7 +103,7 @@ ext {
     sonarqube: '3.3',
     spotbugs: '4.7.0',
     spotbugsContrib: '7.4.7',
-    spotbugsPlugin: '5.0.6',
+    spotbugsPlugin: '5.0.7',
     stats: '0.47.0',
     versions: '0.42.0',
   ]

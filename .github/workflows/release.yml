@@ -4,6 +4,9 @@ on:
     types: [created]
 permissions: read-all
 
+env:
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+
 jobs:
   release:
     runs-on: ubuntu-latest

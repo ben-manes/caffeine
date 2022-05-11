@@ -69,8 +69,9 @@ public abstract class TextReporter implements Reporter {
     if (output.equalsIgnoreCase("console")) {
       System.out.println(report);
     } else {
-      Files.createDirectories(Path.of(output).getParent());
-      Files.write(Path.of(output), report.getBytes(UTF_8));
+      Path path = Path.of(output);
+      Files.createDirectories(path.getParent());
+      Files.write(path, report.getBytes(UTF_8));
     }
   }
 

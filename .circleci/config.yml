@@ -100,17 +100,12 @@ jobs:
           test_steps:
             - run:
                 name: Run tests
-                command: >
-                  ./gradlew
-                  :caffeine:strongKeysAndSoftValuesStatsSyncCaffeineTest
-                  :caffeine:strongKeysAndSoftValuesSyncCaffeineTest
-                  :caffeine:strongKeysAndStrongValuesAsyncCaffeineTest
-                  :caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest
-                  :caffeine:strongKeysAndStrongValuesStatsSyncCaffeineTest
-                  :caffeine:strongKeysAndStrongValuesSyncCaffeineTest
-                  :caffeine:strongKeysAndWeakValuesStatsSyncCaffeineTest
-                  :caffeine:strongKeysAndWeakValuesSyncCaffeineTest
                 no_output_timeout: 1h
+                command: ./.github/scripts/test.sh --caffeine=strongKeys
+            - run:
+                name: Stop Gradle daemon
+                when: always
+                command: ./gradlew --stop
   weak_keys:
     resource_class: arm.medium
     machine:
@@ -124,17 +119,12 @@ jobs:
           test_steps:
             - run:
                 name: Run tests
-                command: >
-                  ./gradlew
-                  :caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest
-                  :caffeine:weakKeysAndSoftValuesSyncCaffeineTest
-                  :caffeine:weakKeysAndStrongValuesAsyncCaffeineTest
-                  :caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest
-                  :caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest
-                  :caffeine:weakKeysAndStrongValuesSyncCaffeineTest
-                  :caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest
-                  :caffeine:weakKeysAndWeakValuesSyncCaffeineTest
                 no_output_timeout: 1h
+                command: ./.github/scripts/test.sh --caffeine=weakKeys
+            - run:
+                name: Stop Gradle daemon
+                when: always
+                command: ./gradlew --stop
   isolated:
     resource_class: arm.medium
     machine:
@@ -148,18 +138,12 @@ jobs:
           test_steps:
             - run:
                 name: Run tests
-                command: >
-                  ./gradlew
-                  :guava:test
-                  :jcache:test
-                  :simulator:test
-                  :caffeine:junitTest
-                  :caffeine:slowCaffeineTest
                 no_output_timeout: 1h
+                command: ./.github/scripts/test.sh --caffeine=check
             - run:
-                name: Run isolated tests
-                command: ./gradlew :caffeine:isolatedTest
-                no_output_timeout: 1h
+                name: Stop Gradle daemon
+                when: always
+                command: ./gradlew --stop
 
 workflows:
   version: 2
