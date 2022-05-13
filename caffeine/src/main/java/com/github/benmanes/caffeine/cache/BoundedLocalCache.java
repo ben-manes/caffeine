@@ -100,6 +100,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
+@SuppressWarnings("serial")
 abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     implements LocalCache<K, V> {
 

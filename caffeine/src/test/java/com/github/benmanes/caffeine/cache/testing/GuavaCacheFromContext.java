@@ -70,7 +70,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"serial", "PreferJavaTimeOverload"})
 public final class GuavaCacheFromContext {
   private GuavaCacheFromContext() {}
   private static final ThreadLocal<Throwable> error = new ThreadLocal<>();

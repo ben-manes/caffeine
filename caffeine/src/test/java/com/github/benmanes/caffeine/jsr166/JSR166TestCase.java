@@ -431,7 +431,7 @@ public class JSR166TestCase extends TestCase {
               System.exit(1);
             }
             System.gc();
-            System.runFinalization();
+//            System.runFinalization();
         }
     }
 

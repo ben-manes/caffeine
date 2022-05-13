@@ -100,6 +100,7 @@ final class ExecutorServiceScheduler implements Scheduler, Serializable {
   private static final Logger logger = System.getLogger(ExecutorServiceScheduler.class.getName());
   private static final long serialVersionUID = 1;
 
+  @SuppressWarnings("serial")
   final ScheduledExecutorService scheduledExecutorService;
 
   ExecutorServiceScheduler(ScheduledExecutorService scheduledExecutorService) {
@@ -130,6 +131,7 @@ final class GuardedScheduler implements Scheduler, Serializable {
   private static final Logger logger = System.getLogger(GuardedScheduler.class.getName());
   private static final long serialVersionUID = 1;
 
+  @SuppressWarnings("serial")
   final Scheduler delegate;
 
   GuardedScheduler(Scheduler delegate) {

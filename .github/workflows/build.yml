@@ -29,7 +29,7 @@ env:
     services.gradle.org:443
     sonarcloud.io:443
   MIN_JVM: 11
-  MAX_JVM: 17
+  MAX_JVM: 18
 
 jobs:
   caffeine:
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 17 ]
+        java: [ 11, 18 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -109,7 +109,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 17 ]
+        java: [ 11, 18 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

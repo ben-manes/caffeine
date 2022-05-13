@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("serial")
 final class CaffeinatedGuavaLoadingCache<K, V>
     extends CaffeinatedGuavaCache<K, V> implements LoadingCache<K, V> {
   private static final ThreadLocal<Boolean> nullBulkLoad =

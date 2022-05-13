@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 17 ]
+        java: [ 11, 18 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

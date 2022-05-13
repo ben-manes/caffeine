@@ -455,6 +455,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   final class CacheView<K, V> extends AbstractCacheView<K, V> {
     private static final long serialVersionUID = 1L;
 
+    @SuppressWarnings("serial")
     final LocalAsyncCache<K, V> asyncCache;
 
     CacheView(LocalAsyncCache<K, V> asyncCache) {

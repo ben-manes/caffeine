@@ -160,6 +160,7 @@ abstract class LocalAsyncLoadingCache<K, V>
       extends AbstractCacheView<K, V> implements LoadingCache<K, V> {
     private static final long serialVersionUID = 1L;
 
+    @SuppressWarnings("serial")
     final LocalAsyncLoadingCache<K, V> asyncCache;
 
     LoadingCacheView(LocalAsyncLoadingCache<K, V> asyncCache) {
