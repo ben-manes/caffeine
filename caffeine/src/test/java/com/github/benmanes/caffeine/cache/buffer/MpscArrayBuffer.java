@@ -15,18 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import java.util.function.Consumer;
-
 import org.jctools.queues.MpscArrayQueue;
-
-import com.github.benmanes.caffeine.cache.ReadBuffer;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class MpscArrayBuffer<E> extends ReadBuffer<E> {
   final MpscArrayQueue<E> queue;
-  long drained;
+  long reads;
 
   MpscArrayBuffer() {
     queue = new MpscArrayQueue<>(BUFFER_SIZE);
@@ -34,25 +30,21 @@ final class MpscArrayBuffer<E> extends ReadBuffer<E> {
 
   @Override
   public int offer(E e) {
-    return queue.relaxedOffer(e) ? SUCCESS : FULL;
+    return queue.failFastOffer(e);
   }
 
   @Override
   public void drainTo(Consumer<E> consumer) {
-    E e;
-    while ((e = queue.poll()) != null) {
-      consumer.accept(e);
-      drained++;
-    }
+    reads += queue.drain(consumer);
   }
 
   @Override
   public long reads() {
-    return drained;
+    return reads;
   }
 
   @Override
   public long writes() {
-    return drained() + queue.size();
+    return reads + queue.size();
   }
 }

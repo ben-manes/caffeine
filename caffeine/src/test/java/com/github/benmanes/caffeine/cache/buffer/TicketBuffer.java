@@ -17,9 +17,6 @@ package com.github.benmanes.caffeine.cache.buffer;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-
-import com.github.benmanes.caffeine.cache.ReadBuffer;
 
 /**
  * A bounded buffer that attempts to record once. This design has the benefit of retaining a

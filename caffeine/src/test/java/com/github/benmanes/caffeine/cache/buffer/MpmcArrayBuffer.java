@@ -15,18 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import java.util.function.Consumer;
-
 import org.jctools.queues.MpmcArrayQueue;
-
-import com.github.benmanes.caffeine.cache.ReadBuffer;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class MpmcArrayBuffer<E> extends ReadBuffer<E> {
   final MpmcArrayQueue<E> queue;
-  long drained;
+  long reads;
 
   MpmcArrayBuffer() {
     queue = new MpmcArrayQueue<>(BUFFER_SIZE);
@@ -39,20 +35,16 @@ final class MpmcArrayBuffer<E> extends ReadBuffer<E> {
 
   @Override
   public void drainTo(Consumer<E> consumer) {
-    E e;
-    while ((e = queue.poll()) != null) {
-      consumer.accept(e);
-      drained++;
-    }
+    reads += queue.drain(consumer);
   }
 
   @Override
   public long reads() {
-    return drained;
+    return reads;
   }
 
   @Override
   public long writes() {
-    return drained() + queue.size();
+    return reads + queue.size();
   }
 }

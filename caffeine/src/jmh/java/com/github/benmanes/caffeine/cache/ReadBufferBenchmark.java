@@ -25,6 +25,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
 import com.github.benmanes.caffeine.cache.buffer.BufferType;
+import com.github.benmanes.caffeine.cache.buffer.ReadBuffer;
 
 /**
  * A concurrent benchmark for read buffer implementation options. A read buffer may be a lossy,

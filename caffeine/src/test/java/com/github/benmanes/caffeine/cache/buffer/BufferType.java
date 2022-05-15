@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache.buffer;
 
 import java.util.function.Supplier;
 
-import com.github.benmanes.caffeine.cache.ReadBuffer;
-
 /**
  * The different read buffer strategies.
  *

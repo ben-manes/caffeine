@@ -23,7 +23,6 @@ import java.util.Iterator;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.ReadBuffer;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
@@ -50,7 +49,7 @@ public final class BufferTest {
         Thread.yield();
       }
     });
-    long recorded = buffer.recorded();
+    long recorded = buffer.writes();
     assertThat(recorded).isEqualTo(ReadBuffer.BUFFER_SIZE);
   }
 
@@ -60,8 +59,8 @@ public final class BufferTest {
       buffer.offer(Boolean.TRUE);
     }
     buffer.drain();
-    long drained = buffer.drained();
-    long recorded = buffer.recorded();
+    long drained = buffer.reads();
+    long recorded = buffer.writes();
     assertThat(drained).isEqualTo(recorded);
   }
 
@@ -78,8 +77,8 @@ public final class BufferTest {
       }
     });
     buffer.drain();
-    long drained = buffer.drained();
-    long recorded = buffer.recorded();
+    long drained = buffer.reads();
+    long recorded = buffer.writes();
     assertThat(drained).isEqualTo(recorded);
   }
 }
