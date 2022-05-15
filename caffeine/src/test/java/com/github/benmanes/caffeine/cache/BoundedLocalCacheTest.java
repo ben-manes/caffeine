@@ -1370,6 +1370,36 @@ public final class BoundedLocalCacheTest {
   /* --------------- Miscellaneous --------------- */
 
   @Test
+  public void cacheFactory_invalid() {
+    try {
+      LocalCacheFactory.loadFactory(/* builder */ null, /* loader */ null,
+          /* async */ false, /* className */ null);
+      Assert.fail();
+    } catch (NullPointerException expected) {}
+    try {
+      LocalCacheFactory.loadFactory(/* builder */ null, /* loader */ null,
+          /* async */ false, /* className */ "");
+      Assert.fail();
+    } catch (IllegalStateException expected) {
+      assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
+    }
+  }
+
+  @Test
+  public void nodeFactory_invalid() {
+    try {
+      NodeFactory.loadFactory(/* className */ null);
+      Assert.fail();
+    } catch (NullPointerException expected) {}
+    try {
+      NodeFactory.loadFactory(/* className */ "");
+      Assert.fail();
+    } catch (IllegalStateException expected) {
+      assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
+    }
+  }
+
+  @Test
   public void unsupported() {
     var cache = Mockito.mock(BoundedLocalCache.class, InvocationOnMock::callRealMethod);
     List<Runnable> methods = List.of(() -> cache.accessOrderWindowDeque(),

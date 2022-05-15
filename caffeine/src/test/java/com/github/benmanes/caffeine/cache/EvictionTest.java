@@ -89,7 +89,7 @@ public final class EvictionTest {
     removalListener.rejected = 0;
     long size = cache.estimatedSize();
     for (Int key : context.absentKeys()) {
-      cache.put(key, key.negate());
+      cache.put(key, key);
       if (cache.estimatedSize() != ++size) {
         break;
       }

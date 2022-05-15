@@ -34,8 +34,13 @@ final class LocalCacheFactory {
   private LocalCacheFactory() {}
 
   /** Returns a cache optimized for this configuration. */
-  static <K, V> BoundedLocalCache<K, V> newBoundedLocalCache(
-      Caffeine<K, V> builder, @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
+  static <K, V> BoundedLocalCache<K, V> newBoundedLocalCache(Caffeine<K, V> builder,
+      @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
+    var className = getClassName(builder);
+    return loadFactory(builder, cacheLoader, async, className);
+  }
+
+  static String getClassName(Caffeine<?, ?> builder) {
     var className = new StringBuilder(LocalCacheFactory.class.getPackageName()).append('.');
     if (builder.isStrongKeys()) {
       className.append('S');
@@ -70,14 +75,19 @@ final class LocalCacheFactory {
     if (builder.refreshAfterWrite()) {
       className.append('R');
     }
+    return className.toString();
+  }
+
+  static <K, V> BoundedLocalCache<K, V> loadFactory(Caffeine<K, V> builder,
+      @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async, String className) {
     try {
-      Class<?> clazz = Class.forName(className.toString());
+      Class<?> clazz = Class.forName(className);
       MethodHandle handle = LOOKUP.findConstructor(clazz, FACTORY);
       return (BoundedLocalCache<K, V>) handle.invoke(builder, cacheLoader, async);
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {
-      throw new IllegalStateException(className.toString(), t);
+      throw new IllegalStateException(className, t);
     }
   }
 }

@@ -113,7 +113,7 @@ import org.jctools.util.UnsafeAccess;
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */
-@SuppressWarnings({"all", "unchecked", "rawtypes", "serial",
+@SuppressWarnings({"all", "deprecation", "unchecked", "rawtypes", "serial",
   "JdkObsolete", "UnnecessaryParentheses", "UnusedNestedClass", "UnusedVariable"})
 public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
         implements ConcurrentMap<K, V>, Serializable {

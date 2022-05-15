@@ -31,7 +31,6 @@ import static java.util.Spliterator.IMMUTABLE;
 import static java.util.Spliterator.NONNULL;
 import static java.util.Spliterator.ORDERED;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
@@ -3055,17 +3054,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** A function that produces an unmodifiable map up to the limit in stream order. */
   static final class SizeLimiter<K, V> implements Function<Stream<CacheEntry<K, V>>, Map<K, V>> {
-    private final Map<K, V> map;
+    private final int expectedSize;
     private final long limit;
 
     SizeLimiter(int expectedSize, long limit) {
       requireArgument(limit >= 0);
-      this.map = new LinkedHashMap<>(calculateHashMapCapacity(expectedSize));
+      this.expectedSize = expectedSize;
       this.limit = limit;
     }
 
     @Override
     public Map<K, V> apply(Stream<CacheEntry<K, V>> stream) {
+      var map = new LinkedHashMap<K, V>(calculateHashMapCapacity(expectedSize));
       stream.limit(limit).forEach(entry -> map.put(entry.getKey(), entry.getValue()));
       return Collections.unmodifiableMap(map);
     }
@@ -3084,12 +3084,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @Override
     public Map<K, V> apply(Stream<CacheEntry<K, V>> stream) {
-      return Collections.unmodifiableMap(stream.takeWhile(entry -> {
+      var map = new LinkedHashMap<K, V>();
+      stream.takeWhile(entry -> {
         weightedSize = Math.addExact(weightedSize, entry.weight());
         return (weightedSize <= weightLimit);
-      }).collect(toMap(Map.Entry::getKey, Map.Entry::getValue,
-          (v1, v2) -> { throw new IllegalStateException(); }, LinkedHashMap::new
-      )));
+      }).forEach(entry -> map.put(entry.getKey(), entry.getValue()));
+      return Collections.unmodifiableMap(map);
     }
   }
 

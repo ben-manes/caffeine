@@ -40,6 +40,16 @@ interface NodeFactory<K, V> {
   String VALUE = "value";
   String KEY = "key";
 
+  /** Returns whether this factory supports weak values. */
+  default boolean weakValues() {
+    return false;
+  }
+
+  /** Returns whether this factory supports soft values. */
+  default boolean softValues() {
+    return false;
+  }
+
   /** Returns a node optimized for the specified features. */
   Node<K, V> newNode(K key, ReferenceQueue<K> keyReferenceQueue, V value,
       ReferenceQueue<V> valueReferenceQueue, int weight, long now);
@@ -71,7 +81,11 @@ interface NodeFactory<K, V> {
     if (builder.interner) {
       return new Interned<>();
     }
+    var className = getClassName(builder, isAsync);
+    return loadFactory(className);
+  }
 
+  static String getClassName(Caffeine<?, ?> builder, boolean isAsync) {
     var className = new StringBuilder(Node.class.getPackageName()).append('.');
     if (builder.isStrongKeys()) {
       className.append('P');
@@ -113,24 +127,18 @@ interface NodeFactory<K, V> {
         className.append('S');
       }
     }
+    return className.toString();
+  }
+
+  static <K, V> NodeFactory<K, V> loadFactory(String className) {
     try {
-      Class<?> clazz = Class.forName(className.toString());
+      Class<?> clazz = Class.forName(className);
       MethodHandle handle = LOOKUP.findConstructor(clazz, FACTORY);
       return (NodeFactory<K, V>) handle.invoke();
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {
-      throw new IllegalStateException(className.toString(), t);
+      throw new IllegalStateException(className, t);
     }
-  }
-
-  /** Returns whether this factory supports weak values. */
-  default boolean weakValues() {
-    return false;
-  }
-
-  /** Returns whether this factory supports soft values. */
-  default boolean softValues() {
-    return false;
   }
 }

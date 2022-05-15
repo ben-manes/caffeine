@@ -102,8 +102,8 @@ dependencyCheck {
 dependencyCheckAggregate.dependsOn(subprojects*.tasks.jar)
 
 snyk {
-  api = System.env.SNYK_TOKEN
   arguments = '--all-sub-projects --sarif-file-output=snyk.sarif'
+  api = System.env.SNYK_TOKEN
   autoDownload = true
   autoUpdate = true
 }
