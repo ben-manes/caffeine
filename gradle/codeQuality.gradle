@@ -28,15 +28,15 @@ dependencies {
 // Gradle rewrites ErrorProne's dependency on Caffeine to a project dependency, which then fails.
 // Instead we have to download and trick the build to put the jar on the compiler's classpath.
 tasks.register('downloadCaffeineLocal') {
+  inputs.property('version', '3.1.0')
+
   def local = file("${buildDir}/libs/caffeine-local.jar")
-  outputs.upToDateWhen { local.exists() }
   outputs.cacheIf { true }
   outputs.file local
 
   doFirst {
-    def version = '3.1.0'
     def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/' +
-      "${version}/caffeine-${version}.jar"
+      "${inputs.properties.version}/caffeine-${inputs.properties.version}.jar"
     if (!local.exists()) {
       local.parentFile.mkdirs()
       new URL(url).withInputStream{ input -> local.withOutputStream { it << input } }
