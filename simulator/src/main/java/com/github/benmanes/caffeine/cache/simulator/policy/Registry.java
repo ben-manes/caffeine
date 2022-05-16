@@ -106,13 +106,6 @@ public final class Registry {
         .collect(toSet());
   }
 
-  /** Returns all of the policy variations that have been configured. */
-  public Set<Policy> policy(String name) {
-    var factory = factories.get(name.toLowerCase(US));
-    checkNotNull(factory, "%s not found", name);
-    return factory.creator().apply(settings.config());
-  }
-
   private void buildRegistry() {
     registerIrr();
     registerLinked();
