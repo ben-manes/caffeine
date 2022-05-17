@@ -8,6 +8,14 @@ GUAVA_STRONG_KEYS=
 GUAVA_WEAK_KEYS=
 GUAVA_CHECK=
 
+if [[ -z "$@" ]]; then
+  echo "Please specify the test suites to run"
+  echo "  --caffeine=[strongKeys, weakKeys, check]"
+  echo "  --guava=[strongKeys, weakKeys, check]"
+  echo "  --all"
+  exit 1
+fi
+
 for i in "$@"; do
   case $i in
     --caffeine=strongKeys)
@@ -37,7 +45,11 @@ for i in "$@"; do
       GUAVA_CHECK=true
       ;;
     -*)
-      echo "Unknown option $i; --caffeine=? or --guava=? with strongKeys, weakKeys, or check"
+      echo "Please specify the test suites to run"
+      echo "  --caffeine=[strongKeys, weakKeys, check]"
+      echo "  --guava=[strongKeys, weakKeys, check]"
+      echo "  --all"
+      echo "Unknown option $i"
       exit 1
       ;;
   esac
