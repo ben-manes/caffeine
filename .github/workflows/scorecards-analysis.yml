@@ -21,12 +21,17 @@ jobs:
       contents: read
 
     steps:
-      - name: "Checkout code"
+      - name: Harden Runner
+        uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           persist-credentials: false
 
-      - name: "Run analysis"
+      - name: Run analysis
         uses: ossf/scorecard-action@c1aec4ac820532bab364f02a81873c555a0ba3a1
         with:
           results_file: results.sarif
@@ -41,7 +46,7 @@ jobs:
           publish_results: true
 
       # Upload the results as artifacts (optional).
-      - name: "Upload artifact"
+      - name: Upload artifact
         uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
           name: SARIF file
@@ -49,7 +54,7 @@ jobs:
           retention-days: 5
 
       # Upload the results to GitHub's code scanning dashboard.
-      - name: "Upload to code-scanning"
+      - name: Upload to code-scanning
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: results.sarif

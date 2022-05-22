@@ -6,8 +6,7 @@ apply plugin: 'org.kordamp.gradle.source-stats'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'org.owasp.dependencycheck'
 
-apply from: "${rootDir}/gradle/coveralls.gradle"
-apply from: "${rootDir}/gradle/sonarqube.gradle"
+apply from: "${rootDir}/gradle/coverage.gradle"
 
 buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"

@@ -1,3 +1,4 @@
+# Runs the test suite on arm64 to verify correctness on a weaker memory model compared to x86's
 version: 2.1
 
 parameters:
@@ -87,68 +88,78 @@ commands:
           cache_key: << parameters.cache_key >>
 
 jobs:
-  strong_keys:
+  compile:
     resource_class: arm.medium
     machine:
-      image: ubuntu-2004:202101-01
+      image: ubuntu-2004:current
     environment:
       JAVA_VERSION: << pipeline.parameters.java_version >>
       TERM: dumb
     steps:
       - run_tests:
-          cache_key: strong_keys
+          cache_key: compile
           test_steps:
             - run:
-                name: Run tests
+                name: Compile
                 no_output_timeout: 1h
-                command: ./.github/scripts/test.sh --caffeine=strongKeys
-            - run:
-                name: Stop Gradle daemon
-                when: always
-                command: ./gradlew --stop
-  weak_keys:
+                command: ./gradlew check -x test
+  test:
     resource_class: arm.medium
     machine:
-      image: ubuntu-2004:202101-01
+      image: ubuntu-2004:current
     environment:
       JAVA_VERSION: << pipeline.parameters.java_version >>
       TERM: dumb
+    parameters:
+      task:
+        type: string
     steps:
       - run_tests:
-          cache_key: weak_keys
+          cache_key: << parameters.task >>
           test_steps:
             - run:
                 name: Run tests
                 no_output_timeout: 1h
-                command: ./.github/scripts/test.sh --caffeine=weakKeys
-            - run:
-                name: Stop Gradle daemon
-                when: always
-                command: ./gradlew --stop
-  isolated:
-    resource_class: arm.medium
-    machine:
-      image: ubuntu-2004:202101-01
-    environment:
-      JAVA_VERSION: << pipeline.parameters.java_version >>
-      TERM: dumb
-    steps:
-      - run_tests:
-          cache_key: isolated
-          test_steps:
-            - run:
-                name: Run tests
-                no_output_timeout: 1h
-                command: ./.github/scripts/test.sh --caffeine=check
-            - run:
-                name: Stop Gradle daemon
-                when: always
-                command: ./gradlew --stop
+                command: ./gradlew << parameters.task >>
 
 workflows:
   version: 2
   workflow:
     jobs:
-      - strong_keys
-      - weak_keys
-      - isolated
+      - compile
+      - test:
+          requires: [compile]
+          matrix:
+            parameters:
+              task:
+                - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineSlowTest
+                - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineSlowTest
+                - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineSlowTest
+                - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineSlowTest
+                - caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest
+                - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineSlowTest
+                - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineSlowTest
+                - caffeine:strongKeysAndStrongValuesStatsSyncCaffeineTest
+                - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest
+                - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest
+                - caffeine:weakKeysAndStrongValuesAsyncCaffeineSlowTest
+                - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineTest
+                - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineTest
+                - caffeine:weakKeysAndStrongValuesSyncCaffeineSlowTest
+                - caffeine:strongKeysAndWeakValuesSyncCaffeineSlowTest
+                - caffeine:strongKeysAndSoftValuesSyncCaffeineSlowTest
+                - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest
+                - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest
+                - caffeine:strongKeysAndStrongValuesAsyncCaffeineTest
+                - caffeine:weakKeysAndWeakValuesSyncCaffeineSlowTest
+                - caffeine:weakKeysAndSoftValuesSyncCaffeineSlowTest
+                - caffeine:strongKeysAndStrongValuesSyncCaffeineTest
+                - caffeine:weakKeysAndStrongValuesAsyncCaffeineTest
+                - caffeine:weakKeysAndStrongValuesSyncCaffeineTest
+                - caffeine:strongKeysAndWeakValuesSyncCaffeineTest
+                - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
+                - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
+                - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
+                - caffeine:lincheckTest
+                - caffeine:isolatedTest
+                - caffeine:junitTest

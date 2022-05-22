@@ -47,7 +47,7 @@ import com.google.common.testing.SerializableTester;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Listeners(CacheValidationListener.class)
-@Test(groups = "slow", dataProviderClass = CacheProvider.class)
+@Test(groups = "isolated", dataProviderClass = CacheProvider.class)
 public final class MultiThreadedTest {
 
   @Test(dataProvider = "caches")

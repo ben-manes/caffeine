@@ -12,8 +12,9 @@ def testNames = [
   'weakKeysAndStrongValues', 'weakKeysAndWeakValues', 'weakKeysAndSoftValues']
   .collectNested { [it, it + 'Stats'] }
   .collectNested { it.contains('StrongValues') ? [it + 'Sync', it + 'Async'] : (it + 'Sync') }
-  .plus('slow')
-  .collectNested { type -> implementations.collect { type + it + 'Test' } }.flatten()
+  .collectNested { type -> implementations.collect { type + it } }
+  .collectNested { it ==~ /(?i).*(weak|soft).*/ ? [it, it + 'Slow'] : it }
+  .flatten().collect { it + 'Test' }
   .findAll { !(it.contains('Guava') && it.contains('Async')) }
 
 testNames.each { testName ->
@@ -40,13 +41,10 @@ testNames.each { testName ->
     }
     systemProperties['implementation'] = implementation
 
-    // Configure task dependencies
-    if (!name.startsWith('slow')) {
-      tasks.test.dependsOn(it)
-    }
     if (System.env.JITPACK == 'true') {
       enabled = false
     }
+    tasks.test.dependsOn(it)
   }
 }
 
@@ -77,7 +75,7 @@ tasks.register('junitTest', Test) {
 
 tasks.withType(Test).configureEach {
   if (options instanceof TestNGOptions) {
-    if (name.startsWith('slow')) {
+    if (name.containsIgnoreCase('slow')) {
       maxParallelForks = 2
       jvmArgs '-XX:+UseParallelGC'
       options.includeGroups = ['slow']

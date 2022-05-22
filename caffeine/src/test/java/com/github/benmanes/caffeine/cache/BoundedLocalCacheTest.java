@@ -372,7 +372,7 @@ public final class BoundedLocalCacheTest {
     assertThat(evictionOrder).containsExactlyElementsIn(expect).inOrder();
   }
 
-  @Test(groups = "slow")
+  @Test(groups = "isolated")
   public void evict_update() {
     Int key = Int.valueOf(0);
     Int oldValue = Int.valueOf(1);

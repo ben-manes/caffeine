@@ -4,6 +4,10 @@
 apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'jacoco'
 
+allprojects {
+  apply plugin: 'org.sonarqube'
+}
+
 def testReport = tasks.register('testReport', TestReport) {
   group = 'Build'
   description = 'Generates an aggregate test report'
@@ -31,12 +35,12 @@ def coveredProjects = [ 'caffeine', 'guava', 'jcache' ].collect { project(it) }
 
 tasks.register('jacocoFullReport', JacocoReport) {
   group = 'Coverage reports'
-  description = 'Generates an aggregate report from all subprojects'
+  description = 'Generates an aggregate report'
 
   coveredProjects.each {
     sourceSets it.sourceSets.main
     mustRunAfter it.tasks.withType(Test)
-    executionData fileTree(it.buildDir.absolutePath).include('jacoco/*.exec')
+    executionData fileTree(rootDir.absolutePath).include("**/*${it.name}*/**/jacoco/*.exec")
   }
 
   reports {
@@ -57,3 +61,16 @@ tasks.named('coveralls').configure {
   dependsOn jacocoFullReport
   onlyIf { System.env.'CI' }
 }
+
+sonarqube {
+  properties {
+    property 'sonar.organization', 'caffeine'
+    property 'sonar.login', System.env.'SONAR_TOKEN'
+    property 'sonar.host.url', 'https://sonarcloud.io'
+    property 'sonar.coverage.exclusions', '**/simulator/**'
+    property 'sonar.coverage.jacoco.xmlReportPaths',
+      "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
+  }
+}
+
+tasks.sonarqube.dependsOn(jacocoFullReport)

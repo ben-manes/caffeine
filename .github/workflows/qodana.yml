@@ -3,6 +3,7 @@ permissions: read-all
 on: [ push, pull_request ]
 
 env:
+  GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   JAVA_VERSION: 11
 
@@ -14,6 +15,10 @@ jobs:
       contents: read
       security-events: write
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813
+        with:
+          egress-policy: audit
       - uses: actions/checkout@v3
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v3
