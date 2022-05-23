@@ -26,18 +26,15 @@ gradleEnterprise {
   }
 }
 
+def gradleEnterpriseCachePassword = properties.'gradleEnterpriseCachePassword'
 buildCache {
-  local {
-    enabled = !System.env.'CI'
-  }
   remote(HttpBuildCache) {
     url = 'https://caffeine.gradle-enterprise.cloud/cache/'
     push = System.env.'CI'
     enabled = true
     credentials {
       username = 'ci'
-      password = properties.'gradleEnterpriseCachePassword'
-          ?: System.env.'GRADLE_ENTERPRISE_CACHE_PASSWORD'
+      password = gradleEnterpriseCachePassword ?: System.env.'GRADLE_ENTERPRISE_CACHE_PASSWORD'
     }
   }
 }

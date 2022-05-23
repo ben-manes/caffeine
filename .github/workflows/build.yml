@@ -8,6 +8,7 @@ env:
   ALLOWED_ENDPOINTS: >
     1k4dacprodeus2file4.blob.core.windows.net:443
     artifactcache.actions.githubusercontent.com:443
+    artifacts.codacy.com:433
     api.azul.com:443
     api.github.com:443
     caffeine.gradle-enterprise.cloud:443
@@ -18,7 +19,6 @@ env:
     coveralls.io:443
     fastly.com:443
     docs.oracle.com:443
-    domain artifacts.codacy.com::433
     downloads.gradle-dn.com:443
     ghcr.io:443
     github.com:443
@@ -78,7 +78,7 @@ jobs:
         continue-on-error: true
         if: failure()
 
-  test:
+  tests:
     name: Tests
     runs-on: ubuntu-latest
     needs: compile
@@ -158,8 +158,23 @@ jobs:
           cache: 'gradle'
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
+      - name: Remove Gradle Cache
+        if: >
+          matrix.suite == 'caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest'
+          || matrix.suite == 'caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest'
+          || matrix.suite == 'caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest'
+          || matrix.suite == 'caffeine:strongKeysAndStrongValuesAsyncCaffeineTest'
+          || matrix.suite == 'caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest'
+          || matrix.suite == 'caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest'
+          || matrix.suite == 'caffeine:weakKeysAndStrongValuesAsyncCaffeineTest'
+          || matrix.suite == 'caffeine:weakKeysAndStrongValuesSyncCaffeineTest'
+          || matrix.suite == 'caffeine:weakKeysAndSoftValuesSyncCaffeineTest'
+          || matrix.suite == 'caffeine:weakKeysAndWeakValuesSyncCaffeineTest'
+        run: rm -rf ~/.gradle
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
+        with:
+          gradle-home-cache-strict-match: true
       - name: Run tests (${{ matrix.suite }})
         run: |
           stopMarker=$(uuidgen)
@@ -192,10 +207,10 @@ jobs:
         continue-on-error: true
         if: failure()
 
-  publish:
+  publish-snapshot:
     name: Publish Snapshot
     runs-on: ubuntu-latest
-    needs: test
+    needs: tests
     if: >
       github.event_name == 'push'
       && endsWith(github.ref, github.event.repository.default_branch)
@@ -231,13 +246,13 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
-    needs: test
+    needs: tests
     if: github.event_name == 'push'
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813
         with:
-          egress-policy: block
+          egress-policy: audit
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@v3
@@ -253,7 +268,15 @@ jobs:
         uses: actions/download-artifact@v3
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
-      - name: Publish Coverage (Coveralls)
+      - name: Combine Jacoco Reports
+        env:
+          JAVA_VERSION: ${{ env.MAX_JVM }}
+        run: |
+          stopMarker=$(uuidgen)
+          echo "::stop-commands::$stopMarker"
+          trap "echo '::$stopMarker::'" EXIT
+          ./gradlew --daemon jacocoFullReport
+      - name: Publish to Coveralls
         env:
           JAVA_VERSION: ${{ env.MAX_JVM }}
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
@@ -263,16 +286,16 @@ jobs:
           trap "echo '::$stopMarker::'" EXIT
           ./gradlew --daemon coveralls
         continue-on-error: true
-      - name: Publish Coverage (Codecov)
-        uses: codecov/codecov-action@v2
+      - name: Publish to Codecov
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-      - name: Publish Coverage (Codacy)
+      - name: Publish to Codacy
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         continue-on-error: true
-      - name: SonarQube
+      - name: Publish to SonarQube
         env:
           JAVA_VERSION: ${{ env.MAX_JVM }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -291,7 +314,7 @@ jobs:
   test-results:
     name: Test Results
     runs-on: ubuntu-latest
-    needs: test
+    needs: tests
     permissions:
       checks: write
     steps:

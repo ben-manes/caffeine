@@ -57,6 +57,7 @@ tasks.named('jar').configure {
   metaInf {
     from "${rootDir}/LICENSE"
   }
+  outputs.cacheIf { true }
 }
 
 checkstyle {
