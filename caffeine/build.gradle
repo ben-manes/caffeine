@@ -127,7 +127,6 @@ tasks.named('sourcesJar').configure {
   dependsOn generateLocalCaches, generateNodes
 }
 tasks.javadoc.mustRunAfter(compileCodeGenJava)
-tasks.shadowJar.mustRunAfter(compileCodeGenJava)
 
 tasks.withType(Test).configureEach {
   classpath += sourceSets.codeGen.runtimeClasspath

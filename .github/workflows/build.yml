@@ -8,8 +8,9 @@ env:
   ALLOWED_ENDPOINTS: >
     1k4dacprodeus2file4.blob.core.windows.net:443
     artifactcache.actions.githubusercontent.com:443
-    artifacts.codacy.com:433
+    artifacts.codacy.com:443
     api.azul.com:443
+    api.codacy.com:443
     api.github.com:443
     caffeine.gradle-enterprise.cloud:443
     cdn.azul.com:443
@@ -25,6 +26,7 @@ env:
     guava.dev:443
     lightbend.github.io:443
     nodejs.org:443
+    objects.githubusercontent.com:443
     oss.sonatype.org:443
     pipelines.actions.githubusercontent.com:443
     plugins.gradle.org:443
@@ -252,7 +254,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813
         with:
-          egress-policy: audit
+          egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@v3

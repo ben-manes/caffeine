@@ -3,7 +3,6 @@
  */
 import org.gradle.plugins.ide.eclipse.model.Library
 
-apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'io.morethan.jmhreport'
 apply plugin: 'me.champeau.jmh'
 
@@ -31,10 +30,6 @@ dependencies {
 tasks.named('jmh').configure {
   group = 'Benchmarks'
   description = 'Executes a Java microbenchmark'
-}
-
-jmhJar {
-  mergeServiceFiles()
 }
 
 jmh {

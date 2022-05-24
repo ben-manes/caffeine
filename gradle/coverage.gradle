@@ -3,10 +3,7 @@
  */
 apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'jacoco'
-
-allprojects {
-  apply plugin: 'org.sonarqube'
-}
+apply plugin: 'java'
 
 def testReport = tasks.register('testReport', TestReport) {
   group = 'Build'
@@ -33,14 +30,14 @@ subprojects {
 // Only report code coverage for projects that are distributed
 def coveredProjects = [ 'caffeine', 'guava', 'jcache' ].collect { project(it) }
 
-tasks.register('jacocoFullReport', JacocoReport) {
+def jacocoFullReport = tasks.register('jacocoFullReport', JacocoReport) {
   group = 'Coverage reports'
   description = 'Generates an aggregate report'
 
-  coveredProjects.each {
-    sourceSets it.sourceSets.main
-    mustRunAfter it.tasks.withType(Test)
-    executionData fileTree(rootDir.absolutePath).include("**/*${it.name}*/**/jacoco/*.exec")
+  coveredProjects.each { proj ->
+    sourceSets proj.sourceSets.main
+    mustRunAfter proj.tasks.withType(Test)
+    executionData fileTree(rootDir.absolutePath).include("**/*${proj.name}*/**/jacoco/*.exec")
   }
 
   reports {
@@ -62,6 +59,13 @@ tasks.named('coveralls').configure {
   onlyIf { System.env.'CI' }
 }
 
+allprojects {
+  apply plugin: 'org.sonarqube'
+
+  rootProject.tasks.sonarqube.dependsOn(jacocoFullReport)
+  rootProject.tasks.sonarqube.dependsOn(tasks.processResources)
+}
+
 sonarqube {
   properties {
     property 'sonar.organization', 'caffeine'
@@ -72,5 +76,3 @@ sonarqube {
       "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
   }
 }
-
-tasks.sonarqube.dependsOn(jacocoFullReport)
