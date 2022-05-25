@@ -1,5 +1,4 @@
 name: Qodana
-permissions: read-all
 on: [ push, pull_request ]
 
 env:
@@ -11,6 +10,7 @@ jobs:
   qodana:
     runs-on: ubuntu-latest
     permissions:
+      checks: write
       actions: read
       contents: read
       security-events: write

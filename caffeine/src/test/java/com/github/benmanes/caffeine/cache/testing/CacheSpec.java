@@ -768,20 +768,20 @@ public @interface CacheSpec {
     THREADED(() -> new TrackingExecutor(ConcurrentTestHarness.executor)),
     // Cache implementations must avoid corrupting internal state due to rejections
     REJECTING(() -> {
-      return new ForkJoinPool() {
+      return new TrackingExecutor(new ForkJoinPool() {
         @Override public void execute(Runnable task) {
           throw new RejectedExecutionException();
         }
-      };
+      });
     });
 
-    private final Supplier<Executor> executor;
+    private final Supplier<TrackingExecutor> executor;
 
-    CacheExecutor(Supplier<Executor> executor) {
+    CacheExecutor(Supplier<TrackingExecutor> executor) {
       this.executor = requireNonNull(executor);
     }
 
-    public Executor create() {
+    public TrackingExecutor create() {
       return executor.get();
     }
   }

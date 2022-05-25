@@ -61,6 +61,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
@@ -769,7 +770,8 @@ public final class CacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
-      executor = CacheExecutor.REJECTING, removalListener = Listener.CONSUMING)
+      executorFailure = ExecutorFailure.IGNORED, executor = CacheExecutor.REJECTING,
+      removalListener = Listener.CONSUMING)
   public void removalListener_rejected(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
     assertThat(context).removalNotifications().withCause(EXPLICIT)

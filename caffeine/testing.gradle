@@ -109,6 +109,7 @@ class Stresser extends DefaultTask {
   @TaskAction def run() {
     project.javaexec {
       mainClass = 'com.github.benmanes.caffeine.cache.Stresser'
+      classpath project.sourceSets.codeGen.runtimeClasspath
       classpath project.sourceSets.test.runtimeClasspath
       if (operation) {
         args '--workload', operation

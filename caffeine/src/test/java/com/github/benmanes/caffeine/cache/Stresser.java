@@ -24,7 +24,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -52,8 +51,8 @@ public final class Stresser implements Runnable {
   private static final String[] STATUS =
     { "Idle", "Required", "Processing -> Idle", "Processing -> Required" };
   private static final int MAX_THREADS = 2 * Runtime.getRuntime().availableProcessors();
-  private static final int WRITE_MAX_SIZE = (1 << 12);
-  private static final int TOTAL_KEYS = (1 << 20);
+  private static final int WRITE_MAX_SIZE = (1 << 12); // 4,096
+  private static final int TOTAL_KEYS = (1 << 20); // 1,048,576
   private static final int MASK = TOTAL_KEYS - 1;
   private static final int STATUS_INTERVAL = 5;
 
@@ -63,7 +62,6 @@ public final class Stresser implements Runnable {
 
   private BoundedLocalCache<Integer, Integer> local;
   private LoadingCache<Integer, Integer> cache;
-  private LongAdder pendingReloads;
   private Stopwatch stopwatch;
   private Integer[] ints;
 
@@ -86,13 +84,13 @@ public final class Stresser implements Runnable {
         .recordStats()
         .build(key -> key);
     local = (BoundedLocalCache<Integer, Integer>) cache.asMap();
-    pendingReloads = new LongAdder();
     ints = new Integer[TOTAL_KEYS];
     Arrays.setAll(ints, key -> {
       cache.put(key, key);
       return key;
     });
     cache.cleanUp();
+    local.refreshes();
     stopwatch = Stopwatch.createStarted();
     status();
   }
@@ -111,8 +109,7 @@ public final class Stresser implements Runnable {
             cache.put(key, key);
             break;
           case REFRESH:
-            pendingReloads.increment();
-            cache.refresh(key).thenRun(pendingReloads::decrement);
+            cache.refresh(key);
             break;
         }
       }
@@ -138,7 +135,7 @@ public final class Stresser implements Runnable {
     System.out.printf("Size = %,d (max: %,d)%n", local.data.mappingCount(), workload.maxEntries);
     System.out.printf("Lock = [%s%n", StringUtils.substringAfter(
         local.evictionLock.toString(), "["));
-    System.out.printf("Pending reloads = %,d%n", pendingReloads.sum());
+    System.out.printf("Pending reloads = %,d%n", local.refreshes.size());
     System.out.printf("Pending tasks = %,d%n",
         ForkJoinPool.commonPool().getQueuedSubmissionCount());
 
@@ -163,7 +160,7 @@ public final class Stresser implements Runnable {
   private enum Workload {
     READ(MAX_THREADS, TOTAL_KEYS),
     WRITE(MAX_THREADS, WRITE_MAX_SIZE),
-    REFRESH(1, WRITE_MAX_SIZE);
+    REFRESH(MAX_THREADS, TOTAL_KEYS / 4);
 
     private final int maxThreads;
     private final int maxEntries;

@@ -81,15 +81,14 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Nullable
   V getIfPresentQuietly(Object key);
 
-  /**
-   * See {@link Cache#getIfPresent(K)}. This method differs by not recording the access with
-   * the statistics nor the eviction policy, and populates the write-time if known.
-   */
-  @Nullable
-  V getIfPresentQuietly(K key, long[/* 1 */] writeTime);
-
   /** See {@link Cache#getAllPresent}. */
   Map<K, V> getAllPresent(Iterable<? extends K> keys);
+
+  /**
+   * See {@link ConcurrentMap#replace(K, K, V)}. This method differs by optionally not discarding an
+   * in-flight refresh for the entry if replaced.
+   */
+  boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh);
 
   @Override
   default @Nullable V compute(K key,

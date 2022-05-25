@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
@@ -86,6 +85,7 @@ public final class CacheContext {
   final Listener removalListenerType;
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
+  final TrackingExecutor executor;
   final ReferenceType keyStrength;
   final Expiry<Int, Int> expiry;
   final Map<Int, Int> original;
@@ -97,7 +97,6 @@ public final class CacheContext {
   final Expire afterAccess;
   final Expire afterWrite;
   final Expire expiryTime;
-  final Executor executor;
   final Compute compute;
   final Expire refresh;
   final Loader loader;
@@ -470,7 +469,7 @@ public final class CacheContext {
     return cacheExecutor;
   }
 
-  public Executor executor() {
+  public TrackingExecutor executor() {
     return executor;
   }
 

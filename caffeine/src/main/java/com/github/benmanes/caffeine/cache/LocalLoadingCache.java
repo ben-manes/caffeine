@@ -98,7 +98,6 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   default CompletableFuture<V> refresh(K key) {
     requireNonNull(key);
 
-    long[] writeTime = new long[1];
     long[] startTime = new long[1];
     @SuppressWarnings("unchecked")
     V[] oldValue = (V[]) new Object[1];
@@ -113,7 +112,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
       try {
         startTime[0] = cache().statsTicker().read();
-        oldValue[0] = cache().getIfPresentQuietly(key, writeTime);
+        oldValue[0] = cache().getIfPresentQuietly(key);
         var refreshFuture = (oldValue[0] == null)
             ? cacheLoader().asyncLoad(key, cache().executor())
             : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
@@ -131,34 +130,21 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
     if (reloading[0] != null) {
       reloading[0].whenComplete((newValue, error) -> {
-        boolean removed = cache().refreshes().remove(keyReference, reloading[0]);
         long loadTime = cache().statsTicker().read() - startTime[0];
         if (error != null) {
           if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
             logger.log(Level.WARNING, "Exception thrown during refresh", error);
           }
+          cache().refreshes().remove(keyReference, reloading[0]);
           cache().statsCounter().recordLoadFailure(loadTime);
           return;
         }
 
         boolean[] discard = new boolean[1];
         var value = cache().compute(key, (k, currentValue) -> {
-          if (currentValue == oldValue[0]) {
-            if (currentValue == null) {
-              if (newValue == null) {
-                return null;
-              } else if (removed) {
-                return newValue;
-              }
-            } else {
-              long expectedWriteTime = writeTime[0];
-              if (cache().hasWriteTime()) {
-                cache().getIfPresentQuietly(key, writeTime);
-              }
-              if (writeTime[0] == expectedWriteTime) {
-                return newValue;
-              }
-            }
+          boolean removed = cache().refreshes().remove(keyReference, reloading[0]);
+          if (removed && (currentValue == oldValue[0])) {
+            return (currentValue == null) && (newValue == null) ? null : newValue;
           }
           discard[0] = (currentValue != newValue);
           return currentValue;

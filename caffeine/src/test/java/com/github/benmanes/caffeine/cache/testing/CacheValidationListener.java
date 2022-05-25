@@ -164,14 +164,14 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   /** Waits until the executor has completed all of the submitted work. */
   private void awaitExecutor(CacheContext context) {
-    if (context.executor() instanceof TrackingExecutor) {
-      var executor = (TrackingExecutor) context.executor();
-      executor.resume();
+    if (context.executor() != null) {
+      context.executor().resume();
 
       if ((context.cacheExecutor != CacheExecutor.DIRECT)
           && (context.cacheExecutor != CacheExecutor.DISCARDING)
-          && (executor.submitted() != executor.completed())) {
-        await().pollInSameThread().until(() -> executor.submitted() == executor.completed());
+          && (context.executor().submitted() != context.executor().completed())) {
+        await().pollInSameThread().until(() ->
+            context.executor().submitted() == context.executor().completed());
       }
     }
   }
@@ -209,15 +209,14 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
 
     assertWithMessage("CacheContext required").that(context).isNotNull();
-    if (!(context.executor() instanceof TrackingExecutor)) {
+    if (context.executor() == null) {
       return;
     }
 
-    var executor = (TrackingExecutor) context.executor();
     if (cacheSpec.executorFailure() == ExecutorFailure.EXPECTED) {
-      assertThat(executor.failed()).isGreaterThan(0);
+      assertThat(context.executor().failed()).isGreaterThan(0);
     } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
-      assertThat(executor.failed()).isEqualTo(0);
+      assertThat(context.executor().failed()).isEqualTo(0);
     }
   }
 

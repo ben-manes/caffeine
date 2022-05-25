@@ -63,7 +63,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
-import com.github.benmanes.caffeine.cache.testing.TrackingExecutor;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
@@ -217,16 +216,15 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
   public void refreshIfNeeded_discard(LoadingCache<Int, Int> cache, CacheContext context) {
-    var executor = (TrackingExecutor) context.executor();
-    executor.pause();
+    context.executor().pause();
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.get(context.firstKey());
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
     cache.put(context.firstKey(), context.absentValue());
-    executor.resume();
+    context.executor().resume();
 
-    await().until(() -> executor.submitted() == executor.completed());
+    await().until(() -> context.executor().submitted() == context.executor().completed());
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
 
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -241,16 +239,15 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
   public void refreshIfNeeded_absent_newValue(LoadingCache<Int, Int> cache, CacheContext context) {
-    var executor = (TrackingExecutor) context.executor();
-    executor.pause();
+    context.executor().pause();
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.get(context.firstKey());
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
     cache.invalidate(context.firstKey());
-    executor.resume();
+    context.executor().resume();
 
-    await().until(() -> executor.submitted() == executor.completed());
+    await().until(() -> context.executor().submitted() == context.executor().completed());
     assertThat(cache).doesNotContainKey(context.firstKey());
 
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -266,16 +263,15 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.NULL, executor = CacheExecutor.THREADED)
   public void refreshIfNeeded_absent_nullValue(LoadingCache<Int, Int> cache, CacheContext context) {
-    var executor = (TrackingExecutor) context.executor();
-    executor.pause();
+    context.executor().pause();
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.get(context.firstKey());
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
     cache.invalidate(context.firstKey());
-    executor.resume();
+    context.executor().resume();
 
-    await().until(() -> executor.submitted() == executor.completed());
+    await().until(() -> context.executor().submitted() == context.executor().completed());
     assertThat(cache).doesNotContainKey(context.firstKey());
 
     assertThat(context).removalNotifications().withCause(EXPLICIT)
@@ -768,8 +764,7 @@ public final class RefreshAfterWriteTest {
     cache.invalidate(key);
     refresh.set(true);
 
-    var executor = (TrackingExecutor) context.executor();
-    await().until(() -> executor.submitted() == executor.completed());
+    await().until(() -> context.executor().submitted() == context.executor().completed());
 
     if (context.isGuava()) {
       // Guava does not protect against ABA when the entry was removed by allowing a possibly
@@ -793,25 +788,24 @@ public final class RefreshAfterWriteTest {
       loader = Loader.ASYNC_INCOMPLETE, refreshAfterWrite = Expire.ONE_MINUTE)
   public void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
-    var executor = (TrackingExecutor) context.executor();
     int submitted;
 
     // trigger an automatic refresh
-    submitted = executor.submitted();
+    submitted = context.executor().submitted();
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.getIfPresent(context.absentKey());
-    assertThat(executor.submitted()).isEqualTo(submitted + 1);
+    assertThat(context.executor().submitted()).isEqualTo(submitted + 1);
 
     // return in-flight future
     var future1 = cache.refresh(context.absentKey());
-    assertThat(executor.submitted()).isEqualTo(submitted + 1);
+    assertThat(context.executor().submitted()).isEqualTo(submitted + 1);
     future1.complete(intern(context.absentValue().negate()));
 
     // trigger a new automatic refresh
-    submitted = executor.submitted();
+    submitted = context.executor().submitted();
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.getIfPresent(context.absentKey());
-    assertThat(executor.submitted()).isEqualTo(submitted + 1);
+    assertThat(context.executor().submitted()).isEqualTo(submitted + 1);
 
     var future2 = cache.refresh(context.absentKey());
     assertThat(future2).isNotSameInstanceAs(future1);

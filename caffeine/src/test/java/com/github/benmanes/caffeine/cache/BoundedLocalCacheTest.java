@@ -35,6 +35,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AF
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
@@ -57,14 +58,17 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -1415,6 +1419,65 @@ public final class BoundedLocalCacheTest {
     future.complete(newValue);
     await().untilAsserted(() -> assertThat(refreshes).isEmpty());
     await().untilAsserted(() -> assertThat(cache).containsEntry(context.absentKey(), newValue));
+  }
+
+  @Test(dataProvider = "caches", groups = "isolated")
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
+      compute = Compute.ASYNC, stats = Stats.DISABLED)
+  public void refresh_startReloadBeforeLoadCompletion(CacheContext context) {
+    var stats = Mockito.mock(StatsCounter.class);
+    var beganLoadSuccess = new AtomicBoolean();
+    var endLoadSuccess = new CountDownLatch(1);
+    var beganReloading = new AtomicBoolean();
+    var beganLoading = new AtomicBoolean();
+    var endReloading = new AtomicBoolean();
+    var endLoading = new AtomicBoolean();
+
+    context.ticker().setAutoIncrementStep(Duration.ofSeconds(1));
+    context.caffeine().recordStats(() -> stats);
+    var asyncCache = context.buildAsync(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        beganLoading.set(true);
+        await().untilTrue(endLoading);
+        return new Int(ThreadLocalRandom.current().nextInt());
+      }
+      @Override public Int reload(Int key, Int oldValue) {
+        beganReloading.set(true);
+        await().untilTrue(endReloading);
+        return new Int(ThreadLocalRandom.current().nextInt());
+      }
+    });
+
+    Answer<?> answer = invocation -> {
+      beganLoadSuccess.set(true);
+      endLoadSuccess.await();
+      return null;
+    };
+    doAnswer(answer).when(stats).recordLoadSuccess(anyLong());
+
+    // Start load
+    var future1 = asyncCache.get(context.absentKey());
+    await().untilTrue(beganLoading);
+
+    // Complete load; start load callback
+    endLoading.set(true);
+    await().untilTrue(beganLoadSuccess);
+
+    // Start reload
+    var refresh = asyncCache.synchronous().refresh(context.absentKey());
+    await().untilTrue(beganReloading);
+
+    // Complete load callback
+    endLoadSuccess.countDown();
+    await().untilAsserted(() -> assertThat(future1.getNumberOfDependents()).isEqualTo(0));
+
+    // Complete reload callback
+    endReloading.set(true);
+    await().untilAsserted(() -> assertThat(refresh.getNumberOfDependents()).isEqualTo(0));
+
+    // Assert new value
+    await().untilAsserted(() ->
+        assertThat(asyncCache.get(context.absentKey())).succeedsWith(refresh.get()));
   }
 
   /* --------------- Miscellaneous --------------- */

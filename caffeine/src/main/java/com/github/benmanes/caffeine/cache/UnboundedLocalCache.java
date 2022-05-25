@@ -137,11 +137,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public @Nullable V getIfPresentQuietly(K key, long[/* 1 */] writeTime) {
-    return data.get(key);
-  }
-
-  @Override
   public long estimatedSize() {
     return data.mappingCount();
   }
@@ -519,6 +514,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
+    return replace(key, oldValue, newValue, /* shouldDiscardRefresh */ true);
+  }
+
+  @Override
+  public boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh) {
     requireNonNull(oldValue);
     requireNonNull(newValue);
 
@@ -526,8 +526,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     V[] prev = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       if (v.equals(oldValue)) {
+        if (shouldDiscardRefresh) {
+          discardRefresh(k);
+        }
         prev[0] = v;
-        discardRefresh(k);
         return newValue;
       }
       return v;

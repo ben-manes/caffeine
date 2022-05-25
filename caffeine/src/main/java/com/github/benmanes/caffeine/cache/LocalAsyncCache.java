@@ -206,15 +206,15 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
             && !(error instanceof TimeoutException)) {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", error);
         }
-        cache().remove(key, valueFuture);
         cache().statsCounter().recordLoadFailure(loadTime);
+        cache().remove(key, valueFuture);
       } else {
         @SuppressWarnings("unchecked")
         var castedFuture = (CompletableFuture<V>) valueFuture;
 
         // update the weight and expiration timestamps
-        cache().replace(key, castedFuture, castedFuture);
         cache().statsCounter().recordLoadSuccess(loadTime);
+        cache().replace(key, castedFuture, castedFuture, /* shouldDiscardRefresh */ false);
       }
       if (recordMiss) {
         cache().statsCounter().recordMisses(1);

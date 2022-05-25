@@ -2097,18 +2097,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     return value;
   }
 
-  @Override
-  public @Nullable V getIfPresentQuietly(K key, long[/* 1 */] writeTime) {
-    V value;
-    Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
-    if ((node == null) || ((value = node.getValue()) == null)
-        || hasExpired(node, expirationTicker().read())) {
-      return null;
-    }
-    writeTime[0] = node.getWriteTime();
-    return value;
-  }
-
   /**
    * Returns the key associated with the mapping in this cache, or {@code null} if there is none.
    *
@@ -2441,6 +2429,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
+    return replace(key, oldValue, newValue, /* shouldDiscardRefresh */ true);
+  }
+
+  @Override
+  public boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh) {
     requireNonNull(key);
     requireNonNull(oldValue);
     requireNonNull(newValue);
@@ -2471,7 +2464,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setAccessTime(n, now[0]);
         setWriteTime(n, now[0]);
         replaced[0] = true;
-        discardRefresh(k);
+
+        if (shouldDiscardRefresh) {
+          discardRefresh(k);
+        }
       }
       return n;
     });
@@ -2693,7 +2689,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param computeIfAbsent if an absent entry can be computed
    * @return the new value associated with the specified key, or null if none
    */
-  @SuppressWarnings("PMD.EmptyIfStmt")
+  @SuppressWarnings("PMD.EmptyControlStatement")
   @Nullable V remap(K key, Object keyRef,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       Expiry<? super K, ? super V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {

@@ -28,12 +28,29 @@ jobs:
           java-version: ${{ matrix.java }}
       - uses: gradle/gradle-build-action@v2
       - name: simulator
-        run: ./gradlew simulator:run
+        run: ./gradlew --daemon simulator:run
       - name: chart simulation
         run: ./gradlew simulator:simulate --maximumSize=100,200,300
+      - name: memory overhead
+        run: ./gradlew --daemon caffeine:memoryOverhead
+      - name: stresser (read)
+        run: >
+          timeout 1m ./gradlew --daemon caffeine:stress --workload=read
+          || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
+      - name: stresser (write)
+        run: >
+          timeout 1m ./gradlew --daemon caffeine:stress --workload=write
+          || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
+      - name: stresser (refresh)
+        run: >
+          timeout 1m ./gradlew --daemon caffeine:stress --workload=refresh
+          || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
       - name: write-behind-rxjava
         working-directory: examples/write-behind-rxjava
         run: mvn test
       - name: coalescing-bulkloader
         working-directory: examples/coalescing-bulkloader
         run: mvn test
+      - name: Stop Gradle daemon
+        if: always()
+        run: ./gradlew --stop
