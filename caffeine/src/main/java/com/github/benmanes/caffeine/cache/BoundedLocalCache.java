@@ -1265,7 +1265,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (((now - writeTime) > refreshAfterWriteNanos()) && (keyReference != null)
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
         && ((writeTime & 1L) == 0L) && !(refreshes = refreshes()).containsKey(keyReference)
-        && node.casWriteTime(writeTime, refreshWriteTime)) {
+        && node.isAlive() && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
       @SuppressWarnings({"unchecked", "rawtypes"})
       CompletableFuture<? extends V>[] refreshFuture = new CompletableFuture[1];

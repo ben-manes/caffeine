@@ -43,6 +43,7 @@ import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +52,7 @@ import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
 import java.lang.Thread.State;
 import java.lang.ref.Reference;
 import java.time.Duration;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +74,7 @@ import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
+import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -1318,6 +1321,53 @@ public final class BoundedLocalCacheTest {
   }
 
   /* --------------- Refresh --------------- */
+
+  @Test(dataProvider = "caches") // Issue #715
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
+      compute = Compute.SYNC, stats = Stats.DISABLED)
+  public void refreshIfNeeded_liveliness(CacheContext context) {
+    var stats = Mockito.mock(StatsCounter.class);
+    context.caffeine().recordStats(() -> stats);
+
+    // Capture the refresh parameters, should not be retired/dead sentinel entry
+    var refreshEntry = new AtomicReference<Map.Entry<Object, Object>>();
+    var cache = asBoundedLocalCache(context.build(new CacheLoader<Object, Object>() {
+      @Override public Int load(Object key) {
+        throw new AssertionError();
+      }
+      @Override public CompletableFuture<Object> asyncReload(
+          Object key, Object oldValue, Executor executor) {
+        refreshEntry.set(new SimpleEntry<>(key, oldValue));
+        return CompletableFuture.completedFuture(key);
+      }
+    }));
+
+    // Seed the cache
+    cache.put(context.absentKey(), context.absentValue());
+    var node = cache.data.get(context.absentKey());
+
+    // Remove the entry after the read, but before the refresh, and leave it as retired
+    doAnswer(invocation -> {
+      ConcurrentTestHarness.execute(() -> {
+        cache.remove(context.absentKey());
+      });
+      await().until(() -> !cache.containsKey(context.absentKey()));
+      assertThat(node.isRetired()).isTrue();
+      return null;
+    }).when(stats).recordHits(1);
+
+    // Ensure that the refresh operation was skipped
+    cache.evictionLock.lock();
+    try {
+      context.ticker().advance(10, TimeUnit.MINUTES);
+      var value = cache.getIfPresent(context.absentKey(), /* recordStats */ true);
+      assertThat(value).isEqualTo(context.absentValue());
+      assertThat(refreshEntry.get()).isNull();
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
 
   @Test(dataProvider = "caches", groups = "isolated")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,

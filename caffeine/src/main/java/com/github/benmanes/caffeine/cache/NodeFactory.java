@@ -29,12 +29,13 @@ import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 interface NodeFactory<K, V> {
-  WeakKeyReference<Object> RETIRED_WEAK_KEY = new WeakKeyReference<>(null, null);
-  WeakKeyReference<Object> DEAD_WEAK_KEY = new WeakKeyReference<>(null, null);
   MethodType FACTORY = MethodType.methodType(void.class);
   MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-  Object RETIRED_STRONG_KEY = new Object();
-  Object DEAD_STRONG_KEY = new Object();
+
+  RetiredStrongKey RETIRED_STRONG_KEY = new RetiredStrongKey();
+  RetiredWeakKey RETIRED_WEAK_KEY = new RetiredWeakKey();
+  DeadStrongKey DEAD_STRONG_KEY = new DeadStrongKey();
+  DeadWeakKey DEAD_WEAK_KEY = new DeadWeakKey();
   String ACCESS_TIME = "accessTime";
   String WRITE_TIME = "writeTime";
   String VALUE = "value";
@@ -141,4 +142,13 @@ interface NodeFactory<K, V> {
       throw new IllegalStateException(className, t);
     }
   }
+
+  final class RetiredWeakKey extends WeakKeyReference<Object> {
+    RetiredWeakKey() { super(/* key */ null, /* referenceQueue */ null); }
+  }
+  final class DeadWeakKey extends WeakKeyReference<Object> {
+    DeadWeakKey() { super(/* key */ null, /* referenceQueue */ null); }
+  }
+  final class RetiredStrongKey {}
+  final class DeadStrongKey {}
 }

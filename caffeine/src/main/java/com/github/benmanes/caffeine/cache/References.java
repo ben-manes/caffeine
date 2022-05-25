@@ -177,7 +177,7 @@ final class References {
    * the advent that the key is reclaimed so that the entry can be removed from the cache in
    * constant time.
    */
-  static final class WeakKeyReference<K> extends WeakReference<K> implements InternalReference<K> {
+  static class WeakKeyReference<K> extends WeakReference<K> implements InternalReference<K> {
     private final int hashCode;
 
     public WeakKeyReference(@Nullable K key, @Nullable ReferenceQueue<K> queue) {
