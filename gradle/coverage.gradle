@@ -3,7 +3,6 @@
  */
 apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'jacoco'
-apply plugin: 'java'
 
 def testReport = tasks.register('testReport', TestReport) {
   group = 'Build'
@@ -39,6 +38,9 @@ def jacocoFullReport = tasks.register('jacocoFullReport', JacocoReport) {
     mustRunAfter proj.tasks.withType(Test)
     executionData fileTree(rootDir.absolutePath).include("**/*${proj.name}*/**/jacoco/*.exec")
   }
+  subprojects.each { proj ->
+    dependsOn proj.tasks.processResources
+  }
 
   reports {
     html.required = true // human readable
@@ -61,10 +63,8 @@ tasks.named('coveralls').configure {
 
 allprojects {
   apply plugin: 'org.sonarqube'
-
-  rootProject.tasks.sonarqube.dependsOn(jacocoFullReport)
-  rootProject.tasks.sonarqube.dependsOn(tasks.processResources)
 }
+tasks.sonarqube.dependsOn(jacocoFullReport)
 
 sonarqube {
   properties {
