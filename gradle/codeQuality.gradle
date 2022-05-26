@@ -123,14 +123,13 @@ tasks.withType(JavaCompile).configureEach {
   options.errorprone {
     def enabledChecks = [
       'AssertFalse', 'CatchingUnchecked', 'CheckedExceptionNotThrown', 'ClassName',
-      'ComparisonContractViolated', 'DepAnn', 'DivZero', 'EmptyIf', 'EqualsBrokenForNull',
-      'FieldCanBeFinal', 'FieldCanBeLocal', 'FieldCanBeStatic', 'ForEachIterable',
-      'FuzzyEqualsShouldNotBeUsedInEqualsMethod', 'FunctionalInterfaceClash',
-      'IterablePathParameter', 'LockMethodChecker', 'LongLiteralLowerCaseSuffix', 'MissingBraces',
-      'MissingDefault', 'MixedArrayDimensions', 'MissingDefault', 'NoAllocation', 'PackageLocation',
-      'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports', 'ReturnsNullCollection',
-      'StronglyTypeByteString', 'StronglyTypeTime', 'SwitchDefault', 'TimeUnitMismatch',
-      'TransientMisuse', 'UnlockMethod', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass',
+      'ComparisonContractViolated', 'DepAnn', 'EmptyIf', 'EqualsBrokenForNull', 'FieldCanBeLocal',
+      'FieldCanBeStatic', 'ForEachIterable', 'FuzzyEqualsShouldNotBeUsedInEqualsMethod',
+      'FunctionalInterfaceClash', 'IterablePathParameter', 'LongLiteralLowerCaseSuffix',
+      'MissingBraces', 'MissingDefault', 'MixedArrayDimensions', 'MissingDefault', 'NoAllocation',
+      'PackageLocation', 'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports',
+      'ReturnsNullCollection', 'StronglyTypeByteString', 'StronglyTypeTime', 'SwitchDefault',
+      'TimeUnitMismatch', 'TransientMisuse', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass',
       'UnnecessaryOptionalGet', 'UnsafeLocaleUsage', 'UsingJsr305CheckReturnValue']
     enabledChecks.each { enable(it) }
 
