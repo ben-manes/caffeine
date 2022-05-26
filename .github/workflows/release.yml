@@ -23,7 +23,7 @@ jobs:
         with:
           cache: 'gradle'
           java-version: 11
-          distribution: 'zulu'
+          distribution: 'temurin'
       - uses: gradle/gradle-build-action@v2
       - name: Releasing
         env:

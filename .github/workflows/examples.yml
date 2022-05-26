@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           cache: 'maven'
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: ${{ matrix.java }}
       - uses: gradle/gradle-build-action@v2
       - name: simulator

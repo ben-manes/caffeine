@@ -7,8 +7,8 @@ env:
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >
     1k4dacprodeus2file4.blob.core.windows.net:443
+    api.adoptium.net
     api.github.com:443
-    api.azul.com:443
     artifactcache.actions.githubusercontent.com:443
     caffeine.gradle-enterprise.cloud:443
     cdn.azul.com:443
@@ -16,6 +16,7 @@ env:
     downloads.gradle-dn.com:443
     ghcr.io:443
     github.com:443
+    objects.githubusercontent.com:443
     oss.sonatype.org:443
     pipelines.actions.githubusercontent.com:443
     plugins.gradle.org:443
@@ -50,7 +51,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           cache: 'gradle'
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: ${{ matrix.java }}
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
@@ -143,7 +144,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           cache: 'gradle'
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: ${{ matrix.java }}
       - name: Remove Gradle Cache
         if: >
@@ -217,7 +218,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           cache: 'gradle'
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: ${{ env.MIN_JVM }}
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
@@ -253,7 +254,6 @@ jobs:
             coveralls.io:443
             fastly.com:443
             nodejs.org:443
-            objects.githubusercontent.com:443
             raw.githubusercontent.com
             sonarcloud.io:443
             storage.googleapis.com:443
@@ -264,7 +264,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           cache: 'gradle'
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: ${{ env.MAX_JVM }}
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2

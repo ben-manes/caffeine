@@ -28,7 +28,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           cache: 'gradle'
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
       - name: Run dependency-check
         uses: gradle/gradle-build-action@v2
