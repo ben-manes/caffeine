@@ -11,6 +11,10 @@ sourceSets {
     java.srcDir "${buildDir}/generated-sources/local"
     java.srcDir "${buildDir}/generated-sources/nodes"
   }
+  jmh {
+    java.srcDir "${buildDir}/generated-sources/local"
+    java.srcDir "${buildDir}/generated-sources/nodes"
+  }
 }
 
 configurations {

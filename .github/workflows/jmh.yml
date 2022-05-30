@@ -1,0 +1,63 @@
+name: jmh
+permissions: read-all
+on: [ push, pull_request ]
+
+env:
+  GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ 11, 18 ]
+    env:
+      JAVA_VERSION: ${{ matrix.java }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v3
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v3
+        with:
+          cache: 'gradle'
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Compute JMH Benchmark
+        run: >
+          ./gradlew caffeine:jmh --no-daemon
+          -PincludePattern=ComputeBenchmark
+          -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
+      - name: Upload Compute JMH Results to Gist
+        uses: exuanbo/actions-deploy-gist@v1
+        with:
+          token: ${{ secrets.GIST_TOKEN }}
+          gist_description: Compute JMH Results
+          gist_id: 511298014cc5629cbc5e57f09fd4c430
+          file_path: ./caffeine/build/reports/jmh/results.json
+          gist_file_name: compute_results_${{ matrix.java }}.json
+      - name: Get/Put JMH Benchmark
+        run: >
+          ./gradlew caffeine:jmh --no-daemon
+          -PincludePattern=GetPutBenchmark
+          -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
+      - name: Upload Get/Put JMH Results to Gist
+        uses: exuanbo/actions-deploy-gist@v1
+        with:
+          token: ${{ secrets.GIST_TOKEN }}
+          gist_description: Get/Put JMH Results
+          gist_id: b231cf57cf8e144e2247716e777edcf3
+          file_path: ./caffeine/build/reports/jmh/results.json
+          gist_file_name: getput_results_${{ matrix.java }}.json
+      - name: Publish JMH benchmarks
+        run: |
+          echo View Compute: https://jmh.morethan.io/?gists=511298014cc5629cbc5e57f09fd4c430
+          echo View Get/Put: https://jmh.morethan.io/?gists=b231cf57cf8e144e2247716e777edcf3
+      - name: Stop Gradle daemon
+        if: always()
+        run: ./gradlew --stop

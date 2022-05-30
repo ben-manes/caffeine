@@ -26,29 +26,30 @@ jobs:
           cache: 'maven'
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
-      - uses: gradle/gradle-build-action@v2
-      - name: simulator
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Simulator
         run: ./gradlew --daemon simulator:run
-      - name: chart simulation
-        run: ./gradlew simulator:simulate --maximumSize=100,200,300
-      - name: memory overhead
+      - name: Chart Simulation
+        run: ./gradlew --daemon simulator:simulate --maximumSize=100,200,300
+      - name: Memory Overhead
         run: ./gradlew --daemon caffeine:memoryOverhead
-      - name: stresser (read)
+      - name: Stresser (read)
         run: >
           timeout 1m ./gradlew --daemon caffeine:stress --workload=read
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
-      - name: stresser (write)
+      - name: Stresser (write)
         run: >
           timeout 1m ./gradlew --daemon caffeine:stress --workload=write
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
-      - name: stresser (refresh)
+      - name: Stresser (refresh)
         run: >
           timeout 1m ./gradlew --daemon caffeine:stress --workload=refresh
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
-      - name: write-behind-rxjava
+      - name: Write-behind (rxjava)
         working-directory: examples/write-behind-rxjava
         run: mvn test
-      - name: coalescing-bulkloader
+      - name: Coalescing Bulkloader
         working-directory: examples/coalescing-bulkloader
         run: mvn test
       - name: Stop Gradle daemon

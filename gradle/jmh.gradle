@@ -30,6 +30,7 @@ dependencies {
 tasks.named('jmh').configure {
   group = 'Benchmarks'
   description = 'Executes a Java microbenchmark'
+  outputs.upToDateWhen { false }
 }
 
 jmh {
@@ -43,7 +44,9 @@ jmh {
   // Benchmark parameters: Separated by '&' for parameter types, and ',' for multiple values
   if (project.hasProperty('benchmarkParameters')) {
     benchmarkParameters = project.benchmarkParameters.split('&').inject([:]) { map, token ->
-      token.split('=').with { map[it[0]] = (it[1].split(',') as List) }
+      token.split('=').with {
+        map[it[0]] = objects.listProperty(String).value(it[1].split(',') as List)
+      }
       map
     }
   }
