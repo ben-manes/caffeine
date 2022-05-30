@@ -21,13 +21,29 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@v3
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v3
+        uses: Wandalen/wretry.action@v1.0.20
         with:
-          cache: 'maven'
-          distribution: 'temurin'
-          java-version: ${{ matrix.java }}
+          action: actions/setup-java@v3
+          with: |
+            distribution: temurin
+            java-version: ${{ matrix.java }}
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: Wandalen/wretry.action@v1.0.20
+        with:
+          action: gradle/gradle-build-action@v2
+          with: |
+            arguments: help --daemon --no-scan
+          attempt_limit: 3
+          attempt_delay: 2000
+      - name: Setup Maven
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ matrix.java }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
       - name: Simulator
         run: ./gradlew --daemon simulator:run
       - name: Chart Simulation

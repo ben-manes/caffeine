@@ -23,21 +23,12 @@ permissions:
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  JAVA_VERSION: 18
 
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        # Override automatic language detection by changing the below list
-        # Supported options are ['csharp', 'cpp', 'go', 'java', 'javascript', 'python']
-        language: ['java']
-        # Learn more...
-        # https://docs.github.com/en/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#overriding-automatic-language-detection
-
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813
@@ -45,37 +36,28 @@ jobs:
           egress-policy: audit
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Setup Java JDK
-        uses: actions/setup-java@v3
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: Wandalen/wretry.action@v1.0.20
         with:
-          distribution: 'temurin'
-          java-version: 11
-
-      # Initializes the CodeQL tools for scanning.
+          action: actions/setup-java@v3
+          with: |
+            distribution: temurin
+            java-version: ${{ env.JAVA_VERSION }}
+          attempt_limit: 3
+          attempt_delay: 2000
+      - name: Setup Gradle
+        uses: Wandalen/wretry.action@v1.0.20
+        with:
+          action: gradle/gradle-build-action@v2
+          with: |
+            arguments: help --no-scan
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
         with:
-          languages: ${{ matrix.language }}
-          # If you wish to specify custom queries, you can do so here or in a config file.
-          # By default, queries listed here will override any specified in a config file.
-          # Prefix the list here with "+" to use these queries and those in the config file.
-          # queries: ./path/to/local/query, your-org/your-repo/queries@main
-
-      # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-      # If this step fails, then you should remove it and run the build manually (see below)
+          languages: java
       - name: Autobuild
         uses: github/codeql-action/autobuild@v2
-
-      # ℹ️ Command-line programs to run using the OS shell.
-      # 📚 https://git.io/JvXDl
-
-      # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
-      #    and modify them (or add more) to build your code if your project
-      #    uses a compiled language
-
-      #- run: |
-      #   make bootstrap
-      #   make release
-
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2

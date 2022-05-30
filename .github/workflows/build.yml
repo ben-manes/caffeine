@@ -21,6 +21,7 @@ env:
     pipelines.actions.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443
+    registry.npmjs.org:443
     repo.gradle.org:443
     repo.maven.apache.org:443
     repo1.maven.org:443
@@ -48,13 +49,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v3
+        uses: Wandalen/wretry.action@v1.0.20
         with:
-          cache: 'gradle'
-          distribution: 'temurin'
-          java-version: ${{ matrix.java }}
+          action: actions/setup-java@v3
+          with: |
+            distribution: temurin
+            java-version: ${{ matrix.java }}
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: Wandalen/wretry.action@v1.0.20
+        with:
+          action: gradle/gradle-build-action@v2
+          with: |
+            arguments: help --no-scan
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Compile
         run: |
           stopMarker=$(uuidgen)
@@ -141,28 +151,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v3
+        uses: Wandalen/wretry.action@v1.0.20
         with:
-          cache: 'gradle'
-          distribution: 'temurin'
-          java-version: ${{ matrix.java }}
-      - name: Remove Gradle Cache
-        if: >
-          matrix.suite == 'caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest'
-          || matrix.suite == 'caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest'
-          || matrix.suite == 'caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest'
-          || matrix.suite == 'caffeine:strongKeysAndStrongValuesAsyncCaffeineTest'
-          || matrix.suite == 'caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest'
-          || matrix.suite == 'caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest'
-          || matrix.suite == 'caffeine:weakKeysAndStrongValuesAsyncCaffeineTest'
-          || matrix.suite == 'caffeine:weakKeysAndStrongValuesSyncCaffeineTest'
-          || matrix.suite == 'caffeine:weakKeysAndSoftValuesSyncCaffeineTest'
-          || matrix.suite == 'caffeine:weakKeysAndWeakValuesSyncCaffeineTest'
-        run: rm -rf ~/.gradle
+          action: actions/setup-java@v3
+          with: |
+            distribution: temurin
+            java-version: ${{ matrix.java }}
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: Wandalen/wretry.action@v1.0.20
         with:
-          gradle-home-cache-strict-match: true
+          action: gradle/gradle-build-action@v2
+          with: |
+            arguments: help --no-scan
+            gradle-home-cache-strict-match: true
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Run tests (${{ matrix.suite }})
         run: |
           stopMarker=$(uuidgen)
@@ -215,13 +220,22 @@ jobs:
             guava.dev:443
       - uses: actions/checkout@v3
       - name: Set up JDK ${{ env.MIN_JVM }}
-        uses: actions/setup-java@v3
+        uses: Wandalen/wretry.action@v1.0.20
         with:
-          cache: 'gradle'
-          distribution: 'temurin'
-          java-version: ${{ env.MIN_JVM }}
+          action: actions/setup-java@v3
+          with: |
+            distribution: temurin
+            java-version: ${{ env.MIN_JVM }}
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: Wandalen/wretry.action@v1.0.20
+        with:
+          action: gradle/gradle-build-action@v2
+          with: |
+            arguments: help --no-scan
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Publish Snapshot
         env:
           JAVA_VERSION: ${{ env.MIN_JVM }}
@@ -261,13 +275,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Set up JDK ${{ env.MAX_JVM }}
-        uses: actions/setup-java@v3
+        uses: Wandalen/wretry.action@v1.0.20
         with:
-          cache: 'gradle'
-          distribution: 'temurin'
-          java-version: ${{ env.MAX_JVM }}
+          action: actions/setup-java@v3
+          with: |
+            distribution: temurin
+            java-version: ${{ env.MAX_JVM }}
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: Wandalen/wretry.action@v1.0.20
+        with:
+          action: gradle/gradle-build-action@v2
+          with: |
+            arguments: help --daemon --no-scan
+          attempt_limit: 3
+          attempt_delay: 2000
       - name: Download Tests Results
         uses: actions/download-artifact@v3
       - name: Decompress
