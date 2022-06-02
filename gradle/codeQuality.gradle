@@ -185,6 +185,7 @@ afterEvaluate {
     group = 'SpotBugs'
     reports {
       html.required = true
+      sarif.required = true
     }
   }
 }

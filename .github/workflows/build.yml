@@ -27,7 +27,6 @@ env:
     repo1.maven.org:443
     scans-in.gradle.com:443
     services.gradle.org:443
-  LANG: en_US.utf8
   MIN_JVM: 11
   MAX_JVM: 18
 
@@ -360,21 +359,18 @@ jobs:
         continue-on-error: true
         id: test-results
         with:
+          json_thousands_separator: ','
           comment_mode: off
           ignore_runs: true
           job_summary: true
           files: '**/TEST-*.xml'
-      - name: Format Test Count
-        run: |
-          COUNT=${{ fromJSON(steps.test-results.outputs.json).stats.runs }}
-          echo "TEST_COUNT=$(printf "%'d" $COUNT)" >> $GITHUB_ENV
       - name: Create badge
         uses: emibcn/badge-action@d6f51ff11b5c3382b3b88689ae2d6db22d9737d1
         with:
           label: tests
           color: 31c653
           path: badge.svg
-          status: ${{ env.TEST_COUNT }}
+          status: ${{ fromJSON(steps.test-results.outputs.json).formatted.stats.runs }}
       - name: Upload badge to Gist
         uses: andymckay/append-gist-action@1fbfbbce708a39bd45846f0955ed5521f2099c6d
         if: endsWith(github.ref, github.event.repository.default_branch)

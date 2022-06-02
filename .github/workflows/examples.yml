@@ -5,6 +5,7 @@ on: [ push, pull_request ]
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  MAX_JVM: 18
 
 jobs:
   examples:
@@ -45,7 +46,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Simulator
-        run: ./gradlew --daemon simulator:run
+        run: >
+          ./gradlew simulator:run
+          -Dcaffeine.simulator.report.output=$(pwd)/simulation.md
+          -Dcaffeine.simulator.files.paths.0="corda:trace_vaultservice.gz"
+          -Dcaffeine.simulator.files.paths.1="lirs:loop.trace.gz"
+          -Dcaffeine.simulator.files.paths.2="corda:trace_vaultservice.gz"
+      - name: Publish Simulator Results
+        if: matrix.java == env.MAX_JVM
+        run: |
+          {
+            echo '### Adaptivity'
+            echo '```'
+            cat $(pwd)/simulation.md
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
       - name: Chart Simulation
         run: ./gradlew --daemon simulator:simulate --maximumSize=100,200,300
       - name: Memory Overhead
