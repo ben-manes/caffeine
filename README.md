@@ -33,8 +33,8 @@ Caffeine provides flexible construction to create a cache with a combination of 
  * [size-based eviction][size] when a maximum is exceeded based on [frequency and recency][efficiency]
  * [time-based expiration][time] of entries, measured since last access or last write
  * [asynchronously refresh][refresh] when the first stale request for an entry occurs
- * keys automatically wrapped in [weak references][reference]
- * values automatically wrapped in [weak or soft references][reference]
+ * keys can be wrapped in [weak references][reference]
+ * values can be wrapped in [weak or soft references][reference]
  * [notification][listener] of evicted (or otherwise removed) entries
  * [writes propagated][compute] to an external resource
  * accumulation of cache access [statistics][statistics]
