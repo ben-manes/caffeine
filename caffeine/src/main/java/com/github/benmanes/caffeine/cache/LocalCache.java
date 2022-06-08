@@ -52,9 +52,6 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Returns the map of in-flight refresh operations. */
   ConcurrentMap<Object, CompletableFuture<?>> refreshes();
 
-  /** Returns whether the cache captures the write-time of the entry. */
-  boolean hasWriteTime();
-
   /** Returns the {@link Expiry} used by this cache. */
   @Nullable Expiry<K, V> expiry();
 

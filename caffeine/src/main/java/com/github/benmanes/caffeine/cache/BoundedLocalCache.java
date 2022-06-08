@@ -479,11 +479,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  public boolean hasWriteTime() {
-    return expiresAfterWrite() || refreshAfterWrite();
-  }
-
-  @Override
   @SuppressWarnings("NullAway")
   public Expiry<K, V> expiry() {
     return null;

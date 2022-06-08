@@ -106,11 +106,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public boolean hasWriteTime() {
-    return false;
-  }
-
-  @Override
   public Object referenceKey(K key) {
     return key;
   }
