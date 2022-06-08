@@ -61,7 +61,9 @@ jobs:
         with:
           action: gradle/gradle-build-action@v2
           with: |
+            cache-read-only: false
             arguments: help --no-scan
+            generate-job-summary: false
           attempt_limit: 3
           attempt_delay: 2000
       - name: Compile
@@ -163,7 +165,9 @@ jobs:
         with:
           action: gradle/gradle-build-action@v2
           with: |
+            cache-read-only: false
             arguments: help --no-scan
+            generate-job-summary: false
             gradle-home-cache-strict-match: true
           attempt_limit: 3
           attempt_delay: 2000
@@ -232,7 +236,9 @@ jobs:
         with:
           action: gradle/gradle-build-action@v2
           with: |
+            cache-read-only: false
             arguments: help --no-scan
+            generate-job-summary: false
           attempt_limit: 3
           attempt_delay: 2000
       - name: Publish Snapshot
@@ -287,6 +293,8 @@ jobs:
         with:
           action: gradle/gradle-build-action@v2
           with: |
+            cache-read-only: false
+            generate-job-summary: false
             arguments: help --daemon --no-scan
           attempt_limit: 3
           attempt_delay: 2000

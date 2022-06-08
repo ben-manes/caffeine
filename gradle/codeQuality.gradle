@@ -57,6 +57,7 @@ tasks.named('jar').configure {
   metaInf {
     from "${rootDir}/LICENSE"
   }
+  inputs.property('version', "${project.version}")
   outputs.cacheIf { true }
 }
 

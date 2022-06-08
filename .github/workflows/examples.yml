@@ -35,6 +35,8 @@ jobs:
         with:
           action: gradle/gradle-build-action@v2
           with: |
+            cache-read-only: false
+            generate-job-summary: false
             arguments: help --daemon --no-scan
           attempt_limit: 3
           attempt_delay: 2000
