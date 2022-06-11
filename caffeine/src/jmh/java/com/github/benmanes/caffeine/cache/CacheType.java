@@ -22,6 +22,7 @@ import org.jctools.maps.NonBlockingHashMap;
 
 import com.github.benmanes.caffeine.cache.impl.Cache2k;
 import com.github.benmanes.caffeine.cache.impl.CaffeineCache;
+import com.github.benmanes.caffeine.cache.impl.CoherenceCache;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
 import com.github.benmanes.caffeine.cache.impl.Ehcache3;
@@ -30,6 +31,7 @@ import com.github.benmanes.caffeine.cache.impl.GuavaCache;
 import com.github.benmanes.caffeine.cache.impl.LinkedHashMapCache;
 import com.github.benmanes.caffeine.cache.impl.TCache;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+import com.tangosol.net.cache.LocalCache;
 import com.trivago.triava.tcache.EvictionPolicy;
 
 import net.jodah.expiringmap.ExpirationPolicy;
@@ -72,6 +74,24 @@ public enum CacheType {
   Caffeine {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new CaffeineCache<>(maximumSize);
+    }
+  },
+  Coherence_Lru {
+    @SuppressWarnings("deprecation")
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new CoherenceCache<>(maximumSize, LocalCache.EVICTION_POLICY_LRU);
+    }
+  },
+  Coherence_Lfu {
+    @SuppressWarnings("deprecation")
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new CoherenceCache<>(maximumSize, LocalCache.EVICTION_POLICY_LFU);
+    }
+  },
+  Coherence_Hybrid {
+    @SuppressWarnings("deprecation")
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new CoherenceCache<>(maximumSize, LocalCache.EVICTION_POLICY_HYBRID);
     }
   },
   ConcurrentLinkedHashMap {

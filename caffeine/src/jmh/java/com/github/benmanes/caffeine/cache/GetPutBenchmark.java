@@ -51,14 +51,9 @@ public class GetPutBenchmark {
     "LinkedHashMap_Lru",
     "Caffeine",
     "ConcurrentLinkedHashMap",
-    "Guava",
-    "Jackrabbit",
-    "Cache2k",
+    "Coherence_Hybrid",
     "Ehcache3",
-    "ExpiringMap_Fifo",
-    "ExpiringMap_Lru",
-    "TCache_Lfu",
-    "TCache_Lru",
+    "Guava",
   })
   CacheType cacheType;
 

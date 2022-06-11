@@ -39,12 +39,13 @@ public class EvictionBenchmark {
 
   @Param({
     "LinkedHashMap_Lru",
+    "Coherence_Hybrid",
     "Caffeine",
     "Ehcache3",
   })
   CacheType cacheType;
 
-  @Param({"0", "100", "10000", "1000000", "10000000"})
+  @Param({"1", "100", "10000", "1000000", "10000000"})
   int size;
 
   BasicCache<Integer, Boolean> cache;

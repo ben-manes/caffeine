@@ -15,12 +15,17 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
-import static java.util.Locale.US;
+import static java.util.stream.Collectors.toSet;
+
+import java.util.EnumSet;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.base.CaseFormat;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
@@ -37,13 +42,20 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
   private final ExpiringMap<Object, Object> cache;
   private final PolicyStats policyStats;
 
-  public ExpiringMapPolicy(Config config) {
-    ExpiringMapSettings settings = new ExpiringMapSettings(config);
-    policyStats = new PolicyStats(name());
+  public ExpiringMapPolicy(ExpiringMapSettings settings, Eviction policy) {
+    policyStats = new PolicyStats(name() + " (%s)", policy);
     cache = ExpiringMap.builder()
         .maxSize(Ints.checkedCast(settings.maximumSize()))
-        .expirationPolicy(settings.policy())
+        .expirationPolicy(policy.type)
         .build();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    var settings = new ExpiringMapSettings(config);
+    return settings.policy().stream()
+        .map(policy -> new ExpiringMapPolicy(settings, policy))
+        .collect(toSet());
   }
 
   @Override
@@ -69,16 +81,32 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
     public ExpiringMapSettings(Config config) {
       super(config);
     }
-    public ExpirationPolicy policy() {
-      String policy = config().getString("expiring-map.policy").toLowerCase(US);
-      switch (policy) {
-        case "fifo":
-          return ExpirationPolicy.CREATED;
-        case "lru":
-          return ExpirationPolicy.ACCESSED;
-        default:
-          throw new IllegalArgumentException("Unknown policy type: " + policy);
+    public Set<Eviction> policy() {
+      var policies = EnumSet.noneOf(Eviction.class);
+      for (var policy : config().getStringList("expiring-map.policy")) {
+        if (policy.equalsIgnoreCase("fifo")) {
+          policies.add(Eviction.FIFO);
+        } else if (policy.equalsIgnoreCase("lru")) {
+          policies.add(Eviction.LRU);
+        } else {
+          throw new IllegalArgumentException("Unknown policy: " + policy);
+        }
       }
+      return policies;
+    }
+  }
+
+  enum Eviction {
+    FIFO(ExpirationPolicy.CREATED),
+    LRU(ExpirationPolicy.ACCESSED);
+
+    ExpirationPolicy type;
+
+    Eviction(ExpirationPolicy type) {
+      this.type = type;
+    }
+    @Override public String toString() {
+      return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, name());
     }
   }
 }

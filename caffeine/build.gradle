@@ -11,10 +11,6 @@ sourceSets {
     java.srcDir "${buildDir}/generated-sources/local"
     java.srcDir "${buildDir}/generated-sources/nodes"
   }
-  jmh {
-    java.srcDir "${buildDir}/generated-sources/local"
-    java.srcDir "${buildDir}/generated-sources/nodes"
-  }
 }
 
 configurations {
@@ -61,9 +57,11 @@ dependencies {
   jmh libraries.ehcache3
   jmh libraries.fastutil
   jmh libraries.slf4jNop
+  jmh libraries.coherence
   jmh libraries.flipTables
   jmh libraries.jackrabbit
   jmh libraries.expiringMap
+  jmh sourceSets.codeGen.output
   jmh libraries.concurrentlinkedhashmap
 
   javaPoetImplementation libraries.guava
