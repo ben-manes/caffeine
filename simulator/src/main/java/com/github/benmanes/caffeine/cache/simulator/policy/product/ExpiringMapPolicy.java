@@ -100,7 +100,7 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
     FIFO(ExpirationPolicy.CREATED),
     LRU(ExpirationPolicy.ACCESSED);
 
-    ExpirationPolicy type;
+    final ExpirationPolicy type;
 
     Eviction(ExpirationPolicy type) {
       this.type = type;

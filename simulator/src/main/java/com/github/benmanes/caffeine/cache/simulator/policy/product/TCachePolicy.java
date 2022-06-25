@@ -104,7 +104,7 @@ public final class TCachePolicy implements KeyOnlyPolicy {
     LRU(EvictionPolicy.LRU),
     LFU(EvictionPolicy.LFU);
 
-    EvictionPolicy type;
+    final EvictionPolicy type;
 
     Eviction(EvictionPolicy type) {
       this.type = type;

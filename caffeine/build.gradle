@@ -58,6 +58,7 @@ dependencies {
   jmh libraries.fastutil
   jmh libraries.slf4jNop
   jmh libraries.coherence
+  jmh libraries.hazelcast
   jmh libraries.flipTables
   jmh libraries.jackrabbit
   jmh libraries.expiringMap

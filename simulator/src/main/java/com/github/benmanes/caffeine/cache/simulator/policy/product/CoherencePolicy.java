@@ -16,9 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
-import static com.tangosol.net.cache.OldCache.EVICTION_POLICY_HYBRID;
-import static com.tangosol.net.cache.OldCache.EVICTION_POLICY_LFU;
-import static com.tangosol.net.cache.OldCache.EVICTION_POLICY_LRU;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.EnumSet;
@@ -131,12 +128,13 @@ public final class CoherencePolicy implements Policy {
     }
   }
 
+  @SuppressWarnings("deprecation")
   enum Eviction {
-    HYBRID(EVICTION_POLICY_HYBRID),
-    LRU(EVICTION_POLICY_LRU),
-    LFU(EVICTION_POLICY_LFU);
+    HYBRID(LocalCache.EVICTION_POLICY_HYBRID),
+    LRU(LocalCache.EVICTION_POLICY_LRU),
+    LFU(LocalCache.EVICTION_POLICY_LFU);
 
-    int type;
+    final int type;
 
     Eviction(int type) {
       this.type = type;

@@ -27,6 +27,7 @@ dependencies {
   implementation libraries.slf4jJdk
   implementation libraries.coherence
   implementation libraries.commonsIo
+  implementation libraries.hazelcast
   implementation libraries.fastfilter
   implementation libraries.flipTables
   implementation libraries.jfreechart

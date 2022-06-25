@@ -119,6 +119,7 @@ def osgiTest = tasks.register('osgiTest', Test) {
   systemProperty 'felixScr.version', testVersions.felixScr
   systemProperty 'osgiUtil.promise', testVersions.osgiUtilPromise
   systemProperty 'osgiUtil.function', testVersions.osgiUtilFunction
+  systemProperty 'osgiService.component', testVersions.osgiSvcComponent
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
   systemProperty 'caffeine-jcache.osgi.jar', project(':jcache').jar.archivePath.path
 }

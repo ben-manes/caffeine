@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
 import com.github.benmanes.caffeine.cache.impl.Ehcache3;
 import com.github.benmanes.caffeine.cache.impl.ExpiringMapCache;
 import com.github.benmanes.caffeine.cache.impl.GuavaCache;
+import com.github.benmanes.caffeine.cache.impl.HazelcastCache;
 import com.github.benmanes.caffeine.cache.impl.LinkedHashMapCache;
 import com.github.benmanes.caffeine.cache.impl.TCache;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
@@ -121,6 +122,21 @@ public enum CacheType {
   Guava {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new GuavaCache<>(maximumSize);
+    }
+  },
+  Hazelcast_Lfu {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new HazelcastCache<>(maximumSize, com.hazelcast.config.EvictionPolicy.LFU);
+    }
+  },
+  Hazelcast_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new HazelcastCache<>(maximumSize, com.hazelcast.config.EvictionPolicy.LRU);
+    }
+  },
+  Hazelcast_Random {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new HazelcastCache<>(maximumSize, com.hazelcast.config.EvictionPolicy.RANDOM);
     }
   },
   Jackrabbit {

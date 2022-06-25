@@ -95,6 +95,16 @@ nexusPublishing {
   }
 }
 
+def isNonStable = { String version ->
+  def stableKeyword = ['RELEASE', 'FINAL', 'GA', 'JRE'].any { version.toUpperCase().contains(it) }
+  def unstableKeyword = ['PREVIEW'].any { version.toUpperCase().contains(it) }
+  def regex = /^[0-9,.v-]+(-r)?$/
+  return (!stableKeyword || unstableKeyword) && !(version ==~ regex)
+}
+dependencyUpdates.rejectVersionIf {
+  (isNonStable(it.candidate.version) && !isNonStable(it.currentVersion))
+}
+
 dependencyCheck {
   formats = ['html', 'sarif']
 }
