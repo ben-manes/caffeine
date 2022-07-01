@@ -159,9 +159,6 @@ tasks.withType(Test).configureEach {
   if (System.properties.containsKey('debug')) {
     jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
   }
-  if (System.env.'CI') {
-    reports.html.required = false
-  }
   testLogging {
     events 'skipped', 'failed'
     exceptionFormat 'full'

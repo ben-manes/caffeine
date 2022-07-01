@@ -72,8 +72,7 @@ tasks.named('javadoc').configure {
   options.addStringOption('Xdoclint:none', '-quiet')
   options.linksOffline(
     "https://static.javadoc.io/javax.cache/cache-api/${versions.jcache}/",
-    "${buildDir}/jcache-docs",
-  )
+    'build/jcache-docs')
 }
 
 tasks.named('test').configure {

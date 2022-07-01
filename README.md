@@ -59,6 +59,7 @@ Use Caffeine in a community provided integration:
 Powering infrastructure near you:
  * [Dropwizard][dropwizard]: Ops-friendly, high-performance, RESTful APIs
  * [Cassandra][cassandra]: Manage massive amounts of data, fast
+ * [Coherence][coherence]: Mission critical in-memory data grid
  * [Accumulo][accumulo]: A sorted, distributed key/value store
  * [HBase][hbase]: A distributed, scalable, big data store
  * [Apache Solr][solr]: Blazingly fast enterprise search
@@ -143,6 +144,7 @@ Snapshots of the development version are available in
 [jhipster]: https://www.jhipster.tech/
 [open-whisk]: https://openwhisk.apache.org/
 [camel]: https://github.com/apache/camel/blob/master/components/camel-caffeine/src/main/docs/caffeine-cache-component.adoc
+[coherence]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-applications/implementing-storage-and-backing-maps.html#GUID-260228C2-371A-4B91-9024-8D6514DD4B78
 [corfu]: https://github.com/CorfuDB/CorfuDB
 [akka-http]: https://doc.akka.io/docs/akka-http/current/common/caching.html
 [micronaut]: https://docs.micronaut.io/latest/guide/index.html#caching

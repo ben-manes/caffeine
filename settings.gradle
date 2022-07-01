@@ -28,6 +28,7 @@ gradleEnterprise {
 
 def gradleEnterpriseCachePassword = properties.'gradleEnterpriseCachePassword'
 buildCache {
+  local.enabled = true
   remote(HttpBuildCache) {
     url = 'https://caffeine.gradle-enterprise.cloud/cache/'
     push = System.env.'CI'

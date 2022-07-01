@@ -75,10 +75,6 @@ tasks.named('compileCodeGenJava').configure {
   classpath = sourceSets.main.runtimeClasspath + sourceSets.main.output
   options.debug = false
   dependsOn compileJava
-
-  doFirst {
-    options.compilerArgs += [ '--module-path', classpath.asPath ]
-  }
 }
 
 tasks.named('jar').configure {
@@ -97,20 +93,26 @@ tasks.named('jar').configure {
 
 def generateLocalCaches = tasks.register('generateLocalCaches', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'
+  outputs.dir(layout.buildDirectory.dir('generated-sources/local'))
+    .withPropertyName('outputDir')
+  inputs.files(sourceSets.javaPoet.output)
+    .withPathSensitivity(PathSensitivity.RELATIVE)
+    .withPropertyName('javaPoetOutput')
   classpath = sourceSets.javaPoet.runtimeClasspath
-  outputs.dir "${buildDir}/generated-sources/local"
-  args "${buildDir}/generated-sources/local"
-  inputs.files sourceSets.javaPoet.output
+  args 'build/generated-sources/local'
   dependsOn compileJavaPoetJava
   outputs.cacheIf { true }
 }
 
 def generateNodes = tasks.register('generateNodes', JavaExec) {
   mainClass = 'com.github.benmanes.caffeine.cache.NodeFactoryGenerator'
+  outputs.dir(layout.buildDirectory.dir('generated-sources/nodes'))
+    .withPropertyName('outputDir')
+  inputs.files(sourceSets.javaPoet.output)
+    .withPathSensitivity(PathSensitivity.RELATIVE)
+    .withPropertyName('javaPoetOutput')
   classpath = sourceSets.javaPoet.runtimeClasspath
-  outputs.dir "${buildDir}/generated-sources/nodes"
-  args "${buildDir}/generated-sources/nodes"
-  inputs.files sourceSets.javaPoet.output
+  args 'build/generated-sources/nodes'
   dependsOn compileJavaPoetJava
   outputs.cacheIf { true }
 }
