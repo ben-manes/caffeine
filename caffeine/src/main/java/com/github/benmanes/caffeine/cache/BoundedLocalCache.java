@@ -3836,7 +3836,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return cache.evictionOrder(/* hottest */ false, transformer, limiter);
       }
       @Override public Map<K, V> coldestWeighted(long weightLimit) {
-        var limiter = new WeightLimiter<K, V>(weightLimit);
+        var limiter = isWeighted()
+            ? new WeightLimiter<K, V>(weightLimit)
+            : new SizeLimiter<K, V>((int) Math.min(weightLimit, cache.size()), weightLimit);
         return cache.evictionOrder(/* hottest */ false, transformer, limiter);
       }
       @Override

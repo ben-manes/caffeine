@@ -7,7 +7,7 @@ apply plugin: 'jacoco'
 def testReport = tasks.register('testReport', TestReport) {
   group = 'Build'
   description = 'Generates an aggregate test report'
-  destinationDir = file("${buildDir}/reports/allTests")
+  destinationDir = layout.buildDirectory.dir('reports/allTests')
 }
 
 subprojects {
@@ -20,9 +20,9 @@ subprojects {
     testTask.dependsOn(jar)
 
     // ensure tasks don't overwrite the default report directories used by the 'test' task
-    reports.html.destination = file("${buildDir}/reports/${name}")
-    reports.junitXml.destination = file("${buildDir}/reports/${name}/results")
-    binaryResultsDirectory = file("${buildDir}/reports/${name}/results/binary/${name}")
+    reports.html.destination = file(layout.buildDirectory.file("reports/${name}"))
+    reports.junitXml.destination = file(layout.buildDirectory.file("reports/${name}/results"))
+    binaryResultsDirectory = layout.buildDirectory.dir("reports/${name}/results/binary/${name}")
   }
 }
 
@@ -50,7 +50,8 @@ def jacocoFullReport = tasks.register('jacocoFullReport', JacocoReport) {
 
 coveralls {
   sourceDirs = coveredProjects.sourceSets.main.allSource.srcDirs.flatten()
-  jacocoReportPath = "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
+  jacocoReportPath = layout.buildDirectory.file(
+    'reports/jacoco/jacocoFullReport/jacocoFullReport.xml')
 }
 
 tasks.named('coveralls').configure {
@@ -73,6 +74,6 @@ sonarqube {
     property 'sonar.host.url', 'https://sonarcloud.io'
     property 'sonar.coverage.exclusions', '**/simulator/**'
     property 'sonar.coverage.jacoco.xmlReportPaths',
-      "${buildDir}/reports/jacoco/jacocoFullReport/jacocoFullReport.xml"
+      '**/reports/jacoco/jacocoFullReport/jacocoFullReport.xml'
   }
 }

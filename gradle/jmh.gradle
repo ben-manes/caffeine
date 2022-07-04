@@ -57,7 +57,7 @@ jmh {
   timeUnit = 's'
 
   resultFormat = 'json'
-  resultsFile = file("${buildDir}/reports/jmh/results.json")
+  resultsFile = layout.buildDirectory.file('reports/jmh/results.json')
 
   jvmArgs = [ '-Xmx2G' ]
   warmupIterations = 3
@@ -69,7 +69,7 @@ jmh {
 
 jmhReport {
   jmhResultPath = jmh.resultsFile.get()
-  jmhReportOutput = file("${buildDir}/reports/jmh")
+  jmhReportOutput = file(layout.buildDirectory.file('reports/jmh'))
 }
 
 tasks.named('jmh').configure {

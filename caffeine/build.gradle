@@ -1,3 +1,4 @@
+import static org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
 
 apply from: "${rootDir}/gradle/jmh.gradle"
@@ -8,8 +9,8 @@ sourceSets {
     java.srcDir 'src/javaPoet/java'
   }
   codeGen {
-    java.srcDir "${buildDir}/generated-sources/local"
-    java.srcDir "${buildDir}/generated-sources/nodes"
+    java.srcDir layout.buildDirectory.dir('generated-sources/local')
+    java.srcDir layout.buildDirectory.dir('generated-sources/nodes')
   }
 }
 
@@ -96,8 +97,8 @@ def generateLocalCaches = tasks.register('generateLocalCaches', JavaExec) {
   outputs.dir(layout.buildDirectory.dir('generated-sources/local'))
     .withPropertyName('outputDir')
   inputs.files(sourceSets.javaPoet.output)
-    .withPathSensitivity(PathSensitivity.RELATIVE)
     .withPropertyName('javaPoetOutput')
+    .withPathSensitivity(RELATIVE)
   classpath = sourceSets.javaPoet.runtimeClasspath
   args 'build/generated-sources/local'
   dependsOn compileJavaPoetJava
@@ -109,8 +110,8 @@ def generateNodes = tasks.register('generateNodes', JavaExec) {
   outputs.dir(layout.buildDirectory.dir('generated-sources/nodes'))
     .withPropertyName('outputDir')
   inputs.files(sourceSets.javaPoet.output)
-    .withPathSensitivity(PathSensitivity.RELATIVE)
     .withPropertyName('javaPoetOutput')
+    .withPathSensitivity(RELATIVE)
   classpath = sourceSets.javaPoet.runtimeClasspath
   args 'build/generated-sources/nodes'
   dependsOn compileJavaPoetJava

@@ -49,6 +49,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Set up JDK ${{ matrix.java }}
         uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
         with:
           action: actions/setup-java@v3
           with: |
@@ -58,12 +59,14 @@ jobs:
           attempt_delay: 2000
       - name: Setup Gradle
         uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
         with:
           action: gradle/gradle-build-action@v2
           with: |
             cache-read-only: false
             arguments: help --no-scan
             generate-job-summary: false
+            gradle-home-cache-strict-match: true
           attempt_limit: 3
           attempt_delay: 2000
       - name: Compile
@@ -153,6 +156,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Set up JDK ${{ matrix.java }}
         uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
         with:
           action: actions/setup-java@v3
           with: |
@@ -162,6 +166,7 @@ jobs:
           attempt_delay: 2000
       - name: Setup Gradle
         uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
         with:
           action: gradle/gradle-build-action@v2
           with: |
@@ -233,6 +238,7 @@ jobs:
           attempt_delay: 2000
       - name: Setup Gradle
         uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
         with:
           action: gradle/gradle-build-action@v2
           with: |
@@ -290,6 +296,7 @@ jobs:
           attempt_delay: 2000
       - name: Setup Gradle
         uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
         with:
           action: gradle/gradle-build-action@v2
           with: |
@@ -341,9 +348,6 @@ jobs:
           git fetch --unshallow
           ./gradlew --daemon sonarqube -Dsonar.branch.name=${GITHUB_REF##*/}
         continue-on-error: true
-      - name: Stop Gradle daemon
-        if: always()
-        run: ./gradlew --stop
 
   test-results:
     name: Test Results

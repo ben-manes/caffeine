@@ -64,7 +64,7 @@ def unzipJCacheJavaDoc = tasks.register('unzipJCacheJavaDoc', Copy) {
   group = 'Build'
   description = 'Unzips the JCache JavaDoc'
   from configurations.doc.collect { zipTree(it) }
-  into { "${buildDir}/jcache-docs" }
+  into { layout.buildDirectory.dir('jcache-docs') }
 }
 
 tasks.named('javadoc').configure {
@@ -83,7 +83,7 @@ tasks.register('unzipTestKit', Copy) {
   group = 'Build'
   description = 'Unzips the JCache TCK'
   from configurations.tck.collect { zipTree(it) }
-  into { "${buildDir}/tck" }
+  into { layout.buildDirectory.dir('tck') }
 }
 
 def testCompatibilityKit = tasks.register('testCompatibilityKit', Test) {
@@ -93,7 +93,7 @@ def testCompatibilityKit = tasks.register('testCompatibilityKit', Test) {
   onlyIf { compileTestJava.didWork || unzipTestKit.didWork }
 
   useJUnit()
-  testClassesDirs = files("${buildDir}/tck")
+  testClassesDirs = layout.buildDirectory.files('tck')
 
   def pkg = 'com.github.benmanes.caffeine.jcache'
   systemProperty 'java.net.preferIPv4Stack', 'true'
