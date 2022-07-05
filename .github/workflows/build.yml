@@ -367,15 +367,15 @@ jobs:
         run: |
           find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
+        uses: EnricoMi/publish-unit-test-result-action@v2
         continue-on-error: true
         id: test-results
         with:
           json_thousands_separator: ','
+          junit_files: '**/TEST-*.xml'
           comment_mode: off
           ignore_runs: true
           job_summary: true
-          files: '**/TEST-*.xml'
       - name: Create badge
         uses: emibcn/badge-action@d6f51ff11b5c3382b3b88689ae2d6db22d9737d1
         with:
