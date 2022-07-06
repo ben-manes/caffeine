@@ -367,7 +367,7 @@ jobs:
         run: |
           find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
+        uses: EnricoMi/publish-unit-test-result-action@v2
         continue-on-error: true
         id: test-results
         with:
