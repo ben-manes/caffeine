@@ -68,7 +68,7 @@ ext {
   testVersions = [
     awaitility: '4.2.0',
     commonsCollectionsTests: '4.4',
-    eclipseCollections: '11.0.0',
+    eclipseCollections: '11.1.0',
     guice: '5.1.0',
     hamcrest: '2.2',
     jcacheTck: '1.1.1',

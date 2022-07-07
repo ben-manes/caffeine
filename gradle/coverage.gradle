@@ -7,7 +7,7 @@ apply plugin: 'jacoco'
 def testReport = tasks.register('testReport', TestReport) {
   group = 'Build'
   description = 'Generates an aggregate test report'
-  destinationDir = layout.buildDirectory.dir('reports/allTests')
+  destinationDirectory = layout.buildDirectory.dir('reports/allTests')
 }
 
 subprojects {

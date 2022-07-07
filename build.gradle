@@ -101,7 +101,7 @@ def isNonStable = { String version ->
   return (!stableKeyword || unstableKeyword) && !(version ==~ regex)
 }
 dependencyUpdates.rejectVersionIf {
-  (isNonStable(it.candidate.version) && !isNonStable(it.currentVersion))
+  (it.candidate.group == 'javax.json.bind') && isNonStable(it.candidate.version)
 }
 
 dependencyCheck {

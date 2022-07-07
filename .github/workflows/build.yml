@@ -208,59 +208,6 @@ jobs:
         continue-on-error: true
         if: failure()
 
-  publish-snapshot:
-    name: Publish Snapshot
-    runs-on: ubuntu-latest
-    needs: tests
-    if: >
-      github.event_name == 'push'
-      && endsWith(github.ref, github.event.repository.default_branch)
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@74b568e8591fbb3115c70f3436a0c6b0909a8504
-        with:
-          egress-policy: block
-          allowed-endpoints: >
-            ${{ env.ALLOWED_ENDPOINTS }}
-            checkerframework.org:443
-            docs.oracle.com:443
-            lightbend.github.io:443
-            guava.dev:443
-      - uses: actions/checkout@v3
-      - name: Set up JDK ${{ env.MIN_JVM }}
-        uses: Wandalen/wretry.action@v1.0.20
-        with:
-          action: actions/setup-java@v3
-          with: |
-            distribution: temurin
-            java-version: ${{ env.MIN_JVM }}
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Setup Gradle
-        uses: Wandalen/wretry.action@v1.0.20
-        timeout-minutes: 5
-        with:
-          action: gradle/gradle-build-action@v2
-          with: |
-            cache-read-only: false
-            arguments: help --no-scan
-            generate-job-summary: false
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Publish Snapshot
-        env:
-          JAVA_VERSION: ${{ env.MIN_JVM }}
-          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKeyId: 20BCF6B1
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
-        run: |
-          stopMarker=$(uuidgen)
-          echo "::stop-commands::$stopMarker"
-          trap "echo '::$stopMarker::'" EXIT
-          ./gradlew publishToSonatype
-
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
@@ -364,8 +311,7 @@ jobs:
       - name: Download Tests
         uses: actions/download-artifact@v3
       - name: Decompress
-        run: |
-          find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
+        run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         continue-on-error: true
@@ -385,8 +331,63 @@ jobs:
           status: ${{ fromJSON(steps.test-results.outputs.json).formatted.stats.runs }}
       - name: Upload badge to Gist
         uses: andymckay/append-gist-action@1fbfbbce708a39bd45846f0955ed5521f2099c6d
-        if: endsWith(github.ref, github.event.repository.default_branch)
+        if: >
+          github.event_name == 'push'
+          && endsWith(github.ref, github.event.repository.default_branch)
         with:
           gistURL: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
           token: ${{ secrets.GIST_TOKEN }}
           file: badge.svg
+
+  publish-snapshot:
+    name: Publish Snapshot
+    runs-on: ubuntu-latest
+    needs: tests
+    if: >
+      github.event_name == 'push'
+      && endsWith(github.ref, github.event.repository.default_branch)
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@74b568e8591fbb3115c70f3436a0c6b0909a8504
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            ${{ env.ALLOWED_ENDPOINTS }}
+            checkerframework.org:443
+            docs.oracle.com:443
+            lightbend.github.io:443
+            guava.dev:443
+      - uses: actions/checkout@v3
+      - name: Set up JDK ${{ env.MIN_JVM }}
+        uses: Wandalen/wretry.action@v1.0.20
+        with:
+          action: actions/setup-java@v3
+          with: |
+            distribution: temurin
+            java-version: ${{ env.MIN_JVM }}
+          attempt_limit: 3
+          attempt_delay: 2000
+      - name: Setup Gradle
+        uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
+        with:
+          action: gradle/gradle-build-action@v2
+          with: |
+            cache-read-only: false
+            arguments: help --no-scan
+            generate-job-summary: false
+          attempt_limit: 3
+          attempt_delay: 2000
+      - name: Publish Snapshot
+        env:
+          JAVA_VERSION: ${{ env.MIN_JVM }}
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKeyId: 20BCF6B1
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+        run: |
+          stopMarker=$(uuidgen)
+          echo "::stop-commands::$stopMarker"
+          trap "echo '::$stopMarker::'" EXIT
+          ./gradlew publishToSonatype

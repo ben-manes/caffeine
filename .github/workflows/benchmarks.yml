@@ -50,6 +50,9 @@ jobs:
           -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Compute JMH Results to Gist
         uses: exuanbo/actions-deploy-gist@v1
+        if: >
+          github.event_name == 'push'
+          && endsWith(github.ref, github.event.repository.default_branch)
         with:
           token: ${{ secrets.GIST_TOKEN }}
           gist_description: Compute JMH Results
@@ -63,6 +66,9 @@ jobs:
           -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Get/Put JMH Results to Gist
         uses: exuanbo/actions-deploy-gist@v1
+        if: >
+          github.event_name == 'push'
+          && endsWith(github.ref, github.event.repository.default_branch)
         with:
           token: ${{ secrets.GIST_TOKEN }}
           gist_description: Get/Put JMH Results
@@ -70,7 +76,10 @@ jobs:
           file_path: ./caffeine/build/reports/jmh/results.json
           gist_file_name: getput_results_${{ matrix.java }}.json
       - name: Publish JMH benchmarks
-        if: matrix.java == env.MAX_JVM
+        if: >
+          matrix.java == env.MAX_JVM
+          && github.event_name == 'push'
+          && endsWith(github.ref, github.event.repository.default_branch)
         run: |
           {
             echo '#### [Compute](https://jmh.morethan.io/?gists=511298014cc5629cbc5e57f09fd4c430)'
