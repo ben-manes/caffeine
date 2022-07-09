@@ -904,7 +904,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @GuardedBy("evictionLock")
   void expireVariableEntries(long now) {
     if (expiresVariable()) {
-      timerWheel().advance(now);
+      timerWheel().advance(this, now);
     }
   }
 

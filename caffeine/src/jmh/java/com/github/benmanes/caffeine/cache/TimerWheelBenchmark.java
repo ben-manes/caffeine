@@ -40,6 +40,7 @@ public class TimerWheelBenchmark {
   private static final long UPPERBOUND = TimeUnit.DAYS.toNanos(5);
 
   TimerWheel<Integer, Integer> timerWheel;
+  MockCache cache;
   long[] times;
   Timer timer;
 
@@ -52,7 +53,8 @@ public class TimerWheelBenchmark {
   public void setup() {
     timer = new Timer(0);
     times = new long[SIZE];
-    timerWheel = new TimerWheel<>(new MockCache());
+    cache = new MockCache();
+    timerWheel = new TimerWheel<>();
     for (int i = 0; i < SIZE; i++) {
       times[i] = ThreadLocalRandom.current().nextLong(UPPERBOUND);
       timerWheel.schedule(new Timer(times[i]));
@@ -78,12 +80,34 @@ public class TimerWheelBenchmark {
     timerWheel.nanos = (time - DELTA);
     timerWheel.deschedule(timer);
     timerWheel.schedule(timer);
-    timerWheel.advance(time);
+    timerWheel.advance(cache, time);
   }
 
   @Benchmark
   public long getExpirationDelay() {
     return timerWheel.getExpirationDelay();
+  }
+
+  @Benchmark
+  @SuppressWarnings({"ForEachIterable", "PMD.ForLoopCanBeForeach"})
+  public int ascending() {
+    int count = 0;
+    for (var i = timerWheel.iterator(); i.hasNext();) {
+      i.next();
+      count++;
+    }
+    return count;
+  }
+
+  @Benchmark
+  @SuppressWarnings("PMD.ForLoopCanBeForeach")
+  public int descending() {
+    int count = 0;
+    for (var i = timerWheel.descendingIterator(); i.hasNext();) {
+      i.next();
+      count++;
+    }
+    return count;
   }
 
   static final class Timer extends Node<Integer, Integer> {

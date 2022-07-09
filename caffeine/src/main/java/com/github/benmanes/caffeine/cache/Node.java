@@ -155,8 +155,8 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   /* --------------- Access order --------------- */
 
   public static final int WINDOW = 0;
-  public static final  int PROBATION = 1;
-  public static final  int PROTECTED = 2;
+  public static final int PROBATION = 1;
+  public static final int PROTECTED = 2;
 
   /** Returns if the entry is in the Window or Main space. */
   public boolean inWindow() {

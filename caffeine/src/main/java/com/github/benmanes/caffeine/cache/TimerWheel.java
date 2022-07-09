@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
-import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.ReferenceQueue;
 import java.util.ConcurrentModificationException;
@@ -65,15 +64,12 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
       Long.numberOfTrailingZeros(SPANS[4]),
   };
 
-  final BoundedLocalCache<K, V> cache;
   final Node<K, V>[][] wheel;
 
   long nanos;
 
   @SuppressWarnings({"rawtypes", "unchecked"})
-  TimerWheel(BoundedLocalCache<K, V> cache) {
-    this.cache = requireNonNull(cache);
-
+  TimerWheel() {
     wheel = new Node[BUCKETS.length][];
     for (int i = 0; i < wheel.length; i++) {
       wheel[i] = new Node[BUCKETS[i]];
@@ -86,9 +82,10 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   /**
    * Advances the timer and evicts entries that have expired.
    *
+   * @param cache the instance that the entries belong to
    * @param currentTimeNanos the current time, in nanoseconds
    */
-  public void advance(long currentTimeNanos) {
+  public void advance(BoundedLocalCache<K, V> cache, long currentTimeNanos) {
     long previousTimeNanos = nanos;
     try {
       nanos = currentTimeNanos;
@@ -105,7 +102,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
         if ((currentTicks - previousTicks) <= 0L) {
           break;
         }
-        expire(i, previousTicks, currentTicks);
+        expire(cache, i, previousTicks, currentTicks);
       }
     } catch (Throwable t) {
       nanos = previousTimeNanos;
@@ -116,11 +113,12 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   /**
    * Expires entries or reschedules into the proper bucket if still active.
    *
-   * @param index the wheel being operated on
+   * @param cache the instance that the entries belong to
+   * @param index the timing wheel being operated on
    * @param previousTicks the previous number of ticks
    * @param currentTicks the current number of ticks
    */
-  void expire(int index, long previousTicks, long currentTicks) {
+  void expire(BoundedLocalCache<K, V> cache, int index, long previousTicks, long currentTicks) {
     Node<K, V>[] timerWheel = wheel[index];
     int mask = timerWheel.length - 1;
 
@@ -269,7 +267,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
 
     long spanMask = SPANS[i] - 1;
     int mask = timerWheel.length - 1;
-    int probe = (int) ((ticks  + 1) & mask);
+    int probe = (int) ((ticks + 1) & mask);
     Node<K, V> sentinel = timerWheel[probe];
     Node<K, V> next = sentinel.getNextInVariableOrder();
     return (next == sentinel) ? Long.MAX_VALUE : (SPANS[i] - (nanos & spanMask));
