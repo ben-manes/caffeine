@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.ref.ReferenceQueue;
@@ -66,8 +67,8 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 @SuppressWarnings("GuardedBy")
 public final class TimerWheelTest {
   private static final Random random = new Random();
-  private static final long[] CLOCKS = { -SPANS[0] + 1, 0L, 0xfffffffc0000000L,
-      Long.MAX_VALUE - SPANS[0] + 1, random.nextLong() };
+  private static final long[] CLOCKS = { Long.MIN_VALUE, -SPANS[0] + 1, 0L,
+      0xfffffffc0000000L, Long.MAX_VALUE - SPANS[0] + 1, Long.MAX_VALUE, random.nextLong() };
 
   @Captor ArgumentCaptor<Node<Long, Long>> captor;
   @Mock BoundedLocalCache<Long, Long> cache;
@@ -135,6 +136,34 @@ public final class TimerWheelTest {
 
     timerWheel.advance(cache, clock + 13 * SPANS[0]);
     verify(cache).evictEntry(any(), any(), anyLong());
+  }
+
+  @Test
+  public void advance_overflow() {
+    when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
+
+    var timerWheel = new TimerWheel<Long, Long>();
+    timerWheel.nanos = -TimeUnit.DAYS.toNanos(365) / 2;
+    timerWheel.schedule(new Timer(timerWheel.nanos + SPANS[0]));
+
+    timerWheel.advance(cache, timerWheel.nanos + TimeUnit.DAYS.toNanos(365));
+    verify(cache).evictEntry(any(), any(), anyLong());
+  }
+
+  @Test(dataProvider = "clock")
+  public void advance_backwards(long clock) {
+    var timerWheel = new TimerWheel<Long, Long>();
+    timerWheel.nanos = clock;
+
+    for (int i = 0; i < 1_000; i++) {
+      long duration = ThreadLocalRandom.current().nextLong(0, TimeUnit.DAYS.toNanos(10));
+      timerWheel.schedule(new Timer(clock + duration));
+    }
+    for (int i = 0; i < TimerWheel.BUCKETS.length; i++) {
+      timerWheel.advance(cache, clock - 3 * TimerWheel.SPANS[i]);
+    }
+
+    verifyNoInteractions(cache);
   }
 
   @Test

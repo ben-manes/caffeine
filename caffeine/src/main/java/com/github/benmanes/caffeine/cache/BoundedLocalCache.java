@@ -1481,7 +1481,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     // threads being busy (perhaps writing into this cache), the write rate greatly exceeds the
     // consuming rate, priority inversion, or if the executor silently discarded the maintenance
     // task. Unfortunately this cannot resolve when the eviction is blocked waiting on a long-
-    // running computation due to an eviction listener, the victim being computed on by other write,
+    // running computation due to an eviction listener, the victim is being computed on by a writer,
     // or the victim residing in the same hash bin as a computing entry. In those cases a warning is
     // logged to encourage the application to decouple these computations from the map operations.
     lock();
@@ -2825,7 +2825,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * <p>
    * The <i>consistency</i> property between invocations requires that the results are the same if
    * there are no modifications to the information used. Therefore, usages should expect that this
-   * operation may return misleading results if either map or the data held by them is modified
+   * operation may return misleading results if either the maps or the data held by them is modified
    * during the execution of this method. This characteristic allows for comparing the map sizes and
    * assuming stable mappings, as done by {@link AbstractMap}-based maps.
    * <p>

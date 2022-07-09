@@ -39,7 +39,7 @@ def jacocoFullReport = tasks.register('jacocoFullReport', JacocoReport) {
     executionData fileTree(rootDir.absolutePath).include("**/*${proj.name}*/**/jacoco/*.exec")
   }
   subprojects.each { proj ->
-    dependsOn proj.tasks.processResources
+    dependsOn proj.tasks.compileTestJava
   }
 
   reports {
@@ -74,6 +74,6 @@ sonarqube {
     property 'sonar.host.url', 'https://sonarcloud.io'
     property 'sonar.coverage.exclusions', '**/simulator/**'
     property 'sonar.coverage.jacoco.xmlReportPaths',
-      '**/reports/jacoco/jacocoFullReport/jacocoFullReport.xml'
+      file(layout.buildDirectory.file('reports/jacoco/jacocoFullReport/jacocoFullReport.xml'))
   }
 }

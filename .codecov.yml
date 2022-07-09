@@ -1,5 +1,6 @@
+comment: false
+
 coverage:
-  comment: false
   round: nearest
   status:
     project:

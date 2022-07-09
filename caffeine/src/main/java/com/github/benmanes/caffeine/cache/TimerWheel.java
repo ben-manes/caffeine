@@ -87,22 +87,25 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    */
   public void advance(BoundedLocalCache<K, V> cache, long currentTimeNanos) {
     long previousTimeNanos = nanos;
+    nanos = currentTimeNanos;
+
+    // If wrapping then temporarily shift the clock for a positive comparison. We assume that the
+    // advancements never exceed a total running time of Long.MAX_VALUE nanoseconds (292 years)
+    // so that an overflow only occurs due to using an arbitrary origin time (System.nanoTime()).
+    if ((previousTimeNanos < 0) && (currentTimeNanos > 0)) {
+      previousTimeNanos += Long.MAX_VALUE;
+      currentTimeNanos += Long.MAX_VALUE;
+    }
+
     try {
-      nanos = currentTimeNanos;
-
-      // If wrapping, temporarily shift the clock for a positive comparison
-      if ((previousTimeNanos < 0) && (currentTimeNanos > 0)) {
-        previousTimeNanos += Long.MAX_VALUE;
-        currentTimeNanos += Long.MAX_VALUE;
-      }
-
       for (int i = 0; i < SHIFT.length; i++) {
         long previousTicks = (previousTimeNanos >>> SHIFT[i]);
         long currentTicks = (currentTimeNanos >>> SHIFT[i]);
-        if ((currentTicks - previousTicks) <= 0L) {
+        long delta = (currentTicks - previousTicks);
+        if (delta <= 0L) {
           break;
         }
-        expire(cache, i, previousTicks, currentTicks);
+        expire(cache, i, previousTicks, delta);
       }
     } catch (Throwable t) {
       nanos = previousTimeNanos;
@@ -116,13 +119,15 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @param cache the instance that the entries belong to
    * @param index the timing wheel being operated on
    * @param previousTicks the previous number of ticks
-   * @param currentTicks the current number of ticks
+   * @param delta the number of additional ticks
    */
-  void expire(BoundedLocalCache<K, V> cache, int index, long previousTicks, long currentTicks) {
+  void expire(BoundedLocalCache<K, V> cache, int index, long previousTicks, long delta) {
     Node<K, V>[] timerWheel = wheel[index];
     int mask = timerWheel.length - 1;
 
-    int steps = Math.min(1 + Math.abs((int) (currentTicks - previousTicks)), timerWheel.length);
+    // We assume that the delta does not overflow an integer and cause negative steps. This can
+    // occur only if the advancement exceeds 2^61 nanoseconds (73 years).
+    int steps = Math.min(1 + (int) delta, timerWheel.length);
     int start = (int) (previousTicks & mask);
     int end = start + steps;
 
@@ -260,17 +265,19 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
 
   /**
    * Returns the duration when the wheel's next bucket expires, or {@link Long.MAX_VALUE} if empty.
+   *
+   * @param index the timing wheel being operated on
    */
-  long peekAhead(int i) {
-    long ticks = (nanos >>> SHIFT[i]);
-    Node<K, V>[] timerWheel = wheel[i];
+  long peekAhead(int index) {
+    long ticks = (nanos >>> SHIFT[index]);
+    Node<K, V>[] timerWheel = wheel[index];
 
-    long spanMask = SPANS[i] - 1;
+    long spanMask = SPANS[index] - 1;
     int mask = timerWheel.length - 1;
     int probe = (int) ((ticks + 1) & mask);
     Node<K, V> sentinel = timerWheel[probe];
     Node<K, V> next = sentinel.getNextInVariableOrder();
-    return (next == sentinel) ? Long.MAX_VALUE : (SPANS[i] - (nanos & spanMask));
+    return (next == sentinel) ? Long.MAX_VALUE : (SPANS[index] - (nanos & spanMask));
   }
 
   /**
@@ -296,8 +303,8 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   abstract class Traverser implements Iterator<Node<K, V>> {
     final long expectedNanos;
 
-    @Nullable Node<K, V> previous;
     @Nullable Node<K, V> current;
+    @Nullable Node<K, V> next;
 
     Traverser() {
       expectedNanos = nanos;
@@ -307,13 +314,13 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
     public boolean hasNext() {
       if (nanos != expectedNanos) {
         throw new ConcurrentModificationException();
-      } else if (current != null) {
+      } else if (next != null) {
         return true;
       } else if (isDone()) {
         return false;
       }
-      current = computeNext();
-      return (current != null);
+      next = computeNext();
+      return (next != null);
     }
 
     @Override
@@ -322,13 +329,13 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      previous = current;
-      current = null;
-      return previous;
+      current = next;
+      next = null;
+      return current;
     }
 
     @Nullable Node<K, V> computeNext() {
-      var node = (previous == null) ? sentinel() : previous;
+      var node = (current == null) ? sentinel() : current;
       for (;;) {
         node = traverse(node);
         if (node != sentinel()) {
