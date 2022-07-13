@@ -195,7 +195,7 @@ public final class EvictionTest {
     cache.policy().eviction().ifPresent(eviction -> {
       assertThat(context).hasWeightedSize(10);
     });
-    assertThat(context).removalNotifications().withCause(SIZE)
+    assertThat(context).notifications().withCause(SIZE)
         .contains(Int.valueOf(20), Int.valueOf(20)).exclusively();
     if (context.isCaffeine()) {
       assertThat(context).stats().evictionWeight(20);

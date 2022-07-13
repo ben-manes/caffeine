@@ -68,6 +68,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
@@ -906,6 +907,7 @@ public final class ExpireAfterVarTest {
         .hasValue(MAXIMUM_EXPIRY);
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.MOCKITO,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -1021,7 +1023,7 @@ public final class ExpireAfterVarTest {
     verifyNoInteractions(context.expiry());
     assertThat(cache).hasSize(context.initialSize());
     assertThat(cache).doesNotContainKey(context.absentKey());
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.absentKey(), context.absentValue()).exclusively();
   }
 
@@ -1036,7 +1038,7 @@ public final class ExpireAfterVarTest {
 
     verifyNoInteractions(context.expiry());
     assertThat(cache).hasSize(context.initialSize());
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.absentKey(), context.absentValue()).exclusively();
   }
 
@@ -1052,10 +1054,11 @@ public final class ExpireAfterVarTest {
     assertThat(cache).hasSize(1);
     verifyNoInteractions(context.expiry());
     assertThat(cache).containsKey(context.absentKey());
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
           .contains(context.original()).exclusively();
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -1104,9 +1107,10 @@ public final class ExpireAfterVarTest {
       assertThat(cache).containsEntry(key, value);
     }
     assertThat(cache).hasSize(context.initialSize());
-    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).notifications().isEmpty();
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -1154,6 +1158,8 @@ public final class ExpireAfterVarTest {
     assertThat(context).removalNotifications().withCause(EXPIRED)
         .contains(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().hasSize(2);
+    assertThat(context).evictionNotifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.absentValue()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -1176,6 +1182,8 @@ public final class ExpireAfterVarTest {
     assertThat(context).removalNotifications().withCause(EXPIRED)
         .contains(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().hasSize(2);
+    assertThat(context).evictionNotifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.absentValue()).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -1200,6 +1208,7 @@ public final class ExpireAfterVarTest {
         .contains(context.firstKey(), context.original().get(context.firstKey()));
     assertThat(context).removalNotifications().withCause(EXPIRED).contains(expired);
     assertThat(context).removalNotifications().hasSize(context.initialSize());
+    assertThat(context).evictionNotifications().withCause(EXPIRED).contains(expired).exclusively();
   }
 
   @Test(dataProvider = "caches")

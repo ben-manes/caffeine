@@ -494,7 +494,7 @@ public final class ExpirationTest {
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.synchronous().cleanUp();
 
-    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).notifications().isEmpty();
     future.complete(context.absentValue());
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(cache).containsEntry(context.absentKey(), future);
@@ -503,7 +503,7 @@ public final class ExpirationTest {
     assertThat(cache).doesNotContainKey(context.absentKey());
 
     cache.synchronous().cleanUp();
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.absentKey(), context.absentValue()).exclusively();
   }
 
@@ -569,7 +569,7 @@ public final class ExpirationTest {
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.synchronous().cleanUp();
 
-    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).notifications().isEmpty();
     future.complete(context.absentValue());
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(cache).containsEntry(context.absentKey(), future);
@@ -578,7 +578,7 @@ public final class ExpirationTest {
     assertThat(cache).doesNotContainKey(context.absentKey());
 
     cache.synchronous().cleanUp();
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.absentKey(), context.absentValue()).exclusively();
   }
 
@@ -1412,7 +1412,7 @@ public final class ExpirationTest {
     context.ticker().advance(10, TimeUnit.MINUTES);
     assertThat(map.keySet().iterator().hasNext()).isFalse();
     assertThat(map).isExhaustivelyEmpty();
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
   }
 
@@ -1433,7 +1433,7 @@ public final class ExpirationTest {
     assertThat(iterator.hasNext()).isFalse();
 
     assertThat(map).isExhaustivelyEmpty();
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
   }
 
@@ -1477,7 +1477,7 @@ public final class ExpirationTest {
     context.ticker().advance(10, TimeUnit.MINUTES);
     assertThat(map.values().iterator().hasNext()).isFalse();
     assertThat(map).isExhaustivelyEmpty();
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
   }
 
@@ -1498,7 +1498,7 @@ public final class ExpirationTest {
     assertThat(iterator.hasNext()).isFalse();
 
     assertThat(map).isExhaustivelyEmpty();
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
   }
 
@@ -1542,7 +1542,7 @@ public final class ExpirationTest {
     context.ticker().advance(10, TimeUnit.MINUTES);
     assertThat(map.keySet().iterator().hasNext()).isFalse();
     assertThat(map).isExhaustivelyEmpty();
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
   }
 
@@ -1563,7 +1563,7 @@ public final class ExpirationTest {
     assertThat(iterator.hasNext()).isFalse();
 
     assertThat(map).isExhaustivelyEmpty();
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
   }
 

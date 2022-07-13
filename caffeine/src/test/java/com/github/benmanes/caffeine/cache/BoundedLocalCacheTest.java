@@ -98,6 +98,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLogger;
@@ -280,6 +281,7 @@ public final class BoundedLocalCacheTest {
     assertThat(map.weightedSize()).isEqualTo(BoundedLocalCache.MAXIMUM_CAPACITY);
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.ONE)
   public void evict_alreadyRemoved(BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -446,6 +448,8 @@ public final class BoundedLocalCacheTest {
     assertThat(context).removalNotifications().withCause(SIZE)
         .contains(Int.valueOf(1), Int.valueOf(20));
     assertThat(context).removalNotifications().hasSize(2);
+    assertThat(context).evictionNotifications().withCause(SIZE)
+        .contains(Int.valueOf(1), Int.valueOf(20)).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -468,6 +472,8 @@ public final class BoundedLocalCacheTest {
     assertThat(context).removalNotifications().withCause(SIZE)
         .contains(Int.valueOf(1), Int.valueOf(20));
     assertThat(context).removalNotifications().hasSize(2);
+    assertThat(context).evictionNotifications().withCause(SIZE)
+        .contains(Int.valueOf(1), Int.valueOf(20)).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -492,6 +498,8 @@ public final class BoundedLocalCacheTest {
     assertThat(context).removalNotifications().withCause(SIZE)
         .contains(Int.valueOf(1), Int.valueOf(20));
     assertThat(context).removalNotifications().hasSize(2);
+    assertThat(context).evictionNotifications().withCause(SIZE)
+        .contains(Int.valueOf(1), Int.valueOf(20)).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -528,10 +536,11 @@ public final class BoundedLocalCacheTest {
     await().untilTrue(done);
 
     assertThat(node.getValue()).isEqualTo(newValue);
-    assertThat(context).removalNotifications().withCause(COLLECTED)
+    assertThat(context).notifications().withCause(COLLECTED)
         .contains(key, null).exclusively();
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = Maximum.UNREACHABLE,
@@ -594,7 +603,7 @@ public final class BoundedLocalCacheTest {
     await().untilTrue(done);
 
     assertThat(cache).containsEntry(key, key.negate());
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(key, key).exclusively();
   }
 
@@ -626,7 +635,7 @@ public final class BoundedLocalCacheTest {
     await().untilTrue(done);
 
     assertThat(cache).containsEntry(key, key);
-    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).notifications().isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -657,7 +666,7 @@ public final class BoundedLocalCacheTest {
     await().untilTrue(done);
 
     assertThat(cache).containsEntry(key, key);
-    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).notifications().isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -687,7 +696,7 @@ public final class BoundedLocalCacheTest {
     await().untilTrue(done);
 
     assertThat(cache).containsEntry(key, key.negate());
-    assertThat(context).removalNotifications().withCause(EXPIRED)
+    assertThat(context).notifications().withCause(EXPIRED)
         .contains(key, key).exclusively();
   }
 
@@ -720,7 +729,7 @@ public final class BoundedLocalCacheTest {
     await().untilTrue(done);
 
     assertThat(cache).containsEntry(key, key);
-    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).notifications().isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -736,7 +745,7 @@ public final class BoundedLocalCacheTest {
     keyReference.clear();
 
     cache.put(context.absentKey(), context.absentValue());
-    assertThat(context).removalNotifications().withCause(COLLECTED)
+    assertThat(context).notifications().withCause(COLLECTED)
         .contains(null, value).exclusively();
   }
 
@@ -755,7 +764,7 @@ public final class BoundedLocalCacheTest {
     cache.setMaximumSize(cache.size() - 1);
     cache.cleanUp();
 
-    assertThat(context).removalNotifications().withCause(COLLECTED)
+    assertThat(context).notifications().withCause(COLLECTED)
         .contains(null, value).exclusively();
   }
 
