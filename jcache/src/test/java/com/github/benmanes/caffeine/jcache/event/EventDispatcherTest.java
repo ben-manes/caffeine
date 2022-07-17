@@ -51,6 +51,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.Iterables;
+import com.google.common.testing.EqualsTester;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -85,7 +86,35 @@ public final class EventDispatcherTest {
         new MutableCacheEntryListenerConfiguration<Integer, Integer>(null, null, false, false);
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     dispatcher.register(configuration);
-    assertThat(dispatcher.dispatchQueues.keySet()).isEmpty();
+    assertThat(dispatcher.dispatchQueues).isEmpty();
+  }
+
+  @Test
+  public void register_twice() {
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var configuration = new MutableCacheEntryListenerConfiguration<>(
+        () -> createdListener, null, false, false);
+    dispatcher.register(configuration);
+    dispatcher.register(configuration);
+    assertThat(dispatcher.dispatchQueues).hasSize(1);
+  }
+
+  @Test
+  public void register_equality() {
+    var c1 = new MutableCacheEntryListenerConfiguration<>(
+        () -> createdListener, null, false, false);
+    var c2 = new MutableCacheEntryListenerConfiguration<>(
+        c1.getCacheEntryListenerFactory(), null, false, false);
+    var c3 = new MutableCacheEntryListenerConfiguration<>(
+        c1.getCacheEntryListenerFactory(), null, true, true);
+
+    new EqualsTester()
+        .addEqualityGroup(
+            new Registration<>(c1, entry -> true, new EventTypeAwareListener<>(createdListener)),
+            new Registration<>(c1, entry -> false, new EventTypeAwareListener<>(updatedListener)),
+            new Registration<>(c2, entry -> true, new EventTypeAwareListener<>(createdListener)))
+        .addEqualityGroup(c3)
+        .testEquals();
   }
 
   @Test
@@ -95,7 +124,7 @@ public final class EventDispatcherTest {
         () -> createdListener, null, false, false);
     dispatcher.register(configuration);
     dispatcher.deregister(configuration);
-    assertThat(dispatcher.dispatchQueues.keySet()).isEmpty();
+    assertThat(dispatcher.dispatchQueues).isEmpty();
   }
 
   @Test

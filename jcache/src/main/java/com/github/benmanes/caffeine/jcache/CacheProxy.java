@@ -755,7 +755,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public <C extends Configuration<K, V>> C getConfiguration(Class<C> clazz) {
     if (clazz.isInstance(configuration)) {
-      return clazz.cast(configuration);
+      synchronized (configuration) {
+        return clazz.cast(configuration.immutableCopy());
+      }
     }
     throw new IllegalArgumentException("The configuration class " + clazz
         + " is not supported by this implementation");
@@ -979,16 +981,20 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void registerCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
     requireNotClosed();
-    configuration.addCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
-    dispatcher.register(cacheEntryListenerConfiguration);
+    synchronized (configuration) {
+      configuration.addCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
+      dispatcher.register(cacheEntryListenerConfiguration);
+    }
   }
 
   @Override
   public void deregisterCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
     requireNotClosed();
-    configuration.removeCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
-    dispatcher.deregister(cacheEntryListenerConfiguration);
+    synchronized (configuration) {
+      configuration.removeCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
+      dispatcher.deregister(cacheEntryListenerConfiguration);
+    }
   }
 
   @Override

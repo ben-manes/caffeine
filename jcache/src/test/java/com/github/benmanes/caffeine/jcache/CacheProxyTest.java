@@ -20,6 +20,9 @@ import static org.mockito.Mockito.verify;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalLong;
 
 import javax.cache.Cache;
 import javax.cache.configuration.Configuration;
@@ -30,6 +33,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 
 import org.mockito.Mockito;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
@@ -54,6 +58,59 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     configuration.setWriteThrough(true);
     configuration.setReadThrough(true);
     return configuration;
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void getConfiguration_immutable() {
+    var config = jcache.getConfiguration(CaffeineConfiguration.class);
+    List<Runnable> modifiers = List.of(
+        () -> config.getCacheEntryListenerConfigurations().iterator().remove(),
+        () -> config.addCacheEntryListenerConfiguration(null),
+        () -> config.setCacheLoaderFactory(null),
+        () -> config.setCacheWriterFactory(null),
+        () -> config.setCopierFactory(null),
+        () -> config.setExecutorFactory(null),
+        () -> config.setExpireAfterAccess(OptionalLong.empty()),
+        () -> config.setExpireAfterWrite(OptionalLong.empty()),
+        () -> config.setExpiryFactory(Optional.empty()),
+        () -> config.setExpiryPolicyFactory(null),
+        () -> config.setManagementEnabled(false),
+        () -> config.setMaximumSize(OptionalLong.empty()),
+        () -> config.setMaximumWeight(OptionalLong.empty()),
+        () -> config.setNativeStatisticsEnabled(false),
+        () -> config.setReadThrough(false),
+        () -> config.setRefreshAfterWrite(OptionalLong.empty()),
+        () -> config.setSchedulerFactory(null),
+        () -> config.setStatisticsEnabled(false),
+        () -> config.setStoreByValue(false),
+        () -> config.setTickerFactory(null),
+        () -> config.setTypes(String.class, String.class),
+        () -> config.setWeigherFactory(Optional.empty()),
+        () -> config.setWriteThrough(false));
+    for (var modifier : modifiers) {
+      try {
+        modifier.run();
+        Assert.fail();
+      } catch (UnsupportedOperationException expected) {}
+    }
+
+    assertThat(config).isEqualTo(jcacheConfiguration);
+    assertThat(config.toString()).isEqualTo(jcacheConfiguration.toString());
+
+    var configuration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+        /* listener */ () -> listener, /* filter */ () -> event -> true,
+        /* isOldValueRequired */ false, /* isSynchronous */ false);
+    jcache.registerCacheEntryListener(configuration);
+    assertThat(config.getCacheEntryListenerConfigurations()).hasSize(0);
+
+    var config2 = jcache.getConfiguration(CaffeineConfiguration.class);
+    assertThat(config2).isNotEqualTo(config);
+    assertThat(config2.getCacheEntryListenerConfigurations()
+        .spliterator().estimateSize()).isEqualTo(1);
+    assertThat(config2.getCacheEntryListenerConfigurations()).hasSize(1);
+    assertThat(config2.getCacheEntryListenerConfigurations().toString())
+        .isEqualTo(List.of(configuration).toString());
   }
 
   @Test(expectedExceptions = IllegalArgumentException.class)

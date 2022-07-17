@@ -54,6 +54,7 @@ public abstract class AbstractJCacheTest {
   protected final ImmutableMap<Integer, Integer> entries = ImmutableMap.of(
       KEY_1, VALUE_1, KEY_2, VALUE_2, KEY_3, VALUE_3);
 
+  protected CaffeineConfiguration<Integer, Integer> jcacheConfiguration;
   protected LoadingCacheProxy<Integer, Integer> jcacheLoading;
   protected CacheProxy<Integer, Integer> jcache;
   protected CacheManager cacheManager;
@@ -68,8 +69,9 @@ public abstract class AbstractJCacheTest {
 
   @BeforeMethod(alwaysRun = true)
   public void before() {
+    jcacheConfiguration = getConfiguration();
     ticker = new FakeTicker().advance(START_TIME_MS, TimeUnit.MILLISECONDS);
-    jcache = (CacheProxy<Integer, Integer>) cacheManager.createCache("jcache", getConfiguration());
+    jcache = (CacheProxy<Integer, Integer>) cacheManager.createCache("jcache", jcacheConfiguration);
     jcacheLoading = (LoadingCacheProxy<Integer, Integer>) cacheManager.createCache(
         "jcacheLoading", getLoadingConfiguration());
   }

@@ -17,9 +17,11 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Spliterator;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
@@ -58,6 +60,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private static final long serialVersionUID = 1L;
 
   private final MutableConfiguration<K, V> delegate;
+  private final boolean readOnly;
 
   private @Nullable Factory<Weigher<K, V>> weigherFactory;
   private @Nullable Factory<Expiry<K, V>> expiryFactory;
@@ -81,9 +84,15 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     tickerFactory = SYSTEM_TICKER;
     executorFactory = COMMON_POOL;
     copierFactory = JAVA_COPIER;
+    readOnly = false;
   }
 
+  /** Returns a modifiable copy of the configuration. */
   public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
+    this(configuration, /* readOnly */ false);
+  }
+
+  private CaffeineConfiguration(CompleteConfiguration<K, V> configuration, boolean readOnly) {
     delegate = new MutableConfiguration<>(configuration);
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       CaffeineConfiguration<K, V> config = (CaffeineConfiguration<K, V>) configuration;
@@ -105,6 +114,18 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       executorFactory = COMMON_POOL;
       copierFactory = JAVA_COPIER;
     }
+    this.readOnly = readOnly;
+  }
+
+  /** Returns an unmodifiable copy of this configuration. */
+  public CaffeineConfiguration<K, V> immutableCopy() {
+    return new CaffeineConfiguration<>(this, /* immutable */ true);
+  }
+
+  private void checkIfReadOnly() {
+    if (readOnly) {
+      throw new UnsupportedOperationException();
+    }
   }
 
   @Override
@@ -119,23 +140,26 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setTypes}. */
   public void setTypes(Class<K> keyType, Class<V> valueType) {
+    checkIfReadOnly();
     delegate.setTypes(keyType, valueType);
   }
 
   @Override
   public Iterable<CacheEntryListenerConfiguration<K, V>> getCacheEntryListenerConfigurations() {
-    return delegate.getCacheEntryListenerConfigurations();
+    return new UnmodifiableIterable<>(delegate.getCacheEntryListenerConfigurations());
   }
 
   /** See {@link MutableConfiguration#addCacheEntryListenerConfiguration}. */
   public void addCacheEntryListenerConfiguration(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
+    checkIfReadOnly();
     delegate.addCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
   }
 
   /** See {@link MutableConfiguration#removeCacheEntryListenerConfiguration}. */
   public void removeCacheEntryListenerConfiguration(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
+    checkIfReadOnly();
     delegate.removeCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
   }
 
@@ -146,6 +170,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setCacheLoaderFactory}. */
   public void setCacheLoaderFactory(Factory<? extends CacheLoader<K, V>> factory) {
+    checkIfReadOnly();
     delegate.setCacheLoaderFactory(factory);
   }
 
@@ -171,6 +196,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setCacheWriterFactory}. */
   public void setCacheWriterFactory(Factory<? extends CacheWriter<? super K, ? super V>> factory) {
+    checkIfReadOnly();
     delegate.setCacheWriterFactory(factory);
   }
 
@@ -181,6 +207,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setExpiryPolicyFactory}. */
   public void setExpiryPolicyFactory(Factory<? extends ExpiryPolicy> factory) {
+    checkIfReadOnly();
     delegate.setExpiryPolicyFactory(factory);
   }
 
@@ -191,6 +218,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setReadThrough}. */
   public void setReadThrough(boolean isReadThrough) {
+    checkIfReadOnly();
     delegate.setReadThrough(isReadThrough);
   }
 
@@ -201,6 +229,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setWriteThrough}. */
   public void setWriteThrough(boolean isWriteThrough) {
+    checkIfReadOnly();
     delegate.setWriteThrough(isWriteThrough);
   }
 
@@ -211,6 +240,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setStoreByValue}. */
   public void setStoreByValue(boolean isStoreByValue) {
+    checkIfReadOnly();
     delegate.setStoreByValue(isStoreByValue);
   }
 
@@ -231,6 +261,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param enabled true to enable native statistics, false to disable.
    */
   public void setNativeStatisticsEnabled(boolean enabled) {
+    checkIfReadOnly();
     this.nativeStatistics = enabled;
   }
 
@@ -241,6 +272,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setStatisticsEnabled}. */
   public void setStatisticsEnabled(boolean enabled) {
+    checkIfReadOnly();
     delegate.setStatisticsEnabled(enabled);
   }
 
@@ -252,6 +284,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setManagementEnabled}. */
   public void setManagementEnabled(boolean enabled) {
+    checkIfReadOnly();
     delegate.setManagementEnabled(enabled);
   }
 
@@ -270,6 +303,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param factory the {@link Copier} {@link Factory}
    */
   public void setCopierFactory(Factory<Copier> factory) {
+    checkIfReadOnly();
     copierFactory = requireNonNull(factory);
   }
 
@@ -288,6 +322,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param factory the {@link Scheduler} {@link Factory}
    */
   public void setSchedulerFactory(Factory<Scheduler> factory) {
+    checkIfReadOnly();
     schedulerFactory = requireNonNull(factory);
   }
 
@@ -306,6 +341,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param factory the {@link Ticker} {@link Factory}
    */
   public void setTickerFactory(Factory<Ticker> factory) {
+    checkIfReadOnly();
     tickerFactory = requireNonNull(factory);
   }
 
@@ -324,6 +360,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param factory the {@link Executor} {@link Factory}
    */
   public void setExecutorFactory(Factory<Executor> factory) {
+    checkIfReadOnly();
     executorFactory = requireNonNull(factory);
   }
 
@@ -344,6 +381,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param refreshAfterWriteNanos the duration in nanoseconds
    */
   public void setRefreshAfterWrite(OptionalLong refreshAfterWriteNanos) {
+    checkIfReadOnly();
     this.refreshAfterWriteNanos = refreshAfterWriteNanos.isPresent()
         ? refreshAfterWriteNanos.getAsLong()
         : null;
@@ -366,6 +404,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param expireAfterWriteNanos the duration in nanoseconds
    */
   public void setExpireAfterWrite(OptionalLong expireAfterWriteNanos) {
+    checkIfReadOnly();
     this.expireAfterWriteNanos = expireAfterWriteNanos.isPresent()
         ? expireAfterWriteNanos.getAsLong()
         : null;
@@ -388,6 +427,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param expireAfterAccessNanos the duration in nanoseconds
    */
   public void setExpireAfterAccess(OptionalLong expireAfterAccessNanos) {
+    checkIfReadOnly();
     this.expireAfterAccessNanos = expireAfterAccessNanos.isPresent()
         ? expireAfterAccessNanos.getAsLong()
         : null;
@@ -409,6 +449,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    */
   @SuppressWarnings("unchecked")
   public void setExpiryFactory(Optional<Factory<? extends Expiry<K, V>>> factory) {
+    checkIfReadOnly();
     expiryFactory = (Factory<Expiry<K, V>>) factory.orElse(null);
   }
 
@@ -418,6 +459,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param maximumSize the maximum size
    */
   public void setMaximumSize(OptionalLong maximumSize) {
+    checkIfReadOnly();
     this.maximumSize = maximumSize.isPresent()
         ? maximumSize.getAsLong()
         : null;
@@ -440,6 +482,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param maximumWeight the maximum weighted size
    */
   public void setMaximumWeight(OptionalLong maximumWeight) {
+    checkIfReadOnly();
     this.maximumWeight = maximumWeight.isPresent()
         ? maximumWeight.getAsLong()
         : null;
@@ -472,6 +515,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    */
   @SuppressWarnings("unchecked")
   public void setWeigherFactory(Optional<Factory<? extends Weigher<K, V>>> factory) {
+    checkIfReadOnly();
     weigherFactory = (Factory<Weigher<K, V>>) factory.orElse(null);
   }
 
@@ -498,5 +542,30 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   @Override
   public int hashCode() {
     return delegate.hashCode();
+  }
+
+  private static final class UnmodifiableIterable<E> implements Iterable<E> {
+    private final Iterable<E> delegate;
+
+    private UnmodifiableIterable(Iterable<E> delegate) {
+      this.delegate = delegate;
+    }
+    @Override public Iterator<E> iterator() {
+      var iterator = delegate.iterator();
+      return new Iterator<E>() {
+        @Override public boolean hasNext() {
+          return iterator.hasNext();
+        }
+        @Override public E next() {
+          return iterator.next();
+        }
+      };
+    }
+    @Override public Spliterator<E> spliterator() {
+      return delegate.spliterator();
+    }
+    @Override public String toString() {
+      return delegate.toString();
+    }
   }
 }
