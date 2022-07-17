@@ -22,11 +22,11 @@ import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 import javax.cache.Cache;
@@ -41,10 +41,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * A dispatcher that publishes cache events to listeners for asynchronous execution.
  * <p>
  * A {@link CacheEntryListener} is required to receive events in the order of the actions being
- * performed on the associated key. This implementation supports this through an actor-like model
- * by using a dispatch queue per listener. A listener is never executed in parallel on different
- * events, but may be executed sequentially on different threads. Batch processing of the dispatch
- * queue is not presently supported.
+ * performed on the associated key. This implementation supports this by using a dispatch queue for
+ * each listener and key pair, and provides the following characteristics:
+ * <ul>
+ *   <li>A listener may be executed in parallel for events with different keys
+ *   <li>A listener is executed sequentially for events with the same key. This creates a dependency
+ *       relationship between events and waiting dependents do not consume threads.
+ *   <li>A listener receives a single event per invocation; batch processing is not supported
+ *   <li>Multiple listeners may be executed in parallel for the same event
+ *   <li>Listeners process events at their own rate and do not explicitly block each other
+ *   <li>Listeners share a pool of threads for event processing. A slow listener may limit the
+ *       throughput if all threads are busy handling distinct events, causing the execution of other
+ *       listeners to be delayed until the executor is able to process the work.
+ * </ul>
  * <p>
  * Some listeners may be configured as <tt>synchronous</tt>, meaning that the publishing thread
  * should wait until the listener has processed the event. The calling thread should publish within
@@ -58,8 +67,8 @@ public final class EventDispatcher<K, V> {
   static final ThreadLocal<List<CompletableFuture<Void>>> pending =
       ThreadLocal.withInitial(ArrayList::new);
 
+  final ConcurrentMap<Registration<K, V>, ConcurrentMap<K, CompletableFuture<Void>>> dispatchQueues;
   final Executor executor;
-  final Map<Registration<K, V>, CompletableFuture<Void>> dispatchQueues;
 
   public EventDispatcher(Executor executor) {
     this.dispatchQueues = new ConcurrentHashMap<>();
@@ -91,7 +100,7 @@ public final class EventDispatcher<K, V> {
     }
 
     var registration = new Registration<K, V>(configuration, filter, listener);
-    dispatchQueues.putIfAbsent(registration, CompletableFuture.completedFuture(null));
+    dispatchQueues.putIfAbsent(registration, new ConcurrentHashMap<>());
   }
 
   /**
@@ -207,6 +216,7 @@ public final class EventDispatcher<K, V> {
   }
 
   /** Broadcasts the event to the interested listener's dispatch queues. */
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void publish(Cache<K, V> cache, EventType eventType, K key,
       boolean hasOldValue, @Nullable V oldValue, @Nullable V newValue, boolean quiet) {
     if (dispatchQueues.isEmpty()) {
@@ -214,7 +224,8 @@ public final class EventDispatcher<K, V> {
     }
 
     JCacheEntryEvent<K, V> event = null;
-    for (var registration : dispatchQueues.keySet()) {
+    for (var entry : dispatchQueues.entrySet()) {
+      var registration = entry.getKey();
       if (!registration.getCacheEntryListener().isCompatible(eventType)) {
         continue;
       }
@@ -226,12 +237,23 @@ public final class EventDispatcher<K, V> {
       }
 
       JCacheEntryEvent<K, V> e = event;
-      var future = dispatchQueues.computeIfPresent(registration, (k, queue) -> {
+      var dispatchQueue = entry.getValue();
+      var future = dispatchQueue.compute(key, (k, queue) -> {
         Runnable action = () -> registration.getCacheEntryListener().dispatch(e);
-        return queue.thenRunAsync(action, executor);
+        return (queue == null)
+            ? CompletableFuture.runAsync(action, executor)
+            : queue.thenRunAsync(action, executor);
       });
-      if ((future != null) && registration.isSynchronous() && !quiet) {
-        pending.get().add(future);
+      if (future != null) {
+        future.whenComplete((result, error) -> {
+          // optimistic check to avoid locking if not a match
+          if (dispatchQueue.get(key) == future) {
+            dispatchQueue.remove(key, future);
+          }
+        });
+        if (registration.isSynchronous() && !quiet) {
+          pending.get().add(future);
+        }
       }
     }
   }

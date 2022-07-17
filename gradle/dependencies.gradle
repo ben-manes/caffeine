@@ -44,7 +44,7 @@ ext {
     googleJavaFormat: '1.15.0',
     guava: '31.1-jre',
     hazelcast: '5.1.2',
-    jackrabbit: '1.42.0',
+    jackrabbit: '1.44.0',
     jamm: '0.3.3',
     javaObjectLayout: '0.16',
     javapoet: '1.13.0',
