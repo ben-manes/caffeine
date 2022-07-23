@@ -1274,7 +1274,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               if (Async.isReady(future)) {
                 @SuppressWarnings("NullAway")
                 var refresh = cacheLoader.asyncReload(key, future.join(), executor);
-                refreshFuture[0] = refresh;
+                refreshFuture[0] = requireNonNull(refresh, "Null future");
               } else {
                 // no-op if load is pending
                 return future;
@@ -1282,7 +1282,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             } else {
               @SuppressWarnings("NullAway")
               var refresh = cacheLoader.asyncReload(key, oldValue, executor);
-              refreshFuture[0] = refresh;
+              refreshFuture[0] = requireNonNull(refresh, "Null future");
             }
             return refreshFuture[0];
           } catch (InterruptedException e) {

@@ -448,6 +448,29 @@ public final class AsyncLoadingCacheTest {
     await().untilAsserted(() -> assertThat(cache).containsEntry(key, key.negate()));
   }
 
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(population = Population.EMPTY, compute = Compute.ASYNC)
+  public void refresh_nullFuture_load(CacheContext context) {
+    var cache = context.buildAsync((Int key, Executor executor) -> null);
+    cache.synchronous().refresh(context.absentKey());
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(population = Population.EMPTY, compute = Compute.ASYNC)
+  public void refresh_nullFuture_reload(CacheContext context) {
+    var cache = context.buildAsync(new AsyncCacheLoader<Int, Int>() {
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        return null;
+      }
+    });
+    cache.synchronous().put(context.absentKey(), context.absentValue());
+    cache.synchronous().refresh(context.absentKey());
+  }
+
   @Test(dataProvider = "caches", timeOut = 5_000) // Issue #69
   @CacheSpec(population = Population.EMPTY,
       compute = Compute.ASYNC, executor = CacheExecutor.THREADED)
@@ -505,6 +528,66 @@ public final class AsyncLoadingCacheTest {
       int failures = context.isGuava() ? 1 : 0;
       assertThat(context).stats().hits(0).misses(0).success(0).failures(failures);
     }
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void refresh_current_inFlight(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    cache.synchronous().refresh(context.absentKey());
+    assertThat(cache).containsEntry(context.absentKey(), future);
+    assertThat(cache.synchronous().policy().refreshes()).isEmpty();
+    future.complete(context.absentValue());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.ASYNC, removalListener = Listener.CONSUMING)
+  public void refresh_current_sameInstance(CacheContext context) {
+    var future = context.absentValue().asFuture();
+    var cache = context.buildAsync((key, executor) -> future);
+
+    cache.put(context.absentKey(), future);
+    cache.synchronous().refresh(context.absentKey());
+    assertThat(context).notifications().isEmpty();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void refresh_current_failed(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var future = context.absentValue().asFuture();
+    cache.put(context.absentKey(), future);
+
+    future.obtrudeException(new Exception());
+    assertThat(cache.asMap()).containsKey(context.absentKey());
+
+    cache.synchronous().refresh(context.absentKey());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.ASYNC,
+      removalListener = Listener.CONSUMING, executor = CacheExecutor.THREADED)
+  public void refresh_current_removed(CacheContext context) {
+    var started = new AtomicBoolean();
+    var done = new AtomicBoolean();
+    var cache = context.buildAsync((Int key) -> {
+      started.set(true);
+      await().untilTrue(done);
+      return key;
+    });
+
+    cache.put(context.absentKey(), context.absentValue().asFuture());
+    cache.synchronous().refresh(context.absentKey());
+    await().untilTrue(started);
+
+    cache.synchronous().invalidate(context.absentKey());
+    done.set(true);
+
+    await().untilAsserted(() -> {
+      assertThat(context).removalNotifications().containsExactlyValues(
+          context.absentKey(), context.absentValue());
+    });
   }
 
   /* --------------- AsyncCacheLoader --------------- */

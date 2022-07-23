@@ -930,6 +930,36 @@ public final class LoadingCacheTest {
     assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  public void refresh_nullFuture_load(CacheContext context) {
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        return null;
+      }
+    });
+    cache.refresh(context.absentKey());
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  public void refresh_nullFuture_reload(CacheContext context) {
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        return null;
+      }
+    });
+    cache.put(context.absentKey(), context.absentValue());
+    cache.refresh(context.absentKey());
+  }
+
   /* --------------- refreshAll --------------- */
 
   @CheckNoEvictions @CheckNoStats
@@ -1010,6 +1040,36 @@ public final class LoadingCacheTest {
 
     assertThat(future2).hasCompletedExceptionally();
     assertThat(cache).containsExactlyEntriesIn(context.original());
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  public void refreshAll_nullFuture_load(CacheContext context) {
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        return null;
+      }
+    });
+    cache.refreshAll(context.absent().keySet());
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
+  public void refreshAll_nullFuture_reload(CacheContext context) {
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        return null;
+      }
+    });
+    cache.put(context.absentKey(), context.absentValue());
+    cache.refreshAll(context.absent().keySet());
   }
 
   /* --------------- CacheLoader --------------- */

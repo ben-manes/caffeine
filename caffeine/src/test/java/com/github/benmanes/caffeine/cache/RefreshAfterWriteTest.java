@@ -357,6 +357,40 @@ public final class RefreshAfterWriteTest {
     assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void refreshIfNeeded_nullFuture(CacheContext context) {
+    var refreshed = new AtomicBoolean();
+    CacheLoader<Int, Int> loader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        refreshed.set(true);
+        return null;
+      }
+    };
+    TestLoggerFactory.getAllTestLoggers().values()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+
+    var cache = context.isAsync()
+        ? context.buildAsync(loader).synchronous()
+        : context.build(loader);
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    cache.get(context.absentKey());
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(NullPointerException.class);
+    assertThat(event.getLevel()).isEqualTo(WARN);
+
+    assertThat(refreshed.get()).isTrue();
+    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
   /* --------------- getIfPresent --------------- */
 
   @CheckNoEvictions

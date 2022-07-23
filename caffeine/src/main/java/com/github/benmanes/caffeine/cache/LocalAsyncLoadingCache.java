@@ -264,7 +264,9 @@ abstract class LocalAsyncLoadingCache<K, V>
         refreshed[0] = true;
         startTime[0] = asyncCache.cache().statsTicker().read();
         try {
-          return asyncCache.cacheLoader.asyncReload(key, oldValue, asyncCache.cache().executor());
+          var reloadFuture = asyncCache.cacheLoader.asyncReload(
+              key, oldValue, asyncCache.cache().executor());
+          return requireNonNull(reloadFuture, "Null future");
         } catch (RuntimeException e) {
           throw e;
         } catch (InterruptedException e) {
@@ -302,7 +304,7 @@ abstract class LocalAsyncLoadingCache<K, V>
                 // If the entry is absent then discard the refresh and maybe notifying the listener
                 discard[0] = (newValue != null);
                 return null;
-              } else if (currentValue == newValue) {
+              } else if ((currentValue == newValue) || (currentValue == castedFuture)) {
                 // If the reloaded value is the same instance then no-op
                 return currentValue;
               } else if (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)) {

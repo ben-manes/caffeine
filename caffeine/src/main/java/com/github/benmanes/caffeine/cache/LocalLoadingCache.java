@@ -116,7 +116,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         var refreshFuture = (oldValue[0] == null)
             ? cacheLoader().asyncLoad(key, cache().executor())
             : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
-        reloading[0] = refreshFuture;
+        reloading[0] = requireNonNull(refreshFuture, "Null future");
         return refreshFuture;
       } catch (RuntimeException e) {
         throw e;
