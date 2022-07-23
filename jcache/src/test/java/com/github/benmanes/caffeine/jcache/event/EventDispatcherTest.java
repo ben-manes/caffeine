@@ -113,7 +113,9 @@ public final class EventDispatcherTest {
             new Registration<>(c1, entry -> true, new EventTypeAwareListener<>(createdListener)),
             new Registration<>(c1, entry -> false, new EventTypeAwareListener<>(updatedListener)),
             new Registration<>(c2, entry -> true, new EventTypeAwareListener<>(createdListener)))
-        .addEqualityGroup(c3)
+        .addEqualityGroup(c1, c2)
+        .addEqualityGroup(
+            new Registration<>(c3, entry -> true, new EventTypeAwareListener<>(createdListener)))
         .testEquals();
   }
 

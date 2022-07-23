@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Arrays;
 
@@ -184,8 +183,6 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
-      checkState(key != Long.MIN_VALUE);
-
       queueIndex = -1;
       prev.next = next;
       next.prev = prev;

@@ -384,8 +384,6 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     }
 
     public boolean isInStack(StackType stackType) {
-      checkState(key != Long.MIN_VALUE);
-
       if (stackType == StackType.S) {
         return isInS;
       } else if (stackType == StackType.Q) {

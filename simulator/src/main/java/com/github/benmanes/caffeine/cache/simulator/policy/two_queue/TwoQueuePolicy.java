@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -227,8 +225,6 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
-      checkState(key != Long.MIN_VALUE);
-
       prev.next = next;
       next.prev = prev;
       prev = next = UNLINKED; // mark as unlinked

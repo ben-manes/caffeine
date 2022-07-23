@@ -89,10 +89,7 @@ final class StrongInterner<E> implements Interner<E> {
     }
 
     var value = map.putIfAbsent(sample, sample);
-    if (value == null) {
-      return sample;
-    }
-    return value;
+    return (value == null) ? sample : value;
   }
 }
 

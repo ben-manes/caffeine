@@ -346,8 +346,6 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     }
 
     public boolean isInStack(StackType stackType) {
-      checkState(key != Long.MIN_VALUE);
-
       if (stackType == StackType.FILTER) {
         return isInFilter;
       } else if (stackType == StackType.MAIN) {

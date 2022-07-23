@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
@@ -200,8 +199,6 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
-      checkState(key != Long.MIN_VALUE);
-
       prev.next = next;
       next.prev = prev;
       prev = next = UNLINKED; // mark as unlinked

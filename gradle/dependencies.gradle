@@ -28,7 +28,7 @@ ext {
     akka: '2.6.19',
     cache2k: '2.6.1.Final',
     checkerFramework: '3.23.0',
-    coherence: '22.06',
+    coherence: '22.06.1',
     commonsCompress: '1.21',
     commonsLang3: '3.12.0',
     commonsMath3: '3.6.1',
