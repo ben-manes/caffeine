@@ -2487,9 +2487,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
     requireNonNull(function);
 
-    BiFunction<K, V, V> remappingFunction = (key, oldValue) -> {
-      return (oldValue == null) ? null : requireNonNull(function.apply(key, oldValue));
-    };
+    BiFunction<K, V, V> remappingFunction = (key, oldValue) ->
+        requireNonNull(function.apply(key, oldValue));
     for (K key : keySet()) {
       long[] now = { expirationTicker().read() };
       Object lookupKey = nodeFactory.newLookupKey(key);
@@ -3115,13 +3114,55 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    public boolean contains(Object obj) {
-      return cache.containsKey(obj);
+    public boolean contains(Object o) {
+      return cache.containsKey(o);
     }
 
     @Override
-    public boolean remove(Object obj) {
-      return (cache.remove(obj) != null);
+    public boolean removeAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      if ((collection instanceof Set<?>) && (collection.size() > size())) {
+        for (K key : this) {
+          if (collection.contains(key)) {
+            modified |= remove(key);
+          }
+        }
+      } else {
+        for (var item : collection) {
+          modified |= (item != null) && remove(item);
+        }
+      }
+      return modified;
+    }
+
+    @Override
+    public boolean remove(Object o) {
+      return (cache.remove(o) != null);
+    }
+
+    @Override
+    public boolean removeIf(Predicate<? super K> filter) {
+      requireNonNull(filter);
+      boolean modified = false;
+      for (K key : this) {
+        if (filter.test(key) && remove(key)) {
+          modified = true;
+        }
+      }
+      return modified;
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      for (K key : this) {
+        if (!collection.contains(key) && remove(key)) {
+          modified = true;
+        }
+      }
+      return modified;
     }
 
     @Override
@@ -3252,6 +3293,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
+    @SuppressWarnings("NullAway")
+    public boolean removeAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
+        if (collection.contains(iterator.value) && cache.remove(iterator.key, iterator.value)) {
+          modified = true;
+        }
+        iterator.advance();
+      }
+      return modified;
+    }
+
+    @Override
+    @SuppressWarnings("NullAway")
     public boolean remove(Object o) {
       if (o == null) {
         return false;
@@ -3269,14 +3325,28 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @SuppressWarnings("NullAway")
     public boolean removeIf(Predicate<? super V> filter) {
       requireNonNull(filter);
-      boolean removed = false;
+      boolean modified = false;
       for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
         if (filter.test(iterator.value)) {
-          removed |= cache.remove(iterator.key, iterator.value);
+          modified |= cache.remove(iterator.key, iterator.value);
         }
         iterator.advance();
       }
-      return removed;
+      return modified;
+    }
+
+    @Override
+    @SuppressWarnings("NullAway")
+    public boolean retainAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
+        if (!collection.contains(iterator.value) && cache.remove(iterator.key, iterator.value)) {
+          modified = true;
+        }
+        iterator.advance();
+      }
+      return modified;
     }
 
     @Override
@@ -3402,11 +3472,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    public boolean contains(Object obj) {
-      if (!(obj instanceof Entry<?, ?>)) {
+    public boolean contains(Object o) {
+      if (!(o instanceof Entry<?, ?>)) {
         return false;
       }
-      var entry = (Entry<?, ?>) obj;
+      var entry = (Entry<?, ?>) o;
       var key = entry.getKey();
       var value = entry.getValue();
       if ((key == null) || (value == null)) {
@@ -3417,11 +3487,29 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    public boolean remove(Object obj) {
-      if (!(obj instanceof Entry<?, ?>)) {
+    public boolean removeAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      if ((collection instanceof Set<?>) && (collection.size() > size())) {
+        for (var entry : this) {
+          if (collection.contains(entry)) {
+            modified |= remove(entry);
+          }
+        }
+      } else {
+        for (var item : collection) {
+          modified |= (item != null) && remove(item);
+        }
+      }
+      return modified;
+    }
+
+    @Override
+    public boolean remove(Object o) {
+      if (!(o instanceof Entry<?, ?>)) {
         return false;
       }
-      var entry = (Entry<?, ?>) obj;
+      var entry = (Entry<?, ?>) o;
       var key = entry.getKey();
       return (key != null) && cache.remove(key, entry.getValue());
     }
@@ -3429,13 +3517,25 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override
     public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
       requireNonNull(filter);
-      boolean removed = false;
+      boolean modified = false;
       for (Entry<K, V> entry : this) {
         if (filter.test(entry)) {
-          removed |= cache.remove(entry.getKey(), entry.getValue());
+          modified |= cache.remove(entry.getKey(), entry.getValue());
         }
       }
-      return removed;
+      return modified;
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      for (var entry : this) {
+        if (!collection.contains(entry) && remove(entry)) {
+          modified = true;
+        }
+      }
+      return modified;
     }
 
     @Override

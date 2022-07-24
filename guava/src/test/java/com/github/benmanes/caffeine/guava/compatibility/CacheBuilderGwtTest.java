@@ -469,7 +469,6 @@ public class CacheBuilderGwtTest extends TestCase {
     assertEquals(ImmutableSet.of(20, 5), foundKeys);
   }
 
-
   public void testAsMapKeySet_contains() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)

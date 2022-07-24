@@ -1278,7 +1278,6 @@ public final class BoundedLocalCacheTest {
     context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
     cache.cleanUp();
 
-
     for (var node : List.copyOf(cache.accessOrderWindowDeque())) {
       node.setAccessTime(context.ticker().read());
     }

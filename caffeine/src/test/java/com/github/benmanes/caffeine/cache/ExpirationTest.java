@@ -1387,7 +1387,6 @@ public final class ExpirationTest {
     assertThat(map).containsKey(key);
   }
 
-
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },

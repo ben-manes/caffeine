@@ -65,7 +65,6 @@ public final class CaffeineCachingProviderTest {
     });
   }
 
-
   @Test
   public void resource_notFound() {
     runWithClassloader(provider -> {

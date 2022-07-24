@@ -81,6 +81,23 @@
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache$KeySetView"/>
+    <Or>
+      <Method name="removeIf"/>
+      <Method name="removeAll"/>
+      <Method name="retainAll"/>
+    </Or>
+    <Bug pattern="DWI_DELETING_WHILE_ITERATING"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache$EntrySetView"/>
+    <Or>
+      <Method name="removeAll"/>
+      <Method name="retainAll"/>
+    </Or>
+    <Bug pattern="DWI_DELETING_WHILE_ITERATING"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.Caffeine"/>
     <Or>
       <Method name="requireArgument"/>
@@ -120,6 +137,14 @@
     <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsMapView$EntrySet"/>
+    <Or>
+      <Method name="removeAll"/>
+      <Method name="retainAll"/>
+    </Or>
+    <Bug pattern="DWI_DELETING_WHILE_ITERATING"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsMapView$EntrySet$1"/>
     <Method name="next"/>
     <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
@@ -155,6 +180,23 @@
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.StripedBuffer"/>
     <Bug pattern="VO_VOLATILE_REFERENCE_TO_ARRAY"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.UnboundedLocalCache$KeySetView"/>
+    <Or>
+      <Method name="removeIf"/>
+      <Method name="removeAll"/>
+      <Method name="retainAll"/>
+    </Or>
+    <Bug pattern="DWI_DELETING_WHILE_ITERATING"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.UnboundedLocalCache$EntrySetView"/>
+    <Or>
+      <Method name="removeAll"/>
+      <Method name="retainAll"/>
+    </Or>
+    <Bug pattern="DWI_DELETING_WHILE_ITERATING"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.WriteThroughEntry"/>

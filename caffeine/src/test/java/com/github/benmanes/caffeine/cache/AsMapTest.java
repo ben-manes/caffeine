@@ -30,8 +30,15 @@ import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
 import static java.util.stream.Collectors.toMap;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.AbstractMap;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,6 +55,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.eclipse.collections.impl.factory.Sets;
+import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -1762,6 +1771,100 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void keySet_removeAll_null(Map<Int, Int> map, CacheContext context) {
+    map.keySet().removeAll(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_removeAll_nullKey(Map<Int, Int> map, CacheContext context) {
+    map.keySet().removeAll(Arrays.asList((Object) null));
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_removeAll_none_empty(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().removeAll(Set.of())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_removeAll_none_populated(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().removeAll(Set.of(context.absentKey()))).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySet_removeAll_partial(Map<Int, Int> map, CacheContext context) {
+    var expected = new HashMap<>(context.original());
+    expected.keySet().removeAll(context.firstMiddleLastKeys());
+    assertThat(map.keySet().removeAll(context.firstMiddleLastKeys())).isTrue();
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(Maps.asMap(context.firstMiddleLastKeys(), context.original()::get)).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySet_removeAll_all(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().removeAll(context.original().keySet())).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySet_removeAll_self(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().removeAll(map.keySet())).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void keySet_removeAll_byCollection(Map<Int, Int> map, CacheContext context) {
+    var delegate = Sets.union(context.original().keySet(), context.absentKeys());
+    var keys = Mockito.mock(Collection.class);
+    when(keys.iterator()).thenReturn(delegate.iterator());
+
+    assertThat(map.keySet().removeAll(keys)).isTrue();
+    verify(keys).iterator();
+    verifyNoMoreInteractions(keys);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void keySet_removeAll_bySet(Map<Int, Int> map, CacheContext context) {
+    var delegate = Sets.union(context.original().keySet(), context.absentKeys());
+    var keys = Mockito.mock(Set.class);
+    when(keys.size()).thenReturn(delegate.size());
+    when(keys.contains(any())).thenAnswer(invocation ->
+        delegate.contains(invocation.getArgument(0)));
+
+    assertThat(map.keySet().removeAll(keys)).isTrue();
+    verify(keys).size();
+    verify(keys, times(context.original().size())).contains(any());
+    verifyNoMoreInteractions(keys);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void keySet_remove_null(Map<Int, Int> map, CacheContext context) {
     map.keySet().remove(null);
   }
@@ -1772,16 +1875,20 @@ public final class AsMapTest {
   public void keySet_remove_none(Map<Int, Int> map, CacheContext context) {
     assertThat(map.keySet().remove(context.absentKey())).isFalse();
     assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
   public void keySet_remove(Map<Int, Int> map, CacheContext context) {
-    assertThat(map.keySet().remove(context.firstKey())).isTrue();
     var expected = new HashMap<>(context.original());
     expected.remove(context.firstKey());
+
+    assertThat(map.keySet().remove(context.firstKey())).isTrue();
     assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.firstKey(), context.original().get(context.firstKey())).exclusively();
   }
 
   @CacheSpec
@@ -1828,6 +1935,77 @@ public final class AsMapTest {
       assertThat(map).isExhaustivelyEmpty();
       assertThat(context).removalNotifications().withCause(EXPLICIT).contains(context.original());
     }
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void keySet_retainAll_null(Map<Int, Int> map, CacheContext context) {
+    map.keySet().retainAll(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_retainAll_nullKey(Map<Int, Int> map, CacheContext context) {
+    map.keySet().retainAll(Arrays.asList((Object) null));
+    assertThat(map).isExhaustivelyEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_retainAll_none_empty(Map<Int, Int> map, CacheContext context) {
+    boolean modified = map.keySet().retainAll(Set.of());
+    assertThat(map).isExhaustivelyEmpty();
+    if (context.original().isEmpty()) {
+      assertThat(modified).isFalse();
+      assertThat(context).removalNotifications().isEmpty();
+    } else {
+      assertThat(modified).isTrue();
+      assertThat(context).removalNotifications().withCause(EXPLICIT)
+          .contains(context.original()).exclusively();
+    }
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySet_retainAll_none_populated(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().retainAll(Set.of(context.absentKey()))).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySet_retainAll_partial(Map<Int, Int> map, CacheContext context) {
+    var expected = new HashMap<>(context.original());
+    expected.keySet().removeAll(context.firstMiddleLastKeys());
+    assertThat(map.keySet().retainAll(expected.keySet())).isTrue();
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(Maps.asMap(context.firstMiddleLastKeys(), context.original()::get)).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySet_retainAll_all(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().retainAll(context.original().keySet())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySet_retainAll_self(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().retainAll(map.keySet())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
   }
 
   @CacheSpec
@@ -2003,6 +2181,72 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void values_removeAll_null(Map<Int, Int> map, CacheContext context) {
+    map.values().removeAll(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_removeAll_nullValue(Map<Int, Int> map, CacheContext context) {
+    map.values().removeAll(Arrays.asList((Object) null));
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_removeAll_none_empty(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().removeAll(Set.of())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_removeAll_none_populated(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().removeAll(Set.of(context.absentValue()))).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_removeAll_partial(Map<Int, Int> map, CacheContext context) {
+    var expected = new HashMap<>(context.original());
+    expected.keySet().removeAll(context.firstMiddleLastKeys());
+    var removed = Maps.asMap(context.firstMiddleLastKeys(), context.original()::get);
+
+    assertThat(map.values().removeAll(removed.values())).isTrue();
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT).contains(removed).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_removeAll_all(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().removeAll(context.original().values())).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_removeAll_self(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().removeAll(map.values())).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CacheSpec
+  @CheckNoStats
   @Test(dataProvider = "caches")
   public void values_remove_null(Map<Int, Int> map, CacheContext context) {
     assertThat(map.values().remove(null)).isFalse();
@@ -2094,6 +2338,79 @@ public final class AsMapTest {
       assertThat(map).isExhaustivelyEmpty();
       assertThat(context).removalNotifications().withCause(EXPLICIT).contains(context.original());
     }
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void values_retainAll_null(Map<Int, Int> map, CacheContext context) {
+    map.values().retainAll(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_retainAll_nullValue(Map<Int, Int> map, CacheContext context) {
+    map.values().retainAll(Arrays.asList((Object) null));
+    assertThat(map).isExhaustivelyEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_retainAll_none_empty(Map<Int, Int> map, CacheContext context) {
+    boolean modified = map.values().retainAll(Set.of());
+    assertThat(map).isExhaustivelyEmpty();
+    if (context.original().isEmpty()) {
+      assertThat(modified).isFalse();
+      assertThat(context).removalNotifications().isEmpty();
+    } else {
+      assertThat(modified).isTrue();
+      assertThat(context).removalNotifications().withCause(EXPLICIT)
+          .contains(context.original()).exclusively();
+    }
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_retainAll_none_populated(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().retainAll(Set.of(context.absentValue()))).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_retainAll_partial(Map<Int, Int> map, CacheContext context) {
+    var expected = new HashMap<>(context.original());
+    expected.keySet().removeAll(context.firstMiddleLastKeys());
+    var removed = Maps.asMap(context.firstMiddleLastKeys(), context.original()::get);
+
+    assertThat(map.values().retainAll(expected.values())).isTrue();
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(removed).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_retainAll_all(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().retainAll(context.original().values())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_retainAll_self(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().retainAll(map.values())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
   }
 
   @CacheSpec
@@ -2294,6 +2611,103 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void entrySet_removeAll_null(Map<Int, Int> map, CacheContext context) {
+    map.entrySet().removeAll(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_removeAll_nullEntry(Map<Int, Int> map, CacheContext context) {
+    map.entrySet().removeAll(Arrays.asList((Object) null));
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_removeAll_none_empty(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().removeAll(Set.of())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_removeAll_none_populated(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().removeAll(
+        Set.of(Map.entry(context.absentKey(), context.absentKey())))).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySet_removeAll_partial(Map<Int, Int> map, CacheContext context) {
+    var removed = Maps.asMap(context.firstMiddleLastKeys(), context.original()::get);
+    var expected = new HashMap<>(context.original());
+    expected.entrySet().removeAll(removed.entrySet());
+
+    assertThat(map.entrySet().removeAll(removed.entrySet())).isTrue();
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(removed).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySet_removeAll_all(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().removeAll(context.original().entrySet())).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySet_removeAll_self(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().removeAll(map.entrySet())).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void entrySet_removeAll_byCollection(Map<Int, Int> map, CacheContext context) {
+    var delegate = Sets.union(context.original().entrySet(), context.absent().entrySet());
+    var entries = Mockito.mock(Collection.class);
+    when(entries.iterator()).thenReturn(delegate.iterator());
+
+    assertThat(map.entrySet().removeAll(entries)).isTrue();
+    verify(entries).iterator();
+    verifyNoMoreInteractions(entries);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void entrySet_removeAll_bySet(Map<Int, Int> map, CacheContext context) {
+    var delegate = Sets.union(context.original().entrySet(), context.absent().entrySet());
+    var entries = Mockito.mock(Set.class);
+    when(entries.size()).thenReturn(delegate.size());
+    when(entries.contains(any())).thenAnswer(invocation ->
+        delegate.contains(invocation.getArgument(0)));
+
+    assertThat(map.entrySet().removeAll(entries)).isTrue();
+    verify(entries).size();
+    verify(entries, times(context.original().size())).contains(any());
+    verifyNoMoreInteractions(entries);
+  }
+
+  @CacheSpec
+  @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_remove_null(Map<Int, Int> map, CacheContext context) {
     assertThat(map.values().remove(null)).isFalse();
@@ -2393,6 +2807,80 @@ public final class AsMapTest {
       assertThat(map).isExhaustivelyEmpty();
       assertThat(context).removalNotifications().withCause(EXPLICIT).contains(context.original());
     }
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void entrySet_retainAll_null(Map<Int, Int> map, CacheContext context) {
+    map.entrySet().retainAll(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_retainAll_nullEntry(Map<Int, Int> map, CacheContext context) {
+    map.entrySet().retainAll(Arrays.asList((Object) null));
+    assertThat(map).isExhaustivelyEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_retainAll_none_empty(Map<Int, Int> map, CacheContext context) {
+    boolean modified = map.entrySet().retainAll(Set.of());
+    assertThat(map).isExhaustivelyEmpty();
+    if (context.original().isEmpty()) {
+      assertThat(modified).isFalse();
+      assertThat(context).removalNotifications().isEmpty();
+    } else {
+      assertThat(modified).isTrue();
+      assertThat(context).removalNotifications().withCause(EXPLICIT)
+          .contains(context.original()).exclusively();
+    }
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySet_retainAll_none_populated(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().retainAll(
+        Set.of(Map.entry(context.absentKey(), context.absentValue())))).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySet_retainAll_partial(Map<Int, Int> map, CacheContext context) {
+    var removed = Maps.asMap(context.firstMiddleLastKeys(), context.original()::get);
+    var expected = new HashMap<>(context.original());
+    expected.entrySet().removeAll(removed.entrySet());
+
+    assertThat(map.entrySet().retainAll(expected.entrySet())).isTrue();
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(removed).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySet_retainAll_all(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().retainAll(context.original().entrySet())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySet_retainAll_self(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().retainAll(map.entrySet())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
   }
 
   @CacheSpec

@@ -155,7 +155,6 @@ public final class MultiThreadedTest {
         }
       });
 
-
   @SuppressWarnings("FutureReturnValueIgnored")
   List<BiConsumer<AsyncLoadingCache<Int, Int>, Int>> asyncOperations = List.of(
       (cache, key) -> { cache.getIfPresent(key); },

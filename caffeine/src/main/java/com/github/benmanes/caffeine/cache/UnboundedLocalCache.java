@@ -608,8 +608,55 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public boolean remove(Object obj) {
-      return (cache.remove(obj) != null);
+    public boolean removeAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      if ((collection instanceof Set<?>) && (collection.size() > size())) {
+        for (K key : this) {
+          if (collection.contains(key)) {
+            modified |= remove(key);
+          }
+        }
+      } else {
+        for (var o : collection) {
+          modified |= (o != null) && remove(o);
+        }
+      }
+      return modified;
+    }
+
+    @Override
+    public boolean remove(Object o) {
+      return (cache.remove(o) != null);
+    }
+
+    @Override
+    public boolean removeIf(Predicate<? super K> filter) {
+      requireNonNull(filter);
+      boolean modified = false;
+      for (K key : this) {
+        if (filter.test(key) && remove(key)) {
+          modified = true;
+        }
+      }
+      return modified;
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      for (K key : this) {
+        if (!collection.contains(key) && remove(key)) {
+          modified = true;
+        }
+      }
+      return modified;
+    }
+
+    @Override
+    public void forEach(Consumer<? super K> action) {
+      cache.data.keySet().forEach(action);
     }
 
     @Override
@@ -684,6 +731,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    public boolean removeAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      for (var entry : cache.data.entrySet()) {
+        if (collection.contains(entry.getValue())
+            && cache.remove(entry.getKey(), entry.getValue())) {
+          modified = true;
+        }
+      }
+      return modified;
+    }
+
+    @Override
     public boolean remove(Object o) {
       if (o == null) {
         return false;
@@ -700,12 +760,30 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public boolean removeIf(Predicate<? super V> filter) {
       requireNonNull(filter);
       boolean removed = false;
-      for (Entry<K, V> entry : cache.data.entrySet()) {
+      for (var entry : cache.data.entrySet()) {
         if (filter.test(entry.getValue())) {
           removed |= cache.remove(entry.getKey(), entry.getValue());
         }
       }
       return removed;
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      for (var entry : cache.data.entrySet()) {
+        if (!collection.contains(entry.getValue())
+            && cache.remove(entry.getKey(), entry.getValue())) {
+          modified = true;
+        }
+      }
+      return modified;
+    }
+
+    @Override
+    public void forEach(Consumer<? super V> action) {
+      cache.data.values().forEach(action);
     }
 
     @Override
@@ -790,11 +868,29 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public boolean remove(Object obj) {
-      if (!(obj instanceof Entry<?, ?>)) {
+    public boolean removeAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      if ((collection instanceof Set<?>) && (collection.size() > size())) {
+        for (var entry : this) {
+          if (collection.contains(entry)) {
+            modified |= remove(entry);
+          }
+        }
+      } else {
+        for (var o : collection) {
+          modified |= remove(o);
+        }
+      }
+      return modified;
+    }
+
+    @Override
+    public boolean remove(Object o) {
+      if (!(o instanceof Entry<?, ?>)) {
         return false;
       }
-      var entry = (Entry<?, ?>) obj;
+      var entry = (Entry<?, ?>) o;
       var key = entry.getKey();
       return (key != null) && cache.remove(key, entry.getValue());
     }
@@ -809,6 +905,18 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         }
       }
       return removed;
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> collection) {
+      requireNonNull(collection);
+      boolean modified = false;
+      for (var entry : this) {
+        if (!collection.contains(entry) && remove(entry)) {
+          modified = true;
+        }
+      }
+      return modified;
     }
 
     @Override

@@ -41,6 +41,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -1040,13 +1041,27 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
+      public boolean removeAll(Collection<?> collection) {
+        requireNonNull(collection);
+        boolean modified = false;
+        for (var entry : delegate.entrySet()) {
+          V value = Async.getIfReady(entry.getValue());
+          if ((value != null) && collection.contains(value)
+              && AsMapView.this.remove(entry.getKey(), value)) {
+            modified = true;
+          }
+        }
+        return modified;
+      }
+
+      @Override
       public boolean remove(Object o) {
         if (o == null) {
           return false;
         }
         for (var entry : delegate.entrySet()) {
           V value = Async.getIfReady(entry.getValue());
-          if ((value != null) && o.equals(value) && AsMapView.this.remove(entry.getKey(), o)) {
+          if ((value != null) && o.equals(value) && AsMapView.this.remove(entry.getKey(), value)) {
             return true;
           }
         }
@@ -1059,6 +1074,31 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         return delegate.values().removeIf(future -> {
           V value = Async.getIfReady(future);
           return (value != null) && filter.test(value);
+        });
+      }
+
+      @Override
+      public boolean retainAll(Collection<?> collection) {
+        requireNonNull(collection);
+        boolean modified = false;
+        for (var entry : delegate.entrySet()) {
+          V value = Async.getIfReady(entry.getValue());
+          if ((value != null) && !collection.contains(value)
+              && AsMapView.this.remove(entry.getKey(), value)) {
+            modified = true;
+          }
+        }
+        return modified;
+      }
+
+      @Override
+      public void forEach(Consumer<? super V> action) {
+        requireNonNull(action);
+        delegate.values().forEach(future -> {
+          V value = Async.getIfReady(future);
+          if (value != null) {
+            action.accept(value);
+          }
         });
       }
 
@@ -1118,6 +1158,24 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
+      public boolean removeAll(Collection<?> collection) {
+        requireNonNull(collection);
+        boolean modified = false;
+        if ((collection instanceof Set<?>) && (collection.size() > size())) {
+          for (var entry : this) {
+            if (collection.contains(entry)) {
+              modified |= remove(entry);
+            }
+          }
+        } else {
+          for (var o : collection) {
+            modified |= remove(o);
+          }
+        }
+        return modified;
+      }
+
+      @Override
       public boolean remove(Object obj) {
         if (!(obj instanceof Entry<?, ?>)) {
           return false;
@@ -1130,11 +1188,25 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Override
       public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
         requireNonNull(filter);
-        return delegate.entrySet().removeIf(entry -> {
-          V value = Async.getIfReady(entry.getValue());
-          return (value != null)
-              && filter.test(new WriteThroughEntry<>(AsMapView.this, entry.getKey(), value));
-        });
+        boolean modified = false;
+        for (Entry<K, V> entry : this) {
+          if (filter.test(entry)) {
+            modified |= AsMapView.this.remove(entry.getKey(), entry.getValue());
+          }
+        }
+        return modified;
+      }
+
+      @Override
+      public boolean retainAll(Collection<?> collection) {
+        requireNonNull(collection);
+        boolean modified = false;
+        for (var entry : this) {
+          if (!collection.contains(entry) && remove(entry)) {
+            modified = true;
+          }
+        }
+        return modified;
       }
 
       @Override
