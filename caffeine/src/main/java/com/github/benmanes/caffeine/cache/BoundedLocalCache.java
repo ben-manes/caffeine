@@ -71,6 +71,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -2486,8 +2487,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
     requireNonNull(function);
 
-    BiFunction<K, V, V> remappingFunction = (key, oldValue)
-        -> requireNonNull(function.apply(key, oldValue));
+    BiFunction<K, V, V> remappingFunction = (key, oldValue) -> {
+      return (oldValue == null) ? null : requireNonNull(function.apply(key, oldValue));
+    };
     for (K key : keySet()) {
       long[] now = { expirationTicker().read() };
       Object lookupKey = nodeFactory.newLookupKey(key);
@@ -2799,6 +2801,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     return newValue[0];
+  }
+
+  @Override
+  public void forEach(BiConsumer<? super K, ? super V> action) {
+    requireNonNull(action);
+
+    for (var iterator = new EntryIterator<>(this); iterator.hasNext();) {
+      action.accept(iterator.key, iterator.value);
+      iterator.advance();
+    }
   }
 
   @Override
@@ -3240,13 +3252,29 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
+    public boolean remove(Object o) {
+      if (o == null) {
+        return false;
+      }
+      for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
+        if (o.equals(iterator.value) && cache.remove(iterator.key, iterator.value)) {
+          return true;
+        }
+        iterator.advance();
+      }
+      return false;
+    }
+
+    @Override
+    @SuppressWarnings("NullAway")
     public boolean removeIf(Predicate<? super V> filter) {
       requireNonNull(filter);
       boolean removed = false;
-      for (Entry<K, V> entry : cache.entrySet()) {
-        if (filter.test(entry.getValue())) {
-          removed |= cache.remove(entry.getKey(), entry.getValue());
+      for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
+        if (filter.test(iterator.value)) {
+          removed |= cache.remove(iterator.key, iterator.value);
         }
+        iterator.advance();
       }
       return removed;
     }
@@ -3394,7 +3422,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return false;
       }
       var entry = (Entry<?, ?>) obj;
-      return cache.remove(entry.getKey(), entry.getValue());
+      var key = entry.getKey();
+      return (key != null) && cache.remove(key, entry.getValue());
     }
 
     @Override
@@ -3453,15 +3482,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             if (evictable) {
               cache.scheduleDrainBuffers();
             }
-            value = null;
-            next = null;
-            key = null;
+            advance();
             continue;
           }
           return true;
         }
         return false;
       }
+    }
+
+    void advance() {
+      value = null;
+      next = null;
+      key = null;
     }
 
     @SuppressWarnings("NullAway")

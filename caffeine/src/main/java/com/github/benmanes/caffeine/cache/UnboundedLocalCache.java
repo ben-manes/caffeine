@@ -684,6 +684,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    public boolean remove(Object o) {
+      if (o == null) {
+        return false;
+      }
+      for (var entry : cache.data.entrySet()) {
+        if (o.equals(entry.getValue()) && cache.remove(entry.getKey(), entry.getValue())) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    @Override
     public boolean removeIf(Predicate<? super V> filter) {
       requireNonNull(filter);
       boolean removed = false;
@@ -782,7 +795,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         return false;
       }
       var entry = (Entry<?, ?>) obj;
-      return cache.remove(entry.getKey(), entry.getValue());
+      var key = entry.getKey();
+      return (key != null) && cache.remove(key, entry.getValue());
     }
 
     @Override

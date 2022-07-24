@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -430,6 +431,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss */ false);
       }
       return result[0];
+    }
+    @Override public void forEach(BiConsumer<? super K, ? super CompletableFuture<V>> action) {
+      asyncCache.cache().forEach(action);
     }
     @Override public Set<K> keySet() {
       return asyncCache.cache().keySet();
@@ -1026,13 +1030,36 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
+      public void clear() {
+        AsMapView.this.clear();
+      }
+
+      @Override
       public boolean contains(Object o) {
         return AsMapView.this.containsValue(o);
       }
 
       @Override
-      public void clear() {
-        AsMapView.this.clear();
+      public boolean remove(Object o) {
+        if (o == null) {
+          return false;
+        }
+        for (var entry : delegate.entrySet()) {
+          V value = Async.getIfReady(entry.getValue());
+          if ((value != null) && o.equals(value) && AsMapView.this.remove(entry.getKey(), o)) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      @Override
+      public boolean removeIf(Predicate<? super V> filter) {
+        requireNonNull(filter);
+        return delegate.values().removeIf(future -> {
+          V value = Async.getIfReady(future);
+          return (value != null) && filter.test(value);
+        });
       }
 
       @Override
@@ -1071,6 +1098,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
+      public void clear() {
+        AsMapView.this.clear();
+      }
+
+      @Override
       public boolean contains(Object o) {
         if (!(o instanceof Entry<?, ?>)) {
           return false;
@@ -1091,12 +1123,18 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           return false;
         }
         Entry<?, ?> entry = (Entry<?, ?>) obj;
-        return AsMapView.this.remove(entry.getKey(), entry.getValue());
+        var key = entry.getKey();
+        return (key != null) && AsMapView.this.remove(key, entry.getValue());
       }
 
       @Override
-      public void clear() {
-        AsMapView.this.clear();
+      public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
+        requireNonNull(filter);
+        return delegate.entrySet().removeIf(entry -> {
+          V value = Async.getIfReady(entry.getValue());
+          return (value != null)
+              && filter.test(new WriteThroughEntry<>(AsMapView.this, entry.getKey(), value));
+        });
       }
 
       @Override

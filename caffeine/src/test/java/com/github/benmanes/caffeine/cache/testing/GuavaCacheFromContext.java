@@ -60,6 +60,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ForwardingConcurrentMap;
+import com.google.common.collect.ForwardingSet;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ExecutionError;
@@ -151,6 +152,7 @@ public final class GuavaCacheFromContext {
     transient ConcurrentMap<K, V> mapView;
     transient StatsCounter statsCounter;
     transient Policy<K, V> policy;
+    transient Set<K> keySet;
 
     GuavaCache(com.google.common.cache.Cache<K, V> cache, CacheContext context) {
       this.canSnapshot = context.expires() || context.refreshes();
@@ -426,6 +428,10 @@ public final class GuavaCacheFromContext {
         }
       }
       @Override
+      public Set<K> keySet() {
+        return (keySet == null) ? (keySet = new KeySetView()) : keySet;
+      }
+      @Override
       protected ConcurrentMap<K, V> delegate() {
         return cache.asMap();
       }
@@ -433,6 +439,16 @@ public final class GuavaCacheFromContext {
       @SuppressWarnings({"UnusedVariable", "UnusedMethod"})
       private void readObject(ObjectInputStream stream) throws InvalidObjectException {
         statsCounter = new SimpleStatsCounter();
+      }
+
+      final class KeySetView extends ForwardingSet<K> {
+        @Override public boolean remove(Object o) {
+          requireNonNull(o);
+          return delegate().remove(o);
+        }
+        @Override protected Set<K> delegate() {
+          return cache.asMap().keySet();
+        }
       }
     }
 

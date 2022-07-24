@@ -64,6 +64,8 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -228,7 +230,11 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void forEach_scan(Map<Int, Int> map, CacheContext context) {
     var remaining = new HashMap<Int, Int>(context.original());
-    map.forEach(remaining::remove);
+    map.forEach((key, value) -> {
+      assertThat(key).isNotNull();
+      assertThat(value).isNotNull();
+      assertThat(remaining.remove(key, value)).isTrue();
+    });
     assertThat(remaining).isExhaustivelyEmpty();
   }
 
@@ -1755,6 +1761,77 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void keySet_remove_null(Map<Int, Int> map, CacheContext context) {
+    map.keySet().remove(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_remove_none(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().remove(context.absentKey())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySet_remove(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().remove(context.firstKey())).isTrue();
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(map).isEqualTo(expected);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void keySet_removeIf_null(Map<Int, Int> map, CacheContext context) {
+    map.keySet().removeIf(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_removeIf_none(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().removeIf(v -> false)).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_removeIf_partial(Map<Int, Int> map, CacheContext context) {
+    Predicate<Int> isEven = key -> (key.intValue() % 2) == 0;
+    boolean hasEven = map.keySet().stream().anyMatch(isEven);
+
+    boolean removedIfEven = map.keySet().removeIf(isEven);
+    assertThat(map.keySet().stream().anyMatch(isEven)).isFalse();
+    assertThat(removedIfEven).isEqualTo(hasEven);
+    if (removedIfEven) {
+      assertThat(map).hasSizeLessThan(context.initialSize());
+    }
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySet_removeIf_all(Map<Int, Int> map, CacheContext context) {
+    if (context.population() == Population.EMPTY) {
+      assertThat(map.keySet().removeIf(v -> true)).isFalse();
+      assertThat(map).isEqualTo(context.original());
+      assertThat(context).removalNotifications().isEmpty();
+    } else {
+      assertThat(map.keySet().removeIf(v -> true)).isTrue();
+      assertThat(map).isExhaustivelyEmpty();
+      assertThat(context).removalNotifications().withCause(EXPLICIT).contains(context.original());
+    }
+  }
+
+  @CacheSpec
+  @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySet(Map<Int, Int> map, CacheContext context) {
     var keys = map.keySet();
@@ -1926,6 +2003,55 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_remove_null(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().remove(null)).isFalse();
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_remove_none(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().remove(context.absentValue())).isFalse();
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_remove(Map<Int, Int> map, CacheContext context) {
+    var value = context.original().get(context.firstKey());
+    assertThat(map.values().remove(value)).isTrue();
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.firstKey(), value).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void values_remove_once(Map<Int, Int> map, CacheContext context) {
+    var expected = new HashMap<>(context.original());
+    for (Int key : context.firstMiddleLastKeys()) {
+      expected.put(key, context.absentValue());
+      map.put(key, context.absentValue());
+    }
+    context.clearRemovalNotifications();
+
+    assertThat(map.values().remove(context.absentValue())).isTrue();
+    var removedKey = context.firstMiddleLastKeys().stream()
+        .filter(key -> !map.containsKey(key))
+        .findAny().orElseThrow();
+    expected.remove(removedKey);
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(removedKey, context.absentValue()).exclusively();
+  }
+
+  @CacheSpec
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void values_removeIf_null(Map<Int, Int> map, CacheContext context) {
     map.values().removeIf(null);
@@ -1934,7 +2060,16 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void values_removeIf(Map<Int, Int> map, CacheContext context) {
+  public void values_removeIf_none(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().removeIf(v -> false)).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_removeIf_partial(Map<Int, Int> map, CacheContext context) {
     Predicate<Int> isEven = value -> (value.intValue() % 2) == 0;
     boolean hasEven = map.values().stream().anyMatch(isEven);
 
@@ -1943,6 +2078,21 @@ public final class AsMapTest {
     assertThat(removedIfEven).isEqualTo(hasEven);
     if (removedIfEven) {
       assertThat(map.size()).isLessThan(context.original().size());
+    }
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_removeIf_all(Map<Int, Int> map, CacheContext context) {
+    if (context.population() == Population.EMPTY) {
+      assertThat(map.values().removeIf(v -> true)).isFalse();
+      assertThat(map).isEqualTo(context.original());
+      assertThat(context).removalNotifications().isEmpty();
+    } else {
+      assertThat(map.values().removeIf(v -> true)).isTrue();
+      assertThat(map).isExhaustivelyEmpty();
+      assertThat(context).removalNotifications().withCause(EXPLICIT).contains(context.original());
     }
   }
 
@@ -2144,6 +2294,63 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_remove_null(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().remove(null)).isFalse();
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_remove_nullKey(Map<Int, Int> map, CacheContext context) {
+    var value = Iterables.getFirst(context.original().values(), context.absentValue());
+    assertThat(map.entrySet().remove(Maps.immutableEntry(null, value))).isFalse();
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_remove_nullValue(Map<Int, Int> map, CacheContext context) {
+    var key = Iterables.getFirst(context.original().keySet(), context.absentKey());
+    assertThat(map.entrySet().remove(Maps.immutableEntry(key, null))).isFalse();
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_remove_nullKeyValue(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().remove(Maps.immutableEntry(null, null))).isFalse();
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_remove_none(Map<Int, Int> map, CacheContext context) {
+    var entry = Map.entry(context.absentKey(), context.absentValue());
+    assertThat(map.entrySet().remove(entry)).isFalse();
+    assertThat(map).isEqualTo(context.original());
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySet_remove(Map<Int, Int> map, CacheContext context) {
+    var entry = Map.entry(context.firstKey(), context.original().get(context.firstKey()));
+    assertThat(map.entrySet().remove(entry)).isTrue();
+
+    var expected = new HashMap<>(context.original());
+    expected.remove(context.firstKey());
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(entry).exclusively();
+  }
+
+  @CacheSpec
+  @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void entrySet_removeIf_null(Map<Int, Int> map, CacheContext context) {
     map.entrySet().removeIf(null);
@@ -2152,7 +2359,16 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySet_removeIf(Map<Int, Int> map, CacheContext context) {
+  public void entrySet_removeIf_none(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.entrySet().removeIf(v -> false)).isFalse();
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_removeIf_partial(Map<Int, Int> map, CacheContext context) {
     Predicate<Map.Entry<Int, Int>> isEven = entry -> (entry.getValue().intValue() % 2) == 0;
     boolean hasEven = map.entrySet().stream().anyMatch(isEven);
 
@@ -2161,6 +2377,21 @@ public final class AsMapTest {
     assertThat(removedIfEven).isEqualTo(hasEven);
     if (removedIfEven) {
       assertThat(map).hasSizeLessThan(context.initialSize());
+    }
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_removeIf_all(Map<Int, Int> map, CacheContext context) {
+    if (context.population() == Population.EMPTY) {
+      assertThat(map.entrySet().removeIf(v -> true)).isFalse();
+      assertThat(map).isEqualTo(context.original());
+      assertThat(context).removalNotifications().isEmpty();
+    } else {
+      assertThat(map.entrySet().removeIf(v -> true)).isTrue();
+      assertThat(map).isExhaustivelyEmpty();
+      assertThat(context).removalNotifications().withCause(EXPLICIT).contains(context.original());
     }
   }
 
