@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
@@ -476,7 +477,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Map<K, V> getAllPresent(Iterable<?> keys) {
-      Set<Object> uniqueKeys = new LinkedHashSet<>();
+      Set<Object> uniqueKeys = new LinkedHashSet<>(calculateHashMapCapacity(keys));
       for (Object key : keys) {
         uniqueKeys.add(key);
       }
@@ -1061,7 +1062,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
           @Override
           public void remove() {
-            Caffeine.requireState(removalKey != null);
+            requireState(removalKey != null);
             delegate.remove(removalKey);
             removalKey = null;
           }
