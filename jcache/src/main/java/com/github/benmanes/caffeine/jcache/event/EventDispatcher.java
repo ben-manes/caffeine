@@ -244,16 +244,14 @@ public final class EventDispatcher<K, V> {
             ? CompletableFuture.runAsync(action, executor)
             : queue.thenRunAsync(action, executor);
       });
-      if (future != null) {
-        future.whenComplete((result, error) -> {
-          // optimistic check to avoid locking if not a match
-          if (dispatchQueue.get(key) == future) {
-            dispatchQueue.remove(key, future);
-          }
-        });
-        if (registration.isSynchronous() && !quiet) {
-          pending.get().add(future);
+      future.whenComplete((result, error) -> {
+        // optimistic check to avoid locking if not a match
+        if (dispatchQueue.get(key) == future) {
+          dispatchQueue.remove(key, future);
         }
+      });
+      if (registration.isSynchronous() && !quiet) {
+        pending.get().add(future);
       }
     }
   }

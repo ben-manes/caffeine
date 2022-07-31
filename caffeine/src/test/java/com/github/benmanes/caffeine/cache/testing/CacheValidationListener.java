@@ -123,11 +123,8 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     try {
       if (testResult.isSuccess()) {
         validate(testResult);
-      } else {
-        if (!detailedParams.get()) {
-          detailedParams.set(true);
-        }
-        testResult.setThrowable(new AssertionError(getTestName(method), testResult.getThrowable()));
+      } else if (!detailedParams.get()) {
+        detailedParams.set(true);
       }
     } catch (Throwable caught) {
       testResult.setStatus(FAILURE);
@@ -300,7 +297,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     var result = (TestResult) testResult;
     result.setParameters(EMPTY_PARAMS);
     result.setContext(testngContext);
-    result.setThrowable(null);
   }
 
   private void stringifyParams(ITestResult testResult, boolean briefParams) {

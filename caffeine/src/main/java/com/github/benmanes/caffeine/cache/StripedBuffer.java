@@ -64,9 +64,10 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    * Contention and/or table collisions are indicated by failed CASes when performing an update
    * operation. Upon a collision, if the table size is less than the capacity, it is doubled in size
    * unless some other thread holds the lock. If a hashed slot is empty, and lock is available, a
-   * new Buffer is created. Otherwise, if the slot exists, a CAS is tried. The Thread id serves as
+   * new Buffer is created. Otherwise, if the slot exists, a CAS is tried. The thread id serves as
    * the base for per-thread hash codes. Retries proceed by "incremental hashing", using the top
-   * half of the seed to increment the bottom half used as the probe to try to find a free slot.
+   * half of the seed to increment the bottom half which is used as a probe to try to find a free
+   * slot.
    *
    * The table size is capped because, when there are more threads than CPUs, supposing that each
    * thread were bound to a CPU, there would exist a perfect hash function mapping threads to slots

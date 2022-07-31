@@ -228,10 +228,13 @@ jobs:
             nodejs.org:443
             raw.githubusercontent.com
             sonarcloud.io:443
+            scanner.sonarcloud.io:443
             storage.googleapis.com:443
             uploader.codecov.io:443
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Set up JDK ${{ env.MAX_JVM }}
         uses: Wandalen/wretry.action@v1.0.20
         with:
@@ -292,7 +295,6 @@ jobs:
           stopMarker=$(uuidgen)
           echo "::stop-commands::$stopMarker"
           trap "echo '::$stopMarker::'" EXIT
-          git fetch --unshallow
           ./gradlew --daemon sonarqube -Dsonar.branch.name=${GITHUB_REF##*/}
         continue-on-error: true
 
