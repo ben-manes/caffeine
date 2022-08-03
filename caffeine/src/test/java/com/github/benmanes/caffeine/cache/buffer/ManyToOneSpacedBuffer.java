@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.buffer;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * A simple ring buffer implementation that watches both the head and tail counts to acquire a
@@ -25,7 +26,7 @@ import java.lang.invoke.VarHandle;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteCounterRef<E> {
-  static final VarHandle BUFFER = MethodHandles.arrayElementVarHandle(Object[].class);
+  static final AtomicReferenceArray<Object> BUFFER = new AtomicReferenceArray<>(BUFFER_SIZE);
 
   // Assume 4-byte references and 64-byte cache line (16 elements per line)
   static final int SPACED_SIZE = BUFFER_SIZE << 4;
@@ -48,7 +49,7 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
     }
     if (casWriteCounter(tail, tail + OFFSET)) {
       int index = (int) (tail & SPACED_MASK);
-      BUFFER.setRelease(buffer, index, e);
+      BUFFER.setRelease(index, e);
       return SUCCESS;
     }
     return FAILED;
@@ -65,12 +66,12 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
     }
     do {
       int index = (int) (head & SPACED_MASK);
-      E e = (E) BUFFER.getAcquire(buffer, index);
+      E e = (E) BUFFER.getAcquire(index);
       if (e == null) {
         // not published yet
         break;
       }
-      BUFFER.setRelease(buffer, index, null);
+      BUFFER.setRelease(index, null);
       consumer.accept(e);
       head += OFFSET;
     } while (head != tail);
