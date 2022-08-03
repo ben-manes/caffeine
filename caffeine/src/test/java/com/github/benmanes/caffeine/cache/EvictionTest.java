@@ -145,19 +145,25 @@ public final class EvictionTest {
     assertThat(cache).hasSize(4);
     assertThat(context).hasWeightedSize(10);
 
-    // [0 | 1, 2, 3] remains (4 exceeds window and has the same usage history, so evicted)
+    // [0(0) | 1(3), 2(5), 3(2)] -> [4(1), 0(0) | 3(2), 2(5), 1(3)] -> [0(0) | 3(2), 2(5), 1(3)]
+    // #1: candidate=0 vs victim=1 -> skip candidate due to zero weight
+    // #2: candidate=4 vs victim=1 -> f(4) == f(1) -> evict candidate
     cache.put(Int.valueOf(4), value4);
     assertThat(cache).hasSize(4);
     assertThat(context).hasWeightedSize(10);
     assertThat(cache).doesNotContainKey(Int.valueOf(4));
 
-    // [0 | 1, 2, 3] -> [0, 4 | 2, 3]
+    // [0(0) | 3(2), 2(5), 1(3)] -> [4(1), 0(0) | 3(2), 2(5), 1(3)] -> [4(1), 0(0) | 3(2), 2(5)]
+    // #1: candidate=0 vs victim=1 => skip candidate due to zero weight
+    // #2: candidate=4 vs victim=1 -> f(4) > f(1) -> evict victim
     cache.put(Int.valueOf(4), value4);
     assertThat(cache).hasSize(4);
     assertThat(context).hasWeightedSize(8);
     assertThat(cache).doesNotContainKey(Int.valueOf(1));
 
-    // [0, 4 | 2, 3] remains (5 exceeds window and has the same usage history, so evicted)
+    // [4(1), 0(0) | 3(2), 2(5)] -> [4(1), 0(0), 5(9) | 3(2), 2(5)] -> [4(1), 0(0) | 3(2), 2(5)]
+    // 5 exceeds window (9 >> 1), so it is inserted at the LRU position for immediate promotion
+    // #1: candidate=5 vs victim=2 => f(5) == f(2) -> evict candidate
     cache.put(Int.valueOf(5), value5);
     assertThat(cache).hasSize(4);
     assertThat(context).hasWeightedSize(8);

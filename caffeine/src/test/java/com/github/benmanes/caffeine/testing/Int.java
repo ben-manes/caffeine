@@ -37,6 +37,8 @@ import com.google.errorprone.annotations.Immutable;
  */
 @Immutable
 public final class Int implements Serializable {
+  public static final Int MAX_VALUE = Int.valueOf(Integer.MAX_VALUE);
+
   private static final long serialVersionUID = 1L;
 
   private static final int low = -2048;

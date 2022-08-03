@@ -191,11 +191,11 @@ public @interface CacheSpec {
     NEGATIVE(-1),
     /** A flag indicating that every entry is valued at Integer.MAX_VALUE units. */
     MAX_VALUE(Integer.MAX_VALUE),
-    /** A flag indicating that the entry is weighted by the integer value. */
+    /** A flag indicating that the entry is weighted by the absolute integer value. */
     VALUE(1) {
       @Override public int weigh(Object key, Object value) {
         requireNonNull(key);
-        return ((Int) value).intValue();
+        return Math.abs(((Int) value).intValue());
       }
     },
     /** A flag indicating that the entry is weighted by the value's collection size. */

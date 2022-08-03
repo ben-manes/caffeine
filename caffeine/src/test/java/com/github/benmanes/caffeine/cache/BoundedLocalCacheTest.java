@@ -55,6 +55,7 @@ import java.lang.ref.Reference;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -105,6 +106,7 @@ import com.github.valfirst.slf4jtest.TestLogger;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.testing.GcFinalization;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -263,22 +265,97 @@ public final class BoundedLocalCacheTest {
 
   /* --------------- Eviction --------------- */
 
-  @Test
-  public void putWeighted_noOverflow() {
-    Cache<Int, Int> cache = Caffeine.newBuilder()
-        .executor(CacheExecutor.DIRECT.create())
-        .weigher(CacheWeigher.MAX_VALUE)
-        .maximumWeight(Long.MAX_VALUE)
-        .build();
-    var map = asBoundedLocalCache(cache);
-
-    cache.put(Int.valueOf(1), Int.valueOf(1));
-    map.setWindowMaximum(0);
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.MAX_VALUE)
+  public void overflow_add_one(BoundedLocalCache<Int, Int> map, CacheContext context) {
+    long actualWeight = map.weightedSize();
     map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
-    cache.put(Int.valueOf(2), Int.valueOf(2));
+    map.put(context.absentKey(), context.absentValue());
 
-    assertThat(cache).hasSize(1);
+    assertThat(map).hasSize(context.initialSize());
     assertThat(map.weightedSize()).isEqualTo(BoundedLocalCache.MAXIMUM_CAPACITY);
+
+    var removed = new HashMap<>(context.original());
+    removed.put(context.absentKey(), context.absentValue());
+    removed.keySet().removeAll(map.keySet());
+    assertThat(context).notifications().hasSize(1);
+    assertThat(context).notifications().withCause(SIZE).contains(removed).exclusively();
+
+    // reset for validation listener
+    map.setWeightedSize(actualWeight);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.MAX_VALUE)
+  public void overflow_add_many(BoundedLocalCache<Int, Int> map, CacheContext context) {
+    long actualWeight = map.weightedSize();
+    map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
+    map.evictionLock.lock();
+    try {
+      map.putAll(context.absent());
+    } finally {
+      map.evictionLock.unlock();
+    }
+    map.cleanUp();
+
+    assertThat(map).hasSize(context.initialSize());
+    assertThat(map.weightedSize()).isEqualTo(BoundedLocalCache.MAXIMUM_CAPACITY);
+
+    var removed = new HashMap<>(context.original());
+    removed.putAll(context.absent());
+    removed.keySet().removeAll(map.keySet());
+    assertThat(context).notifications().hasSize(context.absent().size());
+    assertThat(context).notifications().withCause(SIZE).contains(removed).exclusively();
+
+    // reset for validation listener
+    map.setWeightedSize(actualWeight);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  public void overflow_update_one(BoundedLocalCache<Int, Int> map, CacheContext context) {
+    map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
+    map.put(context.firstKey(), Int.MAX_VALUE);
+
+    assertThat(map).hasSizeLessThan(1 + context.initialSize());
+    assertThat(map.weightedSize()).isAtMost(BoundedLocalCache.MAXIMUM_CAPACITY);
+
+    var removed = new HashMap<>(context.original());
+    removed.put(context.firstKey(), Int.MAX_VALUE);
+    removed.keySet().removeAll(map.keySet());
+    assertThat(removed.size()).isAtLeast(1);
+    assertThat(context).notifications().withCause(SIZE).contains(removed);
+
+    // reset for validation listener
+    map.setWeightedSize(map.data.values().stream().mapToLong(Node::getWeight).sum());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  public void overflow_update_many(BoundedLocalCache<Int, Int> map, CacheContext context) {
+    var updated = Maps.asMap(context.firstMiddleLastKeys(), key -> Int.MAX_VALUE);
+    map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
+    map.evictionLock.lock();
+    try {
+      map.putAll(updated);
+    } finally {
+      map.evictionLock.unlock();
+    }
+    map.cleanUp();
+
+    assertThat(map).hasSizeLessThan(1 + context.initialSize());
+    assertThat(map.weightedSize()).isAtMost(BoundedLocalCache.MAXIMUM_CAPACITY);
+
+    var removed = new HashMap<>(context.original());
+    removed.putAll(updated);
+    removed.keySet().removeAll(map.keySet());
+    assertThat(removed.size()).isAtLeast(1);
+    assertThat(context).notifications().withCause(SIZE).contains(removed);
+
+    // reset for validation listener
+    map.setWeightedSize(map.data.values().stream().mapToLong(Node::getWeight).sum());
   }
 
   @CheckNoEvictions
@@ -866,7 +943,7 @@ public final class BoundedLocalCacheTest {
   public void fastpath(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.skipReadBuffer()).isTrue();
 
-    for (int i = 0; i < context.maximumSize() / 2; i++) {
+    for (int i = 0; i < (context.maximumSize() / 2) - 1; i++) {
       cache.put(Int.valueOf(i), Int.valueOf(-i));
     }
     assertThat(cache.skipReadBuffer()).isTrue();

@@ -720,7 +720,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     while (weightedSize() > maximum()) {
       // Search the admission window for additional candidates
       if (candidates == 0) {
-        candidate = accessOrderWindowDeque().peekLast();
+        candidate = accessOrderWindowDeque().peekFirst();
       }
 
       // Try evicting from the protected and window queues
@@ -744,9 +744,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         victim = victim.getNextInAccessOrder();
         continue;
       } else if ((candidate != null) && (candidate.getPolicyWeight() == 0)) {
-        candidate = (candidates > 0)
-            ? candidate.getPreviousInAccessOrder()
-            : candidate.getNextInAccessOrder();
+        candidate = candidate.getNextInAccessOrder();
         candidates--;
         continue;
       }
@@ -754,7 +752,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       // Evict immediately if only one of the entries is present
       if (victim == null) {
         @SuppressWarnings("NullAway")
-        Node<K, V> previous = candidate.getPreviousInAccessOrder();
+        Node<K, V> previous = candidate.getNextInAccessOrder();
         Node<K, V> evict = candidate;
         candidate = previous;
         candidates--;
@@ -776,22 +774,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       } else if (candidateKey == null) {
-        Node<K, V> evict = candidate;
-        candidate = (candidates > 0)
-            ? candidate.getPreviousInAccessOrder()
-            : candidate.getNextInAccessOrder();
         candidates--;
+        Node<K, V> evict = candidate;
+        candidate = candidate.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       }
 
       // Evict immediately if the candidate's weight exceeds the maximum
       if (candidate.getPolicyWeight() > maximum()) {
-        Node<K, V> evict = candidate;
-        candidate = (candidates > 0)
-            ? candidate.getPreviousInAccessOrder()
-            : candidate.getNextInAccessOrder();
         candidates--;
+        Node<K, V> evict = candidate;
+        candidate = candidate.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
         continue;
       }
@@ -802,12 +796,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
-        candidate = candidate.getPreviousInAccessOrder();
+        candidate = candidate.getNextInAccessOrder();
       } else {
         Node<K, V> evict = candidate;
-        candidate = (candidates > 0)
-            ? candidate.getPreviousInAccessOrder()
-            : candidate.getNextInAccessOrder();
+        candidate = candidate.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
       }
     }
@@ -1786,16 +1778,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @SuppressWarnings("FutureReturnValueIgnored")
     public void run() {
       if (evicts()) {
-        long weightedSize = weightedSize();
-        setWeightedSize(weightedSize + weight);
+        setWeightedSize(weightedSize() + weight);
         setWindowWeightedSize(windowWeightedSize() + weight);
         node.setPolicyWeight(node.getPolicyWeight() + weight);
 
         long maximum = maximum();
-        if (weightedSize >= (maximum >>> 1)) {
-          // Lazily initialize when close to the maximum
-          long capacity = isWeighted() ? data.mappingCount() : maximum;
-          frequencySketch().ensureCapacity(capacity);
+        if (weightedSize() >= (maximum >>> 1)) {
+          if (weightedSize() > MAXIMUM_CAPACITY) {
+            evictEntries();
+          } else {
+            // Lazily initialize when close to the maximum
+            long capacity = isWeighted() ? data.mappingCount() : maximum;
+            frequencySketch().ensureCapacity(capacity);
+          }
         }
 
         K key = node.getKey();
@@ -1815,13 +1810,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (expiresAfterWrite()) {
           writeOrderDeque().add(node);
         }
-        if (evicts() && (weight > windowMaximum())) {
-          accessOrderWindowDeque().offerFirst(node);
-        } else if (evicts() || expiresAfterAccess()) {
-          accessOrderWindowDeque().offerLast(node);
-        }
         if (expiresVariable()) {
           timerWheel().schedule(node);
+        }
+        if (evicts()) {
+          if (weight > maximum()) {
+            evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
+          } else if (weight > windowMaximum()) {
+            accessOrderWindowDeque().offerFirst(node);
+          } else {
+            accessOrderWindowDeque().offerLast(node);
+          }
+        } else if (expiresAfterAccess()) {
+          accessOrderWindowDeque().offerLast(node);
         }
       }
 
@@ -1882,43 +1883,44 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override
     @GuardedBy("evictionLock")
     public void run() {
-      if (evicts()) {
-        int oldWeightedSize = node.getPolicyWeight();
-        node.setPolicyWeight(oldWeightedSize + weightDifference);
-        if (node.inWindow()) {
-          if (node.getPolicyWeight() <= windowMaximum()) {
-            onAccess(node);
-          } else if (accessOrderWindowDeque().contains(node)) {
-            accessOrderWindowDeque().moveToFront(node);
-          }
-          setWindowWeightedSize(windowWeightedSize() + weightDifference);
-        } else if (node.inMainProbation()) {
-            if (node.getPolicyWeight() <= maximum()) {
-              onAccess(node);
-            } else if (accessOrderProbationDeque().remove(node)) {
-              accessOrderWindowDeque().addFirst(node);
-              setWindowWeightedSize(windowWeightedSize() + node.getPolicyWeight());
-            }
-        } else if (node.inMainProtected()) {
-          if (node.getPolicyWeight() <= maximum()) {
-            onAccess(node);
-            setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
-          } else if (accessOrderProtectedDeque().remove(node)) {
-            accessOrderWindowDeque().addFirst(node);
-            setWindowWeightedSize(windowWeightedSize() + node.getPolicyWeight());
-            setMainProtectedWeightedSize(mainProtectedWeightedSize() - oldWeightedSize);
-          } else {
-            setMainProtectedWeightedSize(mainProtectedWeightedSize() - oldWeightedSize);
-          }
-        }
-        setWeightedSize(weightedSize() + weightDifference);
-      } else if (expiresAfterAccess()) {
-        onAccess(node);
-      }
       if (expiresAfterWrite()) {
         reorder(writeOrderDeque(), node);
       } else if (expiresVariable()) {
         timerWheel().reschedule(node);
+      }
+      if (evicts()) {
+        int oldWeightedSize = node.getPolicyWeight();
+        node.setPolicyWeight(oldWeightedSize + weightDifference);
+        if (node.inWindow()) {
+          setWindowWeightedSize(windowWeightedSize() + weightDifference);
+          if (node.getPolicyWeight() > maximum()) {
+            evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
+          } else if (node.getPolicyWeight() <= windowMaximum()) {
+            onAccess(node);
+          } else if (accessOrderWindowDeque().contains(node)) {
+            accessOrderWindowDeque().moveToFront(node);
+          }
+        } else if (node.inMainProbation()) {
+            if (node.getPolicyWeight() <= maximum()) {
+              onAccess(node);
+            } else {
+              evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
+            }
+        } else if (node.inMainProtected()) {
+          setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
+          if (node.getPolicyWeight() <= maximum()) {
+            onAccess(node);
+          } else {
+            evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
+          }
+        }
+
+        setWeightedSize(weightedSize() + weightDifference);
+        if (weightedSize() > MAXIMUM_CAPACITY) {
+          evictEntries();
+        }
+      } else if (expiresAfterAccess()) {
+        onAccess(node);
       }
     }
   }

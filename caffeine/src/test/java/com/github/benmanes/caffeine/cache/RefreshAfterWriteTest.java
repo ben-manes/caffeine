@@ -859,9 +859,9 @@ public final class RefreshAfterWriteTest {
     var future = cache.policy().refreshes().get(context.firstKey());
     assertThat(future).isNotNull();
 
-    future.complete(Int.valueOf(Integer.MAX_VALUE));
+    future.complete(Int.MAX_VALUE);
     assertThat(cache.policy().refreshes()).isExhaustivelyEmpty();
-    assertThat(cache).containsEntry(context.firstKey(), Int.valueOf(Integer.MAX_VALUE));
+    assertThat(cache).containsEntry(context.firstKey(), Int.MAX_VALUE);
   }
 
   /* --------------- Policy: refreshAfterWrite --------------- */
