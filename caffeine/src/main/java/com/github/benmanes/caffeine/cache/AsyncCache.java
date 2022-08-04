@@ -46,8 +46,8 @@ public interface AsyncCache<K extends Object, V extends Object> {
    * cached future for {@code key}.
    *
    * @param key key whose associated value is to be returned
-   * @return the current (existing or computed) future value to which the specified key is mapped,
-   *         or {@code null} if this cache contains no mapping for the key
+   * @return the future value to which the specified key is mapped, or {@code null} if this cache
+   *         does not contain a mapping for the key
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
@@ -116,8 +116,8 @@ public interface AsyncCache<K extends Object, V extends Object> {
    *
    * @param keys the keys whose associated values are to be returned
    * @param mappingFunction the function to asynchronously compute the values
-   * @return the future containing an unmodifiable mapping of keys to values for the specified keys
-   *         in this cache
+   * @return a future containing an unmodifiable mapping of keys to values for the specified keys in
+   *         this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
    *         if the future returned by the mappingFunction is null
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
@@ -145,8 +145,8 @@ public interface AsyncCache<K extends Object, V extends Object> {
    * @param keys the keys whose associated values are to be returned
    * @param mappingFunction the function to asynchronously compute the values, optionally using the
    *        given executor
-   * @return the future containing an unmodifiable mapping of keys to values for the specified keys
-   *         in this cache
+   * @return a future containing an unmodifiable mapping of keys to values for the specified keys in
+   *         this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
    *         if the future returned by the mappingFunction is null
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is

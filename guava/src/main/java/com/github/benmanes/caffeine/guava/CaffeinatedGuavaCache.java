@@ -157,10 +157,10 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     @Nullable KeySetView keySet;
     @Nullable ValuesView values;
 
-    @Override public boolean containsKey(Object key) {
+    @Override public boolean containsKey(@Nullable Object key) {
       return (key != null) && delegate().containsKey(key);
     }
-    @Override public boolean containsValue(Object value) {
+    @Override public boolean containsValue(@Nullable Object value) {
       return (value != null) && delegate().containsValue(value);
     }
     @Override public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
@@ -211,7 +211,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     @Override public boolean removeIf(Predicate<? super V> filter) {
       return delegate().removeIf(filter);
     }
-    @Override public boolean remove(Object o) {
+    @Override public boolean remove(@Nullable Object o) {
       return (o != null) && delegate().remove(o);
     }
     @Override protected Collection<V> delegate() {

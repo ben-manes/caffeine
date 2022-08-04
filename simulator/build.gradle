@@ -62,8 +62,9 @@ tasks.named('sourcesJar').configure {
 }
 
 tasks.withType(JavaCompile).configureEach {
-  options.errorprone.nullaway {
-    severity = CheckSeverity.OFF
+  options.errorprone {
+    nullaway.severity = CheckSeverity.OFF
+    disable('CanIgnoreReturnValueSuggester')
   }
 }
 

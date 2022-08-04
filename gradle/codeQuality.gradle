@@ -121,19 +121,21 @@ tasks.withType(JavaCompile).configureEach {
   options.encoding = 'UTF-8'
   options.errorprone {
     def enabledChecks = [
-      'AssertFalse', 'CatchingUnchecked', 'CheckedExceptionNotThrown', 'ClassName',
-      'ComparisonContractViolated', 'DepAnn', 'EmptyIf', 'EqualsBrokenForNull', 'FieldCanBeLocal',
-      'FieldCanBeStatic', 'ForEachIterable', 'FuzzyEqualsShouldNotBeUsedInEqualsMethod',
-      'FunctionalInterfaceClash', 'IterablePathParameter', 'LongLiteralLowerCaseSuffix',
-      'MissingBraces', 'MissingDefault', 'MixedArrayDimensions', 'MissingDefault', 'NoAllocation',
-      'PackageLocation', 'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports',
-      'ReturnsNullCollection', 'StronglyTypeByteString', 'StronglyTypeTime', 'SwitchDefault',
+      'AssertFalse', 'BuilderReturnThis', 'CatchingUnchecked', 'CheckedExceptionNotThrown',
+      'ClassName', 'ComparisonContractViolated', 'CannotMockFinalClass', 'CannotMockFinalMethod',
+      'DepAnn', 'EmptyIf', 'EqualsBrokenForNull', 'FieldCanBeLocal', 'FieldCanBeStatic',
+      'ForEachIterable', 'FuzzyEqualsShouldNotBeUsedInEqualsMethod', 'FunctionalInterfaceClash',
+      'IterablePathParameter', 'LongLiteralLowerCaseSuffix', 'MissingBraces', 'MissingDefault',
+      'MixedArrayDimensions', 'MissingDefault', 'NoAllocation', 'PackageLocation',
+      'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports', 'ReturnsNullCollection',
+      'SelfAlwaysReturnsThis', 'StronglyTypeByteString', 'StronglyTypeTime', 'SwitchDefault',
       'TimeUnitMismatch', 'TransientMisuse', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass',
-      'UnnecessaryOptionalGet', 'UnsafeLocaleUsage', 'UsingJsr305CheckReturnValue']
+      'UnnecessaryOptionalGet', 'UnsafeLocaleUsage', 'UnusedTypeParameter',
+      'UsingJsr305CheckReturnValue']
     enabledChecks.each { enable(it) }
 
     def disabledChecks = [
-      'AutoValueSubclassLeaked', 'EmptyCatch', 'FieldCanBeFinal', 'MissingSummary']
+      'AutoValueSubclassLeaked', 'EmptyCatch', 'ExtendsObject', 'FieldCanBeFinal', 'MissingSummary']
     disabledChecks.each { disable(it) }
 
     def errorChecks = [ 'NullAway' ]
@@ -141,6 +143,7 @@ tasks.withType(JavaCompile).configureEach {
 
     nullaway {
       annotatedPackages.add('com.github.benmanes.caffeine')
+      annotatedPackages.add('com.google.common')
       checkOptionalEmptiness = true
       suggestSuppressions = true
       checkContracts = true

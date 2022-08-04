@@ -54,6 +54,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.StandardSubjectBuilder;
 import com.google.common.truth.Subject;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
@@ -209,30 +210,37 @@ public final class CacheContextSubject extends Subject {
           || (context.executorType() == CacheExecutor.DIRECT);
     }
 
+    @CanIgnoreReturnValue
     public StatsSubject hits(long count) {
       return awaitStatistic("hitCount", CacheStats::hitCount, count);
     }
 
+    @CanIgnoreReturnValue
     public StatsSubject misses(long count) {
       return awaitStatistic("missCount", CacheStats::missCount, count);
     }
 
+    @CanIgnoreReturnValue
     public StatsSubject evictions(long count) {
       return awaitStatistic("evictionCount", CacheStats::evictionCount, count);
     }
 
+    @CanIgnoreReturnValue
     public StatsSubject evictionWeight(long count) {
       return awaitStatistic("evictionWeight", CacheStats::evictionWeight, count);
     }
 
+    @CanIgnoreReturnValue
     public StatsSubject success(long count) {
       return awaitStatistic("loadSuccessCount", CacheStats::loadSuccessCount, count);
     }
 
+    @CanIgnoreReturnValue
     public StatsSubject failures(long count) {
       return awaitStatistic("loadFailureCount", CacheStats::loadFailureCount, count);
     }
 
+    @CanIgnoreReturnValue
     private StatsSubject awaitStatistic(String label,
         ToLongFunction<CacheStats> supplier, long expectedValue) {
       if (isDirect) {
@@ -313,7 +321,7 @@ public final class CacheContextSubject extends Subject {
       });
     }
 
-    private <T> void awaitUntil(
+    private void awaitUntil(
         BiConsumer<RemovalListenerType, ConsumingRemovalListener<Int, Int>> consumer) {
       actual.forEach((type, listener) -> {
         if (!(listener instanceof ConsumingRemovalListener<?, ?>)) {

@@ -160,6 +160,7 @@ public final class LocalCacheFactoryGenerator {
     return Sets.cartesianProduct(sets);
   }
 
+  @SuppressWarnings("NullAway")
   private TypeSpec makeLocalCacheSpec(String className, boolean isFinal, Set<Feature> features) {
     TypeName superClass;
     Set<Feature> parentFeatures;

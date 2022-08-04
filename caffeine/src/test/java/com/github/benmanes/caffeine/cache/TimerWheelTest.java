@@ -528,7 +528,7 @@ public final class TimerWheelTest {
 
   /** Returns a snapshot roughly ordered by the expiration time. */
   private List<Long> snapshot(boolean ascending) {
-    var snapshot = new ArrayList<Long>(cache.size());
+    var snapshot = new ArrayList<Long>();
     int startLevel = ascending ? 0 : timerWheel.wheel.length - 1;
     Function<Node<?, ?>, Node<?, ?>> successor =
         ascending ? Node::getNextInVariableOrder : Node::getPreviousInVariableOrder;

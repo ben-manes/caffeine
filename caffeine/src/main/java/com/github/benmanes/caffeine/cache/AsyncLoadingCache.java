@@ -69,8 +69,8 @@ public interface AsyncLoadingCache<K extends Object, V extends Object> extends A
    * ignored.
    *
    * @param keys the keys whose associated values are to be returned
-   * @return the future containing an unmodifiable mapping of keys to values for the specified keys
-   *         in this cache
+   * @return a future containing an unmodifiable mapping of keys to values for the specified keys in
+   *         this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
    *         if the future returned by the {@link AsyncCacheLoader} is null
    * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does so, if

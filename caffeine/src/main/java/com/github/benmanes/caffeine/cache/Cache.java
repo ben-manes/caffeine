@@ -89,7 +89,7 @@ public interface Cache<K extends Object, V extends Object> {
    * ignored.
    *
    * @param keys the keys whose associated values are to be returned
-   * @return the unmodifiable mapping of keys to values for the specified keys found in this cache
+   * @return an unmodifiable mapping of keys to values for the specified keys found in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
   Map<K, V> getAllPresent(Iterable<? extends K> keys);

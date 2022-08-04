@@ -67,10 +67,12 @@ public abstract class NodeRule implements Consumer<NodeContext> {
     return context.superClass.equals(TypeName.OBJECT);
   }
 
+  @SuppressWarnings("NullAway")
   protected Strength keyStrength() {
     return strengthOf(Iterables.get(context.generateFeatures, 0));
   }
 
+  @SuppressWarnings("NullAway")
   protected Strength valueStrength() {
     return strengthOf(Iterables.get(context.generateFeatures, 1));
   }

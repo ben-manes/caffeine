@@ -158,6 +158,7 @@ public final class NodeFactoryGenerator {
     return features;
   }
 
+  @SuppressWarnings("NullAway")
   private TypeSpec makeNodeSpec(String className, boolean isFinal, Set<Feature> features) {
     TypeName superClass;
     Set<Feature> parentFeatures;

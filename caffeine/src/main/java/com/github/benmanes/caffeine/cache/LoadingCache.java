@@ -77,7 +77,7 @@ public interface LoadingCache<K extends Object, V extends Object> extends Cache<
    * ignored.
    *
    * @param keys the keys whose associated values are to be returned
-   * @return the unmodifiable mapping of keys to values for the specified keys in this cache
+   * @return an unmodifiable mapping of keys to values for the specified keys in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element
    * @throws CompletionException if a checked exception was thrown while loading the value
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
@@ -119,7 +119,7 @@ public interface LoadingCache<K extends Object, V extends Object> extends Cache<
    * is asynchronous by delegating to the default executor.
    *
    * @param keys the keys whose associated values are to be returned
-   * @return the future containing an unmodifiable mapping of keys to values for the specified keys
+   * @return a future containing an unmodifiable mapping of keys to values for the specified keys
    *         that are loading the values
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
