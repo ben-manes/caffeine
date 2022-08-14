@@ -138,7 +138,7 @@ public final class InternerTest extends TestCase {
 
   @Test
   public void interned() {
-    var node = new Interned<Object, Boolean>();
+    var node = new Interned<Object, Boolean>(new WeakReference<>(null));
     assertThat(node.getValue()).isTrue();
     assertThat(node.getValueReference()).isTrue();
     assertThat(node.newNode(null, null, null, 1, 1)).isInstanceOf(Interned.class);
@@ -147,6 +147,9 @@ public final class InternerTest extends TestCase {
 
     node.retire();
     assertThat(node.isRetired()).isTrue();
+
+    node.die();
+    assertThat(node.isDead()).isTrue();
   }
 
   private void checkSize(Interner<Int> interner, int size) {

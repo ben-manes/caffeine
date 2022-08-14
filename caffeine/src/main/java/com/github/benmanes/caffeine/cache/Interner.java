@@ -161,13 +161,16 @@ final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
     return (keyReference == RETIRED_WEAK_KEY);
   }
   @Override public void retire() {
+    var keyRef = keyReference;
     keyReference = RETIRED_WEAK_KEY;
+    keyRef.clear();
   }
   @Override public boolean isDead() {
     return (keyReference == DEAD_WEAK_KEY);
   }
   @Override public void die() {
-    keyReference.clear();
+    var keyRef = keyReference;
     keyReference = DEAD_WEAK_KEY;
+    keyRef.clear();
   }
 }

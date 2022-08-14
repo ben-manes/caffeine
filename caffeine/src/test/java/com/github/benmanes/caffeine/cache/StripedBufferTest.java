@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -39,8 +40,36 @@ public final class StripedBufferTest {
   public void init(FakeBuffer<Integer> buffer) {
     assertThat(buffer.table).isNull();
 
-    buffer.offer(ELEMENT);
+    var result = buffer.offer(ELEMENT);
     assertThat(buffer.table).hasLength(1);
+    assertThat(result).isEqualTo(Buffer.SUCCESS);
+  }
+
+  @Test
+  public void expand() {
+    var buffer = new FakeBuffer<Integer>(Buffer.FAILED);
+    assertThat(buffer.offer(ELEMENT)).isEqualTo(Buffer.SUCCESS);
+
+    for (int i = 0; i < 64; i++) {
+      int result = buffer.offer(ELEMENT);
+      if (result == Buffer.SUCCESS) {
+        return;
+      }
+    }
+    Assert.fail();
+  }
+
+  @Test
+  @SuppressWarnings("ThreadPriorityCheck")
+  public void expand_concurrent() {
+    var buffer = new FakeBuffer<Boolean>(Buffer.FAILED);
+    ConcurrentTestHarness.timeTasks(10 * NCPU, () -> {
+      for (int i = 0; i < 1000; i++) {
+        buffer.offer(Boolean.TRUE);
+        Thread.yield();
+      }
+    });
+    assertThat(buffer.table).hasLength(MAXIMUM_TABLE_SIZE);
   }
 
   @Test(dataProvider = "buffers")
@@ -53,19 +82,6 @@ public final class StripedBufferTest {
       }
     });
     assertThat(buffer.table.length).isAtMost(MAXIMUM_TABLE_SIZE);
-  }
-
-  @Test
-  @SuppressWarnings("ThreadPriorityCheck")
-  public void expand() {
-    var buffer = new FakeBuffer<Boolean>(Buffer.FAILED);
-    ConcurrentTestHarness.timeTasks(10 * NCPU, () -> {
-      for (int i = 0; i < 1000; i++) {
-        buffer.offer(Boolean.TRUE);
-        Thread.yield();
-      }
-    });
-    assertThat(buffer.table).hasLength(MAXIMUM_TABLE_SIZE);
   }
 
   @Test(dataProvider = "buffers")

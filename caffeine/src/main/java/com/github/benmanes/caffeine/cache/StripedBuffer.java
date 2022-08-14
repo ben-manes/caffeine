@@ -117,7 +117,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   @Override
   public int offer(E e) {
     long z = mix64(Thread.currentThread().getId());
-    int increment = (int) (z >>> 32) | 1;
+    int increment = ((int) (z >>> 32)) | 1;
     int h = (int) z;
 
     int mask;
@@ -168,6 +168,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
               tableBusy = 0;
             }
             if (created) {
+              result = Buffer.SUCCESS;
               break;
             }
             continue; // Slot is now non-empty
@@ -207,6 +208,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
           tableBusy = 0;
         }
         if (init) {
+          result = Buffer.SUCCESS;
           break;
         }
       }

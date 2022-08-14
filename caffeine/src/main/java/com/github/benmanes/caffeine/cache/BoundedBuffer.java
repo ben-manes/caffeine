@@ -62,6 +62,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
     public RingBuffer(E e) {
       buffer = new Object[BUFFER_SIZE];
       BUFFER.set(buffer, 0, e);
+      WRITE.set(this, 1);
     }
 
     @Override
@@ -72,7 +73,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
       if (size >= BUFFER_SIZE) {
         return Buffer.FULL;
       }
-      if (casWriteCounter(tail, tail + 1)) {
+      if (casWriteCounterPlain(tail, tail + 1)) {
         int index = (int) (tail & MASK);
         BUFFER.setRelease(buffer, index, e);
         return Buffer.SUCCESS;
@@ -165,10 +166,6 @@ final class BBHeader {
 
     volatile long writeCounter;
 
-    ReadAndWriteCounterRef() {
-      WRITE.setOpaque(this, 1);
-    }
-
     void setReadCounterOpaque(long count) {
       READ.setOpaque(this, count);
     }
@@ -177,8 +174,8 @@ final class BBHeader {
       return (long) WRITE.getOpaque(this);
     }
 
-    boolean casWriteCounter(long expect, long update) {
-      return WRITE.weakCompareAndSet(this, expect, update);
+    boolean casWriteCounterPlain(long expect, long update) {
+      return WRITE.weakCompareAndSetPlain(this, expect, update);
     }
 
     static {
