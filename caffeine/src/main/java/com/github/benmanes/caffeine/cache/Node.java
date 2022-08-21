@@ -52,10 +52,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
    */
   public abstract Object getValueReference();
 
-  /**
-   * Sets the value, which may be held strongly, weakly, or softly. This update may be set lazily
-   * and rely on the memory fence when the lock is released.
-   */
+  /** Sets the value, which may be held strongly, weakly, or softly. */
   @GuardedBy("this")
   public abstract void setValue(V value, @Nullable ReferenceQueue<V> referenceQueue);
 

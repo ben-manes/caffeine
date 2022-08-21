@@ -220,7 +220,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
   /** The maximum duration before an entry expires. */
   static final long MAXIMUM_EXPIRY = (Long.MAX_VALUE >> 1); // 150 years
-  /** The duration to wait on the eviction lock before warning that of a possible misuse. */
+  /** The duration to wait on the eviction lock before warning of a possible misuse. */
   static final long WARN_AFTER_LOCK_WAIT_NANOS = TimeUnit.SECONDS.toNanos(30);
   /** The handle for the in-flight refresh operations. */
   static final VarHandle REFRESHES;
@@ -2256,9 +2256,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               || (expiresVariable()
                   && Math.abs(varTime - prior.getVariableTime()) > EXPIRE_WRITE_TOLERANCE);
 
-          setWriteTime(prior, now);
-          prior.setWeight(newWeight);
           prior.setValue(value, valueReferenceQueue());
+          prior.setWeight(newWeight);
+          setWriteTime(prior, now);
         }
 
         setVariableTime(prior, varTime);
@@ -2574,12 +2574,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           n.retire();
           return null;
         }
+        now[0] = expirationTicker().read();
         weight[1] = weigher.weigh(key, newValue[0]);
+        long varTime = expireAfterCreate(key, newValue[0], expiry(), now[0]);
+
         n.setValue(newValue[0], valueReferenceQueue());
         n.setWeight(weight[1]);
 
-        now[0] = expirationTicker().read();
-        setVariableTime(n, expireAfterCreate(key, newValue[0], expiry(), now[0]));
+        setVariableTime(n, varTime);
         setAccessTime(n, now[0]);
         setWriteTime(n, now[0]);
         discardRefresh(k);
@@ -2752,6 +2754,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           return null;
         }
 
+        long varTime;
         weight[0] = n.getWeight();
         weight[1] = weigher.weigh(key, newValue[0]);
         now[0] = expirationTicker().read();
@@ -2759,12 +2762,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           if (newValue[0] != oldValue[0]) {
             cause[0] = RemovalCause.REPLACED;
           }
-          setVariableTime(n, expireAfterUpdate(n, key, newValue[0], expiry, now[0]));
+          varTime = expireAfterUpdate(n, key, newValue[0], expiry, now[0]);
         } else {
-          setVariableTime(n, expireAfterCreate(key, newValue[0], expiry, now[0]));
+          varTime = expireAfterCreate(key, newValue[0], expiry, now[0]);
         }
+
         n.setValue(newValue[0], valueReferenceQueue());
         n.setWeight(weight[1]);
+
+        setVariableTime(n, varTime);
         setAccessTime(n, now[0]);
         setWriteTime(n, now[0]);
         discardRefresh(kr);

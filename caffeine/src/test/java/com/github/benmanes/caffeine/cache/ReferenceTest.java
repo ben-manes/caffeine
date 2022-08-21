@@ -31,9 +31,11 @@ import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
@@ -58,6 +60,7 @@ import com.github.benmanes.caffeine.cache.References.WeakValueReference;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
@@ -148,6 +151,23 @@ public final class ReferenceTest {
     assertThat(cache).whenCleanedUp().hasSize(1);
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(collected).exclusively();
+  }
+
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      expiry = CacheExpiry.MOCKITO, removalListener = Listener.REJECTING)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void get_expireFails(Cache<Int, Int> cache, CacheContext context) {
+    Int key = context.firstKey();
+
+    context.clear();
+    GcFinalization.awaitFullGc();
+    try {
+      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+          .thenThrow(IllegalStateException.class);
+      cache.get(key, identity());
+    } finally {
+      assertThat(cache).doesNotContainKey(key);
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -365,6 +385,23 @@ public final class ReferenceTest {
 
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(collected).exclusively();
+  }
+
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      expiry = CacheExpiry.MOCKITO, removalListener = Listener.REJECTING, loader = Loader.IDENTITY)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void get_loading_expireFails(LoadingCache<Int, Int> cache, CacheContext context) {
+    Int key = context.firstKey();
+
+    context.clear();
+    GcFinalization.awaitFullGc();
+    try {
+      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+          .thenThrow(IllegalStateException.class);
+      cache.get(key);
+    } finally {
+      assertThat(cache).doesNotContainKey(key);
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -801,6 +838,23 @@ public final class ReferenceTest {
       assertThat(context).hasWeightedSize(1);
     } else {
       assertThat(context).hasWeightedSize(3);
+    }
+  }
+
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      expiry = CacheExpiry.MOCKITO, removalListener = Listener.REJECTING)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void computeIfAbsent_expireFails(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+
+    context.clear();
+    GcFinalization.awaitFullGc();
+    try {
+      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+          .thenThrow(IllegalStateException.class);
+      map.computeIfAbsent(key, identity());
+    } finally {
+      assertThat(map).doesNotContainKey(key);
     }
   }
 

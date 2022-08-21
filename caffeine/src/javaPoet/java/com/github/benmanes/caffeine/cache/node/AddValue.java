@@ -95,7 +95,7 @@ public final class AddValue extends NodeRule {
         .addParameter(vRefQueueType, "referenceQueue");
 
     if (isStrongValues()) {
-      setter.addStatement("$L.set(this, $N)", varHandleName("value"), "value");
+      setter.addStatement("$L.setRelease(this, $N)", varHandleName("value"), "value");
     } else {
       setter.addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)",
           Reference.class, varHandleName("value"));
