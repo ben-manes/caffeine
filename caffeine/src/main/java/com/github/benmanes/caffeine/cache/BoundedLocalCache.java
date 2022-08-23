@@ -2716,9 +2716,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
         now[0] = expirationTicker().read();
         weight[1] = weigher.weigh(key, newValue[0]);
-        n = nodeFactory.newNode(keyRef, newValue[0],
-            valueReferenceQueue(), weight[1], now[0]);
-        setVariableTime(n, expireAfterCreate(key, newValue[0], expiry, now[0]));
+        long varTime = expireAfterCreate(key, newValue[0], expiry, now[0]);
+        n = nodeFactory.newNode(keyRef, newValue[0], valueReferenceQueue(), weight[1], now[0]);
+        setVariableTime(n, varTime);
         setAccessTime(n, now[0]);
         setWriteTime(n, now[0]);
         discardRefresh(key);

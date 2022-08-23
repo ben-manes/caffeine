@@ -267,6 +267,18 @@ public final class ExpireAfterVarTest {
     assertThat(map).isExhaustivelyEmpty();
   }
 
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
+  public void replace_expiryFails(Map<Int, Int> map, CacheContext context) {
+    try {
+      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+          .thenThrow(ExpirationException.class);
+      map.replace(context.firstKey(), context.absentValue());
+    } finally {
+      assertThat(map).containsExactlyEntriesIn(context.original());
+    }
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
@@ -278,6 +290,19 @@ public final class ExpireAfterVarTest {
 
     context.cleanUp();
     assertThat(map).isExhaustivelyEmpty();
+  }
+
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
+  public void replaceConditionally_expiryFails(Map<Int, Int> map, CacheContext context) {
+    try {
+      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+          .thenThrow(ExpirationException.class);
+      Int oldValue = context.original().get(context.firstKey());
+      map.replace(context.firstKey(), oldValue, context.absentValue());
+    } finally {
+      assertThat(map).containsExactlyEntriesIn(context.original());
+    }
   }
 
   /* --------------- Exceptional --------------- */
@@ -296,8 +321,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
-  @CacheSpec(population = Population.FULL,
-      expiry = CacheExpiry.MOCKITO, removalListener = Listener.REJECTING)
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void get_expiryFails_create(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -421,6 +445,18 @@ public final class ExpireAfterVarTest {
     verifyNoMoreInteractions(context.expiry());
   }
 
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
+  public void computeIfAbsent_expiryFails(Map<Int, Int> map, CacheContext context) {
+    try {
+      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+          .thenThrow(ExpirationException.class);
+      map.computeIfAbsent(context.absentKey(), identity());
+    } finally {
+      assertThat(map).containsExactlyEntriesIn(context.original());
+    }
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void computeIfPresent_absent(Map<Int, Int> map, CacheContext context) {
@@ -449,6 +485,18 @@ public final class ExpireAfterVarTest {
     map.computeIfPresent(context.firstKey(), (key, value) -> value);
     verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     verifyNoMoreInteractions(context.expiry());
+  }
+
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
+  public void computeIfPresent_expiryFails(Map<Int, Int> map, CacheContext context) {
+    try {
+      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+          .thenThrow(ExpirationException.class);
+      map.computeIfPresent(context.firstKey(), (k, v) -> v.negate());
+    } finally {
+      assertThat(map).containsExactlyEntriesIn(context.original());
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -1282,6 +1330,30 @@ public final class ExpireAfterVarTest {
     } catch (IllegalStateException expected) {}
 
     assertThat(variable).isEqualTo(expireAfterVar.getExpiresAfter(context.firstKey()));
+  }
+
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
+  public void compute_absent_expiryFails(Map<Int, Int> map, CacheContext context) {
+    try {
+      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+          .thenThrow(ExpirationException.class);
+      map.compute(context.absentKey(), (k, v) -> k);
+    } finally {
+      assertThat(map).containsExactlyEntriesIn(context.original());
+    }
+  }
+
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
+  public void compute_present_expiryFails(Map<Int, Int> map, CacheContext context) {
+    try {
+      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+          .thenThrow(ExpirationException.class);
+      map.compute(context.firstKey(), (k, v) -> v.negate());
+    } finally {
+      assertThat(map).containsExactlyEntriesIn(context.original());
+    }
   }
 
   /* --------------- Policy: oldest --------------- */
