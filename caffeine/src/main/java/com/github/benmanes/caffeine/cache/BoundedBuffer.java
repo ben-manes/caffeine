@@ -73,7 +73,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
       if (size >= BUFFER_SIZE) {
         return Buffer.FULL;
       }
-      if (casWriteCounterPlain(tail, tail + 1)) {
+      if (casWriteCounter(tail, tail + 1)) {
         int index = (int) (tail & MASK);
         BUFFER.setRelease(buffer, index, e);
         return Buffer.SUCCESS;
@@ -174,8 +174,8 @@ final class BBHeader {
       return (long) WRITE.getOpaque(this);
     }
 
-    boolean casWriteCounterPlain(long expect, long update) {
-      return WRITE.weakCompareAndSetPlain(this, expect, update);
+    boolean casWriteCounter(long expect, long update) {
+      return WRITE.weakCompareAndSet(this, expect, update);
     }
 
     static {

@@ -41,6 +41,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.util.Map.entry;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -100,6 +101,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
+import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLogger;
@@ -408,13 +410,11 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.TEN, weigher = CacheWeigher.DEFAULT,
-      initialCapacity = InitialCapacity.EXCESSIVE)
-  public void evict_wtinylfu(BoundedLocalCache<Int, Int> localCache,
-      Cache<Int, Int> cache, CacheContext context) throws Exception {
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, maximumSize = Maximum.TEN, weigher = CacheWeigher.DEFAULT)
+  public void evict_wtinylfu(Cache<Int, Int> cache, CacheContext context) {
     // Enforce full initialization of internal structures; clear sketch
-    localCache.frequencySketch().ensureCapacity(10);
+    asBoundedLocalCache(cache).frequencySketch().ensureCapacity(context.maximumSize());
 
     for (int i = 0; i < 10; i++) {
       cache.put(Int.valueOf(i), Int.valueOf(-i));
@@ -456,6 +456,45 @@ public final class BoundedLocalCacheTest {
     var evictionOrder = cache.policy().eviction().orElseThrow().coldest(Integer.MAX_VALUE).keySet();
     assertThat(cache).containsExactlyKeys(expect);
     assertThat(evictionOrder).containsExactlyElementsIn(expect).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      removalListener = Listener.CONSUMING)
+  public void evict_candidate_lru(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setMainProtectedMaximum(0);
+    cache.setWindowMaximum(context.maximumSize());
+    for (int i = 0; i < context.maximumSize(); i++) {
+      cache.put(Int.valueOf(i), Int.valueOf(i));
+    }
+
+    var expected = cache.accessOrderWindowDeque().stream().map(Node::getKey).collect(toList());
+    cache.setWindowMaximum(0L);
+    cache.evictFromWindow();
+
+    var actual = cache.accessOrderProbationDeque().stream().map(Node::getKey).collect(toList());
+    assertThat(actual).containsExactlyElementsIn(expected).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      removalListener = Listener.CONSUMING)
+  public void evict_victim_lru(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setWindowMaximum(0);
+    cache.evictFromWindow();
+
+    var expected = FluentIterable
+        .from(cache.accessOrderProbationDeque())
+        .append(cache.accessOrderProtectedDeque())
+        .transform(Node::getKey).toList();
+    cache.setMaximumSize(0L);
+    cache.cleanUp();
+
+    var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
   @Test(groups = "isolated")

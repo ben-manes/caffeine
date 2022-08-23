@@ -122,7 +122,7 @@ public final class Stresser implements Runnable {
     local.evictionLock.lock();
     try {
       pendingWrites = local.writeBuffer.size();
-      drainStatus = local.drainStatus();
+      drainStatus = local.drainStatusAcquire();
     } finally {
       local.evictionLock.unlock();
     }

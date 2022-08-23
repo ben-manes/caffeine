@@ -1523,8 +1523,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * execution is triggered by the next operation.
    */
   void scheduleAfterWrite() {
+    int drainStatus = drainStatusOpaque();
     for (;;) {
-      switch (drainStatus()) {
+      switch (drainStatus) {
         case IDLE:
           casDrainStatus(IDLE, REQUIRED);
           scheduleDrainBuffers();
@@ -1536,6 +1537,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           if (casDrainStatus(PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED)) {
             return;
           }
+          drainStatus = drainStatusAcquire();
           continue;
         case PROCESSING_TO_REQUIRED:
           return;
@@ -1550,12 +1552,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * replacement policy. If the executor rejects the task then it is run directly.
    */
   void scheduleDrainBuffers() {
-    if (drainStatus() >= PROCESSING_TO_IDLE) {
+    if (drainStatusOpaque() >= PROCESSING_TO_IDLE) {
       return;
     }
     if (evictionLock.tryLock()) {
       try {
-        int drainStatus = drainStatus();
+        int drainStatus = drainStatusOpaque();
         if (drainStatus >= PROCESSING_TO_IDLE) {
           return;
         }
@@ -1591,7 +1593,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     } finally {
       evictionLock.unlock();
     }
-    if ((drainStatus() == REQUIRED) && (executor == ForkJoinPool.commonPool())) {
+    if ((drainStatusOpaque() == REQUIRED) && (executor == ForkJoinPool.commonPool())) {
       scheduleDrainBuffers();
     }
   }
@@ -1623,7 +1625,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       climb();
     } finally {
-      if ((drainStatus() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
+      if ((drainStatusOpaque() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
         setDrainStatusOpaque(REQUIRED);
       }
     }
@@ -2058,7 +2060,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (recordStats) {
         statsCounter().recordMisses(1);
       }
-      if (drainStatus() == REQUIRED) {
+      if (drainStatusOpaque() == REQUIRED) {
         scheduleDrainBuffers();
       }
       return null;
@@ -2106,7 +2108,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   public @Nullable K getKey(K key) {
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if (node == null) {
-      if (drainStatus() == REQUIRED) {
+      if (drainStatusOpaque() == REQUIRED) {
         scheduleDrainBuffers();
       }
       return null;
@@ -4486,7 +4488,7 @@ final class BLCHeader {
      * @param delayable if draining the read buffer can be delayed
      */
     boolean shouldDrainBuffers(boolean delayable) {
-      switch (drainStatus()) {
+      switch (drainStatusOpaque()) {
         case IDLE:
           return !delayable;
         case REQUIRED:
@@ -4499,8 +4501,12 @@ final class BLCHeader {
       }
     }
 
-    int drainStatus() {
+    int drainStatusOpaque() {
       return (int) DRAIN_STATUS.getOpaque(this);
+    }
+
+    int drainStatusAcquire() {
+      return (int) DRAIN_STATUS.getAcquire(this);
     }
 
     void setDrainStatusOpaque(int drainStatus) {
