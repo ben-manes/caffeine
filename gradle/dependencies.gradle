@@ -35,7 +35,7 @@ ext {
     commonsIo: '2.11.0',
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.2',
-    ehcache3: '3.10.0',
+    ehcache3: '3.10.1',
     errorprone: '2.15.0',
     expiringMap: '0.5.10',
     fastfilter: '1.0.2',

@@ -19,10 +19,12 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_REQUIRED;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ADMIT_HASHDOS_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WARN_AFTER_LOCK_WAIT_NANOS;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
+import static com.github.benmanes.caffeine.cache.Node.WINDOW;
 import static com.github.benmanes.caffeine.cache.RemovalCause.COLLECTED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
@@ -55,6 +57,7 @@ import java.lang.Thread.State;
 import java.lang.ref.Reference;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -495,6 +498,211 @@ public final class BoundedLocalCacheTest {
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
     var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      removalListener = Listener.CONSUMING)
+  public void evict_window_candidates(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setWindowMaximum(context.maximumSize() / 2);
+    cache.setMainProtectedMaximum(0);
+
+    for (int i = 0; i < context.maximumSize(); i++) {
+      cache.put(Int.valueOf(i), Int.valueOf(i));
+    }
+    Arrays.fill(cache.frequencySketch().table, 0L);
+
+    var expected = cache.accessOrderWindowDeque().stream().map(Node::getKey).collect(toList());
+    cache.setMaximum(context.maximumSize() / 2);
+    cache.setWindowMaximum(0);
+    cache.evictEntries();
+
+    var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    assertThat(actual).containsExactlyElementsIn(expected).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      removalListener = Listener.CONSUMING)
+  public void evict_window_fallback(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setWindowMaximum(context.maximumSize() / 2);
+    cache.setMainProtectedMaximum(0);
+
+    for (int i = 0; i < context.maximumSize(); i++) {
+      cache.put(Int.valueOf(i), Int.valueOf(i));
+    }
+    Arrays.fill(cache.frequencySketch().table, 0L);
+
+    var expected = cache.accessOrderWindowDeque().stream().map(Node::getKey).collect(toList());
+    cache.setMaximum(context.maximumSize() / 2);
+    cache.evictEntries();
+
+    var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    assertThat(actual).containsExactlyElementsIn(expected).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      removalListener = Listener.CONSUMING)
+  public void evict_candidateIsVictim(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setMainProtectedMaximum(context.maximumSize() / 2);
+    cache.setWindowMaximum(context.maximumSize() / 2);
+
+    for (int i = 0; i < context.maximumSize(); i++) {
+      cache.put(Int.valueOf(i), Int.valueOf(i));
+    }
+    while (!cache.accessOrderProbationDeque().isEmpty()) {
+      var node = cache.accessOrderProbationDeque().removeFirst();
+      cache.accessOrderProtectedDeque().offerLast(node);
+      node.makeMainProtected();
+    }
+    Arrays.fill(cache.frequencySketch().table, 0L);
+    cache.setMainProtectedWeightedSize(context.maximumSize() - cache.windowWeightedSize());
+
+    var expected = FluentIterable
+        .from(cache.accessOrderWindowDeque())
+        .append(cache.accessOrderProbationDeque())
+        .append(cache.accessOrderProtectedDeque())
+        .transform(Node::getKey).toList();
+    cache.setMainProtectedMaximum(0L);
+    cache.setWindowMaximum(0L);
+    cache.setMaximum(0L);
+    cache.evictEntries();
+
+    var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    assertThat(actual).containsExactlyElementsIn(expected).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      removalListener = Listener.CONSUMING)
+  public void evict_toZero(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (int i = 0; i < context.maximumSize(); i++) {
+      cache.put(Int.valueOf(i), Int.valueOf(i));
+    }
+    Arrays.fill(cache.frequencySketch().table, 0L);
+
+    var expected = FluentIterable
+        .from(cache.accessOrderWindowDeque())
+        .append(cache.accessOrderProbationDeque())
+        .append(cache.accessOrderProtectedDeque())
+        .transform(Node::getKey).toList();
+    cache.setMaximumSize(0);
+    cache.evictEntries();
+
+    var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    assertThat(actual).containsExactlyElementsIn(expected).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+  public void evict_retired_candidate(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.evictionLock.lock();
+    try {
+      var expected = cache.accessOrderWindowDeque().peekFirst();
+      var key = expected.getKey();
+
+      ConcurrentTestHarness.execute(() -> cache.remove(key));
+      await().until(() -> !cache.containsKey(key));
+      assertThat(expected.isRetired()).isTrue();
+
+      cache.setWindowMaximum(cache.windowMaximum() - 1);
+      cache.setMaximum(context.maximumSize() - 1);
+      cache.evictEntries();
+
+      assertThat(expected.isDead()).isTrue();
+      assertThat(cache).hasSize(cache.maximum());
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+  public void evict_retired_victim(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.evictionLock.lock();
+    try {
+      var expected = cache.accessOrderProbationDeque().peekFirst();
+      var key = expected.getKey();
+
+      ConcurrentTestHarness.execute(() -> cache.remove(key));
+      await().until(() -> !cache.containsKey(key));
+      assertThat(expected.isRetired()).isTrue();
+
+      cache.setWindowMaximum(cache.windowMaximum() - 1);
+      cache.setMaximum(context.maximumSize() - 1);
+      cache.evictEntries();
+
+      assertThat(expected.isDead()).isTrue();
+      assertThat(cache).hasSize(cache.maximum());
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE)
+  public void evict_zeroWeight(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (int i = 0; i < context.maximumSize(); i++) {
+      cache.put(Int.valueOf(i), Int.valueOf(1));
+      cache.get(Int.valueOf(i - 1));
+    }
+    cache.put(cache.accessOrderWindowDeque().peekFirst().getKey(), Int.valueOf(0));
+    cache.put(cache.accessOrderProbationDeque().peekFirst().getKey(), Int.valueOf(0));
+
+    cache.setMaximumSize(0);
+    cache.evictEntries();
+    assertThat(cache).hasSize(2);
+    assertThat(cache.weightedSize()).isEqualTo(0);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.FULL)
+  public void evict_admit(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    Int candidate = Int.valueOf(0);
+    Int victim = Int.valueOf(1);
+
+    // Prefer victim if tie
+    assertThat(cache.admit(candidate, victim)).isFalse();
+
+    // Prefer candidate if more popular
+    cache.frequencySketch().increment(candidate);
+    assertThat(cache.admit(candidate, victim)).isTrue();
+
+    // Prefer victim if more popular
+    for (int i = 0; i < 15; i++) {
+      cache.frequencySketch().increment(victim);
+      assertThat(cache.admit(candidate, victim)).isFalse();
+    }
+
+    // Allow
+    while (cache.frequencySketch().frequency(candidate) < ADMIT_HASHDOS_THRESHOLD) {
+      cache.frequencySketch().increment(candidate);
+    }
+    int allow = 0;
+    int reject = 0;
+    for (int i = 0; i < 1_000; i++) {
+      if (cache.admit(candidate, victim)) {
+        allow++;
+      } else {
+        reject++;
+      }
+    }
+    assertThat(allow).isGreaterThan(0);
+    assertThat(reject).isGreaterThan(0);
+    assertThat(reject).isGreaterThan(allow);
   }
 
   @Test(groups = "isolated")
@@ -1695,7 +1903,7 @@ public final class BoundedLocalCacheTest {
     List<Runnable> methods = List.of(() -> node.casVariableTime(1L, 2L),
         () -> node.getPreviousInVariableOrder(), () -> node.setPreviousInVariableOrder(node),
         () -> node.getNextInVariableOrder(), () -> node.setNextInVariableOrder(node),
-        () -> node.setQueueType(Node.WINDOW), () -> node.setPreviousInAccessOrder(node),
+        () -> node.setQueueType(WINDOW), () -> node.setPreviousInAccessOrder(node),
         () -> node.setNextInAccessOrder(node), () -> node.casWriteTime(1L, 2L),
         () -> node.setPreviousInWriteOrder(node), () -> node.setNextInWriteOrder(node));
     for (var method : methods) {

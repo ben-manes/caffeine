@@ -214,6 +214,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final double HILL_CLIMBER_STEP_PERCENT = 0.0625d;
   /** The rate to decrease the step size to adapt by. */
   static final double HILL_CLIMBER_STEP_DECAY_RATE = 0.98d;
+  /** The minimum popularity for allowing randomized admission. */
+  static final int ADMIT_HASHDOS_THRESHOLD = 6;
   /** The maximum number of entries that can be transferred between queues. */
   static final int QUEUE_TRANSFER_THRESHOLD = 1_000;
   /** The maximum time window between entry updates before the expiration must be reordered. */
@@ -664,20 +666,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (!evicts()) {
       return;
     }
-    int candidates = evictFromWindow();
-    evictFromMain(candidates);
+    var candidate = evictFromWindow();
+    evictFromMain(candidate);
   }
 
   /**
    * Evicts entries from the window space into the main space while the window size exceeds a
    * maximum.
    *
-   * @return the number of candidate entries evicted from the window space
+   * @return the first candidate promoted into the probation space
    */
   @GuardedBy("evictionLock")
-  int evictFromWindow() {
-    int candidates = 0;
-    Node<K, V> node = accessOrderWindowDeque().peek();
+  @Nullable Node<K, V> evictFromWindow() {
+    Node<K, V> first = null;
+    Node<K, V> node = accessOrderWindowDeque().peekFirst();
     while (windowWeightedSize() > windowMaximum()) {
       // The pending operations will adjust the size to reflect the correct weight
       if (node == null) {
@@ -688,15 +690,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (node.getPolicyWeight() != 0) {
         node.makeMainProbation();
         accessOrderWindowDeque().remove(node);
-        accessOrderProbationDeque().add(node);
-        candidates++;
+        accessOrderProbationDeque().offerLast(node);
+        if (first == null) {
+          first = node;
+        }
 
         setWindowWeightedSize(windowWeightedSize() - node.getPolicyWeight());
       }
       node = next;
     }
 
-    return candidates;
+    return first;
   }
 
   /**
@@ -704,23 +708,28 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * determines whether admitting an entry (coming from the window space) is preferable to retaining
    * the eviction policy's victim. This decision is made using a frequency filter so that the
    * least frequently used entry is removed.
+   * <p>
+   * The window space's candidates were previously promoted to the probation space at its MRU
+   * position and the eviction policy's victim starts at the LRU position. The candidates are
+   * evaluated in promotion order while an eviction is required, and if exhausted then additional
+   * entries are retrieved from the window space. Likewise, if the victim selection exhausts the
+   * probation space then additional entries are retrieved the protected space. The queues are
+   * consumed in LRU order and the evicted entry is the one with a lower relative frequency, where
+   * the preference is to retain the main space's victims versus the window space's candidates on a
+   * tie.
    *
-   * The window space's candidates were previously placed in the MRU position and the eviction
-   * policy's victim is at the LRU position. The two ends of the queue are evaluated while an
-   * eviction is required. The number of remaining candidates is provided and decremented on
-   * eviction, so that when there are no more candidates the victim is evicted.
-   *
-   * @param candidates the number of candidate entries evicted from the window space
+   * @param candidate the first candidate promoted into the probation space
    */
   @GuardedBy("evictionLock")
-  void evictFromMain(int candidates) {
+  void evictFromMain(@Nullable Node<K, V> candidate) {
     int victimQueue = PROBATION;
+    int candidateQueue = PROBATION;
     Node<K, V> victim = accessOrderProbationDeque().peekFirst();
-    Node<K, V> candidate = accessOrderProbationDeque().peekLast();
     while (weightedSize() > maximum()) {
       // Search the admission window for additional candidates
-      if (candidates == 0) {
+      if ((candidate == null) && (candidateQueue == PROBATION)) {
         candidate = accessOrderWindowDeque().peekFirst();
+        candidateQueue = WINDOW;
       }
 
       // Try evicting from the protected and window queues
@@ -745,7 +754,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         continue;
       } else if ((candidate != null) && (candidate.getPolicyWeight() == 0)) {
         candidate = candidate.getNextInAccessOrder();
-        candidates--;
         continue;
       }
 
@@ -755,13 +763,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         Node<K, V> previous = candidate.getNextInAccessOrder();
         Node<K, V> evict = candidate;
         candidate = previous;
-        candidates--;
         evictEntry(evict, RemovalCause.SIZE, 0L);
         continue;
       } else if (candidate == null) {
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
+        continue;
+      }
+
+      // Evict immediately if both selected the same entry
+      if (candidate == victim) {
+        victim = victim.getNextInAccessOrder();
+        evictEntry(candidate, RemovalCause.SIZE, 0L);
+        candidate = null;
         continue;
       }
 
@@ -774,16 +789,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       } else if (candidateKey == null) {
-        candidates--;
         Node<K, V> evict = candidate;
         candidate = candidate.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       }
 
+      // Evict immediately if an entry was removed
+      if (!victim.isAlive()) {
+        Node<K, V> evict = victim;
+        victim = victim.getNextInAccessOrder();
+        evictEntry(evict, RemovalCause.SIZE, 0L);
+        continue;
+      } else if (!candidate.isAlive()) {
+        Node<K, V> evict = candidate;
+        candidate = candidate.getNextInAccessOrder();
+        evictEntry(evict, RemovalCause.SIZE, 0L);
+        continue;
+      }
+
       // Evict immediately if the candidate's weight exceeds the maximum
       if (candidate.getPolicyWeight() > maximum()) {
-        candidates--;
         Node<K, V> evict = candidate;
         candidate = candidate.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
@@ -791,7 +817,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       // Evict the entry with the lowest frequency
-      candidates--;
       if (admit(candidateKey, victimKey)) {
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
@@ -821,14 +846,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     int candidateFreq = frequencySketch().frequency(candidateKey);
     if (candidateFreq > victimFreq) {
       return true;
-    } else if (candidateFreq <= 5) {
+    } else if (candidateFreq >= ADMIT_HASHDOS_THRESHOLD) {
       // The maximum frequency is 15 and halved to 7 after a reset to age the history. An attack
       // exploits that a hot candidate is rejected in favor of a hot victim. The threshold of a warm
       // candidate reduces the number of random acceptances to minimize the impact on the hit rate.
-      return false;
+      int random = ThreadLocalRandom.current().nextInt();
+      return ((random & 127) == 0);
     }
-    int random = ThreadLocalRandom.current().nextInt();
-    return ((random & 127) == 0);
+    return false;
   }
 
   /** Expires entries that have expired by access, write, or variable. */
@@ -1115,10 +1140,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     demoteFromMainProtected();
 
     for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
-      Node<K, V> candidate = accessOrderProbationDeque().peek();
+      Node<K, V> candidate = accessOrderProbationDeque().peekFirst();
       boolean probation = true;
       if ((candidate == null) || (quota < candidate.getPolicyWeight())) {
-        candidate = accessOrderProtectedDeque().peek();
+        candidate = accessOrderProtectedDeque().peekFirst();
         probation = false;
       }
       if (candidate == null) {
@@ -1138,7 +1163,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         accessOrderProtectedDeque().remove(candidate);
       }
       setWindowWeightedSize(windowWeightedSize() + weight);
-      accessOrderWindowDeque().add(candidate);
+      accessOrderWindowDeque().offerLast(candidate);
       candidate.makeWindow();
     }
 
@@ -1159,7 +1184,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     setWindowMaximum(windowMaximum() - quota);
 
     for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
-      Node<K, V> candidate = accessOrderWindowDeque().peek();
+      Node<K, V> candidate = accessOrderWindowDeque().peekFirst();
       if (candidate == null) {
         break;
       }
@@ -1172,7 +1197,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       quota -= weight;
       setWindowWeightedSize(windowWeightedSize() - weight);
       accessOrderWindowDeque().remove(candidate);
-      accessOrderProbationDeque().add(candidate);
+      accessOrderProbationDeque().offerLast(candidate);
       candidate.makeMainProbation();
     }
 
@@ -1200,7 +1225,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         break;
       }
       demoted.makeMainProbation();
-      accessOrderProbationDeque().add(demoted);
+      accessOrderProbationDeque().offerLast(demoted);
       mainProtectedWeightedSize -= demoted.getPolicyWeight();
     }
     setMainProtectedWeightedSize(mainProtectedWeightedSize);
@@ -1711,7 +1736,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     // This is deferred to the adaption phase at the end of the maintenance cycle.
     setMainProtectedWeightedSize(mainProtectedWeightedSize() + node.getPolicyWeight());
     accessOrderProbationDeque().remove(node);
-    accessOrderProtectedDeque().add(node);
+    accessOrderProtectedDeque().offerLast(node);
     node.makeMainProtected();
   }
 
@@ -1810,7 +1835,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       if (isAlive) {
         if (expiresAfterWrite()) {
-          writeOrderDeque().add(node);
+          writeOrderDeque().offerLast(node);
         }
         if (expiresVariable()) {
           timerWheel().schedule(node);
