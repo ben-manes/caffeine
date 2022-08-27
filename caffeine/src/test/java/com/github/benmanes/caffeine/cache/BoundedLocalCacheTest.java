@@ -687,7 +687,7 @@ public final class BoundedLocalCacheTest {
       assertThat(cache.admit(candidate, victim)).isFalse();
     }
 
-    // Allow
+    // Admit a small, random percentage of warm candidates to protect against hash flooding
     while (cache.frequencySketch().frequency(candidate) < ADMIT_HASHDOS_THRESHOLD) {
       cache.frequencySketch().increment(candidate);
     }
@@ -701,8 +701,8 @@ public final class BoundedLocalCacheTest {
       }
     }
     assertThat(allow).isGreaterThan(0);
-    assertThat(reject).isGreaterThan(0);
     assertThat(reject).isGreaterThan(allow);
+    assertThat(100.0 * allow / (allow + reject)).isIn(Range.open(0.2, 2.0));
   }
 
   @Test(groups = "isolated")
