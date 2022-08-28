@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -82,7 +83,7 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
-      weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN}, removalListener = Listener.REJECTING)
+      weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN}, removalListener = Listener.REJECTING)
   public void removalListener_fails(Cache<Int, Int> cache, CacheContext context) {
     var removalListener = (RejectingRemovalListener<Int, Int>) context.removalListener();
     // Guava-style caches reject before the max size is reached & are unpredictable
@@ -101,7 +102,7 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = {Maximum.ZERO, Maximum.ONE, Maximum.FULL},
-      weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN})
+      weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   public void evict(Cache<Int, Int> cache, CacheContext context) {
     cache.putAll(context.absent());
     if (context.isWeighted()) {
@@ -265,7 +266,7 @@ public final class EvictionTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
-      weigher = CacheWeigher.DEFAULT, evictionListener = Listener.MOCKITO,
+      weigher = CacheWeigher.DISABLED, evictionListener = Listener.MOCKITO,
       removalListener = Listener.REJECTING)
   public void evict_evictionListenerFails(Cache<Int, Int> cache, CacheContext context) {
     doThrow(RuntimeException.class)
@@ -277,12 +278,42 @@ public final class EvictionTest {
 
   /* --------------- Weighted --------------- */
 
-  @CacheSpec(maximumSize = Maximum.FULL,
-      weigher = CacheWeigher.NEGATIVE, population = Population.EMPTY)
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.NEGATIVE)
   @Test(dataProvider = "caches",
       expectedExceptions = { IllegalArgumentException.class, IllegalStateException.class })
   public void put_negativeWeight(Cache<Int, Int> cache, CacheContext context) {
-    cache.put(context.absentKey(), context.absentValue());
+    try {
+      cache.put(context.absentKey(), context.absentValue());
+    } finally {
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void put_weigherFails_insert(Cache<Int, Int> cache, CacheContext context) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.put(context.absentKey(), context.absentValue());
+    } finally {
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void put_weigherFails_update(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.put(context.firstKey(), context.absentValue());
+    } finally {
+      assertThat(cache).containsExactlyEntriesIn(context.original());
+      assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
+    }
   }
 
   @CacheSpec(maximumSize = Maximum.FULL,
@@ -344,6 +375,34 @@ public final class EvictionTest {
     await().untilAsserted(() -> assertThat(context).hasWeightedSize(5));
   }
 
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches")
+  public void replace_weigherFails_absent(Cache<Int, Int> cache, CacheContext context) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().replace(context.absentKey(), context.absentValue());
+    } catch (IllegalStateException expected) {
+      // optionally thrown
+    } finally {
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void replace_weigherFails_present(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().replace(context.firstKey(), context.absentValue());
+    } finally {
+      assertThat(cache).containsExactlyEntriesIn(context.original());
+      assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
+    }
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.COLLECTION)
@@ -388,6 +447,50 @@ public final class EvictionTest {
     cache.asMap().replace("a", oldValue, newValue);
     assertThat(context).hasWeightedSize(5);
     assertThat(cache).hasSize(2);
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches")
+  public void replaceConditionally_weigherFails_absent(
+      Cache<Int, Int> cache, CacheContext context) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().replace(context.absentKey(), context.absentValue(), context.absentValue());
+    } catch (IllegalStateException expected) {
+      // optionally thrown
+    } finally {
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void replaceConditionally_weigherFails_presentKey(
+      Cache<Int, Int> cache, CacheContext context, Eviction<Int, Int> eviction) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().replace(context.firstKey(), context.absentValue(), context.absentValue());
+    } finally {
+      assertThat(cache).containsExactlyEntriesIn(context.original());
+      assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void replaceConditionally_weigherFails_presentKeyAndValue(
+      Cache<Int, Int> cache, CacheContext context, Eviction<Int, Int> eviction) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().replace(context.firstKey(),
+          context.original().get(context.firstKey()), context.absentValue());
+    } finally {
+      assertThat(cache).containsExactlyEntriesIn(context.original());
+      assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -440,6 +543,163 @@ public final class EvictionTest {
     cache.putAll(Map.of("a", intern(Int.listOf(1, 2, 3)), "b", intern(Int.listOf(1))));
     cache.invalidateAll();
     assertThat(cache).isEmpty();
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void computeIfAbsent_weigherFails(Cache<Int, Int> cache, CacheContext context) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().computeIfAbsent(context.absentKey(), key -> context.absentValue());
+    } finally {
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
+  @Test(dataProvider = "caches")
+  public void computeIfAbsent(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    cache.asMap().computeIfAbsent(context.absentKey(), key -> context.absentValue());
+    assertThat(eviction.weightOf(context.absentKey())).hasValue(10);
+    assertThat(context).hasWeightedSize(10);
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void computeIfPresent_weigherFails(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().computeIfPresent(context.firstKey(), (key, value) -> context.absentValue());
+    } finally {
+      assertThat(cache).containsExactlyEntriesIn(context.original());
+      assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  @Test(dataProvider = "caches")
+  public void computeIfPresent(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    long weightedSize = eviction.weightedSize().getAsLong()
+        + Math.abs(context.absentValue().intValue()) - context.firstKey().intValue();
+    cache.asMap().computeIfPresent(context.firstKey(), (key, value) -> context.absentValue());
+    assertThat(eviction.weightOf(context.firstKey()))
+        .hasValue(Math.abs(context.absentValue().intValue()));
+    assertThat(context).hasWeightedSize(weightedSize);
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void compute_weigherFails_absent(Cache<Int, Int> cache, CacheContext context) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().compute(context.absentKey(), (key, value) -> context.absentValue());
+    } finally {
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void compute_weigherFails_present(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().compute(context.firstKey(), (key, value) -> context.absentValue());
+    } finally {
+      assertThat(cache).containsExactlyEntriesIn(context.original());
+      assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  @Test(dataProvider = "caches")
+  public void compute_insert(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    long weightedSize = eviction.weightedSize().getAsLong()
+        + Math.abs(context.absentValue().intValue());
+    cache.asMap().compute(context.absentKey(), (key, value) -> context.absentValue());
+    assertThat(eviction.weightOf(context.absentKey()))
+        .hasValue(Math.abs(context.absentValue().intValue()));
+    assertThat(context).hasWeightedSize(weightedSize);
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  @Test(dataProvider = "caches")
+  public void compute_update(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    long weightedSize = eviction.weightedSize().getAsLong()
+        + Math.abs(context.absentValue().intValue()) - context.firstKey().intValue();
+    cache.asMap().compute(context.firstKey(), (key, value) -> context.absentValue());
+    assertThat(eviction.weightOf(context.firstKey()))
+        .hasValue(Math.abs(context.absentValue().intValue()));
+    assertThat(context).hasWeightedSize(weightedSize);
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void merge_weigherFails_absent(Cache<Int, Int> cache, CacheContext context) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().merge(context.absentKey(),
+          context.absentKey(), (key, value) -> context.absentValue());
+    } finally {
+      assertThat(cache).doesNotContainKey(context.absentKey());
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void merge_weigherFails_present(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    try {
+      when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+      cache.asMap().merge(context.firstKey(),
+          context.absentValue(), (key, value) -> context.absentValue());
+    } finally {
+      assertThat(cache).containsExactlyEntriesIn(context.original());
+      assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
+    }
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  @Test(dataProvider = "caches")
+  public void merge_absent(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    long weightedSize = eviction.weightedSize().getAsLong()
+        + Math.abs(context.absentValue().intValue());
+    cache.asMap().merge(context.absentKey(),
+        context.absentKey(), (key, value) -> context.absentValue());
+    assertThat(eviction.weightOf(context.absentKey()))
+        .hasValue(Math.abs(context.absentValue().intValue()));
+    assertThat(context).hasWeightedSize(weightedSize);
+  }
+
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  @Test(dataProvider = "caches")
+  public void merge_update(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    long weightedSize = eviction.weightedSize().getAsLong()
+        + Math.abs(context.absentValue().intValue()) - context.firstKey().intValue();
+    cache.asMap().merge(context.firstKey(),
+        context.absentKey(), (key, value) -> context.absentValue());
+    assertThat(eviction.weightOf(context.firstKey()))
+        .hasValue(Math.abs(context.absentValue().intValue()));
+    assertThat(context).hasWeightedSize(weightedSize);
   }
 
   /* --------------- Policy --------------- */
@@ -502,7 +762,7 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void weightedSize_absent(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     assertThat(eviction.weightOf(context.firstKey())).isEmpty();
@@ -544,7 +804,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = Maximum.FULL, weigher = { CacheWeigher.DEFAULT, CacheWeigher.TEN })
+  @CacheSpec(maximumSize = Maximum.FULL, weigher = { CacheWeigher.DISABLED, CacheWeigher.TEN })
   public void maximumSize_decrease_min(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     eviction.setMaximum(0);
@@ -570,7 +830,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = Maximum.FULL, removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(maximumSize = Maximum.FULL, removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void maximumSize_increase(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     eviction.setMaximum(2 * context.maximumWeightOrSize());
@@ -617,8 +877,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, initialCapacity = InitialCapacity.EXCESSIVE,
-      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
-      removalListener = {Listener.DEFAULT, Listener.REJECTING})
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN},
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void coldest_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
     var coldest = new LinkedHashSet<>(eviction.coldest(Integer.MAX_VALUE).keySet());
@@ -702,8 +962,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, initialCapacity = InitialCapacity.EXCESSIVE,
-      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
-      removalListener = {Listener.DEFAULT, Listener.REJECTING})
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN},
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void coldestFunc_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
     var coldest = new LinkedHashSet<>(eviction.coldest(stream ->
@@ -740,7 +1000,7 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.FULL)
   public void coldestWeighted_zero(CacheContext context, Eviction<Int, Int> eviction) {
-    if (context.weigher() == CacheWeigher.ZERO) {
+    if (context.cacheWeigher() == CacheWeigher.ZERO) {
       assertThat(eviction.coldestWeighted(0)).isEqualTo(context.original());
     } else {
       assertThat(eviction.coldestWeighted(0)).isExhaustivelyEmpty();
@@ -769,8 +1029,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, initialCapacity = InitialCapacity.EXCESSIVE,
-      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
-      removalListener = {Listener.DEFAULT, Listener.REJECTING})
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN},
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void coldestWeighted_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
     var coldest = new LinkedHashSet<>(eviction.coldestWeighted(Long.MAX_VALUE).keySet());
@@ -820,7 +1080,7 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, initialCapacity = InitialCapacity.EXCESSIVE,
-      maximumSize = Maximum.FULL, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+      maximumSize = Maximum.FULL, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void hottest_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
     var hottest = eviction.hottest(Integer.MAX_VALUE).keySet();
@@ -905,7 +1165,7 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, initialCapacity = InitialCapacity.EXCESSIVE,
-      maximumSize = Maximum.FULL, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+      maximumSize = Maximum.FULL, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void hottestFunc_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
     var hottest = eviction.hottest(stream -> stream.map(Map.Entry::getKey).collect(toList()));
@@ -951,7 +1211,7 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.FULL)
   public void hottestWeighted_zero(CacheContext context, Eviction<Int, Int> eviction) {
-    if (context.weigher() == CacheWeigher.ZERO) {
+    if (context.cacheWeigher() == CacheWeigher.ZERO) {
       assertThat(eviction.hottestWeighted(0)).isEqualTo(context.original());
     } else {
       assertThat(eviction.hottestWeighted(0)).isExhaustivelyEmpty();
@@ -980,7 +1240,7 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, initialCapacity = InitialCapacity.EXCESSIVE,
-      maximumSize = Maximum.FULL, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+      maximumSize = Maximum.FULL, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void hottestWeighted_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
     var hottest = eviction.hottestWeighted(Long.MAX_VALUE).keySet();

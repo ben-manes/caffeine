@@ -54,7 +54,7 @@ public final class CaffeineCacheFromContext {
       builder.recordStats();
     }
     if (context.maximum() != Maximum.DISABLED) {
-      if (context.weigher() == CacheWeigher.DEFAULT) {
+      if (context.cacheWeigher() == CacheWeigher.DISABLED) {
         builder.maximumSize(context.maximum().max());
       } else {
         builder.weigher(context.weigher());
@@ -90,13 +90,13 @@ public final class CaffeineCacheFromContext {
     if (context.executorType() != CacheExecutor.DEFAULT) {
       builder.executor(context.executor());
     }
-    if (context.cacheScheduler != CacheScheduler.DEFAULT) {
+    if (context.cacheScheduler != CacheScheduler.DISABLED) {
       builder.scheduler(context.scheduler());
     }
-    if (context.removalListenerType() != Listener.DEFAULT) {
+    if (context.removalListenerType() != Listener.DISABLED) {
       builder.removalListener(context.removalListener());
     }
-    if (context.evictionListenerType() != Listener.DEFAULT) {
+    if (context.evictionListenerType() != Listener.DISABLED) {
       builder.evictionListener(context.evictionListener());
     }
     if (context.isAsync()) {

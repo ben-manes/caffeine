@@ -363,7 +363,7 @@ public final class ExpireAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expireAfterWrite = Expire.ONE_MINUTE)
   public void oldest_order(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
@@ -448,7 +448,7 @@ public final class ExpireAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_order(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
@@ -509,7 +509,7 @@ public final class ExpireAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expireAfterWrite = Expire.ONE_MINUTE)
   public void youngest_order(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
@@ -595,7 +595,7 @@ public final class ExpireAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_order(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {

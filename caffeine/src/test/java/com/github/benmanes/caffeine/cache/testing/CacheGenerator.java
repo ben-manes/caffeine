@@ -188,9 +188,9 @@ public final class CacheGenerator {
             || (context.expireAfterWrite() != Expire.DISABLED));
     boolean expirationIncompatible = (cacheSpec.mustExpireWithAnyOf().length > 0)
         && Arrays.stream(cacheSpec.mustExpireWithAnyOf()).noneMatch(context::expires);
-    boolean schedulerIgnored = (context.cacheScheduler != CacheScheduler.DEFAULT)
+    boolean schedulerIgnored = (context.cacheScheduler != CacheScheduler.DISABLED)
         && (!context.expires() || context.isGuava());
-    boolean evictionListenerIncompatible = (context.evictionListenerType() != Listener.DEFAULT)
+    boolean evictionListenerIncompatible = (context.evictionListenerType() != Listener.DISABLED)
         && (!context.isCaffeine() || (context.isAsync() && context.isWeakKeys()));
 
     boolean skip = asyncIncompatible || asyncLoaderIncompatible || evictionListenerIncompatible

@@ -92,10 +92,10 @@ public final class GuavaCacheFromContext {
       builder.recordStats();
     }
     if (context.maximum() != Maximum.DISABLED) {
-      if (context.weigher() == CacheWeigher.DEFAULT) {
+      if (context.cacheWeigher() == CacheWeigher.DISABLED) {
         builder.maximumSize(context.maximum().max());
       } else {
-        builder.weigher(new GuavaWeigher<Object, Object>(context.weigher()));
+        builder.weigher(new GuavaWeigher<>(context.weigher()));
         builder.maximumWeight(context.maximumWeight());
       }
     }
@@ -121,7 +121,7 @@ public final class GuavaCacheFromContext {
     } else if (context.isSoftValues()) {
       builder.softValues();
     }
-    if (context.removalListenerType() != Listener.DEFAULT) {
+    if (context.removalListenerType() != Listener.DISABLED) {
       boolean translateZeroExpire = (context.expireAfterAccess() == Expire.IMMEDIATELY) ||
           (context.expireAfterWrite() == Expire.IMMEDIATELY);
       builder.removalListener(new GuavaRemovalListener<>(

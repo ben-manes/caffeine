@@ -36,7 +36,7 @@ import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncCache;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalManualCache;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.Weighers;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Sets;
 import com.google.common.truth.FailureMetadata;
@@ -377,11 +377,11 @@ public final class LocalCacheSubject extends Subject {
     check("node.getWeight").that(node.getWeight()).isAtLeast(0);
 
     var weigher = bounded.weigher;
-    boolean canCheckWeight = (weigher == CacheWeigher.RANDOM);
+    boolean canCheckWeight = (weigher == Weighers.random());
     if (weigher instanceof AsyncWeigher) {
       @SuppressWarnings("rawtypes")
       var asyncWeigher = (AsyncWeigher) weigher;
-      canCheckWeight = (asyncWeigher.delegate == CacheWeigher.RANDOM);
+      canCheckWeight = (asyncWeigher.delegate == Weighers.random());
     }
     if (canCheckWeight) {
       check("node.getWeight()").that(node.getWeight()).isEqualTo(weigher.weigh(key, value));

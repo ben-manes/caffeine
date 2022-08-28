@@ -398,7 +398,7 @@ public final class ExpireAfterAccessTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = {Listener.DEFAULT, Listener.REJECTING},
+      removalListener = {Listener.DISABLED, Listener.REJECTING},
       expireAfterAccess = Expire.ONE_MINUTE)
   public void oldest_order(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
@@ -483,7 +483,7 @@ public final class ExpireAfterAccessTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expireAfterAccess = Expire.ONE_MINUTE)
   public void oldestFunc_order(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
@@ -545,7 +545,7 @@ public final class ExpireAfterAccessTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expireAfterAccess = Expire.ONE_MINUTE)
   public void youngest_order(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
@@ -631,7 +631,7 @@ public final class ExpireAfterAccessTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expireAfterAccess = Expire.ONE_MINUTE)
   public void youngestFunc_order(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {

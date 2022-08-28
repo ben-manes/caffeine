@@ -161,7 +161,7 @@ public final class AsyncLoadingCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(null);
   }
@@ -169,7 +169,7 @@ public final class AsyncLoadingCacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_nullKey(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(Collections.singletonList(null));
   }
@@ -177,7 +177,7 @@ public final class AsyncLoadingCacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_empty(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getAll(List.of()).join()).isExhaustivelyEmpty();
   }
@@ -263,7 +263,7 @@ public final class AsyncLoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_absent(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys()).join();
 
@@ -276,7 +276,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_partial(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var expect = new HashMap<Int, Int>();
     expect.put(context.firstKey(), context.firstKey().negate());
@@ -290,7 +290,7 @@ public final class AsyncLoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_exceeds(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys()).join();
 
@@ -301,7 +301,7 @@ public final class AsyncLoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_DIFFERENT,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_different(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys()).join();
 
@@ -313,7 +313,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_duplicates(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var absentKeys = ImmutableSet.copyOf(Iterables.limit(context.absentKeys(),
         Ints.saturatedCast(context.maximum().max() - context.initialSize())));
@@ -330,7 +330,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllPresent_ordered_absent(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.absentKeys());
@@ -343,7 +343,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllPresent_ordered_partial(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -357,7 +357,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_NEGATIVE_EXCEEDS },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllPresent_ordered_present(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -369,7 +369,7 @@ public final class AsyncLoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllPresent_ordered_exceeds(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -381,7 +381,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.ASYNC, removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(compute = Compute.ASYNC, removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_badLoader(CacheContext context) {
     var loader = new AsyncCacheLoader<Int, Int>() {
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {

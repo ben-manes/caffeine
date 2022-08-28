@@ -77,21 +77,21 @@ public final class AsyncCacheTest {
 
   /* --------------- getIfPresent --------------- */
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getIfPresent_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getIfPresent(null);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getIfPresent_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getIfPresent(context.absentKey())).isNull();
     assertThat(context).stats().hits(0).misses(1).success(0).failures(0);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getIfPresent_present(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getIfPresent(context.firstKey())).isNotNull();
@@ -336,14 +336,14 @@ public final class AsyncCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKeys(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getAll(null, keys -> { throw new AssertionError(); });
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKeys_nullFunction(
       AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getAll(null, (Function<Set<? extends Int>, Map<Int, Int>>) null);
@@ -351,21 +351,21 @@ public final class AsyncCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullFunction(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getAll(context.original().keySet(), (Function<Set<? extends Int>, Map<Int, Int>>) null);
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getAll(Collections.singletonList(null), keys -> { throw new AssertionError(); });
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_iterable_empty(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(List.of(), keys -> { throw new AssertionError(); }).join();
     assertThat(result).isExhaustivelyEmpty();
@@ -409,7 +409,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), keys -> context.absent()).join();
     int count = context.absentKeys().size();
@@ -419,7 +419,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_present_partial(AsyncCache<Int, Int> cache, CacheContext context) {
     var expect = new HashMap<Int, Int>();
     expect.put(context.firstKey(), context.firstKey().negate());
@@ -435,7 +435,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_exceeds(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), keys -> {
       var moreKeys = new ArrayList<Int>(keys);
@@ -451,7 +451,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
     var actual = context.absentKeys().stream().collect(toMap(Int::negate, identity()));
     var result = cache.getAll(context.absentKeys(), keys -> actual).join();
@@ -464,7 +464,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_duplicates(AsyncCache<Int, Int> cache, CacheContext context) {
     var absentKeys = ImmutableSet.copyOf(Iterables.limit(context.absentKeys(),
         Ints.saturatedCast(context.maximum().max() - context.initialSize())));
@@ -482,7 +482,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_present_ordered_absent(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.absentKeys());
@@ -496,7 +496,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_present_ordered_partial(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -511,7 +511,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_present_ordered_present(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -522,7 +522,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_present_ordered_exceeds(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -540,7 +540,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_badLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getAll(context.absentKeys(), keysToLoad -> { throw new LoadAllException(); }))
         .failsWith(CompletionException.class).hasCauseThat().isInstanceOf(LoadAllException.class);
@@ -551,14 +551,14 @@ public final class AsyncCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKeys(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getAll(null, (keys, executor) -> { throw new AssertionError(); });
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKeys_nullBifunction(
       AsyncCache<Int, Int> cache, CacheContext context) {
     BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;
@@ -567,7 +567,7 @@ public final class AsyncCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullBifunction(AsyncCache<Int, Int> cache, CacheContext context) {
     BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;
     cache.getAll(context.original().keySet(), f);
@@ -575,7 +575,7 @@ public final class AsyncCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getAll(Collections.singletonList(null),
         (keys, executor) -> { throw new AssertionError(); });
@@ -583,7 +583,7 @@ public final class AsyncCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_iterable_empty(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(List.of(),
         (keys, executor) -> { throw new AssertionError(); }).join();
@@ -661,7 +661,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = cache.getAll(context.absentKeys(),
         (keys, executor) -> CompletableFuture.completedFuture(context.absent()));
@@ -673,7 +673,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_present_partial(AsyncCache<Int, Int> cache, CacheContext context) {
     var expect = new HashMap<Int, Int>();
     expect.put(context.firstKey(), context.firstKey().negate());
@@ -690,7 +690,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_exceeds(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
       var moreKeys = new ArrayList<Int>(keys);
@@ -707,7 +707,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
     var actual = context.absentKeys().stream().collect(toMap(Int::negate, identity()));
     var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
@@ -722,7 +722,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_duplicates(AsyncCache<Int, Int> cache, CacheContext context) {
     var absentKeys = ImmutableSet.copyOf(Iterables.limit(context.absentKeys(),
         Ints.saturatedCast(context.maximum().max() - context.initialSize())));
@@ -741,7 +741,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_present_ordered_absent(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.absentKeys());
@@ -757,7 +757,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_present_ordered_partial(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -774,7 +774,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_present_ordered_present(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -786,7 +786,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_present_ordered_exceeds(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -805,7 +805,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_badLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     try {
       cache.getAll(context.absentKeys(), (keysToLoad, executor) ->
@@ -817,7 +817,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_early_success(AsyncCache<Int, Int> cache, CacheContext context) {
     var key = context.absentKeys().iterator().next();
     var value = Int.valueOf(Integer.MAX_VALUE);
@@ -834,7 +834,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_early_failure(AsyncCache<Int, Int> cache, CacheContext context) {
     var key = context.absentKeys().iterator().next();
     var error = new IllegalStateException();
@@ -857,27 +857,27 @@ public final class AsyncCacheTest {
 
   /* --------------- put --------------- */
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     var value = context.absentValue().asFuture();
     cache.put(null, value);
   }
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), null);
   }
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKeyAndValue(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.put(null, null);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_insert_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = CompletableFuture.completedFuture((Int) null);
     failedFuture.completeExceptionally(new IllegalStateException());
@@ -888,7 +888,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_insert_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = new CompletableFuture<Int>();
 
@@ -899,7 +899,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_insert(AsyncCache<Int, Int> cache, CacheContext context) {
     var value = context.absentValue().asFuture();
     cache.put(context.absentKey(), value);
@@ -910,7 +910,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_replace_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = CompletableFuture.completedFuture((Int) null);
     failedFuture.completeExceptionally(new IllegalStateException());
@@ -922,7 +922,7 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_replace_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = CompletableFuture.completedFuture((Int) null);
 

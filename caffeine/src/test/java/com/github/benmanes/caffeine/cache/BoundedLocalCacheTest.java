@@ -414,7 +414,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.EMPTY, maximumSize = Maximum.TEN, weigher = CacheWeigher.DEFAULT)
+      population = Population.EMPTY, maximumSize = Maximum.TEN, weigher = CacheWeigher.DISABLED)
   public void evict_wtinylfu(Cache<Int, Int> cache, CacheContext context) {
     // Enforce full initialization of internal structures; clear sketch
     asBoundedLocalCache(cache).frequencySketch().ensureCapacity(context.maximumSize());
@@ -463,7 +463,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)
   public void evict_candidate_lru(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.setMainProtectedMaximum(0);
@@ -482,7 +482,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)
   public void evict_victim_lru(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.setWindowMaximum(0);
@@ -502,7 +502,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)
   public void evict_window_candidates(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.setWindowMaximum(context.maximumSize() / 2);
@@ -525,7 +525,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)
   public void evict_window_fallback(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.setWindowMaximum(context.maximumSize() / 2);
@@ -547,7 +547,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)
   public void evict_candidateIsVictim(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.setMainProtectedMaximum(context.maximumSize() / 2);
@@ -581,7 +581,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)
   public void evict_toZero(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (int i = 0; i < context.maximumSize(); i++) {
@@ -604,7 +604,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void evict_retired_candidate(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.evictionLock.lock();
     try {
@@ -628,7 +628,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void evict_retired_victim(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.evictionLock.lock();
     try {
@@ -1058,7 +1058,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       keys = ReferenceType.WEAK, removalListener = Listener.CONSUMING)
   public void evict_collected_candidate(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var candidate = cache.accessOrderWindowDeque().getFirst();
@@ -1075,7 +1075,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       keys = ReferenceType.WEAK, removalListener = Listener.CONSUMING)
   public void evict_collected_victim(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var victim = cache.accessOrderProbationDeque().getFirst();
@@ -1184,7 +1184,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       expiry = CacheExpiry.DISABLED, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void fastpath(BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -1302,7 +1302,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN})
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   public void adapt_increaseWindow(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     prepareForAdaption(cache, context, /* make frequency-bias */ false);
 
@@ -1322,7 +1322,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN})
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   public void adapt_decreaseWindow(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     prepareForAdaption(cache, context, /* make recency-bias */ true);
 
@@ -1436,9 +1436,9 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       refreshAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED,
-      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
       compute = Compute.SYNC, loader = Loader.DISABLED, stats = Stats.DISABLED,
-      removalListener = Listener.DEFAULT, evictionListener = Listener.DEFAULT,
+      removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put_warnIfEvictionBlocked(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var testLogger = new AtomicReference<TestLogger>();
@@ -1528,7 +1528,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
-      maximumSize = {Maximum.DISABLED, Maximum.FULL}, weigher = CacheWeigher.DEFAULT)
+      maximumSize = {Maximum.DISABLED, Maximum.FULL}, weigher = CacheWeigher.DISABLED)
   public void expirationDelay_window(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     int maximum = cache.evicts() ? (int) context.maximumSize() : 100;
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * maximum);
@@ -1559,7 +1559,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void expirationDelay_probation(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
@@ -1587,7 +1587,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void expirationDelay_protected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
@@ -1616,7 +1616,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.DEFAULT)
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void expirationDelay_writeOrder(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterWrite().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
@@ -1710,7 +1710,7 @@ public final class BoundedLocalCacheTest {
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       expiry = CacheExpiry.DISABLED, maximumSize = Maximum.DISABLED, compute = Compute.SYNC,
-      removalListener = Listener.DEFAULT, evictionListener = Listener.DEFAULT,
+      removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
       stats = Stats.DISABLED)
   public void refreshIfNeeded_softLock(CacheContext context) {
     var refresh = new AtomicBoolean();

@@ -41,7 +41,7 @@ public final class UnboundedLocalCacheTest {
 
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.DISABLED,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   @Test(dataProvider = "caches")
   public void noPolicy(Cache<Integer, Integer> cache, CacheContext context) {

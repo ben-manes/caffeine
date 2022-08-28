@@ -53,20 +53,20 @@ public final class MultiThreadedTest {
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.DISABLED, stats = Stats.DISABLED,
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, removalListener = Listener.DEFAULT,
+      expireAfterWrite = Expire.DISABLED, removalListener = Listener.DISABLED,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
-      evictionListener = Listener.DEFAULT)
+      evictionListener = Listener.DISABLED)
   public void concurrent_unbounded(LoadingCache<Int, Int> cache, CacheContext context) {
     Threads.runTest(cache, operations);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
-      stats = Stats.DISABLED, population = Population.EMPTY, removalListener = Listener.DEFAULT,
+  @CacheSpec(maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.RANDOM},
+      stats = Stats.DISABLED, population = Population.EMPTY, removalListener = Listener.DISABLED,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
-      evictionListener = Listener.DEFAULT)
+      evictionListener = Listener.DISABLED)
   public void concurrent_bounded(LoadingCache<Int, Int> cache, CacheContext context) {
     Threads.runTest(cache, operations);
   }
@@ -74,21 +74,21 @@ public final class MultiThreadedTest {
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.DISABLED, stats = Stats.DISABLED,
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, removalListener = Listener.DEFAULT,
+      expireAfterWrite = Expire.DISABLED, removalListener = Listener.DISABLED,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
-      evictionListener = Listener.DEFAULT)
+      evictionListener = Listener.DISABLED)
   public void async_concurrent_unbounded(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     Threads.runTest(cache, asyncOperations);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
-      stats = Stats.DISABLED, population = Population.EMPTY, removalListener = Listener.DEFAULT,
+  @CacheSpec(maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.RANDOM},
+      stats = Stats.DISABLED, population = Population.EMPTY, removalListener = Listener.DISABLED,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
-      evictionListener = Listener.DEFAULT)
+      evictionListener = Listener.DISABLED)
   public void async_concurrent_bounded(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     Threads.runTest(cache, asyncOperations);

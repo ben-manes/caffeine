@@ -175,14 +175,14 @@ public @interface CacheSpec {
 
   /** The weigher, each resulting in a new combination. */
   CacheWeigher[] weigher() default {
-    CacheWeigher.DEFAULT,
+    CacheWeigher.DISABLED,
     CacheWeigher.ZERO,
     CacheWeigher.TEN
   };
 
-  enum CacheWeigher implements Weigher<Object, Object> {
+  enum CacheWeigher {
     /** A flag indicating that no weigher is set when building the cache. */
-    DEFAULT(1),
+    DISABLED(1),
     /** A flag indicating that every entry is valued at 10 units. */
     TEN(10),
     /** A flag indicating that every entry is valued at 0 unit. */
@@ -192,43 +192,36 @@ public @interface CacheSpec {
     /** A flag indicating that every entry is valued at Integer.MAX_VALUE units. */
     MAX_VALUE(Integer.MAX_VALUE),
     /** A flag indicating that the entry is weighted by the absolute integer value. */
-    VALUE(1) {
-      @Override public int weigh(Object key, Object value) {
-        requireNonNull(key);
-        return Math.abs(((Int) value).intValue());
-      }
-    },
+    VALUE(() -> (key, value) -> Math.abs(((Int) value).intValue()), 1),
     /** A flag indicating that the entry is weighted by the value's collection size. */
-    COLLECTION(1) {
-      @Override public int weigh(Object key, Object value) {
-        requireNonNull(key);
-        return ((Collection<?>) value).size();
-      }
-    },
+    COLLECTION(() -> (key, value) -> ((Collection<?>) value).size(), 1),
     /** A flag indicating that the entry's weight is randomly changing. */
-    RANDOM(1) {
-      @Override public int weigh(Object key, Object value) {
-        requireNonNull(key);
-        requireNonNull(value);
-        return ThreadLocalRandom.current().nextInt(1, 10);
-      }
-    };
+    RANDOM(Weighers::random, 1),
+    /** A flag indicating that the entry's weight records interactions. */
+    @SuppressWarnings("unchecked")
+    MOCKITO(() -> {
+      var weigher = Mockito.mock(Weigher.class);
+      when(weigher.weigh(any(), any())).thenReturn(1);
+      return weigher;
+    }, 1);
 
+    private final Supplier<Weigher<Object, Object>> factory;
     private final int units;
 
-    CacheWeigher(int multiplier) {
-      this.units = multiplier;
+    CacheWeigher(int units) {
+      this.factory = () -> Weighers.constant(units);
+      this.units = units;
     }
-
-    @Override
-    public int weigh(Object key, Object value) {
-      requireNonNull(key);
-      requireNonNull(value);
-      return units;
+    CacheWeigher(Supplier<Weigher<Object, Object>> factory, int units) {
+      this.factory = factory;
+      this.units = units;
     }
-
     public int unitsPerEntry() {
       return units;
+    }
+    @SuppressWarnings("unchecked")
+    public <K, V> Weigher<K, V> create() {
+      return (Weigher<K, V>) factory.get();
     }
   }
 
@@ -377,19 +370,19 @@ public @interface CacheSpec {
   /** The removal listeners, each resulting in a new combination. */
   Listener[] removalListener() default {
     Listener.CONSUMING,
-    Listener.DEFAULT,
+    Listener.DISABLED,
   };
 
   /** The eviction listeners, each resulting in a new combination. */
   Listener[] evictionListener() default {
     Listener.CONSUMING,
-    Listener.DEFAULT,
+    Listener.DISABLED,
   };
 
   @SuppressWarnings("unchecked")
   enum Listener {
     /** A flag indicating that no removal listener is configured. */
-    DEFAULT(() -> null),
+    DISABLED(() -> null),
     /** A removal listener that rejects all notifications. */
     REJECTING(RemovalListeners::rejecting),
     /** A {@link ConsumingRemovalListener} retains all notifications for evaluation by the test. */
@@ -790,12 +783,12 @@ public @interface CacheSpec {
 
   /** The executors retrieved from a supplier, each resulting in a new combination. */
   CacheScheduler[] scheduler() default {
-    CacheScheduler.DEFAULT,
+    CacheScheduler.DISABLED,
   };
 
   /** The scheduler that the cache can be configured with. */
   enum CacheScheduler {
-    DEFAULT(() -> null), // disabled
+    DISABLED(() -> null),
     SYSTEM(Scheduler::systemScheduler),
     THREADED(() -> Scheduler.forScheduledExecutorService(scheduledExecutor)),
     MOCKITO(() -> Mockito.mock(Scheduler.class));

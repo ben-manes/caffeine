@@ -48,8 +48,8 @@ public final class CaffeineMapTests extends TestCase {
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      weigher = CacheWeigher.DEFAULT, removalListener = Listener.DEFAULT,
-      evictionListener = Listener.DEFAULT, stats = Stats.ENABLED)
+      weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
+      evictionListener = Listener.DISABLED, stats = Stats.ENABLED)
   private static CacheSpec cacheSpec() {
     try {
       return CaffeineMapTests.class.getDeclaredMethod("cacheSpec")

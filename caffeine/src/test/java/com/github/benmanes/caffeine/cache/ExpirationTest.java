@@ -91,7 +91,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.IMMEDIATELY},
       expireAfterWrite = {Expire.DISABLED, Expire.IMMEDIATELY},
       expiryTime = Expire.IMMEDIATELY, population = Population.EMPTY,
-      evictionListener = { Listener.CONSUMING, Listener.DEFAULT, Listener.REJECTING })
+      evictionListener = { Listener.CONSUMING, Listener.DISABLED, Listener.REJECTING })
   public void expire_zero(Cache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
     if (context.isZeroWeighted() && context.isGuava()) {
@@ -1388,7 +1388,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
@@ -1453,7 +1453,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
@@ -1518,7 +1518,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},

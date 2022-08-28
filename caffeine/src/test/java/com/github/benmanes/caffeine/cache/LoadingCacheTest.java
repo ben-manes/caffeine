@@ -162,7 +162,7 @@ public final class LoadingCacheTest {
   /* --------------- getAll --------------- */
 
   @CheckNoEvictions
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_null(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(null);
@@ -170,7 +170,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_nullKey(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(Collections.singletonList(null));
@@ -179,7 +179,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_empty(LoadingCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getAll(List.of())).isExhaustivelyEmpty();
     assertThat(context).stats().hits(0).misses(0);
@@ -279,7 +279,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys());
 
@@ -293,7 +293,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_partial(LoadingCache<Int, Int> cache, CacheContext context) {
     var expect = new HashMap<Int, Int>();
     expect.put(context.firstKey(), context.firstKey().negate());
@@ -309,7 +309,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_full(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.original().keySet());
     assertThat(result).containsExactlyEntriesIn(context.original());
@@ -319,7 +319,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_exceeds(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys());
 
@@ -331,7 +331,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.BULK_DIFFERENT,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_different(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys());
 
@@ -344,7 +344,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_duplicates(LoadingCache<Int, Int> cache, CacheContext context) {
     var absentKeys = ImmutableSet.copyOf(Iterables.limit(context.absentKeys(),
         Ints.saturatedCast(context.maximum().max() - context.initialSize())));
@@ -362,7 +362,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_ordered_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<Int>(context.absentKeys());
     Collections.shuffle(keys);
@@ -374,7 +374,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_ordered_partial(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     keys.addAll(context.absentKeys());
@@ -387,7 +387,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_ordered_present(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
@@ -398,7 +398,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_ordered_exceeds(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     keys.addAll(context.absentKeys());
@@ -435,7 +435,7 @@ public final class LoadingCacheTest {
   /* --------------- refresh --------------- */
 
   @CheckNoEvictions
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void refresh_null(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.refresh(null);
@@ -482,7 +482,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      loader = Loader.EXCEPTIONAL, removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      loader = Loader.EXCEPTIONAL, removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refresh_failure(LoadingCache<Int, Int> cache, CacheContext context) {
     // Shouldn't leak exception to caller nor retain the future; should retain the stale entry
     var future1 = cache.refresh(context.absentKey());
@@ -534,7 +534,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refresh_cancel(LoadingCache<Int, Int> cache, CacheContext context) {
     var key = context.original().isEmpty() ? context.absentKey() : context.firstKey();
     var future1 = cache.refresh(key);
@@ -561,7 +561,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(
       maximumSize = Maximum.UNREACHABLE,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING }, population = Population.SINGLETON)
+      removalListener = { Listener.DISABLED, Listener.REJECTING }, population = Population.SINGLETON)
   public void refresh_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     var future = cache.refresh(key);
@@ -817,7 +817,7 @@ public final class LoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
-      maximumSize = Maximum.ONE, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.ONE, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)
   public void refresh_evicted(CacheContext context) {
     var started = new AtomicBoolean();
@@ -963,14 +963,14 @@ public final class LoadingCacheTest {
   /* --------------- refreshAll --------------- */
 
   @CheckNoEvictions @CheckNoStats
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void refreshAll_null(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.refreshAll(null);
   }
 
   @CheckNoEvictions @CheckNoStats
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void refreshAll_nullKey(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.refreshAll(Collections.singletonList(null));
@@ -978,7 +978,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.refreshAll(context.absentKeys()).join();
     int count = context.absentKeys().size();
@@ -989,7 +989,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_present(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.refreshAll(context.original().keySet()).join();
     int count = context.original().keySet().size();
@@ -1002,7 +1002,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      loader = Loader.EXCEPTIONAL, removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      loader = Loader.EXCEPTIONAL, removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_failure(LoadingCache<Int, Int> cache, CacheContext context) {
     var future = cache.refreshAll(List.of(
         context.absentKey(), context.firstKey(), context.lastKey()));
@@ -1029,7 +1029,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_cancel(LoadingCache<Int, Int> cache, CacheContext context) {
     var key = context.original().isEmpty() ? context.absentKey() : context.firstKey();
     var future1 = cache.refresh(key);

@@ -41,6 +41,7 @@ import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
+import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
@@ -77,6 +78,7 @@ public final class CacheContext {
 
   final RemovalListener<Int, Int> evictionListener;
   final RemovalListener<Int, Int> removalListener;
+  final Weigher<Object, Object> weigher;
   final InitialCapacity initialCapacity;
   final Implementation implementation;
   final CacheScheduler cacheScheduler;
@@ -87,11 +89,11 @@ public final class CacheContext {
   final ReferenceType valueStrength;
   final TrackingExecutor executor;
   final ReferenceType keyStrength;
+  final CacheWeigher cacheWeigher;
   final Expiry<Int, Int> expiry;
   final Map<Int, Int> original;
   final CacheExpiry expiryType;
   final Population population;
-  final CacheWeigher weigher;
   final Maximum maximumSize;
   final Scheduler scheduler;
   final Expire afterAccess;
@@ -120,7 +122,7 @@ public final class CacheContext {
 
   Map<Int, Int> absent;
 
-  public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
+  public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher cacheWeigher,
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
       Expire refresh, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, CacheScheduler cacheScheduler, Listener removalListenerType,
@@ -128,7 +130,8 @@ public final class CacheContext {
       Loader loader, Implementation implementation, CacheSpec cacheSpec) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
-    this.weigher = requireNonNull(weigher);
+    this.weigher = cacheWeigher.create();
+    this.cacheWeigher = cacheWeigher;
     this.maximumSize = requireNonNull(maximumSize);
     this.afterAccess = requireNonNull(afterAccess);
     this.afterWrite = requireNonNull(afterWrite);
@@ -284,7 +287,7 @@ public final class CacheContext {
 
   public long maximumWeight() {
     assertWithMessage("Invalid usage of context").that(isWeighted()).isTrue();
-    long maximum = weigher.unitsPerEntry() * maximumSize.max();
+    long maximum = cacheWeigher.unitsPerEntry() * maximumSize.max();
     return (maximum < 0) ? Long.MAX_VALUE : maximum;
   }
 
@@ -292,16 +295,20 @@ public final class CacheContext {
     return isWeighted() ? maximumWeight() : maximumSize();
   }
 
-  public CacheWeigher weigher() {
+  public Weigher<Object, Object> weigher() {
     return weigher;
   }
 
+  public CacheWeigher cacheWeigher() {
+    return cacheWeigher;
+  }
+
   public boolean isWeighted() {
-    return (weigher != CacheWeigher.DEFAULT);
+    return (cacheWeigher != CacheWeigher.DISABLED);
   }
 
   public boolean isZeroWeighted() {
-    return (weigher == CacheWeigher.ZERO);
+    return (cacheWeigher == CacheWeigher.ZERO);
   }
 
   public boolean isUnbounded() {
@@ -482,7 +489,7 @@ public final class CacheContext {
     return MoreObjects.toStringHelper(this)
         .add("population", population)
         .add("maximumSize", maximumSize)
-        .add("weigher", weigher)
+        .add("weigher", cacheWeigher)
         .add("expiry", expiryType)
         .add("expiryTime", expiryTime)
         .add("afterAccess", afterAccess)

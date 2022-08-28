@@ -922,7 +922,7 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy: compute --------------- */
 
-  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void compute_nullKey(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     expireAfterVar.compute(null, (key, value) -> key.negate(), Duration.ZERO);
@@ -930,7 +930,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_nullMappingFunction(CacheContext context,
       VarExpiration<Int, Int> expireAfterVar) {
     expireAfterVar.compute(Int.valueOf(1), null, Duration.ZERO);
@@ -938,7 +938,7 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_negativeDuration(
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     expireAfterVar.compute(Int.valueOf(1), (key, value) -> key.negate(), Duration.ofMinutes(-1));
@@ -1028,7 +1028,7 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(expiry = CacheExpiry.MOCKITO, removalListener = {Listener.DEFAULT, Listener.REJECTING})
+  @CacheSpec(expiry = CacheExpiry.MOCKITO, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_absent_nullValue(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Int result = expireAfterVar.compute(context.absentKey(),
@@ -1043,7 +1043,7 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
-      removalListener = {Listener.DEFAULT, Listener.REJECTING})
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_absent(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
@@ -1261,7 +1261,7 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.MOCKITO, population = Population.EMPTY,
-      removalListener = {Listener.DEFAULT, Listener.REJECTING})
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_async_null(AsyncCache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Int key = context.absentKey();
@@ -1385,7 +1385,7 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL}, expiry = CacheExpiry.ACCESS,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void oldest_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var oldest = expireAfterVar.oldest(Integer.MAX_VALUE);
     assertThat(oldest.keySet()).containsExactlyElementsIn(context.original().keySet()).inOrder();
@@ -1466,7 +1466,7 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expiry = CacheExpiry.ACCESS)
   public void oldestFunc_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var oldest = expireAfterVar.oldest(stream -> stream.map(Map.Entry::getKey).collect(toList()));
@@ -1522,7 +1522,7 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL}, expiry = CacheExpiry.ACCESS,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void youngest_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var youngest = expireAfterVar.youngest(Integer.MAX_VALUE);
     var expected = ImmutableList.copyOf(context.original().keySet()).reverse();
@@ -1605,7 +1605,7 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
       expiry = CacheExpiry.ACCESS)
   public void youngestFunc_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var youngest = expireAfterVar.youngest(

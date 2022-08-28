@@ -167,10 +167,10 @@ public final class CaffeineTest {
     if (context.isSoftValues()) {
       assertThat(description).contains("valueStrength=soft");
     }
-    if (context.evictionListenerType() != Listener.DEFAULT) {
+    if (context.evictionListenerType() != Listener.DISABLED) {
       assertThat(description).contains("evictionListener");
     }
-    if (context.removalListenerType() != Listener.DEFAULT) {
+    if (context.removalListenerType() != Listener.DISABLED) {
       assertThat(description).contains("removalListener");
     }
   }

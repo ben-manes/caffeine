@@ -71,7 +71,7 @@ public final class CaffeineSpecTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
-      compute = Compute.SYNC, removalListener = Listener.DEFAULT)
+      compute = Compute.SYNC, removalListener = Listener.DISABLED)
   public void seconds(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.SECONDS, "s"));
   }
@@ -79,7 +79,7 @@ public final class CaffeineSpecTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
-      compute = Compute.SYNC, removalListener = Listener.DEFAULT)
+      compute = Compute.SYNC, removalListener = Listener.DISABLED)
   public void minutes(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.MINUTES, "m"));
   }
@@ -87,7 +87,7 @@ public final class CaffeineSpecTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
-      compute = Compute.SYNC, removalListener = Listener.DEFAULT)
+      compute = Compute.SYNC, removalListener = Listener.DISABLED)
   public void hours(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.HOURS, "h"));
   }
@@ -95,7 +95,7 @@ public final class CaffeineSpecTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
-      compute = Compute.SYNC, removalListener = Listener.DEFAULT)
+      compute = Compute.SYNC, removalListener = Listener.DISABLED)
   public void days(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.DAYS, "d"));
   }
