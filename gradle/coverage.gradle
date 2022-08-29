@@ -72,6 +72,7 @@ sonarqube {
     property 'sonar.organization', 'caffeine'
     property 'sonar.login', System.env.'SONAR_TOKEN'
     property 'sonar.host.url', 'https://sonarcloud.io'
+    property 'sonar.cpd.exclusions', '**/simulator/**'
     property 'sonar.coverage.exclusions', '**/simulator/**'
     property 'sonar.coverage.jacoco.xmlReportPaths',
       file(layout.buildDirectory.file('reports/jacoco/jacocoFullReport/jacocoFullReport.xml'))

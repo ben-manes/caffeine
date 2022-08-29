@@ -94,7 +94,7 @@ ext {
     errorprone: '2.0.2',
     findsecbugs: '1.12.0',
     jacoco: '0.8.7',
-    jmh: '0.6.6',
+    jmh: '0.6.7',
     jmhReport: '0.9.0',
     nexusPublish: '1.1.0',
     nullaway: '1.3.0',

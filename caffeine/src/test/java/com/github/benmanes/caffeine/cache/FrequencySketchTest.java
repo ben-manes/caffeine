@@ -36,7 +36,7 @@ public final class FrequencySketchTest {
     assertThat(sketch.isNotInitialized()).isTrue();
 
     sketch.increment(item);
-    assertThat(sketch.frequency(item)).isEqualTo(0);;
+    assertThat(sketch.frequency(item)).isEqualTo(0);
   }
 
   @Test(dataProvider = "sketch", expectedExceptions = IllegalArgumentException.class)
