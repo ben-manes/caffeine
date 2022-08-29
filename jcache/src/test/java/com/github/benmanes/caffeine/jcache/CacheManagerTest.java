@@ -72,4 +72,14 @@ public final class CacheManagerTest {
     ManagementFactory.getPlatformMBeanServer().getObjectInstance(
         new ObjectName(String.format(name, cache.getName(), PROVIDER_NAME)));
   }
+
+  @Test
+  public void enableManagement_absent() {
+    cacheManager.enableManagement("absent", true);
+  }
+
+  @Test
+  public void enableStatistics_absent() {
+    cacheManager.enableStatistics("absent", true);
+  }
 }

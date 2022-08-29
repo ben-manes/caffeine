@@ -33,6 +33,10 @@ public final class FrequencySketchTest {
   public void construct() {
     var sketch = new FrequencySketch<Integer>();
     assertThat(sketch.table).isNull();
+    assertThat(sketch.isNotInitialized()).isTrue();
+
+    sketch.increment(item);
+    assertThat(sketch.frequency(item)).isEqualTo(0);;
   }
 
   @Test(dataProvider = "sketch", expectedExceptions = IllegalArgumentException.class)

@@ -46,6 +46,13 @@ public final class CaffeineCachingProviderTest {
         Assert.fail("", e);
       }
     });
+
+    Thread.currentThread().setContextClassLoader(null);
+    try (var provider = new CaffeineCachingProvider()) {
+      provider.getDefaultClassLoader().loadClass(Object.class.getName());
+    } catch (ClassNotFoundException e) {
+      Assert.fail("", e);
+    }
   }
 
   @Test
@@ -63,6 +70,11 @@ public final class CaffeineCachingProviderTest {
     runWithClassloader(provider -> {
       assertThat(provider.getDefaultClassLoader().getResource("")).isNotNull();
     });
+
+    Thread.currentThread().setContextClassLoader(null);
+    try (var provider = new CaffeineCachingProvider()) {
+      assertThat(provider.getDefaultClassLoader().getResource("")).isNotNull();
+    }
   }
 
   @Test
@@ -94,6 +106,17 @@ public final class CaffeineCachingProviderTest {
         throw new UncheckedIOException(e);
       }
     });
+  }
+
+  @Test
+  public void osgi_getCache() {
+    try (var provider = new CaffeineCachingProvider()) {
+      provider.isOsgiComponent = true;
+      var cacheManager = provider.getCacheManager(
+          provider.getDefaultURI(), provider.getDefaultClassLoader());
+      assertThat(cacheManager.getCache("test-cache", Object.class, Object.class)).isNotNull();
+      assertThat(cacheManager.getCache("test-cache")).isNotNull();
+    }
   }
 
   private void runWithClassloader(Consumer<CachingProvider> consumer) {

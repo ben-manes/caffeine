@@ -48,10 +48,14 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
+import static uk.org.lidalia.slf4jext.Level.ERROR;
 
 import java.lang.Thread.State;
 import java.lang.ref.Reference;
@@ -141,6 +145,38 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  public void cleanupTask_exception() {
+    var expected = new RuntimeException();
+    TestLoggerFactory.getAllTestLoggers().values()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+
+    var cache = Mockito.mock(BoundedLocalCache.class);
+    doThrow(expected).when(cache).performCleanUp(any());
+    var task = new PerformCleanupTask(cache);
+    assertThat(task.exec()).isFalse();
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
+    assertThat(event.getLevel()).isEqualTo(ERROR);
+  }
+
+  @Test
+  public void cleanup_exception() {
+    var expected = new RuntimeException();
+    TestLoggerFactory.getAllTestLoggers().values()
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+
+    var cache = Mockito.mock(BoundedLocalCache.class);
+    doThrow(expected).when(cache).performCleanUp(any());
+    doCallRealMethod().when(cache).cleanUp();
+    cache.cleanUp();
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
+    assertThat(event.getLevel()).isEqualTo(ERROR);
+  }
+
+  @Test
   public void scheduleAfterWrite() {
     var cache = new BoundedLocalCache<Object, Object>(
         Caffeine.newBuilder(), /* loader */ null, /* async */ false) {
@@ -216,6 +252,14 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.drainStatus).isEqualTo(IDLE);
     assertThat(cache.writeBuffer.isEmpty()).isTrue();
     assertThat(cache.evictionLock.isLocked()).isFalse();
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void shouldDrain_exception() {
+    var cache = new BoundedLocalCache<Object, Object>(
+        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
+    cache.setDrainStatusOpaque(Integer.MAX_VALUE);
+    cache.shouldDrainBuffers(true);
   }
 
   @Test(dataProvider = "caches")

@@ -60,9 +60,9 @@ public final class CaffeineCachingProvider implements CachingProvider {
   private static final ClassLoader DEFAULT_CLASS_LOADER = new JCacheClassLoader();
 
   @GuardedBy("itself")
-  private final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;
+  final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;
 
-  private boolean isOsgiComponent;
+  boolean isOsgiComponent;
 
   public CaffeineCachingProvider() {
     this.cacheManagers = new WeakHashMap<>(1);
