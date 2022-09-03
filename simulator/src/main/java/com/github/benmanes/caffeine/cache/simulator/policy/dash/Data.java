@@ -4,9 +4,11 @@ import java.util.Objects;
 
 public class Data {
     public final long key;
+    public int LFUCounter;
 
     public Data(long key) {
         this.key = key;
+        this.LFUCounter = 0;
     }
 
     @Override
