@@ -420,9 +420,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public @Nullable V put(K key, V value) {
-    requireNonNull(value);
-
-    // ensures that the removal notification is processed after the removal has completed
     V oldValue = data.put(key, value);
     notifyOnReplace(key, oldValue, value);
     return oldValue;
@@ -677,8 +674,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Nullable K current;
 
     KeyIterator(UnboundedLocalCache<K, ?> cache) {
-      this.cache = requireNonNull(cache);
       this.iterator = cache.data.keySet().iterator();
+      this.cache = cache;
     }
 
     @Override
@@ -804,8 +801,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Nullable Entry<K, V> entry;
 
     ValuesIterator(UnboundedLocalCache<K, V> cache) {
-      this.cache = requireNonNull(cache);
       this.iterator = cache.data.entrySet().iterator();
+      this.cache = cache;
     }
 
     @Override
@@ -937,8 +934,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Nullable Entry<K, V> entry;
 
     EntryIterator(UnboundedLocalCache<K, V> cache) {
-      this.cache = requireNonNull(cache);
       this.iterator = cache.data.entrySet().iterator();
+      this.cache = cache;
     }
 
     @Override

@@ -1,0 +1,54 @@
+name: Dependency Submission
+on:
+  push:
+    branches: [master]
+permissions: read-all
+
+env:
+  GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  JAVA_VERSION: 18
+
+jobs:
+  dependency-submission:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dd2c410b088af7c0dc8046f3ac9a8f4148492a95
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v3
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
+        with:
+          action: actions/setup-java@v3
+          with: |
+            cache: gradle
+            distribution: temurin
+            java-version: ${{ env.JAVA_VERSION }}
+          attempt_limit: 3
+          attempt_delay: 2000
+      - name: Setup Gradle
+        uses: Wandalen/wretry.action@v1.0.20
+        timeout-minutes: 5
+        with:
+          action: gradle/gradle-build-action@v2
+          with: |
+            cache-read-only: false
+            arguments: help --no-scan
+            generate-job-summary: false
+          attempt_limit: 3
+          attempt_delay: 2000
+      - name: Submit Dependency Graph
+        uses: mikepenz/gradle-dependency-submission@v0.7.1
+        with:
+          gradle-build-module: |-
+            :simulator
+            :caffeine
+            :jcache
+            :guava
+          sub-module-mode: INDIVIDUAL_DEEP
+          gradle-build-configuration: testCompileClasspath

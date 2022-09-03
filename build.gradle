@@ -62,6 +62,10 @@ subprojects {
     testImplementation testLibraries.osgiCompile
 
     testRuntimeOnly testLibraries.osgiRuntime
+
+    constraints {
+      implementation('org.jetbrains.kotlin:kotlin-stdlib:1.7.10+')
+    }
   }
 
   tasks.register('bundle', aQute.bnd.gradle.Bundle) {
