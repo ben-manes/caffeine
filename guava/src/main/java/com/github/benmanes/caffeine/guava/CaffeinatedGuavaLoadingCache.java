@@ -21,15 +21,20 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
-import com.google.common.base.Throwables;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ExecutionError;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
 /**
@@ -133,7 +138,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     }
 
     @Override
-    public V load(K key) {
+    public V load(K key) throws Exception {
       try {
         V value = cacheLoader.load(key);
         if (value == null) {
@@ -151,20 +156,19 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     }
 
     @Override
-    public V reload(K key, V oldValue) {
+    public CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) {
+      var future = new CompletableFuture<V>();
       try {
-        V value = Futures.getUnchecked(cacheLoader.reload(key, oldValue));
-        if (value == null) {
-          throw new InvalidCacheLoadException("null value");
+        ListenableFuture<V> reload = cacheLoader.reload(key, oldValue);
+        if (reload == null) {
+          future.completeExceptionally(new InvalidCacheLoadException("null value"));
+        } else {
+          Futures.addCallback(reload, new FutureCompleter<>(future), Runnable::run);
         }
-        return value;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new CacheLoaderException(e);
-      } catch (Exception e) {
-        Throwables.throwIfUnchecked(e);
-        throw new RuntimeException(e);
+      } catch (Throwable t) {
+        future.completeExceptionally(t);
       }
+      return future;
     }
   }
 
@@ -199,6 +203,51 @@ final class CaffeinatedGuavaLoadingCache<K, V>
       } catch (Exception e) {
         throw new CacheLoaderException(e);
       }
+    }
+  }
+
+  static class ExternalizedSingleLoader<K, V> extends SingleLoader<K, V> {
+    private static final long serialVersionUID = 1L;
+
+    ExternalizedSingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+      super(cacheLoader);
+    }
+    @Override public V load(K key) throws Exception {
+      V value = cacheLoader.load(key);
+      if (value == null) {
+        throw new InvalidCacheLoadException("null value");
+      }
+      return value;
+    }
+  }
+
+  static final class ExternalizedBulkLoader<K, V> extends ExternalizedSingleLoader<K, V> {
+    private static final long serialVersionUID = 1L;
+
+    ExternalizedBulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+      super(cacheLoader);
+    }
+    @Override public Map<K, V> loadAll(Set<? extends K> keys) throws Exception {
+      return cacheLoader.loadAll(keys);
+    }
+  }
+
+  static final class FutureCompleter<V> implements FutureCallback<V> {
+    final CompletableFuture<V> future;
+
+    FutureCompleter(CompletableFuture<V> future) {
+      this.future = future;
+    }
+
+    @Override public void onSuccess(@Nullable V value) {
+      if (value == null) {
+        future.completeExceptionally(new InvalidCacheLoadException("null value"));
+      } else {
+        future.complete(value);
+      }
+    }
+    @Override public void onFailure(Throwable t) {
+      future.completeExceptionally(t);
     }
   }
 }

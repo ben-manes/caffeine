@@ -259,6 +259,11 @@
     </Or>
     <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache$SingleLoader"/>
+    <Method name="asyncReload"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+  </Match>
 
   <!-- JCache -->
   <Match>
