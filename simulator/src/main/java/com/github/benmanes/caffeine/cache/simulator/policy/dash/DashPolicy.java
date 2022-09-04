@@ -18,6 +18,7 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
     private PolicyStats policyStats;
 
     // Class fields
+    private HashFunc hashFunc;
     private Segment[] segments;
     private int numOfSegments;
     private int segmentSize;
@@ -26,22 +27,30 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
     // TODO: erase
     private Set<Long> uniqueItems;
 
-    public DashPolicy(Config config) {
-        // Caffeine stuff
-        this.policyStats = new PolicyStats(name());
-        DashSettings settings = new DashSettings(config);
-
-        // Class fields
-        this.debugMode = settings.debugMode();
-        this.numOfSegments = settings.numOfSegments();
-        this.segmentSize = settings.segmentSize();
-
-        this.policy = EvictionPolicy.LRU;
-        this.segments = new Segment[this.numOfSegments];
-        for (int i = 0; i < this.segments.length; i++) {
-            this.segments[i] = new Segment(this.segmentSize, settings.bucketSize());
-        }
+    private interface isDisplacementPossible {
+        boolean execute(Data data);
     }
+
+    private interface HashFunc {
+        int execute(Data data);
+    }
+
+//    public DashPolicy(Config config) {
+//        // Caffeine stuff
+//        this.policyStats = new PolicyStats(name());
+//        DashSettings settings = new DashSettings(config);
+//
+//        // Class fields
+//        this.debugMode = settings.debugMode();
+//        this.numOfSegments = settings.numOfSegments();
+//        this.segmentSize = settings.segmentSize();
+//
+//        this.policy = EvictionPolicy.LRU;
+//        this.segments = new Segment[this.numOfSegments];
+//        for (int i = 0; i < this.segments.length; i++) {
+//            this.segments[i] = new Segment(this.segmentSize, settings.bucketSize());
+//        }
+//    }
 
     public DashPolicy(DashSettings settings, EvictionPolicy policy) {
         this(
@@ -49,19 +58,25 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
             settings.segmentSize(),
             settings.bucketSize(),
             settings.debugMode(),
-            policy
+            policy,
+            null,
+            "Default"
         );
     }
 
-    public DashPolicy(int numOfSegments, int segmentSize, int bucketSize, int debugMode, EvictionPolicy policy) {
+    public DashPolicy(int numOfSegments, int segmentSize, int bucketSize, int debugMode, EvictionPolicy policy,
+                      HashFunc hashFunc, String hashName) {
         // Caffeine stuff
-        this.policyStats = new PolicyStats(name() + " #S = %d, #B = %d, #E = %d (%s)",
-                numOfSegments,
+        this.policyStats = new PolicyStats(name() + " hash = %s, #B = %d, #E = %d (%s)",
+//                numOfSegments,
+                hashName,
                 segmentSize,
                 bucketSize,
                 CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, policy.name()));
 
         // Class fields
+        this.hashFunc = hashFunc;
+
         this.debugMode = debugMode;
         if (this.debugMode >= 1) {
             System.out.println("^^^^^^^^^^^^^^^^^^^^^^ Constructor ^^^^^^^^^^^^^^^^^^^^^^^^^^");
@@ -77,22 +92,68 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
         }
     }
 
-    // TODO: implement
-//    public static List<List<Integer>> getDifferentSizes
+    private static String hashNumToString(int i) {
+        switch (i) {
+            case 0:
+                return "Default";
+            case 1:
+                return "MD5";
+            case 2:
+                return "SHA-256";
+            default:
+                return "";
+        }
+    }
 
     public static Set<Policy> policies(Config config) {
         DashSettings settings = new DashSettings(config);
         Set<Policy> set = new HashSet<>();
-        settings.policy()
-            .forEach(policy -> {
-                set.add(new DashPolicy(1, 4, 256, settings.debugMode(), policy));
-                set.add(new DashPolicy(1, 8, 128, settings.debugMode(), policy));
-                set.add(new DashPolicy(1, 16, 64, settings.debugMode(), policy));
-                set.add(new DashPolicy(1, 32, 32, settings.debugMode(), policy));
-                set.add(new DashPolicy(1, 64, 16, settings.debugMode(), policy));
-                set.add(new DashPolicy(1, 128, 8, settings.debugMode(), policy));
-                set.add(new DashPolicy(1, 256, 4, settings.debugMode(), policy));
-            });
+        List<HashFunc> hashList = Arrays.asList(
+            (Data data) -> Math.abs(data.hashCode()),
+                HashFunctions::MD5,
+                HashFunctions::SHA
+        );
+        List<List<Integer>> sizes = Arrays.asList(
+            Arrays.asList(1, 4, 256),
+            Arrays.asList(1, 8, 128),
+            Arrays.asList(1, 16, 64),
+            Arrays.asList(1, 32, 32),
+            Arrays.asList(1, 64, 16),
+            Arrays.asList(1, 128, 8),
+            Arrays.asList(1, 256, 4)
+        );
+        //////////////////////////////////////////////////////
+        List<Integer> defaultSizes = Arrays.asList(1, 128, 8);
+        EvictionPolicy defaultPolicy = EvictionPolicy.LRU;
+        HashFunc defaultHash = (Data data) -> Math.abs(data.hashCode());
+//        HashFunc defaultHash = HashFunctions::SHA;
+        int defaultHashNum = 0;
+        //////////////////////////////////////////////////////
+
+        if (settings.testPolicies()) {
+            for (EvictionPolicy policy : settings.policy()) {
+                if (settings.testSizes()) {
+                    for (List<Integer> sizeList : sizes) {
+                        if (settings.testHash()) {
+                            for (int i = 0; i < hashList.size(); i++) {
+                                set.add(new DashPolicy(sizeList.get(0), sizeList.get(1), sizeList.get(2), settings.debugMode(),
+                                        policy, hashList.get(i), hashNumToString(i)));
+                            }
+                        } else {
+                            set.add(new DashPolicy(sizeList.get(0), sizeList.get(1), sizeList.get(2), settings.debugMode(),
+                                    policy,defaultHash, hashNumToString(defaultHashNum)));
+                        }
+                    }
+                } else {
+                    set.add(new DashPolicy(defaultSizes.get(0), defaultSizes.get(1), defaultSizes.get(2), settings.debugMode(),
+                            policy,defaultHash, hashNumToString(defaultHashNum)));
+                }
+
+            }
+        } else {
+            set.add(new DashPolicy(defaultSizes.get(0), defaultSizes.get(1), defaultSizes.get(2), settings.debugMode(),
+                    defaultPolicy,defaultHash, hashNumToString(defaultHashNum)));
+        }
         return set;
     }
 
@@ -114,7 +175,11 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
     }
 
     private int hash(Data data) {
-        return Math.abs(data.hashCode());
+        if (this.hashFunc != null) {
+            return this.hashFunc.execute(data);
+        } else {
+            return Math.abs(data.hashCode());
+        }
     }
 
     private Segment getSegment(int hash) {
@@ -267,10 +332,6 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
         }
     }
 
-    private interface isDisplacementPossible {
-        boolean execute(Data data);
-    }
-
     private Bucket displaceFromTo(isDisplacementPossible f, Bucket fromBucket, Bucket toBucket) {
         if (!toBucket.isFull()) {
             for (Data data : fromBucket.data_list) {
@@ -323,25 +384,29 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
     }
 
     public static final class DashSettings extends BasicSettings {
-
         public DashSettings(Config config) {
             super(config);
         }
-
         public int numOfSegments() {
             return this.config().getInt("dash.numOfSegments");
         }
-
         public int segmentSize() {
             return this.config().getInt("dash.segmentSize");
         }
-
         public int bucketSize() {
             return this.config().getInt("dash.bucketSize");
         }
-
         public int debugMode() {
             return this.config().getInt("dash.debugMode");
+        }
+        public boolean testHash() {
+            return this.config().getBoolean("dash.testHash");
+        }
+        public boolean testSizes() {
+            return this.config().getBoolean("dash.testSizes");
+        }
+        public boolean testPolicies() {
+            return this.config().getBoolean("dash.testPolicies");
         }
 
         public Set<EvictionPolicy> policy() {
