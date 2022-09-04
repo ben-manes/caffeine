@@ -11,19 +11,18 @@ import com.typesafe.config.Config;
 import java.util.*;
 
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toSet;
 
 @PolicySpec(name = "dash.Dash")
 public class DashPolicy implements Policy.KeyOnlyPolicy {
     // Caffeine stuff
-    private final PolicyStats policyStats;
+    private PolicyStats policyStats;
 
     // Class fields
-    private final Segment[] segments;
-    private final int numOfSegments;
-    private final int segmentSize;
-    private final EvictionPolicy policy;
-    private final int debugMode;
+    private Segment[] segments;
+    private int numOfSegments;
+    private int segmentSize;
+    private EvictionPolicy policy;
+    private int debugMode;
     // TODO: erase
     private Set<Long> uniqueItems;
 
@@ -45,39 +44,33 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
     }
 
     public DashPolicy(DashSettings settings, EvictionPolicy policy) {
+        this(
+            settings.numOfSegments(),
+            settings.segmentSize(),
+            settings.bucketSize(),
+            settings.debugMode(),
+            policy
+        );
+    }
+
+    public DashPolicy(int numOfSegments, int segmentSize, int bucketSize, int debugMode, EvictionPolicy policy) {
         // Caffeine stuff
         this.policyStats = new PolicyStats(name() + " #S = %d, #B = %d, #E = %d (%s)",
-                settings.numOfSegments(),
-                settings.segmentSize(),
-                settings.bucketSize(),
+                numOfSegments,
+                segmentSize,
+                bucketSize,
                 CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, policy.name()));
 
         // Class fields
-        this.debugMode = settings.debugMode();
+        this.debugMode = debugMode;
         if (this.debugMode >= 1) {
             System.out.println("^^^^^^^^^^^^^^^^^^^^^^ Constructor ^^^^^^^^^^^^^^^^^^^^^^^^^^");
         }
         this.uniqueItems = new HashSet<>();
-        this.numOfSegments = settings.numOfSegments();
-        this.segmentSize = settings.segmentSize();
-
-        this.policy = policy;
-        this.segments = new Segment[this.numOfSegments];
-        for (int i = 0; i < this.segments.length; i++) {
-            this.segments[i] = new Segment(this.segmentSize, settings.bucketSize());
-        }
-    }
-
-    public DashPolicy(int numOfSegments, int segmentSize, int bucketSize) {
-        // Caffeine stuff
-        this.policyStats = new PolicyStats(name());
-
-        // Class fields
-        this.debugMode = 0;
         this.numOfSegments = numOfSegments;
         this.segmentSize = segmentSize;
 
-        this.policy = EvictionPolicy.LRU;
+        this.policy = policy;
         this.segments = new Segment[this.numOfSegments];
         for (int i = 0; i < this.segments.length; i++) {
             this.segments[i] = new Segment(this.segmentSize, bucketSize);
@@ -89,9 +82,18 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
 
     public static Set<Policy> policies(Config config) {
         DashSettings settings = new DashSettings(config);
-        return settings.policy().stream()
-                .map(policy -> new DashPolicy(settings, policy))
-                .collect(toSet());
+        Set<Policy> set = new HashSet<>();
+        settings.policy()
+            .forEach(policy -> {
+                set.add(new DashPolicy(1, 4, 256, settings.debugMode(), policy));
+                set.add(new DashPolicy(1, 8, 128, settings.debugMode(), policy));
+                set.add(new DashPolicy(1, 16, 64, settings.debugMode(), policy));
+                set.add(new DashPolicy(1, 32, 32, settings.debugMode(), policy));
+                set.add(new DashPolicy(1, 64, 16, settings.debugMode(), policy));
+                set.add(new DashPolicy(1, 128, 8, settings.debugMode(), policy));
+                set.add(new DashPolicy(1, 256, 4, settings.debugMode(), policy));
+            });
+        return set;
     }
 
     @Override
@@ -183,6 +185,7 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
             case MOVE_AHEAD:
                 if (isOnTarget) {
                     Bucket nextBucket = segment.buckets[getNextBucketIndex(bucketIndex)];
+                    // TODO: think of something better
                     if (!nextBucket.isFull()) {
                         segment.buckets[bucketIndex].remove(data);
                         segment.buckets[getNextBucketIndex(bucketIndex)].insert(data);
@@ -196,6 +199,7 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
                 break;
 
             case LFU:
+            case LFU_DISP:
                 data.LFUCounter++;
                 break;
 
@@ -220,11 +224,12 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
             // Displacement
             Bucket bucket = this.displace(targetBucketIndex, targetSegment);
             // TODO: change to boolean
-            if (bucket == null) {
+            if (bucket != null) {
+                bucket.insert(data);
+            } else {
                 // TODO: think if there is a difference between evicting an item from
                 // the target bucket or the probing bucket
-                targetBucket.evictItem(this.policy, this.policyStats);
-                targetBucket.insert(data);
+                this.evictAndInsert(targetBucket, probingBucket, data);
             }
         } else {
             if (this.policy == EvictionPolicy.MOVE_AHEAD) {
@@ -232,8 +237,7 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
                     targetBucket.insert(data);
                 } else {
                     // TODO: maybe put in probing bucket anyway
-                    targetBucket.evictItem(this.policy, this.policyStats);
-                    targetBucket.insert(data);
+                    this.evictAndInsert(targetBucket, probingBucket, data);
                 }
             } else {
                 // Probing
@@ -243,6 +247,23 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
                     probingBucket.insert(data);
                 }
             }
+        }
+    }
+
+    private void evictAndInsert(Bucket targetBucket, Bucket probingBucket, Data data) {
+        if (policy == EvictionPolicy.LFU_DISP) {
+            Data targetLFU = targetBucket.getLFU();
+            Data probingLFU = probingBucket.getLFU();
+            if (targetLFU.LFUCounter <= probingLFU.LFUCounter) {
+                targetBucket.evictItem(this.policy, this.policyStats, targetLFU);
+                targetBucket.insert(data);
+            } else {
+                probingBucket.evictItem(this.policy, this.policyStats, probingLFU);
+                probingBucket.insert(data);
+            }
+        } else {
+            targetBucket.evictItem(this.policy, this.policyStats, null);
+            targetBucket.insert(data);
         }
     }
 
@@ -259,7 +280,7 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
                     }
                     fromBucket.remove(data);
                     toBucket.insert(data);
-                    return toBucket;
+                    return fromBucket;
                 }
             }
         }
@@ -297,6 +318,7 @@ public class DashPolicy implements Policy.KeyOnlyPolicy {
         LRU,
         LIFO,
         LFU,
+        LFU_DISP,
         FIFO;
     }
 

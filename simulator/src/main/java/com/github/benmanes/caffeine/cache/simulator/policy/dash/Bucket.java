@@ -23,9 +23,25 @@ public class Bucket {
         return this.data_list.size();
     }
 
-    public void evictItem(DashPolicy.EvictionPolicy policy, PolicyStats policyStats) {
+    public Data getLFU() {
+        Data LFUData = this.data_list.get(0);
+        for (Data data : this.data_list) {
+            if (data.LFUCounter < LFUData.LFUCounter) {
+                LFUData = data;
+            }
+        }
+        return LFUData;
+    }
+
+    public void evictItem(DashPolicy.EvictionPolicy policy, PolicyStats policyStats, Data data) {
         policyStats.recordEviction();
 //        this.count--;
+
+        if (data != null) {
+            this.data_list.remove(data);
+            return;
+        }
+
         switch (policy) {
             case MOVE_AHEAD:
             case FIFO:
@@ -38,13 +54,10 @@ public class Bucket {
                 break;
 
             case LFU:
-                Data LFUData = this.data_list.get(0);
-                for (Data data : this.data_list) {
-                    if (data.LFUCounter < LFUData.LFUCounter) {
-                        LFUData = data;
-                    }
-                }
-                this.data_list.remove(LFUData);
+                this.data_list.remove(this.getLFU());
+                break;
+
+            case LFU_DISP:
                 break;
         }
     }
