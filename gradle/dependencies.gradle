@@ -102,9 +102,9 @@ ext {
     semanticVersioning: '1.1.0',
     snyke: '0.4',
     sonarqube: '3.4.0.2513',
-    spotbugs: '4.7.1',
+    spotbugs: '4.7.2',
     spotbugsContrib: '7.4.7',
-    spotbugsPlugin: '5.0.10',
+    spotbugsPlugin: '5.0.12',
     stats: '0.47.0',
     versions: '0.42.0',
   ]

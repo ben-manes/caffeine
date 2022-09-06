@@ -260,7 +260,7 @@
     <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache$SingleLoader"/>
+    <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache$CaffeinatedLoader"/>
     <Method name="asyncReload"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
   </Match>

@@ -18,10 +18,10 @@ package com.github.benmanes.caffeine.guava;
 import java.lang.reflect.Method;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.BulkLoader;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalizedBulkLoader;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalizedSingleLoader;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.SingleLoader;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalBulkLoader;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalSingleLoader;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.InternalBulkLoader;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.InternalSingleLoader;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -58,8 +58,8 @@ public final class CaffeinatedGuava {
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       Caffeine<K, V> builder, CacheLoader<? super K1, V1> loader) {
     return build(builder, hasLoadAll(loader)
-        ? new BulkLoader<>(loader)
-        : new SingleLoader<>(loader));
+        ? new InternalBulkLoader<>(loader)
+        : new InternalSingleLoader<>(loader));
   }
 
   /**
@@ -86,8 +86,8 @@ public final class CaffeinatedGuava {
   public static <K, V> com.github.benmanes.caffeine.cache.CacheLoader<K, V> caffeinate(
       CacheLoader<K, V> loader) {
     return hasLoadAll(loader)
-        ? new ExternalizedBulkLoader<>(loader)
-        : new ExternalizedSingleLoader<>(loader);
+        ? new ExternalBulkLoader<>(loader)
+        : new ExternalSingleLoader<>(loader);
   }
 
   static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {

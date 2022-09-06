@@ -128,17 +128,35 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     cache.refresh(key);
   }
 
-  static class SingleLoader<K, V> implements CacheLoader<K, V>, Serializable {
-    private static final long serialVersionUID = 1L;
-
+  abstract static class CaffeinatedLoader<K, V> implements CacheLoader<K, V>, Serializable {
     final com.google.common.cache.CacheLoader<K, V> cacheLoader;
 
-    SingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+    CaffeinatedLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       this.cacheLoader = requireNonNull(cacheLoader);
     }
+    @Override public CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) {
+      var future = new CompletableFuture<V>();
+      try {
+        ListenableFuture<V> reloader = cacheLoader.reload(key, oldValue);
+        if (reloader == null) {
+          future.completeExceptionally(new InvalidCacheLoadException("null future"));
+        } else {
+          Futures.addCallback(reloader, new FutureCompleter<>(future), Runnable::run);
+        }
+      } catch (Throwable t) {
+        future.completeExceptionally(t);
+      }
+      return future;
+    }
+  }
 
-    @Override
-    public V load(K key) throws Exception {
+  static class InternalSingleLoader<K, V> extends CaffeinatedLoader<K, V> {
+    private static final long serialVersionUID = 1L;
+
+    InternalSingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+      super(cacheLoader);
+    }
+    @Override public V load(K key) {
       try {
         V value = cacheLoader.load(key);
         if (value == null) {
@@ -154,33 +172,15 @@ final class CaffeinatedGuavaLoadingCache<K, V>
         throw new CacheLoaderException(e);
       }
     }
-
-    @Override
-    public CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) {
-      var future = new CompletableFuture<V>();
-      try {
-        ListenableFuture<V> reload = cacheLoader.reload(key, oldValue);
-        if (reload == null) {
-          future.completeExceptionally(new InvalidCacheLoadException("null value"));
-        } else {
-          Futures.addCallback(reload, new FutureCompleter<>(future), Runnable::run);
-        }
-      } catch (Throwable t) {
-        future.completeExceptionally(t);
-      }
-      return future;
-    }
   }
 
-  static final class BulkLoader<K, V> extends SingleLoader<K, V> {
+  static final class InternalBulkLoader<K, V> extends InternalSingleLoader<K, V> {
     private static final long serialVersionUID = 1L;
 
-    BulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+    InternalBulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       super(cacheLoader);
     }
-
-    @Override
-    public Map<K, V> loadAll(Set<? extends K> keys) {
+    @Override public Map<K, V> loadAll(Set<? extends K> keys) {
       try {
         Map<K, V> loaded = cacheLoader.loadAll(keys);
         if (loaded == null) {
@@ -206,10 +206,10 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     }
   }
 
-  static class ExternalizedSingleLoader<K, V> extends SingleLoader<K, V> {
+  static class ExternalSingleLoader<K, V> extends CaffeinatedLoader<K, V> {
     private static final long serialVersionUID = 1L;
 
-    ExternalizedSingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+    ExternalSingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       super(cacheLoader);
     }
     @Override public V load(K key) throws Exception {
@@ -221,10 +221,10 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     }
   }
 
-  static final class ExternalizedBulkLoader<K, V> extends ExternalizedSingleLoader<K, V> {
+  static final class ExternalBulkLoader<K, V> extends ExternalSingleLoader<K, V> {
     private static final long serialVersionUID = 1L;
 
-    ExternalizedBulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+    ExternalBulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       super(cacheLoader);
     }
     @Override public Map<K, V> loadAll(Set<? extends K> keys) throws Exception {
@@ -238,7 +238,6 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     FutureCompleter(CompletableFuture<V> future) {
       this.future = future;
     }
-
     @Override public void onSuccess(@Nullable V value) {
       if (value == null) {
         future.completeExceptionally(new InvalidCacheLoadException("null value"));
