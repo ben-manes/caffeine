@@ -43,16 +43,16 @@ public class BasicSettings {
     this.config = requireNonNull(config);
   }
 
+  public ActorSettings actor() {
+    return new ActorSettings();
+  }
+
   public ReportSettings report() {
     return new ReportSettings();
   }
 
   public int randomSeed() {
     return config().getInt("random-seed");
-  }
-
-  public int batchSize() {
-    return config().getInt("batch-size");
   }
 
   public Set<String> policies() {
@@ -87,6 +87,15 @@ public class BasicSettings {
   /** Returns the config resolved at the simulator's path. */
   public Config config() {
     return config;
+  }
+
+  public final class ActorSettings {
+    public int mailboxSize() {
+      return config().getInt("actor.mailbox-size");
+    }
+    public int batchSize() {
+      return config().getInt("actor.batch-size");
+    }
   }
 
   public final class ReportSettings {

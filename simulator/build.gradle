@@ -14,10 +14,10 @@ dependencies {
 
   implementation libraries.xz
   implementation libraries.ohc
-  implementation libraries.akka
   implementation libraries.ycsb
   implementation libraries.zstd
   implementation libraries.guava
+  implementation libraries.config
   implementation libraries.stream
   implementation libraries.tcache
   implementation libraries.cache2k
@@ -78,7 +78,7 @@ application {
 
 tasks.named('run').configure {
   systemProperties System.properties.findAll {
-    it.getKey().startsWith('akka') || it.getKey().startsWith('caffeine')
+    it.key.startsWith('caffeine')
   }
 
   jvmArgs '-XX:+UseParallelGC', '-Xmx4g'

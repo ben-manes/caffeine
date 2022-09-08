@@ -42,12 +42,12 @@ public final class CsvReporter extends TextReporter {
   }
 
   @Override
-  protected String assemble(List<PolicyStats> results) {
+  protected String assemble(Set<String> headers, List<PolicyStats> results) {
     StringWriter output = new StringWriter();
     CsvWriter writer = new CsvWriter(output, new CsvWriterSettings());
-    writer.writeHeaders(headers());
+    writer.writeHeaders(headers);
     for (PolicyStats policyStats : results) {
-      String[] data = headers().stream()
+      String[] data = headers.stream()
           .map(policyStats.metrics()::get)
           .map(metrics()::format)
           .map(Strings::emptyToNull)
@@ -59,7 +59,7 @@ public final class CsvReporter extends TextReporter {
   }
 
   @Override
-  protected Metrics newMetrics() {
+  protected Metrics metrics() {
     return Metrics.builder()
         .percentFormatter(value -> String.format("%.2f", 100 * value))
         .doubleFormatter(value -> String.format("%.2f", value))

@@ -49,7 +49,6 @@ Use Caffeine in a community provided integration:
  * [Play Framework][play]: High velocity web framework
  * [Micronaut][micronaut]: A modern, full-stack framework
  * [Spring Cache][spring]: As of Spring 4.3 & Boot 1.4
- * [Akka][akka-http]: Build reactive applications easily
  * [Quarkus][quarkus]: Supersonic Subatomic Java
  * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
  * [ScalaCache][scala-cache]: Simple caching in Scala
@@ -146,7 +145,6 @@ Snapshots of the development version are available in
 [camel]: https://github.com/apache/camel/blob/master/components/camel-caffeine/src/main/docs/caffeine-cache-component.adoc
 [coherence]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-applications/implementing-storage-and-backing-maps.html#GUID-260228C2-371A-4B91-9024-8D6514DD4B78
 [corfu]: https://github.com/CorfuDB/CorfuDB
-[akka-http]: https://doc.akka.io/docs/akka-http/current/common/caching.html
 [micronaut]: https://docs.micronaut.io/latest/guide/index.html#caching
 [play]: https://www.playframework.com/documentation/latest/JavaCache
 [redisson]: https://github.com/redisson/redisson

@@ -18,78 +18,106 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 
-import com.github.benmanes.caffeine.cache.simulator.Simulator;
-import com.github.benmanes.caffeine.cache.simulator.Simulator.Stats;
-
-import akka.actor.typed.ActorRef;
-import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 
 /**
  * An actor that proxies to the page replacement policy.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class PolicyActor extends AbstractBehavior<PolicyActor.Command> {
-  private final ActorRef<Simulator.Command> simulator;
+public final class PolicyActor {
+  private final Semaphore semaphore;
   private final Policy policy;
+  private final Thread parent;
 
-  public PolicyActor(ActorContext<Command> context,
-      ActorRef<Simulator.Command> simulator, Policy policy) {
-    super(context);
+  private CompletableFuture<Void> future;
+
+  /**
+   * Creates an actor that executes the policy actions asynchronously over a buffered channel.
+   *
+   * @param parent the supervisor to interrupt if the policy fails
+   * @param policy the cache policy being simulated
+   * @param settings the simulation settings
+   */
+  public PolicyActor(Thread parent, Policy policy, BasicSettings settings) {
+    this.semaphore = new Semaphore(settings.actor().mailboxSize());
+    this.future = CompletableFuture.completedFuture(null);
     this.policy = requireNonNull(policy);
-    this.simulator = requireNonNull(simulator);
+    this.parent = requireNonNull(parent);
   }
 
-  public static Behavior<Command> create(ActorRef<Simulator.Command> simulator, Policy policy) {
-    return Behaviors.setup(context -> new PolicyActor(context, simulator, policy));
+  /** Sends the access events for async processing and blocks until accepted into the mailbox. */
+  public void send(List<AccessEvent> events) {
+    submit(new Execute(events));
   }
 
-  @Override
-  public Receive<Command> createReceive() {
-    return newReceiveBuilder()
-        .onMessage(AccessEvents.class, msg -> process(msg.events))
-        .onMessage(Finished.class, msg -> finish())
-        .build();
+  /** Sends a shutdown signal after the pending messages are completed and blocks until done. */
+  public void finish() {
+    submit(new Finish());
+    future.join();
   }
 
-  private Behavior<Command> process(List<AccessEvent> events) {
-    policy.stats().stopwatch().start();
-    for (AccessEvent event : events) {
-      long priorMisses = policy.stats().missCount();
-      long priorHits = policy.stats().hitCount();
-      policy.record(event);
-
-      if (policy.stats().hitCount() > priorHits) {
-        policy.stats().recordHitPenalty(event.hitPenalty());
-      } else if (policy.stats().missCount() > priorMisses) {
-        policy.stats().recordMissPenalty(event.missPenalty());
-      }
+  /** Submits the command to the mailbox and blocks until accepted. */
+  private void submit(Command command) {
+    try {
+      semaphore.acquire();
+      future = future.thenRunAsync(command);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException(e);
     }
-    policy.stats().stopwatch().stop();
-    return this;
   }
 
-  private Behavior<Command> finish() {
-    policy.finished();
-    simulator.tell(new Stats(policy.stats()));
-    return Behaviors.stopped();
+  /** Returns the cache efficiency statistics. */
+  public PolicyStats stats() {
+    return policy.stats();
   }
 
-  /** A message sent to the policy. */
-  @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
-  public abstract static class Command {
-    private Command() {}
-  }
-  public static final class AccessEvents extends Command {
-    public final List<AccessEvent> events;
-    public AccessEvents(List<AccessEvent> events) {
+  /** A command to process the access events. */
+  private final class Execute extends Command {
+    final List<AccessEvent> events;
+
+    Execute(List<AccessEvent> events) {
       this.events = requireNonNull(events);
     }
+    @Override public void execute() {
+      policy.stats().stopwatch().start();
+      for (AccessEvent event : events) {
+        long priorMisses = policy.stats().missCount();
+        long priorHits = policy.stats().hitCount();
+        policy.record(event);
+
+        if (policy.stats().hitCount() > priorHits) {
+          policy.stats().recordHitPenalty(event.hitPenalty());
+        } else if (policy.stats().missCount() > priorMisses) {
+          policy.stats().recordMissPenalty(event.missPenalty());
+        }
+      }
+      policy.stats().stopwatch().stop();
+    }
   }
-  public static final class Finished extends Command {}
+
+  /** A command to shutdown the policy and finalize the statistics. */
+  private final class Finish extends Command {
+    @Override public void execute() {
+      policy.finished();
+    }
+  }
+
+  private abstract class Command implements Runnable {
+    @Override public final void run() {
+      try {
+        execute();
+      } catch (Throwable t) {
+        parent.interrupt();
+        throw t;
+      } finally {
+        semaphore.release();
+      }
+    }
+    protected abstract void execute();
+  }
 }

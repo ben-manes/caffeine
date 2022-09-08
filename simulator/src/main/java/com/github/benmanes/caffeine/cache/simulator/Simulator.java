@@ -15,38 +15,23 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
-import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.mutable.MutableObject;
-
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor.AccessEvents;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor.Finished;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
-import com.github.benmanes.caffeine.cache.simulator.report.Reporter;
 import com.google.common.base.Stopwatch;
-
-import akka.actor.typed.ActorRef;
-import akka.actor.typed.ActorSystem;
-import akka.actor.typed.Behavior;
-import akka.actor.typed.ChildFailed;
-import akka.actor.typed.MailboxSelector;
-import akka.actor.typed.Terminated;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * A simulator that broadcasts the recorded cache events to each policy and generates an aggregated
@@ -67,76 +52,69 @@ import akka.actor.typed.javadsl.Receive;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Simulator extends AbstractBehavior<Simulator.Command> {
-  private final List<ActorRef<PolicyActor.Command>> policies;
-  private final TraceReader traceReader;
+public final class Simulator {
   private final BasicSettings settings;
-  private final Stopwatch stopwatch;
-  private final Reporter reporter;
 
-  public Simulator(ActorContext<Command> context, BasicSettings settings) {
-    super(context);
-    this.settings = settings;
-    this.policies = new ArrayList<>();
-    this.stopwatch = Stopwatch.createUnstarted();
-    this.traceReader = makeTraceReader(settings);
-    this.reporter = settings.report().format()
-        .create(settings.config(), traceReader.characteristics());
-  }
-
-  public static Behavior<Command> create() {
-    return Behaviors.setup(context -> {
-      var config = context.getSystem().settings().config().getConfig("caffeine.simulator");
-      return new Simulator(context, new BasicSettings(config));
-    });
-  }
-
-  @Override
-  public Receive<Command> createReceive() {
-    return newReceiveBuilder()
-        .onMessage(Broadcast.class, msg -> broadcast())
-        .onMessage(Stats.class, msg -> reportStats(msg.policyStats))
-        .onSignal(ChildFailed.class, msg -> Behaviors.stopped())
-        .onSignal(Terminated.class, msg -> Behaviors.same())
-        .build();
+  public Simulator() {
+    settings = new BasicSettings(ConfigFactory.load().getConfig("caffeine.simulator"));
   }
 
   /** Broadcast the trace events to all of the policy actors. */
-  private Behavior<Command> broadcast() {
-    spawnPolicyActors();
+  public void run() {
+    var trace = getTraceReader(settings);
+    var policies = getPolicyActors(trace.characteristics());
     if (policies.isEmpty()) {
       System.err.println("No active policies in the current configuration");
-      return Behaviors.stopped();
+      return;
     }
 
-    stopwatch.start();
-    long skip = settings.trace().skip();
-    long limit = settings.trace().limit();
-    int batchSize = settings.batchSize();
-    try (Stream<AccessEvent> events = traceReader.events().skip(skip).limit(limit)) {
-      var batch = new MutableObject<>(new ArrayList<AccessEvent>(batchSize));
-      events.forEach(event -> {
-        batch.getValue().add(event);
-        if (batch.getValue().size() == batchSize) {
-          route(new AccessEvents(batch.getValue()));
-          batch.setValue(new ArrayList<>(batchSize));
-        }
-      });
-      route(new AccessEvents(batch.getValue()));
-      route(new Finished());
-      return this;
+    var stopwatch = Stopwatch.createStarted();
+    try {
+      broadcast(policies, trace);
+      report(policies, trace.characteristics());
+      System.out.println("Executed in " + stopwatch);
+    } catch (RuntimeException e) {
+      if (!Thread.currentThread().isInterrupted()) {
+        throw e;
+      }
     }
   }
 
-  /** Publishes the message to all of the policy actors. */
-  private void route(PolicyActor.Command message) {
-    for (var policy : policies) {
-      policy.tell(message);
+  private void broadcast(List<PolicyActor> policies, TraceReader trace) {
+    long skip = settings.trace().skip();
+    long limit = settings.trace().limit();
+    int batchSize = settings.actor().batchSize();
+    try (Stream<AccessEvent> events = trace.events().skip(skip).limit(limit)) {
+      var batch = new ArrayList<AccessEvent>(batchSize);
+      events.forEach(event -> {
+        batch.add(event);
+        if (batch.size() == batchSize) {
+          var accessEvents = List.copyOf(batch);
+          for (var policy : policies) {
+            policy.send(accessEvents);
+          }
+          batch.clear();
+        }
+      });
+
+      var accessEvents = List.copyOf(batch);
+      for (var policy : policies) {
+        policy.send(accessEvents);
+      }
+      for (var policy : policies) {
+        policy.finish();
+      }
     }
+  }
+
+  private void report(List<PolicyActor> policies, Set<Characteristic> characteristics) {
+    var results = policies.stream().map(PolicyActor::stats).collect(toList());
+    var reporter = settings.report().format().create(settings.config(), characteristics);
+    reporter.print(results);
   }
 
   /** Returns a trace reader for the access events. */
-  private static TraceReader makeTraceReader(BasicSettings settings) {
+  private TraceReader getTraceReader(BasicSettings settings) {
     if (settings.trace().isSynthetic()) {
       return Synthetic.generate(settings.trace());
     }
@@ -145,47 +123,16 @@ public final class Simulator extends AbstractBehavior<Simulator.Command> {
     return format.readFiles(filePaths);
   }
 
-  /** Spawns the policy actors to broadcast trace events to. */
-  private void spawnPolicyActors() {
-    var registry = new Registry(settings, traceReader.characteristics());
-    var mailbox = MailboxSelector.fromConfig("caffeine.simulator.mailbox");
-    for (var policy : registry.policies()) {
-      var name = policy.getClass().getSimpleName() + "@" + System.identityHashCode(policy);
-      var actor = PolicyActor.create(getContext().getSelf(), policy);
-      var actorRef = getContext().spawn(actor, name, mailbox);
-      getContext().watch(actorRef);
-      policies.add(actorRef);
-    }
-  }
-
-  /** Add the stats to the reporter, print if completed, and stop the simulator. */
-  private Behavior<Command> reportStats(PolicyStats stats) throws IOException {
-    reporter.add(stats);
-
-    if (reporter.stats().size() == policies.size()) {
-      reporter.print();
-      System.out.println("Executed in " + stopwatch);
-      return Behaviors.stopped();
-    }
-    return this;
+  /** Returns the policy actors that asynchronously apply the trace events. */
+  private List<PolicyActor> getPolicyActors(Set<Characteristic> characteristics) {
+    var registry = new Registry(settings, characteristics);
+    return registry.policies().stream()
+        .map(policy -> new PolicyActor(Thread.currentThread(), policy, settings))
+        .collect(toList());
   }
 
   public static void main(String[] args) {
     Logger.getLogger("").setLevel(Level.WARNING);
-    var simulator = ActorSystem.create(Simulator.create(), "Simulator");
-    simulator.tell(new Broadcast());
-  }
-
-  /** A message sent to the simulator. */
-  @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
-  public abstract static class Command {
-    private Command() {}
-  }
-  private static final class Broadcast extends Command {}
-  public static final class Stats extends Command {
-    public final PolicyStats policyStats;
-    public Stats(PolicyStats policyStats) {
-      this.policyStats = requireNonNull(policyStats);
-    }
+    new Simulator().run();
   }
 }

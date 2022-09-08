@@ -21,9 +21,9 @@ import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -33,8 +33,9 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSortedSet;
 import com.typesafe.config.Config;
 
 /**
@@ -44,78 +45,65 @@ import com.typesafe.config.Config;
  */
 public abstract class TextReporter implements Reporter {
   private final Set<Characteristic> characteristics;
-  private final List<PolicyStats> results;
   private final BasicSettings settings;
-
-  private ImmutableSet<String> headers;
-  private Metrics metrics;
 
   protected TextReporter(Config config, Set<Characteristic> characteristics) {
     this.characteristics = requireNonNull(characteristics);
     this.settings = new BasicSettings(config);
-    this.results = new ArrayList<>();
   }
 
   @Override
-  public void add(PolicyStats policyStats) {
-    results.add(policyStats);
-  }
+  public void print(List<PolicyStats> results) {
+    var sortedStats = getSortedStats(results);
+    var headers = getHeaders(sortedStats);
 
-  @Override
-  public void print() throws IOException {
-    results.sort(comparator());
-    String report = assemble(results);
+    String report = assemble(headers, sortedStats);
     String output = settings.report().output();
     if (output.equalsIgnoreCase("console")) {
       System.out.println(report);
-    } else {
+      return;
+    }
+    try {
       Path path = Path.of(output);
       Files.createDirectories(path.getParent());
       Files.write(path, report.getBytes(UTF_8));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
-  @Override
-  public Collection<PolicyStats> stats() {
-    return results;
-  }
-
-  /** Returns the column headers. */
-  protected Set<String> headers() {
-    if (headers == null) {
-      ImmutableSet<String> all = results.stream()
-            .flatMap(policyStats -> policyStats.metrics().keySet().stream())
-            .collect(toImmutableSet());
-      ImmutableSet<String> used = results.stream()
-          .flatMap(policyStats -> policyStats.metrics().values().stream())
-          .filter(metric -> metric.characteristics().isEmpty()
-              || metric.characteristics().stream().anyMatch(characteristics::contains))
-          .filter(metric -> metric.required() || !metrics().format(metric).isEmpty())
-          .map(Metric::name)
-          .collect(toImmutableSet());
-      headers = ImmutableSet.copyOf(Sets.intersection(all, used));
-    }
-    return headers;
-  }
-
-  /** Returns the configuration for how to work with metrics. */
-  protected Metrics metrics() {
-    return (metrics == null) ? (metrics = newMetrics()) : metrics;
-  }
-
-  /** Returns a new configuration for how to work with metrics. */
-  protected abstract Metrics newMetrics();
-
-  /** Assembles an aggregated report. */
-  protected abstract String assemble(List<PolicyStats> results);
-
-  /** Returns a comparator that sorts by the specified column. */
-  private Comparator<PolicyStats> comparator() {
+  private ImmutableList<PolicyStats> getSortedStats(Collection<PolicyStats> results) {
     String sortBy = results.stream()
         .flatMap(policyStats -> policyStats.metrics().keySet().stream())
         .filter(header -> header.toLowerCase(US).equals(settings.report().sortBy().toLowerCase(US)))
         .findAny().orElseThrow(() -> new IllegalArgumentException(
             "Unknown sort order: " + settings.report().sortBy()));
+    return ImmutableSortedSet.copyOf(comparator(sortBy), results).asList();
+  }
+
+  /** Returns the column headers in declaration order. */
+  private ImmutableSet<String> getHeaders(Collection<PolicyStats> results) {
+    var columns = results.stream()
+        .flatMap(policyStats -> policyStats.metrics().values().stream())
+        .filter(metric -> metric.characteristics().isEmpty()
+            || metric.characteristics().stream().anyMatch(characteristics::contains))
+        .filter(metric -> metric.required() || !metrics().format(metric).isEmpty())
+        .map(Metric::name)
+        .collect(toImmutableSet());
+    return results.stream()
+        .flatMap(policyStats -> policyStats.metrics().keySet().stream())
+        .filter(columns::contains)
+        .collect(toImmutableSet());
+  }
+
+  /** Returns the configuration for how to work with metrics. */
+  protected abstract Metrics metrics();
+
+  /** Assembles an aggregated report. */
+  protected abstract String assemble(Set<String> headers, List<PolicyStats> results);
+
+  /** Returns a comparator that sorts by the specified column. */
+  private Comparator<PolicyStats> comparator(String sortBy) {
     Comparator<PolicyStats> comparator = metrics().comparator(sortBy);
     return settings.report().ascending() ? comparator : comparator.reversed();
   }

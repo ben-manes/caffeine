@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report;
 
-import java.io.IOException;
-import java.util.Collection;
+import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 
@@ -27,12 +26,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
  */
 public interface Reporter {
 
-  /** Adds the result of a policy simulation. */
-  void add(PolicyStats policyStats);
-
   /** Writes the report to the output destination. */
-  void print() throws IOException;
-
-  /** Returns the collected statistics. */
-  Collection<PolicyStats> stats();
+  void print(List<PolicyStats> results);
 }
