@@ -24,23 +24,20 @@ import org.junit.runners.Parameterized;
  * @author nitsanw@yahoo.com (Nitsan Wakart)
  */
 @RunWith(Parameterized.class)
-@SuppressWarnings("deprecation")
 public final class MpscGrowableQueueSanityTest extends QueueSanityTest {
 
-  public MpscGrowableQueueSanityTest(
-      org.jctools.queues.spec.ConcurrentQueueSpec spec, Queue<Integer> queue) {
-    super(spec, queue);
+  public MpscGrowableQueueSanityTest(Queue<Integer> queue,
+      Ordering ordering, int capacity, boolean isBounded) {
+    super(queue, ordering, capacity, isBounded);
   }
 
   @Parameterized.Parameters
   public static List<Object[]> parameters() {
     var list = new ArrayList<Object[]>();
     // MPSC size: 1
-    list.add(makeQueue(0, 1, 4, org.jctools.queues.spec.Ordering.FIFO,
-        new MpscGrowableArrayQueue<>(2, 4)));
+    list.add(new Object[] { new MpscGrowableArrayQueue<>(2, 4), Ordering.FIFO, 4, true });
     // MPSC size: SIZE
-    list.add(makeQueue(0, 1, SIZE, org.jctools.queues.spec.Ordering.FIFO,
-        new MpscGrowableArrayQueue<>(8, SIZE)));
+    list.add(new Object[] { new MpscGrowableArrayQueue<>(8, SIZE), Ordering.FIFO, SIZE, true });
     return list;
   }
 }

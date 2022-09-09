@@ -83,7 +83,7 @@ public final class SchedulerTest {
   }
 
   @Test
-  public void disabledFuture() throws Exception {
+  public void disabledFuture() {
     assertThat(DisabledFuture.INSTANCE.get(0, TimeUnit.SECONDS)).isNull();
     assertThat(DisabledFuture.INSTANCE.isCancelled()).isFalse();
     assertThat(DisabledFuture.INSTANCE.cancel(false)).isFalse();

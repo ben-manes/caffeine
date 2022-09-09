@@ -30,7 +30,6 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.hamcrest.Matcher;
-import org.jctools.queues.atomic.AtomicQueueFactory;
 import org.jctools.util.Pow2;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,12 +43,16 @@ public abstract class QueueSanityTest {
   public static final int SIZE = 8192 * 2;
 
   private final Queue<Integer> queue;
-  private final org.jctools.queues.spec.ConcurrentQueueSpec spec;
+  private final Ordering ordering;
+  private final boolean isBounded;
+  private final int capacity;
 
-  protected QueueSanityTest(
-      org.jctools.queues.spec.ConcurrentQueueSpec spec, Queue<Integer> queue) {
+  protected QueueSanityTest(Queue<Integer> queue,
+      Ordering ordering, int capacity, boolean isBounded) {
     this.queue = queue;
-    this.spec = spec;
+    this.ordering = ordering;
+    this.capacity = capacity;
+    this.isBounded = isBounded;
   }
 
   @Before
@@ -69,7 +72,7 @@ public abstract class QueueSanityTest {
     }
     int size = i;
     assertEquals(size, queue.size());
-    if (spec.ordering == org.jctools.queues.spec.Ordering.FIFO) {
+    if (ordering == Ordering.FIFO) {
       // expect FIFO
       i = 0;
       Integer p;
@@ -107,7 +110,7 @@ public abstract class QueueSanityTest {
 
   @Test
   public void whenFirstInThenFirstOut() {
-    assumeThat(spec.ordering, is(org.jctools.queues.spec.Ordering.FIFO));
+    assumeThat(ordering, is(Ordering.FIFO));
 
     // Arrange
     int i = 0;
@@ -157,8 +160,8 @@ public abstract class QueueSanityTest {
 
   @Test
   public void testPowerOf2Capacity() {
-    assumeThat(spec.isBounded(), is(true));
-    int n = Pow2.roundToPowerOfTwo(spec.capacity);
+    assumeThat(isBounded, is(true));
+    int n = Pow2.roundToPowerOfTwo(capacity);
 
     for (int i = 0; i < n; i++) {
       assertTrue("Failed to insert:" + i, queue.offer(i));
@@ -172,7 +175,7 @@ public abstract class QueueSanityTest {
 
   @Test
   @SuppressWarnings({"rawtypes", "unchecked"})
-  public void testHappensBefore() throws Exception {
+  public void testHappensBefore() throws InterruptedException {
     final AtomicBoolean stop = new AtomicBoolean();
     final Queue q = queue;
     final Val fail = new Val();
@@ -217,7 +220,7 @@ public abstract class QueueSanityTest {
   }
 
   @Test
-  public void testSize() throws Exception {
+  public void testSize() throws InterruptedException {
     final AtomicBoolean stop = new AtomicBoolean();
     final Queue<Integer> q = queue;
     final Val fail = new Val();
@@ -253,7 +256,7 @@ public abstract class QueueSanityTest {
   }
 
   @Test
-  public void testPollAfterIsEmpty() throws Exception {
+  public void testPollAfterIsEmpty() throws InterruptedException {
     final AtomicBoolean stop = new AtomicBoolean();
     final Queue<Integer> q = queue;
     final Val fail = new Val();
@@ -289,29 +292,11 @@ public abstract class QueueSanityTest {
 
   }
 
-  public static Object[] makeQueue(int producers, int consumers, int capacity,
-      org.jctools.queues.spec.Ordering ordering, Queue<Integer> q) {
-    org.jctools.queues.spec.ConcurrentQueueSpec spec =
-        new org.jctools.queues.spec.ConcurrentQueueSpec(
-            producers, consumers, capacity, ordering, org.jctools.queues.spec.Preference.NONE);
-    if (q == null) {
-      q = org.jctools.queues.QueueFactory.newQueue(spec);
-    }
-    return new Object[] {spec, q};
-  }
-
-  public static Object[] makeAtomic(int producers, int consumers, int capacity,
-      org.jctools.queues.spec.Ordering ordering, Queue<Integer> q) {
-    org.jctools.queues.spec.ConcurrentQueueSpec spec =
-        new org.jctools.queues.spec.ConcurrentQueueSpec(
-            producers, consumers, capacity, ordering, org.jctools.queues.spec.Preference.NONE);
-    if (q == null) {
-      q = AtomicQueueFactory.newQueue(spec);
-    }
-    return new Object[] {spec, q};
-  }
-
   public static Matcher<Collection<?>> emptyAndZeroSize() {
     return allOf(hasSize(0), empty());
+  }
+
+  enum Ordering {
+    FIFO
   }
 }

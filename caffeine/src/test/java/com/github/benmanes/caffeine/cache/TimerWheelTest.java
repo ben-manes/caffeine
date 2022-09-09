@@ -73,12 +73,11 @@ public final class TimerWheelTest {
   @Captor ArgumentCaptor<Node<Long, Long>> captor;
   @Mock BoundedLocalCache<Long, Long> cache;
   TimerWheel<Long, Long> timerWheel;
-  AutoCloseable mocks;
 
   @BeforeMethod
-  public void beforeMethod() {
+  public void beforeMethod() throws Exception {
     Reset.setThreadLocalRandom(random.nextInt(), random.nextInt());
-    mocks = MockitoAnnotations.openMocks(this);
+    MockitoAnnotations.openMocks(this).close();
     timerWheel = new TimerWheel<>();
   }
 
@@ -87,7 +86,6 @@ public final class TimerWheelTest {
     if (!testResult.isSuccess()) {
       printTimerWheel();
     }
-    mocks.close();
   }
 
   @Test(dataProvider = "schedule")

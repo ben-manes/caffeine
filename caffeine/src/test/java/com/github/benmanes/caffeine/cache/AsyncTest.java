@@ -45,7 +45,7 @@ public final class AsyncTest {
   private static final long ONE_MINUTE = TimeUnit.MINUTES.toNanos(1);
 
   @Test
-  public void reflectivelyConstruct() throws Exception {
+  public void reflectivelyConstruct() throws ReflectiveOperationException {
     var constructor = Async.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();

@@ -59,13 +59,13 @@ public final class CaffeinatedGuavaTest extends TestCase {
         Caffeine.newBuilder(), TestingCacheLoaders.identityLoader()));
   }
 
-  public void testReflectivelyConstruct() throws Exception {
+  public void testReflectivelyConstruct() throws ReflectiveOperationException {
     Constructor<?> constructor = CaffeinatedGuava.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();
   }
 
-  public void testHasMethod_notFound() throws Exception {
+  public void testHasMethod_notFound() {
     assertFalse(CaffeinatedGuava.hasMethod(TestingCacheLoaders.identityLoader(), "abc"));
   }
 
@@ -74,7 +74,7 @@ public final class CaffeinatedGuavaTest extends TestCase {
       LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
           Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
           new CacheLoader<Integer, Integer>() {
-            @Override public Integer load(Integer key) throws Exception {
+            @Override public Integer load(Integer key) throws InterruptedException {
               throw new InterruptedException();
             }
           });
@@ -123,7 +123,7 @@ public final class CaffeinatedGuavaTest extends TestCase {
 
     try {
       var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
-        @Override public Integer load(Integer key) throws Exception {
+        @Override public Integer load(Integer key) {
           throw new UnsupportedOperationException();
         }
         @Override
@@ -216,7 +216,7 @@ public final class CaffeinatedGuavaTest extends TestCase {
   public void testCacheLoader_reload() throws Exception {
     SettableFuture<Integer> reloader = SettableFuture.create();
     var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
-      @Override public Integer load(Integer key) throws Exception {
+      @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
       @Override
@@ -235,7 +235,7 @@ public final class CaffeinatedGuavaTest extends TestCase {
   public void testCacheLoader_reloadFailure() throws Exception {
     SettableFuture<Integer> reloader = SettableFuture.create();
     var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
-      @Override public Integer load(Integer key) throws Exception {
+      @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
       @Override

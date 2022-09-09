@@ -915,7 +915,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
-  public void refresh_error_log(CacheContext context) throws Exception {
+  public void refresh_error_log(CacheContext context) {
     var expected = new RuntimeException();
     CacheLoader<Int, Int> cacheLoader = key -> { throw expected; };
     LoadingCache<Int, Int> cache = context.isAsync()
@@ -1104,7 +1104,7 @@ public final class LoadingCacheTest {
   public void asyncLoadAll_exception() throws Exception {
     var e = new Exception();
     var loader = new CacheLoader<Int, Int>() {
-      @Override public Int load(Int key) throws Exception {
+      @Override public Int load(Int key) {
         throw new AssertionError();
       }
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws Exception {

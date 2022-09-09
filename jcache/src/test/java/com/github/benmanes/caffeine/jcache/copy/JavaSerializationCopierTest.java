@@ -66,7 +66,7 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test
-  public void deserializable_resolveClass() throws Exception {
+  public void deserializable_resolveClass() {
     var copier = new JavaSerializationCopier();
     copier.copy(ImmutableSet.of(), ClassLoader.getPlatformClassLoader());
   }
@@ -77,7 +77,7 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test(expectedExceptions = CacheException.class)
-  public void deserializable_classNotFound() throws Exception {
+  public void deserializable_classNotFound() {
     var copier = new JavaSerializationCopier() {
       @Override protected ObjectInputStream newInputStream(
           InputStream in, ClassLoader classLoader) throws IOException {

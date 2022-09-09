@@ -52,7 +52,7 @@ ext {
     jmh: '1.35',
     joor: '0.9.14',
     jsr330: '1',
-    nullaway: '0.9.10',
+    nullaway: '0.10.0',
     ohc: '0.6.1',
     osgiComponentAnnotations: '1.5.0',
     picocli: '4.6.3',
@@ -71,7 +71,7 @@ ext {
     guice: '5.1.0',
     hamcrest: '2.2',
     jcacheTck: '1.1.1',
-    jctools: '3.3.1-ea',
+    jctools: '4.0.1',
     junit: '4.13.2',
     lincheck: '2.14.1',
     mockito: '4.8.0',
@@ -240,5 +240,15 @@ ext {
       "com.github.h908714124:auto-builder:${annotationProcessorVersions.autoValueBuilder}",
       "com.google.auto.value:auto-value-annotations:${annotationProcessorVersions.autoValue}",
     ],
+  ]
+  platforms = [
+    'org.jetbrains.kotlin:kotlin-bom:1.7.10'
+  ]
+  restrictions = [
+    'org.jsoup:jsoup': '1.15.3',
+    'xerces:xercesImpl': '2.12.2',
+    'org.bouncycastle:bcprov-jdk15on': '1.70',
+    'com.thoughtworks.xstream:xstream': '1.4.19',
+    'org.apache.httpcomponents:httpclient': '4.5.13',
   ]
 }

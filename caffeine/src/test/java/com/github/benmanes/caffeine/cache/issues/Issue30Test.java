@@ -26,7 +26,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -95,15 +94,14 @@ public final class Issue30Test {
   @Test(dataProvider = "params", invocationCount = 100, threadPoolSize = N_THREADS)
   public void expiration(AsyncLoadingCache<String, String> cache,
       ConcurrentMap<String, String> source, ConcurrentMap<String, Instant> lastLoad)
-          throws Exception {
+          throws InterruptedException {
     initialValues(cache, source, lastLoad);
     firstUpdate(cache, source);
     secondUpdate(cache, source);
   }
 
   private void initialValues(AsyncLoadingCache<String, String> cache,
-      ConcurrentMap<String, String> source, ConcurrentMap<String, Instant> lastLoad)
-          throws InterruptedException, ExecutionException {
+      ConcurrentMap<String, String> source, ConcurrentMap<String, Instant> lastLoad) {
     source.put(A_KEY, A_ORIGINAL);
     source.put(B_KEY, B_ORIGINAL);
     lastLoad.clear();
@@ -113,7 +111,7 @@ public final class Issue30Test {
   }
 
   private void firstUpdate(AsyncLoadingCache<String, String> cache,
-      ConcurrentMap<String, String> source) throws InterruptedException, ExecutionException {
+      ConcurrentMap<String, String> source) throws InterruptedException {
     source.put(A_KEY, A_UPDATE_1);
     source.put(B_KEY, B_UPDATE_1);
 
@@ -132,7 +130,7 @@ public final class Issue30Test {
   }
 
   private void secondUpdate(AsyncLoadingCache<String, String> cache,
-      ConcurrentMap<String, String> source) throws Exception {
+      ConcurrentMap<String, String> source) throws InterruptedException {
     source.put(A_KEY, A_UPDATE_2);
     source.put(B_KEY, B_UPDATE_2);
 

@@ -50,7 +50,7 @@ public final class LinkedDequeTests extends TestCase {
   // cause unexpected mutations. Instead, a different collection type should be used for comparison
   static final ThreadLocal<Boolean> useTarget = ThreadLocal.withInitial(() -> false);
 
-  public static Test suite() throws Exception {
+  public static Test suite() {
     var suite = new TestSuite();
     suite.addTest(suite("AccessOrderDeque", AccessOrderDeque::new));
     suite.addTest(suite("WriteOrderDeque", WriteOrderDeque::new));

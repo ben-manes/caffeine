@@ -25,6 +25,7 @@ import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.management.ObjectName;
+import javax.management.OperationsException;
 
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -50,17 +51,18 @@ public final class CacheManagerTest {
   }
 
   @Test
-  public void jmxBeanIsRegistered_createCache() throws Exception {
+  public void jmxBeanIsRegistered_createCache() throws OperationsException {
     checkConfigurationJmx(() -> cacheManager.createCache("cache-not-in-config-file",
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache").get()));
   }
 
   @Test
-  public void jmxBeanIsRegistered_getCache() throws Exception {
+  public void jmxBeanIsRegistered_getCache() throws OperationsException {
     checkConfigurationJmx(() -> cacheManager.getCache("test-cache"));
   }
 
-  private void checkConfigurationJmx(Supplier<Cache<?, ?>> cacheSupplier) throws Exception {
+  private void checkConfigurationJmx(Supplier<Cache<?, ?>> cacheSupplier)
+      throws OperationsException {
     Cache<?, ?> cache = cacheSupplier.get();
 
     @SuppressWarnings("unchecked")

@@ -18,6 +18,11 @@ buildscript {
 
   dependencies {
     classpath gradlePlugins.values()
+    classpath platforms.collect { platform(it) }
+
+    restrictions.each { module, version ->
+      constraints.classpath(module).version { require version }
+    }
   }
 }
 
@@ -60,11 +65,12 @@ subprojects {
     testImplementation testLibraries.hamcrest
     testImplementation testLibraries.awaitility
     testImplementation testLibraries.osgiCompile
+    testImplementation platforms.collect { platform(it) }
 
     testRuntimeOnly testLibraries.osgiRuntime
 
-    constraints {
-      implementation('org.jetbrains.kotlin:kotlin-stdlib:1.7.10+')
+    restrictions.each { module, version ->
+      constraints.testImplementation(module).version { require version }
     }
   }
 
@@ -104,8 +110,12 @@ def isNonStable = { String version ->
   def regex = /^[0-9,.v-]+(-r)?$/
   return (!stableKeyword || unstableKeyword) && !(version ==~ regex)
 }
-dependencyUpdates.rejectVersionIf {
-  (it.candidate.group == 'javax.json.bind') && isNonStable(it.candidate.version)
+dependencyUpdates {
+  rejectVersionIf {
+    isNonStable(it.candidate.version) && it.candidate.group in [
+      'javax.json.bind', 'org.jetbrains.kotlin'
+    ]
+  }
 }
 
 dependencyCheck {

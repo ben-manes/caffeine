@@ -56,7 +56,7 @@ public final class Solr10141Test {
   final Random rnd = new Random();
 
   @Test
-  public void eviction() throws Exception {
+  public void eviction() {
     var hits = new AtomicLong();
     var inserts = new AtomicLong();
     var removals = new AtomicLong();
@@ -135,7 +135,7 @@ public final class Solr10141Test {
   }
 
   @Test
-  public void clear() throws Exception {
+  public void clear() {
     var inserts = new AtomicLong();
     var removals = new AtomicLong();
     var failed = new AtomicBoolean();

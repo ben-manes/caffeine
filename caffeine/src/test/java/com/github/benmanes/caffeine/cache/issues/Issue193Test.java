@@ -61,12 +61,12 @@ public final class Issue193Test {
   private final String key = Issue193Test.class.getSimpleName();
 
   /** This ensures that any outstanding async loading is completed as well */
-  private long loadGet(AsyncLoadingCache<String, Long> cache, String key) throws Exception {
+  private long loadGet(AsyncLoadingCache<String, Long> cache, String key) {
     CompletableFuture<Long> future = cache.get(key);
     if (!loadingTask.isDone()) {
       loadingTask.run();
     }
-    return future.get();
+    return future.join();
   }
 
   @Test

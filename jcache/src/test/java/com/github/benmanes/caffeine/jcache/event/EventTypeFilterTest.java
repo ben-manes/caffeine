@@ -29,7 +29,7 @@ public final class EventTypeFilterTest {
   EventTypeFilter<Integer, Integer> filter;
 
   @BeforeTest
-  public void before() throws Exception {
+  public void before() {
     CacheEntryCreatedListener<Integer, Integer> created = events -> {};
     filter = new EventTypeFilter<>(created, event -> true);
   }

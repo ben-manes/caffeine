@@ -443,13 +443,13 @@ public @interface CacheSpec {
     },
     /** A loader that always throws a checked exception. */
     CHECKED_EXCEPTIONAL {
-      @Override public Int load(Int key) throws Exception {
+      @Override public Int load(Int key) throws ExecutionException {
         throw new ExecutionException(null);
       }
     },
     /** A loader that always throws an interrupted exception. */
     INTERRUPTED {
-      @Override public Int load(Int key) throws Exception {
+      @Override public Int load(Int key) throws InterruptedException {
         throw new InterruptedException();
       }
     },
@@ -528,7 +528,7 @@ public @interface CacheSpec {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws Exception {
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws ExecutionException {
         throw new ExecutionException(null);
       }
     },
@@ -567,7 +567,7 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public CompletableFuture<Int> asyncLoad(
-          Int key, Executor executor) throws Exception {
+          Int key, Executor executor) throws ExecutionException {
         throw new ExecutionException(null);
       }
     },
@@ -592,7 +592,7 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public CompletableFuture<Int> asyncLoad(
-          Int key, Executor executor) throws Exception {
+          Int key, Executor executor) throws InterruptedException {
         throw new InterruptedException();
       }
     },
@@ -612,7 +612,7 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
-          Set<? extends Int> keys, Executor executor) throws Exception {
+          Set<? extends Int> keys, Executor executor) throws ExecutionException {
         throw new ExecutionException(null);
       }
     },
@@ -633,7 +633,7 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
-          Set<? extends Int> keys, Executor executor) throws Exception {
+          Set<? extends Int> keys, Executor executor) throws InterruptedException {
         throw new InterruptedException();
       }
     },
@@ -653,29 +653,29 @@ public @interface CacheSpec {
     },
     /** A loader that always throws a checked exception. */
     REFRESH_CHECKED_EXCEPTIONAL {
-      @Override public Int load(Int key) throws Exception {
+      @Override public Int load(Int key) throws ExecutionException {
         throw new ExecutionException(null);
       }
       @Override public CompletableFuture<Int> asyncLoad(
-          Int key, Executor executor) throws Exception {
+          Int key, Executor executor) throws ExecutionException {
         throw new ExecutionException(null);
       }
       @Override public CompletableFuture<Int> asyncReload(
-          Int key, Int oldValue, Executor executor) throws Exception {
+          Int key, Int oldValue, Executor executor) throws ExecutionException {
         throw new ExecutionException(null);
       }
     },
     /** A loader that always throws an interrupted exception. */
     REFRESH_INTERRUPTED {
-      @Override public Int load(Int key) throws Exception {
+      @Override public Int load(Int key) throws InterruptedException {
         throw new InterruptedException();
       }
       @Override public CompletableFuture<Int> asyncLoad(
-          Int key, Executor executor) throws Exception {
+          Int key, Executor executor) throws InterruptedException {
         throw new InterruptedException();
       }
       @Override public CompletableFuture<Int> asyncReload(
-          Int key, Int oldValue, Executor executor) throws Exception {
+          Int key, Int oldValue, Executor executor) throws InterruptedException {
         throw new InterruptedException();
       }
     };
