@@ -55,9 +55,9 @@ public final class PolicyActor {
   }
 
   /** Sends a shutdown signal after the pending messages are completed and blocks until done. */
-  public void finish() {
+  public CompletableFuture<Void> finish() {
     submit(new Finish());
-    future.join();
+    return future;
   }
 
   /** Submits the command to the mailbox and blocks until accepted. */

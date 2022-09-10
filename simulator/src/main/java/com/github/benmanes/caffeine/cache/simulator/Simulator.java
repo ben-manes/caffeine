@@ -20,6 +20,7 @@ import static java.util.stream.Collectors.toList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -97,13 +98,13 @@ public final class Simulator {
         }
       });
 
-      var accessEvents = List.copyOf(batch);
+      var remainder = List.copyOf(batch);
       for (var policy : policies) {
-        policy.send(accessEvents);
+        policy.send(remainder);
       }
-      for (var policy : policies) {
-        policy.finish();
-      }
+
+      var futures = policies.stream().map(PolicyActor::finish).toArray(CompletableFuture<?>[]::new);
+      CompletableFuture.allOf(futures).join();
     }
   }
 
