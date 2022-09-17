@@ -39,7 +39,7 @@ import net.jodah.expiringmap.ExpiringMap;
  */
 @PolicySpec(name = "product.ExpiringMap")
 public final class ExpiringMapPolicy implements KeyOnlyPolicy {
-  private final ExpiringMap<Object, Object> cache;
+  private final ExpiringMap<Long, Boolean> cache;
   private final PolicyStats policyStats;
 
   public ExpiringMapPolicy(ExpiringMapSettings settings, Eviction policy) {
@@ -60,12 +60,12 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    Object value = cache.get(key);
+    var value = cache.get(key);
     if (value == null) {
       if (cache.size() == cache.getMaxSize()) {
         policyStats.recordEviction();
       }
-      cache.put(key, key);
+      cache.put(key, Boolean.TRUE);
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();

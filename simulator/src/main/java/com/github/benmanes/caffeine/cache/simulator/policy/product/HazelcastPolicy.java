@@ -50,7 +50,7 @@ import com.typesafe.config.Config;
  */
 @PolicySpec(name = "product.Hazelcast")
 public final class HazelcastPolicy implements KeyOnlyPolicy {
-  private final NearCache<Long, Long> cache;
+  private final NearCache<Long, Boolean> cache;
   private final PolicyStats policyStats;
   private final int maximumSize;
 
@@ -85,7 +85,7 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
       if (cache.size() == maximumSize) {
         policyStats.recordEviction();
       }
-      cache.put(key, /* keyData */ null, key, /* valueDate */ null);
+      cache.put(key, /* keyData */ null, Boolean.TRUE, /* valueDate */ null);
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();

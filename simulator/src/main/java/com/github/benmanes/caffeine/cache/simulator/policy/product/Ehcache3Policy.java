@@ -35,7 +35,7 @@ import com.typesafe.config.Config;
  */
 @PolicySpec(name = "product.Ehcache3")
 public final class Ehcache3Policy implements KeyOnlyPolicy {
-  private final Cache<Object, Object> cache;
+  private final Cache<Long, Boolean> cache;
   private final CacheManager cacheManager;
   private final PolicyStats policyStats;
   private final long maximumSize;
@@ -48,7 +48,7 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
     BasicSettings settings = new BasicSettings(config);
     cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = cacheManager.createCache("ehcache3",
-        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,
+        CacheConfigurationBuilder.newCacheConfigurationBuilder(Long.class, Boolean.class,
             ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .heap(settings.maximumSize(), EntryUnit.ENTRIES))
             .build());
@@ -57,10 +57,11 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    Object value = cache.putIfAbsent(key, key);
+    var value = cache.get(key);
     if (value == null) {
-      size++;
+      cache.put(key, Boolean.TRUE);
       policyStats.recordMiss();
+      size++;
       if (size > maximumSize) {
         policyStats.recordEviction();
         size--;

@@ -39,12 +39,12 @@ import com.typesafe.config.Config;
  */
 @PolicySpec(name = "product.TCache")
 public final class TCachePolicy implements KeyOnlyPolicy {
-  private final Cache<Object, Object> cache;
+  private final Cache<Long, Boolean> cache;
   private final PolicyStats policyStats;
 
   public TCachePolicy(TCacheSettings settings, Eviction policy) {
     policyStats = new PolicyStats(name() + " (%s)", policy);
-    cache = TCacheFactory.standardFactory().builder()
+    cache = TCacheFactory.standardFactory().<Long, Boolean>builder()
         .setMaxElements(Ints.checkedCast(settings.maximumSize()))
         .setEvictionPolicy(policy.type)
         .setStatistics(true)
@@ -64,7 +64,7 @@ public final class TCachePolicy implements KeyOnlyPolicy {
     Object value = cache.get(key);
     if (value == null) {
       policyStats.recordMiss();
-      cache.put(key, key);
+      cache.put(key, Boolean.TRUE);
     } else {
       policyStats.recordHit();
     }
