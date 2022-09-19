@@ -54,6 +54,7 @@ Use Caffeine in a community provided integration:
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [Camel][camel]: Routing and mediation engine
  * [JHipster][jhipster]: Generate, develop, deploy
+ * [Aedile][aedile]: Kotlin wrapper for Caffeine
 
 Powering infrastructure near you:
  * [Dropwizard][dropwizard]: Ops-friendly, high-performance, RESTful APIs
@@ -152,3 +153,4 @@ Snapshots of the development version are available in
 [dropwizard]: https://www.dropwizard.io
 [grails]: https://grails.org
 [quarkus]: https://quarkus.io
+[aedile]: https://github.com/sksamuel/aedile
