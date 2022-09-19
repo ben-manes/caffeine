@@ -109,6 +109,8 @@ public final class PolicyActor {
 
   private abstract class Command implements Runnable {
     @Override public final void run() {
+      var name = Thread.currentThread().getName();
+      Thread.currentThread().setName(policy.getClass().getSimpleName());
       try {
         execute();
       } catch (Throwable t) {
@@ -116,6 +118,7 @@ public final class PolicyActor {
         throw t;
       } finally {
         semaphore.release();
+        Thread.currentThread().setName(name);
       }
     }
     protected abstract void execute();
