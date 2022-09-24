@@ -92,6 +92,20 @@ public final class CacheContextSubject extends Subject {
     });
   }
 
+  /** Fails if the cache does not have less than the given weighted size. */
+  public void hasWeightedSizeLessThan(long other) {
+    checkArgument(other >= 0, "other (%s) must be >= 0", other);
+    actual.cache().policy().eviction().ifPresentOrElse(policy -> {
+      check("weightedSize()").about(optionalLongs()).that(policy.weightedSize()).isPresent();
+      check("weightedSize()").that(policy.weightedSize().orElseThrow()).isLessThan(other);
+    }, () -> {
+      long weight = actual.cache().asMap().entrySet().stream()
+          .mapToLong(entry -> actual.weigher().weigh(entry.getKey(), entry.getValue()))
+          .sum();
+      check("weight").that(weight).isLessThan(other);
+    });
+  }
+
   /** Fails if the cache does not have the given entry and metadata. */
   public void containsEntry(CacheEntry<Int, Int> entry) {
     checkBasic(entry);

@@ -231,11 +231,13 @@ public final class EvictionTest {
     ready.set(true);
     await().untilTrue(done);
     await().untilAsserted(() -> assertThat(cache).hasSize(2));
-    await().untilAsserted(() -> assertThat(context).hasWeightedSize(10));
+    await().untilAsserted(() -> assertThat(context)
+        .hasWeightedSizeLessThan(context.maximumWeight() + 1));
 
-    assertThat(context).stats().evictionWeight(5);
+    int expected = 15 - cache.synchronous().asMap().values().stream().mapToInt(Int::intValue).sum();
+    assertThat(context).stats().evictionWeight(expected);
     assertThat(context).notifications().withCause(SIZE)
-        .contains(Int.valueOf(5), Int.valueOf(5)).exclusively();
+        .contains(Int.valueOf(expected), Int.valueOf(expected)).exclusively();
   }
 
   @Test(dataProvider = "caches")

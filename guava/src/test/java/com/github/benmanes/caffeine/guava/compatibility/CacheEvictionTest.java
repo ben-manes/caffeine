@@ -180,29 +180,36 @@ public class CacheEvictionTest extends TestCase {
 
     assertThat(removalListener.getCount()).isEqualTo(0);
 
-    // caches 3, evicts 2
+    // caches 2, evicts 3
     assertThat(cache.getUnchecked(3)).isEqualTo(3);
-    assertThat(cache.asMap().keySet()).containsExactly(3);
+    assertThat(cache.asMap().keySet()).containsExactly(2);
 
     assertThat(removalListener.getCount()).isEqualTo(1);
 
     // doesn't cache 5, doesn't evict
     assertThat(cache.getUnchecked(5)).isEqualTo(5);
-    assertThat(cache.asMap().keySet()).containsExactly(3);
+    assertThat(cache.asMap().keySet()).containsExactly(2);
 
     assertThat(removalListener.getCount()).isEqualTo(2);
 
     // caches 1, evicts nothing
     assertThat(cache.getUnchecked(1)).isEqualTo(1);
-    assertThat(cache.asMap().keySet()).containsExactly(3, 1);
+    assertThat(cache.asMap().keySet()).containsExactly(2, 1);
 
     assertThat(removalListener.getCount()).isEqualTo(2);
 
     // caches 4, evicts 1 and 3
     assertThat(cache.getUnchecked(4)).isEqualTo(4);
+    assertThat(cache.getUnchecked(4)).isEqualTo(4);
     assertThat(cache.asMap().keySet()).containsExactly(4);
 
-    assertThat(removalListener.getCount()).isEqualTo(4);
+    assertThat(removalListener.getCount()).isEqualTo(5);
+
+    // caches 4, evicts 5
+    for (int i = 0; i < 10; i++) {
+      assertThat(cache.getUnchecked(5)).isEqualTo(5);
+      assertThat(cache.asMap().keySet()).containsExactly(4);
+    }
 
     // Should we pepper more of these calls throughout the above? Where?
     CacheTesting.checkValidState(cache);

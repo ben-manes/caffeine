@@ -43,8 +43,8 @@ objectLayoutTasks*.configure {
   doFirst {
     if (!project.hasProperty('className')) {
       throw new GradleException("Usage: ${it.name} " +
-        '-PclassName=com.github.benmanes.caffeine.[CLASS_NAME]')
+        '-PclassName=com.github.benmanes.caffeine.cache.[CLASS_NAME]')
     }
-    args it.name, 'com.github.benmanes.caffeine.' + className
+    args it.name, 'com.github.benmanes.caffeine.cache.' + className
   }
 }

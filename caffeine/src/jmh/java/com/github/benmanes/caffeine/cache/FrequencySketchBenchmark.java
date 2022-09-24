@@ -16,11 +16,13 @@
 package com.github.benmanes.caffeine.cache;
 
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import site.ycsb.generator.NumberGenerator;
+import com.github.benmanes.caffeine.cache.sketch.TinyLfuSketch;
+
 import site.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
@@ -36,17 +38,21 @@ public class FrequencySketchBenchmark {
   private static final int MASK = SIZE - 1;
   private static final int ITEMS = SIZE / 3;
 
-  int index;
+  @Param({"Flat", "Block"})
+  SketchType sketchType;
+
+  @Param({"32768", "524288", "8388608", "134217728"})
+  long tableSize;
+
+  TinyLfuSketch<Integer> sketch;
   Integer[] ints;
-  FrequencySketch<Integer> sketch;
+  int index;
 
   @Setup
   public void setup() {
+    var generator = new ScrambledZipfianGenerator(ITEMS);
+    sketch = sketchType.create(tableSize);
     ints = new Integer[SIZE];
-    sketch = new FrequencySketch<>();
-    sketch.ensureCapacity(ITEMS);
-
-    NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextValue().intValue();
       sketch.increment(i);
@@ -61,5 +67,10 @@ public class FrequencySketchBenchmark {
   @Benchmark
   public int frequency() {
     return sketch.frequency(ints[index++ & MASK]);
+  }
+
+  @Benchmark
+  public void reset() {
+    sketch.reset();
   }
 }
