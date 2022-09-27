@@ -108,7 +108,7 @@ Snapshots of the development version are available in
 [users-guide]: https://github.com/ben-manes/caffeine/wiki
 [javadoc]: http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine
 [guava-cache]: https://github.com/google/guava/wiki/CachesExplained
-[clhm]: https://code.google.com/p/concurrentlinkedhashmap
+[clhm]: https://github.com/ben-manes/concurrentlinkedhashmap
 [population]: https://github.com/ben-manes/caffeine/wiki/Population
 [size]: https://github.com/ben-manes/caffeine/wiki/Eviction#size-based
 [time]: https://github.com/ben-manes/caffeine/wiki/Eviction#time-based
