@@ -11,6 +11,8 @@ apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
 apply plugin: 'pmd'
 
+java.toolchain.languageVersion = JavaLanguageVersion.of(System.env.'JAVA_VERSION' ?: 11)
+
 configurations {
   checkstyleConfig
 }
@@ -108,10 +110,19 @@ def JVM_ARGS_STRONG_ENCAPSULATION = [
 
 tasks.withType(JavaExec).configureEach {
   jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
+
+  javaLauncher.set(
+    javaToolchains.launcherFor {
+      languageVersion = java.toolchain.languageVersion
+    }
+  )
 }
 
 tasks.withType(JavaCompile).configureEach {
   dependsOn downloadCaffeineLocal
+  sourceCompatibility = '11'
+  targetCompatibility = '11'
+  options.release.set(11)
 
   options.forkOptions.jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
   options.compilerArgs << [
@@ -166,6 +177,12 @@ tasks.withType(Test).configureEach {
     showCauses = true
     showExceptions = true
     showStackTraces = true
+  }
+  if (System.env.'JDK_EA') {
+    extensions.configure(JacocoTaskExtension) {
+      it.enabled = !System.env.'JDK_EA'
+    }
+    systemProperty 'net.bytebuddy.experimental', true
   }
 }
 

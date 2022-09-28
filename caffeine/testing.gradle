@@ -34,12 +34,14 @@ testNames.each { testName ->
 
     if (labels.size() == 2) {
       def strength = labels.collect{ it.split('Keys|Values') }.flatten()
-      systemProperties['keys'] = strength[0]
-      systemProperties['values'] = strength[1]
-      systemProperties['compute'] = isAsync ? 'async' : 'sync'
-      systemProperties['stats'] = hasStats ? 'enabled' : 'disabled'
+      systemProperties [
+        'keys': strength[0],
+        'values': strength[1],
+        'compute': isAsync ? 'async' : 'sync',
+        'stats': hasStats ? 'enabled' : 'disabled',
+      ]
     }
-    systemProperties['implementation'] = implementation
+    systemProperty 'implementation', implementation
 
     if (System.env.JITPACK == 'true') {
       enabled = false
@@ -57,6 +59,7 @@ tasks.register('isolatedTest', Test) {
 tasks.register('lincheckTest', Test) {
   group = 'Cache tests'
   description = 'Tests that assert linearizability'
+  enabled = !System.env.'JDK_EA'
   useTestNG()
 }
 

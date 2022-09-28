@@ -6,22 +6,24 @@ env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >
-    1k4dacprodeus2file4.blob.core.windows.net:443
     api.adoptium.net
     api.github.com:443
     artifactcache.actions.githubusercontent.com:443
     caffeine.gradle-enterprise.cloud:443
     cdn.azul.com:443
     cloudflare.com:443
+    download.java.net
     downloads.gradle-dn.com:443
     ghcr.io:443
     github.com:443
+    jdk.java.net:443
     jcenter.bintray.com:443
     objects.githubusercontent.com:443
     oss.sonatype.org:443
     pipelines.actions.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443
+    raw.githubusercontent.com:443
     registry.npmjs.org:443
     repo.gradle.org:443
     repo.maven.apache.org:443
@@ -29,15 +31,17 @@ env:
     scans-in.gradle.com:443
     services.gradle.org:443
   MIN_JVM: 11
-  MAX_JVM: 18
+  MAX_JVM: 19
+  EA_JVM: 20
 
 jobs:
   compile:
     name: Compile
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 18 ]
+        java: [ 11, 19, 20 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -48,34 +52,12 @@ jobs:
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Set up JDK ${{ matrix.java }}
-        uses: Wandalen/wretry.action@v1.0.20
-        timeout-minutes: 5
-        with:
-          action: actions/setup-java@v3
-          with: |
-            distribution: temurin
-            java-version: ${{ matrix.java }}
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Setup Gradle
-        uses: Wandalen/wretry.action@v1.0.20
-        timeout-minutes: 5
-        with:
-          action: gradle/gradle-build-action@v2
-          with: |
-            cache-read-only: false
-            arguments: help --no-scan
-            generate-job-summary: false
-            gradle-home-cache-strict-match: true
-          attempt_limit: 3
-          attempt_delay: 2000
       - name: Compile
-        run: |
-          stopMarker=$(uuidgen)
-          echo "::stop-commands::$stopMarker"
-          trap "echo '::$stopMarker::'" EXIT
-          ./gradlew check -x test
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ matrix.java }}
+          arguments: check -x test
+          early-access: ${{ matrix.java == env.EA_JVM }}
       - name: Cancel if failed
         uses: andymckay/cancel-action@0.2
         continue-on-error: true
@@ -83,6 +65,7 @@ jobs:
 
   tests:
     name: Tests
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     needs: compile
     strategy:
@@ -144,7 +127,7 @@ jobs:
           - simulator:check
           - jcache:check
           - guava:check
-        java: [ 11, 18 ]
+        java: [ 11, 19, 20 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -155,34 +138,12 @@ jobs:
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Set up JDK ${{ matrix.java }}
-        uses: Wandalen/wretry.action@v1.0.20
-        timeout-minutes: 5
-        with:
-          action: actions/setup-java@v3
-          with: |
-            distribution: temurin
-            java-version: ${{ matrix.java }}
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Setup Gradle
-        uses: Wandalen/wretry.action@v1.0.20
-        timeout-minutes: 5
-        with:
-          action: gradle/gradle-build-action@v2
-          with: |
-            cache-read-only: false
-            arguments: help --no-scan
-            generate-job-summary: false
-            gradle-home-cache-strict-match: true
-          attempt_limit: 3
-          attempt_delay: 2000
       - name: Run tests (${{ matrix.suite }})
-        run: |
-          stopMarker=$(uuidgen)
-          echo "::stop-commands::$stopMarker"
-          trap "echo '::$stopMarker::'" EXIT
-          ./gradlew ${{ matrix.suite }}
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ matrix.java }}
+          arguments: ${{ matrix.suite }}
+          early-access: ${{ matrix.java == env.EA_JVM }}
       - name: Format Test Artifact Name
         if: always() && (matrix.java == env.MAX_JVM)
         run: |

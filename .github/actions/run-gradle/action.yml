@@ -1,0 +1,60 @@
+name: Run Gradle
+description: Sets up Gradle JDKs and runs Gradle
+inputs:
+  arguments:
+    required: true
+    description: Gradle arguments
+  java:
+    required: true
+    description: The JDK version
+  early-access:
+    required: true
+    description: If an early access release
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK ${{ inputs.java }}
+      uses: actions/setup-java@v3
+      if: inputs.java == 11
+      with:
+        java-version: 11
+        distribution: temurin
+    - name: Set up JDK ${{ inputs.java }}
+      uses: oracle-actions/setup-java@v1
+      if: inputs.java != 11
+      with:
+        release: ${{ inputs.java }}
+        website: jdk.java.net
+        version: latest
+    - name: Prepare JDK ${{ inputs.java }}
+      shell: bash
+      run: |
+        echo "JDK_CI=$JAVA_HOME" >> $GITHUB_ENV
+        echo "JDK_EA=${{ inputs.early-access }}" >> $GITHUB_ENV
+    - name: Set up JDK 17
+      id: setup-gradle-jdk
+      uses: actions/setup-java@v3
+      with:
+        java-version: 17
+        distribution: temurin
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      env:
+        JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
+      with:
+        cache-read-only: false
+        generate-job-summary: false
+        gradle-home-cache-strict-match: true
+        arguments: |
+          -Porg.gradle.java.installations.auto-download=false
+          --no-scan
+          help
+    - name: Run ${{ inputs.arguments }}
+      env:
+        JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
+      shell: bash
+      run: |
+        stopMarker=$(uuidgen)
+        echo "::stop-commands::$stopMarker"
+        trap "echo '::$stopMarker::'" EXIT
+        ./gradlew -Porg.gradle.java.installations.auto-download=false ${{ inputs.arguments }}
