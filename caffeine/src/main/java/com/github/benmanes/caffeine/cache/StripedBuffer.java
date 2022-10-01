@@ -116,6 +116,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
 
   @Override
   public int offer(E e) {
+    @SuppressWarnings("deprecation")
     long z = mix64(Thread.currentThread().getId());
     int increment = ((int) (z >>> 32)) | 1;
     int h = (int) z;

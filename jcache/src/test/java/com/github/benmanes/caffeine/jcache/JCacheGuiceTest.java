@@ -138,6 +138,7 @@ public final class JCacheGuiceTest {
       var provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
       var cacheManager = provider.getCacheManager(
           provider.getDefaultURI(), provider.getDefaultClassLoader());
+      cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
       bind(CacheResolverFactory.class).toInstance(new DefaultCacheResolverFactory(cacheManager));
       bind(CacheManager.class).toInstance(cacheManager);
     }

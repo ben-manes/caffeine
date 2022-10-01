@@ -48,6 +48,7 @@ public final class CacheManagerTest {
     var provider = Caching.getCachingProvider(PROVIDER_NAME);
     cacheManager = provider.getCacheManager(
         provider.getDefaultURI(), provider.getDefaultClassLoader());
+    cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
   }
 
   @Test

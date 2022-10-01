@@ -8,8 +8,6 @@ dependencies {
   api libraries.guava
 
   testImplementation libraries.slf4jNop
-  testImplementation testLibraries.junit
-  testImplementation testLibraries.truth
   testImplementation testLibraries.jctools
   testImplementation testLibraries.guavaTestLib
 }
@@ -36,25 +34,13 @@ tasks.withType(Javadoc).configureEach {
 }
 
 tasks.named('test').configure {
-  useJUnit {
-    excludeCategories 'com.github.benmanes.caffeine.guava.OSGiTests'
-  }
-}
-
-def osgiTest = tasks.register('osgiTest', Test) {
-  group = 'Cache tests'
-  description = 'Isolated OSGi tests'
-
-  useJUnit {
-    includeCategories 'com.github.benmanes.caffeine.guava.OSGiTests'
-  }
-}
-tasks.named('test').configure {
-  dependsOn(osgiTest)
+  useJUnitPlatform()
 }
 
 tasks.withType(Test) {
-  systemProperty 'guava.osgi.version', versions.guava
-  systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
-  systemProperty 'caffeine-guava.osgi.jar', project(':guava').jar.archivePath.path
+  systemProperties [
+    'guava.osgi.version': versions.guava,
+    'caffeine.osgi.jar': project(':caffeine').jar.archivePath.path,
+    'caffeine-guava.osgi.jar': project(':guava').jar.archivePath.path,
+  ]
 }

@@ -60,7 +60,9 @@ subprojects {
 
   dependencies {
     testImplementation libraries.guava
+    testImplementation testLibraries.junit
     testImplementation testLibraries.truth
+    testImplementation testLibraries.testng
     testImplementation testLibraries.mockito
     testImplementation testLibraries.hamcrest
     testImplementation testLibraries.awaitility
@@ -68,6 +70,7 @@ subprojects {
     testImplementation platforms.collect { platform(it) }
 
     testRuntimeOnly testLibraries.osgiRuntime
+    testRuntimeOnly testLibraries.junitEngines
 
     restrictions.each { module, version ->
       constraints.testImplementation(module).version { require version }
@@ -110,11 +113,17 @@ def isNonStable = { String version ->
   def regex = /^[0-9,.v-]+(-r)?$/
   return (!stableKeyword || unstableKeyword) && !(version ==~ regex)
 }
-dependencyUpdates {
-  rejectVersionIf {
-    isNonStable(it.candidate.version) && it.candidate.group in [
-      'javax.json.bind', 'org.jetbrains.kotlin'
-    ]
+tasks.named('dependencyUpdates').configure {
+  resolutionStrategy {
+    componentSelection {
+      all {
+        def unstable = ['javax.json.bind', 'org.jetbrains.kotlin']
+        if (isNonStable(it.candidate.version) && it.candidate.group in unstable) {
+          reject('release candidate')
+        }
+      }
+      force libraries.coherence
+    }
   }
 }
 

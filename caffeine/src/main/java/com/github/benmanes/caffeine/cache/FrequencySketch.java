@@ -44,9 +44,9 @@ final class FrequencySketch<E> {
    * uniformly distributed in order to minimize collisions. In that configuration the memory
    * accesses are not predictable and lack spatial locality, which may cause the pipeline to need to
    * wait for four memory loads. Instead the items are uniformly distributed to blocks and each
-   * counter is selected uniformly from 16 byte segments. While the runtime memory layout may result
-   * in the blocks not being cache aligned, the L2 spatial prefetcher tries to load aligned pairs of
-   * cache lines so the typical cost is only one memory access.
+   * counter is selected uniformly from a distinct 16 byte segment. While the runtime memory layout
+   * may result in the blocks not being cache aligned, the L2 spatial prefetcher tries to load
+   * aligned pairs of cache lines so the typical cost is only one memory access.
    *
    * The frequency of all entries is aged periodically using a sampling window based on the maximum
    * number of entries in the cache. This is referred to as the reset operation by TinyLfu and keeps

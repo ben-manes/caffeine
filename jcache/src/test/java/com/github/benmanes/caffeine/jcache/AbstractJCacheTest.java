@@ -65,6 +65,7 @@ public abstract class AbstractJCacheTest {
     var provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
     cacheManager = provider.getCacheManager(
         provider.getDefaultURI(), provider.getDefaultClassLoader());
+    cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
   }
 
   @BeforeMethod(alwaysRun = true)

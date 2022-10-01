@@ -20,8 +20,6 @@ dependencies {
 
   testImplementation libraries.guava
   testImplementation libraries.slf4jNop
-  testImplementation testLibraries.junit
-  testImplementation testLibraries.testng
   testImplementation testLibraries.mockito
   testImplementation testLibraries.hamcrest
   testImplementation testLibraries.jcacheTck
@@ -75,33 +73,12 @@ tasks.named('javadoc').configure {
     'build/jcache-docs')
 }
 
-tasks.named('test').configure {
-  useTestNG()
-}
-
 tasks.register('unzipTestKit', Copy) {
   group = 'Build'
   description = 'Unzips the JCache TCK'
   from configurations.tck.collect { zipTree(it) }
   into { layout.buildDirectory.dir('tck') }
-}
-
-def testCompatibilityKit = tasks.register('testCompatibilityKit', Test) {
-  group = 'Build'
-  description = 'Runs the JCache TCK'
-  dependsOn(unzipTestKit)
-  onlyIf { compileTestJava.didWork || unzipTestKit.didWork }
-
-  useJUnit()
-  testClassesDirs = layout.buildDirectory.files('tck')
-
-  def pkg = 'com.github.benmanes.caffeine.jcache'
-  systemProperty 'java.net.preferIPv4Stack', 'true'
-  systemProperty 'javax.cache.Cache', "${pkg}.CacheProxy"
-  systemProperty 'javax.cache.Cache.Entry', "${pkg}.EntryProxy"
-  systemProperty 'javax.cache.CacheManager', "${pkg}.CacheManagerImpl"
-  systemProperty 'org.jsr107.tck.management.agentId', 'CaffeineMBeanServer'
-  systemProperty 'javax.management.builder.initial', "${pkg}.management.JCacheMBeanServerBuilder"
+  outputs.cacheIf { true }
 }
 
 eclipse.classpath.file.whenMerged {
@@ -109,21 +86,29 @@ eclipse.classpath.file.whenMerged {
   tests?.sourcePath = fileReference(file(configurations.tckSources.asPath))
 }
 
-def osgiTest = tasks.register('osgiTest', Test) {
-  group = 'Build'
-  description = 'Isolated OSGi tests'
-  useJUnit()
-  systemProperty 'config.osgi.version', versions.config
-  systemProperty 'jcache.osgi.version', versions.jcache
-  systemProperty 'felixScr.version', testVersions.felixScr
-  systemProperty 'osgiUtil.promise', testVersions.osgiUtilPromise
-  systemProperty 'osgiUtil.function', testVersions.osgiUtilFunction
-  systemProperty 'osgiService.component', testVersions.osgiSvcComponent
-  systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
-  systemProperty 'caffeine-jcache.osgi.jar', project(':jcache').jar.archivePath.path
-}
-
 tasks.named('test').configure {
-  dependsOn(testCompatibilityKit)
-  dependsOn(osgiTest)
+  useJUnitPlatform()
+  dependsOn(unzipTestKit)
+  testClassesDirs += layout.buildDirectory.files('tck')
+
+  systemProperties [
+    // Test Compatibility Kit
+    'java.net.preferIPv4Stack': 'true',
+    'org.jsr107.tck.management.agentId': 'CaffeineMBeanServer',
+    'javax.cache.Cache': 'com.github.benmanes.caffeine.jcache.CacheProxy',
+    'javax.cache.Cache.Entry': 'com.github.benmanes.caffeine.jcache.EntryProxy',
+    'javax.cache.CacheManager': 'com.github.benmanes.caffeine.jcache.CacheManagerImpl',
+    'javax.management.builder.initial':
+      'com.github.benmanes.caffeine.jcache.management.JCacheMBeanServerBuilder',
+
+    // OSGi tests
+    'config.osgi.version': versions.config,
+    'jcache.osgi.version': versions.jcache,
+    'felixScr.version': testVersions.felixScr,
+    'osgiUtil.promise': testVersions.osgiUtilPromise,
+    'osgiUtil.function': testVersions.osgiUtilFunction,
+    'osgiService.component': testVersions.osgiSvcComponent,
+    'caffeine.osgi.jar': project(':caffeine').jar.archivePath.path,
+    'caffeine-jcache.osgi.jar': project(':jcache').jar.archivePath.path,
+  ]
 }

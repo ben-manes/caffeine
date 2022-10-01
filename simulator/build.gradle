@@ -37,8 +37,6 @@ dependencies {
   implementation libraries.commonsCompress
   implementation libraries.univocityParsers
 
-  testImplementation testLibraries.testng
-
   annotationProcessor annotationProcessors.values()
   compileOnly annotationProcessors.values()
 }
@@ -48,7 +46,7 @@ tasks.named('compileJava').configure {
 }
 
 tasks.named('test').configure {
-  useTestNG()
+  useJUnitPlatform()
 }
 
 tasks.named('jar').configure {

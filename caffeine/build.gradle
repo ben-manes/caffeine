@@ -39,8 +39,6 @@ dependencies {
   testImplementation libraries.guava
   testImplementation libraries.picocli
   testImplementation libraries.fastutil
-  testImplementation testLibraries.junit
-  testImplementation testLibraries.testng
   testImplementation testLibraries.jctools
   testImplementation testLibraries.lincheck
   testImplementation libraries.commonsLang3

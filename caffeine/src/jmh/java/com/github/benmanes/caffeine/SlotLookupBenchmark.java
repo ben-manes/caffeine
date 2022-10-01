@@ -59,6 +59,7 @@ public class SlotLookupBenchmark {
   long[] array;
 
   @Setup
+  @SuppressWarnings("deprecation")
   public void setupThreadLocal() {
     threadLocal = ThreadLocal.withInitial(() -> {
       for (int i = 0; i < ARENA_SIZE; i++) {
@@ -88,6 +89,7 @@ public class SlotLookupBenchmark {
   @Benchmark
   public int threadIdHash() {
     // Emulates finding the arena slot by hashing the thread id
+    @SuppressWarnings("deprecation")
     long hash = mix64(Thread.currentThread().getId());
     return selectSlot(Long.hashCode(hash));
   }

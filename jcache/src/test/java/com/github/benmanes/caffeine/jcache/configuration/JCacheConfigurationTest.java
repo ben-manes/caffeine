@@ -45,7 +45,7 @@ public final class JCacheConfigurationTest {
   public void beforeClass() {
     var provider = Caching.getCachingProvider(PROVIDER_NAME);
     cacheManager = provider.getCacheManager();
-    cacheManager.destroyCache("cache-not-in-config-file");
+    cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
 
     cacheConfig = new MutableConfiguration<>();
     cacheConfig.setTypes(String.class, String.class);

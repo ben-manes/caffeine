@@ -47,11 +47,14 @@ public final class CaffeineCachingProviderTest {
       }
     });
 
+    var classLoader = Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(null);
     try (var provider = new CaffeineCachingProvider()) {
       provider.getDefaultClassLoader().loadClass(Object.class.getName());
     } catch (ClassNotFoundException e) {
       Assert.fail("", e);
+    } finally {
+      Thread.currentThread().setContextClassLoader(classLoader);
     }
   }
 
@@ -71,9 +74,12 @@ public final class CaffeineCachingProviderTest {
       assertThat(provider.getDefaultClassLoader().getResource("")).isNotNull();
     });
 
+    var classLoader = Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(null);
     try (var provider = new CaffeineCachingProvider()) {
       assertThat(provider.getDefaultClassLoader().getResource("")).isNotNull();
+    } finally {
+      Thread.currentThread().setContextClassLoader(classLoader);
     }
   }
 
@@ -127,11 +133,12 @@ public final class CaffeineCachingProviderTest {
     }).start();
     await().untilAtomic(provider, is(not(nullValue())));
 
+    var classLoader = Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(new ClassLoader() {});
     try {
       consumer.accept(provider.get());
     } finally {
-      Thread.currentThread().setContextClassLoader(null);
+      Thread.currentThread().setContextClassLoader(classLoader);
     }
   }
 }

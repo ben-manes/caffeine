@@ -1198,6 +1198,7 @@ public class JSR166TestCase extends TestCase {
     /**
      * Returns the thread's blocker's class name, if any, else null.
      */
+    @SuppressWarnings("deprecation")
     String blockerClassName(Thread thread) {
         ThreadInfo threadInfo; LockInfo lockInfo;
         if ((threadInfo = THREAD_MXBEAN.getThreadInfo(thread.getId(), 0)) != null

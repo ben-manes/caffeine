@@ -93,6 +93,12 @@ public final class FrequencySketchTest {
     assertThat(sketch.frequency(item + 2)).isEqualTo(0);
   }
 
+  @Test(dataProvider = "sketch")
+  public void increment_zero(FrequencySketch<Integer> sketch) {
+    sketch.increment(0);
+    assertThat(sketch.frequency(0)).isEqualTo(1);
+  }
+
   @Test
   public void reset() {
     boolean reset = false;
