@@ -43,9 +43,7 @@ testNames.each { testName ->
     }
     systemProperty 'implementation', implementation
 
-    if (System.env.JITPACK == 'true') {
-      enabled = false
-    }
+    enabled = (System.env.JITPACK != 'true')
     tasks.test.dependsOn(it)
   }
 }
@@ -59,7 +57,7 @@ tasks.register('isolatedTest', Test) {
 tasks.register('lincheckTest', Test) {
   group = 'Cache tests'
   description = 'Tests that assert linearizability'
-  enabled = !System.env.'JDK_EA'
+  enabled = (System.env.JDK_EA != 'true')
   useTestNG()
 }
 

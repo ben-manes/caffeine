@@ -11,7 +11,7 @@ apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
 apply plugin: 'pmd'
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(System.env.'JAVA_VERSION' ?: 11)
+java.toolchain.languageVersion = JavaLanguageVersion.of(System.env.JAVA_VERSION ?: 11)
 
 configurations {
   checkstyleConfig
@@ -178,9 +178,9 @@ tasks.withType(Test).configureEach {
     showExceptions = true
     showStackTraces = true
   }
-  if (System.env.'JDK_EA') {
+  if (System.env.JDK_EA) {
     extensions.configure(JacocoTaskExtension) {
-      it.enabled = !System.env.'JDK_EA'
+      it.enabled = (System.env.JDK_EA != 'true')
     }
     systemProperty 'net.bytebuddy.experimental', true
   }

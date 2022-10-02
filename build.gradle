@@ -50,8 +50,6 @@ subprojects {
   apply from: "${rootDir}/gradle/dependencies.gradle"
   apply from: "${rootDir}/gradle/objectLayout.gradle"
 
-  java.toolchain.languageVersion = JavaLanguageVersion.of(System.env.'JAVA_VERSION' ?: 11)
-
   configurations.all {
     resolutionStrategy.dependencySubstitution {
       substitute module('org.hamcrest:hamcrest-core') using module(testLibraries.hamcrest)
@@ -101,8 +99,8 @@ subprojects {
 nexusPublishing {
   repositories {
     sonatype {
-      username = project.properties['nexusUsername'] ?: System.env.'NEXUS_USERNAME'
-      password = project.properties['nexusPassword'] ?: System.env.'NEXUS_PASSWORD'
+      username = project.properties['nexusUsername'] ?: System.env.NEXUS_USERNAME
+      password = project.properties['nexusPassword'] ?: System.env.NEXUS_PASSWORD
     }
   }
 }

@@ -59,7 +59,7 @@ tasks.named('coveralls').configure {
   description = 'Uploads the aggregated coverage report to Coveralls'
 
   dependsOn jacocoFullReport
-  onlyIf { System.env.'CI' }
+  onlyIf { System.env.CI }
 }
 
 allprojects {
@@ -70,7 +70,7 @@ tasks.sonarqube.dependsOn(jacocoFullReport)
 sonarqube {
   properties {
     property 'sonar.organization', 'caffeine'
-    property 'sonar.login', System.env.'SONAR_TOKEN'
+    property 'sonar.login', System.env.SONAR_TOKEN
     property 'sonar.host.url', 'https://sonarcloud.io'
     property 'sonar.cpd.exclusions', '**/simulator/**'
     property 'sonar.coverage.exclusions', '**/simulator/**'

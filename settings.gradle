@@ -1,6 +1,6 @@
 plugins {
   id 'com.gradle.enterprise' version '3.11.1'
-  id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.8'
+  id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.8.1'
 }
 
 gradleEnterprise {
@@ -12,12 +12,12 @@ gradleEnterprise {
     capture.taskInputFiles = true
     publishAlways()
 
-    if (System.env.'CI') {
+    if (System.env.CI) {
       uploadInBackground = false
     } else {
       obfuscation.ipAddresses { [] }
     }
-    if (System.env.'GITHUB_ACTIONS') {
+    if (System.env.GITHUB_ACTIONS) {
       obfuscation.username { 'github' }
     }
 
@@ -31,11 +31,11 @@ buildCache {
   local.enabled = true
   remote(HttpBuildCache) {
     url = 'https://caffeine.gradle-enterprise.cloud/cache/'
-    push = System.env.'CI'
+    push = System.env.CI
     enabled = true
     credentials {
       username = 'ci'
-      password = gradleEnterpriseCachePassword ?: System.env.'GRADLE_ENTERPRISE_CACHE_PASSWORD'
+      password = gradleEnterpriseCachePassword ?: System.env.GRADLE_ENTERPRISE_CACHE_PASSWORD
     }
   }
 }

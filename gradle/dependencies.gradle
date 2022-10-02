@@ -110,7 +110,7 @@ ext {
     versions: '0.42.0',
   ]
   platformVerrsions = [
-    asm: '9.3',
+    asm: '9.4',
     kotlin: '1.7.20',
   ]
   annotationProcessorVersions = [
