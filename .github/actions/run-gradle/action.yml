@@ -51,6 +51,7 @@ runs:
           help
     - name: Run ${{ inputs.arguments }}
       env:
+        JAVA_VERSION: ${{ inputs.java }}
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
       shell: bash
       run: |
