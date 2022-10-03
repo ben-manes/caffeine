@@ -334,7 +334,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Invalidate the in-flight refresh. */
   void discardRefresh(Object keyReference) {
     var pending = refreshes;
-    if (pending != null) {
+    if ((pending != null) && pending.containsKey(keyReference)) {
       pending.remove(keyReference);
     }
   }
