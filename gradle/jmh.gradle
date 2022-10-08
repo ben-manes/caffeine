@@ -59,6 +59,9 @@ jmh {
   resultFormat = 'json'
   resultsFile = layout.buildDirectory.file('reports/jmh/results.json')
 
+  jvm = javaToolchains.launcherFor { languageVersion = java.toolchain.languageVersion }
+    .get().executablePath.asFile.absolutePath
+
   jvmArgs = [ '-Xmx2G' ]
   warmupIterations = 3
   failOnError = true

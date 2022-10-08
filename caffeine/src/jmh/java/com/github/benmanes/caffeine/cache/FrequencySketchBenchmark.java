@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -42,7 +44,7 @@ public class FrequencySketchBenchmark {
   SketchType sketchType;
 
   @Param({"32768", "524288", "8388608", "134217728"})
-  long tableSize;
+  int tableSize;
 
   TinyLfuSketch<Integer> sketch;
   Integer[] ints;
@@ -55,7 +57,10 @@ public class FrequencySketchBenchmark {
     ints = new Integer[SIZE];
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextValue().intValue();
-      sketch.increment(i);
+      sketch.increment(ints[i]);
+    }
+    for (int i = 0; i < 5 * SIZE; i++) {
+      sketch.increment(ThreadLocalRandom.current().nextInt());
     }
   }
 

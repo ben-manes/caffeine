@@ -6,13 +6,14 @@ env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   MAX_JVM: 18
+  EA_JVM: 20
 
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 18 ]
+        java: [ 11, 19, 20 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -21,33 +22,15 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@v3
-      - name: Set up JDK ${{ matrix.java }}
-        uses: Wandalen/wretry.action@v1.0.35
-        timeout-minutes: 5
-        with:
-          action: actions/setup-java@v3
-          with: |
-            distribution: temurin
-            java-version: ${{ matrix.java }}
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Setup Gradle
-        uses: Wandalen/wretry.action@v1.0.35
-        timeout-minutes: 5
-        with:
-          action: gradle/gradle-build-action@v2
-          with: |
-            cache-read-only: false
-            arguments: help --no-scan
-            generate-job-summary: false
-            gradle-home-cache-strict-match: true
-          attempt_limit: 3
-          attempt_delay: 2000
       - name: Compute JMH Benchmark
-        run: >
-          ./gradlew caffeine:jmh --no-daemon
-          -PincludePattern=ComputeBenchmark
-          -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ matrix.java }}
+          early-access: ${{ matrix.java == env.EA_JVM }}
+          arguments: >
+            caffeine:jmh --no-daemon
+            -PincludePattern=ComputeBenchmark
+            -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Compute JMH Results to Gist
         uses: exuanbo/actions-deploy-gist@v1
         if: >
@@ -60,10 +43,14 @@ jobs:
           file_path: ./caffeine/build/reports/jmh/results.json
           gist_file_name: compute_results_${{ matrix.java }}.json
       - name: Get/Put JMH Benchmark
-        run: >
-          ./gradlew caffeine:jmh --no-daemon
-          -PincludePattern=GetPutBenchmark
-          -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ matrix.java }}
+          early-access: ${{ matrix.java == env.EA_JVM }}
+          arguments: >
+            caffeine:jmh --no-daemon
+            -PincludePattern=GetPutBenchmark
+            -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Get/Put JMH Results to Gist
         uses: exuanbo/actions-deploy-gist@v1
         if: >
@@ -75,6 +62,27 @@ jobs:
           gist_id: b231cf57cf8e144e2247716e777edcf3
           file_path: ./caffeine/build/reports/jmh/results.json
           gist_file_name: getput_results_${{ matrix.java }}.json
+      - name: Put/Remove JMH Benchmark
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ matrix.java }}
+          early-access: ${{ matrix.java == env.EA_JVM }}
+          arguments: >
+            caffeine:jmh --no-daemon
+            -PincludePattern=PutRemoveBenchmark
+            -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
+      - name: FrequencySketch JMH Benchmark
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ matrix.java }}
+          early-access: ${{ matrix.java == env.EA_JVM }}
+          arguments: caffeine:jmh --no-daemon -PincludePattern=FrequencySketchBenchmark
+      - name: TimerWheelBenchmark JMH Benchmark
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ matrix.java }}
+          early-access: ${{ matrix.java == env.EA_JVM }}
+          arguments: caffeine:jmh --no-daemon -PincludePattern=TimerWheelBenchmark
       - name: Publish JMH benchmarks
         if: >
           matrix.java == env.MAX_JVM

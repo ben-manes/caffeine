@@ -18,10 +18,14 @@ buildscript {
 
   dependencies {
     classpath gradlePlugins.values()
-    classpath platforms.collect { platform(it) }
 
-    restrictions.each { module, version ->
-      constraints.classpath(module).version { require version }
+    configurations.each { configuration ->
+      restrictions.each { module, version ->
+        constraints.add(configuration.name, module).version { require version }
+      }
+      platforms.each { dependency ->
+        add(configuration.name, platform(dependency))
+      }
     }
   }
 }
@@ -36,6 +40,17 @@ allprojects {
     minor = 1 // backwards-compatible additions
     patch = 2 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
+  }
+
+  dependencies {
+    configurations.each { configuration ->
+      restrictions.each { module, version ->
+        constraints.add(configuration.name, module).version { require version }
+      }
+      platforms.each { dependency ->
+        add(configuration.name, platform(dependency))
+      }
+    }
   }
 }
 
@@ -65,14 +80,9 @@ subprojects {
     testImplementation testLibraries.hamcrest
     testImplementation testLibraries.awaitility
     testImplementation testLibraries.osgiCompile
-    testImplementation platforms.collect { platform(it) }
 
     testRuntimeOnly testLibraries.osgiRuntime
     testRuntimeOnly testLibraries.junitEngines
-
-    restrictions.each { module, version ->
-      constraints.testImplementation(module).version { require version }
-    }
   }
 
   tasks.register('bundle', aQute.bnd.gradle.Bundle) {
@@ -131,7 +141,7 @@ dependencyCheck {
 dependencyCheckAggregate.dependsOn(subprojects*.tasks.jar)
 
 snyk {
-  arguments = '--all-sub-projects --sarif-file-output=snyk.sarif'
+  arguments = "--all-sub-projects ${findProperty('snykArgs') ?: ''}"
   api = System.env.SNYK_TOKEN
   autoDownload = true
   autoUpdate = true
