@@ -29,7 +29,6 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
-import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
@@ -39,6 +38,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -228,8 +228,8 @@ public final class RefreshAfterWriteTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
 
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(context.firstKey(), context.original().get(context.firstKey())),
-            entry(context.firstKey(), context.firstKey()))
+        .contains(Map.entry(context.firstKey(), context.original().get(context.firstKey())),
+            Map.entry(context.firstKey(), context.firstKey()))
         .exclusively();
   }
 
@@ -766,7 +766,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache).containsEntry(key, updated);
     assertThat(context).stats().success(1).failures(0);
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(key, original), entry(key, refreshed))
+        .contains(Map.entry(key, original), Map.entry(key, refreshed))
         .exclusively();
   }
 
@@ -921,11 +921,11 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE)
   public void ageOf_duration(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     // Truncated to seconds to ignore the LSB (nanosecond) used for refreshAfterWrite's lock
-    assertThat(refreshAfterWrite.ageOf(context.firstKey()).get().toSeconds()).isEqualTo(0);
+    assertThat(refreshAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(0);
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(refreshAfterWrite.ageOf(context.firstKey()).get().toSeconds()).isEqualTo(30);
+    assertThat(refreshAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(30);
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(refreshAfterWrite.ageOf(context.firstKey()).get().toSeconds()).isEqualTo(75);
+    assertThat(refreshAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(75);
   }
 
   @Test(dataProvider = "caches")

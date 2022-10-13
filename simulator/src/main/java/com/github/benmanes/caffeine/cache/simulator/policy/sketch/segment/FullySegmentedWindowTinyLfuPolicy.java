@@ -30,7 +30,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -65,7 +64,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
   public FullySegmentedWindowTinyLfuPolicy(
       double percentMain, FullySegmentedWindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
-    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.maximumSize());
     int maxMain = (int) (maximumSize * percentMain);
     this.maxWindow = maximumSize - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());

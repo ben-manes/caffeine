@@ -19,7 +19,6 @@ import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -42,7 +41,7 @@ public final class AmsGrad extends AbstractClimber {
 
   public AmsGrad(Config config) {
     AmsGradSettings settings = new AmsGradSettings(config);
-    int maximumSize = Ints.checkedCast(settings.maximumSize());
+    int maximumSize = Math.toIntExact(settings.maximumSize());
     sampleSize = (int) (settings.percentSample() * maximumSize);
     stepSize = (int) (settings.percentPivot() * maximumSize);
     epsilon = settings.epsilon();

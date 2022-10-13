@@ -22,7 +22,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -61,7 +60,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
 
   public FrdPolicy(Config config) {
     FrdSettings settings = new FrdSettings(config);
-    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.maximumMainResidentSize = (int) (maximumSize * settings.percentMain());
     this.maximumFilterSize = maximumSize - maximumMainResidentSize;
     this.policyStats = new PolicyStats(name());

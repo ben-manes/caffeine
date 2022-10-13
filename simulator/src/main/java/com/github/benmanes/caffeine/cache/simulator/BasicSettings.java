@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
@@ -65,7 +66,7 @@ public class BasicSettings {
     return config().getStringList("admission").stream()
         .map(String::toUpperCase)
         .map(Admission::valueOf)
-        .collect(toImmutableSet());
+        .collect(toImmutableEnumSet());
   }
 
   public MembershipSettings membership() {

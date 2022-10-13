@@ -42,7 +42,6 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
-import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
@@ -929,7 +928,7 @@ public final class BoundedLocalCacheTest {
       ConcurrentTestHarness.execute(() -> {
         evictor.set(Thread.currentThread());
         started.set(true);
-        cache.policy().eviction().get().setMaximum(0);
+        cache.policy().eviction().orElseThrow().setMaximum(0);
         done.set(true);
       });
 
@@ -943,7 +942,7 @@ public final class BoundedLocalCacheTest {
 
     assertThat(cache).containsEntry(key, List.of());
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(key, value)).exclusively();
+        .contains(Map.entry(key, value)).exclusively();
   }
 
   @Test(dataProvider = "caches")
@@ -994,14 +993,14 @@ public final class BoundedLocalCacheTest {
       ConcurrentTestHarness.execute(() -> {
         evictor.set(Thread.currentThread());
         started.set(true);
-        cache.policy().expireAfterAccess().get().setExpiresAfter(Duration.ZERO);
+        cache.policy().expireAfterAccess().orElseThrow().setExpiresAfter(Duration.ZERO);
         done.set(true);
       });
 
       await().untilTrue(started);
       var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
-      cache.policy().expireAfterAccess().get().setExpiresAfter(Duration.ofHours(1));
+      cache.policy().expireAfterAccess().orElseThrow().setExpiresAfter(Duration.ofHours(1));
       return v;
     });
     await().untilTrue(done);
@@ -1025,14 +1024,14 @@ public final class BoundedLocalCacheTest {
       ConcurrentTestHarness.execute(() -> {
         evictor.set(Thread.currentThread());
         started.set(true);
-        cache.policy().expireAfterWrite().get().setExpiresAfter(Duration.ZERO);
+        cache.policy().expireAfterWrite().orElseThrow().setExpiresAfter(Duration.ZERO);
         done.set(true);
       });
 
       await().untilTrue(started);
       var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
-      cache.policy().expireAfterWrite().get().setExpiresAfter(Duration.ofHours(1));
+      cache.policy().expireAfterWrite().orElseThrow().setExpiresAfter(Duration.ofHours(1));
       return v;
     });
     await().untilTrue(done);

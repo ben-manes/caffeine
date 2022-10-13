@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.infe
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.Indicator;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy.HillClimberWindowTinyLfuSettings;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -34,7 +33,7 @@ public final class IndicatorClimber implements HillClimber {
 
   public IndicatorClimber(Config config) {
     HillClimberWindowTinyLfuSettings settings = new HillClimberWindowTinyLfuSettings(config);
-    this.cacheSize = Ints.checkedCast(settings.maximumSize());
+    this.cacheSize = Math.toIntExact(settings.maximumSize());
     this.prevPercent = 1 - settings.percentMain().get(0);
     this.indicator = new Indicator(config);
   }

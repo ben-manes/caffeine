@@ -35,7 +35,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -71,7 +70,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     this.admittor = admission.from(config, policyStats);
 
     SampledSettings settings = new SampledSettings(config);
-    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
     this.data = new Long2ObjectOpenHashMap<>();

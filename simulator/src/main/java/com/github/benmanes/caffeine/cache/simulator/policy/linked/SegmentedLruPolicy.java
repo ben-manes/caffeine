@@ -27,7 +27,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -73,7 +72,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.maxProtected = (int) (maximumSize * settings.percentProtected());
   }
 

@@ -23,7 +23,6 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
-import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Ordered;
 
@@ -50,13 +49,13 @@ public class MapSubject extends com.google.common.truth.MapSubject {
 
   /** Fails if the map does not have the given size. */
   public final void hasSize(long expectedSize) {
-    super.hasSize(Ints.checkedCast(expectedSize));
+    super.hasSize(Math.toIntExact(expectedSize));
   }
 
   /** Fails if the map does not have less than the given size. */
   public void hasSizeLessThan(long other) {
     checkArgument(other >= 0, "expectedSize (%s) must be >= 0", other);
-    check("size()").that(actual.size()).isLessThan(Ints.checkedCast(other));
+    check("size()").that(actual.size()).isLessThan(Math.toIntExact(other));
   }
 
   /** Fails if the map's size is not in {@code range}. */

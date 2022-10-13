@@ -29,7 +29,6 @@ import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
-import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.WARN;
@@ -684,7 +683,7 @@ public final class LoadingCacheTest {
     assertThat(cache).containsEntry(key, updated);
     assertThat(context).stats().success(1).failures(0);
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(key, original), entry(key, refreshed))
+        .contains(Map.entry(key, original), Map.entry(key, refreshed))
         .exclusively();
   }
 
@@ -725,7 +724,7 @@ public final class LoadingCacheTest {
 
     assertThat(context).stats().success(1).failures(0);
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(entry(key, original), entry(key, refreshed))
+        .contains(Map.entry(key, original), Map.entry(key, refreshed))
         .exclusively();
   }
 
@@ -766,7 +765,7 @@ public final class LoadingCacheTest {
       // linearizable
       await().untilAsserted(() -> assertThat(cache).doesNotContainKey(key));
       assertThat(context).removalNotifications().withCause(EXPLICIT)
-          .contains(entry(key, original), entry(key, refreshed))
+          .contains(Map.entry(key, original), Map.entry(key, refreshed))
           .exclusively();
     }
     assertThat(context).stats().success(1).failures(0);

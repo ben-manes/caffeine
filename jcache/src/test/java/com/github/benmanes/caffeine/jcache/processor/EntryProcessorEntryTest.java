@@ -24,8 +24,6 @@ import javax.cache.Cache;
 
 import org.testng.annotations.Test;
 
-import com.google.common.collect.Maps;
-
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -54,6 +52,6 @@ public final class EntryProcessorEntryTest {
 
   @Test
   public void string() {
-    assertThat(entry.toString()).isEqualTo(Maps.immutableEntry(1, 2).toString());
+    assertThat(entry.toString()).isEqualTo(Map.entry(1, 2).toString());
   }
 }

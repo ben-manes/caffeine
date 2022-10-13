@@ -64,7 +64,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
     } else if (value != null) {
       action = Action.READ;
     } else if (cacheLoader.isPresent()) {
-      value = cacheLoader.get().load(key);
+      value = cacheLoader.orElseThrow().load(key);
       cacheLoader = Optional.empty();
       if (value != null) {
         action = Action.LOADED;

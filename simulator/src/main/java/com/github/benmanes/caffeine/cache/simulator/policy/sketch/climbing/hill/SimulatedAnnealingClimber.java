@@ -19,7 +19,6 @@ import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -41,7 +40,7 @@ public final class SimulatedAnnealingClimber extends AbstractClimber {
 
   public SimulatedAnnealingClimber(Config config) {
     SimulatedAnnealingSettings settings = new SimulatedAnnealingSettings(config);
-    int maximumSize = Ints.checkedCast(settings.maximumSize());
+    int maximumSize = Math.toIntExact(settings.maximumSize());
     this.initialStepSize = (int) (settings.percentPivot() * maximumSize);
     this.sampleSize = (int) (settings.percentSample() * maximumSize);
     this.coolDownTolerance = 100 * settings.coolDownTolerance();

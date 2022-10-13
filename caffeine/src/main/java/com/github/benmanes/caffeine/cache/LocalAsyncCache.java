@@ -160,7 +160,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
    */
   static <K, V> CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
     if (futures.isEmpty()) {
-      return CompletableFuture.completedFuture(Collections.emptyMap());
+      return CompletableFuture.completedFuture(Map.of());
     }
     @SuppressWarnings("rawtypes")
     CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);

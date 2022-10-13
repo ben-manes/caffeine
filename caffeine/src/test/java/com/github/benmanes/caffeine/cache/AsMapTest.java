@@ -27,9 +27,7 @@ import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
-import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
@@ -2567,7 +2565,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_contains_absent(Map<Int, Int> map, CacheContext context) {
-    var entry = entry(context.absentKey(), context.absentValue());
+    var entry = Map.entry(context.absentKey(), context.absentValue());
     assertThat(map.entrySet().contains(entry)).isFalse();
   }
 
@@ -2576,7 +2574,7 @@ public final class AsMapTest {
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_contains_present(Map<Int, Int> map, CacheContext context) {
-    var entry = entry(context.firstKey(), context.original().get(context.firstKey()));
+    var entry = Map.entry(context.firstKey(), context.original().get(context.firstKey()));
     assertThat(map.entrySet().contains(entry)).isTrue();
   }
 
@@ -2593,7 +2591,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void entrySet_addIsNotSupported(Map<Int, Int> map, CacheContext context) {
     try {
-      map.entrySet().add(immutableEntry(Int.valueOf(1), Int.valueOf(2)));
+      map.entrySet().add(Map.entry(Int.valueOf(1), Int.valueOf(2)));
     } finally {
       assertThat(map).isExhaustivelyEmpty();
     }

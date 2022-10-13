@@ -36,7 +36,7 @@ ext {
     config: '1.4.2',
     ehcache3: '3.10.2',
     errorprone: '2.16',
-    errorproneSupport: '0.3.0',
+    errorproneSupport: '0.4.0',
     expiringMap: '0.5.10',
     fastfilter: '1.0.2',
     fastutil: '8.5.9',
@@ -261,10 +261,11 @@ ext {
     "org.ow2.asm:asm-bom:${platformVerrsions.asm}",
   ]
   restrictions = [
-    'com.fasterxml.jackson:jackson-bom': '2.13.4.20221012',
     'com.beust:jcommander': '1.82',
+    'com.fasterxml.jackson:jackson-bom': '2.13.4.20221012',
     'com.google.protobuf:protobuf-java': '3.21.7',
     'com.thoughtworks.xstream:xstream': '1.4.19',
+    'org.apache.commons:commons-text': '1.10.0',
     'org.apache.httpcomponents:httpclient': '4.5.13',
     'org.bouncycastle:bcprov-jdk15on': '1.70',
     'org.jsoup:jsoup': '1.15.3',

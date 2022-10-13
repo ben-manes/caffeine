@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.future;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.time.ZoneOffset.UTC;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -55,7 +56,6 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 @Test(groups = "isolated")
 @Listeners(CacheValidationListener.class)
-@SuppressWarnings({"PreferJavaTimeOverload", "TimeZoneUsage"})
 public final class Issue30Test {
   private static final boolean DEBUG = false;
 
@@ -85,7 +85,7 @@ public final class Issue30Test {
     var source = new ConcurrentHashMap<String, String>();
     var lastLoad = new ConcurrentHashMap<String, Instant>();
     AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
-        .expireAfterWrite(TTL, TimeUnit.MILLISECONDS)
+        .expireAfterWrite(Duration.ofMillis(TTL))
         .executor(executor)
         .buildAsync(new Loader(source, lastLoad));
     return new Object[][] {{ cache, source, lastLoad }};
@@ -163,6 +163,7 @@ public final class Issue30Test {
       return CompletableFuture.completedFuture(source.get(key));
     }
 
+    @SuppressWarnings("TimeZoneUsage")
     private void reportCacheMiss(String key) {
       Instant now = Instant.now();
       Instant last = lastLoad.get(key);

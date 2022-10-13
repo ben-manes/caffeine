@@ -23,7 +23,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuP
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -51,7 +50,7 @@ public final class MiniSimClimber implements HillClimber {
 
   public MiniSimClimber(Config config) {
     MiniSimSettings settings = new MiniSimSettings(config);
-    this.cacheSize = Ints.checkedCast(settings.maximumSize());
+    this.cacheSize = Math.toIntExact(settings.maximumSize());
     R = (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100);
     WindowTinyLfuSettings simulationSettings = new WindowTinyLfuSettings(ConfigFactory
         .parseString("maximum-size = " + cacheSize / R)

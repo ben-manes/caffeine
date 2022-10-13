@@ -27,11 +27,8 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
-import static java.util.Map.entry;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -1393,8 +1390,8 @@ public final class AsyncAsMapTest {
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void equalsAndHashCodeFail_empty(AsyncCache<Int, Int> cache, CacheContext context) {
-    var other = Stream.of(1, 2, 3)
-        .collect(toUnmodifiableMap(Int::valueOf, key -> Int.futureOf(-key)));
+    var other = Map.of(Int.valueOf(1), Int.futureOf(-1),
+        Int.valueOf(2), Int.futureOf(-2), Int.valueOf(3), Int.futureOf(-3));
     assertThat(cache.asMap().equals(other)).isFalse();
     assertThat(other.equals(cache.asMap())).isFalse();
     assertThat(cache.asMap().hashCode()).isNotEqualTo(other.hashCode());
@@ -1404,10 +1401,9 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void equalsAndHashCodeFail_present(
-      AsyncCache<Int, Int> cache, CacheContext context) {
-    var other = Stream.of(1, 2, 3)
-        .collect(toUnmodifiableMap(Int::valueOf, key -> Int.futureOf(-key)));
+  public void equalsAndHashCodeFail_present(AsyncCache<Int, Int> cache, CacheContext context) {
+    var other = Map.of(Int.valueOf(1), Int.futureOf(-1),
+        Int.valueOf(2), Int.futureOf(-2), Int.valueOf(3), Int.futureOf(-3));
     assertThat(cache.asMap().equals(other)).isFalse();
     assertThat(other.equals(cache.asMap())).isFalse();
     assertThat(cache.asMap().hashCode()).isNotEqualTo(other.hashCode());
@@ -2334,7 +2330,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_contains_absent(AsyncCache<Int, Int> cache, CacheContext context) {
-    var entry = entry(context.absentKey(), context.absentValue().asFuture());
+    var entry = Map.entry(context.absentKey(), context.absentValue().asFuture());
     assertThat(cache.asMap().entrySet().contains(entry)).isFalse();
   }
 
@@ -2343,7 +2339,7 @@ public final class AsyncAsMapTest {
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_contains_present(AsyncCache<Int, Int> cache, CacheContext context) {
-    var entry = entry(context.firstKey(), cache.asMap().get(context.firstKey()));
+    var entry = Map.entry(context.firstKey(), cache.asMap().get(context.firstKey()));
     assertThat(cache.asMap().entrySet().contains(entry)).isTrue();
   }
 
@@ -2352,7 +2348,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void entrySet_addIsNotSupported(AsyncCache<Int, Int> cache, CacheContext context) {
     try {
-      cache.asMap().entrySet().add(immutableEntry(Int.valueOf(1), Int.valueOf(2).asFuture()));
+      cache.asMap().entrySet().add(Map.entry(Int.valueOf(1), Int.valueOf(2).asFuture()));
     } finally {
       assertThat(cache).isEmpty();
     }

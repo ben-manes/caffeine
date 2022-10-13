@@ -9,7 +9,7 @@ permissions: read-all
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  JAVA_VERSION: 18
+  JAVA_VERSION: 19
 
 jobs:
   dependency-check:
@@ -24,31 +24,12 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@v3
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@v1.0.35
-        timeout-minutes: 5
-        with:
-          action: actions/setup-java@v3
-          with: |
-            cache: gradle
-            distribution: temurin
-            java-version: ${{ env.JAVA_VERSION }}
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Setup Gradle
-        uses: Wandalen/wretry.action@v1.0.35
-        timeout-minutes: 5
-        with:
-          action: gradle/gradle-build-action@v2
-          with: |
-            cache-read-only: false
-            arguments: help --no-scan
-            generate-job-summary: false
-          attempt_limit: 3
-          attempt_delay: 2000
       - name: Run dependency-check
-        run: ./gradlew dependencyCheckAggregate
-        continue-on-error: true
+        uses: ./.github/actions/run-gradle
+        with:
+          early-access: false
+          java: ${{ env.JAVA_VERSION }}
+          arguments: dependencyCheckAggregate
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v2
         continue-on-error: true

@@ -42,7 +42,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 /**
@@ -257,7 +256,7 @@ public final class CacheGenerator {
     var builder = new ImmutableList.Builder<Map.Entry<Int, Int>>();
     for (int i = 0; i < size; i++) {
       Int value = Int.valueOf(BASE + i);
-      builder.add(Maps.immutableEntry(value, value.negate()));
+      builder.add(Map.entry(value, value.negate()));
     }
     return builder.build();
   }

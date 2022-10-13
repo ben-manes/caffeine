@@ -54,7 +54,7 @@ public final class CacheManagerTest {
   @Test
   public void jmxBeanIsRegistered_createCache() throws OperationsException {
     checkConfigurationJmx(() -> cacheManager.createCache("cache-not-in-config-file",
-        TypesafeConfigurator.from(ConfigFactory.load(), "test-cache").get()));
+        TypesafeConfigurator.from(ConfigFactory.load(), "test-cache").orElseThrow()));
   }
 
   @Test

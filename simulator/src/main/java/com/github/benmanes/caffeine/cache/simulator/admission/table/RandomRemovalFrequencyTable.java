@@ -23,7 +23,6 @@ import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -52,7 +51,7 @@ public final class RandomRemovalFrequencyTable implements Frequency {
 
   public RandomRemovalFrequencyTable(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    maxSum = Ints.checkedCast(sampleFactor * settings.maximumSize());
+    maxSum = Math.toIntExact(sampleFactor * settings.maximumSize());
     random = new Random(settings.randomSeed());
     table = new HashMap<>(maxSum);
   }

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.stream.Collectors.joining;
 
+import java.util.Collections;
 import java.util.Set;
 
 import com.google.common.base.CaseFormat;
@@ -100,6 +101,6 @@ public enum Feature {
   }
 
   public static boolean usesFastPath(Set<Feature> features) {
-    return features.stream().noneMatch(fastPathIncompatible::contains) && usesMaximum(features);
+    return Collections.disjoint(features, fastPathIncompatible) && usesMaximum(features);
   }
 }

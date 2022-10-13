@@ -262,11 +262,12 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
   public void getIfPresentQuietly(Cache<Int, Int> cache, CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    var original = expireAfterAccess.ageOf(context.firstKey()).get();
+    var original = expireAfterAccess.ageOf(context.firstKey()).orElseThrow();
     var advancement = Duration.ofSeconds(30);
     context.ticker().advance(advancement);
     cache.policy().getIfPresentQuietly(context.firstKey());
-    var current = cache.policy().expireAfterAccess().get().ageOf(context.firstKey()).get();
+    var current = cache.policy().expireAfterAccess()
+        .flatMap(policy -> policy.ageOf(context.firstKey())).orElseThrow();
     assertThat(current.minus(advancement)).isEqualTo(original);
   }
 

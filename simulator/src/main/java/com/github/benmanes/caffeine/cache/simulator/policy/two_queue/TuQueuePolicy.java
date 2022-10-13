@@ -22,7 +22,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -76,7 +75,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     this.headCold = new Node();
     this.data = new Long2ObjectOpenHashMap<>();
     this.policyStats = new PolicyStats(name());
-    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.maxHot = (int) (maximumSize * settings.percentHot());
     this.maxWarm = (int) (maximumSize * settings.percentWarm());
   }

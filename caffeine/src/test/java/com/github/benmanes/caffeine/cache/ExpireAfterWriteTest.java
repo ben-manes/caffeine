@@ -226,11 +226,11 @@ public final class ExpireAfterWriteTest {
   @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
   public void getIfPresentQuietly(Cache<Int, Int> cache, CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    var original = expireAfterWrite.ageOf(context.firstKey()).get();
+    var original = expireAfterWrite.ageOf(context.firstKey()).orElseThrow();
     var advancement = Duration.ofSeconds(30);
     context.ticker().advance(advancement);
     cache.policy().getIfPresentQuietly(context.firstKey());
-    var current = expireAfterWrite.ageOf(context.firstKey()).get();
+    var current = expireAfterWrite.ageOf(context.firstKey()).orElseThrow();
     assertThat(current.minus(advancement)).isEqualTo(original);
   }
 
@@ -305,9 +305,9 @@ public final class ExpireAfterWriteTest {
   public void ageOf_duration(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
     // Truncated to seconds to ignore the LSB (nanosecond) used for refreshAfterWrite's lock
-    assertThat(expireAfterWrite.ageOf(context.firstKey()).get().toSeconds()).isEqualTo(0);
+    assertThat(expireAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(0);
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(expireAfterWrite.ageOf(context.firstKey()).get().toSeconds()).isEqualTo(30);
+    assertThat(expireAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(30);
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(expireAfterWrite.ageOf(context.firstKey())).isEmpty();
   }

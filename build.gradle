@@ -18,13 +18,11 @@ buildscript {
 
   dependencies {
     classpath gradlePlugins.values()
+    classpath platforms.collect { platform(it) }
 
-    configurations.each { configuration ->
+    configurations.all { configuration ->
       restrictions.each { module, version ->
         constraints.add(configuration.name, module).version { require version }
-      }
-      platforms.each { dependency ->
-        add(configuration.name, platform(dependency))
       }
     }
   }
@@ -43,12 +41,9 @@ allprojects {
   }
 
   dependencies {
-    configurations.each { configuration ->
+    configurations.all { configuration ->
       restrictions.each { module, version ->
         constraints.add(configuration.name, module).version { require version }
-      }
-      platforms.each { dependency ->
-        add(configuration.name, platform(dependency))
       }
     }
   }
@@ -72,6 +67,9 @@ subprojects {
   }
 
   dependencies {
+    implementation platforms.collect { platform(it) }
+    annotationProcessor platforms.collect { platform(it) }
+
     testImplementation libraries.guava
     testImplementation testLibraries.junit
     testImplementation testLibraries.truth

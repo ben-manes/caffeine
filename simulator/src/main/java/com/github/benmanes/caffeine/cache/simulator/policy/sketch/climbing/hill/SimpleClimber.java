@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -38,7 +37,7 @@ public final class SimpleClimber extends AbstractClimber {
 
   public SimpleClimber(Config config) {
     SimpleClimberSettings settings = new SimpleClimberSettings(config);
-    int maximumSize = Ints.checkedCast(settings.maximumSize());
+    int maximumSize = Math.toIntExact(settings.maximumSize());
     this.initialSampleSize = (int) (settings.percentSample() * maximumSize);
     this.initialStepSize = settings.percentPivot() * maximumSize;
     this.restartThreshold = settings.restartThreshold();

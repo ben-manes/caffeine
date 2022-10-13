@@ -125,7 +125,7 @@ public final class LocalCacheSubject extends Subject {
     for (;;) {
       bounded.cleanUp();
 
-      if (bounded.writeBuffer.size() > 0) {
+      if (!bounded.writeBuffer.isEmpty()) {
         continue; // additional writes to drain
       } else if (bounded.evicts() && (bounded.adjustment() != adjustment)) {
         adjustment = bounded.adjustment();

@@ -30,7 +30,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
-import static java.util.Map.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -261,7 +260,7 @@ public final class EvictionTest {
     await().untilTrue(done);
     await().untilAsserted(() -> assertThat(cache).isEmpty());
     assertThat(context).notifications().withCause(SIZE)
-        .contains(entry(context.absentKey(), Int.listOf(1, 2, 3, 4, 5)))
+        .contains(Map.entry(context.absentKey(), Int.listOf(1, 2, 3, 4, 5)))
         .exclusively();
   }
 

@@ -29,7 +29,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -72,7 +71,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   public WindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     this.admittor = new TinyLfu(settings.config(), policyStats);
-    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.maximumSize());
 
     int maxMain = (int) (maximumSize * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());

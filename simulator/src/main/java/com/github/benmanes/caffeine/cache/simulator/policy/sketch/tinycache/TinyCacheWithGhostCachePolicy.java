@@ -20,7 +20,6 @@ import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCach
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -34,7 +33,7 @@ public final class TinyCacheWithGhostCachePolicy implements KeyOnlyPolicy {
   public TinyCacheWithGhostCachePolicy(Config config) {
     this.policyStats = new PolicyStats(name());
     BasicSettings settings = new BasicSettings(config);
-    int maximumSize = Ints.checkedCast(settings.maximumSize());
+    int maximumSize = Math.toIntExact(settings.maximumSize());
     tinyCache = new TinyCacheWithGhostCache((int) Math.ceil(maximumSize / 64.0),
         64, settings.randomSeed());
   }

@@ -50,7 +50,6 @@ import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemo
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMultiset;
-import com.google.common.primitives.Ints;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.StandardSubjectBuilder;
 import com.google.common.truth.Subject;
@@ -316,7 +315,7 @@ public final class CacheContextSubject extends Subject {
     /** Fails if the number of notifications does not have the given size. */
     public void hasSize(long expectedSize) {
       awaitUntil((type, listener) -> {
-        check(type).that(listener.removed()).hasSize(Ints.checkedCast(expectedSize));
+        check(type).that(listener.removed()).hasSize(Math.toIntExact(expectedSize));
       });
     }
 
@@ -398,7 +397,7 @@ public final class CacheContextSubject extends Subject {
                 .map(RemovalNotification::getCause)
                 .collect(toImmutableMultiset());
             check(type).that(causes).isEqualTo(ImmutableMultiset.builder()
-                .addCopies(cause, Ints.checkedCast(expectedSize)).build());
+                .addCopies(cause, Math.toIntExact(expectedSize)).build());
           });
         }
       }

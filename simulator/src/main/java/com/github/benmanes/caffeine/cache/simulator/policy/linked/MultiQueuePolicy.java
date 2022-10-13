@@ -24,7 +24,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
@@ -64,7 +63,7 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
   public MultiQueuePolicy(Config config) {
     MultiQueueSettings settings = new MultiQueueSettings(config);
-    maximumSize = Ints.checkedCast(settings.maximumSize());
+    maximumSize = Math.toIntExact(settings.maximumSize());
     threshold = new long[settings.numberOfQueues()];
     headQ = new Node[settings.numberOfQueues()];
     out = new Long2ObjectLinkedOpenHashMap<>();

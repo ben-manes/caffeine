@@ -28,7 +28,6 @@ import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
-import static java.util.Map.entry;
 import static java.util.function.Function.identity;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -1137,7 +1136,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void entrySet_contains(Map<Int, Int> map, CacheContext context) {
-    var entry = entry(new Int(context.firstKey()),
+    var entry = Map.entry(new Int(context.firstKey()),
         new Int(context.original().get(context.firstKey())));
     assertThat(map.entrySet().contains(entry)).isFalse();
   }

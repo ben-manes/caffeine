@@ -22,7 +22,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -95,7 +94,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   public ClockProPolicy(Config config) {
     ClockProSettings settings = new ClockProSettings(config);
-    this.maxSize = Ints.checkedCast(settings.maximumSize());
+    this.maxSize = Math.toIntExact(settings.maximumSize());
     this.maxNonResSize = (int) (maxSize * settings.nonResidentMultiplier());
     this.minResColdSize = (int) (maxSize * settings.percentMinCold());
     if (minResColdSize < settings.lowerBoundCold()) {

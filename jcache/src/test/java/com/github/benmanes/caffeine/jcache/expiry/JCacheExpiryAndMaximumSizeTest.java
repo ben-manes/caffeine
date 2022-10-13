@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.jcache.expiry;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -83,7 +82,7 @@ public class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
   @Test
   public void expiry() {
     jcache.put(KEY_1, VALUE_1);
-    verify(expiry, times(1)).expireAfterCreate(anyInt(), anyInt(), anyLong());
+    verify(expiry).expireAfterCreate(anyInt(), anyInt(), anyLong());
 
     jcache.put(KEY_1, VALUE_2);
     verify(expiry).expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong());

@@ -77,7 +77,7 @@ public final class Issue298Test {
 
     key = "key";
     cache = makeAsyncCache();
-    policy = cache.synchronous().policy().expireVariably().get();
+    policy = cache.synchronous().policy().expireVariably().orElseThrow();
   }
 
   @AfterMethod
@@ -103,7 +103,7 @@ public final class Issue298Test {
 
     // Ran expireAfterCreate (expire: infinite -> create)
     doCreate.set(true);
-    await().until(() -> policy.getExpiresAfter(key).get().toNanos() <= EXPIRE_NS);
+    await().until(() -> policy.getExpiresAfter(key).orElseThrow().toNanos() <= EXPIRE_NS);
     await().untilTrue(startedRead);
 
     // Ran reader (expire: create -> ?)
@@ -112,7 +112,7 @@ public final class Issue298Test {
     reader.join();
 
     // Ensure expire is [expireAfterCreate], not [infinite]
-    assertThat(policy.getExpiresAfter(key).get().toNanos()).isAtMost(EXPIRE_NS);
+    assertThat(policy.getExpiresAfter(key).orElseThrow().toNanos()).isAtMost(EXPIRE_NS);
   }
 
   private AsyncLoadingCache<String, String> makeAsyncCache() {

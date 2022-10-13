@@ -21,7 +21,7 @@ import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbin
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.PROTECTED;
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.WINDOW;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static java.util.Locale.US;
 
 import java.util.HashSet;
@@ -41,7 +41,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillC
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -77,7 +76,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public HillClimberWindowTinyLfuPolicy(HillClimberType strategy, double percentMain,
       HillClimberWindowTinyLfuSettings settings) {
-    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.maximumSize());
     int maxMain = (int) (maximumSize * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxWindow = maximumSize - maxMain;
@@ -382,7 +381,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
       return config().getStringList("hill-climber-window-tiny-lfu.strategy").stream()
           .map(strategy -> strategy.replace('-', '_').toUpperCase(US))
           .map(HillClimberType::valueOf)
-          .collect(toImmutableSet());
+          .collect(toImmutableEnumSet());
     }
   }
 }

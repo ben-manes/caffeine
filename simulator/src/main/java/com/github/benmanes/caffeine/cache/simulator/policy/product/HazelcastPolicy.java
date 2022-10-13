@@ -30,7 +30,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
-import com.google.common.primitives.Ints;
 import com.hazelcast.config.EvictionConfig;
 import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.InMemoryFormat;
@@ -57,7 +56,7 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
   public HazelcastPolicy(HazelcastSettings settings, EvictionPolicy policy) {
     policyStats = new PolicyStats(name() + " (%s)",
         CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, policy.name()));
-    maximumSize = Ints.checkedCast(settings.maximumSize());
+    maximumSize = Math.toIntExact(settings.maximumSize());
     var config = new NearCacheConfig()
         .setSerializeKeys(false)
         .setInMemoryFormat(InMemoryFormat.OBJECT)

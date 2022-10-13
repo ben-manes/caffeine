@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import java.io.UncheckedIOException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -76,7 +75,6 @@ public final class JavaSerializationCopierTest {
     copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader());
   }
 
-  @SuppressWarnings("TimeZoneUsage")
   @Test(expectedExceptions = CacheException.class)
   public void deserializable_classNotFound() {
     var copier = new JavaSerializationCopier() {
@@ -90,7 +88,7 @@ public final class JavaSerializationCopierTest {
         };
       }
     };
-    copier.roundtrip(Instant.now(), Thread.currentThread().getContextClassLoader());
+    copier.roundtrip(100, Thread.currentThread().getContextClassLoader());
   }
 
   @Test(dataProvider = "copier")

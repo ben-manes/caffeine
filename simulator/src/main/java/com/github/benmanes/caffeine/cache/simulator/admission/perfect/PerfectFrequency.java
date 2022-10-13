@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.admission.perfect;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
-import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
@@ -36,7 +35,7 @@ public final class PerfectFrequency implements Frequency {
 
   public PerfectFrequency(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    sampleSize = Ints.checkedCast(10 * settings.maximumSize());
+    sampleSize = Math.toIntExact(10 * settings.maximumSize());
     counts = new Long2IntOpenHashMap();
   }
 

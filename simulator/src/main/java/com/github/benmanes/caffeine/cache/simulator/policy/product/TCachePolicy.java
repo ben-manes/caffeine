@@ -26,7 +26,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.CaseFormat;
-import com.google.common.primitives.Ints;
 import com.trivago.triava.tcache.Cache;
 import com.trivago.triava.tcache.EvictionPolicy;
 import com.trivago.triava.tcache.TCacheFactory;
@@ -45,7 +44,7 @@ public final class TCachePolicy implements KeyOnlyPolicy {
   public TCachePolicy(TCacheSettings settings, Eviction policy) {
     policyStats = new PolicyStats(name() + " (%s)", policy);
     cache = TCacheFactory.standardFactory().<Long, Boolean>builder()
-        .setMaxElements(Ints.checkedCast(settings.maximumSize()))
+        .setMaxElements(Math.toIntExact(settings.maximumSize()))
         .setEvictionPolicy(policy.type)
         .setStatistics(true)
         .build();

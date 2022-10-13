@@ -81,9 +81,9 @@ public final class TypesafeConfigurationTest {
   public void testCache() {
     Optional<CaffeineConfiguration<Integer, Integer>> config =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
-    assertThat(config.get()).isEqualTo(TypesafeConfigurator.from(
-        ConfigFactory.load(), "test-cache").get());
-    checkTestCache(config.get());
+    assertThat(config).isEqualTo(
+        TypesafeConfigurator.from(ConfigFactory.load(), "test-cache"));
+    checkTestCache(config.orElseThrow());
   }
 
   @Test
@@ -94,13 +94,14 @@ public final class TypesafeConfigurationTest {
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-2");
     assertThat(config1).isNotEqualTo(config2);
 
-    assertThat(config2.get().getKeyType()).isAssignableTo(String.class);
-    assertThat(config2.get().getValueType()).isAssignableTo(Integer.class);
-    assertThat(config2.get().isNativeStatisticsEnabled()).isFalse();
-    assertThat(config2.get().getExpiryPolicyFactory().create().getExpiryForAccess()).isNull();
-    assertThat(config2.get().getExpiryFactory().get().create()).isInstanceOf(TestExpiry.class);
-    assertThat(config2.get().getExecutorFactory().create()).isEqualTo(ForkJoinPool.commonPool());
-    assertThat(config2.get().getCacheWriter()).isNull();
+    var config = config2.orElseThrow();
+    assertThat(config.getKeyType()).isAssignableTo(String.class);
+    assertThat(config.getValueType()).isAssignableTo(Integer.class);
+    assertThat(config.isNativeStatisticsEnabled()).isFalse();
+    assertThat(config.getExpiryPolicyFactory().create().getExpiryForAccess()).isNull();
+    assertThat(config.getExpiryFactory().orElseThrow().create()).isInstanceOf(TestExpiry.class);
+    assertThat(config.getExecutorFactory().create()).isEqualTo(ForkJoinPool.commonPool());
+    assertThat(config.getCacheWriter()).isNull();
   }
 
   @Test
@@ -169,6 +170,6 @@ public final class TypesafeConfigurationTest {
   static void checkSize(CaffeineConfiguration<?, ?> config) {
     assertThat(config.getMaximumSize()).isEmpty();
     assertThat(config.getMaximumWeight()).hasValue(1_000L);
-    assertThat(config.getWeigherFactory().get().create()).isInstanceOf(TestWeigher.class);
+    assertThat(config.getWeigherFactory().orElseThrow().create()).isInstanceOf(TestWeigher.class);
   }
 }
