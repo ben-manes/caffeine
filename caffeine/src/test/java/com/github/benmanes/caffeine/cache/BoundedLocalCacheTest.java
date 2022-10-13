@@ -39,11 +39,11 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.util.Map.entry;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -516,11 +516,13 @@ public final class BoundedLocalCacheTest {
       cache.put(Int.valueOf(i), Int.valueOf(i));
     }
 
-    var expected = cache.accessOrderWindowDeque().stream().map(Node::getKey).collect(toList());
+    var expected = cache.accessOrderWindowDeque().stream()
+        .map(Node::getKey).collect(toImmutableList());
     cache.setWindowMaximum(0L);
     cache.evictFromWindow();
 
-    var actual = cache.accessOrderProbationDeque().stream().map(Node::getKey).collect(toList());
+    var actual = cache.accessOrderProbationDeque().stream()
+        .map(Node::getKey).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -540,7 +542,7 @@ public final class BoundedLocalCacheTest {
     cache.cleanUp();
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -557,13 +559,14 @@ public final class BoundedLocalCacheTest {
     }
     Arrays.fill(cache.frequencySketch().table, 0L);
 
-    var expected = cache.accessOrderWindowDeque().stream().map(Node::getKey).collect(toList());
+    var expected = cache.accessOrderWindowDeque().stream()
+        .map(Node::getKey).collect(toImmutableList());
     cache.setMaximum(context.maximumSize() / 2);
     cache.setWindowMaximum(0);
     cache.evictEntries();
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -580,12 +583,13 @@ public final class BoundedLocalCacheTest {
     }
     Arrays.fill(cache.frequencySketch().table, 0L);
 
-    var expected = cache.accessOrderWindowDeque().stream().map(Node::getKey).collect(toList());
+    var expected = cache.accessOrderWindowDeque().stream()
+        .map(Node::getKey).collect(toImmutableList());
     cache.setMaximum(context.maximumSize() / 2);
     cache.evictEntries();
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -619,7 +623,7 @@ public final class BoundedLocalCacheTest {
     cache.evictEntries();
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -642,7 +646,7 @@ public final class BoundedLocalCacheTest {
     cache.evictEntries();
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toList());
+    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -1891,23 +1895,26 @@ public final class BoundedLocalCacheTest {
   @Test
   public void unsupported() {
     var cache = Mockito.mock(BoundedLocalCache.class, InvocationOnMock::callRealMethod);
-    List<Runnable> methods = List.of(() -> cache.accessOrderWindowDeque(),
-        () -> cache.accessOrderProbationDeque(), () -> cache.accessOrderProtectedDeque(),
-        () -> cache.writeOrderDeque(), () -> cache.expiresAfterAccessNanos(),
-        () -> cache.setExpiresAfterAccessNanos(1L), () -> cache.expiresAfterWriteNanos(),
-        () -> cache.setExpiresAfterWriteNanos(1L), () -> cache.refreshAfterWriteNanos(),
-        () -> cache.setRefreshAfterWriteNanos(1L), () -> cache.timerWheel(),
-        () -> cache.frequencySketch(), () -> cache.maximum(), () -> cache.windowMaximum(),
-        () -> cache.mainProtectedMaximum(), () -> cache.setMaximum(1L),
-        () -> cache.setWindowMaximum(1L), () -> cache.setMainProtectedMaximum(1L),
-        () -> cache.weightedSize(), () -> cache.windowWeightedSize(),
-        () -> cache.mainProtectedWeightedSize(), () -> cache.setWeightedSize(1L),
-        () -> cache.setWindowWeightedSize(0), () -> cache.setMainProtectedWeightedSize(1L),
-        () -> cache.hitsInSample(), () -> cache.missesInSample(), () -> cache.sampleCount(),
-        () -> cache.stepSize(), () -> cache.previousSampleHitRate(), () -> cache.adjustment(),
-        () -> cache.setHitsInSample(1), () -> cache.setMissesInSample(1),
-        () -> cache.setSampleCount(1), () -> cache.setStepSize(1.0),
-        () -> cache.setPreviousSampleHitRate(1.0), () -> cache.setAdjustment(1L));
+    @SuppressWarnings("MethodReferenceUsage")
+    List<Runnable> methods = List.of(
+        () -> cache.accessOrderWindowDeque(),       () -> cache.accessOrderProbationDeque(),
+        () -> cache.accessOrderProtectedDeque(),    () -> cache.writeOrderDeque(),
+        () -> cache.expiresAfterAccessNanos(),      () -> cache.setExpiresAfterAccessNanos(1L),
+        () -> cache.expiresAfterWriteNanos(),       () -> cache.setExpiresAfterWriteNanos(1L),
+        () -> cache.refreshAfterWriteNanos(),       () -> cache.setRefreshAfterWriteNanos(1L),
+        () -> cache.timerWheel(),                   () -> cache.frequencySketch(),
+        () -> cache.maximum(),                      () -> cache.windowMaximum(),
+        () -> cache.mainProtectedMaximum(),         () -> cache.setMaximum(1L),
+        () -> cache.setWindowMaximum(1L),           () -> cache.setMainProtectedMaximum(1L),
+        () -> cache.weightedSize(),                 () -> cache.windowWeightedSize(),
+        () -> cache.mainProtectedWeightedSize(),    () -> cache.setWeightedSize(1L),
+        () -> cache.setWindowWeightedSize(0),       () -> cache.setMainProtectedWeightedSize(1L),
+        () -> cache.hitsInSample(),                 () -> cache.missesInSample(),
+        () -> cache.sampleCount(),                  () -> cache.stepSize(),
+        () -> cache.previousSampleHitRate(),        () -> cache.adjustment(),
+        () -> cache.setHitsInSample(1),             () -> cache.setMissesInSample(1),
+        () -> cache.setSampleCount(1),              () -> cache.setStepSize(1.0),
+        () -> cache.setPreviousSampleHitRate(1.0),  () -> cache.setAdjustment(1L));
     for (var method : methods) {
       try {
         method.run();
@@ -1944,12 +1951,14 @@ public final class BoundedLocalCacheTest {
   public void node_unsupported() {
     @SuppressWarnings("unchecked")
     Node<Object, Object> node = Mockito.mock(Node.class, InvocationOnMock::callRealMethod);
-    List<Runnable> methods = List.of(() -> node.casVariableTime(1L, 2L),
-        () -> node.getPreviousInVariableOrder(), () -> node.setPreviousInVariableOrder(node),
-        () -> node.getNextInVariableOrder(), () -> node.setNextInVariableOrder(node),
-        () -> node.setQueueType(WINDOW), () -> node.setPreviousInAccessOrder(node),
-        () -> node.setNextInAccessOrder(node), () -> node.casWriteTime(1L, 2L),
-        () -> node.setPreviousInWriteOrder(node), () -> node.setNextInWriteOrder(node));
+    @SuppressWarnings("MethodReferenceUsage")
+    List<Runnable> methods = List.of(
+        () -> node.getPreviousInVariableOrder(),    () -> node.getNextInVariableOrder(),
+        () -> node.setPreviousInVariableOrder(node),() -> node.setNextInVariableOrder(node),
+        () -> node.setPreviousInAccessOrder(node),  () -> node.setNextInAccessOrder(node),
+        () -> node.setPreviousInWriteOrder(node),   () -> node.setNextInWriteOrder(node),
+        () -> node.casVariableTime(1L, 2L),         () -> node.casWriteTime(1L, 2L),
+        () -> node.setQueueType(WINDOW));
     for (var method : methods) {
       try {
         method.run();
@@ -1971,8 +1980,7 @@ public final class BoundedLocalCacheTest {
   @Test
   @SuppressWarnings("unchecked")
   public void policy_unsupported() {
-    Policy<Object, Object> policy = Mockito.mock(
-        Policy.class, invocation -> invocation.callRealMethod());
+    Policy<Object, Object> policy = Mockito.mock(Policy.class, InvocationOnMock::callRealMethod);
     var eviction = Mockito.mock(Eviction.class, InvocationOnMock::callRealMethod);
     var fixedExpiration = Mockito.mock(FixedExpiration.class, InvocationOnMock::callRealMethod);
     var varExpiration = Mockito.mock(VarExpiration.class, InvocationOnMock::callRealMethod);

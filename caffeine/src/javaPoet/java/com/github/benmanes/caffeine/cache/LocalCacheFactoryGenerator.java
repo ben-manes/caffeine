@@ -18,9 +18,9 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -53,6 +53,7 @@ import com.github.benmanes.caffeine.cache.local.AddSubtype;
 import com.github.benmanes.caffeine.cache.local.Finalize;
 import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
 import com.github.benmanes.caffeine.cache.local.LocalCacheRule;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -108,9 +109,9 @@ public final class LocalCacheFactoryGenerator {
 
   private void reformat() throws FormatterException, IOException {
     try (Stream<Path> stream = Files.walk(directory)) {
-      List<Path> files = stream
+      ImmutableList<Path> files = stream
           .filter(path -> path.toString().endsWith(".java"))
-          .collect(toList());
+          .collect(toImmutableList());
       var formatter = new Formatter();
       for (Path file : files) {
         String source = Files.readString(file);

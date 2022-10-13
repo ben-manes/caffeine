@@ -195,7 +195,7 @@ abstract class BaseMpscLinkedArrayQueueColdProducerFields<E>
   protected E[] producerBuffer;
 }
 
-@SuppressWarnings({"PMD", "NullAway"})
+@SuppressWarnings({"NullAway", "PMD"})
 abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdProducerFields<E> {
   static final VarHandle REF_ARRAY;
   static final VarHandle P_INDEX;

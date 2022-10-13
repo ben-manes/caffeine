@@ -68,7 +68,7 @@ public final class LocalCacheSubject extends Subject {
     return LocalCacheSubject::new;
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
+  @SuppressWarnings({"rawtypes", "unchecked"})
   public void isValid() {
     if (actual instanceof BoundedLocalCache<?, ?>) {
       var bounded = (BoundedLocalCache<Object, Object>) actual;

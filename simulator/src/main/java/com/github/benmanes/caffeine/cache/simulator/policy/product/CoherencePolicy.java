@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -68,7 +68,7 @@ public final class CoherencePolicy implements Policy {
     var settings = new CoherenceSettings(config);
     return settings.policy().stream()
         .map(policy -> new CoherencePolicy(settings, policy))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Set;
 
@@ -73,7 +73,7 @@ public final class LinkedPolicy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
       new LinkedPolicy(config, characteristics, admission, policy)
-    ).collect(toSet());
+    ).collect(toUnmodifiableSet());
   }
 
   @Override

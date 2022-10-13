@@ -21,7 +21,7 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -496,7 +496,8 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
-        return keys.stream().collect(toMap(key -> intern(intern(key).negate()), identity()));
+        return keys.stream().collect(toUnmodifiableMap(
+            key -> intern(intern(key).negate()), identity()));
       }
     },
     /** A bulk-only loader that loads more than requested. */

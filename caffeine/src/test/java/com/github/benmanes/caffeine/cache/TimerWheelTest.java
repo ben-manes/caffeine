@@ -20,7 +20,6 @@ import static com.github.benmanes.caffeine.cache.TimerWheel.SPANS;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
-import static java.util.stream.Collectors.toList;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
@@ -449,6 +448,7 @@ public final class TimerWheelTest {
   }
 
   @DataProvider(name = "iterator")
+  @SuppressWarnings("MethodReferenceUsage")
   public Object[][] providesIterators() {
     Iterable<Node<Long, Long>> descending = () -> timerWheel.descendingIterator();
     Iterable<Node<Long, Long>> ascending = () -> timerWheel.iterator();
@@ -465,11 +465,11 @@ public final class TimerWheelTest {
     }).boxed().collect(toImmutableList());
 
     var ascending = Streams.stream(timerWheel.iterator())
-        .limit(input.size() + 1).map(Node::getKey).collect(toList());
+        .limit(input.size() + 1).map(Node::getKey).collect(toImmutableList());
     assertThat(ascending).containsExactlyElementsIn(input).inOrder();
 
     var descending = Streams.stream(timerWheel.descendingIterator())
-        .limit(input.size() + 1).map(Node::getKey).collect(toList());
+        .limit(input.size() + 1).map(Node::getKey).collect(toImmutableList());
     assertThat(descending).containsExactlyElementsIn(input.reverse()).inOrder();
   }
 
@@ -481,18 +481,18 @@ public final class TimerWheelTest {
     var input = IntStream.range(0, range).mapToLong(i -> {
       return ThreadLocalRandom.current().nextLong(
           TimeUnit.SECONDS.toNanos(1), TimeUnit.DAYS.toNanos(7));
-    }).boxed().sorted().collect(toList());
+    }).boxed().sorted().collect(toImmutableList());
     for (long time : input) {
       timerWheel.schedule(new Timer(time));
     }
 
     var ascending = Streams.stream(timerWheel.iterator())
-        .limit(range + 1).map(Node::getKey).collect(toList());
+        .limit(range + 1).map(Node::getKey).collect(toImmutableList());
     assertThat(ascending).containsExactlyElementsIn(input);
     assertThat(ascending).containsExactlyElementsIn(snapshot(/* ascending */ true)).inOrder();
 
     var descending = Streams.stream(timerWheel.descendingIterator())
-        .limit(range + 1).map(Node::getKey).collect(toList());
+        .limit(range + 1).map(Node::getKey).collect(toImmutableList());
     assertThat(descending).containsExactlyElementsIn(snapshot(/* ascending */ false)).inOrder();
     assertThat(descending).containsExactlyElementsIn(input);
   }
@@ -515,7 +515,7 @@ public final class TimerWheelTest {
   @Test
   public void sentinel_unsupported() {
     var node = new Sentinel<>();
-    List<Runnable> methods = List.of(() -> node.getKeyReference(), () -> node.getValueReference());
+    List<Runnable> methods = List.of(node::getKeyReference, node::getValueReference);
     for (var method : methods) {
       try {
         method.run();

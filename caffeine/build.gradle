@@ -26,7 +26,7 @@ eclipse.classpath.file.whenMerged {
   entries.findAll { it instanceof SourceFolder && it.output == 'bin/codeGen' }*.output = 'bin/main'
 }
 
-plugins.withType(EclipsePlugin) {
+plugins.withType(EclipsePlugin).configureEach {
   project.eclipse.classpath.plusConfigurations += [ configurations.javaPoetCompileClasspath ]
 }
 

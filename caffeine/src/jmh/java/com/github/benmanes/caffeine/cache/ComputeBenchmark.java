@@ -38,7 +38,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings("PMD.MethodNamingConventions")
+@SuppressWarnings({"LexicographicalAnnotationAttributeListing", "PMD.MethodNamingConventions"})
 public class ComputeBenchmark {
   static final int SIZE = (2 << 14);
   static final int MASK = SIZE - 1;

@@ -76,6 +76,7 @@ public final class JavaSerializationCopierTest {
     copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader());
   }
 
+  @SuppressWarnings("TimeZoneUsage")
   @Test(expectedExceptions = CacheException.class)
   public void deserializable_classNotFound() {
     var copier = new JavaSerializationCopier() {
@@ -105,14 +106,14 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test(dataProvider = "copier")
-  @SuppressWarnings({"JdkObsolete", "JavaUtilDate", "UndefinedEquals"})
+  @SuppressWarnings({"JavaUtilDate", "JdkObsolete", "UndefinedEquals"})
   public void deepCopy_date(Copier copier) {
     Date date = new Date();
     assertThat(copy(copier, date)).isEqualTo(date);
   }
 
   @Test(dataProvider = "copier")
-  @SuppressWarnings({"JdkObsolete", "JavaUtilDate"})
+  @SuppressWarnings({"JavaUtilDate", "JdkObsolete"})
   public void deepCopy_calendar(Copier copier) {
     Calendar calendar = Calendar.getInstance();
     calendar.setTime(new Date());

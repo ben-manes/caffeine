@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.List;
 import java.util.Set;
@@ -84,7 +84,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
     DClockSettings settings = new DClockSettings(config);
     return settings.percentActive().stream()
         .map(percentActive -> new DClockPolicy(settings, percentActive))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

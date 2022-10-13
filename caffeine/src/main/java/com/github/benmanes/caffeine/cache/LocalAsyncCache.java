@@ -87,7 +87,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   default CompletableFuture<V> get(K key, BiFunction<? super K, ? super Executor,
       ? extends CompletableFuture<? extends V>> mappingFunction, boolean recordStats) {
     long startTime = cache().statsTicker().read();
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     CompletableFuture<? extends V>[] result = new CompletableFuture[1];
     CompletableFuture<V> future = cache().computeIfAbsent(key, k -> {
       @SuppressWarnings("unchecked")
@@ -741,7 +741,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     public @Nullable V replace(K key, V value) {
       requireNonNull(value);
 
-      @SuppressWarnings({"unchecked", "rawtypes"})
+      @SuppressWarnings({"rawtypes", "unchecked"})
       V[] oldValue = (V[]) new Object[1];
       boolean[] done = { false };
       for (;;) {
@@ -825,7 +825,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           }
         }
 
-        @SuppressWarnings({"unchecked", "rawtypes"})
+        @SuppressWarnings({"rawtypes", "unchecked"})
         CompletableFuture<V>[] future = new CompletableFuture[1];
         CompletableFuture<V> computed = delegate.compute(key, (k, valueFuture) -> {
           if ((valueFuture != null) && valueFuture.isDone()
@@ -853,7 +853,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
       requireNonNull(remappingFunction);
 
-      @SuppressWarnings({"unchecked", "rawtypes"})
+      @SuppressWarnings({"rawtypes", "unchecked"})
       V[] newValue = (V[]) new Object[1];
       for (;;) {
         Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
@@ -886,7 +886,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       // Keep in sync with BoundedVarExpiration.computeAsync(key, remappingFunction, expiry)
       requireNonNull(remappingFunction);
 
-      @SuppressWarnings({"unchecked", "rawtypes"})
+      @SuppressWarnings({"rawtypes", "unchecked"})
       V[] newValue = (V[]) new Object[1];
       for (;;) {
         Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));

@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -56,7 +56,7 @@ public final class TCachePolicy implements KeyOnlyPolicy {
     var settings = new TCacheSettings(config);
     return settings.policy().stream()
         .map(policy -> new TCachePolicy(settings, policy))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

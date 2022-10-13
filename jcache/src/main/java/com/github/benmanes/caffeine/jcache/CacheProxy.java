@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toUnmodifiableList;
 
 import java.io.Closeable;
 import java.lang.System.Logger;
@@ -100,7 +101,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   private volatile boolean closed;
 
-  @SuppressWarnings({"PMD.ExcessiveParameterList", "NullAway"})
+  @SuppressWarnings({"NullAway", "PMD.ExcessiveParameterList"})
   public CacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache,
@@ -294,7 +295,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private void loadAllAndKeepExisting(Set<? extends K> keys) {
     List<K> keysToLoad = keys.stream()
         .filter(key -> !cache.asMap().containsKey(key))
-        .collect(toList());
+        .collect(toUnmodifiableList());
     @SuppressWarnings("NullAway")
     Map<K, V> result = cacheLoader.orElseThrow().loadAll(keysToLoad);
     for (var entry : result.entrySet()) {
@@ -812,8 +813,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Returns the updated expirable value after performing the post-processing actions. */
-  @SuppressWarnings({"fallthrough", "PMD.MissingBreakInSwitch",
-    "PMD.SwitchStmtsShouldHaveDefault", "NullAway"})
+  @SuppressWarnings({"fallthrough", "NullAway",
+    "PMD.MissingBreakInSwitch", "PMD.SwitchStmtsShouldHaveDefault"})
   private @Nullable Expirable<V> postProcess(Expirable<V> expirable,
       EntryProcessorEntry<K, V> entry, long currentTimeMS) {
     switch (entry.getAction()) {
@@ -1051,6 +1052,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (!configuration.isWriteThrough() || map.isEmpty()) {
       return null;
     }
+    @SuppressWarnings("CollectorMutability")
     List<Cache.Entry<? extends K, ? extends V>> entries = map.entrySet().stream()
         .map(entry -> new EntryProxy<>(entry.getKey(), entry.getValue()))
         .collect(toList());
@@ -1132,6 +1134,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param map the mapping of keys to expirable values
    * @return a deep or shallow copy of the mappings depending on the store by value setting
    */
+  @SuppressWarnings("CollectorMutability")
   protected final Map<K, V> copyMap(Map<K, Expirable<V>> map) {
     ClassLoader classLoader = cacheManager.getClassLoader();
     return map.entrySet().stream().collect(toMap(

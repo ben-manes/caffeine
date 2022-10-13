@@ -22,9 +22,9 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,6 +59,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
@@ -289,7 +290,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
+  @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_exceeds(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys()).join();
@@ -622,7 +623,7 @@ public final class AsyncLoadingCacheTest {
   @Test
   public void bulk_function_present() throws Exception {
     AsyncCacheLoader<Int, Int> loader = AsyncCacheLoader.bulk(keys -> {
-      return keys.stream().collect(toMap(identity(), identity()));
+      return keys.stream().collect(toImmutableMap(identity(), identity()));
     });
     assertThat(loader.asyncLoadAll(Int.setOf(1, 2), Runnable::run))
         .succeedsWith(Int.mapOf(1, 1, 2, 2));
@@ -649,7 +650,8 @@ public final class AsyncLoadingCacheTest {
   public void bulk_present() throws Exception {
     BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f =
         (keys, executor) -> {
-          Map<Int, Int> results = keys.stream().collect(toMap(identity(), identity()));
+          ImmutableMap<Int, Int> results = keys.stream()
+              .collect(toImmutableMap(identity(), identity()));
           return CompletableFuture.completedFuture(results);
         };
     var loader = AsyncCacheLoader.bulk(f);

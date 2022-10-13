@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.testing;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.testng.Assert.fail;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
@@ -33,13 +33,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.testng.log4testng.Logger;
 
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -72,7 +70,7 @@ public final class Threads {
       long timeNS = future.get(TIMEOUT, TimeUnit.SECONDS);
       logger.debug("\nExecuted in " + TimeUnit.NANOSECONDS.toSeconds(timeNS) + " second(s)");
     } catch (ExecutionException e) {
-      fail("Exception during test: " + e.toString(), e);
+      fail("Exception during test: " + e, e);
     } catch (TimeoutException e) {
       handleTimout(failures, es, e);
     } catch (InterruptedException e) {
@@ -100,7 +98,7 @@ public final class Threads {
     var keys = IntStream.range(0, iterations)
         .map(i -> ThreadLocalRandom.current().nextInt(iterations / 100))
         .mapToObj(Int::valueOf)
-        .collect(Collectors.toList());
+        .collect(toImmutableList());
     return shuffle(nThreads, keys);
   }
 
@@ -110,12 +108,12 @@ public final class Threads {
    * @param samples the number of variants to create
    * @param baseline the base working set to build from
    */
-  private static <T> List<List<T>> shuffle(int samples, Collection<T> baseline) {
+  private static <T> List<List<T>> shuffle(int samples, List<T> baseline) {
     var workingSets = new ArrayList<List<T>>(samples);
+    var workingSet = new ArrayList<T>(baseline);
     for (int i = 0; i < samples; i++) {
-      var workingSet = new ArrayList<T>(baseline);
       Collections.shuffle(workingSet);
-      workingSets.add(ImmutableList.copyOf(workingSet));
+      workingSets.add(List.copyOf(workingSet));
     }
     return List.copyOf(workingSets);
   }

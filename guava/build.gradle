@@ -35,9 +35,6 @@ tasks.withType(Javadoc).configureEach {
 
 tasks.named('test').configure {
   useJUnitPlatform()
-}
-
-tasks.withType(Test) {
   systemProperties [
     'guava.osgi.version': versions.guava,
     'caffeine.osgi.jar': project(':caffeine').jar.archivePath.path,

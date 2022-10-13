@@ -23,9 +23,9 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -386,7 +386,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllFunction_immutable_result(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(),
-        keys -> keys.stream().collect(toMap(identity(), identity()))).join();
+        keys -> keys.stream().collect(toImmutableMap(identity(), identity()))).join();
     result.clear();
   }
 
@@ -427,7 +427,7 @@ public final class AsyncCacheTest {
     expect.put(context.lastKey(), context.lastKey().negate());
     var result = cache.getAll(expect.keySet(), keys -> {
       assertThat(keys).hasSizeLessThan(expect.size());
-      return keys.stream().collect(toMap(identity(), Int::negate));
+      return keys.stream().collect(toImmutableMap(identity(), Int::negate));
     }).join();
 
     assertThat(result).isEqualTo(expect);
@@ -442,7 +442,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return moreKeys.stream().collect(toMap(identity(), Int::negate));
+      return moreKeys.stream().collect(toImmutableMap(identity(), Int::negate));
     }).join();
 
     assertThat(result).containsExactlyKeys(context.absentKeys());
@@ -453,7 +453,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
-    var actual = context.absentKeys().stream().collect(toMap(Int::negate, identity()));
+    var actual = context.absentKeys().stream().collect(toImmutableMap(Int::negate, identity()));
     var result = cache.getAll(context.absentKeys(), keys -> actual).join();
 
     assertThat(result).isEmpty();
@@ -472,7 +472,7 @@ public final class AsyncCacheTest {
         context.original().keySet(), context.original().keySet());
     var result = cache.getAll(keys, keysToLoad -> {
       assertThat(keysToLoad).containsNoDuplicates();
-      return keysToLoad.stream().collect(toMap(identity(), Int::negate));
+      return keysToLoad.stream().collect(toImmutableMap(identity(), Int::negate));
     }).join();
 
     assertThat(context).stats().hits(context.initialSize())
@@ -489,7 +489,7 @@ public final class AsyncCacheTest {
     Collections.shuffle(keys);
 
     var result = cache.getAll(keys, keysToLoad -> {
-      return keysToLoad.stream().collect(toMap(identity(), Int::negate));
+      return keysToLoad.stream().collect(toImmutableMap(identity(), Int::negate));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
@@ -504,7 +504,7 @@ public final class AsyncCacheTest {
     Collections.shuffle(keys);
 
     var result = cache.getAll(keys, keysToLoad -> {
-      return keysToLoad.stream().collect(toMap(identity(), Int::negate));
+      return keysToLoad.stream().collect(toImmutableMap(identity(), Int::negate));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
@@ -534,7 +534,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return moreKeys.stream().collect(toMap(identity(), Int::negate));
+      return moreKeys.stream().collect(toImmutableMap(identity(), Int::negate));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
@@ -604,7 +604,7 @@ public final class AsyncCacheTest {
   public void getAllBifunction_immutable_result(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
       return CompletableFuture.completedFuture(
-          keys.stream().collect(toMap(identity(), identity())));
+          keys.stream().collect(toImmutableMap(identity(), identity())));
     }).join();
     result.clear();
   }
@@ -682,7 +682,7 @@ public final class AsyncCacheTest {
     var result = cache.getAll(expect.keySet(), (keys, executor) -> {
       assertThat(keys.size()).isLessThan(expect.size());
       return CompletableFuture.completedFuture(
-          keys.stream().collect(toMap(identity(), Int::negate)));
+          keys.stream().collect(toImmutableMap(identity(), Int::negate)));
     }).join();
 
     assertThat(result).containsExactlyEntriesIn(expect);
@@ -698,7 +698,7 @@ public final class AsyncCacheTest {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
       return CompletableFuture.completedFuture(
-          moreKeys.stream().collect(toMap(identity(), Int::negate)));
+          moreKeys.stream().collect(toImmutableMap(identity(), Int::negate)));
     }).join();
 
     assertThat(result).containsExactlyKeys(context.absentKeys());
@@ -709,7 +709,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
-    var actual = context.absentKeys().stream().collect(toMap(Int::negate, identity()));
+    var actual = context.absentKeys().stream().collect(toImmutableMap(Int::negate, identity()));
     var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
       return CompletableFuture.completedFuture(actual);
     }).join();
@@ -731,7 +731,7 @@ public final class AsyncCacheTest {
     var result = cache.getAll(keys, (keysToLoad, executor) -> {
       assertThat(keysToLoad).containsNoDuplicates();
       return CompletableFuture.completedFuture(
-          keysToLoad.stream().collect(toMap(identity(), Int::negate)));
+          keysToLoad.stream().collect(toImmutableMap(identity(), Int::negate)));
     }).join();
 
     assertThat(result).containsExactlyKeys(keys);
@@ -750,7 +750,7 @@ public final class AsyncCacheTest {
     var result = cache.getAll(keys, (keysToLoad, executor) -> {
       assertThat(keysToLoad).containsExactlyElementsIn(context.absentKeys());
       return CompletableFuture.completedFuture(
-          keysToLoad.stream().collect(toMap(identity(), Int::negate)));
+          keysToLoad.stream().collect(toImmutableMap(identity(), Int::negate)));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
@@ -767,7 +767,7 @@ public final class AsyncCacheTest {
     var result = cache.getAll(keys, (keysToLoad, executor) -> {
       assertThat(keysToLoad).containsExactlyElementsIn(context.absentKeys());
       return CompletableFuture.completedFuture(
-          keysToLoad.stream().collect(toMap(identity(), Int::negate)));
+          keysToLoad.stream().collect(toImmutableMap(identity(), Int::negate)));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
@@ -799,7 +799,7 @@ public final class AsyncCacheTest {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
       return CompletableFuture.completedFuture(
-          moreKeys.stream().collect(toMap(identity(), Int::negate)));
+          moreKeys.stream().collect(toImmutableMap(identity(), Int::negate)));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }

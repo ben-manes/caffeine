@@ -43,7 +43,7 @@ import org.junit.Test;
  *
  * Ported from Eclipse Collections 11.0.
  */
-@SuppressWarnings({"all", "unchecked"})
+@SuppressWarnings({"all", "IdentityConversion", "unchecked"})
 public abstract class ConcurrentHashMapTest extends ConcurrentHashMapTestCase {
   public static final MutableMap<Integer, MutableBag<Integer>> SMALL_BAG_MUTABLE_MAP =
       Interval.oneTo(100).groupBy(each -> each % 10).toMap(HashBag::new);

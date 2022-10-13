@@ -18,9 +18,9 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -48,6 +48,7 @@ import com.github.benmanes.caffeine.cache.node.AddValue;
 import com.github.benmanes.caffeine.cache.node.Finalize;
 import com.github.benmanes.caffeine.cache.node.NodeContext;
 import com.github.benmanes.caffeine.cache.node.NodeRule;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -111,9 +112,9 @@ public final class NodeFactoryGenerator {
 
   private void reformat() throws FormatterException, IOException {
     try (Stream<Path> stream = Files.walk(directory)) {
-      List<Path> files = stream
+      ImmutableList<Path> files = stream
           .filter(path -> path.toString().endsWith(".java"))
-          .collect(toList());
+          .collect(toImmutableList());
       var formatter = new Formatter();
       for (Path file : files) {
         String source = Files.readString(file);
@@ -136,14 +137,14 @@ public final class NodeFactoryGenerator {
   private NavigableMap<String, Set<Feature>> getClassNameToFeatures() {
     var classNameToFeatures = new TreeMap<String, Set<Feature>>();
     for (List<Object> combination : combinations()) {
-      Set<Feature> features = getFeatures(combination);
-      String className = Feature.makeClassName(features);
-      classNameToFeatures.put(encode(className), ImmutableSet.copyOf(features));
+      var features = getFeatures(combination);
+      var className = Feature.makeClassName(features);
+      classNameToFeatures.put(encode(className), features);
     }
     return classNameToFeatures;
   }
 
-  private Set<Feature> getFeatures(List<Object> combination) {
+  private ImmutableSet<Feature> getFeatures(List<Object> combination) {
     var features = new LinkedHashSet<Feature>();
     features.add((Feature) combination.get(0));
     features.add((Feature) combination.get(1));
@@ -155,7 +156,7 @@ public final class NodeFactoryGenerator {
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       features.remove(Feature.MAXIMUM_SIZE);
     }
-    return features;
+    return ImmutableSet.copyOf(features);
   }
 
   @SuppressWarnings("NullAway")

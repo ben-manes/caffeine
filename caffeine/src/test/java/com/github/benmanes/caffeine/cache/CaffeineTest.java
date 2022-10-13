@@ -50,7 +50,7 @@ import com.google.common.testing.NullPointerTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"PreferJavaTimeOverload", "CheckReturnValue"})
+@SuppressWarnings({"CheckReturnValue", "PreferJavaTimeOverload"})
 public final class CaffeineTest {
   @Mock StatsCounter statsCounter;
   @Mock Expiry<Object, Object> expiry;

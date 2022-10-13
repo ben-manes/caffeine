@@ -45,8 +45,9 @@ import junit.framework.Test;
  * Contains tests applicable to all jdk8+ Collection implementations.
  * An extension of CollectionTest.
  */
-@SuppressWarnings({"rawtypes", "try", "unchecked", "CatchAndPrintStackTrace", "MissingDefault",
-  "MissingFail", "ReturnValueIgnored", "UnnecessaryParentheses"})
+@SuppressWarnings({"CatchAndPrintStackTrace", "CollectorMutability", "MethodReferenceUsage",
+  "MissingDefault", "MissingFail", "rawtypes", "ReturnValueIgnored", "try", "unchecked",
+  "UnnecessaryParentheses"})
 public class Collection8Test extends JSR166TestCase {
     final CollectionImplementation impl;
 

@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -65,7 +65,7 @@ public final class OhcPolicy implements KeyOnlyPolicy {
     OhcSettings settings = new OhcSettings(config);
     return settings.policy().stream()
         .map(policy -> new OhcPolicy(settings, policy))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

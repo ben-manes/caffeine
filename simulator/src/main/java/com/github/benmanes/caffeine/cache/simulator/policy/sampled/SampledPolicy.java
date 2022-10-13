@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,7 +85,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     BasicSettings settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
       new SampledPolicy(admission, policy, config)
-    ).collect(toSet());
+    ).collect(toUnmodifiableSet());
   }
 
   @Override
@@ -225,7 +225,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      */
     LFU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min(Comparator.comparingLong(node -> node.frequency)).orElseThrow();
+        return sample.stream().min(Comparator.comparingInt(node -> node.frequency)).orElseThrow();
       }
     },
 
@@ -234,7 +234,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      */
     MFU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().max(Comparator.comparingLong(node -> node.frequency)).orElseThrow();
+        return sample.stream().max(Comparator.comparingInt(node -> node.frequency)).orElseThrow();
       }
     },
 

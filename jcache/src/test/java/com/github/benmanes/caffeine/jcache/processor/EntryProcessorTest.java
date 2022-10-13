@@ -16,9 +16,9 @@
 package com.github.benmanes.caffeine.jcache.processor;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -39,6 +39,7 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
 /**
@@ -139,8 +140,8 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     }
 
     @Override
-    public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-      return Streams.stream(keys).collect(toMap(identity(), this::load));
+    public ImmutableMap<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      return Streams.stream(keys).collect(toImmutableMap(identity(), this::load));
     }
   }
 }

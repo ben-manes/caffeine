@@ -15,12 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.function.Function.identity;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -94,8 +95,8 @@ public final class MultiThreadedTest {
     Threads.runTest(cache, asyncOperations);
   }
 
-  @SuppressWarnings({"rawtypes", "ReturnValueIgnored", "FutureReturnValueIgnored",
-      "SizeGreaterThanOrEqualsZero", "SelfEquals"})
+  @SuppressWarnings({"FutureReturnValueIgnored", "MethodReferenceUsage", "rawtypes",
+    "ReturnValueIgnored", "SelfEquals", "SizeGreaterThanOrEqualsZero"})
   List<BiConsumer<LoadingCache<Int, Int>, Int>> operations = List.of(
       // LoadingCache
       (cache, key) -> { cache.get(key); },
@@ -104,7 +105,7 @@ public final class MultiThreadedTest {
 
       // Cache
       (cache, key) -> { cache.getIfPresent(key); },
-      (cache, key) -> { cache.get(key, Function.identity()); },
+      (cache, key) -> { cache.get(key, identity()); },
       (cache, key) -> { cache.getAllPresent(List.of(key)); },
       (cache, key) -> { cache.put(key, key); },
       (cache, key) -> { cache.putAll(Map.of(key, key)); },
@@ -155,7 +156,7 @@ public final class MultiThreadedTest {
         }
       });
 
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"FutureReturnValueIgnored", "MethodReferenceUsage"})
   List<BiConsumer<AsyncLoadingCache<Int, Int>, Int>> asyncOperations = List.of(
       (cache, key) -> { cache.getIfPresent(key); },
       (cache, key) -> { cache.get(key, k -> key); },

@@ -17,7 +17,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @deprecated Don't use in new tests
  */
 @Deprecated
-@SuppressWarnings({"all", "EqualsUnsafeCast", "EqualsBrokenForNull"})
+@SuppressWarnings({"all", "EqualsBrokenForNull", "EqualsUnsafeCast"})
 public final class IntegerSum implements Sum {
   private static final long serialVersionUID = 1L;
 

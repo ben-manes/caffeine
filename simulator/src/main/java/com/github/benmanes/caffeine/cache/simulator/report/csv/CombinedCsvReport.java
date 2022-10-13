@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
-import static java.util.stream.Collectors.toList;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.nio.file.Path;
 import java.text.NumberFormat;
@@ -84,7 +84,7 @@ public final class CombinedCsvReport implements Runnable {
     var policies = newCsvParser()
         .parseAllRecords(inputFiles.values().iterator().next().toFile()).stream()
         .map(record -> record.getString("Policy"))
-        .collect(toList());
+        .collect(toImmutableList());
     var formatter = NumberFormat.getInstance(Locale.US);
     var headers = Stream
         .concat(Stream.of("Policy"), inputFiles.keySet().stream().map(formatter::format))

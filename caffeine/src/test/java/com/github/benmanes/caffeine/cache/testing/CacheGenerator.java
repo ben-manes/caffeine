@@ -87,6 +87,7 @@ public final class CacheGenerator {
   }
 
   /** Returns the Cartesian set of the possible cache configurations. */
+  @SuppressWarnings("IdentityConversion")
   private Set<List<Object>> combinations() {
     var asyncLoader = ImmutableSet.of(true, false);
     var loaders = ImmutableSet.copyOf(cacheSpec.loader());

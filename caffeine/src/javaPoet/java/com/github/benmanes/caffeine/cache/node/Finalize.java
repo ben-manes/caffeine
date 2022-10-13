@@ -38,7 +38,9 @@ public class Finalize extends NodeRule {
   @Override
   protected void execute() {
     if (!context.suppressedWarnings.isEmpty()) {
-      var format = "{" + StringUtils.repeat("$S", ", ", context.suppressedWarnings.size()) + "}";
+      var format = (context.suppressedWarnings.size() == 1)
+          ? "$S"
+          : "{" + StringUtils.repeat("$S", ", ", context.suppressedWarnings.size()) + "}";
       context.nodeSubtype.addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
           .addMember("value", format, context.suppressedWarnings.toArray())
           .build());

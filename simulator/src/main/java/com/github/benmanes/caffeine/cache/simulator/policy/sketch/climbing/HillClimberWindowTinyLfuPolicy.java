@@ -21,8 +21,8 @@ import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbin
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.PROTECTED;
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.WINDOW;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toSet;
 
 import java.util.HashSet;
 import java.util.List;
@@ -40,6 +40,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
@@ -377,11 +378,11 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     public double percentMainProtected() {
       return config().getDouble("hill-climber-window-tiny-lfu.percent-main-protected");
     }
-    public Set<HillClimberType> strategy() {
+    public ImmutableSet<HillClimberType> strategy() {
       return config().getStringList("hill-climber-window-tiny-lfu.strategy").stream()
           .map(strategy -> strategy.replace('-', '_').toUpperCase(US))
           .map(HillClimberType::valueOf)
-          .collect(toSet());
+          .collect(toImmutableSet());
     }
   }
 }

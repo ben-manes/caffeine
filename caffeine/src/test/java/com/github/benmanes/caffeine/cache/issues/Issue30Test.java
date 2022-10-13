@@ -55,7 +55,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 @Test(groups = "isolated")
 @Listeners(CacheValidationListener.class)
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"PreferJavaTimeOverload", "TimeZoneUsage"})
 public final class Issue30Test {
   private static final boolean DEBUG = false;
 

@@ -25,12 +25,13 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -353,7 +354,7 @@ public final class AsyncAsMapTest {
     var entries = IntStream
         .range(startKey, 100 + startKey)
         .mapToObj(Int::valueOf)
-        .collect(toMap(identity(), key -> key.negate().asFuture()));
+        .collect(toImmutableMap(identity(), key -> key.negate().asFuture()));
     cache.asMap().putAll(entries);
     assertThat(cache).hasSize(100 + context.initialSize());
   }
@@ -361,7 +362,8 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void putAll_replace(AsyncCache<Int, Int> cache, CacheContext context) {
-    var entries = context.original().keySet().stream().collect(toMap(identity(), Int::asFuture));
+    var entries = context.original().keySet().stream()
+        .collect(toImmutableMap(identity(), Int::asFuture));
     cache.asMap().putAll(entries);
     assertThat(cache).containsExactlyEntriesIn(entries);
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -1391,7 +1393,8 @@ public final class AsyncAsMapTest {
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void equalsAndHashCodeFail_empty(AsyncCache<Int, Int> cache, CacheContext context) {
-    var other = Stream.of(1, 2, 3).collect(toMap(Int::valueOf, key -> Int.futureOf(-key)));
+    var other = Stream.of(1, 2, 3)
+        .collect(toUnmodifiableMap(Int::valueOf, key -> Int.futureOf(-key)));
     assertThat(cache.asMap().equals(other)).isFalse();
     assertThat(other.equals(cache.asMap())).isFalse();
     assertThat(cache.asMap().hashCode()).isNotEqualTo(other.hashCode());
@@ -1403,7 +1406,8 @@ public final class AsyncAsMapTest {
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void equalsAndHashCodeFail_present(
       AsyncCache<Int, Int> cache, CacheContext context) {
-    var other = Stream.of(1, 2, 3).collect(toMap(Int::valueOf, key -> Int.futureOf(-key)));
+    var other = Stream.of(1, 2, 3)
+        .collect(toUnmodifiableMap(Int::valueOf, key -> Int.futureOf(-key)));
     assertThat(cache.asMap().equals(other)).isFalse();
     assertThat(other.equals(cache.asMap())).isFalse();
     assertThat(cache.asMap().hashCode()).isNotEqualTo(other.hashCode());
@@ -1850,15 +1854,15 @@ public final class AsyncAsMapTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void values_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
     var futures = cache.asMap().values().toArray(new CompletableFuture<?>[0]);
-    var values1 = Stream.of(futures).map(CompletableFuture::join).collect(toList());
+    var values1 = Stream.of(futures).map(CompletableFuture::join).collect(toImmutableList());
     assertThat(values1).containsExactlyElementsIn(context.original().values());
 
     var array = cache.asMap().values().toArray(new CompletableFuture<?>[0]);
-    var values2 = Stream.of(array).map(CompletableFuture::join).collect(toList());
+    var values2 = Stream.of(array).map(CompletableFuture::join).collect(toImmutableList());
     assertThat(values2).containsExactlyElementsIn(context.original().values());
 
     var func = cache.asMap().values().toArray(CompletableFuture<?>[]::new);
-    var values3 = Stream.of(func).map(CompletableFuture::join).collect(toList());
+    var values3 = Stream.of(func).map(CompletableFuture::join).collect(toImmutableList());
     assertThat(values3).containsExactlyElementsIn(context.original().values());
   }
 

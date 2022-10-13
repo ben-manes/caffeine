@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Arrays;
 import java.util.List;
@@ -76,7 +76,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
     S4WindowTinyLfuSettings settings = new S4WindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new S4WindowTinyLfuPolicy(percentMain, settings))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

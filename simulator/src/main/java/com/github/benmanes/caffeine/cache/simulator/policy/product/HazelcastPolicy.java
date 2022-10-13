@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 import static com.google.common.base.Preconditions.checkState;
 import static com.hazelcast.config.MaxSizePolicy.ENTRY_COUNT;
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -75,7 +75,7 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
     var settings = new HazelcastSettings(config);
     return settings.policy().stream()
         .map(policy -> new HazelcastPolicy(settings, policy))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override
@@ -124,7 +124,7 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked", "TypeParameterUnusedInFormals"})
+  @SuppressWarnings({"rawtypes", "TypeParameterUnusedInFormals", "unchecked"})
   enum DummySerializationService implements SerializationService {
     INSTANCE;
 

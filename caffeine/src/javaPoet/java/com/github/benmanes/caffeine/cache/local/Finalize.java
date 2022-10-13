@@ -32,7 +32,9 @@ public final class Finalize extends LocalCacheRule {
   @Override
   protected void execute() {
     if (!context.suppressedWarnings.isEmpty()) {
-      var format = "{" + StringUtils.repeat("$S", ", ", context.suppressedWarnings.size()) + "}";
+      var format = (context.suppressedWarnings.size() == 1)
+          ? "$S"
+          : "{" + StringUtils.repeat("$S", ", ", context.suppressedWarnings.size()) + "}";
       context.cache.addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
           .addMember("value", format, context.suppressedWarnings.toArray())
           .build());

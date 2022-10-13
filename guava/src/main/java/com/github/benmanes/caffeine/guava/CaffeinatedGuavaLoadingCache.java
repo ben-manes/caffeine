@@ -57,7 +57,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   }
 
   @Override
-  @SuppressWarnings({"PMD.PreserveStackTrace", "NullAway"})
+  @SuppressWarnings({"NullAway", "PMD.PreserveStackTrace"})
   public V get(K key) throws ExecutionException {
     requireNonNull(key);
     try {
@@ -74,8 +74,8 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   }
 
   @Override
-  @SuppressWarnings({"PMD.PreserveStackTrace",
-    "PMD.AvoidCatchingNPE", "NullAway", "CatchingUnchecked"})
+  @SuppressWarnings({"CatchingUnchecked", "NullAway",
+    "PMD.AvoidCatchingNPE", "PMD.PreserveStackTrace"})
   public V getUnchecked(K key) {
     try {
       return cache.get(key);
@@ -91,7 +91,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   }
 
   @Override
-  @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.AvoidCatchingNPE", "CatchingUnchecked"})
+  @SuppressWarnings({"CatchingUnchecked", "PMD.AvoidCatchingNPE", "PMD.PreserveStackTrace"})
   public ImmutableMap<K, V> getAll(Iterable<? extends K> keys) throws ExecutionException {
     try {
       Map<K, V> result = cache.getAll(keys);

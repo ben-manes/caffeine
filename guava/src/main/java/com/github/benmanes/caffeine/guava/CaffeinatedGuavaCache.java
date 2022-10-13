@@ -65,7 +65,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   }
 
   @Override
-  @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.ExceptionAsFlowControl", "NullAway"})
+  @SuppressWarnings({"NullAway", "PMD.ExceptionAsFlowControl", "PMD.PreserveStackTrace"})
   public V get(K key, Callable<? extends V> valueLoader) throws ExecutionException {
     requireNonNull(valueLoader);
     try {
@@ -240,7 +240,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     CacheLoaderException(Exception e) {
       super(e);
     }
-    @SuppressWarnings({"UnsynchronizedOverridesSynchronized", "lgtm [java/non-sync-override]"})
+    @SuppressWarnings({"lgtm [java/non-sync-override]", "UnsynchronizedOverridesSynchronized"})
     @Override public Throwable fillInStackTrace() {
       return this;
     }

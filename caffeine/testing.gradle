@@ -1,7 +1,7 @@
 /**
  * The configuration to break cache tests into independent tasks.
  */
-test {
+tasks.named('test').configure {
   useTestNG()
   exclude 'com/github/benmanes/caffeine/cache/**'
 }

@@ -15,13 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
 
 import java.io.PrintStream;
 import java.math.RoundingMode;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.github.jamm.MemoryMeter;
@@ -30,6 +30,7 @@ import org.github.jamm.MemoryMeter.Guess;
 import com.google.common.base.Functions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.math.LongMath;
 import com.jakewharton.fliptables.FlipTable;
 
@@ -44,15 +45,16 @@ import com.jakewharton.fliptables.FlipTable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"PreferJavaTimeOverload", "PMD.MethodNamingConventions"})
+@SuppressWarnings({"LexicographicalAnnotationAttributeListing",
+  "PreferJavaTimeOverload", "PMD.MethodNamingConventions"})
 public final class MemoryBenchmark {
   // The number of entries added to minimize skew due to non-entry factors
   static final int FUZZY_SIZE = 25_000;
   // The maximum size, which is larger than the fuzzy factor due to Guava's early eviction
   static final int MAXIMUM_SIZE = 2 * FUZZY_SIZE;
   // The pre-computed entries to store into the cache when computing the per-entry overhead
-  static final Map<Integer, Integer> workingSet = IntStream.range(0, FUZZY_SIZE)
-      .boxed().collect(Collectors.toMap(identity(), i -> -i));
+  static final ImmutableMap<Integer, Integer> workingSet = IntStream.range(0, FUZZY_SIZE)
+      .boxed().collect(toImmutableMap(identity(), i -> -i));
 
   final MemoryMeter meter = new MemoryMeter()
       .withGuessing(Guess.FALLBACK_BEST)

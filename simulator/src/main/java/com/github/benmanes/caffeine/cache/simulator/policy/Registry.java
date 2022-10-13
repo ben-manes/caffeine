@@ -17,8 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.util.HashMap;
@@ -100,12 +100,12 @@ public final class Registry {
    * Returns all of the policies that have been configured for simulation and that meet a minimal
    * set of supported characteristics.
    */
-  public Set<Policy> policies() {
+  public ImmutableSet<Policy> policies() {
     return settings.policies().stream()
         .map(name -> checkNotNull(factories.get(name.toLowerCase(US)), "%s not found", name))
         .filter(factory -> factory.characteristics().containsAll(characteristics))
         .flatMap(factory -> factory.creator().apply(settings.config()).stream())
-        .collect(toSet());
+        .collect(toImmutableSet());
   }
 
   private void buildRegistry() {

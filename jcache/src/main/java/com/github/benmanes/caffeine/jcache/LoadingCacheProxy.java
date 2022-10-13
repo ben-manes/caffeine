@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
+import static java.util.stream.Collectors.toUnmodifiableList;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,7 +24,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -132,7 +133,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       if (entries.size() != keys.size()) {
         List<K> keysToLoad = keys.stream()
             .filter(key -> !entries.containsKey(key))
-            .collect(Collectors.<K>toList());
+            .collect(toUnmodifiableList());
         entries.putAll(cache.getAll(keysToLoad));
       }
 

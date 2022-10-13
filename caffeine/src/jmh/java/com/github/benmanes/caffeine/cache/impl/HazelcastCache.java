@@ -68,7 +68,7 @@ public final class HazelcastCache<K, V> implements BasicCache<K, V> {
     cache.clear();
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked", "TypeParameterUnusedInFormals"})
+  @SuppressWarnings({"rawtypes", "TypeParameterUnusedInFormals", "unchecked"})
   enum DummySerializationService implements SerializationService {
     INSTANCE;
 

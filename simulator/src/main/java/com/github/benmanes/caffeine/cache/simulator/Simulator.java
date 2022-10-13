@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
-import static java.util.stream.Collectors.toList;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.typesafe.config.ConfigFactory;
 
 /**
@@ -109,8 +110,8 @@ public final class Simulator {
   }
 
   private void report(List<PolicyActor> policies, Set<Characteristic> characteristics) {
-    var results = policies.stream().map(PolicyActor::stats).collect(toList());
     var reporter = settings.report().format().create(settings.config(), characteristics);
+    var results = policies.stream().map(PolicyActor::stats).collect(toImmutableList());
     reporter.print(results);
   }
 
@@ -125,11 +126,11 @@ public final class Simulator {
   }
 
   /** Returns the policy actors that asynchronously apply the trace events. */
-  private List<PolicyActor> getPolicyActors(Set<Characteristic> characteristics) {
+  private ImmutableList<PolicyActor> getPolicyActors(Set<Characteristic> characteristics) {
     var registry = new Registry(settings, characteristics);
     return registry.policies().stream()
         .map(policy -> new PolicyActor(Thread.currentThread(), policy, settings))
-        .collect(toList());
+        .collect(toImmutableList());
   }
 
   public static void main(String[] args) {

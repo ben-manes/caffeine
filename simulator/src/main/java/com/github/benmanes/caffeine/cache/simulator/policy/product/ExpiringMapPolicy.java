@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -55,7 +55,7 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
     var settings = new ExpiringMapSettings(config);
     return settings.policy().stream()
         .map(policy -> new ExpiringMapPolicy(settings, policy))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

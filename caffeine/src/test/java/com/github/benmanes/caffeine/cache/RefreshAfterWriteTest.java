@@ -320,7 +320,7 @@ public final class RefreshAfterWriteTest {
           Int key, Int oldValue, Executor executor) {
         var future = new CompletableFuture<Int>();
         future.orTimeout(0, TimeUnit.SECONDS);
-        await().until(() -> future.isDone());
+        await().until(future::isDone);
         return future;
       }
     };

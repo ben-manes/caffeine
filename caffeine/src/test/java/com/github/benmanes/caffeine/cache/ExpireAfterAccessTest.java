@@ -23,10 +23,10 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VA
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -467,7 +467,7 @@ public final class ExpireAfterAccessTest {
       CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var result = expireAfterAccess.oldest(stream -> stream
         .limit(context.initialSize() / 2)
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
@@ -477,7 +477,7 @@ public final class ExpireAfterAccessTest {
   public void oldestFunc_full(Cache<Int, Int> cache,
       CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var result = expireAfterAccess.oldest(stream -> stream
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache).containsExactlyEntriesIn(result);
   }
 
@@ -488,7 +488,7 @@ public final class ExpireAfterAccessTest {
   public void oldestFunc_order(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var oldest = expireAfterAccess.oldest(stream ->
-        stream.map(Map.Entry::getKey).collect(toList()));
+        stream.map(Map.Entry::getKey).collect(toImmutableList()));
     assertThat(oldest).containsExactlyElementsIn(context.original().keySet()).inOrder();
   }
 
@@ -496,7 +496,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(mustExpireWithAnyOf = AFTER_ACCESS, population = {Population.PARTIAL, Population.FULL})
   public void oldestFunc_metadata(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    var entries = expireAfterAccess.oldest(stream -> stream.collect(toList()));
+    var entries = expireAfterAccess.oldest(stream -> stream.collect(toImmutableList()));
     for (var entry : entries) {
       assertThat(context).containsEntry(entry);
     }
@@ -507,7 +507,7 @@ public final class ExpireAfterAccessTest {
   public void oldestFunc_metadata_expiresInTraversal(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
-    var entries = expireAfterAccess.oldest(stream -> stream.collect(toList()));
+    var entries = expireAfterAccess.oldest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);
   }
@@ -615,7 +615,7 @@ public final class ExpireAfterAccessTest {
       CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var result = expireAfterAccess.youngest(stream -> stream
         .limit(context.initialSize() / 2)
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
@@ -625,7 +625,7 @@ public final class ExpireAfterAccessTest {
   public void youngestFunc_full(Cache<Int, Int> cache,
       CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var result = expireAfterAccess.youngest(stream -> stream
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache).containsExactlyEntriesIn(result);
   }
 
@@ -636,7 +636,7 @@ public final class ExpireAfterAccessTest {
   public void youngestFunc_order(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var youngest = expireAfterAccess.youngest(
-        stream -> stream.map(Map.Entry::getKey).collect(toList()));
+        stream -> stream.map(Map.Entry::getKey).collect(toImmutableList()));
     var expected = ImmutableList.copyOf(context.original().keySet()).reverse();
     assertThat(youngest).containsExactlyElementsIn(expected).inOrder();
   }
@@ -645,7 +645,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(mustExpireWithAnyOf = AFTER_ACCESS, population = {Population.PARTIAL, Population.FULL})
   public void youngestFunc_metadata(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    var entries = expireAfterAccess.youngest(stream -> stream.collect(toList()));
+    var entries = expireAfterAccess.youngest(stream -> stream.collect(toImmutableList()));
     for (var entry : entries) {
       assertThat(context).containsEntry(entry);
     }
@@ -656,7 +656,7 @@ public final class ExpireAfterAccessTest {
   public void youngestFunc_metadata_expiresInTraversal(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
-    var entries = expireAfterAccess.youngest(stream -> stream.collect(toList()));
+    var entries = expireAfterAccess.youngest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);
   }

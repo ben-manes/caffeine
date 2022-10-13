@@ -29,11 +29,11 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
@@ -1450,7 +1450,7 @@ public final class ExpireAfterVarTest {
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var result = expireAfterVar.oldest(stream -> stream
         .limit(context.initialSize() / 2)
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
@@ -1460,7 +1460,7 @@ public final class ExpireAfterVarTest {
   public void oldestFunc_full(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var result = expireAfterVar.oldest(stream -> stream
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache).containsExactlyEntriesIn(result);
   }
 
@@ -1469,14 +1469,15 @@ public final class ExpireAfterVarTest {
       removalListener = { Listener.DISABLED, Listener.REJECTING },
       expiry = CacheExpiry.ACCESS)
   public void oldestFunc_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var oldest = expireAfterVar.oldest(stream -> stream.map(Map.Entry::getKey).collect(toList()));
+    var oldest = expireAfterVar.oldest(stream -> stream.map(Map.Entry::getKey)
+        .collect(toImmutableList()));
     assertThat(oldest).containsExactlyElementsIn(context.original().keySet()).inOrder();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(mustExpireWithAnyOf = VARIABLE, population = {Population.PARTIAL, Population.FULL})
   public void oldestFunc_metadata(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var entries = expireAfterVar.oldest(stream -> stream.collect(toList()));
+    var entries = expireAfterVar.oldest(stream -> stream.collect(toImmutableList()));
     for (var entry : entries) {
       assertThat(context).containsEntry(entry);
     }
@@ -1488,7 +1489,7 @@ public final class ExpireAfterVarTest {
   public void oldestFunc_metadata_expiresInTraversal(CacheContext context,
       VarExpiration<Int, Int> expireAfterVar) {
     context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
-    var entries = expireAfterVar.oldest(stream -> stream.collect(toList()));
+    var entries = expireAfterVar.oldest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);
   }
@@ -1589,7 +1590,7 @@ public final class ExpireAfterVarTest {
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var result = expireAfterVar.youngest(stream -> stream
         .limit(context.initialSize() / 2)
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
@@ -1599,7 +1600,7 @@ public final class ExpireAfterVarTest {
   public void youngestFunc_full(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var result = expireAfterVar.youngest(stream -> stream
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache).containsExactlyEntriesIn(result);
   }
 
@@ -1609,7 +1610,7 @@ public final class ExpireAfterVarTest {
       expiry = CacheExpiry.ACCESS)
   public void youngestFunc_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var youngest = expireAfterVar.youngest(
-        stream -> stream.map(Map.Entry::getKey).collect(toList()));
+        stream -> stream.map(Map.Entry::getKey).collect(toImmutableList()));
     var expected = ImmutableList.copyOf(context.original().keySet()).reverse();
     assertThat(youngest).containsExactlyElementsIn(expected).inOrder();
   }
@@ -1617,7 +1618,7 @@ public final class ExpireAfterVarTest {
   @Test(dataProvider = "caches")
   @CacheSpec(mustExpireWithAnyOf = VARIABLE, population = Population.FULL)
   public void youngestFunc_metadata(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var entries = expireAfterVar.youngest(stream -> stream.collect(toList()));
+    var entries = expireAfterVar.youngest(stream -> stream.collect(toImmutableList()));
     for (var entry : entries) {
       assertThat(context).containsEntry(entry);
     }
@@ -1629,7 +1630,7 @@ public final class ExpireAfterVarTest {
   public void youngestFunc_metadata_expiresInTraversal(CacheContext context,
       VarExpiration<Int, Int> expireAfterVar) {
     context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
-    var entries = expireAfterVar.youngest(stream -> stream.collect(toList()));
+    var entries = expireAfterVar.youngest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);
   }

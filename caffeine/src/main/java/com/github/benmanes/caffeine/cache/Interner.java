@@ -114,7 +114,7 @@ final class WeakInterner<E> implements Interner<E> {
   }
 }
 
-@SuppressWarnings({"unchecked", "NullAway"})
+@SuppressWarnings({"NullAway", "unchecked"})
 final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
   volatile Reference<?> keyReference;
 

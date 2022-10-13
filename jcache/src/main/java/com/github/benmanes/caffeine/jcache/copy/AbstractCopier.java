@@ -45,7 +45,7 @@ import java.util.regex.Pattern;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"JdkObsolete", "JavaUtilDate"})
+@SuppressWarnings({"JavaUtilDate", "JdkObsolete"})
 public abstract class AbstractCopier<A> implements Copier {
   private static final Map<Class<?>, Function<Object, Object>> JAVA_DEEP_COPY = Map.of(Date.class,
       o -> ((Date) o).clone(), GregorianCalendar.class, o -> ((GregorianCalendar) o).clone());
@@ -132,7 +132,7 @@ public abstract class AbstractCopier<A> implements Copier {
 
   /** @return a deep copy of the object. */
   private <T> T deepCopy(T object) {
-    @SuppressWarnings({"unchecked", "NullAway"})
+    @SuppressWarnings({"NullAway", "unchecked"})
     T copy = (T) deepCopyStrategies.get(object.getClass()).apply(object);
     return copy;
   }

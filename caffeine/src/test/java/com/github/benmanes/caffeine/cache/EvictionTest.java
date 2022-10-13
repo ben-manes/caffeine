@@ -26,11 +26,11 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.util.Map.entry;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -948,7 +948,7 @@ public final class EvictionTest {
       CacheContext context, Eviction<Int, Int> eviction) {
     var result = eviction.coldest(stream -> stream
         .limit(context.initialSize() / 2)
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
@@ -958,7 +958,7 @@ public final class EvictionTest {
   public void coldestFunc_full(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     var result = eviction.coldest(stream -> stream
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache).containsExactlyEntriesIn(result);
   }
 
@@ -969,7 +969,7 @@ public final class EvictionTest {
   public void coldestFunc_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
     var coldest = new LinkedHashSet<>(eviction.coldest(stream ->
-        stream.map(Map.Entry::getKey).collect(toList())));
+        stream.map(Map.Entry::getKey).collect(toImmutableList())));
 
     // Ignore the last key; hard to predict with W-TinyLFU
     keys.remove(context.lastKey());
@@ -981,7 +981,7 @@ public final class EvictionTest {
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void coldestFunc_metadata(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    var entries = eviction.coldest(stream -> stream.collect(toList()));
+    var entries = eviction.coldest(stream -> stream.collect(toImmutableList()));
     for (var entry : entries) {
       assertThat(context).containsEntry(entry);
     }
@@ -1151,7 +1151,7 @@ public final class EvictionTest {
       CacheContext context, Eviction<Int, Int> eviction) {
     var result = eviction.hottest(stream -> stream
         .limit(context.initialSize() / 2)
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache.asMap()).containsAtLeastEntriesIn(result);
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
@@ -1161,7 +1161,7 @@ public final class EvictionTest {
   public void hottestFunc_full(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     var result = eviction.hottest(stream -> stream
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
     assertThat(cache).containsExactlyEntriesIn(result);
   }
 
@@ -1170,8 +1170,9 @@ public final class EvictionTest {
       maximumSize = Maximum.FULL, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void hottestFunc_order(CacheContext context, Eviction<Int, Int> eviction) {
     var keys = new LinkedHashSet<>(context.original().keySet());
-    var hottest = eviction.hottest(stream -> stream.map(Map.Entry::getKey).collect(toList()));
-    var coldest = new LinkedHashSet<>(ImmutableList.copyOf(hottest).reverse());
+    var hottest = eviction.hottest(stream ->
+        stream.map(Map.Entry::getKey).collect(toImmutableList()));
+    var coldest = new LinkedHashSet<>(hottest.reverse());
 
     // Ignore the last key; hard to predict with W-TinyLFU
     keys.remove(context.lastKey());
@@ -1183,7 +1184,7 @@ public final class EvictionTest {
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void hottestFunc_metadata(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    var entries = eviction.hottest(stream -> stream.collect(toList()));
+    var entries = eviction.hottest(stream -> stream.collect(toImmutableList()));
     for (var entry : entries) {
       assertThat(context).containsEntry(entry);
     }

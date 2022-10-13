@@ -26,10 +26,10 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
@@ -290,7 +290,7 @@ public final class ReferenceTest {
     var keys = context.firstMiddleLastKeys();
     if (context.isStrongValues()) {
       retained = context.firstMiddleLastKeys().stream()
-          .collect(toMap(identity(), key -> context.original().get(key)));
+          .collect(toImmutableMap(identity(), key -> context.original().get(key)));
       collected = getExpectedAfterGc(context,
           Maps.filterKeys(context.original(), not(keys::contains)));
     } else {
@@ -326,7 +326,7 @@ public final class ReferenceTest {
     var keys = context.firstMiddleLastKeys();
     if (context.isStrongValues()) {
       retained = context.firstMiddleLastKeys().stream()
-          .collect(toMap(identity(), key -> context.original().get(key)));
+          .collect(toImmutableMap(identity(), key -> context.original().get(key)));
       collected = getExpectedAfterGc(context,
           Maps.filterKeys(context.original(), not(keys::contains)));
     } else {
@@ -580,7 +580,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void clear(Map<Int, Int> map, CacheContext context) {
     var retained = context.firstMiddleLastKeys().stream()
-        .collect(toMap(identity(), key -> context.original().get(key)));
+        .collect(toImmutableMap(identity(), key -> context.original().get(key)));
     var collected = getExpectedAfterGc(context, Maps.difference(
         context.original(), retained).entriesOnlyOnLeft());
 
@@ -1190,8 +1190,8 @@ public final class ReferenceTest {
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.FULL, requiresWeakOrSoft = true)
   public void equals_cleanUp(Map<Int, Int> map, CacheContext context) {
-    var copy = context.original().entrySet().stream()
-        .collect(toMap(entry -> new Int(entry.getKey()), entry -> new Int(entry.getValue())));
+    var copy = context.original().entrySet().stream().collect(toImmutableMap(
+        entry -> new Int(entry.getKey()), entry -> new Int(entry.getValue())));
     context.clear();
 
     GcFinalization.awaitFullGc();

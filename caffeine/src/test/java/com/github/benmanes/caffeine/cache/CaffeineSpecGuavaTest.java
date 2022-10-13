@@ -32,7 +32,7 @@ import junit.framework.TestCase;
  *
  * @author Adam Winer
  */
-@SuppressWarnings({"PreferJavaTimeOverload", "CheckReturnValue"})
+@SuppressWarnings({"CheckReturnValue", "PreferJavaTimeOverload"})
 public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_empty() {

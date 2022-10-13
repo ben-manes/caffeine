@@ -979,7 +979,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return if the entry was evicted
    */
   @GuardedBy("evictionLock")
-  @SuppressWarnings({"PMD.CollapsibleIfStatements", "GuardedByChecker", "NullAway"})
+  @SuppressWarnings({"GuardedByChecker", "NullAway", "PMD.CollapsibleIfStatements"})
   boolean evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
     @SuppressWarnings("unchecked")
@@ -1280,7 +1280,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         && ((writeTime & 1L) == 0L) && !(refreshes = refreshes()).containsKey(keyReference)
         && node.isAlive() && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
-      @SuppressWarnings({"unchecked", "rawtypes"})
+      @SuppressWarnings({"rawtypes", "unchecked"})
       CompletableFuture<? extends V>[] refreshFuture = new CompletableFuture[1];
       try {
         refreshes.computeIfAbsent(keyReference, k -> {
@@ -2320,7 +2320,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   public @Nullable V remove(Object key) {
     @SuppressWarnings("unchecked")
     K castKey = (K) key;
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] node = new Node[1];
     @SuppressWarnings("unchecked")
     V[] oldValue = (V[]) new Object[1];
@@ -2361,7 +2361,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return false;
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] removed = new Node[1];
     @SuppressWarnings("unchecked")
     K[] oldKey = (K[]) new Object[1];
@@ -2561,7 +2561,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     V[] newValue = (V[]) new Object[1];
     @SuppressWarnings("unchecked")
     K[] nodeKey = (K[]) new Object[1];
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] removed = new Node[1];
 
     int[] weight = new int[2]; // old, new
@@ -2726,7 +2726,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     V[] oldValue = (V[]) new Object[1];
     @SuppressWarnings("unchecked")
     V[] newValue = (V[]) new Object[1];
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] removed = new Node[1];
 
     int[] weight = new int[2]; // old, new
@@ -4232,7 +4232,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         var delegate = (LocalCache<K, CompletableFuture<V>>) cache;
 
-        @SuppressWarnings({"unchecked", "rawtypes"})
+        @SuppressWarnings({"rawtypes", "unchecked"})
         V[] newValue = (V[]) new Object[1];
         for (;;) {
           Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));

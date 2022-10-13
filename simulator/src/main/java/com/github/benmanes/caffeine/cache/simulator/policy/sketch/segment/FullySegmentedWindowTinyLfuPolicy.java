@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.List;
 import java.util.Set;
@@ -83,7 +83,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
     FullySegmentedWindowTinyLfuSettings settings = new FullySegmentedWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new FullySegmentedWindowTinyLfuPolicy(percentMain, settings))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

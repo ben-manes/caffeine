@@ -16,9 +16,9 @@
 package com.github.benmanes.caffeine.cache.issues;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.function.Function.identity;
 
 import java.util.Set;
-import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -50,8 +50,8 @@ public final class HashClashTest {
   @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.ONE_FIFTY, stats = Stats.ENABLED)
   public void testCache(Cache<Long, Long> cache, CacheContext context) {
     for (long j = 0; j < 300; ++j) {
-      cache.get(1L, Function.identity());
-      cache.get(j, Function.identity());
+      cache.get(1L, identity());
+      cache.get(j, identity());
     }
     printStats(cache);
     printKeys(cache);
@@ -59,21 +59,21 @@ public final class HashClashTest {
     // add a hashcode clash for 1
     Long CLASH = (ITERS << 32) ^ ITERS ^ 1;
     assertThat(CLASH.hashCode()).isEqualTo(LONG_1.hashCode());
-    cache.get(CLASH, Function.identity());
+    cache.get(CLASH, identity());
     printKeys(cache);
 
     // repeat some entries to let CLASH flow to the probation head
     for (long j = 0; j < 300; ++j) {
-      cache.get(1L, Function.identity());
-      cache.get(j, Function.identity());
+      cache.get(1L, identity());
+      cache.get(j, identity());
     }
     printKeys(cache);
 
     // Now run a repeating sequence which has a longer length than window space size.
     for (long i = 0; i < ITERS; i += STEP) {
-      cache.get(1L, Function.identity());
+      cache.get(1L, identity());
       for (long j = 0; j < STEP; ++j) {
-        cache.get(-j, Function.identity());
+        cache.get(-j, identity());
       }
     }
     printKeys(cache);

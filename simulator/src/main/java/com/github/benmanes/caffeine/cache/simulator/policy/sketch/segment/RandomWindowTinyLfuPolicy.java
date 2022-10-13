@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment;
 
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.List;
 import java.util.Random;
@@ -70,7 +70,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
     RandomWindowTinyLfuSettings settings = new RandomWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new RandomWindowTinyLfuPolicy(percentMain, settings))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

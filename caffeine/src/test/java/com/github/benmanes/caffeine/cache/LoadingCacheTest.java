@@ -27,10 +27,10 @@ import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
@@ -318,7 +318,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
+  @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_exceeds(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys());
@@ -898,7 +898,7 @@ public final class LoadingCacheTest {
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         var future = new CompletableFuture<Int>();
         future.orTimeout(0, TimeUnit.SECONDS);
-        await().until(() -> future.isDone());
+        await().until(future::isDone);
         return future;
       }
     };
@@ -995,7 +995,8 @@ public final class LoadingCacheTest {
     int count = context.original().keySet().size();
     assertThat(result).hasSize(count);
 
-    var expected = context.original().keySet().stream().collect(toMap(identity(), identity()));
+    var expected = context.original().keySet().stream()
+        .collect(toImmutableMap(identity(), identity()));
     assertThat(cache).containsExactlyEntriesIn(expected);
   }
 
@@ -1155,7 +1156,7 @@ public final class LoadingCacheTest {
   @Test
   public void bulk_present() throws Exception {
     CacheLoader<Int, Int> loader = CacheLoader.bulk(keys -> {
-      return keys.stream().collect(toMap(identity(), identity()));
+      return keys.stream().collect(toImmutableMap(identity(), identity()));
     });
     assertThat(loader.loadAll(Int.setOf(1, 2))).containsExactlyEntriesIn(Int.mapOf(1, 1, 2, 2));
     assertThat(loader.load(Int.valueOf(1))).isEqualTo(1);

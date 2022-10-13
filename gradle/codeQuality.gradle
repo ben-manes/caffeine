@@ -23,6 +23,7 @@ dependencies {
   checkstyleConfig gradlePlugins.checkstyle
 
   errorprone layout.buildDirectory.files('libs/caffeine-local.jar')
+  errorprone libraries.errorproneSupport
   errorprone libraries.errorproneCore
   errorprone libraries.nullaway
 }
@@ -141,12 +142,13 @@ tasks.withType(JavaCompile).configureEach {
       'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports', 'ReturnsNullCollection',
       'SelfAlwaysReturnsThis', 'StronglyTypeByteString', 'StronglyTypeTime', 'SwitchDefault',
       'TimeUnitMismatch', 'TransientMisuse', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass',
-      'UnnecessaryOptionalGet', 'UnsafeLocaleUsage', 'UnusedTypeParameter',
-      'UsingJsr305CheckReturnValue']
+      'UnnecessaryOptionalGet', 'UnnecessarilyUsedValue', 'UnsafeLocaleUsage',
+      'UnusedTypeParameter', 'UsingJsr305CheckReturnValue']
     enabledChecks.each { enable(it) }
 
     def disabledChecks = [
-      'AutoValueSubclassLeaked', 'EmptyCatch', 'ExtendsObject', 'FieldCanBeFinal', 'MissingSummary']
+      'AutoValueSubclassLeaked', 'EmptyCatch', 'ExtendsObject', 'FieldCanBeFinal',
+      'LexicographicalAnnotationListing', 'MissingSummary', 'StaticImport']
     disabledChecks.each { disable(it) }
 
     def errorChecks = [ 'NullAway' ]

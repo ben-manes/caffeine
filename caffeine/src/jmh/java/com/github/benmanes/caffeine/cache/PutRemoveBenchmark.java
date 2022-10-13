@@ -47,7 +47,8 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
-@SuppressWarnings({"PMD.JUnit4TestShouldUseAfterAnnotation", "PMD.MethodNamingConventions"})
+@SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing",
+    "PMD.JUnit4TestShouldUseAfterAnnotation", "PMD.MethodNamingConventions"})
 public class PutRemoveBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;
@@ -59,7 +60,6 @@ public class PutRemoveBenchmark {
     "ConcurrentHashMap",
     "ConcurrentLinkedHashMap",
     "Guava",
-    "Cache2k",
     "Ehcache3",
   })
   CacheType cacheType;

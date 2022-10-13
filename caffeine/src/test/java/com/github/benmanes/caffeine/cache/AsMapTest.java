@@ -26,10 +26,11 @@ import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
-import static java.util.stream.Collectors.toMap;
+import static java.util.function.Function.identity;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -52,7 +53,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.eclipse.collections.impl.factory.Sets;
@@ -395,7 +395,7 @@ public final class AsMapTest {
     var entries = IntStream
         .range(startKey, 100 + startKey)
         .mapToObj(Int::valueOf)
-        .collect(Collectors.toMap(Function.identity(), key -> key.negate()));
+        .collect(toImmutableMap(identity(), Int::negate));
     map.putAll(entries);
     assertThat(map).hasSize(100 + context.initialSize());
   }
@@ -955,7 +955,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void computeIfAbsent_nullKey(Map<Int, Int> map, CacheContext context) {
-    map.computeIfAbsent(null, key -> key.negate());
+    map.computeIfAbsent(null, Int::negate);
   }
 
   @CheckNoStats
@@ -1636,8 +1636,8 @@ public final class AsMapTest {
     assertThat(context.absent().equals(map)).isFalse();
 
     if (!map.isEmpty()) {
-      var other = map.entrySet().stream().collect(toMap(
-          entry -> entry.getKey(), entry -> entry.getValue().negate()));
+      var other = map.entrySet().stream().collect(toImmutableMap(
+          Map.Entry::getKey, entry -> entry.getValue().negate()));
       assertThat(map.equals(other)).isFalse();
       assertThat(other.equals(map)).isFalse();
     }

@@ -826,7 +826,7 @@ public final class LinkedDequeTest {
   }
 
   private static Comparator<LinkedValue> comparator() {
-    return Comparator.comparing((LinkedValue v) -> v.value);
+    return Comparator.comparingInt((LinkedValue v) -> v.value);
   }
 
   /* --------------- Deque providers --------------- */

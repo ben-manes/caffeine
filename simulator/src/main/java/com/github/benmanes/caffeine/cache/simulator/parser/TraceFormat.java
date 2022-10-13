@@ -15,9 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toList;
 
 import java.util.List;
 import java.util.function.Function;
@@ -50,6 +50,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTr
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -110,12 +111,12 @@ public enum TraceFormat {
         return readers().stream().flatMap(TraceReader::events);
       }
 
-      private List<TraceReader> readers() {
+      private ImmutableList<TraceReader> readers() {
         return filePaths.stream().map(path -> {
           List<String> parts = Splitter.on(':').limit(2).splitToList(path);
           TraceFormat format = (parts.size() == 1) ? TraceFormat.this : named(parts.get(0));
           return format.factory.apply(Iterables.getLast(parts));
-        }).collect(toList());
+        }).collect(toImmutableList());
       }
     };
   }

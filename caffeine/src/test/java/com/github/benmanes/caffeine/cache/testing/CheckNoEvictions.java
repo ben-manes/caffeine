@@ -28,5 +28,5 @@ import java.lang.annotation.Target;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Target({TYPE, METHOD}) @Retention(RUNTIME)
+@Target({METHOD, TYPE}) @Retention(RUNTIME)
 public @interface CheckNoEvictions {}

@@ -15,8 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
-import static java.util.stream.Collectors.toMap;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -212,7 +212,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
   @Test
   public void invokeAll_present() {
     var result = jcache.invokeAll(keys, (entry, args) -> entry.getValue());
-    var unwrapped = result.entrySet().stream().collect(toMap(
+    var unwrapped = result.entrySet().stream().collect(toImmutableMap(
         Map.Entry::getKey, entry -> entry.getValue().get()));
     assertThat(unwrapped).isEqualTo(entries);
 

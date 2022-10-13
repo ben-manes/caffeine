@@ -22,15 +22,15 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.Sta
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.cache;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableMultiset.toImmutableMultiset;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.OptionalLongSubject.optionalLongs;
 import static com.google.common.truth.StreamSubject.streams;
 import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -297,7 +297,7 @@ public final class CacheContextSubject extends Subject {
       return (metadata, context) -> {
         var subject = Stream.of(removalListenerTypes)
             .filter(listener -> listener.isConsumingListener(context))
-            .collect(toMap(identity(), listener -> listener.instance(context)));
+            .collect(toImmutableMap(identity(), listener -> listener.instance(context)));
         return new ListenerSubject(metadata, context, subject);
       };
     }
@@ -377,7 +377,7 @@ public final class CacheContextSubject extends Subject {
         awaitUntil((type, listener) -> {
           var notifications = Stream.of(entries)
               .map(entry -> new RemovalNotification<>(entry.getKey(), entry.getValue(), cause))
-              .collect(toSet());
+              .collect(toImmutableSet());
           check(type).withMessage("%s", cause)
               .that(listener.removed()).containsAtLeastElementsIn(notifications);
         });

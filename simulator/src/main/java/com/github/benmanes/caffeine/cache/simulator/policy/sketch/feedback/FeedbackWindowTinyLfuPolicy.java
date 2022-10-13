@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.List;
 import java.util.Map;
@@ -110,7 +110,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     FeedbackWindowTinyLfuSettings settings = new FeedbackWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new FeedbackWindowTinyLfuPolicy(percentMain, settings))
-        .collect(toSet());
+        .collect(toUnmodifiableSet());
   }
 
   @Override

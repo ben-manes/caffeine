@@ -199,7 +199,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
         boolean init = false;
         try { // Initialize table
           if (table == buffers) {
-            @SuppressWarnings({"unchecked", "rawtypes"})
+            @SuppressWarnings({"rawtypes", "unchecked"})
             Buffer<E>[] rs = new Buffer[1];
             rs[0] = create(e);
             table = rs;

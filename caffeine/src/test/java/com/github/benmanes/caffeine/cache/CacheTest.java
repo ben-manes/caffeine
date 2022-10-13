@@ -21,10 +21,10 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Triple;
@@ -439,7 +438,7 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_different(Cache<Int, Int> cache, CacheContext context) {
     var actual = context.absentKeys().stream()
-        .collect(toMap(key -> intern(key.negate()), identity()));
+        .collect(toImmutableMap(key -> intern(key.negate()), identity()));
     var result = cache.getAll(context.absentKeys(), keys -> actual);
 
     assertThat(result).isEmpty();
@@ -539,9 +538,10 @@ public final class CacheTest {
     assertThat(result).containsExactly(key, value);
   }
 
-  static Function<Set<? extends Int>, Map<Int, Int>> bulkMappingFunction() {
+  static Function<Set<? extends Int>, ImmutableMap<Int, Int>> bulkMappingFunction() {
     return keys -> {
-      Map<Int, Int> result = keys.stream().collect(toMap(identity(), Int::negate));
+      ImmutableMap<Int, Int> result = keys.stream()
+          .collect(toImmutableMap(identity(), Int::negate));
       CacheContext.interner().putAll(result);
       return result;
     };
@@ -636,7 +636,7 @@ public final class CacheTest {
     var entries = IntStream
         .range(startKey, 100 + startKey)
         .mapToObj(Int::valueOf)
-        .collect(Collectors.toMap(Function.identity(), Int::negate));
+        .collect(toImmutableMap(identity(), Int::negate));
     cache.putAll(entries);
     assertThat(cache).hasSize(100 + context.initialSize());
   }
@@ -744,7 +744,7 @@ public final class CacheTest {
   public void invalidateAll_partial(Cache<Int, Int> cache, CacheContext context) {
     var removals = cache.asMap().entrySet().stream()
         .filter(entry -> ((entry.getKey().intValue() % 2) == 0))
-        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
     cache.invalidateAll(removals.keySet());
     assertThat(cache).hasSize(context.initialSize() - removals.size());
     assertThat(context).removalNotifications().withCause(EXPLICIT)

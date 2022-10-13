@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapaci
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
 
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
@@ -242,9 +243,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     requireNonNull(function);
 
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     K[] notificationKey = (K[]) new Object[1];
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     V[] notificationValue = (V[]) new Object[1];
     data.replaceAll((key, value) -> {
       if (notificationKey[0] != null) {
@@ -305,7 +306,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     V[] oldValue = (V[]) new Object[1];
     boolean[] replaced = new boolean[1];
     V nv = data.computeIfPresent(key, (K k, V value) -> {
@@ -355,7 +356,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
    */
   V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     V[] oldValue = (V[]) new Object[1];
     boolean[] replaced = new boolean[1];
     V nv = data.compute(key, (K k, V value) -> {
@@ -443,7 +444,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public @Nullable V remove(Object key) {
     @SuppressWarnings("unchecked")
     K castKey = (K) key;
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     V[] oldValue = (V[]) new Object[1];
     data.computeIfPresent(castKey, (k, v) -> {
       discardRefresh(k);
@@ -467,7 +468,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @SuppressWarnings("unchecked")
     K castKey = (K) key;
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     V[] oldValue = (V[]) new Object[1];
 
     data.computeIfPresent(castKey, (k, v) -> {
@@ -490,7 +491,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public @Nullable V replace(K key, V value) {
     requireNonNull(value);
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     V[] oldValue = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       discardRefresh(k);
@@ -514,7 +515,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     requireNonNull(oldValue);
     requireNonNull(newValue);
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     V[] prev = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       if (v.equals(oldValue)) {
@@ -1028,7 +1029,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public Policy<K, V> policy() {
       return (policy == null)
-          ? (policy = new UnboundedPolicy<>(cache, Function.identity()))
+          ? (policy = new UnboundedPolicy<>(cache, identity()))
           : policy;
     }
 

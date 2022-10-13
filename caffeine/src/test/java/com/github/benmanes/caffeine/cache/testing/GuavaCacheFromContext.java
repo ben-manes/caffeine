@@ -71,7 +71,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"serial", "PreferJavaTimeOverload"})
+@SuppressWarnings({"PreferJavaTimeOverload", "serial"})
 public final class GuavaCacheFromContext {
   private GuavaCacheFromContext() {}
   private static final ThreadLocal<Throwable> error = new ThreadLocal<>();
@@ -436,7 +436,7 @@ public final class GuavaCacheFromContext {
         return cache.asMap();
       }
 
-      @SuppressWarnings({"UnusedVariable", "UnusedMethod"})
+      @SuppressWarnings({"UnusedMethod", "UnusedVariable"})
       private void readObject(ObjectInputStream stream) throws InvalidObjectException {
         statsCounter = new SimpleStatsCounter();
       }

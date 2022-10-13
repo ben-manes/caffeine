@@ -101,7 +101,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     long[] startTime = new long[1];
     @SuppressWarnings("unchecked")
     V[] oldValue = (V[]) new Object[1];
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     CompletableFuture<? extends V>[] reloading = new CompletableFuture[1];
     Object keyReference = cache().referenceKey(key);
 

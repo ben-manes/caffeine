@@ -15,8 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.stream.Collectors.joining;
+
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableSet;
@@ -58,7 +59,7 @@ public enum Feature {
   public static String makeClassName(Iterable<Feature> features) {
     String enumName = Streams.stream(features)
         .map(Feature::name)
-        .collect(Collectors.joining("_"));
+        .collect(joining("_"));
     return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
   }
 

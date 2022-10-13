@@ -44,7 +44,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @FunctionalInterface
-@SuppressWarnings({"PMD.SignatureDeclareThrowsException", "FunctionalInterfaceMethodChanged"})
+@SuppressWarnings({"FunctionalInterfaceMethodChanged", "PMD.SignatureDeclareThrowsException"})
 public interface CacheLoader<K extends Object, V extends Object> extends AsyncCacheLoader<K, V> {
 
   /**

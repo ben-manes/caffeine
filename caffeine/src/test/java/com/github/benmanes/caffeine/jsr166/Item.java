@@ -11,7 +11,7 @@ import java.util.Comparator;
 /**
  * A simple element class for collections etc
  */
-@SuppressWarnings({"serial", "NonOverridingEquals"})
+@SuppressWarnings({"NonOverridingEquals", "serial"})
 public final class Item extends Number implements Comparable<Item>, Serializable {
     public final int value;
     public Item(int v) { value = v; }
