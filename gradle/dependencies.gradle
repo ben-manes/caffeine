@@ -138,7 +138,10 @@ ext {
     errorproneCore: dependencies.create("com.google.errorprone:error_prone_core:${versions.errorprone}") {
       exclude group: 'com.github.ben-manes.caffeine'
     },
-    errorproneSupport: "tech.picnic.error-prone-support:error-prone-contrib:${versions.errorproneSupport}",
+    errorproneSupport: [
+      "tech.picnic.error-prone-support:error-prone-contrib:${versions.errorproneSupport}",
+      "org.mockito:mockito-errorprone:${testVersions.mockito}",
+    ],
     expiringMap: "net.jodah:expiringmap:${versions.expiringMap}",
     fastfilter: "io.github.fastfilter:fastfilter:${versions.fastfilter}",
     fastutil: "it.unimi.dsi:fastutil-core:${versions.fastutil}",

@@ -667,7 +667,7 @@ public final class BoundedLocalCacheTest {
       cache.evictEntries();
 
       assertThat(expected.isDead()).isTrue();
-      assertThat(cache).hasSize(cache.maximum());
+      await().untilAsserted(() -> assertThat(cache).hasSize(cache.maximum()));
     } finally {
       cache.evictionLock.unlock();
     }
@@ -691,7 +691,7 @@ public final class BoundedLocalCacheTest {
       cache.evictEntries();
 
       assertThat(expected.isDead()).isTrue();
-      assertThat(cache).hasSize(cache.maximum());
+      await().untilAsserted(() -> assertThat(cache).hasSize(cache.maximum()));
     } finally {
       cache.evictionLock.unlock();
     }

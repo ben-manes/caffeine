@@ -182,7 +182,7 @@ tasks.withType(Test).configureEach {
   }
   if (System.env.JDK_EA == 'true') {
     systemProperty 'net.bytebuddy.experimental', true
-    extensions.configure(JacocoTaskExtension) { it.enabled = true }
+    extensions.configure(JacocoTaskExtension) { it.enabled = false }
   }
 }
 
