@@ -45,7 +45,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
  */
 @FunctionalInterface
 @SuppressWarnings({"FunctionalInterfaceMethodChanged", "PMD.SignatureDeclareThrowsException"})
-public interface CacheLoader<K extends Object, V extends Object> extends AsyncCacheLoader<K, V> {
+public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
 
   /**
    * Computes or retrieves the value corresponding to {@code key}.
@@ -223,8 +223,8 @@ public interface CacheLoader<K extends Object, V extends Object> extends AsyncCa
    */
   @CheckReturnValue
   @SuppressWarnings("FunctionalInterfaceClash")
-  static <K extends Object, V extends Object> CacheLoader<K, V> bulk(
-      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
+  static <K, V> CacheLoader<K, V> bulk(Function<? super Set<? extends K>,
+      ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);
     return new CacheLoader<K, V>() {
       @Override public @Nullable V load(K key) {

@@ -34,7 +34,7 @@ public interface Copier {
    */
   <T> T copy(T object, ClassLoader classLoader);
 
-  /** @return a copy strategy that performs an identity function, for use by store-by-reference */
+  /** Return a copy strategy that performs an identity function, for use by store-by-reference. */
   static Copier identity() {
     return IdentityCopier.INSTANCE;
   }

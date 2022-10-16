@@ -39,17 +39,17 @@ public final class Registration<K, V> {
     this.filter = requireNonNull(filter);
   }
 
-  /** @return the configuration */
+  /** Returns the configuration. */
   public CacheEntryListenerConfiguration<K, V> getConfiguration() {
     return configuration;
   }
 
-  /** @return the registered listener */
+  /** Returns the registered listener. */
   public EventTypeAwareListener<K, V> getCacheEntryListener() {
     return listener;
   }
 
-  /** @return the registered filter */
+  /** Returns the registered filter. */
   public CacheEntryEventFilter<K, V> getCacheEntryFilter() {
     return filter;
   }

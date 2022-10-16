@@ -355,7 +355,7 @@ public final class EventDispatcherTest {
   private static final class ConsumingCacheListener implements
       CacheEntryCreatedListener<Integer, Integer>,  CacheEntryUpdatedListener<Integer, Integer>,
       CacheEntryRemovedListener<Integer, Integer>, CacheEntryExpiredListener<Integer, Integer> {
-    Queue<CacheEntryEvent<?, ? >> queue = new ConcurrentLinkedQueue<>();
+    Queue<CacheEntryEvent<?, ?>> queue = new ConcurrentLinkedQueue<>();
 
     @Override
     public void onCreated(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {

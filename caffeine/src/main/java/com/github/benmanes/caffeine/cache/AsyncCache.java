@@ -39,7 +39,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-public interface AsyncCache<K extends Object, V extends Object> {
+public interface AsyncCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, or {@code null} if there is no

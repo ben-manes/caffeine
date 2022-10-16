@@ -40,7 +40,7 @@ import org.checkerframework.checker.nullness.qual.PolyNull;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface Policy<K extends Object, V extends Object> {
+public interface Policy<K, V> {
 
   /**
    * Returns whether the cache statistics are being accumulated.
@@ -150,7 +150,7 @@ public interface Policy<K extends Object, V extends Object> {
   Optional<FixedRefresh<K, V>> refreshAfterWrite();
 
   /** The low-level operations for a cache with a size-based eviction policy. */
-  interface Eviction<K extends Object, V extends Object> {
+  interface Eviction<K, V> {
 
     /**
      * Returns whether the cache is bounded by a maximum size or maximum weight.
@@ -333,7 +333,7 @@ public interface Policy<K extends Object, V extends Object> {
   }
 
   /** The low-level operations for a cache with a fixed expiration policy. */
-  interface FixedExpiration<K extends Object, V extends Object> {
+  interface FixedExpiration<K, V> {
 
     /**
      * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
@@ -505,7 +505,7 @@ public interface Policy<K extends Object, V extends Object> {
   }
 
   /** The low-level operations for a cache with a variable expiration policy. */
-  interface VarExpiration<K extends Object, V extends Object> {
+  interface VarExpiration<K, V> {
 
     /**
      * Returns the duration until the entry should be automatically removed. The expiration policy
@@ -746,7 +746,7 @@ public interface Policy<K extends Object, V extends Object> {
   }
 
   /** The low-level operations for a cache with a fixed refresh policy. */
-  interface FixedRefresh<K extends Object, V extends Object> {
+  interface FixedRefresh<K, V> {
 
     /**
      * Returns the age of the entry based on the refresh policy. The entry's age is the cache's

@@ -32,10 +32,9 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.AutoValue.CopyAnnotations;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
-
-import net.autobuilder.AutoBuilder;
 
 /**
  * Statistics gathered by a policy execution. A policy can extend this class as a convenient way to
@@ -76,13 +75,13 @@ public class PolicyStats {
         () -> (admittedCount + rejectedCount) == 0 ? 0 : admissionRate());
     addMetric(Metric.builder()
         .value((LongSupplier) this::requestsWeight)
-        .addToCharacteristics(WEIGHTED)
+        .addCharacteristic(WEIGHTED)
         .name("Requests Weight")
         .type(NUMBER)
         .build());
     addMetric(Metric.builder()
         .value((DoubleSupplier) this::weightedHitRate)
-        .addToCharacteristics(WEIGHTED)
+        .addCharacteristic(WEIGHTED)
         .name("Weighted Hit Rate")
         .type(PERCENT)
         .build());
@@ -291,7 +290,7 @@ public class PolicyStats {
     return ToStringBuilder.reflectionToString(this, MULTI_LINE_STYLE);
   }
 
-  @AutoValue @AutoBuilder
+  @AutoValue
   public abstract static class Metric {
     public enum MetricType { NUMBER, PERCENT, OBJECT }
 
@@ -304,8 +303,24 @@ public class PolicyStats {
     public static Metric of(String name, Object value, MetricType type, boolean required) {
       return builder().name(name).value(value).type(type).required(required).build();
     }
-    public static PolicyStats_Metric_Builder builder() {
-      return PolicyStats_Metric_Builder.builder();
+    public static Metric.Builder builder() {
+      return new AutoValue_PolicyStats_Metric.Builder().required(false);
+    }
+
+    @AutoValue.Builder @CopyAnnotations
+    @SuppressWarnings("NarrowingCompoundAssignment")
+    public abstract static class Builder {
+      public abstract Builder name(String name);
+      public abstract Builder value(Object value);
+      public abstract Builder type(MetricType type);
+      public abstract Builder required(boolean required);
+      public abstract ImmutableSet.Builder<Characteristic> characteristicsBuilder();
+      public abstract Metric build();
+
+      public final Builder addCharacteristic(Characteristic characteristic) {
+        characteristicsBuilder().add(characteristic);
+        return this;
+      }
     }
   }
 }

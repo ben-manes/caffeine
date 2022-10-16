@@ -764,7 +764,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         + " is not supported by this implementation");
   }
 
-  /** @return the cache's configuration */
+  /** Returns the cache's configuration. */
   public CaffeineConfiguration<K, V> getConfiguration() {
     return configuration;
   }
@@ -1142,12 +1142,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         entry -> copier.copy(entry.getValue().get(), classLoader)));
   }
 
-  /** @return the current time in milliseconds */
+  /** Returns the current time in milliseconds. */
   protected final long currentTimeMillis() {
     return nanosToMillis(ticker.read());
   }
 
-  /** @return the nanosecond time in milliseconds */
+  /** Returns the nanosecond time in milliseconds. */
   protected static long nanosToMillis(long nanos) {
     return TimeUnit.NANOSECONDS.toMillis(nanos);
   }

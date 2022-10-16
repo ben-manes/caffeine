@@ -37,8 +37,8 @@ dependencies {
   implementation libraries.commonsCompress
   implementation libraries.univocityParsers
 
+  compileOnly libraries.autoValue
   annotationProcessor annotationProcessors.values()
-  compileOnly annotationProcessors.values()
 }
 
 tasks.named('compileJava').configure {

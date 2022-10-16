@@ -68,12 +68,12 @@ public abstract class AbstractCopier<A> implements Copier {
     this.deepCopyStrategies = requireNonNull(deepCopyStrategies);
   }
 
-  /** @return the set of Java native classes that are immutable */
+  /** Returns the set of Java native classes that are immutable. */
   public static Set<Class<?>> javaImmutableClasses() {
     return JAVA_IMMUTABLE;
   }
 
-  /** @return the set of Java native classes that are deeply copied. */
+  /** Returns the set of Java native classes that are deeply copied. */
   public static Map<Class<?>, Function<Object, Object>> javaDeepCopyStrategies() {
     return JAVA_DEEP_COPY;
   }

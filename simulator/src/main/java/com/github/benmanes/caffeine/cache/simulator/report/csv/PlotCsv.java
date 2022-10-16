@@ -44,11 +44,11 @@ import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.AutoValue.CopyAnnotations;
 import com.google.common.base.Strings;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
 
-import net.autobuilder.AutoBuilder;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
@@ -209,7 +209,30 @@ public final class PlotCsv implements Runnable {
         .execute(args);
   }
 
-  @AutoValue @AutoBuilder
+  static final class ChartStyleConverter implements ITypeConverter<ChartStyle> {
+    @Override public ChartStyle convert(String value) {
+      switch (value.toLowerCase(US)) {
+        case "light": {
+          var grid = new Color(0xeee8d5);
+          var content = new Color(0x585858);
+          var background = new Color(0xfdf6e3);
+          return ChartStyle.forColors(background, content, grid);
+        }
+        case "dark": {
+          var grid = new Color(0x073642);
+          var content = new Color(0x93a1a1);
+          var background = new Color(0x002b36);
+          return ChartStyle.forColors(background, content, grid);
+        }
+        default:
+          throw new TypeConversionException(String.format(
+              "expected one of %s (case-insensitive) but was '%s'",
+              List.of("light", "dark"), value));
+      }
+    }
+  }
+
+  @AutoValue
   abstract static class ChartStyle {
     abstract RectangleInsets axisOffset();
 
@@ -232,7 +255,7 @@ public final class PlotCsv implements Runnable {
     abstract float alpha();
 
     static ChartStyle forColors(Color background, Color content, Color grid) {
-      return PlotCsv_ChartStyle_Builder.builder()
+      return new AutoValue_PlotCsv_ChartStyle.Builder()
           .axisOffset(new RectangleInsets(20, 20, 20, 20))
           .extraLargeFont(new Font("Helvetica", BOLD, 18))
           .regularFont(new Font("Helvetica", PLAIN, 12))
@@ -251,28 +274,31 @@ public final class PlotCsv implements Runnable {
           .alpha(0.8f)
           .build();
     }
-  }
 
-  static final class ChartStyleConverter implements ITypeConverter<ChartStyle> {
-    @Override public ChartStyle convert(String value) {
-      switch (value.toLowerCase(US)) {
-        case "light": {
-          var grid = new Color(0xeee8d5);
-          var content = new Color(0x585858);
-          var background = new Color(0xfdf6e3);
-          return ChartStyle.forColors(background, content, grid);
-        }
-        case "dark": {
-          var grid = new Color(0x073642);
-          var content = new Color(0x93a1a1);
-          var background = new Color(0x002b36);
-          return ChartStyle.forColors(background, content, grid);
-        }
-        default:
-          throw new TypeConversionException(String.format(
-              "expected one of %s (case-insensitive) but was '%s'",
-              List.of("light", "dark"), value));
-      }
+    @AutoValue.Builder @CopyAnnotations
+    @SuppressWarnings("NarrowingCompoundAssignment")
+    abstract static class Builder {
+      abstract Builder axisOffset(RectangleInsets axisOffset);
+
+      abstract Builder title(Color title);
+      abstract Builder subtitle(Color subtitle);
+      abstract Builder background(Color background);
+      abstract Builder axisLine(Color axisLine);
+      abstract Builder axisLabel(Color axisLabel);
+      abstract Builder gridLine(Color gridLine);
+      abstract Builder gridBand(Color gridBand);
+      abstract Builder legend(Color legend);
+      abstract Builder label(Color label);
+
+      abstract Builder extraLargeFont(Font extraLargeFont);
+      abstract Builder regularFont(Font regularFont);
+      abstract Builder largeFont(Font largeFont);
+
+      abstract Builder brightness(float brightness);
+      abstract Builder saturation(float saturation);
+      abstract Builder alpha(float alpha);
+
+      abstract ChartStyle build();
     }
   }
 }

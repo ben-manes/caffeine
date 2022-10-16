@@ -90,7 +90,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
     this.value = value;
   }
 
-  /** @return the dominant action performed by the processor on the entry. */
+  /** Returns the dominant action performed by the processor on the entry. */
   public Action getAction() {
     return action;
   }

@@ -44,7 +44,7 @@ import com.google.errorprone.annotations.CheckReturnValue;
  */
 @FunctionalInterface
 @SuppressWarnings("PMD.SignatureDeclareThrowsException")
-public interface AsyncCacheLoader<K extends Object, V extends Object> {
+public interface AsyncCacheLoader<K, V> {
 
   /**
    * Asynchronously computes or retrieves the value corresponding to {@code key}.
@@ -135,8 +135,8 @@ public interface AsyncCacheLoader<K extends Object, V extends Object> {
    * @throws NullPointerException if the mappingFunction is null
    */
   @CheckReturnValue
-  static <K extends Object, V extends Object> AsyncCacheLoader<K, V> bulk(
-      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
+  static <K, V> AsyncCacheLoader<K, V> bulk(Function<? super Set<? extends K>,
+      ? extends Map<? extends K, ? extends V>> mappingFunction) {
     return CacheLoader.bulk(mappingFunction);
   }
 
@@ -159,8 +159,7 @@ public interface AsyncCacheLoader<K extends Object, V extends Object> {
    * @throws NullPointerException if the mappingFunction is null
    */
   @CheckReturnValue
-  static <K extends Object, V extends Object> AsyncCacheLoader<K, V> bulk(
-      BiFunction<? super Set<? extends K>, ? super Executor,
+  static <K, V> AsyncCacheLoader<K, V> bulk(BiFunction<? super Set<? extends K>, ? super Executor,
       ? extends CompletableFuture<? extends Map<? extends K, ? extends V>>> mappingFunction) {
     requireNonNull(mappingFunction);
     return new AsyncCacheLoader<>() {

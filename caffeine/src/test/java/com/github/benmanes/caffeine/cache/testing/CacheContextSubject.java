@@ -147,7 +147,7 @@ public final class CacheContextSubject extends Subject {
     try {
       entry.setValue(entry.getValue());
       failWithActual("setValue", entry);
-    } catch (UnsupportedOperationException expected) {}
+    } catch (UnsupportedOperationException expected) { /* ignored */ }
   }
 
   private void checkWeight(CacheEntry<Int, Int> entry) {

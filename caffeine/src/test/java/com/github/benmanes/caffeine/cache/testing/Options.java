@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static java.util.Locale.US;
+import static org.apache.commons.lang3.StringUtils.capitalize;
+
 import java.util.Optional;
 
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
@@ -40,30 +43,30 @@ final class Options {
   /** Compute indicates if an async or sync cache variation should be use, or both if unset. */
   Optional<Compute> compute() {
     return Optional.ofNullable(Enums.getIfPresent(Compute.class,
-        System.getProperty("compute", "").toUpperCase()).orNull());
+        System.getProperty("compute", "").toUpperCase(US)).orNull());
   }
 
   /** Implementation variation to use, or all if unset. */
   Optional<Implementation> implementation() {
     return Optional.ofNullable(Enums.getIfPresent(Implementation.class,
-        System.getProperty("implementation", "")).orNull());
+        capitalize(System.getProperty("implementation", "").toLowerCase(US))).orNull());
   }
 
   /** Indicates if statistics should be used, both if unset */
   Optional<Stats> stats() {
     return Optional.ofNullable(Enums.getIfPresent(Stats.class,
-        System.getProperty("stats", "").toUpperCase()).orNull());
+        System.getProperty("stats", "").toUpperCase(US)).orNull());
   }
 
   /** The key reference combination to use, or all if unset. */
   Optional<ReferenceType> keys() {
     return Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
-        System.getProperty("keys", "").toUpperCase()).orNull());
+        System.getProperty("keys", "").toUpperCase(US)).orNull());
   }
 
   /** The value reference combination to use, or all if unset. */
   Optional<ReferenceType> values() {
     return Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
-        System.getProperty("values", "").toUpperCase()).orNull());
+        System.getProperty("values", "").toUpperCase(US)).orNull());
   }
 }

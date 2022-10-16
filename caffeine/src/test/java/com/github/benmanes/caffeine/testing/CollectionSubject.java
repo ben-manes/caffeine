@@ -109,10 +109,10 @@ public class CollectionSubject extends com.google.common.truth.IterableSubject {
     check("peek()").that(queue.peek()).isNull();
     try {
       failWithActual("remove()", queue.remove());
-    } catch (NoSuchElementException expected) {}
+    } catch (NoSuchElementException expected) { /* ignored */ }
     try {
       failWithActual("element()", queue.element());
-    } catch (NoSuchElementException expected) {}
+    } catch (NoSuchElementException expected) { /* ignored */ }
   }
 
   private void checkDeque(Deque<?> deque) {

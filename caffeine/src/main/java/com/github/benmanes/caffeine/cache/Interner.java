@@ -35,7 +35,7 @@ import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @FunctionalInterface
-public interface Interner<E extends Object> {
+public interface Interner<E> {
 
   /**
    * Chooses and returns the representative instance for any of a collection of instances that are

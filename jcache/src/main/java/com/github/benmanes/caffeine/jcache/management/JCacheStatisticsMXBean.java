@@ -39,7 +39,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
 
   private volatile boolean enabled;
 
-  /** @return if statistic collection is enabled. */
+  /** Returns if statistic collection is enabled. */
   public boolean isEnabled() {
     return enabled;
   }

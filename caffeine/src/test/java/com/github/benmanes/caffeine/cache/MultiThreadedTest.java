@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.function.Function.identity;
 
 import java.util.List;
@@ -39,7 +40,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.benmanes.caffeine.testing.Threads;
-import com.google.common.base.Preconditions;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -117,7 +117,7 @@ public final class MultiThreadedTest {
           cache.invalidateAll();
         }
       },
-      (cache, key) -> { Preconditions.checkState(cache.estimatedSize() >= 0); },
+      (cache, key) -> { checkState(cache.estimatedSize() >= 0); },
       (cache, key) -> { cache.stats(); },
       (cache, key) -> { cache.cleanUp(); },
 
@@ -125,7 +125,7 @@ public final class MultiThreadedTest {
       (cache, key) -> { cache.asMap().containsKey(key); },
       (cache, key) -> { cache.asMap().containsValue(key); },
       (cache, key) -> { cache.asMap().isEmpty(); },
-      (cache, key) -> { Preconditions.checkState(cache.asMap().size() >= 0); },
+      (cache, key) -> { checkState(cache.asMap().size() >= 0); },
       (cache, key) -> { cache.asMap().get(key); },
       (cache, key) -> { cache.asMap().put(key, key); },
       (cache, key) -> { cache.asMap().putAll(Map.of(key, key)); },

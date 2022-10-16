@@ -432,7 +432,7 @@ public class CacheLoadingTest extends TestCase {
       }
 
       @Override
-      public Map<Object, Object> loadAll(Iterable<? extends Object> keys) {
+      public Map<Object, Object> loadAll(Iterable<?> keys) {
         Map<Object, Object> result = Maps.newHashMap();
         for (Object key : keys) {
           Object value = new Object();
@@ -469,7 +469,7 @@ public class CacheLoadingTest extends TestCase {
       }
 
       @Override
-      public Map<Object, Object> loadAll(Iterable<? extends Object> keys) {
+      public Map<Object, Object> loadAll(Iterable<?> keys) {
         Map<Object, Object> result = Maps.newHashMap();
         for (Object key : keys) {
           Object value = new Object();
@@ -506,7 +506,7 @@ public class CacheLoadingTest extends TestCase {
       }
 
       @Override
-      public Map<Object, Object> loadAll(Iterable<? extends Object> keys) {
+      public Map<Object, Object> loadAll(Iterable<?> keys) {
         Map<Object, Object> result = Maps.newHashMap();
         for (Object key : keys) {
           Object value = new Object();
@@ -544,7 +544,7 @@ public class CacheLoadingTest extends TestCase {
       }
 
       @Override
-      public Map<Object, Object> loadAll(Iterable<? extends Object> keys) {
+      public Map<Object, Object> loadAll(Iterable<?> keys) {
         Map<Object, Object> result = Maps.newHashMap();
         for (Object key : keys) {
           Object value = new Object();
@@ -582,7 +582,7 @@ public class CacheLoadingTest extends TestCase {
       }
 
       @Override
-      public Map<Object, Object> loadAll(Iterable<? extends Object> keys) {
+      public Map<Object, Object> loadAll(Iterable<?> keys) {
         Map<Object, Object> result = Maps.newHashMap();
         // ignore request keys
         result.put(extraKey, extraValue);
@@ -840,7 +840,7 @@ public class CacheLoadingTest extends TestCase {
 
           @Override
           @SuppressWarnings("ReturnsNullCollection")
-          public Map<Object, Object> loadAll(Iterable<? extends Object> keys) {
+          public Map<Object, Object> loadAll(Iterable<?> keys) {
             return null;
           }
         });

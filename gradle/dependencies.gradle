@@ -25,6 +25,7 @@
  */
 ext {
   versions = [
+    autoValue: '1.10',
     cache2k: '2.6.1.Final',
     checkerFramework: '3.26.0',
     coherence: '22.06.2',
@@ -114,12 +115,9 @@ ext {
     asm: '9.4',
     kotlin: '1.7.20',
   ]
-  annotationProcessorVersions = [
-    autoValue: '1.10',
-    autoValueBuilder: '2.9.3',
-  ]
 
   libraries = [
+    autoValue: "com.google.auto.value:auto-value-annotations:${versions.autoValue}",
     cache2k: "org.cache2k:cache2k-core:${versions.cache2k}",
     checkerAnnotations: "org.checkerframework:checker-qual:${versions.checkerFramework}",
     checkerFramework: "org.checkerframework:checker:${versions.checkerFramework}",
@@ -138,10 +136,8 @@ ext {
     errorproneCore: dependencies.create("com.google.errorprone:error_prone_core:${versions.errorprone}") {
       exclude group: 'com.github.ben-manes.caffeine'
     },
-    errorproneSupport: [
-      "tech.picnic.error-prone-support:error-prone-contrib:${versions.errorproneSupport}",
-      "org.mockito:mockito-errorprone:${testVersions.mockito}",
-    ],
+    errorproneMockito: "org.mockito:mockito-errorprone:${testVersions.mockito}",
+    errorproneSupport: "tech.picnic.error-prone-support:error-prone-contrib:${versions.errorproneSupport}",
     expiringMap: "net.jodah:expiringmap:${versions.expiringMap}",
     fastfilter: "io.github.fastfilter:fastfilter:${versions.fastfilter}",
     fastutil: "it.unimi.dsi:fastutil-core:${versions.fastutil}",
@@ -252,11 +248,7 @@ ext {
     versions: "com.github.ben-manes:gradle-versions-plugin:${pluginVersions.versions}",
   ]
   annotationProcessors = [
-    autoValue: [
-      "com.google.auto.value:auto-value:${annotationProcessorVersions.autoValue}",
-      "com.github.h908714124:auto-builder:${annotationProcessorVersions.autoValueBuilder}",
-      "com.google.auto.value:auto-value-annotations:${annotationProcessorVersions.autoValue}",
-    ],
+    autoValue: "com.google.auto.value:auto-value:${versions.autoValue}",
   ]
   platforms = [
     "org.jetbrains.kotlin:kotlin-bom:${platformVerrsions.kotlin}",

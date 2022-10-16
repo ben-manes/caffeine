@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -45,7 +46,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
 import org.testng.ITestResult;
@@ -165,7 +165,7 @@ public final class TimerWheelTest {
 
   @Test
   public void advance_exception() {
-    Mockito.doThrow(new IllegalStateException())
+    doThrow(new IllegalStateException())
         .when(cache).evictEntry(captor.capture(), any(), anyLong());
     var timer = new Timer(timerWheel.nanos + SPANS[1]);
 

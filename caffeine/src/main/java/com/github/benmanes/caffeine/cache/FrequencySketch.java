@@ -124,7 +124,7 @@ final class FrequencySketch<E> {
     int block = (blockHash & blockMask) << 3;
     for (int i = 0; i < 4; i++) {
       int h = counterHash >>> (i << 3);
-      int index = (h >> 1) & 15;
+      int index = (h >>> 1) & 15;
       int offset = h & 1;
       count[i] = (int) ((table[block + offset + (i << 1)] >>> (index << 2)) & 0xfL);
     }
@@ -150,7 +150,7 @@ final class FrequencySketch<E> {
     int block = (blockHash & blockMask) << 3;
     for (int i = 0; i < 4; i++) {
       int h = counterHash >>> (i << 3);
-      index[i] = (h >> 1) & 15;
+      index[i] = (h >>> 1) & 15;
       int offset = h & 1;
       index[i + 4] = block + offset + (i << 1);
     }

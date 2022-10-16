@@ -33,7 +33,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *        {@code Object} if any value is acceptable
  */
 @FunctionalInterface
-public interface RemovalListener<K extends Object, V extends Object> {
+public interface RemovalListener<K, V> {
 
   /**
    * Notifies the listener that a removal occurred at some point in the past.

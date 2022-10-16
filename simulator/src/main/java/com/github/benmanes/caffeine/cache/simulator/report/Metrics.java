@@ -31,14 +31,12 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.Me
 import com.google.auto.value.AutoValue;
 import com.google.common.base.MoreObjects;
 
-import net.autobuilder.AutoBuilder;
-
 /**
  * A utility for performing common operations against a {@link Metric}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@AutoValue @AutoBuilder
+@AutoValue
 public abstract class Metrics {
   public abstract Function<Object, String> objectFormatter();
   public abstract DoubleFunction<String> percentFormatter();
@@ -74,12 +72,21 @@ public abstract class Metrics {
     return new MetricComparator(header);
   }
 
-  public static Metrics_Builder builder() {
-    return Metrics_Builder.builder()
+  public static Metrics.Builder builder() {
+    return new AutoValue_Metrics.Builder()
         .percentFormatter(value -> (value == 0.0) ? "" : Double.toString(100 * value))
         .doubleFormatter(value -> (value == 0.0) ? "" : Double.toString(value))
         .objectFormatter(object -> (object == null) ? "" : object.toString())
         .longFormatter(value -> (value == 0) ? "" : Long.toString(value));
+  }
+
+  @AutoValue.Builder
+  public abstract static class Builder {
+    public abstract Builder objectFormatter(Function<Object, String> objectFormatter);
+    public abstract Builder percentFormatter(DoubleFunction<String> percentFormatter);
+    public abstract Builder doubleFormatter(DoubleFunction<String> doubleFormatter);
+    public abstract Builder longFormatter(LongFunction<String> longFormatter);
+    public abstract Metrics build();
   }
 
   private final class MetricComparator implements Comparator<PolicyStats> {

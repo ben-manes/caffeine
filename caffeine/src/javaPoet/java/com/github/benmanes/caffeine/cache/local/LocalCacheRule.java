@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.local;
 import java.util.function.Consumer;
 
 /**
+ * A code generation rule for a cache.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public abstract class LocalCacheRule implements Consumer<LocalCacheContext> {
@@ -34,7 +36,7 @@ public abstract class LocalCacheRule implements Consumer<LocalCacheContext> {
     }
   }
 
-  /** @return if the rule should be executed. */
+  /** Returns if the rule should be executed. */
   protected abstract boolean applies();
 
   protected abstract void execute();

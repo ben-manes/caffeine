@@ -58,7 +58,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
     }
   }
 
-  /** @return if the rule should be executed. */
+  /** Returns if the rule should be executed. */
   protected abstract boolean applies();
 
   protected abstract void execute();

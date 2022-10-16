@@ -209,7 +209,7 @@ public final class BoundedLocalCacheTest {
       assertThat(cache.drainStatus).isEqualTo(end);
 
       if (!start.equals(end)) {
-        Mockito.verify(executor).execute(any());
+        verify(executor).execute(any());
         Mockito.reset(executor);
       }
     });
