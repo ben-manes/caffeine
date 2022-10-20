@@ -62,7 +62,14 @@ jmh {
   jvm = javaToolchains.launcherFor { languageVersion = java.toolchain.languageVersion }
     .get().executablePath.asFile.absolutePath
 
-  jvmArgs = [ '-Xmx2G' ]
+  def jvmArguments = [ '-Xmx2G' ]
+  if (System.env.GRAALVM == 'true') {
+    jvmArguments += [
+      '-XX:+UnlockExperimentalVMOptions', '-Dgraal.ShowConfiguration=info',
+      '-XX:+EnableJVMCI', '-XX:+UseJVMCICompiler', '-XX:+EagerJVMCI']
+  }
+  jvmArgs = jvmArguments
+
   warmupIterations = 3
   failOnError = true
   iterations = 3

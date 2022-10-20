@@ -73,7 +73,7 @@ dependencies {
 tasks.named('compileCodeGenJava').configure {
   classpath = sourceSets.main.runtimeClasspath + sourceSets.main.output
   options.debug = false
-  dependsOn compileJava
+  dependsOn compileJava, bundle
 }
 
 tasks.named('jar').configure {

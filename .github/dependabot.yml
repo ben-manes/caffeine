@@ -1,7 +1,23 @@
 version: 2
+registries:
+  gradle-plugin-portal:
+    type: maven-repository
+    url: https://plugins.gradle.org/m2
+    username: dummy # Required by dependabot
+    password: dummy # Required by dependabot
 updates:
   # Maintain dependencies for GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "daily"
+      interval: daily
+  # Maintain dependencies for Gradle plugins
+  - package-ecosystem: gradle
+    directory: /
+    allow:
+      - dependency-name: com.gradle*
+    registries:
+      - gradle-plugin-portal
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10

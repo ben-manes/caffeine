@@ -10,22 +10,43 @@ inputs:
   early-access:
     required: true
     description: If an early access release
+  token:
+    required: false
+    description: 'A Github PAT'
 runs:
   using: composite
   steps:
+    - name: Prepare OpenJDK
+      if: inputs.java != 'GraalVM'
+      shell: bash
+      run: echo "JAVA_VERSION=${{ inputs.java }}" >> $GITHUB_ENV
+    - name: Prepare GraalVM
+      if: inputs.java == 'GraalVM'
+      shell: bash
+      run: |
+        echo "GRAALVM=true" >> $GITHUB_ENV
+        echo "JAVA_VERSION=17" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
       uses: actions/setup-java@v3
-      if: inputs.early-access == 'false'
+      if: (inputs.early-access == 'false') && (inputs.java != 'GraalVM')
       with:
         java-version: ${{ inputs.java }}
         distribution: temurin
     - name: Set up JDK ${{ inputs.java }}
       uses: oracle-actions/setup-java@v1
-      if: inputs.early-access == 'true'
+      if: (inputs.early-access == 'true') && (inputs.java != 'GraalVM')
       with:
         release: ${{ inputs.java }}
         website: jdk.java.net
         version: latest
+    - name: Set up JDK 17 + GraalVM
+      uses: graalvm/setup-graalvm@v1
+      if: inputs.java == 'GraalVM'
+      with:
+        version: 'latest'
+        java-version: '17'
+        components: 'native-image'
+        github-token: ${{ inputs.token }}
     - name: Prepare JDK ${{ inputs.java }}
       shell: bash
       run: |
@@ -34,6 +55,7 @@ runs:
     - name: Set up JDK 17
       id: setup-gradle-jdk
       uses: actions/setup-java@v3
+      if: inputs.java != 'GraalVM'
       with:
         java-version: 17
         distribution: temurin
@@ -51,7 +73,6 @@ runs:
           help
     - name: Run ${{ inputs.arguments }}
       env:
-        JAVA_VERSION: ${{ inputs.java }}
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
       shell: bash
       run: |

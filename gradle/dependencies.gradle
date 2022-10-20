@@ -64,7 +64,7 @@ ext {
     univocityParsers: '2.9.1',
     ycsb: '0.17.0',
     xz: '1.9',
-    zstd: '1.5.2-4',
+    zstd: '1.5.2-5',
   ]
   testVersions = [
     awaitility: '4.2.0',
@@ -78,7 +78,7 @@ ext {
     junit5: '5.9.1',
     junitTestNG: '1.0.4',
     lincheck: '2.15',
-    mockito: '4.8.0',
+    mockito: '4.8.1',
     paxExam: '4.13.5',
     slf4jTest: '2.6.1',
     testng: '7.6.1',
@@ -93,7 +93,7 @@ ext {
     bnd: '6.3.1',
     checkstyle: '10.3.4',
     coveralls: '2.12.0',
-    dependencyCheck: '7.2.1',
+    dependencyCheck: '7.3.0',
     errorprone: '3.0.1',
     findsecbugs: '1.12.0',
     jacoco: '0.8.7',
@@ -105,11 +105,11 @@ ext {
     semanticVersioning: '1.1.0',
     snyke: '0.4',
     sonarqube: '3.4.0.2513',
-    spotbugs: '4.7.2',
+    spotbugs: '4.7.3',
     spotbugsContrib: '7.4.7',
-    spotbugsPlugin: '5.0.12',
+    spotbugsPlugin: '5.0.13',
     stats: '0.47.0',
-    versions: '0.42.0',
+    versions: '0.43.0',
   ]
   platformVerrsions = [
     asm: '9.4',

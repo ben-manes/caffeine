@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 19, 20 ]
+        java: [ 11, 19, 20, GraalVM ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -26,6 +26,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: >
             caffeine:jmh --no-daemon
@@ -46,6 +47,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: >
             caffeine:jmh --no-daemon
@@ -66,6 +68,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: >
             caffeine:jmh --no-daemon
@@ -75,12 +78,14 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: caffeine:jmh --no-daemon -PincludePattern=FrequencySketchBenchmark
       - name: TimerWheelBenchmark JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: caffeine:jmh --no-daemon -PincludePattern=TimerWheelBenchmark
       - name: Publish JMH benchmarks

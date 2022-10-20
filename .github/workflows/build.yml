@@ -30,6 +30,7 @@ env:
     repo1.maven.org:443
     scans-in.gradle.com:443
     services.gradle.org:443
+    www.graalvm.org:443
   MIN_JVM: 11
   MAX_JVM: 19
   EA_JVM: 20
@@ -41,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 19, 20 ]
+        java: [ 11, 19, 20, GraalVM ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -57,6 +58,7 @@ jobs:
         with:
           java: ${{ matrix.java }}
           arguments: check -x test
+          token: ${{ secrets.GITHUB_TOKEN }}
           early-access: ${{ matrix.java == env.EA_JVM }}
       - name: Cancel if failed
         uses: andymckay/cancel-action@0.2
@@ -127,7 +129,7 @@ jobs:
           - simulator:check
           - jcache:check
           - guava:check
-        java: [ 11, 19, 20 ]
+        java: [ 11, 19, 20, GraalVM ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -143,6 +145,7 @@ jobs:
         with:
           java: ${{ matrix.java }}
           arguments: ${{ matrix.suite }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           early-access: ${{ matrix.java == env.EA_JVM }}
       - name: Format Test Artifact Name
         if: always() && (matrix.java == env.MAX_JVM)

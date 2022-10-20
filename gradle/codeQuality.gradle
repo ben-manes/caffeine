@@ -172,6 +172,10 @@ tasks.withType(Test).configureEach {
   if (System.properties.containsKey('debug')) {
     jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
   }
+  if (System.env.GRAALVM == 'true') {
+    jvmArgs '-XX:+UnlockExperimentalVMOptions', '-Dgraal.ShowConfiguration=info',
+      '-XX:+EnableJVMCI', '-XX:+UseJVMCICompiler', '-XX:+EagerJVMCI'
+  }
   testLogging {
     events 'skipped', 'failed'
     exceptionFormat 'full'
