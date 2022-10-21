@@ -15,7 +15,7 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout code
-        uses: actions/checkout@main
+        uses: actions/checkout@v3
       - name: Run Codacy Analysis
         uses: codacy/codacy-analysis-cli-action@master
         continue-on-error: true

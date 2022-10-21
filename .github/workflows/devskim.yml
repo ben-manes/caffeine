@@ -23,7 +23,7 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Run DevSkim scanner
         uses: microsoft/DevSkim-Action@v1
       - name: Upload DevSkim scan results to GitHub Security tab
