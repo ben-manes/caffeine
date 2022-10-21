@@ -2247,8 +2247,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           afterRead(prior, now, /* recordHit */ false);
           return currentValue;
         }
-      } else {
-        discardRefresh(prior.getKeyReference());
       }
 
       V oldValue;
@@ -2286,6 +2284,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           prior.setValue(value, valueReferenceQueue());
           prior.setWeight(newWeight);
           setWriteTime(prior, now);
+
+          discardRefresh(prior.getKeyReference());
         }
 
         setVariableTime(prior, varTime);
