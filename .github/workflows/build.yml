@@ -302,7 +302,7 @@ jobs:
             guava.dev:443
       - uses: actions/checkout@v3
       - name: Set up JDK ${{ env.MIN_JVM }}
-        uses: Wandalen/wretry.action@v1.0.35
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           action: actions/setup-java@v3
           with: |
@@ -311,7 +311,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Setup Gradle
-        uses: Wandalen/wretry.action@v1.0.35
+        uses: Wandalen/wretry.action@v1.0.36
         timeout-minutes: 5
         with:
           action: gradle/gradle-build-action@v2

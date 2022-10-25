@@ -37,7 +37,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@v1.0.35
+        uses: Wandalen/wretry.action@v1.0.36
         timeout-minutes: 5
         with:
           action: actions/setup-java@v3
@@ -47,7 +47,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Setup Gradle
-        uses: Wandalen/wretry.action@v1.0.35
+        uses: Wandalen/wretry.action@v1.0.36
         timeout-minutes: 5
         with:
           action: gradle/gradle-build-action@v2
