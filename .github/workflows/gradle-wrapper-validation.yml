@@ -12,4 +12,4 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@v3
-      - uses: gradle/wrapper-validation-action@v1.0.4
+      - uses: gradle/wrapper-validation-action@v1.0.5
