@@ -27,6 +27,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -51,6 +52,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.ExpireAfterAccess;
 import com.github.benmanes.caffeine.testing.Int;
@@ -62,6 +64,7 @@ import com.google.common.collect.Maps;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckMaxLogLevel(WARN)
 @Listeners(CacheValidationListener.class)
 @SuppressWarnings("PreferJavaTimeOverload")
 @Test(dataProviderClass = CacheProvider.class)

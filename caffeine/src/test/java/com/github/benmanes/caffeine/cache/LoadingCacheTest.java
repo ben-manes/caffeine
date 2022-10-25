@@ -31,6 +31,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
+import static uk.org.lidalia.slf4jext.Level.TRACE;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.util.ArrayList;
@@ -63,6 +64,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
@@ -78,6 +80,7 @@ import com.google.common.primitives.Ints;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckMaxLogLevel(WARN)
 @Listeners(CacheValidationListener.class)
 @SuppressWarnings("FutureReturnValueIgnored")
 @Test(dataProviderClass = CacheProvider.class)
@@ -862,8 +865,8 @@ public final class LoadingCacheTest {
     assertThat(context).stats().success(1).failures(0);
   }
 
-  @CheckNoEvictions
   @Test(dataProvider = "caches")
+  @CheckNoEvictions @CheckMaxLogLevel(TRACE)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refresh_cancel_noLog(CacheContext context) {
     var cacheLoader = new CacheLoader<Int, Int>() {
@@ -886,8 +889,8 @@ public final class LoadingCacheTest {
     assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
   }
 
-  @CheckNoEvictions
   @Test(dataProvider = "caches")
+  @CheckNoEvictions @CheckMaxLogLevel(TRACE)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refresh_timeout_noLog(CacheContext context) {
     var cacheLoader = new CacheLoader<Int, Int>() {

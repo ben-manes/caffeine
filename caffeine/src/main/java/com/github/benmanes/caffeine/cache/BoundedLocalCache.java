@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
+import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Caffeine.saturatedToNanos;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
@@ -224,6 +225,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final long MAXIMUM_EXPIRY = (Long.MAX_VALUE >> 1); // 150 years
   /** The duration to wait on the eviction lock before warning of a possible misuse. */
   static final long WARN_AFTER_LOCK_WAIT_NANOS = TimeUnit.SECONDS.toNanos(30);
+  /** The number of retries before computing to validate the entry's integrity; pow2 modulus. */
+  static final int MAX_PUT_SPIN_WAIT_ATTEMPTS = 1024 - 1;
   /** The handle for the in-flight refresh operations. */
   static final VarHandle REFRESHES;
 
@@ -279,6 +282,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     } catch (ReflectiveOperationException e) {
       throw new ExceptionInInitializerError(e);
     }
+  }
+
+  static void requireIsAlive(Object key, Node<?, ?> node) {
+    requireState(node.isAlive(), "An invalid state was detected that occurs if the key's equals "
+        + "or hashCode was modified while it resided in the map. This violation of the Map "
+        + "contract can lead to non-deterministic behavior (key: %s).", key);
   }
 
   /* --------------- Shared --------------- */
@@ -1029,10 +1038,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
 
         notifyEviction(key, value[0], actualCause[0]);
-        makeDead(n);
+        discardRefresh(keyReference);
+        removed[0] = true;
+        node.retire();
       }
-      discardRefresh(keyReference);
-      removed[0] = true;
       return null;
     });
 
@@ -1042,8 +1051,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     // If the eviction fails due to a concurrent removal of the victim, that removal may cancel out
-    // the addition that triggered this eviction. The victim is eagerly unlinked before the removal
-    // task so that if an eviction is still required then a new victim will be chosen for removal.
+    // the addition that triggered this eviction. The victim is eagerly unlinked and the size
+    // decremented before the removal task so that if an eviction is still required then a new
+    // victim will be chosen for removal.
     if (node.inWindow() && (evicts() || expiresAfterAccess())) {
       accessOrderWindowDeque().remove(node);
     } else if (evicts()) {
@@ -1059,16 +1069,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       timerWheel().deschedule(node);
     }
 
+    synchronized (node) {
+      if (node.isAlive()) {
+        logger.log(Level.ERROR, "An invalid state was detected that occurs if the key's equals or "
+            + "hashCode was modified while it resided in the map. This violation of the Map "
+            + "contract can lead to non-deterministic behavior (key: {}).", keyReference);
+      }
+      makeDead(node);
+    }
+
     if (removed[0]) {
       statsCounter().recordEviction(node.getWeight(), actualCause[0]);
-
-      // Notify the listener only if the entry was evicted. This must be performed as the last
-      // step during eviction to safeguard against the executor rejecting the notification task.
       notifyRemoval(key, value[0], actualCause[0]);
-    } else {
-      // Eagerly decrement the size to potentially avoid an additional eviction, rather than wait
-      // for the removal task to do it on the next maintenance cycle.
-      makeDead(node);
     }
 
     return true;
@@ -2007,8 +2019,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @SuppressWarnings("unchecked")
     V[] value = (V[]) new Object[1];
     RemovalCause[] cause = new RemovalCause[1];
+    Object keyReference = node.getKeyReference();
 
-    data.computeIfPresent(node.getKeyReference(), (k, n) -> {
+    data.computeIfPresent(keyReference, (k, n) -> {
       if (n != node) {
         return n;
       }
@@ -2028,7 +2041,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
 
         discardRefresh(node.getKeyReference());
-        makeDead(n);
+        node.retire();
         return null;
       }
     });
@@ -2046,6 +2059,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       writeOrderDeque().remove(node);
     } else if (expiresVariable()) {
       timerWheel().deschedule(node);
+    }
+
+    synchronized (node) {
+      if (node.isAlive()) {
+        logger.log(Level.ERROR, "An invalid state was detected that occurs if the key's equals or "
+            + "hashCode was modified while it resided in the map. This violation of the Map "
+            + "contract can lead to non-deterministic behavior (key: {}).", keyReference);
+      }
+      makeDead(node);
     }
 
     if (cause[0] != null) {
@@ -2212,8 +2234,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     Node<K, V> node = null;
     long now = expirationTicker().read();
     int newWeight = weigher.weigh(key, value);
-    for (;;) {
-      Node<K, V> prior = data.get(nodeFactory.newLookupKey(key));
+    Object lookupKey = nodeFactory.newLookupKey(key);
+    for (int attempts = 1; ; attempts++) {
+      Node<K, V> prior = data.get(lookupKey);
       if (prior == null) {
         if (node == null) {
           node = nodeFactory.newNode(key, keyReferenceQueue(),
@@ -2247,6 +2270,30 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           afterRead(prior, now, /* recordHit */ false);
           return currentValue;
         }
+      }
+
+      // A read may race with the entry's removal, so that after the time the entry's is acquired
+      // it is no longer usable. A retry will reread from the map and either find an absent
+      // mapping, a new entry, or a stale entry.
+      if (!prior.isAlive()) {
+        // A reread of the stale entry may occur if the state transition occurred but the map
+        // removal was delayed by a context switch, so that this thread spin waits until resolved.
+        if ((attempts & MAX_PUT_SPIN_WAIT_ATTEMPTS) != 0) {
+          Thread.onSpinWait();
+          continue;
+        }
+
+        // If the spin wait attempts are exhausted then fallback to a map computation in order to
+        // deschedule this thread until the entry's removal completes. If the key was modified
+        // while in the map so that its equals or hashCode changed then the contents may be
+        // corrupted, where the cache holds an evicted (dead) entry that could not be removed.
+        // That is a violation of the Map contract, so we check that the mapping is in the "alive"
+        // state while in the computation.
+        data.computeIfPresent(lookupKey, (k, n) -> {
+          requireIsAlive(key, n);
+          return n;
+        });
+        continue;
       }
 
       V oldValue;
@@ -2329,6 +2376,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     data.computeIfPresent(lookupKey, (k, n) -> {
       synchronized (n) {
+        requireIsAlive(key, n);
         oldValue[0] = n.getValue();
         if (oldValue[0] == null) {
           cause[0] = RemovalCause.COLLECTED;
@@ -2340,10 +2388,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (cause[0].wasEvicted()) {
           notifyEviction(castKey, oldValue[0], cause[0]);
         }
+        discardRefresh(lookupKey);
+        node[0] = n;
         n.retire();
       }
-      discardRefresh(lookupKey);
-      node[0] = n;
       return null;
     });
 
@@ -2372,6 +2420,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     data.computeIfPresent(lookupKey, (kR, node) -> {
       synchronized (node) {
+        requireIsAlive(key, node);
         oldKey[0] = node.getKey();
         oldValue[0] = node.getValue();
         if ((oldKey[0] == null) || (oldValue[0] == null)) {
@@ -2416,6 +2465,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     int weight = weigher.weigh(key, value);
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
+        requireIsAlive(key, n);
         nodeKey[0] = n.getKey();
         oldValue[0] = n.getValue();
         oldWeight[0] = n.getWeight();
@@ -2473,6 +2523,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long[] now = new long[1];
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
+        requireIsAlive(key, n);
         nodeKey[0] = n.getKey();
         prevValue[0] = n.getValue();
         oldWeight[0] = n.getWeight();
@@ -2581,6 +2632,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       synchronized (n) {
+        requireIsAlive(key, n);
         nodeKey[0] = n.getKey();
         weight[0] = n.getWeight();
         oldValue[0] = n.getValue();
@@ -2753,6 +2805,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       synchronized (n) {
+        requireIsAlive(key, n);
         nodeKey[0] = n.getKey();
         oldValue[0] = n.getValue();
         if ((nodeKey[0] == null) || (oldValue[0] == null)) {

@@ -15,28 +15,29 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static com.github.benmanes.caffeine.cache.LocalCacheSubject.mapLocal;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
-import static com.google.common.truth.Truth.assertAbout;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.testng.ITestResult.FAILURE;
-import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.OFF_LEVELS;
+import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.joor.Reflect;
 import org.mockito.Mockito;
+import org.testng.Assert;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
 import org.testng.ISuite;
@@ -83,13 +84,12 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         resultQueues.add(invokedMethods.get());
       }
     }
-    disableLoggers();
   }
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
     TestLoggerFactory.getAllTestLoggers().values().stream()
-        .forEach(logger -> logger.setEnabledLevels(OFF_LEVELS));
+        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
     TestLoggerFactory.clear();
 
     if (beforeCleanup.get() || !beforeCleanup.compareAndSet(false, true)) {
@@ -142,21 +142,13 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         .findFirst().orElse(null);
     if (context != null) {
       awaitExecutor(context);
-    }
 
-    boolean foundCache = findAndCheckCache(testResult);
-    if (context != null) {
-      if (!foundCache) {
-        if (context.cache != null) {
-          assertThat(context.cache).isValid();
-        } else if (context.asyncCache != null) {
-          assertThat(context.asyncCache).isValid();
-        }
-      }
+      checkCache(context);
       checkNoStats(testResult, context);
       checkExecutor(testResult, context);
       checkNoEvictions(testResult, context);
     }
+    checkLogger(testResult);
   }
 
   /** Waits until the executor has completed all of the submitted work. */
@@ -173,24 +165,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
   }
 
-  /** Returns if the cache was found and, if so, then validates it. */
-  private boolean findAndCheckCache(ITestResult testResult) {
-    boolean foundCache = false;
-    for (Object param : testResult.getParameters()) {
-      if (param instanceof Cache<?, ?>) {
-        assertThat((Cache<?, ?>) param).isValid();
-        foundCache = true;
-      } else if (param instanceof AsyncCache<?, ?>) {
-        assertThat((AsyncCache<?, ?>) param).isValid();
-        foundCache = true;
-      } else if (param instanceof Map<?, ?>) {
-        assertAbout(mapLocal()).that((Map<?, ?>) param).isValid();
-        foundCache = true;
-      }
-    }
-    return foundCache;
-  }
-
   /** Returns the name of the executed test. */
   private static String getTestName(IInvokedMethod method) {
     return StringUtils.substringAfterLast(method.getTestMethod().getTestClass().getName(), ".")
@@ -201,12 +175,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   private static void checkExecutor(ITestResult testResult, CacheContext context) {
     var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
     var cacheSpec = testMethod.getAnnotation(CacheSpec.class);
-    if (cacheSpec == null) {
-      return;
-    }
-
-    assertWithMessage("CacheContext required").that(context).isNotNull();
-    if (context.executor() == null) {
+    if ((cacheSpec == null) || (context.executor() == null)) {
       return;
     }
 
@@ -214,6 +183,17 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       assertThat(context.executor().failed()).isGreaterThan(0);
     } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
       assertThat(context.executor().failed()).isEqualTo(0);
+    }
+  }
+
+  /** Checks that the cache is in an valid state. */
+  private void checkCache(CacheContext context) {
+    if (context.cache != null) {
+      assertThat(context.cache).isValid();
+    } else if (context.asyncCache != null) {
+      assertThat(context.asyncCache).isValid();
+    } else {
+      Assert.fail("Test requires that the CacheContext holds the cache under test");
     }
   }
 
@@ -226,7 +206,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       return;
     }
 
-    assertWithMessage("Test requires CacheContext param for validation").that(context).isNotNull();
     assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
   }
 
@@ -239,9 +218,21 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       return;
     }
 
-    assertWithMessage("Test requires CacheContext param for validation").that(context).isNotNull();
     assertThat(context).removalNotifications().hasNoEvictions();
     assertThat(context).evictionNotifications().isEmpty();
+  }
+
+  /** Checks that no logs above the specified level were emitted. */
+  private static void checkLogger(ITestResult testResult) {
+    var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+    var checkMaxLogLevel = Optional.ofNullable(testMethod.getAnnotation(CheckMaxLogLevel.class))
+        .orElse(testResult.getTestClass().getRealClass().getAnnotation(CheckMaxLogLevel.class));
+    if (checkMaxLogLevel != null) {
+      var events = TestLoggerFactory.getLoggingEvents().stream()
+          .filter(event -> event.getLevel().ordinal() > checkMaxLogLevel.value().ordinal())
+          .collect(toImmutableList());
+      assertWithMessage("maxLevel=%s", checkMaxLogLevel.value()).that(events).isEmpty();
+    }
   }
 
   /** Free memory by clearing unused resources after test execution. */
@@ -314,17 +305,5 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         params[i] = Objects.toString(param);
       }
     }
-  }
-
-  private void disableLoggers() {
-    String packageName = Caffeine.class.getPackageName();
-    String[] classes = {"Caffeine", "LocalCache", "LocalManualCache", "LocalLoadingCache",
-        "LocalAsyncCache", "BoundedLocalCache", "UnboundedLocalCache",
-        "ExecutorServiceScheduler", "GuardedScheduler"};
-    for (var className : classes) {
-      System.getLogger(packageName + "." + className);
-    }
-    TestLoggerFactory.getAllTestLoggers().values().stream()
-        .forEach(logger -> logger.setEnabledLevelsForAllThreads(OFF_LEVELS));
   }
 }

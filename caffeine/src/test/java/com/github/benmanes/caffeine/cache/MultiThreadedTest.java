@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.function.Function.identity;
+import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.benmanes.caffeine.testing.Threads;
 import com.google.common.testing.SerializableTester;
@@ -47,6 +49,7 @@ import com.google.common.testing.SerializableTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckMaxLogLevel(WARN)
 @Listeners(CacheValidationListener.class)
 @Test(groups = "isolated", dataProviderClass = CacheProvider.class)
 public final class MultiThreadedTest {

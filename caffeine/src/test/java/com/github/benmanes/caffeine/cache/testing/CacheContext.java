@@ -311,10 +311,6 @@ public final class CacheContext {
     return (cacheWeigher == CacheWeigher.ZERO);
   }
 
-  public boolean isUnbounded() {
-    return (maximumSize == Maximum.DISABLED);
-  }
-
   public boolean refreshes() {
     return (refresh != Expire.DISABLED);
   }

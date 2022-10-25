@@ -179,7 +179,7 @@ public final class CacheGenerator {
     boolean asyncLoaderIncompatible = context.isAsyncLoader()
         && (!context.isAsync() || !context.isLoading());
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
-    boolean weigherIncompatible = context.isUnbounded() && context.isWeighted();
+    boolean weigherIncompatible = (context.maximum() == Maximum.DISABLED) && context.isWeighted();
     boolean referenceIncompatible = cacheSpec.requiresWeakOrSoft()
         && context.isStrongKeys() && context.isStrongValues();
     boolean expiryIncompatible = (context.expiryType() != CacheExpiry.DISABLED)

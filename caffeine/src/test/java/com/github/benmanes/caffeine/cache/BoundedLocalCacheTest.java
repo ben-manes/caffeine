@@ -44,6 +44,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
@@ -55,6 +57,7 @@ import static org.mockito.Mockito.when;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.ERROR;
+import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.lang.Thread.State;
 import java.lang.ref.Reference;
@@ -74,6 +77,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -106,6 +110,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -124,6 +129,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckMaxLogLevel(WARN)
 @SuppressWarnings("GuardedBy")
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
@@ -144,6 +150,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  @CheckMaxLogLevel(ERROR)
   public void cleanupTask_exception() {
     var expected = new RuntimeException();
     TestLoggerFactory.getAllTestLoggers().values()
@@ -160,6 +167,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  @CheckMaxLogLevel(ERROR)
   public void cleanup_exception() {
     var expected = new RuntimeException();
     TestLoggerFactory.getAllTestLoggers().values()
@@ -240,6 +248,7 @@ public final class BoundedLocalCacheTest {
     await().untilAsserted(() -> assertThat(cache.drainStatus).isAnyOf(REQUIRED, IDLE));
   }
 
+  @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL,
       executor = CacheExecutor.REJECTING, executorFailure = ExecutorFailure.EXPECTED,
@@ -1479,6 +1488,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(8);
   }
 
+  @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches", groups = "isolated")
   @CacheSpec(population = Population.EMPTY,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -1523,6 +1533,33 @@ public final class BoundedLocalCacheTest {
       done.set(true);
       cache.evictionLock.unlock();
     }
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void put_spinToCompute(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.put(context.absentKey(), context.absentValue());
+    var node = cache.data.get(context.absentKey());
+    node.retire();
+
+    cache.data.compute(context.absentKey(), (k, n) -> {
+      var writer = new AtomicReference<Thread>();
+      ConcurrentTestHarness.execute(() -> {
+        writer.set(Thread.currentThread());
+        cache.put(context.absentKey(), context.absentKey());
+      });
+
+      await().untilAtomic(writer, is(not(nullValue())));
+      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      await().until(() -> threadState.contains(writer.get().getState()));
+
+      return null;
+    });
+
+    await().untilAsserted(() ->
+        assertThat(cache).containsEntry(context.absentKey(), context.absentKey()));
+    cache.afterWrite(cache.new RemovalTask(node));
   }
 
   @Test(dataProvider = "caches")
@@ -1857,6 +1894,212 @@ public final class BoundedLocalCacheTest {
     // Assert new value
     await().untilAsserted(() ->
         assertThat(asyncCache.get(context.absentKey())).succeedsWith(refresh.get()));
+  }
+
+  /* --------------- Broken Equality --------------- */
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.MAX_VALUE})
+  public void brokenEquality_eviction(BoundedLocalCache<Object, Int> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
+    TestLoggerFactory.getAllTestLoggers().values().forEach(
+        logger -> logger.setEnabledLevels(INFO_LEVELS));
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    eviction.setMaximum(0);
+    assertThat(Map.copyOf(cache)).isEmpty();
+    assertThat(context).notifications().isEmpty();
+    assertThat(cache.estimatedSize()).isEqualTo(1);
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getMessage()).contains("An invalid state was detected");
+    assertThat(event.getLevel()).isEqualTo(ERROR);
+
+    cache.data.clear();
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expiry = CacheExpiry.CREATE,  expiryTime = Expire.ONE_MINUTE)
+  public void brokenEquality_expiration(
+      BoundedLocalCache<Object, Int> cache, CacheContext context) {
+    TestLoggerFactory.getAllTestLoggers().values().forEach(
+        logger -> logger.setEnabledLevels(INFO_LEVELS));
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    context.ticker().advance(1, TimeUnit.DAYS);
+    cache.cleanUp();
+
+    assertThat(Map.copyOf(cache)).isEmpty();
+    assertThat(context).notifications().isEmpty();
+    assertThat(cache.estimatedSize()).isEqualTo(1);
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getMessage()).contains("An invalid state was detected");
+    assertThat(event.getLevel()).isEqualTo(ERROR);
+
+    cache.data.clear();
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void brokenEquality_clear(BoundedLocalCache<Object, Int> cache, CacheContext context) {
+    TestLoggerFactory.getAllTestLoggers().values().forEach(
+        logger -> logger.setEnabledLevels(INFO_LEVELS));
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    cache.clear();
+    assertThat(Map.copyOf(cache)).isEmpty();
+    assertThat(context).notifications().isEmpty();
+    assertThat(cache.estimatedSize()).isEqualTo(1);
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getMessage()).contains("An invalid state was detected");
+    assertThat(event.getLevel()).isEqualTo(ERROR);
+
+    cache.data.clear();
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void brokenEquality_put(BoundedLocalCache<Object, Int> cache, CacheContext context) {
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    cache.clear();
+    key.decrement();
+
+    try {
+      cache.put(key, context.absentValue());
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessageThat().contains("An invalid state was detected");
+    } finally {
+      cache.data.clear();
+    }
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void brokenEquality_putIfAbsent(
+      BoundedLocalCache<Object, Int> cache, CacheContext context) {
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    cache.clear();
+    key.decrement();
+
+    try {
+      cache.putIfAbsent(key, context.absentValue());
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessageThat().contains("An invalid state was detected");
+    } finally {
+      cache.data.clear();
+    }
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void brokenEquality_replace(BoundedLocalCache<Object, Int> cache, CacheContext context) {
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    cache.clear();
+    key.decrement();
+
+    try {
+      cache.replace(key, context.absentValue());
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessageThat().contains("An invalid state was detected");
+    } finally {
+      cache.data.clear();
+    }
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void brokenEquality_replaceConditionally(
+      BoundedLocalCache<Object, Int> cache, CacheContext context) {
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    cache.clear();
+    key.decrement();
+
+    try {
+      cache.replace(key, context.absentValue(), context.absentValue().negate());
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessageThat().contains("An invalid state was detected");
+    } finally {
+      cache.data.clear();
+    }
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void brokenEquality_remove(BoundedLocalCache<Object, Int> cache, CacheContext context) {
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    cache.clear();
+    key.decrement();
+
+    try {
+      cache.remove(key);
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessageThat().contains("An invalid state was detected");
+    } finally {
+      cache.data.clear();
+    }
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void brokenEquality_removeConditionally(
+      BoundedLocalCache<Object, Int> cache, CacheContext context) {
+    var key = new MutableInt(context.absentKey().intValue());
+    cache.put(key, context.absentValue());
+    key.increment();
+
+    cache.clear();
+    key.decrement();
+
+    try {
+      cache.remove(key, context.absentValue());
+      Assert.fail();
+    } catch (IllegalStateException e) {
+      assertThat(e).hasMessageThat().contains("An invalid state was detected");
+    } finally {
+      cache.data.clear();
+    }
   }
 
   /* --------------- Miscellaneous --------------- */

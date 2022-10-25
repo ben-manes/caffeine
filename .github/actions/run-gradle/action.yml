@@ -25,7 +25,7 @@ runs:
       shell: bash
       run: |
         echo "GRAALVM=true" >> $GITHUB_ENV
-        echo "JAVA_VERSION=17" >> $GITHUB_ENV
+        echo "JAVA_VERSION=19" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
       uses: actions/setup-java@v3
       if: (inputs.early-access == 'false') && (inputs.java != 'GraalVM')
@@ -44,9 +44,9 @@ runs:
       if: inputs.java == 'GraalVM'
       with:
         version: 'latest'
-        java-version: '17'
         components: 'native-image'
         github-token: ${{ inputs.token }}
+        java-version: ${{ env.JAVA_VERSION }}
     - name: Prepare JDK ${{ inputs.java }}
       shell: bash
       run: |

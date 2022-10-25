@@ -90,7 +90,7 @@ tasks.withType(Test).configureEach {
         '--add-exports', 'java.base/jdk.internal.util=ALL-UNNAMED',
       ]
       testLogging.events 'started'
-      maxHeapSize = '2g'
+      maxHeapSize = '3g'
       failFast = true
     } else {
       options {

@@ -72,6 +72,11 @@
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
+    <Method name="put"/>
+    <Bug pattern="CC_CYCLOMATIC_COMPLEXITY"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
     <Method name="setMaximumSize"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
   </Match>
