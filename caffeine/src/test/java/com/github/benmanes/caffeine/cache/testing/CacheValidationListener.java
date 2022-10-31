@@ -23,7 +23,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.testng.ITestResult.FAILURE;
-import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
+import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.TRACE_LEVELS;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -89,7 +89,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
     TestLoggerFactory.getAllTestLoggers().values().stream()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
+        .forEach(logger -> logger.setEnabledLevels(TRACE_LEVELS));
     TestLoggerFactory.clear();
 
     if (beforeCleanup.get() || !beforeCleanup.compareAndSet(false, true)) {

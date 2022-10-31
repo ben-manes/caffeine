@@ -54,7 +54,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.ERROR;
 import static uk.org.lidalia.slf4jext.Level.WARN;
@@ -76,6 +75,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.mockito.Mockito;
@@ -153,9 +153,6 @@ public final class BoundedLocalCacheTest {
   @CheckMaxLogLevel(ERROR)
   public void cleanupTask_exception() {
     var expected = new RuntimeException();
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
-
     var cache = Mockito.mock(BoundedLocalCache.class);
     doThrow(expected).when(cache).performCleanUp(any());
     var task = new PerformCleanupTask(cache);
@@ -170,9 +167,6 @@ public final class BoundedLocalCacheTest {
   @CheckMaxLogLevel(ERROR)
   public void cleanup_exception() {
     var expected = new RuntimeException();
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
-
     var cache = Mockito.mock(BoundedLocalCache.class);
     doThrow(expected).when(cache).performCleanUp(any());
     doCallRealMethod().when(cache).cleanUp();
@@ -1488,7 +1482,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(8);
   }
 
-  @CheckMaxLogLevel(ERROR)
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches", groups = "isolated")
   @CacheSpec(population = Population.EMPTY,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -1904,8 +1898,6 @@ public final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.MAX_VALUE})
   public void brokenEquality_eviction(BoundedLocalCache<Object, Int> cache,
       CacheContext context, Eviction<?, ?> eviction) {
-    TestLoggerFactory.getAllTestLoggers().values().forEach(
-        logger -> logger.setEnabledLevels(INFO_LEVELS));
     var key = new MutableInt(context.absentKey().intValue());
     cache.put(key, context.absentValue());
     key.increment();
@@ -1931,8 +1923,6 @@ public final class BoundedLocalCacheTest {
       expiry = CacheExpiry.CREATE,  expiryTime = Expire.ONE_MINUTE)
   public void brokenEquality_expiration(
       BoundedLocalCache<Object, Int> cache, CacheContext context) {
-    TestLoggerFactory.getAllTestLoggers().values().forEach(
-        logger -> logger.setEnabledLevels(INFO_LEVELS));
     var key = new MutableInt(context.absentKey().intValue());
     cache.put(key, context.absentValue());
     key.increment();
@@ -1955,8 +1945,6 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_clear(BoundedLocalCache<Object, Int> cache, CacheContext context) {
-    TestLoggerFactory.getAllTestLoggers().values().forEach(
-        logger -> logger.setEnabledLevels(INFO_LEVELS));
     var key = new MutableInt(context.absentKey().intValue());
     cache.put(key, context.absentValue());
     key.increment();
@@ -1976,115 +1964,53 @@ public final class BoundedLocalCacheTest {
   @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
-  public void brokenEquality_put(BoundedLocalCache<Object, Int> cache, CacheContext context) {
-    var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
-    key.increment();
-
-    cache.clear();
-    key.decrement();
-
-    try {
-      cache.put(key, context.absentValue());
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).hasMessageThat().contains("An invalid state was detected");
-    } finally {
-      cache.data.clear();
-    }
+  public void brokenEquality_put(BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key -> cache.put(key, context.absentValue()));
   }
 
   @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_putIfAbsent(
-      BoundedLocalCache<Object, Int> cache, CacheContext context) {
-    var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
-    key.increment();
-
-    cache.clear();
-    key.decrement();
-
-    try {
-      cache.putIfAbsent(key, context.absentValue());
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).hasMessageThat().contains("An invalid state was detected");
-    } finally {
-      cache.data.clear();
-    }
+      BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key -> cache.putIfAbsent(key, context.absentValue()));
   }
 
   @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
-  public void brokenEquality_replace(BoundedLocalCache<Object, Int> cache, CacheContext context) {
-    var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
-    key.increment();
-
-    cache.clear();
-    key.decrement();
-
-    try {
-      cache.replace(key, context.absentValue());
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).hasMessageThat().contains("An invalid state was detected");
-    } finally {
-      cache.data.clear();
-    }
+  public void brokenEquality_replace(
+      BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key -> cache.replace(key, context.absentValue()));
   }
 
   @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_replaceConditionally(
-      BoundedLocalCache<Object, Int> cache, CacheContext context) {
-    var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
-    key.increment();
-
-    cache.clear();
-    key.decrement();
-
-    try {
-      cache.replace(key, context.absentValue(), context.absentValue().negate());
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).hasMessageThat().contains("An invalid state was detected");
-    } finally {
-      cache.data.clear();
-    }
+      BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key ->
+        cache.replace(key, context.absentValue(), context.absentValue().negate()));
   }
 
   @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
-  public void brokenEquality_remove(BoundedLocalCache<Object, Int> cache, CacheContext context) {
-    var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
-    key.increment();
-
-    cache.clear();
-    key.decrement();
-
-    try {
-      cache.remove(key);
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).hasMessageThat().contains("An invalid state was detected");
-    } finally {
-      cache.data.clear();
-    }
+  public void brokenEquality_remove(
+      BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key -> cache.remove(key));
   }
 
   @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_removeConditionally(
-      BoundedLocalCache<Object, Int> cache, CacheContext context) {
+      BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key -> cache.remove(key, context.absentValue()));
+  }
+
+  private static void testForBrokenEquality(BoundedLocalCache<MutableInt, Int> cache,
+      CacheContext context, Consumer<MutableInt> task) {
     var key = new MutableInt(context.absentKey().intValue());
     cache.put(key, context.absentValue());
     key.increment();
@@ -2093,7 +2019,7 @@ public final class BoundedLocalCacheTest {
     key.decrement();
 
     try {
-      cache.remove(key, context.absentValue());
+      task.accept(key);
       Assert.fail();
     } catch (IllegalStateException e) {
       assertThat(e).hasMessageThat().contains("An invalid state was detected");

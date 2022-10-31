@@ -30,7 +30,6 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
-import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.TRACE;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
@@ -882,9 +881,6 @@ public final class LoadingCacheTest {
     LoadingCache<Int, Int> cache = context.isAsync()
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
-
     cache.refresh(context.absentKey());
     assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
   }
@@ -907,15 +903,12 @@ public final class LoadingCacheTest {
     LoadingCache<Int, Int> cache = context.isAsync()
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
-
     cache.refresh(context.absentKey());
     assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
   }
 
-  @CheckNoEvictions
   @Test(dataProvider = "caches")
+  @CheckNoEvictions @CheckMaxLogLevel(WARN)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refresh_error_log(CacheContext context) {
     var expected = new RuntimeException();
@@ -923,9 +916,6 @@ public final class LoadingCacheTest {
     LoadingCache<Int, Int> cache = context.isAsync()
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
-
     cache.refresh(context.absentKey());
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
     assertThat(event.getThrowable().orElseThrow()).hasCauseThat().isSameInstanceAs(expected);

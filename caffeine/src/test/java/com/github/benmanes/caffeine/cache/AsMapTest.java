@@ -34,6 +34,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.org.lidalia.slf4jext.Level.ERROR;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.util.AbstractMap;
@@ -343,6 +344,20 @@ public final class AsMapTest {
     assertThat(map).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(replaced).exclusively();
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void put_recursiveUpdate(Map<Int, Int> map, CacheContext context) {
+    map.put(context.absentKey(), context.absentValue());
+    var result = map.compute(context.absentKey(), (key, value) -> {
+      var oldValue = map.put(key, intern(value.add(1)));
+      assertThat(oldValue).isEqualTo(value);
+      return key;
+    });
+    assertThat(result).isEqualTo(context.absentKey());
+    assertThat(map).containsExactly(context.absentKey(), context.absentKey());
   }
 
   @Test(dataProvider = "caches")

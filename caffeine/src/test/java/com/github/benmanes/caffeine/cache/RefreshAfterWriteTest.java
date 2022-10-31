@@ -31,7 +31,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
-import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.INFO_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.time.Duration;
@@ -301,8 +300,6 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
     context.ticker().advance(2, TimeUnit.MINUTES);
 
     cache.get(context.absentKey());
@@ -330,8 +327,6 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
     context.ticker().advance(2, TimeUnit.MINUTES);
 
     cache.get(context.absentKey());
@@ -349,8 +344,6 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
     context.ticker().advance(2, TimeUnit.MINUTES);
 
     cache.get(context.absentKey());
@@ -374,8 +367,6 @@ public final class RefreshAfterWriteTest {
         return null;
       }
     };
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(INFO_LEVELS));
 
     var cache = context.isAsync()
         ? context.buildAsync(loader).synchronous()

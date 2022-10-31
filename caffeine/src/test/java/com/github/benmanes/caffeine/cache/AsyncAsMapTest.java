@@ -34,6 +34,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.org.lidalia.slf4jext.Level.ERROR;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.util.AbstractMap;
@@ -327,6 +328,20 @@ public final class AsyncAsMapTest {
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(replaced).exclusively();
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void put_recursiveUpdate(AsyncCache<Int, Int> cache, CacheContext context) {
+    cache.synchronous().put(context.absentKey(), context.absentValue());
+    var result = cache.asMap().compute(context.absentKey(), (key, future) -> {
+      var oldValue = cache.synchronous().asMap().put(key, intern(future.join().add(1)));
+      assertThat(oldValue).isEqualTo(future.join());
+      return key.asFuture();
+    });
+    assertThat(result).succeedsWith(context.absentKey());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentKey());
   }
 
   /* ---------------- putAll -------------- */
