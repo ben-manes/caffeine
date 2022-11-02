@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.testing;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Locale.US;
 import static org.testng.Assert.fail;
 
 import java.util.ArrayList;
@@ -142,7 +143,7 @@ public final class Threads {
         try {
           operation.accept(collection, e);
         } catch (Throwable t) {
-          failures.add(String.format("Failed: key %s on operation %s%n%s",
+          failures.add(String.format(US, "Failed: key %s on operation %s%n%s",
               e, operation, Throwables.getStackTraceAsString(t)));
           throw t;
         }

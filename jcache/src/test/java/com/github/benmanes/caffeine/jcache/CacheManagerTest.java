@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Locale.US;
 
 import java.lang.management.ManagementFactory;
 import java.util.function.Supplier;
@@ -73,7 +74,7 @@ public final class CacheManagerTest {
 
     String name = "javax.cache:Cache=%s,CacheManager=%s,type=CacheStatistics";
     ManagementFactory.getPlatformMBeanServer().getObjectInstance(
-        new ObjectName(String.format(name, cache.getName(), PROVIDER_NAME)));
+        new ObjectName(String.format(US, name, cache.getName(), PROVIDER_NAME)));
   }
 
   @Test

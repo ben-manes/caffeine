@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission.bloom;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static java.util.Locale.US;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -132,9 +133,9 @@ public class MembershipTest {
       int expectedInsertions, int falsePositives, double falsePositiveRate) {
     return new String[] {
         filterType.toString(),
-        String.format("%,d", capacity),
-        String.format("%,d", expectedInsertions),
-        String.format("%,d (%.2f %%)", falsePositives, 100 * falsePositiveRate),
+        String.format(US, "%,d", capacity),
+        String.format(US, "%,d", expectedInsertions),
+        String.format(US, "%,d (%.2f %%)", falsePositives, 100 * falsePositiveRate),
     };
   }
 

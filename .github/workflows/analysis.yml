@@ -26,5 +26,6 @@ jobs:
           early-access: false
           java: ${{ matrix.java }}
           arguments: >
+            forbiddenApis -DforbiddenApis
             pmdJavaPoet pmdMain pmdCodeGen pmdJmh -Dpmd
             spotbugsJavaPoet spotbugsMain spotbugsCodeGen spotbugsJmh -Dspotbugs

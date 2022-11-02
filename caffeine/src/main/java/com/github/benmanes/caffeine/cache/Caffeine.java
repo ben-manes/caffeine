@@ -179,7 +179,7 @@ public final class Caffeine<K, V> {
   @FormatMethod
   static void requireArgument(boolean expression, String template, @Nullable Object... args) {
     if (!expression) {
-      throw new IllegalArgumentException(String.format(template, args));
+      throw new IllegalArgumentException(String.format(US, template, args));
     }
   }
 
@@ -201,7 +201,7 @@ public final class Caffeine<K, V> {
   @FormatMethod
   static void requireState(boolean expression, String template, @Nullable Object... args) {
     if (!expression) {
-      throw new IllegalStateException(String.format(template, args));
+      throw new IllegalStateException(String.format(US, template, args));
     }
   }
 

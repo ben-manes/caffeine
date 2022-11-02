@@ -42,6 +42,8 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
+import static java.util.Locale.US;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -58,7 +60,6 @@ import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.ERROR;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
-import java.lang.Thread.State;
 import java.lang.ref.Reference;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
@@ -902,7 +903,7 @@ public final class BoundedLocalCacheTest {
         done.set(true);
       });
       await().untilTrue(started);
-      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
 
       return newValue;
@@ -936,7 +937,7 @@ public final class BoundedLocalCacheTest {
       });
 
       await().untilTrue(started);
-      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
 
       return List.of();
@@ -970,7 +971,7 @@ public final class BoundedLocalCacheTest {
       });
 
       await().untilTrue(started);
-      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
       return key.negate();
     });
@@ -1001,7 +1002,7 @@ public final class BoundedLocalCacheTest {
       });
 
       await().untilTrue(started);
-      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
       cache.policy().expireAfterAccess().orElseThrow().setExpiresAfter(Duration.ofHours(1));
       return v;
@@ -1032,7 +1033,7 @@ public final class BoundedLocalCacheTest {
       });
 
       await().untilTrue(started);
-      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
       cache.policy().expireAfterWrite().orElseThrow().setExpiresAfter(Duration.ofHours(1));
       return v;
@@ -1063,7 +1064,7 @@ public final class BoundedLocalCacheTest {
       });
 
       await().untilTrue(started);
-      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
       return key.negate();
     });
@@ -1096,7 +1097,7 @@ public final class BoundedLocalCacheTest {
       });
 
       await().untilTrue(started);
-      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
       node.setVariableTime(context.ticker().read() + TimeUnit.DAYS.toNanos(1));
     }
@@ -1544,8 +1545,8 @@ public final class BoundedLocalCacheTest {
         cache.put(context.absentKey(), context.absentKey());
       });
 
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       await().untilAtomic(writer, is(not(nullValue())));
-      var threadState = EnumSet.of(State.BLOCKED, State.WAITING);
       await().until(() -> threadState.contains(writer.get().getState()));
 
       return null;
@@ -1998,7 +1999,7 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_remove(
       BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
-    testForBrokenEquality(cache, context, key -> cache.remove(key));
+    testForBrokenEquality(cache, context, cache::remove);
   }
 
   @CheckMaxLogLevel(ERROR)
@@ -2110,9 +2111,9 @@ public final class BoundedLocalCacheTest {
     assertThat(description).contains("key=" + node.getKey());
     assertThat(description).contains("value=" + node.getValue());
     assertThat(description).contains("weight=" + node.getWeight());
-    assertThat(description).contains(String.format("accessTimeNS=%,d", node.getAccessTime()));
-    assertThat(description).contains(String.format("writeTimeNS=%,d", node.getWriteTime()));
-    assertThat(description).contains(String.format("varTimeNs=%,d", node.getVariableTime()));
+    assertThat(description).contains(String.format(US, "accessTimeNS=%,d", node.getAccessTime()));
+    assertThat(description).contains(String.format(US, "writeTimeNS=%,d", node.getWriteTime()));
+    assertThat(description).contains(String.format(US, "varTimeNs=%,d", node.getVariableTime()));
   }
 
   @Test

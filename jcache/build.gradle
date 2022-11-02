@@ -37,6 +37,10 @@ dependencies {
   doc "${libraries.jcache}:javadoc"
 }
 
+tasks.named('forbiddenApisTest').configure {
+  bundledSignatures -= 'jdk-system-out'
+}
+
 tasks.named('compileJava').configure {
   modularity.inferModulePath = false
 }

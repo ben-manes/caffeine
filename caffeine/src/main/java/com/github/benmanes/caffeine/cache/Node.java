@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Locale.US;
+
 import java.lang.ref.ReferenceQueue;
 
 import org.checkerframework.checker.index.qual.NonNegative;
@@ -278,7 +280,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   @Override
   @SuppressWarnings("GuardedBy")
   public final String toString() {
-    return String.format("%s=[key=%s, value=%s, weight=%d, queueType=%,d, accessTimeNS=%,d, "
+    return String.format(US, "%s=[key=%s, value=%s, weight=%d, queueType=%,d, accessTimeNS=%,d, "
         + "writeTimeNS=%,d, varTimeNs=%,d, prevInAccess=%s, nextInAccess=%s, prevInWrite=%s, "
         + "nextInWrite=%s]", getClass().getSimpleName(), getKey(), getValue(), getWeight(),
         getQueueType(), getAccessTime(), getWriteTime(), getVariableTime(),

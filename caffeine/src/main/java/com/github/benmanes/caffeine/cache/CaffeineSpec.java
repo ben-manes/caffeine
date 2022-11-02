@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -272,7 +273,7 @@ public final class CaffeineSpec {
     try {
       return Integer.parseInt(value);
     } catch (NumberFormatException e) {
-      throw new IllegalArgumentException(String.format(
+      throw new IllegalArgumentException(String.format(US,
           "key %s value was set to %s, must be an integer", key, value), e);
     }
   }
@@ -283,7 +284,7 @@ public final class CaffeineSpec {
     try {
       return Long.parseLong(value);
     } catch (NumberFormatException e) {
-      throw new IllegalArgumentException(String.format(
+      throw new IllegalArgumentException(String.format(US,
           "key %s value was set to %s, must be a long", key, value), e);
     }
   }
@@ -322,7 +323,7 @@ public final class CaffeineSpec {
       case 's':
         return TimeUnit.SECONDS;
       default:
-        throw new IllegalArgumentException(String.format(
+        throw new IllegalArgumentException(String.format(US,
             "key %s invalid format; was %s, must end with one of [dDhHmMsS]", key, value));
     }
   }

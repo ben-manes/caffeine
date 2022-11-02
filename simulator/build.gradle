@@ -41,6 +41,11 @@ dependencies {
   annotationProcessor annotationProcessors.values()
 }
 
+forbiddenApis {
+  bundledSignatures -= 'jdk-system-out'
+  bundledSignatures += 'commons-io-unsafe-2.11.0'
+}
+
 tasks.named('compileJava').configure {
   modularity.inferModulePath = false
 }

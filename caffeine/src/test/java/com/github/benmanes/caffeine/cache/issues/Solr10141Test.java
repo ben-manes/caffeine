@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Locale.US;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -64,7 +65,7 @@ public final class Solr10141Test {
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
       assertThat(v.key).isEqualTo(k);
       if (!v.live.compareAndSet(true, false)) {
-        throw new RuntimeException(String.format(
+        throw new RuntimeException(String.format(US,
             "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
       }
       removals.incrementAndGet();
@@ -127,7 +128,7 @@ public final class Solr10141Test {
 
     await().until(() -> (inserts.get() - removals.get()) == cache.estimatedSize());
 
-    System.out.printf("Done!%n"
+    System.out.printf(US, "Done!%n"
         + "entries=%,d inserts=%,d removals=%,d hits=%,d maxEntries=%,d maxObservedSize=%,d%n",
         cache.estimatedSize(), inserts.get(), removals.get(),
         hits.get(), maxEntries, maxObservedSize.get());
@@ -143,7 +144,7 @@ public final class Solr10141Test {
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
       assertThat(v.key).isEqualTo(k);
       if (!v.live.compareAndSet(true, false)) {
-        throw new RuntimeException(String.format(
+        throw new RuntimeException(String.format(US,
             "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
       }
       removals.incrementAndGet();

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Random;
@@ -85,7 +86,7 @@ public final class JCacheProfiler {
     Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
       long count = this.count.longValue();
       long rate = count / stopwatch.elapsed(TimeUnit.SECONDS);
-      System.out.printf("%s - %,d [%,d / sec]%n", stopwatch, count, rate);
+      System.out.printf(US, "%s - %,d [%,d / sec]%n", stopwatch, count, rate);
     }, 5, 5, TimeUnit.SECONDS);
   }
 

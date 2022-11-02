@@ -12,6 +12,10 @@ dependencies {
   testImplementation testLibraries.guavaTestLib
 }
 
+tasks.named('forbiddenApisTest').configure {
+  bundledSignatures -= 'jdk-reflection'
+}
+
 tasks.named('compileJava').configure {
   modularity.inferModulePath = true
 }

@@ -41,6 +41,7 @@
  */
 package com.github.benmanes.caffeine.jsr166;
 
+import static java.util.Locale.US;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -242,7 +243,7 @@ public class JSR166TestCase extends TestCase {
             return Float.parseFloat(floatString);
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(
-                String.format("Bad float value in system property %s=%s",
+                String.format(US, "Bad float value in system property %s=%s",
                               name, floatString));
         }
     }
@@ -307,7 +308,7 @@ public class JSR166TestCase extends TestCase {
                 try { MINUTES.sleep(timeoutMinutes); }
                 catch (InterruptedException unexpected) { break; }
                 if (lastTestCase == currentTestCase) {
-                    System.err.printf(
+                    System.err.printf(US,
                         "Looks like we're stuck running test: %s%n",
                         lastTestCase);
 //                     System.err.printf(
@@ -371,7 +372,7 @@ public class JSR166TestCase extends TestCase {
             // Never report first run of any test; treat it as a
             // warmup run, notably to trigger all needed classloading,
             if (i > 0) {
-              System.out.printf("%s: %d%n", toString(), elapsedMillis);
+              System.out.printf(US, "%s: %d%n", toString(), elapsedMillis);
             }
         }
     }
@@ -795,7 +796,7 @@ public class JSR166TestCase extends TestCase {
     }
 
     void tearDownFail(String format, Object... args) {
-        String msg = toString() + ": " + String.format(format, args);
+        String msg = toString() + ": " + String.format(US, format, args);
         System.err.println(msg);
         dumpTestThreads();
         throw new AssertionError(msg);
@@ -1654,7 +1655,7 @@ public class JSR166TestCase extends TestCase {
             threadUnexpectedException(fail);
         }
         if (thread.getState() != Thread.State.TERMINATED) {
-            String detail = String.format(
+            String detail = String.format(US,
                     "timed out waiting for thread to terminate, thread=%s, state=%s" ,
                     thread, thread.getState());
             try {

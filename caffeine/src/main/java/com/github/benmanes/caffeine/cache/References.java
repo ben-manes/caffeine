@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.ReferenceQueue;
@@ -128,7 +129,8 @@ final class References {
 
     @Override
     public String toString() {
-      return String.format("%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
+      return String.format(US,
+          "%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
     }
   }
 
@@ -168,7 +170,8 @@ final class References {
 
     @Override
     public String toString() {
-      return String.format("%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
+      return String.format(US,
+          "%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
     }
   }
 
@@ -202,7 +205,8 @@ final class References {
 
     @Override
     public String toString() {
-      return String.format("%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
+      return String.format(US,
+          "%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
     }
   }
 
@@ -237,7 +241,8 @@ final class References {
 
     @Override
     public String toString() {
-      return String.format("%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
+      return String.format(US,
+          "%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
     }
   }
 
@@ -278,7 +283,7 @@ final class References {
 
     @Override
     public String toString() {
-      return String.format("%s{value=%s}", getClass().getSimpleName(), get());
+      return String.format(US, "%s{value=%s}", getClass().getSimpleName(), get());
     }
   }
 
@@ -319,7 +324,7 @@ final class References {
 
     @Override
     public String toString() {
-      return String.format("%s{value=%s}", getClass().getSimpleName(), get());
+      return String.format(US, "%s{value=%s}", getClass().getSimpleName(), get());
     }
   }
 }

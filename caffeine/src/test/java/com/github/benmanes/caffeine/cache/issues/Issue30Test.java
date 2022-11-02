@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.future;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.time.ZoneOffset.UTC;
+import static java.util.Locale.US;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -147,7 +148,8 @@ public final class Issue30Test {
   }
 
   static final class Loader implements AsyncCacheLoader<String, String> {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("hh:MM:ss.SSS");
+    private static final DateTimeFormatter FORMATTER =
+        DateTimeFormatter.ofPattern("hh:MM:ss.SSS", US);
 
     final ConcurrentMap<String, String> source;
     final ConcurrentMap<String, Instant> lastLoad;

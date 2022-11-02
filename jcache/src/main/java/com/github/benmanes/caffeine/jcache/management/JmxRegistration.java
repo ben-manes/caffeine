@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache.management;
 
+import static java.util.Locale.US;
+
 import java.lang.management.ManagementFactory;
 
 import javax.cache.Cache;
@@ -89,7 +91,7 @@ public final class JmxRegistration {
   static ObjectName getObjectName(Cache<?, ?> cache, MBeanType type) {
     String cacheManagerName = sanitize(cache.getCacheManager().getURI().toString());
     String cacheName = sanitize(cache.getName());
-    String name = String.format("javax.cache:type=Cache%s,CacheManager=%s,Cache=%s",
+    String name = String.format(US, "javax.cache:type=Cache%s,CacheManager=%s,Cache=%s",
         type, cacheManagerName, cacheName);
     return newObjectName(name);
   }
@@ -98,7 +100,7 @@ public final class JmxRegistration {
     try {
       return new ObjectName(name);
     } catch (MalformedObjectNameException e) {
-      String msg = String.format("Illegal ObjectName: %s", name);
+      String msg = "Illegal ObjectName: " + name;
       throw new CacheException(msg, e);
     }
   }

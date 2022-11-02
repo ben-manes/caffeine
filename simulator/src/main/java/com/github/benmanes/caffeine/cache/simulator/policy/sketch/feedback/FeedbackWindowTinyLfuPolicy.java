@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Locale.US;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.List;
@@ -295,7 +296,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   void printSegmentSizes() {
     if (debug) {
-      System.out.printf("maxWindow=%d, maxProtected=%d, percentWindow=%.1f%n",
+      System.out.printf(US, "maxWindow=%d, maxProtected=%d, percentWindow=%.1f%n",
           maxWindow, maxProtected, (double) (100 * maxWindow) / maximumSize);
     }
   }

@@ -41,9 +41,13 @@ allprojects {
   }
 
   dependencies {
+    def deprecated = ['apiElements', 'archives', 'compileClasspath', 'default',
+      'runtimeClasspath', 'runtimeElements', 'testCompileClasspath', 'testRuntimeClasspath']
     configurations.all { configuration ->
-      restrictions.each { module, version ->
-        constraints.add(configuration.name, module).version { require version }
+      if (name !in deprecated) {
+        restrictions.each { module, version ->
+          constraints.add(configuration.name, module).version { require version }
+        }
       }
     }
   }

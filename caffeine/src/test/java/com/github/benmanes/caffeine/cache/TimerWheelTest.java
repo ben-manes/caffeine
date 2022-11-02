@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.TimerWheel.SPANS;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static java.util.Locale.US;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
@@ -304,7 +305,7 @@ public final class TimerWheelTest {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         for (long timer : getTimers(timerWheel.wheel[i][j])) {
           if (timer <= duration) {
-            throw new AssertionError(String.format("wheel[%s][%d] by %ss", i, j,
+            throw new AssertionError(String.format(US, "wheel[%s][%d] by %ss", i, j,
                 TimeUnit.NANOSECONDS.toSeconds(duration - timer)));
           }
         }
@@ -570,7 +571,7 @@ public final class TimerWheelTest {
       }
       builder.append(" - Wheel #").append(i + 1).append(": ").append(buckets).append('\n');
     }
-    System.err.printf("%nCurrent state:%n%s%n%n", builder.deleteCharAt(builder.length() - 1));
+    System.err.printf(US, "%nCurrent state:%n%s%n%n", builder.deleteCharAt(builder.length() - 1));
   }
 
   private static final class Timer extends Node<Long, Long> {

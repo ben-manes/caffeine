@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -59,7 +60,7 @@ public final class Expirable<V> {
 
   @Override
   public String toString() {
-    return String.format("%s{value=%s, expireTimeMS=%,d}",
+    return String.format(US, "%s{value=%s, expireTimeMS=%,d}",
         getClass().getSimpleName(), value, expireTimeMS);
   }
 }

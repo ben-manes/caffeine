@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import static java.util.Locale.US;
+
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -78,9 +80,9 @@ public final class Rewriter implements Runnable {
         }
       });
       writer.writeFooter();
-      System.out.printf("Rewrote %,d events from %,d input(s) in %s%n",
+      System.out.printf(US, "Rewrote %,d events from %,d input(s) in %s%n",
           tick[0], inputFiles.size(), stopwatch);
-      System.out.printf("Output in %s format to %s%n",
+      System.out.printf(US, "Output in %s format to %s%n",
           CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_HYPHEN, outputFormat.name()), outputFile);
     } catch (IOException e) {
       throw new UncheckedIOException(e);

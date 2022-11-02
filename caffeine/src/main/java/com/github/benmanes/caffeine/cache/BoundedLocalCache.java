@@ -284,10 +284,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
+  /** Ensures that the node is alive during the map operation. */
   static void requireIsAlive(Object key, Node<?, ?> node) {
     requireState(node.isAlive(), "An invalid state was detected that occurs if the key's equals "
-        + "or hashCode was modified while it resided in the map. This violation of the Map "
+        + "or hashCode was modified while it resided in the cache. This violation of the Map "
         + "contract can lead to non-deterministic behavior (key: %s).", key);
+  }
+
+  /** Logs if the node cannot be found in the map but is still alive. */
+  static void logIfAlive(Node<?, ?> node) {
+    if (node.isAlive()) {
+      logger.log(Level.ERROR, "An invalid state was detected that occurs if the key's equals or "
+          + "hashCode was modified while it resided in the cache. This violation of the Map "
+          + "contract can lead to non-deterministic behavior (key: {}).", node.getKeyReference());
+    }
   }
 
   /* --------------- Shared --------------- */
@@ -1070,11 +1080,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     synchronized (node) {
-      if (node.isAlive()) {
-        logger.log(Level.ERROR, "An invalid state was detected that occurs if the key's equals or "
-            + "hashCode was modified while it resided in the map. This violation of the Map "
-            + "contract can lead to non-deterministic behavior (key: {}).", keyReference);
-      }
+      logIfAlive(node);
       makeDead(node);
     }
 
@@ -2062,11 +2068,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     synchronized (node) {
-      if (node.isAlive()) {
-        logger.log(Level.ERROR, "An invalid state was detected that occurs if the key's equals or "
-            + "hashCode was modified while it resided in the map. This violation of the Map "
-            + "contract can lead to non-deterministic behavior (key: {}).", keyReference);
-      }
+      logIfAlive(node);
       makeDead(node);
     }
 

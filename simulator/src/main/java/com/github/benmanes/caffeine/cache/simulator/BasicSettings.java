@@ -58,13 +58,13 @@ public class BasicSettings {
 
   public Set<String> policies() {
     return config().getStringList("policies").stream()
-        .map(String::toLowerCase)
+        .map(policy -> policy.toLowerCase(US))
         .collect(toImmutableSet());
   }
 
   public Set<Admission> admission() {
     return config().getStringList("admission").stream()
-        .map(String::toUpperCase)
+        .map(policy -> policy.toUpperCase(US))
         .map(Admission::valueOf)
         .collect(toImmutableEnumSet());
   }

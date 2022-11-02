@@ -6,6 +6,7 @@
  */
 package com.github.benmanes.caffeine.jsr166;
 
+import static java.util.Locale.US;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -357,14 +358,14 @@ public class Collection8Test extends JSR166TestCase {
         } catch (Throwable ex) {
             System.err.println(impl.klazz());
             // c is at risk of corruption if we got here, so be lenient
-            try { System.err.printf("c=%s%n", c); }
+            try { System.err.printf(US, "c=%s%n", c); }
             catch (Throwable t) { t.printStackTrace(); }
-            System.err.printf("n=%d%n", n);
-            System.err.printf("orig=%s%n", orig);
-            System.err.printf("accepts=%s%n", accepts);
-            System.err.printf("rejects=%s%n", rejects);
-            System.err.printf("survivors=%s%n", survivors);
-            System.err.printf("threwAt=%s%n", threwAt.get());
+            System.err.printf(US, "n=%d%n", n);
+            System.err.printf(US, "orig=%s%n", orig);
+            System.err.printf(US, "accepts=%s%n", accepts);
+            System.err.printf(US, "rejects=%s%n", rejects);
+            System.err.printf(US, "survivors=%s%n", survivors);
+            System.err.printf(US, "threwAt=%s%n", threwAt.get());
             throw ex;
         }
     }

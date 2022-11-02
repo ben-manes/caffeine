@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.copy;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Locale.US;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +30,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.function.Function;
 
 import javax.cache.CacheException;
@@ -113,7 +115,7 @@ public final class JavaSerializationCopierTest {
   @Test(dataProvider = "copier")
   @SuppressWarnings({"JavaUtilDate", "JdkObsolete"})
   public void deepCopy_calendar(Copier copier) {
-    Calendar calendar = Calendar.getInstance();
+    Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), US);
     calendar.setTime(new Date());
     assertThat(copy(copier, calendar)).isEqualTo(calendar);
   }

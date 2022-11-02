@@ -124,8 +124,7 @@ tasks.named('compileJava').configure {
   finalizedBy compileCodeGenJava
 }
 tasks.named('compileTestJava').configure {
-  dependsOn compileCodeGenJava
-  dependsOn(jar)
+  dependsOn jar, compileCodeGenJava
 }
 tasks.named('sourcesJar').configure {
   dependsOn generateLocalCaches, generateNodes
@@ -134,6 +133,27 @@ tasks.javadoc.mustRunAfter(compileCodeGenJava)
 
 tasks.withType(Test).configureEach {
   classpath += sourceSets.codeGen.runtimeClasspath
+}
+
+tasks.named('forbiddenApisMain').configure {
+  bundledSignatures += 'jdk-deprecated-18'
+  bundledSignatures -= 'jdk-deprecated'
+}
+tasks.named('forbiddenApisCodeGen').configure {
+  classpath = sourceSets.main.output + sourceSets.codeGen.output
+}
+tasks.named('forbiddenApisJavaPoet').configure {
+  bundledSignatures += 'jdk-system-out'
+}
+tasks.named('forbiddenApisJmh').configure {
+  bundledSignatures -= ['jdk-deprecated', 'jdk-internal',
+    'jdk-non-portable', 'jdk-unsafe', 'jdk-system-out']
+  bundledSignatures += 'jdk-deprecated-18'
+}
+tasks.named('forbiddenApisTest').configure {
+  bundledSignatures -= ['jdk-deprecated', 'jdk-reflection',
+    'jdk-internal', 'jdk-non-portable', 'jdk-system-out', 'jdk-unsafe']
+  bundledSignatures += 'jdk-deprecated-18'
 }
 
 tasks.register('memoryOverhead', JavaExec) {

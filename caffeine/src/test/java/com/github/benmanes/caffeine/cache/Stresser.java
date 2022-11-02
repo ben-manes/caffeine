@@ -128,23 +128,24 @@ public final class Stresser implements Runnable {
     }
 
     var elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(TimeUnit.SECONDS));
-    System.out.printf("---------- %s ----------%n", elapsedTime);
-    System.out.printf("Pending reads: %,d; writes: %,d%n", local.readBuffer.size(), pendingWrites);
-    System.out.printf("Drain status = %s (%s)%n", STATUS[drainStatus], drainStatus);
-    System.out.printf("Evictions = %,d%n", cache.stats().evictionCount());
-    System.out.printf("Size = %,d (max: %,d)%n", local.data.mappingCount(), workload.maxEntries);
-    System.out.printf("Lock = [%s%n", StringUtils.substringAfter(
+    System.out.printf(US, "---------- %s ----------%n", elapsedTime);
+    System.out.printf(US, "Pending reads: %,d; writes: %,d%n",
+        local.readBuffer.size(), pendingWrites);
+    System.out.printf(US, "Drain status = %s (%s)%n", STATUS[drainStatus], drainStatus);
+    System.out.printf(US, "Evictions = %,d%n", cache.stats().evictionCount());
+    System.out.printf(US, "Size = %,d (max: %,d)%n", local.data.mappingCount(), workload.maxEntries);
+    System.out.printf(US, "Lock = [%s%n", StringUtils.substringAfter(
         local.evictionLock.toString(), "["));
-    System.out.printf("Pending reloads = %,d%n", local.refreshes.size());
-    System.out.printf("Pending tasks = %,d%n",
+    System.out.printf(US, "Pending reloads = %,d%n", local.refreshes.size());
+    System.out.printf(US, "Pending tasks = %,d%n",
         ForkJoinPool.commonPool().getQueuedSubmissionCount());
 
     long maxMemory = Runtime.getRuntime().maxMemory();
     long freeMemory = Runtime.getRuntime().freeMemory();
     long allocatedMemory = Runtime.getRuntime().totalMemory();
-    System.out.printf("Max Memory = %,d bytes%n", maxMemory);
-    System.out.printf("Free Memory = %,d bytes%n", freeMemory);
-    System.out.printf("Allocated Memory = %,d bytes%n", allocatedMemory);
+    System.out.printf(US, "Max Memory = %,d bytes%n", maxMemory);
+    System.out.printf(US, "Free Memory = %,d bytes%n", freeMemory);
+    System.out.printf(US, "Allocated Memory = %,d bytes%n", allocatedMemory);
 
     System.out.println();
   }

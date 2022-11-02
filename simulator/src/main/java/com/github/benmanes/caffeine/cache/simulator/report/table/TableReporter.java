@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report.table;
 
+import static java.util.Locale.US;
+
 import java.util.List;
 import java.util.Set;
 
@@ -52,9 +54,9 @@ public final class TableReporter extends TextReporter {
   @Override
   protected Metrics metrics() {
     return Metrics.builder()
-        .percentFormatter(value -> String.format("%.2f %%", 100 * value))
-        .doubleFormatter(value -> String.format("%.2f", value))
-        .longFormatter(value -> String.format("%,d", value))
+        .percentFormatter(value -> String.format(US, "%.2f %%", 100 * value))
+        .doubleFormatter(value -> String.format(US, "%.2f", value))
+        .longFormatter(value -> String.format(US, "%,d", value))
         .build();
   }
 }

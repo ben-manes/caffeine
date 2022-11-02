@@ -34,6 +34,8 @@
  */
 package com.github.benmanes.caffeine.cache.impl;
 
+import static org.jctools.util.UnsafeAccess.UNSAFE;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -52,8 +54,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
-
-import org.jctools.util.UnsafeAccess;
 
 /**
  * A hash table supporting full concurrency of retrievals and
@@ -307,11 +307,9 @@ public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
         }
 
         // Unsafe mechanics
-        static final sun.misc.Unsafe UNSAFE;
         static final long nextOffset;
         static {
             try {
-                UNSAFE = UnsafeAccess.UNSAFE;//sun.misc.Unsafe.getUnsafe();
                 Class k = HashEntry.class;
                 nextOffset = UNSAFE.objectFieldOffset
                     (k.getDeclaredField("next"));
@@ -1695,7 +1693,6 @@ public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
     }
 
     // Unsafe mechanics
-    private static final sun.misc.Unsafe UNSAFE;
     private static final long SBASE;
     private static final int SSHIFT;
     private static final long TBASE;
@@ -1708,7 +1705,6 @@ public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
     static {
         int ss, ts;
         try {
-            UNSAFE = UnsafeAccess.UNSAFE;//sun.misc.Unsafe.getUnsafe();
             Class tc = HashEntry[].class;
             Class sc = Segment[].class;
             TBASE = UNSAFE.arrayBaseOffset(tc);

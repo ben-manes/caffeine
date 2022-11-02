@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Charact
 import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.NUMBER;
 import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.OBJECT;
 import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.PERCENT;
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.builder.ToStringStyle.MULTI_LINE_STYLE;
 
@@ -62,7 +63,7 @@ public class PolicyStats {
   @SuppressWarnings("AnnotateFormatMethod")
   public PolicyStats(String format, Object... args) {
     this.stopwatch = Stopwatch.createUnstarted();
-    this.name = String.format(format, args);
+    this.name = String.format(US, format, args);
     this.metrics = new LinkedHashMap<>();
 
     addMetric(Metric.of("Policy", (Supplier<String>) this::name, OBJECT, true));

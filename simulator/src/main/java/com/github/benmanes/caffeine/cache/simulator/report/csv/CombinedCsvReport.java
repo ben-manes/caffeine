@@ -16,10 +16,10 @@
 package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Locale.US;
 
 import java.nio.file.Path;
 import java.text.NumberFormat;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -58,7 +58,7 @@ public final class CombinedCsvReport implements Runnable {
   public void run() {
     normalize();
     writeReport(tabulate());
-    System.out.printf("Wrote combined report to %s%n", outputFile);
+    System.out.printf(US, "Wrote combined report to %s%n", outputFile);
   }
 
   /** Normalizes the input parameters. */
@@ -85,7 +85,7 @@ public final class CombinedCsvReport implements Runnable {
         .parseAllRecords(inputFiles.values().iterator().next().toFile()).stream()
         .map(record -> record.getString("Policy"))
         .collect(toImmutableList());
-    var formatter = NumberFormat.getInstance(Locale.US);
+    var formatter = NumberFormat.getInstance(US);
     var headers = Stream
         .concat(Stream.of("Policy"), inputFiles.keySet().stream().map(formatter::format))
         .toArray(String[]::new);

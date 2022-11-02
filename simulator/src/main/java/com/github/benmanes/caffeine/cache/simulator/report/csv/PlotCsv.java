@@ -90,7 +90,7 @@ public final class PlotCsv implements Runnable {
 
     try {
       ChartUtils.saveChartAsPNG(outputFile.toFile(), chart, 1280, 720);
-      System.out.printf("Wrote chart to %s%n", outputFile);
+      System.out.printf(US, "Wrote chart to %s%n", outputFile);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -225,7 +225,7 @@ public final class PlotCsv implements Runnable {
           return ChartStyle.forColors(background, content, grid);
         }
         default:
-          throw new TypeConversionException(String.format(
+          throw new TypeConversionException(String.format(US,
               "expected one of %s (case-insensitive) but was '%s'",
               List.of("light", "dark"), value));
       }

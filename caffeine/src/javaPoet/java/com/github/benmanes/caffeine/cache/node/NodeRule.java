@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Locale.US;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import java.lang.invoke.VarHandle;
@@ -135,11 +136,11 @@ public abstract class NodeRule implements Consumer<NodeContext> {
         .returns(varType);
     if (strength == Strength.STRONG) {
       if (visibility == Visibility.PLAIN) {
-        var template = String.format("return (%s) $L.get(this)",
+        var template = String.format(US, "return (%s) $L.get(this)",
             varType.isPrimitive() ? "$L" : "$T");
         getter.addStatement(template, varType, varHandleName(varName));
       } else if (visibility == Visibility.OPAQUE) {
-        var template = String.format("return (%s) $L.getOpaque(this)",
+        var template = String.format(US, "return (%s) $L.getOpaque(this)",
             varType.isPrimitive() ? "$L" : "$T");
         getter.addStatement(template, varType, varHandleName(varName));
       } else if (visibility == Visibility.VOLATILE) {

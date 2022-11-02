@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Locale.US;
 import static java.util.function.Function.identity;
 
 import java.io.PrintStream;
@@ -213,7 +214,7 @@ public final class MemoryBenchmark {
     guava.cleanUp();
 
     int leftPadded = Math.max((36 - label.length()) / 2 - 1, 1);
-    out.printf(" %2$-" + leftPadded + "s %s%n", label, " ");
+    out.printf(US, " %2$-" + leftPadded + "s %s%n", label, " ");
     String result = FlipTable.of(new String[] { "Cache", "Baseline", "Per Entry" }, new String[][] {
         evaluate("Caffeine", caffeine.asMap()),
         evaluate("Guava", guava.asMap())
@@ -233,8 +234,8 @@ public final class MemoryBenchmark {
     long aligned = ((perEntry % 8) == 0) ? perEntry : ((1 + perEntry / 8) * 8);
     return new String[] {
         label,
-        String.format("%,d bytes", base),
-        String.format("%,d bytes (%,d aligned)", perEntry, aligned)
+        String.format(US, "%,d bytes", base),
+        String.format(US, "%,d bytes (%,d aligned)", perEntry, aligned)
     };
   }
 
