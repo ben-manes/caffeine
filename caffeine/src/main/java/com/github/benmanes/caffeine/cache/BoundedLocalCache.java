@@ -1585,7 +1585,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         case PROCESSING_TO_REQUIRED:
           return;
         default:
-          throw new IllegalStateException();
+          throw new IllegalStateException("Invalid drain status: " + drainStatus);
       }
     }
   }
@@ -2274,9 +2274,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
       }
 
-      // A read may race with the entry's removal, so that after the time the entry's is acquired
-      // it is no longer usable. A retry will reread from the map and either find an absent
-      // mapping, a new entry, or a stale entry.
+      // A read may race with the entry's removal, so that after the entry is acquired it may no
+      // longer be usable. A retry will reread from the map and either find an absent mapping, a
+      // new entry, or a stale entry.
       if (!prior.isAlive()) {
         // A reread of the stale entry may occur if the state transition occurred but the map
         // removal was delayed by a context switch, so that this thread spin waits until resolved.
@@ -4215,13 +4215,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             : putSync(key, value, duration, unit, /* onlyIfAbsent */ true);
       }
       @Nullable V putSync(K key, V value, long duration, TimeUnit unit, boolean onlyIfAbsent) {
-        var expiry = new FixedExpiry<K, V>(duration, unit);
+        var expiry = new FixedExpireAfterWrite<K, V>(duration, unit);
         return cache.put(key, value, expiry, onlyIfAbsent);
       }
       @SuppressWarnings("unchecked")
       @Nullable V putIfAbsentAsync(K key, V value, long duration, TimeUnit unit) {
         // Keep in sync with LocalAsyncCache.AsMapView#putIfAbsent(key, value)
-        var expiry = (Expiry<K, V>) new AsyncExpiry<>(new FixedExpiry<>(duration, unit));
+        var expiry = (Expiry<K, V>) new AsyncExpiry<>(new FixedExpireAfterWrite<>(duration, unit));
         V asyncValue = (V) CompletableFuture.completedFuture(value);
 
         for (;;) {
@@ -4258,7 +4258,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       @SuppressWarnings("unchecked")
       @Nullable V putAsync(K key, V value, long duration, TimeUnit unit) {
-        var expiry = (Expiry<K, V>) new AsyncExpiry<>(new FixedExpiry<>(duration, unit));
+        var expiry = (Expiry<K, V>) new AsyncExpiry<>(new FixedExpireAfterWrite<>(duration, unit));
         V asyncValue = (V) CompletableFuture.completedFuture(value);
 
         var oldValueFuture = (CompletableFuture<V>) cache.put(
@@ -4273,7 +4273,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireNonNull(duration);
         requireNonNull(remappingFunction);
         requireArgument(!duration.isNegative(), "duration cannot be negative: %s", duration);
-        var expiry = new FixedExpiry<K, V>(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
+        var expiry = new FixedExpireAfterWrite<K, V>(
+            saturatedToNanos(duration), TimeUnit.NANOSECONDS);
 
         return cache.isAsync
             ? computeAsync(key, remappingFunction, expiry)
@@ -4325,11 +4326,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     }
 
-    static final class FixedExpiry<K, V> implements Expiry<K, V> {
+    static final class FixedExpireAfterWrite<K, V> implements Expiry<K, V> {
       final long duration;
       final TimeUnit unit;
 
-      FixedExpiry(long duration, TimeUnit unit) {
+      FixedExpireAfterWrite(long duration, TimeUnit unit) {
         this.duration = duration;
         this.unit = unit;
       }
@@ -4577,7 +4578,7 @@ final class BLCHeader {
         case PROCESSING_TO_REQUIRED:
           return false;
         default:
-          throw new IllegalStateException();
+          throw new IllegalStateException("Invalid drain status: " + drainStatus);
       }
     }
 

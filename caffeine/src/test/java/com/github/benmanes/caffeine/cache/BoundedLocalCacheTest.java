@@ -55,6 +55,7 @@ import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.ERROR;
@@ -68,6 +69,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -86,6 +88,7 @@ import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedPolicy.FixedExpireAfterWrite;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.PerformCleanupTask;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
@@ -196,6 +199,21 @@ public final class BoundedLocalCacheTest {
     });
   }
 
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void scheduleAfterWrite_invalidDrainStatus() {
+    var cache = new BoundedLocalCache<Object, Object>(
+        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
+    var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
+    for (;;) {
+      int state = ThreadLocalRandom.current().nextInt();
+      if (!valid.contains(state)) {
+        cache.drainStatus = state;
+        cache.scheduleAfterWrite();
+        Assert.fail("Should not be valid: " + state);
+      }
+    }
+  }
+
   @Test
   public void scheduleDrainBuffers() {
     var executor = Mockito.mock(Executor.class);
@@ -258,11 +276,18 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(expectedExceptions = IllegalStateException.class)
-  public void shouldDrain_exception() {
+  public void shouldDrainBuffers_invalidDrainStatus() {
     var cache = new BoundedLocalCache<Object, Object>(
         Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
-    cache.setDrainStatusOpaque(Integer.MAX_VALUE);
-    cache.shouldDrainBuffers(true);
+    var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
+    for (;;) {
+      int state = ThreadLocalRandom.current().nextInt();
+      if (!valid.contains(state)) {
+        cache.drainStatus = state;
+        cache.shouldDrainBuffers(true);
+        Assert.fail("Should not be valid: " + state);
+      }
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -313,6 +338,28 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.evictionLock.isLocked()).isFalse();
     assertThat(queued[0]).isEqualTo(WRITE_BUFFER_MAX);
     assertThat(triggered[0]).isEqualTo(WRITE_BUFFER_MAX + 1);
+  }
+
+  @Test @CheckMaxLogLevel(ERROR)
+  public void afterWrite_exception() {
+    var expected = new RuntimeException();
+    var cache = new BoundedLocalCache<Object, Object>(
+        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {
+      @Override void maintenance(Runnable task) {
+        throw expected;
+      }
+    };
+
+    Runnable pendingTask = () -> {};
+    for (int i = 0; i < WRITE_BUFFER_MAX; i++) {
+      cache.afterWrite(pendingTask);
+    }
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
+
+    cache.afterWrite(pendingTask);
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
+    assertThat(event.getLevel()).isEqualTo(ERROR);
   }
 
   /* --------------- Eviction --------------- */
@@ -1558,6 +1605,39 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void putIfAbsent_expireAfterRead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
+    context.ticker().advance(1, TimeUnit.HOURS);
+    var result = new AtomicReference<Int>();
+    long currentDuration = 1;
+
+    synchronized (node) {
+      var started = new AtomicBoolean();
+      var thread = new AtomicReference<Thread>();
+      ConcurrentTestHarness.execute(() -> {
+        thread.set(Thread.currentThread());
+        started.set(true);
+        var value = cache.putIfAbsent(context.firstKey(), context.absentValue());
+        result.set(value);
+      });
+      await().untilTrue(started);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> threadState.contains(thread.get().getState()));
+      node.setVariableTime(context.ticker().read() + currentDuration);
+    }
+
+    var expected = context.original().get(context.firstKey());
+    await().untilAtomic(result, is(expected));
+    assertThat(node.getVariableTime()).isEqualTo(
+        context.ticker().read() + context.expiryTime().timeNanos());
+    verify(context.expiry()).expireAfterRead(context.firstKey(),
+        context.absentValue(), context.ticker().read(), currentDuration);
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       scheduler = CacheScheduler.MOCKITO, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -2165,6 +2245,22 @@ public final class BoundedLocalCacheTest {
         Assert.fail();
       } catch (UnsupportedOperationException expected) {}
     }
+  }
+
+  @Test
+  public void fixedExpireAfterWrite() {
+    int key = 1;
+    int value = 2;
+    long duration = TimeUnit.DAYS.toNanos(1);
+    long currentTime = ThreadLocalRandom.current().nextLong();
+    long currentDuration = ThreadLocalRandom.current().nextLong(0, Long.MAX_VALUE);
+
+    var expiry = new FixedExpireAfterWrite<>(1, TimeUnit.DAYS);
+    assertThat(expiry.expireAfterCreate(key, value, currentTime)).isEqualTo(duration);
+    assertThat(expiry.expireAfterUpdate(
+        key, value, currentTime, currentDuration)).isEqualTo(duration);
+    assertThat(expiry.expireAfterRead(
+        key, value, currentTime, currentDuration)).isEqualTo(currentDuration);
   }
 
   static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {

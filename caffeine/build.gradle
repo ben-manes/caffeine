@@ -142,9 +142,6 @@ tasks.named('forbiddenApisMain').configure {
 tasks.named('forbiddenApisCodeGen').configure {
   classpath = sourceSets.main.output + sourceSets.codeGen.output
 }
-tasks.named('forbiddenApisJavaPoet').configure {
-  bundledSignatures += 'jdk-system-out'
-}
 tasks.named('forbiddenApisJmh').configure {
   bundledSignatures -= ['jdk-deprecated', 'jdk-internal',
     'jdk-non-portable', 'jdk-unsafe', 'jdk-system-out']
