@@ -71,6 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: compile
     strategy:
+      fail-fast: false
       matrix:
         suite:
           - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineSlowTest
