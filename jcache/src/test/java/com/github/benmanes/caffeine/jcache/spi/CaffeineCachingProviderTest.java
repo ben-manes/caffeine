@@ -32,6 +32,8 @@ import javax.cache.spi.CachingProvider;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -122,6 +124,9 @@ public final class CaffeineCachingProviderTest {
           provider.getDefaultURI(), provider.getDefaultClassLoader());
       assertThat(cacheManager.getCache("test-cache", Object.class, Object.class)).isNotNull();
       assertThat(cacheManager.getCache("test-cache")).isNotNull();
+
+      cacheManager.createCache("new-cache", new CaffeineConfiguration<>());
+      assertThat(cacheManager.getCache("new-cache")).isNotNull();
     }
   }
 

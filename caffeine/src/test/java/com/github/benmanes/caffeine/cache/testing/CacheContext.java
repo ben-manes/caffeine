@@ -513,7 +513,7 @@ public final class CacheContext {
 
     @SuppressWarnings("PreferJavaTimeOverload")
     public SerializableFakeTicker() {
-      startTime = ThreadLocalRandom.current().nextLong();
+      startTime = ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, Long.MAX_VALUE);
       advance(startTime);
     }
   }

@@ -28,6 +28,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * The test cases that ensure the <tt>expiry for creation</tt> time is set for the created entries.
@@ -53,6 +54,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
         new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION)));
+    configuration.setExecutorFactory(MoreExecutors::directExecutor);
     configuration.setTickerFactory(() -> ticker::read);
     configuration.setStatisticsEnabled(true);
     return configuration;
@@ -101,8 +103,10 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
   @Test
   public void get_loading_expired_lazy() {
+    cacheManager.enableStatistics(jcacheLoading.getName(), false);
+
     jcacheLoading.put(KEY_1, VALUE_1);
-    ticker.setAutoIncrementStep((long) (EXPIRY_DURATION / 2.5), TimeUnit.MILLISECONDS);
+    ticker.setAutoIncrementStep((long) (EXPIRY_DURATION / 1.5), TimeUnit.MILLISECONDS);
 
     assertThat(jcacheLoading.get(KEY_1)).isEqualTo(KEY_1);
   }

@@ -2253,7 +2253,7 @@ public final class BoundedLocalCacheTest {
     int value = 2;
     long duration = TimeUnit.DAYS.toNanos(1);
     long currentTime = ThreadLocalRandom.current().nextLong();
-    long currentDuration = ThreadLocalRandom.current().nextLong(0, Long.MAX_VALUE);
+    long currentDuration = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
     var expiry = new FixedExpireAfterWrite<>(1, TimeUnit.DAYS);
     assertThat(expiry.expireAfterCreate(key, value, currentTime)).isEqualTo(duration);

@@ -158,6 +158,15 @@ public final class MpscGrowableArrayQueueTest {
     assertThat(buffer).hasSize(POPULATED_SIZE);
   }
 
+  @Test(dataProvider = "full")
+  public void peek_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+    for (int i = 0; i < FULL_SIZE; i++) {
+      assertThat(buffer.peek()).isNotNull();
+      buffer.poll();
+    }
+    assertThat(buffer.peek()).isNull();
+  }
+
   @Test(dataProvider = "empty")
   public void relaxedPeek_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.relaxedPeek()).isNull();
@@ -167,6 +176,15 @@ public final class MpscGrowableArrayQueueTest {
   public void relaxedPeek_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.relaxedPeek()).isNotNull();
     assertThat(buffer).hasSize(POPULATED_SIZE);
+  }
+
+  @Test(dataProvider = "full")
+  public void relaxedPeek_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+    for (int i = 0; i < FULL_SIZE; i++) {
+      assertThat(buffer.relaxedPeek()).isNotNull();
+      buffer.poll();
+    }
+    assertThat(buffer.relaxedPeek()).isNull();
   }
 
   /* --------------- Miscellaneous --------------- */

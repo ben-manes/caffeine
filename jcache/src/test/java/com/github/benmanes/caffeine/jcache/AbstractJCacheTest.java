@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache;
 
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.CacheManager;
@@ -43,9 +44,9 @@ import com.google.common.testing.FakeTicker;
 @Test(singleThreaded = true)
 @SuppressWarnings("PreferJavaTimeOverload")
 public abstract class AbstractJCacheTest {
-  protected static final long START_TIME_MS = 0L;//System.currentTimeMillis();
   protected static final long EXPIRY_DURATION = TimeUnit.MINUTES.toMillis(1);
-
+  protected static final long START_TIME_MS = TimeUnit.NANOSECONDS.toMillis(
+      ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, Long.MAX_VALUE));
   protected static final Integer KEY_1 = 1, VALUE_1 = -1;
   protected static final Integer KEY_2 = 2, VALUE_2 = -2;
   protected static final Integer KEY_3 = 3, VALUE_3 = -3;

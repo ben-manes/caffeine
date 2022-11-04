@@ -597,17 +597,6 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    */
 
   /**
-   * A plain store (no ordering/fences) of an element to a given offset
-   *
-   * @param buffer this.buffer
-   * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset(long)}
-   * @param e an orderly kitty
-   */
-  static <E> void spElement(E[] buffer, long offset, E e) {
-    REF_ARRAY.set(buffer, (int) offset, e);
-  }
-
-  /**
    * An ordered store(store + StoreStore barrier) of an element to a given offset
    *
    * @param buffer this.buffer
@@ -619,33 +608,14 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   }
 
   /**
-   * A plain load (no ordering/fences) of an element from a given offset.
-   *
-   * @param buffer this.buffer
-   * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset(long)}
-   * @return the element at the offset
-   */
-  static <E> E lpElement(E[] buffer, long offset) {
-    return (E) REF_ARRAY.get(buffer, (int) offset);
-  }
-
-  /**
    * A volatile load (load + LoadLoad barrier) of an element from a given offset.
    *
    * @param buffer this.buffer
-   * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset(long)}
+   * @param offset computed
    * @return the element at the offset
    */
   static <E> E lvElement(E[] buffer, long offset) {
     return (E) REF_ARRAY.getVolatile(buffer, (int) offset);
-  }
-
-  /**
-   * @param index desirable element index
-   * @return the offset in bytes within the array for a given index.
-   */
-  static long calcElementOffset(long index) {
-    return (index >> 1);
   }
 
   /**

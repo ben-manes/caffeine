@@ -154,7 +154,7 @@ public final class TimerWheelTest {
     timerWheel.nanos = clock;
 
     for (int i = 0; i < 1_000; i++) {
-      long duration = ThreadLocalRandom.current().nextLong(0, TimeUnit.DAYS.toNanos(10));
+      long duration = ThreadLocalRandom.current().nextLong(TimeUnit.DAYS.toNanos(10));
       timerWheel.schedule(new Timer(clock + duration));
     }
     for (int i = 0; i < TimerWheel.BUCKETS.length; i++) {
