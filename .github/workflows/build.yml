@@ -155,13 +155,11 @@ jobs:
           ARTIFACT_NAME=$(echo $RAW_NAME | sed 's/:/-/g')
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> $GITHUB_ENV
       - name: Compress test results
-        uses: sibiraj-s/action-archiver@v1
         if: always() && (matrix.java == env.MAX_JVM)
-        with:
-          path: '**/{jacoco,results}/**/*.{exec,xml}'
-          output: ${{ env.ARTIFACT_NAME }}.tar.gz
-          format: tar
-          gzip: true
+        run: >
+          find . -name *.exec -o -name *.xml |
+          grep "jacoco\|results" |
+          tar czf ${{ env.ARTIFACT_NAME }}.tar.gz --files-from -
       - name: Upload test results
         uses: actions/upload-artifact@v3
         if: always() && (matrix.java == env.MAX_JVM)
@@ -251,7 +249,9 @@ jobs:
         uses: step-security/harden-runner@2e205a28d0e1da00c5f53b161f4067b052c61f34
         with:
           egress-policy: block
-          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+          allowed-endpoints: >
+            ${{ env.ALLOWED_ENDPOINTS }}
+            badgen.net:443
       - name: Download Tests
         uses: actions/download-artifact@v3
       - name: Decompress
@@ -267,12 +267,11 @@ jobs:
           ignore_runs: true
           job_summary: true
       - name: Create badge
-        uses: emibcn/badge-action@d6f51ff11b5c3382b3b88689ae2d6db22d9737d1
-        with:
-          label: tests
-          color: 31c653
-          path: badge.svg
-          status: ${{ fromJSON(steps.test-results.outputs.json).formatted.stats.runs }}
+        env:
+          LABEL: tests
+          COLOR: 31c653
+          STATUS: ${{ fromJSON(steps.test-results.outputs.json).formatted.stats.runs }}
+        run: curl -s https://badgen.net/badge/${{env.LABEL}}/${{env.STATUS}}/${{env.COLOR}} > badge.svg
       - name: Upload badge to Gist
         uses: andymckay/append-gist-action@88823092589111fc0683e670da60e941b29f94e9
         if: >

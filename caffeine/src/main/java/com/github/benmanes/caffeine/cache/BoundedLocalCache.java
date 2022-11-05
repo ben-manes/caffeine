@@ -1509,6 +1509,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return;
       }
       scheduleDrainBuffers();
+      Thread.onSpinWait();
     }
 
     // In scenarios where the writing threads cannot make progress then they attempt to provide
@@ -3331,15 +3332,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           advanced[0] = true;
         }
       };
-      for (;;) {
-        if (spliterator.tryAdvance(consumer)) {
-          if (advanced[0]) {
-            return true;
-          }
-          continue;
+      while (spliterator.tryAdvance(consumer)) {
+        if (advanced[0]) {
+          return true;
         }
-        return false;
       }
+      return false;
     }
 
     @Override
@@ -3515,15 +3513,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           advanced[0] = true;
         }
       };
-      for (;;) {
-        if (spliterator.tryAdvance(consumer)) {
-          if (advanced[0]) {
-            return true;
-          }
-          continue;
+      while (spliterator.tryAdvance(consumer)) {
+        if (advanced[0]) {
+          return true;
         }
-        return false;
       }
+      return false;
     }
 
     @Override
@@ -3661,24 +3656,22 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       long now = cache.expirationTicker().read();
-      for (;;) {
-        if (iterator.hasNext()) {
-          next = iterator.next();
-          value = next.getValue();
-          key = next.getKey();
+      while (iterator.hasNext()) {
+        next = iterator.next();
+        value = next.getValue();
+        key = next.getKey();
 
-          boolean evictable = (key == null) || (value == null) || cache.hasExpired(next, now);
-          if (evictable || !next.isAlive()) {
-            if (evictable) {
-              cache.scheduleDrainBuffers();
-            }
-            advance();
-            continue;
+        boolean evictable = (key == null) || (value == null) || cache.hasExpired(next, now);
+        if (evictable || !next.isAlive()) {
+          if (evictable) {
+            cache.scheduleDrainBuffers();
           }
-          return true;
+          advance();
+          continue;
         }
-        return false;
+        return true;
       }
+      return false;
     }
 
     void advance() {
@@ -3777,15 +3770,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           advanced[0] = true;
         }
       };
-      for (;;) {
-        if (spliterator.tryAdvance(consumer)) {
-          if (advanced[0]) {
-            return true;
-          }
-          continue;
+      while (spliterator.tryAdvance(consumer)) {
+        if (advanced[0]) {
+          return true;
         }
-        return false;
       }
+      return false;
     }
 
     @Override

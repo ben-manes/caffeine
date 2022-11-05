@@ -238,7 +238,7 @@ public final class Caffeine<K, V> {
   static int calculateHashMapCapacity(Iterable<?> iterable) {
     return (iterable instanceof Collection)
         ? calculateHashMapCapacity(((Collection<?>) iterable).size())
-        : /* DEFAULT_INITIAL_CAPACITY */ 16;
+        : DEFAULT_INITIAL_CAPACITY;
   }
 
   /**
