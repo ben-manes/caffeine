@@ -1,5 +1,3 @@
-import net.ltgt.gradle.errorprone.CheckSeverity
-
 apply plugin: 'io.github.gradle-nexus.publish-plugin'
 apply plugin: 'io.snyk.gradle.plugin.snykplugin'
 apply plugin: 'org.kordamp.gradle.source-stats'
@@ -12,8 +10,8 @@ buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
 
   repositories {
-    mavenCentral()
     gradlePluginPortal()
+    mavenCentral()
   }
 
   dependencies {
@@ -90,14 +88,6 @@ subprojects {
   tasks.register('bundle', aQute.bnd.gradle.Bundle) {
     from sourceSets.main.output
     sourceSet = sourceSets.main
-  }
-
-  tasks.withType(JavaCompile).configureEach {
-    if (name.contains('Test') || name.contains('Jmh')) {
-      options.errorprone.nullaway {
-        severity = CheckSeverity.OFF
-      }
-    }
   }
 
   if (project != project(':caffeine')) {

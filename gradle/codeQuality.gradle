@@ -161,6 +161,9 @@ tasks.withType(JavaCompile).configureEach {
     errorChecks.each { error(it) }
 
     nullaway {
+      if (name.contains('Test') || name.contains('Jmh')) {
+        disable()
+      }
       annotatedPackages.add('com.github.benmanes.caffeine')
       annotatedPackages.add('com.google.common')
       checkOptionalEmptiness = true

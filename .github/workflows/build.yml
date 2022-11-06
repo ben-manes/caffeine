@@ -71,7 +71,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: compile
     strategy:
-      fail-fast: false
       matrix:
         suite:
           - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineSlowTest
@@ -130,7 +129,7 @@ jobs:
           - simulator:check
           - jcache:check
           - guava:check
-        java: [ 11, 19, 20, GraalVM ]
+        java: [ 19 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -157,9 +156,8 @@ jobs:
       - name: Compress test results
         if: always() && (matrix.java == env.MAX_JVM)
         run: >
-          find . -name *.exec -o -name *.xml |
-          grep "jacoco\|results" |
-          tar czf ${{ env.ARTIFACT_NAME }}.tar.gz --files-from -
+          find . -path */jacoco/*.exec -o -path */results/*.xml
+          | tar czf ${{ env.ARTIFACT_NAME }}.tar.gz --files-from -
       - name: Upload test results
         uses: actions/upload-artifact@v3
         if: always() && (matrix.java == env.MAX_JVM)
@@ -273,14 +271,16 @@ jobs:
           STATUS: ${{ fromJSON(steps.test-results.outputs.json).formatted.stats.runs }}
         run: curl -s https://badgen.net/badge/${{env.LABEL}}/${{env.STATUS}}/${{env.COLOR}} > badge.svg
       - name: Upload badge to Gist
-        uses: andymckay/append-gist-action@88823092589111fc0683e670da60e941b29f94e9
+        uses: popsiclestick/gist-sync-action@v1.2.0
         if: >
           github.event_name == 'push'
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
-          gistURL: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
-          token: ${{ secrets.GIST_TOKEN }}
-          file: badge.svg
+          gist_url: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
+          auth: ${{ secrets.GIST_TOKEN }}
+          gist_description: Test Results
+          gist_title: Test Results
+          github_file: badge.svg
 
   publish-snapshot:
     name: Publish Snapshot

@@ -1,6 +1,5 @@
 /** Cache simulator using tracing data and a family of eviction policy options. */
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
-import net.ltgt.gradle.errorprone.CheckSeverity
 
 apply plugin:'application'
 
@@ -66,8 +65,8 @@ tasks.named('sourcesJar').configure {
 
 tasks.withType(JavaCompile).configureEach {
   options.errorprone {
-    nullaway.severity = CheckSeverity.OFF
     disable('CanIgnoreReturnValueSuggester')
+    nullaway.disable()
   }
 }
 
