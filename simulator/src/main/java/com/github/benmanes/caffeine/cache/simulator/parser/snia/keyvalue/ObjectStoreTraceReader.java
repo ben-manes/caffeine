@@ -48,7 +48,7 @@ public final class ObjectStoreTraceReader extends TextTraceReader {
     return lines()
         .map(line -> line.split(" "))
         .filter(array -> array[1].equals("REST.GET.OBJECT"))
-        .map(array -> {
+        .flatMap(array -> {
           long key = new BigInteger(array[2], 16).longValue();
           int weight;
           if (array.length == 3) {
@@ -58,7 +58,10 @@ public final class ObjectStoreTraceReader extends TextTraceReader {
             long end = Long.parseLong(array[5]);
             weight = Ints.saturatedCast(end - start);
           }
-          return AccessEvent.forKeyAndWeight(key, weight);
+          if (weight < 0) {
+              return Stream.empty();
+          }
+          return Stream.of(AccessEvent.forKeyAndWeight(key, weight));
         });
   }
 }
