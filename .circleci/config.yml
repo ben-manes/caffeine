@@ -21,6 +21,7 @@ commands:
       - run:
           name: Add openjdk-r PPA
           command: |
+            sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 EB9B1D8886F44E2A
             sudo add-apt-repository --yes ppa:openjdk-r/ppa
             sudo apt-get --yes update
       - run:
@@ -91,7 +92,7 @@ jobs:
   compile:
     resource_class: arm.medium
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     environment:
       JAVA_VERSION: << pipeline.parameters.java_version >>
       TERM: dumb
@@ -106,7 +107,7 @@ jobs:
   test:
     resource_class: arm.medium
     machine:
-      image: ubuntu-2004:current
+      image: ubuntu-2204:current
     environment:
       JAVA_VERSION: << pipeline.parameters.java_version >>
       TERM: dumb
