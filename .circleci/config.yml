@@ -21,8 +21,8 @@ commands:
       - run:
           name: Add openjdk-r PPA
           command: |
-            sudo add-apt-repository ppa:openjdk-r/ppa
-            sudo apt-get update
+            sudo add-apt-repository --yes ppa:openjdk-r/ppa
+            sudo apt-get --yes update
       - run:
           name: Generate cache version
           command: |
@@ -40,7 +40,7 @@ commands:
       - run:
           name: Install openjdk
           command: |
-            sudo apt-get install --assume-yes openjdk-<< parameters.version >>-jdk
+            sudo apt-get install --yes openjdk-<< parameters.version >>-jdk
             sudo update-java-alternatives --set java-1.<< parameters.version >>.0-openjdk-arm64
       - run:
           name: Prepare to save apt cache
