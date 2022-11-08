@@ -5,30 +5,25 @@ on: [ push, pull_request ]
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  MAX_JVM: 18
+  JAVA_VERSION: 19
 
 jobs:
   examples:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ 11, 18 ]
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@2e205a28d0e1da00c5f53b161f4067b052c61f34
         with:
           egress-policy: audit
       - uses: actions/checkout@v3
-      - name: Set up JDK ${{ matrix.java }}
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: Wandalen/wretry.action@v1.0.36
         timeout-minutes: 5
         with:
           action: actions/setup-java@v3
           with: |
             distribution: temurin
-            java-version: ${{ matrix.java }}
+            java-version: ${{ env.JAVA_VERSION }}
           attempt_limit: 3
           attempt_delay: 2000
       - name: Setup Gradle
@@ -47,7 +42,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.java }}-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-${{ env.JAVA_VERSION }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Simulator
@@ -58,7 +53,6 @@ jobs:
           -Dcaffeine.simulator.files.paths.1="lirs:loop.trace.gz"
           -Dcaffeine.simulator.files.paths.2="corda:trace_vaultservice.gz"
       - name: Publish Simulator Results
-        if: matrix.java == env.MAX_JVM
         run: |
           {
             echo '### Adaptivity'

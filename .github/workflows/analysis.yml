@@ -5,15 +5,11 @@ on: [ push, pull_request ]
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  JAVA_VERSION: 19
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ 11, 19 ]
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@2e205a28d0e1da00c5f53b161f4067b052c61f34
@@ -23,8 +19,8 @@ jobs:
       - name: Run analyzers
         uses: ./.github/actions/run-gradle
         with:
+          java: ${{ env.JAVA_VERSION }}
           early-access: false
-          java: ${{ matrix.java }}
           arguments: >
             forbiddenApis -DforbiddenApis
             pmdJavaPoet pmdMain pmdCodeGen pmdJmh -Dpmd

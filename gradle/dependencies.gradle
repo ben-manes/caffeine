@@ -114,7 +114,7 @@ ext {
   ]
   platformVerrsions = [
     asm: '9.4',
-    kotlin: '1.7.20',
+    kotlin: '1.7.21',
   ]
 
   libraries = [
@@ -262,6 +262,7 @@ ext {
     'com.fasterxml.jackson:jackson-bom': '2.13.4.20221013',
     'com.google.protobuf:protobuf-java': '3.21.8',
     'com.thoughtworks.xstream:xstream': '1.4.19',
+    'org.apache.bcel:bcel': '6.6.1',
     'org.apache.commons:commons-text': '1.10.0',
     'org.apache.httpcomponents:httpclient': '4.5.13',
     'org.bouncycastle:bcprov-jdk15on': '1.70',
