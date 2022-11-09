@@ -50,14 +50,9 @@ public final class ObjectStoreTraceReader extends TextTraceReader {
         .filter(array -> array[1].equals("REST.GET.OBJECT"))
         .flatMap(array -> {
           long key = new BigInteger(array[2], 16).longValue();
-          int weight;
-          if (array.length == 3) {
-            weight = Integer.parseInt(array[3]);
-          } else {
-            long start = Long.parseLong(array[4]);
-            long end = Long.parseLong(array[5]);
-            weight = Ints.saturatedCast(end - start);
-          }
+          long start = Long.parseLong(array[4]);
+          long end = Long.parseLong(array[5]);
+          int  weight = Ints.saturatedCast(end - start);
           if (weight < 0) {
               return Stream.empty();
           }
