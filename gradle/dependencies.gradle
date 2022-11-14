@@ -35,7 +35,7 @@ ext {
     commonsIo: '2.11.0',
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.2',
-    ehcache3: '3.10.2',
+    ehcache3: '3.10.3',
     errorprone: '2.16',
     errorproneSupport: '0.5.0',
     expiringMap: '0.5.10',
@@ -110,7 +110,7 @@ ext {
     spotbugsContrib: '7.4.7',
     spotbugsPlugin: '5.0.13',
     stats: '0.47.0',
-    versions: '0.43.0',
+    versions: '0.44.0',
   ]
   platformVerrsions = [
     asm: '9.4',

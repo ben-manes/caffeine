@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser.snia.keyvalue;
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 
 import java.math.BigInteger;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -48,15 +49,15 @@ public final class ObjectStoreTraceReader extends TextTraceReader {
     return lines()
         .map(line -> line.split(" "))
         .filter(array -> array[1].equals("REST.GET.OBJECT"))
-        .flatMap(array -> {
-          long key = new BigInteger(array[2], 16).longValue();
+        .map(array -> {
           long start = Long.parseLong(array[4]);
           long end = Long.parseLong(array[5]);
-          int  weight = Ints.saturatedCast(end - start);
-          if (weight < 0) {
-              return Stream.empty();
+          int weight = Ints.saturatedCast(end - start);
+          if (weight <= 0) {
+            return null;
           }
-          return Stream.of(AccessEvent.forKeyAndWeight(key, weight));
-        });
+          long key = new BigInteger(array[2], 16).longValue();
+          return AccessEvent.forKeyAndWeight(key, weight);
+        }).filter(Objects::nonNull);
   }
 }

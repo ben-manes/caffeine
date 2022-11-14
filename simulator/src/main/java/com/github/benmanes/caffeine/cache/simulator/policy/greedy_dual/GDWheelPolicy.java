@@ -84,8 +84,10 @@ public final class GDWheelPolicy implements Policy {
   }
 
   private void onMiss(AccessEvent event, Node node) {
-    evict(event);
-    add(event, node);
+    if (event.weight() <= maximumSize) {
+      evict(event);
+      add(event, node);
+    }
   }
 
   private void evict(AccessEvent event) {
@@ -148,8 +150,7 @@ public final class GDWheelPolicy implements Policy {
 
   private void onHit(AccessEvent event, Node node) {
     remove(node);
-    evict(event);
-    add(event, node);
+    onMiss(event, node);
   }
 
   private void remove(Node node) {
