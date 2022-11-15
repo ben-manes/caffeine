@@ -61,7 +61,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           early-access: ${{ matrix.java == env.EA_JVM }}
       - name: Cancel if failed
-        uses: andymckay/cancel-action@0.2
+        uses: andymckay/cancel-action@0.3
         continue-on-error: true
         if: failure()
 
@@ -166,7 +166,7 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}-results
           path: ${{ env.ARTIFACT_NAME }}.tar.gz
       - name: Cancel if failed
-        uses: andymckay/cancel-action@0.2
+        uses: andymckay/cancel-action@0.3
         continue-on-error: true
         if: failure()
 
