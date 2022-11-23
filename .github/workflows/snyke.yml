@@ -28,7 +28,6 @@ jobs:
         uses: ./.github/actions/run-gradle
         continue-on-error: true
         with:
-          early-access: false
           java: ${{ env.JAVA_VERSION }}
           arguments: snyk-test -PsnykArgs="--sarif-file-output=snyk.sarif"
       - name: Upload result to GitHub Code Scanning
@@ -40,6 +39,5 @@ jobs:
         uses: ./.github/actions/run-gradle
         continue-on-error: true
         with:
-          early-access: false
           java: ${{ env.JAVA_VERSION }}
           arguments: snyk-monitor

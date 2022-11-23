@@ -27,7 +27,6 @@ jobs:
       - name: Run dependency-check
         uses: ./.github/actions/run-gradle
         with:
-          early-access: false
           java: ${{ env.JAVA_VERSION }}
           arguments: dependencyCheckAggregate
       - name: Upload result to GitHub Code Scanning

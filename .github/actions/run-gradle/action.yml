@@ -8,8 +8,9 @@ inputs:
     required: true
     description: The JDK version
   early-access:
-    required: true
-    description: If an early access release
+    default: '20'
+    required: false
+    description: The early access release
   token:
     required: false
     description: 'A Github PAT'
@@ -28,13 +29,13 @@ runs:
         echo "JAVA_VERSION=19" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
       uses: actions/setup-java@v3
-      if: (inputs.early-access == 'false') && (inputs.java != 'GraalVM')
+      if: (inputs.early-access != inputs.java) && (inputs.java != 'GraalVM')
       with:
         java-version: ${{ inputs.java }}
         distribution: temurin
     - name: Set up JDK ${{ inputs.java }}
       uses: oracle-actions/setup-java@v1
-      if: (inputs.early-access == 'true') && (inputs.java != 'GraalVM')
+      if: (inputs.early-access == inputs.java) && (inputs.java != 'GraalVM')
       with:
         release: ${{ inputs.java }}
         website: jdk.java.net
@@ -51,7 +52,7 @@ runs:
       shell: bash
       run: |
         echo "JDK_CI=$JAVA_HOME" >> $GITHUB_ENV
-        echo "JDK_EA=${{ inputs.early-access }}" >> $GITHUB_ENV
+        echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
     - name: Set up JDK 17
       id: setup-gradle-jdk
       uses: actions/setup-java@v3

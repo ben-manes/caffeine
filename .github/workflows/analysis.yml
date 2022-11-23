@@ -20,7 +20,6 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          early-access: false
           arguments: >
             forbiddenApis -DforbiddenApis
             pmdJavaPoet pmdMain pmdCodeGen pmdJmh -Dpmd

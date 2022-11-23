@@ -5,8 +5,7 @@ on: [ push, pull_request ]
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  MAX_JVM: 19
-  EA_JVM: 20
+  PUBLISH_JDK: 19
 
 jobs:
   benchmarks:
@@ -27,7 +26,6 @@ jobs:
         with:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: >
             caffeine:jmh --no-daemon
             -PincludePattern=ComputeBenchmark
@@ -48,7 +46,6 @@ jobs:
         with:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: >
             caffeine:jmh --no-daemon
             -PincludePattern=GetPutBenchmark
@@ -69,28 +66,28 @@ jobs:
         with:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: >
             caffeine:jmh --no-daemon
             -PincludePattern=PutRemoveBenchmark
-            -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
+            -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
       - name: FrequencySketch JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
-          arguments: caffeine:jmh --no-daemon -PincludePattern=FrequencySketchBenchmark
+          arguments: >
+            caffeine:jmh --no-daemon
+            -PincludePattern=FrequencySketchBenchmark
+            -PbenchmarkParameters=tableSize=134217728
       - name: TimerWheelBenchmark JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
           arguments: caffeine:jmh --no-daemon -PincludePattern=TimerWheelBenchmark
       - name: Publish JMH benchmarks
         if: >
-          matrix.java == env.MAX_JVM
+          matrix.java == env.PUBLISH_JDK
           && github.event_name == 'push'
           && endsWith(github.ref, github.event.repository.default_branch)
         run: |

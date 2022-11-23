@@ -31,9 +31,7 @@ env:
     scans-in.gradle.com:443
     services.gradle.org:443
     www.graalvm.org:443
-  MIN_JVM: 11
-  MAX_JVM: 19
-  EA_JVM: 20
+  PUBLISH_JDK: 11
 
 jobs:
   compile:
@@ -59,7 +57,6 @@ jobs:
           java: ${{ matrix.java }}
           arguments: check -x test
           token: ${{ secrets.GITHUB_TOKEN }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
       - name: Cancel if failed
         uses: andymckay/cancel-action@0.3
         continue-on-error: true
@@ -129,7 +126,7 @@ jobs:
           - simulator:check
           - jcache:check
           - guava:check
-        java: [ 19 ]
+        java: [ 11 ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -146,21 +143,20 @@ jobs:
           java: ${{ matrix.java }}
           arguments: ${{ matrix.suite }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
       - name: Format Test Artifact Name
-        if: always() && (matrix.java == env.MAX_JVM)
+        if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
         run: |
-          RAW_NAME=${{ matrix.suite }}-${{ matrix.java }}
+          RAW_NAME=${{ matrix.suite }}-${{ env.JAVA_VERSION }}
           ARTIFACT_NAME=$(echo $RAW_NAME | sed 's/:/-/g')
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> $GITHUB_ENV
       - name: Compress test results
-        if: always() && (matrix.java == env.MAX_JVM)
+        if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
         run: >
           find . -path */jacoco/*.exec -o -path */results/*.xml
           | tar czf ${{ env.ARTIFACT_NAME }}.tar.gz --files-from -
       - name: Upload test results
         uses: actions/upload-artifact@v3
-        if: always() && (matrix.java == env.MAX_JVM)
+        if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
         with:
           retention-days: 1
           name: ${{ env.ARTIFACT_NAME }}-results
@@ -205,16 +201,14 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           arguments: check -x test
-          java: ${{ env.MAX_JVM }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
+          java: ${{ env.PUBLISH_JDK }}
       - name: Publish to Coveralls
         uses: ./.github/actions/run-gradle
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
           arguments: coveralls
-          java: ${{ env.MAX_JVM }}
-          early-access: ${{ matrix.java == env.EA_JVM }}
+          java: ${{ env.PUBLISH_JDK }}
         continue-on-error: true
       - name: Publish to Codecov
         uses: codecov/codecov-action@v3
@@ -231,9 +225,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          java: ${{ env.MAX_JVM }}
+          java: ${{ env.PUBLISH_JDK }}
           arguments: sonarqube -Dsonar.branch.name=${GITHUB_REF##*/}
-          early-access: ${{ matrix.java == env.EA_JVM }}
         continue-on-error: true
 
   test-results:
@@ -301,13 +294,13 @@ jobs:
             lightbend.github.io:443
             guava.dev:443
       - uses: actions/checkout@v3
-      - name: Set up JDK ${{ env.MIN_JVM }}
+      - name: Set up JDK ${{ env.PUBLISH_JDK }}
         uses: Wandalen/wretry.action@v1.0.36
         with:
           action: actions/setup-java@v3
           with: |
             distribution: temurin
-            java-version: ${{ env.MIN_JVM }}
+            java-version: ${{ env.PUBLISH_JDK }}
           attempt_limit: 3
           attempt_delay: 2000
       - name: Setup Gradle
@@ -323,7 +316,7 @@ jobs:
           attempt_delay: 2000
       - name: Publish Snapshot
         env:
-          JAVA_VERSION: ${{ env.MIN_JVM }}
+          JAVA_VERSION: ${{ env.PUBLISH_JDK }}
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKeyId: 20BCF6B1

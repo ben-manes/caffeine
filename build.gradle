@@ -117,8 +117,8 @@ tasks.named('dependencyUpdates').configure {
   resolutionStrategy {
     componentSelection {
       all {
-        def unstable = ['javax.json.bind', 'org.jetbrains.kotlin']
-        if (isNonStable(it.candidate.version) && it.candidate.group in unstable) {
+        def stable = ['javax.json.bind', 'org.jetbrains.kotlin', 'org.osgi']
+        if (isNonStable(it.candidate.version) && it.candidate.group in stable) {
           reject('release candidate')
         }
       }
