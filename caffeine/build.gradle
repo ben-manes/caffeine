@@ -72,22 +72,21 @@ dependencies {
 
 tasks.named('compileCodeGenJava').configure {
   classpath = sourceSets.main.runtimeClasspath + sourceSets.main.output
+  dependsOn compileJava
   options.debug = false
-  dependsOn compileJava, bundle
 }
 
 tasks.named('jar').configure {
   from sourceSets.main.output + sourceSets.codeGen.output
   dependsOn compileCodeGenJava
-  manifest {
-    attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine'
-    attributes 'Import-Package': ''
-    attributes 'Export-Package': [
+  bundle.bnd(
+    'Bundle-SymbolicName': 'com.github.ben-manes.caffeine',
+    'Import-Package': '',
+    'Export-Package': [
       'com.github.benmanes.caffeine',
       'com.github.benmanes.caffeine.cache',
-      'com.github.benmanes.caffeine.cache.stats'].join(',')
-    attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine'
-  }
+      'com.github.benmanes.caffeine.cache.stats'].join(','),
+    'Automatic-Module-Name': 'com.github.benmanes.caffeine')
 }
 
 def generateLocalCaches = tasks.register('generateLocalCaches', JavaExec) {

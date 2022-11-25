@@ -58,7 +58,7 @@ ext {
     ohc: '0.6.1',
     osgiComponentAnnotations: '1.5.0',
     picocli: '4.7.0',
-    slf4j: '2.0.4',
+    slf4j: '2.0.5',
     tcache: '2.0.1',
     stream: '2.9.8',
     univocityParsers: '2.9.1',
@@ -109,7 +109,6 @@ ext {
     spotbugs: '4.7.3',
     spotbugsContrib: '7.4.7',
     spotbugsPlugin: '5.0.13',
-    stats: '0.47.0',
     versions: '0.44.0',
   ]
   platformVerrsions = [
@@ -246,7 +245,6 @@ ext {
     spotbugs: "com.github.spotbugs:spotbugs:${pluginVersions.spotbugs}",
     spotbugsContrib: "com.mebigfatguy.sb-contrib:sb-contrib:${pluginVersions.spotbugsContrib}",
     spotbugsPlugin: "com.github.spotbugs.snom:spotbugs-gradle-plugin:${pluginVersions.spotbugsPlugin}",
-    stats: "org.kordamp.gradle:sourcestats-gradle-plugin:${pluginVersions.stats}",
     versions: "com.github.ben-manes:gradle-versions-plugin:${pluginVersions.versions}",
   ]
   annotationProcessors = [

@@ -44,6 +44,7 @@ dependencyResolutionManagement.repositories {
   mavenCentral()
 }
 
+enableFeaturePreview 'STABLE_CONFIGURATION_CACHE'
 rootProject.name = 'caffeine'
 
 include 'caffeine'

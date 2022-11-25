@@ -60,6 +60,7 @@ public final class Stochastic extends AbstractClimber {
   }
 
   @Override
+  @SuppressWarnings("PMD.SwitchStmtsShouldHaveDefault")
   protected double adjust(double hitRate) {
     double currentMissRate = (1 - hitRate);
     double previousMissRate = (1 - previousHitRate);

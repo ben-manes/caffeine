@@ -21,16 +21,15 @@ tasks.named('compileJava').configure {
 }
 
 tasks.named('jar').configure {
-  manifest {
-    attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.guava'
-    attributes 'Import-Package': [
+  bundle.bnd(
+    'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.guava',
+    'Import-Package': [
       'com.google.common.cache',
       'com.google.common.util.concurrent',
       'com.github.benmanes.caffeine.cache',
-      'com.github.benmanes.caffeine.cache.stats'].join(',')
-    attributes 'Export-Package': 'com.github.benmanes.caffeine.guava'
-    attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.guava'
-  }
+      'com.github.benmanes.caffeine.cache.stats'].join(','),
+    'Export-Package': 'com.github.benmanes.caffeine.guava',
+    'Automatic-Module-Name': 'com.github.benmanes.caffeine.guava')
 }
 
 tasks.withType(Javadoc).configureEach {

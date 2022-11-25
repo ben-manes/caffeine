@@ -77,13 +77,28 @@ jmh {
   fork = 1
 }
 
+tasks.named('jmhRunBytecodeGenerator').configure {
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = java.toolchain.languageVersion
+  }
+}
+
 jmhReport {
   jmhResultPath = jmh.resultsFile.get()
   jmhReportOutput = file(layout.buildDirectory.file('reports/jmh'))
 }
 
+tasks.named('jmhReport').configure {
+  notCompatibleWithConfigurationCache(
+    'The jmhReport task is not compatible with the configuration cache')
+}
+
+tasks.named('jmhJar').configure {
+  notCompatibleWithConfigurationCache(
+    'The jmhJar task is not compatible with the configuration cache')
+}
+
 tasks.named('jmh').configure {
-  dependsOn(bundle)
   finalizedBy(tasks.jmhReport)
 }
 

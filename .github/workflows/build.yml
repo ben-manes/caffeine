@@ -226,7 +226,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           java: ${{ env.PUBLISH_JDK }}
-          arguments: sonarqube -Dsonar.branch.name=${GITHUB_REF##*/}
+          arguments: sonar -Dsonar.branch.name=${GITHUB_REF##*/}
         continue-on-error: true
 
   test-results:
@@ -326,4 +326,4 @@ jobs:
           stopMarker=$(uuidgen)
           echo "::stop-commands::$stopMarker"
           trap "echo '::$stopMarker::'" EXIT
-          ./gradlew publishToSonatype
+          ./gradlew --no-configuration-cache publishToSonatype

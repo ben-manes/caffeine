@@ -84,7 +84,9 @@ public final class GDWheelPolicy implements Policy {
   }
 
   private void onMiss(AccessEvent event, Node node) {
-    if (event.weight() <= maximumSize) {
+    if (event.weight() > maximumSize) {
+      policyStats.recordEviction();
+    } else {
       evict(event);
       add(event, node);
     }

@@ -46,4 +46,6 @@ jobs:
           ORG_GRADLE_PROJECT_signingKeyId: 20BCF6B1
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
-        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository -Prelease
+        run: >
+          ./gradlew --no-configuration-cache
+          publishToSonatype closeAndReleaseSonatypeStagingRepository -Prelease

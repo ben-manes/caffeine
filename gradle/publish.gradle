@@ -74,3 +74,8 @@ signing {
   useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
   sign publishing.publications.mavenJava
 }
+
+tasks.withType(org.gradle.plugins.signing.Sign).configureEach {
+  notCompatibleWithConfigurationCache(
+    "The ${name} task is not compatible with the configuration cache")
+}

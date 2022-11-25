@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
@@ -151,24 +150,24 @@ public final class Registry {
   }
 
   private void registerLinked() {
-    Stream.of(LinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      registerMany(priority.label(), LinkedPolicy.class,
-          config -> LinkedPolicy.policies(config, characteristics, priority));
-    });
-    Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      registerMany(priority.label(), FrequentlyUsedPolicy.class,
-          config -> FrequentlyUsedPolicy.policies(config, priority));
-    });
+    for (var policy : LinkedPolicy.EvictionPolicy.values()) {
+      registerMany(policy.label(), LinkedPolicy.class,
+          config -> LinkedPolicy.policies(config, characteristics, policy));
+    }
+    for (var policy : FrequentlyUsedPolicy.EvictionPolicy.values()) {
+      registerMany(policy.label(), FrequentlyUsedPolicy.class,
+          config -> FrequentlyUsedPolicy.policies(config, policy));
+    }
     registerMany(S4LruPolicy.class, S4LruPolicy::policies);
     register(MultiQueuePolicy.class, MultiQueuePolicy::new);
     registerMany(SegmentedLruPolicy.class, SegmentedLruPolicy::policies);
   }
 
   private void registerSampled() {
-    Stream.of(SampledPolicy.EvictionPolicy.values()).forEach(priority -> {
-      registerMany(priority.label(), SampledPolicy.class,
-          config -> SampledPolicy.policies(config, priority));
-    });
+    for (var policy : SampledPolicy.EvictionPolicy.values()) {
+      registerMany(policy.label(), SampledPolicy.class,
+          config -> SampledPolicy.policies(config, policy));
+    }
   }
 
   private void registerTwoQueue() {

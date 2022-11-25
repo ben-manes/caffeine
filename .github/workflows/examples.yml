@@ -61,20 +61,20 @@ jobs:
             echo '```'
           } >> $GITHUB_STEP_SUMMARY
       - name: Chart Simulation
-        run: ./gradlew --daemon simulator:simulate --maximumSize=100,200,300
+        run: ./gradlew --daemon -q simulator:simulate --maximumSize=100,200,300
       - name: Memory Overhead
-        run: ./gradlew --daemon caffeine:memoryOverhead
+        run: ./gradlew --daemon -q caffeine:memoryOverhead
       - name: Stresser (read)
         run: >
-          timeout 1m ./gradlew --daemon caffeine:stress --workload=read
+          timeout 1m ./gradlew --daemon -q caffeine:stress --workload=read
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
       - name: Stresser (write)
         run: >
-          timeout 1m ./gradlew --daemon caffeine:stress --workload=write
+          timeout 1m ./gradlew --daemon -q caffeine:stress --workload=write
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
       - name: Stresser (refresh)
         run: >
-          timeout 1m ./gradlew --daemon caffeine:stress --workload=refresh
+          timeout 1m ./gradlew --daemon -q caffeine:stress --workload=refresh
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
       - name: Write-behind (rxjava)
         working-directory: examples/write-behind-rxjava

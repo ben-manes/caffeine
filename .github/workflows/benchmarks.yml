@@ -27,7 +27,7 @@ jobs:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: >
-            caffeine:jmh --no-daemon
+            caffeine:jmh --no-daemon -q
             -PincludePattern=ComputeBenchmark
             -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Compute JMH Results to Gist
@@ -47,7 +47,7 @@ jobs:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: >
-            caffeine:jmh --no-daemon
+            caffeine:jmh --no-daemon -q
             -PincludePattern=GetPutBenchmark
             -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Get/Put JMH Results to Gist
@@ -67,7 +67,7 @@ jobs:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: >
-            caffeine:jmh --no-daemon
+            caffeine:jmh --no-daemon -q
             -PincludePattern=PutRemoveBenchmark
             -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
       - name: FrequencySketch JMH Benchmark
@@ -76,7 +76,7 @@ jobs:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: >
-            caffeine:jmh --no-daemon
+            caffeine:jmh --no-daemon -q
             -PincludePattern=FrequencySketchBenchmark
             -PbenchmarkParameters=tableSize=134217728
       - name: TimerWheelBenchmark JMH Benchmark
@@ -84,7 +84,7 @@ jobs:
         with:
           java: ${{ matrix.java }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          arguments: caffeine:jmh --no-daemon -PincludePattern=TimerWheelBenchmark
+          arguments: caffeine:jmh --no-daemon -q -PincludePattern=TimerWheelBenchmark
       - name: Publish JMH benchmarks
         if: >
           matrix.java == env.PUBLISH_JDK

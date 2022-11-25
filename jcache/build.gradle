@@ -46,20 +46,19 @@ tasks.named('compileJava').configure {
 }
 
 tasks.named('jar').configure {
-  manifest {
-    attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.jcache'
-    attributes 'Import-Package': [
+  bundle.bnd(
+    'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.jcache',
+    'Import-Package': [
       '!org.checkerframework.checker.*',
-      '*'].join(',')
-    attributes 'Export-Package': [
+      '*'].join(','),
+    'Export-Package': [
       'com.github.benmanes.caffeine.jcache.spi',
       'com.github.benmanes.caffeine.jcache.copy',
-      'com.github.benmanes.caffeine.jcache.configuration'].join(',')
-    attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.jcache'
-    attributes '-exportcontents': '${removeall;${packages;VERSIONED};${packages;CONDITIONAL}}'
-    attributes '-snapshot': 'SNAPSHOT'
-    attributes '-noextraheaders': true
-  }
+      'com.github.benmanes.caffeine.jcache.configuration'].join(','),
+    'Automatic-Module-Name': 'com.github.benmanes.caffeine.jcache',
+    '-exportcontents': '${removeall;${packages;VERSIONED};${packages;CONDITIONAL}}',
+    '-snapshot': 'SNAPSHOT',
+    '-noextraheaders': true)
 }
 
 def unzipJCacheJavaDoc = tasks.register('unzipJCacheJavaDoc', Copy) {

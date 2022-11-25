@@ -54,11 +54,11 @@ tasks.named('test').configure {
 }
 
 tasks.named('jar').configure {
-  manifest {
-    attributes 'Bundle-SymbolicName': 'com.github.benmanes.caffeine.simulator'
-    attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.simulator'
-  }
+  bundle.bnd(
+    'Bundle-SymbolicName': 'com.github.benmanes.caffeine.simulator',
+    'Automatic-Module-Name': 'com.github.benmanes.caffeine.simulator')
 }
+
 tasks.named('sourcesJar').configure {
   dependsOn(compileJava)
 }
@@ -163,6 +163,8 @@ class Simulate extends DefaultTask {
 tasks.register('simulate', Simulate) {
   group 'Application'
   description 'Runs multiple simulations and generates an aggregate report'
+  notCompatibleWithConfigurationCache(
+    'The simulate task is not compatible with the configuration cache')
   dependsOn processResources, compileJava
   outputs.upToDateWhen { false }
 }
@@ -202,6 +204,8 @@ class Rewrite extends DefaultTask {
 tasks.register('rewrite', Rewrite) {
   group 'Application'
   description 'Rewrite traces into the format used by other simulators'
+  notCompatibleWithConfigurationCache(
+    'The rewrite task is not compatible with the configuration cache')
   dependsOn processResources, compileJava
   outputs.upToDateWhen { false }
 }

@@ -56,12 +56,20 @@ tasks.named('javadoc').configure {
 }
 
 tasks.named('jar').configure {
-  manifest.attributes 'Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0'
+  bundle {
+    bnd('Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0', '-reproducible': 'true')
+    properties.empty()
+  }
   metaInf {
     from "${rootDir}/LICENSE"
   }
   inputs.property('version', "${project.version}")
   outputs.cacheIf { true }
+}
+
+tasks.withType(AbstractArchiveTask) {
+  preserveFileTimestamps = false
+  reproducibleFileOrder = true
 }
 
 checkstyle {
@@ -79,6 +87,7 @@ forbiddenApis {
 spotbugs {
   effort = 'max'
   reportLevel = 'low'
+  useJavaToolchains = true
   toolVersion = pluginVersions.spotbugs
   excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
 }
@@ -119,19 +128,21 @@ def JVM_ARGS_STRONG_ENCAPSULATION = [
 
 tasks.withType(JavaExec).configureEach {
   jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
-
-  javaLauncher.set(
-    javaToolchains.launcherFor {
-      languageVersion = java.toolchain.languageVersion
-    }
-  )
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = java.toolchain.languageVersion
+  }
 }
 
 tasks.withType(JavaCompile).configureEach {
   dependsOn downloadCaffeineLocal
-  sourceCompatibility = '11'
-  targetCompatibility = '11'
-  options.release.set(11)
+
+  sourceCompatibility = java.toolchain.languageVersion.get()
+  targetCompatibility = java.toolchain.languageVersion.get()
+  options.release.set(java.toolchain.languageVersion.get().asInt())
+
+  javaCompiler = javaToolchains.compilerFor {
+    languageVersion = java.toolchain.languageVersion
+  }
 
   options.forkOptions.jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
   options.compilerArgs << [
@@ -213,6 +224,7 @@ afterEvaluate {
     enabled = System.properties.containsKey('forbiddenApis')
   }
   tasks.findAll { it.name.startsWith('spotbugs') }*.configure {
+    notCompatibleWithConfigurationCache('Spotbugs is not compatible with the configuration cache')
     enabled = System.properties.containsKey('spotbugs')
     group = 'SpotBugs'
     reports {
@@ -229,4 +241,5 @@ tasks.withType(Pmd).configureEach {
     xml.required = false
     html.required = true
   }
+  consoleOutput = true
 }

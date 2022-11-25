@@ -1,6 +1,7 @@
+import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
+
 apply plugin: 'io.github.gradle-nexus.publish-plugin'
 apply plugin: 'io.snyk.gradle.plugin.snykplugin'
-apply plugin: 'org.kordamp.gradle.source-stats'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'org.owasp.dependencycheck'
 
@@ -10,8 +11,15 @@ buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
 
   repositories {
-    gradlePluginPortal()
     mavenCentral()
+    maven {
+      url 'https://plugins.gradle.org/m2'
+      metadataSources {
+        ignoreGradleMetadataRedirection()
+        mavenPom()
+        artifact()
+      }
+    }
   }
 
   dependencies {
@@ -85,11 +93,6 @@ subprojects {
     testRuntimeOnly testLibraries.junitEngines
   }
 
-  tasks.register('bundle', aQute.bnd.gradle.Bundle) {
-    from sourceSets.main.output
-    sourceSet = sourceSets.main
-  }
-
   if (project != project(':caffeine')) {
     javadoc.options.linksOffline(
       "https://static.javadoc.io/${group}/caffeine/${version}/",
@@ -124,6 +127,14 @@ tasks.named('dependencyUpdates').configure {
       }
       force libraries.coherence
     }
+  }
+  outputFormatter { result ->
+    def reporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
+    result.exceeded.dependencies.removeIf { dependency ->
+      result.current.dependencies.add(dependency)
+      dependency.group.startsWith('org.ops4j')
+    }
+    reporter.write(System.out, result)
   }
 }
 
