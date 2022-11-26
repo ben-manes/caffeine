@@ -89,7 +89,6 @@
     <exclude name="DataflowAnomalyAnalysis"/>
     <exclude name="CompareObjectsWithEquals"/>
     <exclude name="AvoidLiteralsInIfCondition"/>
-    <exclude name="BeanMembersShouldSerialize"/>
     <exclude name="AvoidFieldNameMatchingMethodName"/>
     <exclude name="ConstructorCallsOverridableMethod"/>
     <exclude name="AvoidBranchingStatementAsLastInLoop"/>

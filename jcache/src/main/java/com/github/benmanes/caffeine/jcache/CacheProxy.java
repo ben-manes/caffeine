@@ -1048,6 +1048,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Writes all of the entries to the cache writer if write-through is enabled. */
+  @SuppressWarnings("PMD.UnnecessaryLocalBeforeReturn")
   private @Nullable CacheWriterException writeAllToCacheWriter(Map<? extends K, ? extends V> map) {
     if (!configuration.isWriteThrough() || map.isEmpty()) {
       return null;
@@ -1073,6 +1074,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Deletes all of the entries using the cache writer, retaining only the keys that succeeded. */
+  @SuppressWarnings("PMD.UnnecessaryLocalBeforeReturn")
   private @Nullable CacheWriterException deleteAllToCacheWriter(Set<? extends K> keys) {
     if (!configuration.isWriteThrough() || keys.isEmpty()) {
       return null;
