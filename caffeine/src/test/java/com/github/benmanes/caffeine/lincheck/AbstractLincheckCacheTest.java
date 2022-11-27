@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.lincheck;
 
 import java.util.Map;
+import java.util.concurrent.ForkJoinPool;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
@@ -45,6 +46,7 @@ public abstract class AbstractLincheckCacheTest extends VerifierState {
 
   public AbstractLincheckCacheTest(Caffeine<Object, Object> builder) {
     cache = builder.executor(Runnable::run).build(key -> -key);
+    ForkJoinPool.commonPool(); // force eager initialization
   }
 
   /**
@@ -55,7 +57,9 @@ public abstract class AbstractLincheckCacheTest extends VerifierState {
    * <p>
    * This test requires the following JVM arguments,
    * <ul>
+   *   <li>--add-opens java.base/jdk.internal.vm=ALL-UNNAMED
    *   <li>--add-opens java.base/jdk.internal.misc=ALL-UNNAMED
+   *   <li>--add-opens java.base/jdk.internal.access=ALL-UNNAMED
    *   <li>--add-exports java.base/jdk.internal.util=ALL-UNNAMED
    * </ul>
    */

@@ -86,7 +86,9 @@ tasks.withType(Test).configureEach {
     } else if (name.startsWith('lincheck')) {
       options.includeGroups = ['lincheck']
       jvmArgs += [
+        '--add-opens', 'java.base/jdk.internal.vm=ALL-UNNAMED',
         '--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED',
+        '--add-opens', 'java.base/jdk.internal.access=ALL-UNNAMED',
         '--add-exports', 'java.base/jdk.internal.util=ALL-UNNAMED',
       ]
       testLogging.events 'started'
