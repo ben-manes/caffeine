@@ -73,7 +73,7 @@ tasks.named('javadoc').configure {
   options.addStringOption('Xdoclint:none', '-quiet')
   options.linksOffline(
     "https://static.javadoc.io/javax.cache/cache-api/${versions.jcache}/",
-    'build/jcache-docs')
+    relativePath(unzipJCacheJavaDoc.map { it.destinationDir }))
 }
 
 tasks.register('unzipTestKit', Copy) {

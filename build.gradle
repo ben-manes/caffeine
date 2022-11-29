@@ -95,7 +95,7 @@ subprojects {
   if (project != project(':caffeine')) {
     javadoc.options.linksOffline(
       "https://static.javadoc.io/${group}/caffeine/${version}/",
-      '../caffeine/build/docs/javadoc/')
+      relativePath(project(':caffeine').javadoc.destinationDir))
     javadoc.dependsOn(project(':caffeine').javadoc)
   }
 }

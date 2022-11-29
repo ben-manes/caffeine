@@ -59,8 +59,9 @@ jmh {
   resultFormat = 'json'
   resultsFile = layout.buildDirectory.file('reports/jmh/results.json')
 
-  jvm = javaToolchains.launcherFor { languageVersion = java.toolchain.languageVersion }
-    .get().executablePath.asFile.absolutePath
+  jvm = javaToolchains
+    .launcherFor { languageVersion = java.toolchain.languageVersion }
+    .map { it.executablePath.asFile.absolutePath }
 
   def jvmArguments = [ '-Xmx2G' ]
   if (System.env.GRAALVM == 'true') {
@@ -84,7 +85,7 @@ tasks.named('jmhRunBytecodeGenerator').configure {
 }
 
 jmhReport {
-  jmhResultPath = jmh.resultsFile.get()
+  jmhResultPath = file(jmh.resultsFile)
   jmhReportOutput = file(layout.buildDirectory.file('reports/jmh'))
 }
 

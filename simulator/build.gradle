@@ -5,7 +5,7 @@ apply plugin:'application'
 
 eclipse.classpath.file.beforeMerged {
   entries.add(new SourceFolder(
-    "${buildDir.name}/generated/sources/annotationProcessor/java/main", 'bin/main'))
+    relativePath("${buildDir}/generated/sources/annotationProcessor/java/main"), 'bin/main'))
 }
 
 dependencies {
