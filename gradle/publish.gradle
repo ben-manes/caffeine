@@ -37,6 +37,10 @@ publishing {
         url = 'https://github.com/ben-manes/caffeine'
         inceptionYear = '2014'
 
+        withXml {
+          asNode().remove(asNode().dependencyManagement)
+        }
+
         scm {
           url = 'https://github.com/ben-manes/caffeine'
           connection = 'scm:git:https://github.com/ben-manes/caffeine.git'

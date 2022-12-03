@@ -76,7 +76,6 @@ subprojects {
   }
 
   dependencies {
-    implementation platforms.collect { platform(it) }
     annotationProcessor platforms.collect { platform(it) }
 
     testImplementation libraries.guava
@@ -87,6 +86,7 @@ subprojects {
     testImplementation testLibraries.hamcrest
     testImplementation testLibraries.awaitility
     testImplementation testLibraries.osgiCompile
+    testImplementation platforms.collect { platform(it) }
 
     testRuntimeOnly testLibraries.osgiRuntime
     testRuntimeOnly testLibraries.junitEngines
@@ -130,8 +130,11 @@ tasks.named('dependencyUpdates').configure {
   outputFormatter { result ->
     def reporter = new PlainTextReporter(project, revision, gradleReleaseChannel)
     result.exceeded.dependencies.removeIf { dependency ->
-      result.current.dependencies.add(dependency)
-      dependency.group.startsWith('org.ops4j')
+      if (dependency.group.startsWith('org.ops4j')) {
+        result.current.dependencies.add(dependency)
+        return true
+      }
+      return false
     }
     reporter.write(System.out, result)
   }

@@ -27,7 +27,7 @@ ext {
   versions = [
     autoValue: '1.10.1',
     cache2k: '2.6.1.Final',
-    checkerFramework: '3.27.0',
+    checkerFramework: '3.28.0',
     coherence: '22.06.2',
     commonsCompress: '1.22',
     commonsLang3: '3.12.0',
@@ -90,7 +90,7 @@ ext {
     osgiUtilPromise: '1.2.0',
   ]
   pluginVersions = [
-    bnd: '6.3.1',
+    bnd: '6.4.0',
     checkstyle: '10.5.0',
     coveralls: '2.12.0',
     dependencyCheck: '7.3.2',
