@@ -10,6 +10,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5
         with:
+          disable-sudo: true
           egress-policy: audit
       - uses: actions/checkout@v3
       - uses: gradle/wrapper-validation-action@v1.0.5
