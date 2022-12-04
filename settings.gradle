@@ -10,10 +10,10 @@ gradleEnterprise {
   }
   buildScan {
     capture.taskInputFiles = true
-    publishAlways()
 
     if (System.env.CI) {
       uploadInBackground = false
+      publishAlways()
     } else {
       obfuscation.ipAddresses { [] }
     }

@@ -46,10 +46,12 @@ allprojects {
   }
 
   dependencies {
-    def deprecated = ['apiElements', 'archives', 'compileClasspath', 'default',
-      'runtimeClasspath', 'runtimeElements', 'testCompileClasspath', 'testRuntimeClasspath']
+    def ignored = [
+      'api', 'apiElements', 'archives', 'compileClasspath', 'compileOnlyApi', 'default',
+      'implementation', 'javadocElements', 'runtimeClasspath', 'runtimeElements', 'runtimeOnly',
+      'sourcesElements', 'testCompileClasspath', 'testRuntimeClasspath']
     configurations.all { configuration ->
-      if (name !in deprecated) {
+      if (name !in ignored) {
         restrictions.each { module, version ->
           constraints.add(configuration.name, module).version { require version }
         }
