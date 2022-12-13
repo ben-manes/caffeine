@@ -165,7 +165,8 @@ tasks.withType(JavaCompile).configureEach {
       'UnusedTypeParameter', 'UsingJsr305CheckReturnValue']
     enabledChecks.each { enable(it) }
 
-    def disabledChecks = [ 'LexicographicalAnnotationListing', 'MissingSummary', 'StaticImport' ]
+    def disabledChecks = [ 'LexicographicalAnnotationListing',
+      'MissingSummary', 'IsInstanceLambdaUsage', 'StaticImport' ]
     disabledChecks.each { disable(it) }
 
     def errorChecks = [ 'NullAway' ]

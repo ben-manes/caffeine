@@ -139,6 +139,25 @@ import com.google.common.util.concurrent.Uninterruptibles;
 @Test(dataProviderClass = CacheProvider.class)
 public final class BoundedLocalCacheTest {
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, removalListener = Listener.MOCKITO)
+  public void clear_pendingWrites(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var insert = new boolean[] { true };
+    Mockito.doAnswer(invocation -> {
+      if (insert[0]) {
+        while (cache.writeBuffer.offer(() -> {})) {
+          // ignored
+        }
+        insert[0] = false;
+      }
+      return null;
+    }).when(context.removalListener()).onRemoval(any(), any(), any());
+
+    cache.clear();
+    assertThat(cache).isExhaustivelyEmpty();
+    assertThat(cache.writeBuffer).isEmpty();
+  }
+
   /* --------------- Maintenance --------------- */
 
   @Test

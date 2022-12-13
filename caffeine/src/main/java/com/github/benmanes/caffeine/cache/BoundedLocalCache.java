@@ -1989,21 +1989,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  @SuppressWarnings("FutureReturnValueIgnored")
   public void clear() {
     evictionLock.lock();
     try {
-      long now = expirationTicker().read();
+      // Discard all pending reads
+      readBuffer.drainTo(e -> {});
 
       // Apply all pending writes
       Runnable task;
       while ((task = writeBuffer.poll()) != null) {
         task.run();
-      }
-
-      // Discard all entries
-      for (var entry : data.entrySet()) {
-        removeNode(entry.getValue(), now);
       }
 
       // Cancel the scheduled cleanup
@@ -2012,10 +2007,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         pacer.cancel();
       }
 
-      // Discard all pending reads
-      readBuffer.drainTo(e -> {});
+      // Discard all entries
+      int threshold = (WRITE_BUFFER_MAX / 2);
+      long now = expirationTicker().read();
+      for (var node : data.values()) {
+        if (writeBuffer.size() >= threshold) {
+          // Fallback to one-by-one to avoid excessive lock hold times
+          break;
+        }
+        removeNode(node, now);
+      }
     } finally {
       evictionLock.unlock();
+    }
+
+    // Remove any stragglers, such as if released early to more aggressively flush incoming writes
+    for (Object key : keySet()) {
+      remove(key);
     }
   }
 
