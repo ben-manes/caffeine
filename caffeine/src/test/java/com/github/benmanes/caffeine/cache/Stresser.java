@@ -133,7 +133,8 @@ public final class Stresser implements Runnable {
         local.readBuffer.size(), pendingWrites);
     System.out.printf(US, "Drain status = %s (%s)%n", STATUS[drainStatus], drainStatus);
     System.out.printf(US, "Evictions = %,d%n", cache.stats().evictionCount());
-    System.out.printf(US, "Size = %,d (max: %,d)%n", local.data.mappingCount(), workload.maxEntries);
+    System.out.printf(US, "Size = %,d (max: %,d)%n",
+        local.data.mappingCount(), workload.maxEntries);
     System.out.printf(US, "Lock = [%s%n", StringUtils.substringAfter(
         local.evictionLock.toString(), "["));
     System.out.printf(US, "Pending reloads = %,d%n", local.refreshes.size());

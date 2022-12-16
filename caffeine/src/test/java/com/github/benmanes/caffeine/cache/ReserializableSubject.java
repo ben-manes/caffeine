@@ -138,7 +138,8 @@ public final class ReserializableSubject extends Subject {
     checkEvictionListener(original, copy);
   }
 
-  private void checkRefreshAfterWrite(BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
+  private void checkRefreshAfterWrite(
+      BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
     check("refreshAfterWrite()").that(copy.refreshAfterWrite())
         .isEqualTo(original.refreshAfterWrite());
     if (original.refreshAfterWrite()) {
@@ -147,7 +148,8 @@ public final class ReserializableSubject extends Subject {
     }
   }
 
-  private void checkEviction(BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
+  private void checkEviction(
+      BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
     check("evicts()").that(copy.evicts()).isEqualTo(original.evicts());
     check("weigher()").that(unwrapWeigher(copy.weigher))
         .isInstanceOf(unwrapWeigher(original.weigher).getClass());
@@ -156,7 +158,8 @@ public final class ReserializableSubject extends Subject {
     }
   }
 
-  private void checkExpiresAfterAccess(BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
+  private void checkExpiresAfterAccess(
+      BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
     check("expiresAfterAccess()").that(copy.expiresAfterAccess())
         .isEqualTo(original.expiresAfterAccess());
     if (original.expiresAfterAccess()) {
@@ -165,7 +168,8 @@ public final class ReserializableSubject extends Subject {
     }
   }
 
-  private void checkExpiresAfterWrite(BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
+  private void checkExpiresAfterWrite(
+      BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
     check("expiresAfterWrite()").that(copy.expiresAfterWrite())
         .isEqualTo(original.expiresAfterWrite());
     if (original.expiresAfterWrite()) {
@@ -174,7 +178,8 @@ public final class ReserializableSubject extends Subject {
     }
   }
 
-  private void checkExpiresVariable(BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
+  private void checkExpiresVariable(
+      BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
     check("expiresVariable()").that(copy.expiresVariable())
         .isEqualTo(original.expiresVariable());
     if (original.expiresVariable()) {

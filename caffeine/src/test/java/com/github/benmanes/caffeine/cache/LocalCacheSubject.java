@@ -251,7 +251,8 @@ public final class LocalCacheSubject extends Subject {
       var deques = new ImmutableTable.Builder<String, Long, LinkedDeque<Node<Object, Object>>>()
           .put("window", bounded.windowWeightedSize(), bounded.accessOrderWindowDeque())
           .put("probation", mainProbation, bounded.accessOrderProbationDeque())
-          .put("protected", bounded.mainProtectedWeightedSize(), bounded.accessOrderProtectedDeque())
+          .put("protected", bounded.mainProtectedWeightedSize(),
+              bounded.accessOrderProtectedDeque())
           .build();
       checkLinks(bounded, deques);
       check("accessOrderWindowDeque()").about(deque())

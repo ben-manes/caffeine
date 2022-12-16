@@ -560,9 +560,8 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CacheSpec(
-      maximumSize = Maximum.UNREACHABLE,
-      removalListener = { Listener.DISABLED, Listener.REJECTING }, population = Population.SINGLETON)
+  @CacheSpec(population = Population.SINGLETON, maximumSize = Maximum.UNREACHABLE,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refresh_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     var future = cache.refresh(key);

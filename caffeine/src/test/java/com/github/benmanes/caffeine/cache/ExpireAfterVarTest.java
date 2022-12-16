@@ -1031,7 +1031,8 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(expiry = CacheExpiry.MOCKITO, removalListener = {Listener.DISABLED, Listener.REJECTING})
+  @CacheSpec(expiry = CacheExpiry.MOCKITO,
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_absent_nullValue(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Int result = expireAfterVar.compute(context.absentKey(),

@@ -187,7 +187,8 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
   }
 
   private void startWaiting() {
-    ScheduledFuture<?> oldSchedule = schedule.getAndSet(timer.schedule(this::doLoad, maxDelay, MILLISECONDS));
+    ScheduledFuture<?> oldSchedule = schedule.getAndSet(
+        timer.schedule(this::doLoad, maxDelay, MILLISECONDS));
     if (oldSchedule != null) {
       oldSchedule.cancel(false);
     }

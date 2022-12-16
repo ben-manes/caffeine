@@ -834,7 +834,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = Maximum.FULL, removalListener = { Listener.DISABLED, Listener.REJECTING })
+  @CacheSpec(maximumSize = Maximum.FULL, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void maximumSize_increase(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     eviction.setMaximum(2 * context.maximumWeightOrSize());

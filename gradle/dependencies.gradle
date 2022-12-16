@@ -80,7 +80,7 @@ ext {
     junit5: '5.9.1',
     junitTestNG: '1.0.4',
     lincheck: '2.16',
-    mockito: '4.9.0',
+    mockito: '4.10.0',
     osgiSvcComponent: '1.5.0',
     osgiUtilFunction: '1.2.0',
     osgiUtilPromise: '1.2.0',
