@@ -24,8 +24,8 @@ import java.io.Closeable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -402,8 +402,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       requireNonNull(entry.getValue());
     }
     int[] puts = { 0 };
-    CacheWriterException e = writeAllToCacheWriter(map);
-    for (var entry : map.entrySet()) {
+    var entriesToWrite = new LinkedHashMap<>(map);
+    CacheWriterException e = writeAllToCacheWriter(entriesToWrite);
+    for (var entry : entriesToWrite.entrySet()) {
       putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false, puts);
     }
     dispatcher.awaitSynchronous();
@@ -725,7 +726,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
 
-    Set<K> keysToRemove = new HashSet<>(keys);
+    var keysToRemove = new LinkedHashSet<>(keys);
     CacheWriterException e = deleteAllToCacheWriter(keysToRemove);
     long removed = keysToRemove.stream()
         .map(this::removeNoCopyOrAwait)
