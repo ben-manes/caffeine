@@ -25,6 +25,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
@@ -69,6 +70,19 @@ public final class CacheWriterTest extends AbstractJCacheTest {
       Assert.fail();
     } catch (CacheWriterException e) {
       assertThat(map).isEmpty();
+    }
+  }
+
+  @Test
+  public void putAllImmutable_fails() {
+    doThrow(CacheWriterException.class).when(writer).writeAll(any());
+    var immutableMap = Map.of(KEY_1, VALUE_1);
+
+    try {
+      jcache.putAll(immutableMap);
+      Assert.fail();
+    } catch (CacheWriterException e) {
+      assertThat(immutableMap).isEmpty();
     }
   }
 
