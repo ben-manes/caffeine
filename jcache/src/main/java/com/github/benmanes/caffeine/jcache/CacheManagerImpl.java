@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
+import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.spi.CachingProvider;
 
@@ -106,8 +107,11 @@ public final class CacheManagerImpl implements CacheManager {
         }
         return CacheFactory.createCache(this, cacheName, configuration);
       });
-      enableManagement(cache.getName(), cache.getConfiguration().isManagementEnabled());
-      enableStatistics(cache.getName(), cache.getConfiguration().isStatisticsEnabled());
+
+      @SuppressWarnings("unchecked")
+      var config = cache.getConfiguration(CompleteConfiguration.class);
+      enableManagement(cache.getName(), config.isManagementEnabled());
+      enableStatistics(cache.getName(), config.isStatisticsEnabled());
 
       @SuppressWarnings("unchecked")
       Cache<K, V> castedCache = (Cache<K, V>) cache;
@@ -133,7 +137,8 @@ public final class CacheManagerImpl implements CacheManager {
       requireNonNull(keyType);
       requireNonNull(valueType);
 
-      Configuration<?, ?> config = cache.getConfiguration();
+      @SuppressWarnings("unchecked")
+      var config = cache.getConfiguration(CompleteConfiguration.class);
       if (keyType != config.getKeyType()) {
         throw new ClassCastException("Incompatible cache key types specified, expected "
             + config.getKeyType() + " but " + keyType + " was specified");
@@ -161,8 +166,10 @@ public final class CacheManagerImpl implements CacheManager {
       CacheProxy<?, ?> cache = caches.computeIfAbsent(cacheName, name -> {
         CacheProxy<?, ?> created = CacheFactory.tryToCreateFromExternalSettings(this, name);
         if (created != null) {
-          created.enableManagement(created.getConfiguration().isManagementEnabled());
-          created.enableStatistics(created.getConfiguration().isStatisticsEnabled());
+          @SuppressWarnings("unchecked")
+          var config = created.getConfiguration(CompleteConfiguration.class);
+          created.enableManagement(config.isManagementEnabled());
+          created.enableStatistics(config.isStatisticsEnabled());
         }
         return created;
       });

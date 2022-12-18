@@ -95,7 +95,6 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
    * Performs a non-blocking bulk load of the missing keys. Any missing entry that materializes
    * during the load are replaced when the loaded entries are inserted into the cache.
    */
-  @SuppressWarnings("CatchingUnchecked")
   default void bulkLoad(Set<K> keysToLoad, Map<K, V> result,
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     boolean success = false;

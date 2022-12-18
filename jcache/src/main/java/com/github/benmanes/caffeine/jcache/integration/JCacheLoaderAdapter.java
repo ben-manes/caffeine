@@ -124,7 +124,6 @@ public final class JCacheLoaderAdapter<K, V>
     }
   }
 
-  @SuppressWarnings("CatchingUnchecked")
   private long expireTimeMS() {
     try {
       Duration duration = expiry.getExpiryForCreation();
@@ -135,7 +134,7 @@ public final class JCacheLoaderAdapter<K, V>
       }
       long millis = TimeUnit.NANOSECONDS.toMillis(ticker.read());
       return duration.getAdjustedTime(millis);
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       logger.log(Level.WARNING, "Exception thrown by expiry policy", e);
       throw e;
     }

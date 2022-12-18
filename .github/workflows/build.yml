@@ -276,8 +276,8 @@ jobs:
           gist_url: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
           auth: ${{ secrets.GIST_TOKEN }}
           gist_description: Test Results
-          gist_title: Test Results
           github_file: badge.svg
+          gist_title: badge.svg
 
   publish-snapshot:
     name: Publish Snapshot

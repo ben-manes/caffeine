@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.copy;
 
+import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaDeepCopyStrategies;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 
@@ -103,6 +104,15 @@ public final class JavaSerializationCopierTest {
   public void immutable() {
     String text = "test";
     assertThat(copy(new JavaSerializationCopier(), text)).isSameInstanceAs(text);
+  }
+
+  @Test
+  public void canDeeplyCopy() {
+    var copier = new JavaSerializationCopier();
+    assertThat(copier.canDeeplyCopy(Object.class)).isFalse();
+    for (var clazz : javaDeepCopyStrategies().keySet()) {
+      assertThat(copier.canDeeplyCopy(clazz)).isTrue();
+    }
   }
 
   @Test(dataProvider = "copier")

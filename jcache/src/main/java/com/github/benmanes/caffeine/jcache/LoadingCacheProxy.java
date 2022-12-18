@@ -152,7 +152,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   @Override
-  @SuppressWarnings({"CatchingUnchecked", "FutureReturnValueIgnored"})
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();
@@ -164,18 +164,16 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     var future = CompletableFuture.runAsync(() -> {
       try {
         if (replaceExistingValues) {
-          int[] ignored = { 0 };
           @SuppressWarnings("NullAway")
           Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
           for (var entry : loaded.entrySet()) {
-            putNoCopyOrAwait(entry.getKey(), entry.getValue(),
-                /* publishToWriter */ false, ignored);
+            putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false);
           }
         } else {
           getAll(keys, /* updateAccessTime */ false);
         }
         listener.onCompletion();
-      } catch (Exception e) {
+      } catch (RuntimeException e) {
         listener.onException(e);
       } finally {
         dispatcher.ignoreSynchronous();

@@ -82,13 +82,20 @@ public abstract class AbstractCopier<A> implements Copier {
   public <T> T copy(T object, ClassLoader classLoader) {
     requireNonNull(object);
     requireNonNull(classLoader);
+
     if (isImmutable(object.getClass())) {
       return object;
-    } else if (canDeeplyCopy(object.getClass())) {
-      return deepCopy(object);
     } else if (isArrayOfImmutableTypes(object.getClass())) {
       return arrayCopy(object);
     }
+
+    var deeplyCopyStrategy = deepCopyStrategies.get(object.getClass());
+    if (deeplyCopyStrategy != null) {
+      @SuppressWarnings("unchecked")
+      T copy = (T) deeplyCopyStrategy.apply(object);
+      return copy;
+    }
+
     return roundtrip(object, classLoader);
   }
 
@@ -127,13 +134,6 @@ public abstract class AbstractCopier<A> implements Copier {
     @SuppressWarnings("unchecked")
     T copy = (T) Array.newInstance(object.getClass().getComponentType(), length);
     System.arraycopy(object, 0, copy, 0, length);
-    return copy;
-  }
-
-  /** @return a deep copy of the object. */
-  private <T> T deepCopy(T object) {
-    @SuppressWarnings({"NullAway", "unchecked"})
-    T copy = (T) deepCopyStrategies.get(object.getClass()).apply(object);
     return copy;
   }
 
