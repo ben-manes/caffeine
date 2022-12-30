@@ -21,7 +21,6 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
-import java.io.Closeable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
@@ -952,6 +951,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         var thrown = shutdownExecutor();
         thrown = tryClose(expiry, thrown);
         thrown = tryClose(writer, thrown);
+        thrown = tryClose(executor, thrown);
         thrown = tryClose(cacheLoader.orElse(null), thrown);
         for (Registration<K, V> registration : dispatcher.registrations()) {
           thrown = tryClose(registration.getCacheEntryListener(), thrown);
@@ -964,13 +964,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     cache.invalidateAll();
   }
 
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"FutureReturnValueIgnored", "PMD.CloseResource"})
   private @Nullable Throwable shutdownExecutor() {
-    Throwable thrown = null;
     if (executor instanceof ExecutorService) {
       var es = (ExecutorService) executor;
       es.shutdown();
     }
+
+    Throwable thrown = null;
     try {
       CompletableFuture
           .allOf(inFlight.toArray(CompletableFuture[]::new))
@@ -991,9 +992,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return the outermost error, or null if unset and successful
    */
   private static @Nullable Throwable tryClose(@Nullable Object o, @Nullable Throwable outer) {
-    if (o instanceof Closeable) {
+    if (o instanceof AutoCloseable) {
       try {
-        ((Closeable) o).close();
+        ((AutoCloseable) o).close();
       } catch (Throwable t) {
         if (outer == null) {
           return t;

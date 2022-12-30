@@ -252,6 +252,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @Nullable volatile ConcurrentMap<Object, CompletableFuture<?>> refreshes;
 
   /** Creates an instance based on the builder's configuration. */
+  @SuppressWarnings("GuardedBy")
   protected BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable AsyncCacheLoader<K, V> cacheLoader, boolean isAsync) {
     this.isAsync = isAsync;
@@ -1669,7 +1670,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       climb();
     } finally {
-      if ((drainStatusOpaque() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
+      if ((drainStatusOpaque() != PROCESSING_TO_IDLE)
+          || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
         setDrainStatusOpaque(REQUIRED);
       }
     }
@@ -2937,7 +2939,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * there are no modifications to the information used. Therefore, usages should expect that this
    * operation may return misleading results if either the maps or the data held by them is modified
    * during the execution of this method. This characteristic allows for comparing the map sizes and
-   * assuming stable mappings, as done by {@link AbstractMap}-based maps.
+   * assuming stable mappings, as done by {@link java.util.AbstractMap}-based maps.
    * <p>
    * The <i>symmetric</i> property requires that the result is the same for all implementations of
    * {@link Map#equals(Object)}. That contract is defined in terms of the stable mappings provided

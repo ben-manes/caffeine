@@ -110,7 +110,7 @@ tasks.named('test').configure {
     'felixScr.version': testVersions.felixScr,
     'osgiUtil.promise': testVersions.osgiUtilPromise,
     'osgiUtil.function': testVersions.osgiUtilFunction,
-    'osgiService.component': testVersions.osgiSvcComponent,
+    'osgiService.component': versions.osgiComponentAnnotations,
     'caffeine.osgi.jar': relativePath(project(':caffeine').jar.archivePath.path),
     'caffeine-jcache.osgi.jar': relativePath(project(':jcache').jar.archivePath.path),
   ]

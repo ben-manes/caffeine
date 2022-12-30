@@ -33,6 +33,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 /**
@@ -57,8 +58,8 @@ import com.typesafe.config.ConfigFactory;
 public final class Simulator {
   private final BasicSettings settings;
 
-  public Simulator() {
-    settings = new BasicSettings(ConfigFactory.load().getConfig("caffeine.simulator"));
+  public Simulator(Config config) {
+    settings = new BasicSettings(config.getConfig("caffeine.simulator"));
   }
 
   /** Broadcast the trace events to all of the policy actors. */
@@ -104,7 +105,9 @@ public final class Simulator {
         policy.send(remainder);
       }
 
-      var futures = policies.stream().map(PolicyActor::finish).toArray(CompletableFuture<?>[]::new);
+      var futures = policies.stream()
+          .map(PolicyActor::finish)
+          .toArray(CompletableFuture<?>[]::new);
       CompletableFuture.allOf(futures).join();
     }
   }
@@ -135,6 +138,6 @@ public final class Simulator {
 
   public static void main(String[] args) {
     Logger.getLogger("").setLevel(Level.WARNING);
-    new Simulator().run();
+    new Simulator(ConfigFactory.load()).run();
   }
 }

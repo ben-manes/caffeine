@@ -46,7 +46,6 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("serial")
 class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   private static final long serialVersionUID = 1L;
 
@@ -152,6 +151,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     cache.cleanUp();
   }
 
+  @SuppressWarnings("NullAway.Init")
   final class AsMapView extends ForwardingConcurrentMap<K, V> {
     @Nullable EntrySetView entrySet;
     @Nullable KeySetView keySet;

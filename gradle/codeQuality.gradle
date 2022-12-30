@@ -49,7 +49,7 @@ tasks.register('downloadCaffeineLocal') {
 
 tasks.named('javadoc').configure {
   options.links(
-    // 'https://checkerframework.org/api/',
+    'https://checkerframework.org/api/',
     'https://lightbend.github.io/config/latest/api/',
     "https://guava.dev/releases/${versions.guava}/api/docs/",
     "https://docs.oracle.com/en/java/javase/${JavaVersion.current().majorVersion}/docs/api/")
@@ -82,6 +82,7 @@ forbiddenApis {
   bundledSignatures += [
     'jdk-deprecated', 'jdk-internal', 'jdk-unsafe',
     'jdk-non-portable', 'jdk-reflection', 'jdk-system-out']
+  failOnUnresolvableSignatures = false
 }
 
 spotbugs {
@@ -165,8 +166,8 @@ tasks.withType(JavaCompile).configureEach {
       'UnusedTypeParameter', 'UsingJsr305CheckReturnValue']
     enabledChecks.each { enable(it) }
 
-    def disabledChecks = [ 'LexicographicalAnnotationListing',
-      'MissingSummary', 'IsInstanceLambdaUsage', 'StaticImport' ]
+    def disabledChecks = [ 'AvoidObjectArrays', 'IsInstanceLambdaUsage',
+      'LexicographicalAnnotationListing', 'MissingSummary', 'NonCanonicalType', 'StaticImport' ]
     disabledChecks.each { disable(it) }
 
     def errorChecks = [ 'NullAway' ]
