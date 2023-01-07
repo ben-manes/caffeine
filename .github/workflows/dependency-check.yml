@@ -27,7 +27,6 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run dependency-check
         uses: ./.github/actions/run-gradle
-        continue-on-error: true
         with:
           java: ${{ env.JAVA_VERSION }}
           arguments: dependencyCheckAggregate
