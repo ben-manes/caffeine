@@ -89,6 +89,7 @@ subprojects {
     testImplementation testLibraries.awaitility
     testImplementation testLibraries.osgiCompile
     testImplementation platforms.collect { platform(it) }
+    testImplementation testPlatforms.collect { platform(it) }
 
     testRuntimeOnly testLibraries.osgiRuntime
     testRuntimeOnly testLibraries.junitEngines

@@ -110,7 +110,7 @@ ext {
     spotbugsPlugin: '5.0.13',
     versions: '0.44.0',
   ]
-  platformVerrsions = [
+  platformVersions = [
     asm: '9.4',
     kotlin: '1.8.0',
   ]
@@ -250,9 +250,11 @@ ext {
     autoValue: "com.google.auto.value:auto-value:${versions.autoValue}",
   ]
   platforms = [
-    "org.jetbrains.kotlin:kotlin-bom:${platformVerrsions.kotlin}",
+    "org.jetbrains.kotlin:kotlin-bom:${platformVersions.kotlin}",
+    "org.ow2.asm:asm-bom:${platformVersions.asm}",
+  ]
+  testPlatforms = [
     "org.junit:junit-bom:${testVersions.junit5}",
-    "org.ow2.asm:asm-bom:${platformVerrsions.asm}",
   ]
   restrictions = [
     'com.beust:jcommander': '1.82',
