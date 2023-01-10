@@ -91,7 +91,7 @@ import org.junit.Test;
  * Ported from Eclipse Collections 11.0.
  */
 @SuppressWarnings({"all", "deprecation", "IdentityConversion",
-  "IsInstanceIncompatibleType", "PreferredInterfaceType", "unchecked"})
+  "IsInstanceIncompatibleType", "PreferredInterfaceType", "unchecked", "YodaCondition"})
 public abstract class MapIterableTestCase {
   protected abstract <K, V> MapIterable<K, V> newMap();
 

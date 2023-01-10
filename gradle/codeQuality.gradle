@@ -163,11 +163,11 @@ tasks.withType(JavaCompile).configureEach {
       'SelfAlwaysReturnsThis', 'StronglyTypeByteString', 'StronglyTypeTime', 'SwitchDefault',
       'TimeUnitMismatch', 'TransientMisuse', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass',
       'UnnecessaryOptionalGet', 'UnnecessarilyUsedValue', 'UnsafeLocaleUsage',
-      'UnusedTypeParameter', 'UsingJsr305CheckReturnValue']
+      'UnusedTypeParameter', 'UsingJsr305CheckReturnValue', 'YodaCondition']
     enabledChecks.each { enable(it) }
 
     def disabledChecks = [ 'AvoidObjectArrays', 'IsInstanceLambdaUsage',
-      'LexicographicalAnnotationListing', 'MissingSummary', 'NonCanonicalType', 'StaticImport' ]
+      'LexicographicalAnnotationListing', 'MissingSummary', 'StaticImport' ]
     disabledChecks.each { disable(it) }
 
     def errorChecks = [ 'NullAway' ]

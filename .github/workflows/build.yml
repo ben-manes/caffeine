@@ -32,6 +32,7 @@ env:
     services.gradle.org:443
     www.graalvm.org:443
   PUBLISH_JDK: 11
+  EA_JDK: 20
 
 jobs:
   compile:
@@ -57,6 +58,7 @@ jobs:
         with:
           java: ${{ matrix.java }}
           arguments: check -x test
+          early-access: ${{ env.EA_JDK }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Cancel if failed
         uses: andymckay/cancel-action@0.3
