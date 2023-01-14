@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.impl;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
 
@@ -25,6 +26,7 @@ import com.github.benmanes.caffeine.cache.BasicCache;
  */
 public final class LinkedHashMapCache<K, V> implements BasicCache<K, V> {
   private final Map<K, V> map;
+  private final ReentrantLock mapLock = new ReentrantLock();
 
   public LinkedHashMapCache(int maximumSize, boolean accessOrder) {
     map = new BoundedLinkedHashMap<>(maximumSize, accessOrder);
@@ -32,29 +34,41 @@ public final class LinkedHashMapCache<K, V> implements BasicCache<K, V> {
 
   @Override
   public V get(K key) {
-    synchronized (map) {
+    mapLock.lock();
+    try {
       return map.get(key);
+    } finally {
+      mapLock.unlock();
     }
   }
 
   @Override
   public void put(K key, V value) {
-    synchronized (map) {
+    mapLock.lock();
+    try {
       map.put(key, value);
+    } finally {
+      mapLock.unlock();
     }
   }
 
   @Override
   public void remove(K key) {
-    synchronized (map) {
+    mapLock.lock();
+    try {
       map.remove(key);
+    } finally {
+      mapLock.unlock();
     }
   }
 
   @Override
   public void clear() {
-    synchronized (map) {
+    mapLock.lock();
+    try {
       map.clear();
+    } finally {
+      mapLock.unlock();
     }
   }
 

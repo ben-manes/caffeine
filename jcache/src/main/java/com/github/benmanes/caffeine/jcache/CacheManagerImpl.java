@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -48,7 +49,7 @@ public final class CacheManagerImpl implements CacheManager {
   private final Map<String, CacheProxy<?, ?>> caches;
   private final CachingProvider cacheProvider;
   private final Properties properties;
-  private final Object lock;
+  private final ReentrantLock lock;
   private final URI uri;
 
   private final boolean runsAsAnOsgiBundle;
@@ -64,7 +65,7 @@ public final class CacheManagerImpl implements CacheManager {
     this.properties = requireNonNull(properties);
     this.caches = new ConcurrentHashMap<>();
     this.uri = requireNonNull(uri);
-    this.lock = new Object();
+    this.lock = new ReentrantLock();
   }
 
   @Override
@@ -225,7 +226,8 @@ public final class CacheManagerImpl implements CacheManager {
     if (isClosed()) {
       return;
     }
-    synchronized (lock) {
+    lock.lock();
+    try {
       if (!isClosed()) {
         cacheProvider.close(uri, classLoaderReference.get());
         for (Cache<?, ?> cache : caches.values()) {
@@ -233,6 +235,8 @@ public final class CacheManagerImpl implements CacheManager {
         }
         closed = true;
       }
+    } finally {
+      lock.unlock();
     }
   }
 

@@ -19,6 +19,7 @@ import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.lang.ref.WeakReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
@@ -126,22 +127,28 @@ public class CacheReferencesTest extends TestCase {
   static class Key {
     private final int value;
     private WeakReference<String> toString;
+    private final ReentrantLock lock = new ReentrantLock();
 
     Key(int value) {
       this.value = value;
     }
 
-    @Override public synchronized String toString() {
-      String s;
-      if (toString != null) {
-        s = toString.get();
-        if (s != null) {
-          return s;
+    @Override public String toString() {
+      lock.lock();
+      try {
+        String s;
+        if (toString != null) {
+          s = toString.get();
+          if (s != null) {
+            return s;
+          }
         }
+        s = Integer.toString(value);
+        toString = new WeakReference<String>(s);
+        return s;
+      } finally {
+        lock.unlock();
       }
-      s = Integer.toString(value);
-      toString = new WeakReference<String>(s);
-      return s;
     }
   }
 }

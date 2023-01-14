@@ -500,8 +500,11 @@ public final class BoundedLocalCacheTest {
       await().untilAsserted(() -> assertThat(cache).doesNotContainKey(oldEntry.getKey()));
       await().untilTrue(removed);
       await().until(() -> {
-        synchronized (node) {
+        node.getLock().lock();
+        try {
           return !node.isAlive();
+        } finally {
+          node.getLock().unlock();
         }
       });
       checkStatus(node, Status.RETIRED);
@@ -519,10 +522,13 @@ public final class BoundedLocalCacheTest {
   enum Status { ALIVE, RETIRED, DEAD }
 
   static void checkStatus(Node<Int, Int> node, Status expected) {
-    synchronized (node) {
+    node.getLock().lock();
+    try {
       assertThat(node.isAlive()).isEqualTo(expected == Status.ALIVE);
       assertThat(node.isRetired()).isEqualTo(expected == Status.RETIRED);
       assertThat(node.isDead()).isEqualTo(expected == Status.DEAD);
+    } finally {
+      node.getLock().unlock();
     }
   }
 
@@ -1154,7 +1160,8 @@ public final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
     var evictor = new AtomicReference<Thread>();
-    synchronized (node) {
+    node.getLock().lock();
+    try {
       context.ticker().advance(Duration.ofHours(1));
       ConcurrentTestHarness.execute(() -> {
         evictor.set(Thread.currentThread());
@@ -1167,6 +1174,8 @@ public final class BoundedLocalCacheTest {
       var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(evictor.get().getState()));
       node.setVariableTime(context.ticker().read() + TimeUnit.DAYS.toNanos(1));
+    } finally {
+      node.getLock().unlock();
     }
     await().untilTrue(done);
 
@@ -1633,7 +1642,8 @@ public final class BoundedLocalCacheTest {
     var result = new AtomicReference<Int>();
     long currentDuration = 1;
 
-    synchronized (node) {
+    node.getLock().lock();
+    try {
       var started = new AtomicBoolean();
       var thread = new AtomicReference<Thread>();
       ConcurrentTestHarness.execute(() -> {
@@ -1646,6 +1656,8 @@ public final class BoundedLocalCacheTest {
       var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> threadState.contains(thread.get().getState()));
       node.setVariableTime(context.ticker().read() + currentDuration);
+    } finally {
+      node.getLock().unlock();
     }
 
     var expected = context.original().get(context.firstKey());

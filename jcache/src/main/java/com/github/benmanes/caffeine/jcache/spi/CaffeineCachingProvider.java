@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.WeakHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.cache.CacheManager;
 import javax.cache.Caching;
@@ -59,8 +60,9 @@ import com.typesafe.config.ConfigFactory;
 public final class CaffeineCachingProvider implements CachingProvider {
   private static final ClassLoader DEFAULT_CLASS_LOADER = new JCacheClassLoader();
 
-  @GuardedBy("itself")
+  @GuardedBy("cacheManagersLock")
   final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;
+  private final ReentrantLock cacheManagersLock = new ReentrantLock();
 
   boolean isOsgiComponent;
 
@@ -98,29 +100,36 @@ public final class CaffeineCachingProvider implements CachingProvider {
     URI managerURI = getManagerUri(uri);
     ClassLoader managerClassLoader = getManagerClassLoader(classLoader);
 
-    synchronized (cacheManagers) {
+    cacheManagersLock.lock();
+    try {
       Map<URI, CacheManager> cacheManagersByURI = cacheManagers.computeIfAbsent(
           managerClassLoader, any -> new HashMap<>());
       return cacheManagersByURI.computeIfAbsent(managerURI, any -> {
         Properties managerProperties = (properties == null) ? getDefaultProperties() : properties;
         return new CacheManagerImpl(this, managerURI, managerClassLoader, managerProperties);
       });
+    } finally {
+      cacheManagersLock.unlock();
     }
   }
 
   @Override
   public void close() {
-    synchronized (cacheManagers) {
+    cacheManagersLock.lock();
+    try {
       for (ClassLoader classLoader : new ArrayList<>(cacheManagers.keySet())) {
         close(classLoader);
       }
+    } finally {
+      cacheManagersLock.unlock();
     }
   }
 
   @Override
   @SuppressWarnings("PMD.CloseResource")
   public void close(ClassLoader classLoader) {
-    synchronized (cacheManagers) {
+    cacheManagersLock.lock();
+    try {
       ClassLoader managerClassLoader = getManagerClassLoader(classLoader);
       Map<URI, CacheManager> cacheManagersByURI = cacheManagers.remove(managerClassLoader);
       if (cacheManagersByURI != null) {
@@ -128,13 +137,16 @@ public final class CaffeineCachingProvider implements CachingProvider {
           cacheManager.close();
         }
       }
+    } finally {
+      cacheManagersLock.unlock();
     }
   }
 
   @Override
   @SuppressWarnings("PMD.CloseResource")
   public void close(URI uri, ClassLoader classLoader) {
-    synchronized (cacheManagers) {
+    cacheManagersLock.lock();
+    try {
       ClassLoader managerClassLoader = getManagerClassLoader(classLoader);
       Map<URI, CacheManager> cacheManagersByURI = cacheManagers.get(managerClassLoader);
 
@@ -147,6 +159,8 @@ public final class CaffeineCachingProvider implements CachingProvider {
           cacheManagers.remove(managerClassLoader);
         }
       }
+    } finally {
+      cacheManagersLock.unlock();
     }
   }
 

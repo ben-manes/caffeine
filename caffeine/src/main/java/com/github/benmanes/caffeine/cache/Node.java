@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Locale.US;
 
 import java.lang.ref.ReferenceQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -33,6 +34,12 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
+
+  private final ReentrantLock lock = new ReentrantLock();
+
+  final ReentrantLock getLock() {
+    return lock;
+  }
 
   /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
   @Nullable
@@ -55,7 +62,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   public abstract Object getValueReference();
 
   /** Sets the value, which may be held strongly, weakly, or softly. */
-  @GuardedBy("this")
+  @GuardedBy("getLock()")
   public abstract void setValue(V value, @Nullable ReferenceQueue<V> referenceQueue);
 
   /**
@@ -66,13 +73,13 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
 
   /** Returns the weight of this entry from the entry's perspective. */
   @NonNegative
-  @GuardedBy("this")
+  @GuardedBy("getLock()")
   public int getWeight() {
     return 1;
   }
 
   /** Sets the weight from the entry's perspective. */
-  @GuardedBy("this")
+  @GuardedBy("getLock()")
   public void setWeight(@NonNegative int weight) {}
 
   /** Returns the weight of this entry from the policy's perspective. */
@@ -95,19 +102,19 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
    * If the entry was removed from the hash-table and is awaiting removal from the page
    * replacement policy.
    */
-  @GuardedBy("this")
+  @GuardedBy("getLock()")
   public abstract boolean isRetired();
 
   /** If the entry was removed from the hash-table and the page replacement policy. */
-  @GuardedBy("this")
+  @GuardedBy("getLock()")
   public abstract boolean isDead();
 
   /** Sets the node to the <tt>retired</tt> state. */
-  @GuardedBy("this")
+  @GuardedBy("getLock()")
   public abstract void retire();
 
   /** Sets the node to the <tt>dead</tt> state. */
-  @GuardedBy("this")
+  @GuardedBy("getLock()")
   public abstract void die();
 
   /* --------------- Variable order --------------- */

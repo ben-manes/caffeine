@@ -40,6 +40,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -91,6 +92,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final Ticker ticker;
 
   private final CaffeineConfiguration<K, V> configuration;
+  private final ReentrantLock configurationLock = new ReentrantLock();
   private final CacheManager cacheManager;
   private final CacheWriter<K, V> writer;
   private final JCacheMXBean cacheMXBean;
@@ -799,8 +801,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public <C extends Configuration<K, V>> C getConfiguration(Class<C> clazz) {
     if (clazz.isInstance(configuration)) {
-      synchronized (configuration) {
+      configurationLock.lock();
+      try {
         return clazz.cast(configuration.immutableCopy());
+      } finally {
+        configurationLock.unlock();
       }
     }
     throw new IllegalArgumentException("The configuration class " + clazz
@@ -941,7 +946,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (isClosed()) {
       return;
     }
-    synchronized (configuration) {
+    configurationLock.lock();
+    try {
       if (!isClosed()) {
         enableManagement(false);
         enableStatistics(false);
@@ -960,6 +966,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           logger.log(Level.WARNING, "Failure when closing cache resources", thrown);
         }
       }
+    } finally {
+      configurationLock.unlock();
     }
     cache.invalidateAll();
   }
@@ -1022,9 +1030,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void registerCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
     requireNotClosed();
-    synchronized (configuration) {
+    configurationLock.lock();
+    try {
       configuration.addCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
       dispatcher.register(cacheEntryListenerConfiguration);
+    } finally {
+      configurationLock.unlock();
     }
   }
 
@@ -1032,9 +1043,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void deregisterCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
     requireNotClosed();
-    synchronized (configuration) {
+    configurationLock.lock();
+    try {
       configuration.removeCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
       dispatcher.deregister(cacheEntryListenerConfiguration);
+    } finally {
+      configurationLock.unlock();
     }
   }
 
@@ -1048,13 +1062,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   void enableManagement(boolean enabled) {
     requireNotClosed();
 
-    synchronized (configuration) {
+    configurationLock.lock();
+    try {
       if (enabled) {
         JmxRegistration.registerMXBean(this, cacheMXBean, MBeanType.Configuration);
       } else {
         JmxRegistration.unregisterMXBean(this, MBeanType.Configuration);
       }
       configuration.setManagementEnabled(enabled);
+    } finally {
+      configurationLock.unlock();
     }
   }
 
@@ -1062,7 +1079,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   void enableStatistics(boolean enabled) {
     requireNotClosed();
 
-    synchronized (configuration) {
+    configurationLock.lock();
+    try {
       if (enabled) {
         JmxRegistration.registerMXBean(this, statistics, MBeanType.Statistics);
       } else {
@@ -1070,6 +1088,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
       statistics.enable(enabled);
       configuration.setStatisticsEnabled(enabled);
+    } finally {
+      configurationLock.unlock();
     }
   }
 

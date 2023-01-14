@@ -1013,7 +1013,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (n != node) {
         return n;
       }
-      synchronized (n) {
+      n.getLock().lock();
+      try {
         value[0] = n.getValue();
 
         if ((key == null) || (value[0] == null)) {
@@ -1052,6 +1053,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         discardRefresh(keyReference);
         removed[0] = true;
         node.retire();
+      } finally {
+        n.getLock().unlock();
       }
       return null;
     });
@@ -1080,9 +1083,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       timerWheel().deschedule(node);
     }
 
-    synchronized (node) {
+    node.getLock().lock();
+    try {
       logIfAlive(node);
       makeDead(node);
+    } finally {
+      node.getLock().unlock();
     }
 
     if (removed[0]) {
@@ -1792,7 +1798,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    */
   @GuardedBy("evictionLock")
   void makeDead(Node<K, V> node) {
-    synchronized (node) {
+    node.getLock().lock();
+    try {
       if (node.isDead()) {
         return;
       }
@@ -1808,6 +1815,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setWeightedSize(weightedSize() - node.getWeight());
       }
       node.die();
+    } finally {
+      node.getLock().unlock();
     }
   }
 
@@ -1851,8 +1860,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       // ignore out-of-order write operations
       boolean isAlive;
-      synchronized (node) {
+      node.getLock().lock();
+      try {
         isAlive = node.isAlive();
+      } finally {
+        node.getLock().unlock();
       }
       if (isAlive) {
         if (expiresAfterWrite()) {
@@ -1876,13 +1888,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       // Ensure that in-flight async computation cannot expire (reset on a completion callback)
       if (isComputingAsync(node)) {
-        synchronized (node) {
+        node.getLock().lock();
+        try {
           if (!Async.isReady((CompletableFuture<?>) node.getValue())) {
             long expirationTime = expirationTicker().read() + ASYNC_EXPIRY;
             setVariableTime(node, expirationTime);
             setAccessTime(node, expirationTime);
             setWriteTime(node, expirationTime);
           }
+        } finally {
+          node.getLock().unlock();
         }
       }
     }
@@ -2042,7 +2057,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (n != node) {
         return n;
       }
-      synchronized (n) {
+      n.getLock().lock();
+      try {
         value[0] = n.getValue();
 
         if ((key == null) || (value[0] == null)) {
@@ -2060,6 +2076,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         discardRefresh(node.getKeyReference());
         node.retire();
         return null;
+      } finally {
+        n.getLock().unlock();
       }
     });
 
@@ -2078,9 +2096,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       timerWheel().deschedule(node);
     }
 
-    synchronized (node) {
+    node.getLock().lock();
+    try {
       logIfAlive(node);
       makeDead(node);
+    } finally {
+      node.getLock().unlock();
     }
 
     if (cause[0] != null) {
@@ -2315,7 +2336,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       boolean expired = false;
       boolean mayUpdate = true;
       boolean exceedsTolerance = false;
-      synchronized (prior) {
+      prior.getLock().lock();
+      try {
         if (!prior.isAlive()) {
           continue;
         }
@@ -2350,6 +2372,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         setVariableTime(prior, varTime);
         setAccessTime(prior, now);
+      } finally {
+        prior.getLock().unlock();
       }
 
       if (expired) {
@@ -2388,7 +2412,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     Object lookupKey = nodeFactory.newLookupKey(key);
 
     data.computeIfPresent(lookupKey, (k, n) -> {
-      synchronized (n) {
+      n.getLock().lock();
+      try {
         requireIsAlive(key, n);
         oldValue[0] = n.getValue();
         if (oldValue[0] == null) {
@@ -2404,6 +2429,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         discardRefresh(lookupKey);
         node[0] = n;
         n.retire();
+      } finally {
+        n.getLock().unlock();
       }
       return null;
     });
@@ -2432,7 +2459,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     Object lookupKey = nodeFactory.newLookupKey(key);
 
     data.computeIfPresent(lookupKey, (kR, node) -> {
-      synchronized (node) {
+      node.getLock().lock();
+      try {
         requireIsAlive(key, node);
         oldKey[0] = node.getKey();
         oldValue[0] = node.getValue();
@@ -2452,6 +2480,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         removed[0] = node;
         node.retire();
         return null;
+      } finally {
+        node.getLock().unlock();
       }
     });
 
@@ -2477,7 +2507,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long[] now = new long[1];
     int weight = weigher.weigh(key, value);
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
-      synchronized (n) {
+      n.getLock().lock();
+      try {
         requireIsAlive(key, n);
         nodeKey[0] = n.getKey();
         oldValue[0] = n.getValue();
@@ -2497,6 +2528,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setWriteTime(n, now[0]);
         discardRefresh(k);
         return n;
+      } finally {
+        n.getLock().unlock();
       }
     });
 
@@ -2535,7 +2568,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     int[] oldWeight = new int[1];
     long[] now = new long[1];
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
-      synchronized (n) {
+      n.getLock().lock();
+      try {
         requireIsAlive(key, n);
         nodeKey[0] = n.getKey();
         prevValue[0] = n.getValue();
@@ -2557,6 +2591,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (shouldDiscardRefresh) {
           discardRefresh(k);
         }
+      } finally {
+        n.getLock().unlock();
       }
       return n;
     });
@@ -2644,7 +2680,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return n;
       }
 
-      synchronized (n) {
+      n.getLock().lock();
+      try {
         requireIsAlive(key, n);
         nodeKey[0] = n.getKey();
         weight[0] = n.getWeight();
@@ -2678,6 +2715,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setWriteTime(n, now[0]);
         discardRefresh(k);
         return n;
+      } finally {
+        n.getLock().unlock();
       }
     });
 
@@ -2817,7 +2856,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return n;
       }
 
-      synchronized (n) {
+      n.getLock().lock();
+      try {
         requireIsAlive(key, n);
         nodeKey[0] = n.getKey();
         oldValue[0] = n.getValue();
@@ -2868,6 +2908,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setWriteTime(n, now[0]);
         discardRefresh(kr);
         return n;
+      } finally {
+        n.getLock().unlock();
       }
     });
 
@@ -4021,8 +4063,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if ((node == null) || cache.hasExpired(node, cache.expirationTicker().read())) {
           return OptionalInt.empty();
         }
-        synchronized (node) {
+        node.getLock().lock();
+        try {
           return OptionalInt.of(node.getWeight());
+        } finally {
+          node.getLock().unlock();
         }
       }
       @Override public OptionalLong weightedSize() {
@@ -4188,12 +4233,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (node != null) {
           long now;
           long durationNanos = TimeUnit.NANOSECONDS.convert(duration, unit);
-          synchronized (node) {
+          node.getLock().lock();
+          try {
             now = cache.expirationTicker().read();
             if (cache.hasExpired(node, now)) {
               return;
             }
             node.setVariableTime(now + Math.min(durationNanos, MAXIMUM_EXPIRY));
+          } finally {
+            node.getLock().unlock();
           }
           cache.afterRead(node, now, /* recordHit */ false);
         }
