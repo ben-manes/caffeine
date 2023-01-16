@@ -1530,6 +1530,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     } finally {
       evictionLock.unlock();
     }
+    rescheduleCleanUpIfIncomplete();
   }
 
   /** Acquires the eviction lock. */
@@ -1638,8 +1639,41 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     } finally {
       evictionLock.unlock();
     }
-    if ((drainStatusOpaque() == REQUIRED) && (executor == ForkJoinPool.commonPool())) {
+    rescheduleCleanUpIfIncomplete();
+  }
+
+  /**
+   * If there remains pending operations that were not handled by the prior clean up then try to
+   * schedule an asynchronous maintenance task. This may occur due to a concurrent write after the
+   * maintenance work had started or if the amortized threshold of work per clean up was reached.
+   */
+  void rescheduleCleanUpIfIncomplete() {
+    if (drainStatusOpaque() != REQUIRED) {
+      return;
+    }
+
+    // An immediate scheduling cannot be performed on a custom executor because it may use a
+    // caller-runs policy. This could cause the caller's penalty to exceed the amortized threshold,
+    // e.g. repeated concurrent writes could result in a retry loop.
+    if (executor == ForkJoinPool.commonPool()) {
       scheduleDrainBuffers();
+      return;
+    }
+
+    // If a scheduler was configured then the maintenance can be deferred onto the custom executor
+    // to be run some time into the future. This is only leveraged if there was not otherwise
+    // scheduled by a pending expiration event. Otherwise, rely on other cache activity trigger the
+    // next run.
+    var pacer = pacer();
+    if ((pacer != null) && (pacer.future == null) && evictionLock.tryLock()) {
+      try {
+        if ((pacer.future == null) && (drainStatusOpaque() == REQUIRED)) {
+          pacer.schedule(executor, drainBuffersTask,
+              expirationTicker().read(), Pacer.TOLERANCE);
+        }
+      } finally {
+        evictionLock.unlock();
+      }
     }
   }
 
@@ -3123,6 +3157,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     } finally {
       evictionLock.unlock();
+      rescheduleCleanUpIfIncomplete();
     }
   }
 
@@ -4029,9 +4064,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (cache.evicts() && isWeighted()) {
           cache.evictionLock.lock();
           try {
+            if (cache.drainStatusOpaque() == REQUIRED) {
+              cache.maintenance(/* ignored */ null);
+            }
             return OptionalLong.of(Math.max(0, cache.weightedSize()));
           } finally {
             cache.evictionLock.unlock();
+            cache.rescheduleCleanUpIfIncomplete();
           }
         }
         return OptionalLong.empty();
@@ -4039,9 +4078,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Override public long getMaximum() {
         cache.evictionLock.lock();
         try {
+          if (cache.drainStatusOpaque() == REQUIRED) {
+            cache.maintenance(/* ignored */ null);
+          }
           return cache.maximum();
         } finally {
           cache.evictionLock.unlock();
+          cache.rescheduleCleanUpIfIncomplete();
         }
       }
       @Override public void setMaximum(long maximum) {
@@ -4051,6 +4094,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           cache.maintenance(/* ignored */ null);
         } finally {
           cache.evictionLock.unlock();
+          cache.rescheduleCleanUpIfIncomplete();
         }
       }
       @Override public Map<K, V> coldest(int limit) {

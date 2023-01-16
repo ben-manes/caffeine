@@ -238,6 +238,7 @@ jobs:
     name: Test Results
     runs-on: ubuntu-latest
     needs: tests
+    if: github.event_name == 'push'
     permissions:
       checks: write
     steps:
@@ -264,15 +265,17 @@ jobs:
           ignore_runs: true
           job_summary: true
       - name: Create badge
+        id: test-badge
         env:
           LABEL: tests
           COLOR: 31c653
           STATUS: ${{ fromJSON(steps.test-results.outputs.json).formatted.stats.runs }}
-        run: curl -s https://badgen.net/badge/${{env.LABEL}}/${{env.STATUS}}/${{env.COLOR}} > badge.svg
+        continue-on-error: true
+        run: curl -s -f https://badgen.net/badge/${{env.LABEL}}/${{env.STATUS}}/${{env.COLOR}} > badge.svg
       - name: Upload badge to Gist
         uses: popsiclestick/gist-sync-action@v1.2.0
         if: >
-          github.event_name == 'push'
+          steps.test-badge.outcome == 'success'
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
           gist_url: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4

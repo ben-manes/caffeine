@@ -54,7 +54,9 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
@@ -311,6 +313,87 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  public void rescheduleCleanUpIfIncomplete_complete(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+    for (int status : new int[] { IDLE, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED}) {
+      cache.drainStatus = status;
+      cache.rescheduleCleanUpIfIncomplete();
+      verifyNoInteractions(context.scheduler());
+      assertThat(cache.drainStatus).isEqualTo(status);
+      assertThat(context.executor().completed()).isEqualTo(context.population().size());
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void rescheduleCleanUpIfIncomplete_incompatible(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.drainStatus = REQUIRED;
+    cache.rescheduleCleanUpIfIncomplete();
+    assertThat(cache.drainStatus).isEqualTo(REQUIRED);
+    assertThat(context.executor().completed()).isEqualTo(context.population().size());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DEFAULT)
+  public void rescheduleCleanUpIfIncomplete_immediate(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.drainStatus = REQUIRED;
+    cache.rescheduleCleanUpIfIncomplete();
+    await().until(() -> cache.drainStatus, is(IDLE));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  public void rescheduleCleanUpIfIncomplete_notScheduled_future(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+    cache.drainStatus = REQUIRED;
+    cache.pacer().future = DisabledFuture.INSTANCE;
+
+    cache.rescheduleCleanUpIfIncomplete();
+    verifyNoInteractions(context.scheduler());
+    await().until(() -> cache.drainStatus, is(REQUIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  public void rescheduleCleanUpIfIncomplete_notScheduled_locked(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+    cache.drainStatus = REQUIRED;
+    cache.pacer().cancel();
+
+    var done = new AtomicBoolean();
+    cache.evictionLock.lock();
+    try {
+      ConcurrentTestHarness.execute(() -> {
+        cache.rescheduleCleanUpIfIncomplete();
+        done.set(true);
+      });
+      await().untilTrue(done);
+      verifyNoInteractions(context.scheduler());
+      await().until(() -> cache.drainStatus, is(REQUIRED));
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  public void rescheduleCleanUpIfIncomplete_scheduled(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+    cache.drainStatus = REQUIRED;
+    cache.pacer().cancel();
+
+    cache.rescheduleCleanUpIfIncomplete();
+    verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void afterWrite_drainFullWriteBuffer(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -382,99 +465,117 @@ public final class BoundedLocalCacheTest {
     assertThat(event.getLevel()).isEqualTo(ERROR);
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
+  public void weightedSize_maintenance(BoundedLocalCache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    cache.drainStatus = REQUIRED;
+    eviction.weightedSize();
+    assertThat(cache.drainStatus).isEqualTo(IDLE);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = Maximum.FULL)
+  public void maximumSize_maintenance(BoundedLocalCache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    cache.drainStatus = REQUIRED;
+    eviction.getMaximum();
+    assertThat(cache.drainStatus).isEqualTo(IDLE);
+  }
+
   /* --------------- Eviction --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.MAX_VALUE)
-  public void overflow_add_one(BoundedLocalCache<Int, Int> map, CacheContext context) {
-    long actualWeight = map.weightedSize();
-    map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
-    map.put(context.absentKey(), context.absentValue());
+  public void overflow_add_one(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    long actualWeight = cache.weightedSize();
+    cache.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
+    cache.put(context.absentKey(), context.absentValue());
 
-    assertThat(map).hasSize(context.initialSize());
-    assertThat(map.weightedSize()).isEqualTo(BoundedLocalCache.MAXIMUM_CAPACITY);
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache.weightedSize()).isEqualTo(BoundedLocalCache.MAXIMUM_CAPACITY);
 
     var removed = new HashMap<>(context.original());
     removed.put(context.absentKey(), context.absentValue());
-    removed.keySet().removeAll(map.keySet());
+    removed.keySet().removeAll(cache.keySet());
     assertThat(context).notifications().hasSize(1);
     assertThat(context).notifications().withCause(SIZE).contains(removed).exclusively();
 
     // reset for validation listener
-    map.setWeightedSize(actualWeight);
+    cache.setWeightedSize(actualWeight);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.MAX_VALUE)
-  public void overflow_add_many(BoundedLocalCache<Int, Int> map, CacheContext context) {
-    long actualWeight = map.weightedSize();
-    map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
-    map.evictionLock.lock();
+  public void overflow_add_many(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    long actualWeight = cache.weightedSize();
+    cache.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
+    cache.evictionLock.lock();
     try {
-      map.putAll(context.absent());
+      cache.putAll(context.absent());
     } finally {
-      map.evictionLock.unlock();
+      cache.evictionLock.unlock();
     }
-    map.cleanUp();
+    cache.cleanUp();
 
-    assertThat(map).hasSize(context.initialSize());
-    assertThat(map.weightedSize()).isEqualTo(BoundedLocalCache.MAXIMUM_CAPACITY);
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache.weightedSize()).isEqualTo(BoundedLocalCache.MAXIMUM_CAPACITY);
 
     var removed = new HashMap<>(context.original());
     removed.putAll(context.absent());
-    removed.keySet().removeAll(map.keySet());
+    removed.keySet().removeAll(cache.keySet());
     assertThat(context).notifications().hasSize(context.absent().size());
     assertThat(context).notifications().withCause(SIZE).contains(removed).exclusively();
 
     // reset for validation listener
-    map.setWeightedSize(actualWeight);
+    cache.setWeightedSize(actualWeight);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
-  public void overflow_update_one(BoundedLocalCache<Int, Int> map, CacheContext context) {
-    map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
-    map.put(context.firstKey(), Int.MAX_VALUE);
+  public void overflow_update_one(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
+    cache.put(context.firstKey(), Int.MAX_VALUE);
 
-    assertThat(map).hasSizeLessThan(1 + context.initialSize());
-    assertThat(map.weightedSize()).isAtMost(BoundedLocalCache.MAXIMUM_CAPACITY);
+    assertThat(cache).hasSizeLessThan(1 + context.initialSize());
+    assertThat(cache.weightedSize()).isAtMost(BoundedLocalCache.MAXIMUM_CAPACITY);
 
     var removed = new HashMap<>(context.original());
     removed.put(context.firstKey(), Int.MAX_VALUE);
-    removed.keySet().removeAll(map.keySet());
+    removed.keySet().removeAll(cache.keySet());
     assertThat(removed.size()).isAtLeast(1);
     assertThat(context).notifications().withCause(SIZE).contains(removed);
 
     // reset for validation listener
-    map.setWeightedSize(map.data.values().stream().mapToLong(Node::getWeight).sum());
+    cache.setWeightedSize(cache.data.values().stream().mapToLong(Node::getWeight).sum());
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
-  public void overflow_update_many(BoundedLocalCache<Int, Int> map, CacheContext context) {
+  public void overflow_update_many(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var updated = Maps.asMap(context.firstMiddleLastKeys(), key -> Int.MAX_VALUE);
-    map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
-    map.evictionLock.lock();
+    cache.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
+    cache.evictionLock.lock();
     try {
-      map.putAll(updated);
+      cache.putAll(updated);
     } finally {
-      map.evictionLock.unlock();
+      cache.evictionLock.unlock();
     }
-    map.cleanUp();
+    cache.cleanUp();
 
-    assertThat(map).hasSizeLessThan(1 + context.initialSize());
-    assertThat(map.weightedSize()).isAtMost(BoundedLocalCache.MAXIMUM_CAPACITY);
+    assertThat(cache).hasSizeLessThan(1 + context.initialSize());
+    assertThat(cache.weightedSize()).isAtMost(BoundedLocalCache.MAXIMUM_CAPACITY);
 
     var removed = new HashMap<>(context.original());
     removed.putAll(updated);
-    removed.keySet().removeAll(map.keySet());
+    removed.keySet().removeAll(cache.keySet());
     assertThat(removed.size()).isAtLeast(1);
     assertThat(context).notifications().withCause(SIZE).contains(removed);
 
     // reset for validation listener
-    map.setWeightedSize(map.data.values().stream().mapToLong(Node::getWeight).sum());
+    cache.setWeightedSize(cache.data.values().stream().mapToLong(Node::getWeight).sum());
   }
 
   @CheckNoEvictions
