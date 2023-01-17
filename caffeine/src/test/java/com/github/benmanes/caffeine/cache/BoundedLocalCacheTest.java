@@ -351,7 +351,7 @@ public final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     reset(context.scheduler());
     cache.drainStatus = REQUIRED;
-    cache.pacer().future = DisabledFuture.INSTANCE;
+    cache.pacer().future = new CompletableFuture<>();
 
     cache.rescheduleCleanUpIfIncomplete();
     verifyNoInteractions(context.scheduler());
@@ -383,13 +383,33 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
-  public void rescheduleCleanUpIfIncomplete_scheduled(
+  public void rescheduleCleanUpIfIncomplete_scheduled_noFuture(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     reset(context.scheduler());
+
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .thenReturn(new CompletableFuture<>());
     cache.drainStatus = REQUIRED;
     cache.pacer().cancel();
 
     cache.rescheduleCleanUpIfIncomplete();
+    assertThat(cache.pacer().isScheduled()).isTrue();
+    verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  public void rescheduleCleanUpIfIncomplete_scheduled_doneFuture(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .thenReturn(new CompletableFuture<>());
+    cache.pacer().future = DisabledFuture.INSTANCE;
+    cache.drainStatus = REQUIRED;
+
+    cache.rescheduleCleanUpIfIncomplete();
+    assertThat(cache.pacer().isScheduled()).isTrue();
     verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
   }
 

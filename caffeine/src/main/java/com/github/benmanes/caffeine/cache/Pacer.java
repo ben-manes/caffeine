@@ -72,6 +72,11 @@ final class Pacer {
     }
   }
 
+  /** Returns if a task is scheduled to run. */
+  public boolean isScheduled() {
+    return (future != null) && !future.isDone();
+  }
+
   /**
    * Returns if the current fire time is sooner, or if it is later and within the tolerance limit.
    */

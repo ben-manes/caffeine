@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -59,11 +60,12 @@ public final class PacerTest {
   @Test
   public void schedule_initialize() {
     long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
-    doReturn(DisabledFuture.INSTANCE)
+    doReturn(future)
         .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
     pacer.schedule(executor, command, NOW, delay);
 
-    assertThat(pacer.future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(pacer.isScheduled()).isTrue();
+    assertThat(pacer.future).isSameInstanceAs(future);
     assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
   }
 
@@ -74,11 +76,13 @@ public final class PacerTest {
       assertThat(pacer.future).isNull();
       assertThat(pacer.nextFireTime).isNotEqualTo(0);
       pacer.schedule(executor, command, NOW, delay);
-      return DisabledFuture.INSTANCE;
+      return future;
     }).when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
 
     pacer.schedule(executor, command, NOW, delay);
-    assertThat(pacer.future).isSameInstanceAs(DisabledFuture.INSTANCE);
+
+    assertThat(pacer.isScheduled()).isTrue();
+    assertThat(pacer.future).isSameInstanceAs(future);
     assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
   }
 
@@ -92,13 +96,16 @@ public final class PacerTest {
     pacer.schedule(executor, command, NOW, delay);
     assertThat(pacer.nextFireTime).isEqualTo(fireTime);
     assertThat(pacer.future).isSameInstanceAs(future);
+    assertThat(pacer.isScheduled()).isTrue();
 
     pacer.cancel();
     verify(future).cancel(false);
     assertThat(pacer.nextFireTime).isEqualTo(0);
+    assertThat(pacer.isScheduled()).isFalse();
     assertThat(pacer.future).isNull();
 
     pacer.schedule(executor, command, NOW, delay);
+    assertThat(pacer.isScheduled()).isTrue();
     assertThat(pacer.nextFireTime).isEqualTo(fireTime);
     assertThat(pacer.future).isSameInstanceAs(future);
   }
@@ -110,10 +117,11 @@ public final class PacerTest {
 
     long expectedNextFireTime = pacer.nextFireTime;
     pacer.schedule(executor, command, NOW, ONE_MINUTE_IN_NANOS);
+    verifyNoInteractions(scheduler, executor, command, future);
 
+    assertThat(pacer.isScheduled()).isTrue();
     assertThat(pacer.future).isSameInstanceAs(future);
     assertThat(pacer.nextFireTime).isEqualTo(expectedNextFireTime);
-    verifyNoInteractions(scheduler, executor, command, future);
   }
 
   @Test
@@ -125,10 +133,11 @@ public final class PacerTest {
     long delay = ONE_MINUTE_IN_NANOS
         - Math.max(1, random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE)));
     pacer.schedule(executor, command, NOW, delay);
+    verifyNoInteractions(scheduler, executor, command, future);
 
+    assertThat(pacer.isScheduled()).isTrue();
     assertThat(pacer.future).isSameInstanceAs(future);
     assertThat(pacer.nextFireTime).isEqualTo(expectedNextFireTime);
-    verifyNoInteractions(scheduler, executor, command, future);
   }
 
   @Test
@@ -137,18 +146,19 @@ public final class PacerTest {
     pacer.future = future;
 
     long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
-    doReturn(DisabledFuture.INSTANCE)
+    doReturn(future)
         .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
     pacer.schedule(executor, command, NOW, delay);
-
-    assertThat(pacer.future).isSameInstanceAs(DisabledFuture.INSTANCE);
-    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
 
     verify(future).cancel(false);
     verify(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
 
     verifyNoInteractions(executor, command);
     verifyNoMoreInteractions(scheduler, future);
+
+    assertThat(pacer.future).isSameInstanceAs(future);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
+    assertThat(pacer.isScheduled()).isTrue();
   }
 
   @Test
@@ -157,24 +167,26 @@ public final class PacerTest {
     pacer.future = future;
 
     long delay = (Pacer.TOLERANCE + Math.max(1, random.nextInt()));
-    doReturn(DisabledFuture.INSTANCE)
+    doReturn(future)
         .when(scheduler).schedule(executor, command, delay, TimeUnit.NANOSECONDS);
     pacer.schedule(executor, command, NOW, delay);
-
-    assertThat(pacer.future).isSameInstanceAs(DisabledFuture.INSTANCE);
-    assertThat(pacer.nextFireTime).isEqualTo(NOW + delay);
 
     verify(future).cancel(false);
     verify(scheduler).schedule(executor, command, delay, TimeUnit.NANOSECONDS);
 
     verifyNoInteractions(executor, command);
     verifyNoMoreInteractions(scheduler, future);
+
+    assertThat(pacer.future).isSameInstanceAs(future);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + delay);
+    assertThat(pacer.isScheduled()).isTrue();
   }
 
   @Test
   public void cancel_initialize() {
     pacer.cancel();
     assertThat(pacer.nextFireTime).isEqualTo(0);
+    assertThat(pacer.isScheduled()).isFalse();
     assertThat(pacer.future).isNull();
   }
 
@@ -186,6 +198,25 @@ public final class PacerTest {
     pacer.cancel();
     verify(future).cancel(false);
     assertThat(pacer.future).isNull();
+    assertThat(pacer.isScheduled()).isFalse();
     assertThat(pacer.nextFireTime).isEqualTo(0);
+  }
+
+  @Test
+  public void isScheduled_nullFuture() {
+    pacer.future = null;
+    assertThat(pacer.isScheduled()).isFalse();
+  }
+
+  @Test
+  public void isScheduled_doneFuture() {
+    pacer.future = DisabledFuture.INSTANCE;
+    assertThat(pacer.isScheduled()).isFalse();
+  }
+
+  @Test
+  public void isScheduled_inFlight() {
+    pacer.future = new CompletableFuture<>();
+    assertThat(pacer.isScheduled()).isTrue();
   }
 }

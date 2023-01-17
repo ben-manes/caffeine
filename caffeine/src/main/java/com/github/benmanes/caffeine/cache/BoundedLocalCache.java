@@ -1661,15 +1661,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     // If a scheduler was configured then the maintenance can be deferred onto the custom executor
-    // to be run some time into the future. This is only leveraged if there was not otherwise
-    // scheduled by a pending expiration event. Otherwise, rely on other cache activity trigger the
-    // next run.
+    // to be run in the near future. This is only used if there is no scheduled set, else the next
+    // run depends on other activity to trigger it.
     var pacer = pacer();
-    if ((pacer != null) && (pacer.future == null) && evictionLock.tryLock()) {
+    if ((pacer != null) && !pacer.isScheduled() && evictionLock.tryLock()) {
       try {
-        if ((pacer.future == null) && (drainStatusOpaque() == REQUIRED)) {
-          pacer.schedule(executor, drainBuffersTask,
-              expirationTicker().read(), Pacer.TOLERANCE);
+        if ((drainStatusOpaque() == REQUIRED) && !pacer.isScheduled()) {
+          pacer.schedule(executor, drainBuffersTask, expirationTicker().read(), Pacer.TOLERANCE);
         }
       } finally {
         evictionLock.unlock();

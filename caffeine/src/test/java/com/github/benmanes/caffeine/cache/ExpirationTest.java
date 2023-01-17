@@ -32,7 +32,6 @@ import static java.util.Map.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -150,11 +149,11 @@ public final class ExpirationTest {
   public void schedule_immediate(Cache<Int, Int> cache, CacheContext context) {
     doAnswer(invocation -> {
       invocation.getArgument(1, Runnable.class).run();
-      return DisabledFuture.INSTANCE;
+      return new CompletableFuture<>();
     }).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
 
     cache.put(context.absentKey(), context.absentValue());
-    verify(context.scheduler(), atMostOnce()).schedule(any(), any(), anyLong(), any());
+    verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
   }
 
   @Test(dataProvider = "caches")
