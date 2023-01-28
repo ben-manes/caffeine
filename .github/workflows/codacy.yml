@@ -25,8 +25,13 @@ jobs:
           output: results.sarif
           gh-code-scanning-compat: true
           max-allowed-issues: 2147483647
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v2
+        with:
+          files: results.sarif
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v2
-        continue-on-error: true
+        if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif

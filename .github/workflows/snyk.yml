@@ -1,4 +1,4 @@
-name: snyke
+name: snyk
 on:
   push:
     branches: [master, v2.dev, v3.dev]
@@ -10,7 +10,7 @@ env:
   JAVA_VERSION: 19
 
 jobs:
-  snyke:
+  snyk:
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -25,15 +25,25 @@ jobs:
           disable-sudo: true
           egress-policy: audit
       - uses: actions/checkout@v3
+      - name: Downgrade Gradle (snyk-gradle-plugin/issues/252)
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          arguments: wrapper --gradle-version 7.6
       - name: Run Snyk test
         uses: ./.github/actions/run-gradle
         continue-on-error: true
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: snyk-test -PsnykArgs="--sarif-file-output=snyk.sarif"
+          arguments: snyk-test -PsnykArgs="--sarif-file-output=snyk.sarif" --no-configuration-cache
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v2
+        with:
+          files: snyk.sarif
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v2
-        continue-on-error: true
+        if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: snyk.sarif
       - name: Run Snyk monitor
@@ -41,4 +51,4 @@ jobs:
         continue-on-error: true
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: snyk-monitor
+          arguments: snyk-monitor --no-configuration-cache

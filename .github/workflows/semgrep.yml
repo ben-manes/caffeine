@@ -29,9 +29,13 @@ jobs:
             p/github-actions
             p/semgrep-rule-lints
             p/semgrep-misconfigurations
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v2
+        with:
+          files: semgrep.sarif
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
         uses: github/codeql-action/upload-sarif@v2
-        continue-on-error: true
+        if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: semgrep.sarif
-        if: always()

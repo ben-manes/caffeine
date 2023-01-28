@@ -144,7 +144,9 @@ tasks.named('dependencyUpdates').configure {
 }
 
 dependencyCheck {
-  formats = ['html', 'sarif']
+  formats = ['html', 'sarif']*.toUpperCase()
+  scanBuildEnv = true
+  failOnError = false
 }
 dependencyCheckAggregate.dependsOn(subprojects*.tasks.jar)
 
@@ -153,4 +155,12 @@ snyk {
   api = System.env.SNYK_TOKEN
   autoDownload = true
   autoUpdate = true
+}
+tasks.named('snyk-test').configure {
+  notCompatibleWithConfigurationCache(
+    'The snyk-test task is not compatible with the configuration cache')
+}
+tasks.named('snyk-monitor').configure {
+  notCompatibleWithConfigurationCache(
+    'The snyk-monitor task is not compatible with the configuration cache')
 }
