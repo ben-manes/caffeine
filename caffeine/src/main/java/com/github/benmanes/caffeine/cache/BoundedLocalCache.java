@@ -49,6 +49,7 @@ import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -1661,8 +1662,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     // If a scheduler was configured then the maintenance can be deferred onto the custom executor
-    // to be run in the near future. This is only used if there is no scheduled set, else the next
-    // run depends on other activity to trigger it.
+    // and run in the near future. Otherwise, it will be handled due to other cache activity.
     var pacer = pacer();
     if ((pacer != null) && !pacer.isScheduled() && evictionLock.tryLock()) {
       try {
@@ -3985,7 +3985,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
       if ((refreshes == null) || refreshes.isEmpty()) {
-        return Map.of();
+        return Collections.unmodifiableMap(Collections.emptyMap());
       } else if (cache.collectKeys()) {
         var inFlight = new IdentityHashMap<K, CompletableFuture<V>>(refreshes.size());
         for (var entry : refreshes.entrySet()) {
@@ -4001,7 +4001,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       @SuppressWarnings("unchecked")
       var castedRefreshes = (Map<K, CompletableFuture<V>>) (Object) refreshes;
-      return Map.copyOf(castedRefreshes);
+      return Collections.unmodifiableMap(new HashMap<>(castedRefreshes));
     }
     @Override public Optional<Eviction<K, V>> eviction() {
       return cache.evicts()

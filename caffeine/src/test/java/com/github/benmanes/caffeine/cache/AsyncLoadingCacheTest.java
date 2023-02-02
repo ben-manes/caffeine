@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.ass
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -204,7 +205,16 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_result(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
-    cache.getAll(context.absentKeys()).join().clear();
+    cache.getAll(context.firstMiddleLastKeys()).join().clear();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAll_nullLookup(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.firstMiddleLastKeys()).join();
+    assertThat(result.containsValue(null)).isFalse();
+    assertThat(result.containsKey(null)).isFalse();
+    assertThat(result.get(null)).isNull();
   }
 
   @CacheSpec(loader = Loader.BULK_NULL)
@@ -334,7 +344,7 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_ordered_absent(
+  public void getAll_present_ordered_absent(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.absentKeys());
     Collections.shuffle(keys);
@@ -347,7 +357,7 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_ordered_partial(
+  public void getAll_present_ordered_partial(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     keys.addAll(context.absentKeys());
@@ -361,7 +371,7 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_NEGATIVE_EXCEEDS },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_ordered_present(
+  public void getAll_present_ordered_present(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
@@ -373,7 +383,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_ordered_exceeds(
+  public void getAll_present_ordered_exceeds(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     keys.addAll(context.absentKeys());

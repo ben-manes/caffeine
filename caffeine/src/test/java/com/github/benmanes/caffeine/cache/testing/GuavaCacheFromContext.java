@@ -470,7 +470,7 @@ public final class GuavaCacheFromContext {
         return new GuavaCacheEntry<>(key, value, snapshotAt);
       }
       @Override public Map<K, CompletableFuture<V>> refreshes() {
-        return Map.of();
+        return Collections.unmodifiableMap(Collections.emptyMap());
       }
       @Override public Optional<Eviction<K, V>> eviction() {
         return Optional.empty();
@@ -568,7 +568,8 @@ public final class GuavaCacheFromContext {
 
     CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
       if (futures.isEmpty()) {
-        return CompletableFuture.completedFuture(Map.of());
+        return CompletableFuture.completedFuture(
+            Collections.unmodifiableMap(Collections.emptyMap()));
       }
       @SuppressWarnings("rawtypes")
       CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);

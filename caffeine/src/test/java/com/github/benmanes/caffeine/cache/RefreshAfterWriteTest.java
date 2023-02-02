@@ -857,6 +857,21 @@ public final class RefreshAfterWriteTest {
     assertThat(cache).containsEntry(context.firstKey(), Int.MAX_VALUE);
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
+      refreshAfterWrite = Expire.ONE_MINUTE, population = Population.FULL)
+  public void refreshes_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    cache.getIfPresent(context.firstKey());
+    var future = cache.policy().refreshes().get(context.firstKey());
+
+    assertThat(cache.policy().refreshes().get(null)).isNull();
+    assertThat(cache.policy().refreshes().containsKey(null)).isFalse();
+    assertThat(cache.policy().refreshes().containsValue(null)).isFalse();
+
+    future.cancel(true);
+  }
+
   /* --------------- Policy: refreshAfterWrite --------------- */
 
   @Test(dataProvider = "caches")

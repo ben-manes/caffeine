@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.ass
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -64,6 +65,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 
 /**
@@ -373,6 +375,16 @@ public final class AsyncCacheTest {
     assertThat(result).isExhaustivelyEmpty();
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void getAllFunction_nullLookup(AsyncCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.firstMiddleLastKeys(),
+        keys -> Maps.asMap(keys, Int::negate)).join();
+    assertThat(result.containsValue(null)).isFalse();
+    assertThat(result.containsKey(null)).isFalse();
+    assertThat(result.get(null)).isNull();
+  }
+
   @CacheSpec
   @Test(dataProvider = "caches")
   public void getAllFunction_immutable_keys(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -387,7 +399,7 @@ public final class AsyncCacheTest {
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllFunction_immutable_result(AsyncCache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.absentKeys(),
+    var result = cache.getAll(context.firstMiddleLastKeys(),
         keys -> keys.stream().collect(toImmutableMap(identity(), identity()))).join();
     result.clear();
   }
@@ -592,6 +604,16 @@ public final class AsyncCacheTest {
     assertThat(result).isExhaustivelyEmpty();
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void getAllBiFunction_nullLookup(AsyncCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.firstMiddleLastKeys(), (keys, executor) ->
+        CompletableFuture.completedFuture(Maps.asMap(keys, Int::negate))).join();
+    assertThat(result.containsValue(null)).isFalse();
+    assertThat(result.containsKey(null)).isFalse();
+    assertThat(result.get(null)).isNull();
+  }
+
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllBifunction_immutable_keys(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -604,7 +626,7 @@ public final class AsyncCacheTest {
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllBifunction_immutable_result(AsyncCache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
+    var result = cache.getAll(context.firstMiddleLastKeys(), (keys, executor) -> {
       return CompletableFuture.completedFuture(
           keys.stream().collect(toImmutableMap(identity(), identity())));
     }).join();

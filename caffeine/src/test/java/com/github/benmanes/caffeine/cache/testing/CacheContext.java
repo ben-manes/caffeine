@@ -224,7 +224,9 @@ public final class CacheContext {
   }
 
   public ImmutableSet<Int> firstMiddleLastKeys() {
-    return ImmutableSet.of(firstKey(), middleKey(), lastKey());
+    return (firstKey == null)
+        ? ImmutableSet.of()
+        : ImmutableSet.of(firstKey(), middleKey(), lastKey());
   }
 
   public void cleanUp() {

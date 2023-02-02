@@ -197,7 +197,16 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_result(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.getAll(context.absentKeys()).clear();
+    cache.getAll(context.firstMiddleLastKeys()).clear();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAll_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.firstMiddleLastKeys());
+    assertThat(result.containsValue(null)).isFalse();
+    assertThat(result.containsKey(null)).isFalse();
+    assertThat(result.get(null)).isNull();
   }
 
   @CheckNoEvictions
@@ -967,6 +976,23 @@ public final class LoadingCacheTest {
     cache.refreshAll(Collections.singletonList(null));
   }
 
+  @CacheSpec
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
+  public void refreshAll_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
+    var result = cache.refreshAll(context.firstMiddleLastKeys()).join();
+    assertThat(result.containsValue(null)).isFalse();
+    assertThat(result.containsKey(null)).isFalse();
+    assertThat(result.get(null)).isNull();
+  }
+
+  @CacheSpec
+  @CheckNoEvictions
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void refreshAll_immutable(LoadingCache<Int, Int> cache, CacheContext context) {
+    cache.refreshAll(context.firstMiddleLastKeys()).join().clear();
+  }
+
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -1169,5 +1195,18 @@ public final class LoadingCacheTest {
     future1.complete(Int.valueOf(1));
     future2.cancel(true);
     assertThat(cache.policy().refreshes()).isExhaustivelyEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE)
+  public void refreshes_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
+    cache.refreshAll(context.absentKeys());
+    assertThat(cache.policy().refreshes().get(null)).isNull();
+    assertThat(cache.policy().refreshes().containsKey(null)).isFalse();
+    assertThat(cache.policy().refreshes().containsValue(null)).isFalse();
+
+    for (var future : cache.policy().refreshes().values()) {
+      future.cancel(true);
+    }
   }
 }

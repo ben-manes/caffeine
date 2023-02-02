@@ -32,6 +32,7 @@ import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -1068,12 +1069,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
-      if (refreshes == null) {
-        return Map.of();
+      if ((refreshes == null) || refreshes.isEmpty()) {
+        return Collections.unmodifiableMap(Collections.emptyMap());
       }
       @SuppressWarnings("unchecked")
       var castedRefreshes = (Map<K, CompletableFuture<V>>) (Object) refreshes;
-      return Map.copyOf(castedRefreshes);
+      return Collections.unmodifiableMap(new HashMap<>(castedRefreshes));
     }
     @Override public Optional<Eviction<K, V>> eviction() {
       return Optional.empty();

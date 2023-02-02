@@ -233,7 +233,16 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllPresent_immutable(Cache<Int, Int> cache, CacheContext context) {
-    cache.getAllPresent(context.absentKeys()).clear();
+    cache.getAllPresent(context.firstMiddleLastKeys()).clear();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void getAllPresent_nullLookup(Cache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAllPresent(context.firstMiddleLastKeys());
+    assertThat(result.containsValue(null)).isFalse();
+    assertThat(result.containsKey(null)).isFalse();
+    assertThat(result.get(null)).isNull();
   }
 
   @Test(dataProvider = "caches")
@@ -364,8 +373,17 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_result(Cache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.absentKeys(), bulkMappingFunction());
+    var result = cache.getAll(context.firstMiddleLastKeys(), bulkMappingFunction());
     result.clear();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAll_nullLookup(Cache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.firstMiddleLastKeys(), bulkMappingFunction());
+    assertThat(result.containsValue(null)).isFalse();
+    assertThat(result.containsKey(null)).isFalse();
+    assertThat(result.get(null)).isNull();
   }
 
   @CacheSpec
@@ -963,6 +981,14 @@ public final class CacheTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void refreshes_unmodifiable(Cache<Int, Int> cache, CacheContext context) {
     cache.policy().refreshes().clear();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void refreshes_nullLookup(Cache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.policy().refreshes().containsValue(null)).isFalse();
+    assertThat(cache.policy().refreshes().containsKey(null)).isFalse();
+    assertThat(cache.policy().refreshes().get(null)).isNull();
   }
 
   /* --------------- Policy: CacheEntry --------------- */
