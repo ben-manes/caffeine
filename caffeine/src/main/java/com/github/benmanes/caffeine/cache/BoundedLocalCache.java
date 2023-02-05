@@ -366,7 +366,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  public boolean isPendingEviction(Object key) {
+  public boolean isPendingEviction(K key) {
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     return (node != null)
         && ((node.getValue() == null) || hasExpired(node, expirationTicker().read()));
@@ -2188,7 +2188,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  public @Nullable V getIfPresentQuietly(Object key) {
+  public @Nullable V getIfPresentQuietly(K key) {
     V value;
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if ((node == null) || ((value = node.getValue()) == null)
@@ -2241,11 +2241,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           setAccessTime(node, now);
         }
         V refreshed = afterRead(node, now, /* recordHit */ false);
-        if (refreshed == null) {
-          entry.setValue(value);
-        } else {
-          entry.setValue(refreshed);
-        }
+        entry.setValue((refreshed == null) ? value : refreshed);
       }
     }
     statsCounter().recordHits(result.size());
@@ -3726,6 +3722,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return false;
     }
 
+    /** Invalidates the current position so that the iterator may compute the next position. */
     void advance() {
       value = null;
       next = null;
@@ -3738,9 +3735,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         throw new NoSuchElementException();
       }
       removalKey = key;
-      value = null;
-      next = null;
-      key = null;
+      advance();
       return removalKey;
     }
 
@@ -3751,9 +3746,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       removalKey = key;
       V val = value;
-      value = null;
-      next = null;
-      key = null;
+      advance();
       return val;
     }
 
@@ -3765,9 +3758,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @SuppressWarnings("NullAway")
       var entry = new WriteThroughEntry<>(cache, key, value);
       removalKey = key;
-      value = null;
-      next = null;
-      key = null;
+      advance();
       return entry;
     }
 

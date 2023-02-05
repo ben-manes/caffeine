@@ -68,7 +68,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * Returns whether an absent entry has expired or has been reference collected but has not yet
    * been removed from the cache.
    */
-  boolean isPendingEviction(Object key);
+  boolean isPendingEviction(K key);
 
   /**
    * See {@link Cache#getIfPresent(K)}. This method differs by accepting a parameter of whether
@@ -82,7 +82,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * the statistics nor the eviction policy.
    */
   @Nullable
-  V getIfPresentQuietly(Object key);
+  V getIfPresentQuietly(K key);
 
   /** See {@link Cache#getAllPresent}. */
   Map<K, V> getAllPresent(Iterable<? extends K> keys);

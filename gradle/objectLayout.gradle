@@ -27,7 +27,7 @@ tasks.register('packing', JavaExec) {
   description = 'Compute the object footprint under different field layout strategies'
   dependsOn(jar)
   mainClass = 'org.openjdk.jol.Main'
-  args it.name, jar.archivePath
+  args it.name, jar.archiveFile
   it.classpath configurations.objectLayout
 }
 

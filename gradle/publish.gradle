@@ -75,7 +75,7 @@ signing {
   sign publishing.publications.mavenJava
 }
 
-tasks.withType(org.gradle.plugins.signing.Sign).configureEach {
+tasks.withType(Sign).configureEach {
   notCompatibleWithConfigurationCache(
     "The ${name} task is not compatible with the configuration cache")
 }

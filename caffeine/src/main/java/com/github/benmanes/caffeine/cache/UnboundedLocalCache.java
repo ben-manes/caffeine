@@ -113,7 +113,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public boolean isPendingEviction(Object key) {
+  public boolean isPendingEviction(K key) {
     return false;
   }
 
@@ -134,7 +134,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public @Nullable V getIfPresentQuietly(Object key) {
+  public @Nullable V getIfPresentQuietly(K key) {
     return data.get(key);
   }
 

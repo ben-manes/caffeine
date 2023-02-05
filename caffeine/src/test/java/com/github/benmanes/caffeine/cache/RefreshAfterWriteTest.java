@@ -848,9 +848,11 @@ public final class RefreshAfterWriteTest {
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.getIfPresent(context.absentKey());
     assertThat(context.executor().submitted()).isEqualTo(submitted + 1);
+    var automatic1 = cache.policy().refreshes().get(context.absentKey());
 
     // return in-flight future
     var future1 = cache.refresh(context.absentKey());
+    assertThat(future1).isSameInstanceAs(automatic1);
     assertThat(context.executor().submitted()).isEqualTo(submitted + 1);
     future1.complete(intern(context.absentValue().negate()));
 
@@ -859,9 +861,11 @@ public final class RefreshAfterWriteTest {
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.getIfPresent(context.absentKey());
     assertThat(context.executor().submitted()).isEqualTo(submitted + 1);
+    var automatic2 = cache.policy().refreshes().get(context.absentKey());
 
     var future2 = cache.refresh(context.absentKey());
     assertThat(future2).isNotSameInstanceAs(future1);
+    assertThat(future2).isSameInstanceAs(automatic2);
     future2.cancel(true);
   }
 

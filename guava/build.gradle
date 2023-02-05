@@ -40,7 +40,7 @@ tasks.named('test').configure {
   useJUnitPlatform()
   systemProperties [
     'guava.osgi.version': versions.guava,
-    'caffeine.osgi.jar': relativePath(project(':caffeine').jar.archivePath.path),
-    'caffeine-guava.osgi.jar': relativePath(project(':guava').jar.archivePath.path),
+    'caffeine.osgi.jar': relativePath(project(':caffeine').jar.archiveFile.get().asFile.path),
+    'caffeine-guava.osgi.jar': relativePath(project(':guava').jar.archiveFile.get().asFile.path),
   ]
 }

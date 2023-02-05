@@ -71,7 +71,8 @@ tasks.register('junitTest', Test) {
 
   failFast = true
   maxHeapSize = '2g'
-  systemProperty 'caffeine.osgi.jar', relativePath(project(':caffeine').jar.archivePath.path)
+  systemProperty 'caffeine.osgi.jar',
+    relativePath(project(':caffeine').jar.archiveFile.get().asFile.path)
 }
 
 tasks.withType(Test).configureEach {
