@@ -365,6 +365,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     return nodeFactory.newLookupKey(key);
   }
 
+  @Override
+  public boolean isPendingEviction(Object key) {
+    Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
+    return (node != null)
+        && ((node.getValue() == null) || hasExpired(node, expirationTicker().read()));
+  }
+
   /* --------------- Stats Support --------------- */
 
   @Override
@@ -1354,11 +1361,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         V value = (isAsync && (newValue != null)) ? (V) refreshFuture[0] : newValue;
 
-        boolean[] discard = new boolean[1];
+        RemovalCause[] cause = new RemovalCause[1];
         V result = compute(key, (k, currentValue) -> {
           if (currentValue == null) {
             // If the entry is absent then discard the refresh and maybe notifying the listener
-            discard[0] = (value != null);
+            if (value != null) {
+              cause[0] = RemovalCause.EXPLICIT;
+            }
             return null;
           } else if (currentValue == value) {
             // If the reloaded value is the same instance then no-op
@@ -1372,12 +1381,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             return value;
           }
           // Otherwise, a write invalidated the refresh so discard it and notify the listener
-          discard[0] = true;
+          cause[0] = RemovalCause.REPLACED;
           return currentValue;
         }, expiry(), /* recordLoad */ false, /* recordLoadFailure */ true);
 
-        if (discard[0]) {
-          notifyRemoval(key, value, RemovalCause.REPLACED);
+        if (cause[0] != null) {
+          notifyRemoval(key, value, cause[0]);
         }
         if (newValue == null) {
           statsCounter().recordLoadFailure(loadTime);

@@ -22,9 +22,9 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.Sta
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.cache;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableMultiset.toImmutableMultiset;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.OptionalLongSubject.optionalLongs;
 import static com.google.common.truth.StreamSubject.streams;
 import static com.google.common.truth.Truth.assertAbout;
@@ -32,6 +32,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.function.Function.identity;
 
+import java.util.AbstractMap.SimpleEntry;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
@@ -361,24 +363,25 @@ public final class CacheContextSubject extends Subject {
       }
 
       public Exclusive contains(Int key, Int value) {
-        awaitUntil((type, listener) -> {
-          check(type).withMessage("%s", cause)
-              .that(listener.removed()).contains(new RemovalNotification<>(key, value, cause));
-        });
-        return new Exclusive(1);
+        return contains(new SimpleEntry<>(key, value));
       }
 
       public Exclusive contains(Map<Int, Int> map) {
         return contains(map.entrySet().toArray(Map.Entry[]::new));
       }
 
+      public Exclusive contains(List<Entry<Int, Int>> entries) {
+        return contains(entries.toArray(Map.Entry[]::new));
+      }
+
       public Exclusive contains(Entry<?, ?>... entries) {
         awaitUntil((type, listener) -> {
           var notifications = Stream.of(entries)
               .map(entry -> new RemovalNotification<>(entry.getKey(), entry.getValue(), cause))
-              .collect(toImmutableSet());
-          check(type).withMessage("%s", cause)
-              .that(listener.removed()).containsAtLeastElementsIn(notifications);
+              .collect(toImmutableListMultimap(RemovalNotification::getCause, identity()));
+          var actual = listener.removed().stream()
+              .collect(toImmutableListMultimap(RemovalNotification::getCause, identity()));
+          check(type).that(actual).containsAtLeastEntriesIn(notifications);
         });
         return new Exclusive(entries.length);
       }

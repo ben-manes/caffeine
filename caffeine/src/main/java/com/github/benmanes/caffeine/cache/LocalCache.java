@@ -65,6 +65,12 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   Object referenceKey(K key);
 
   /**
+   * Returns whether an absent entry has expired or has been reference collected but has not yet
+   * been removed from the cache.
+   */
+  boolean isPendingEviction(Object key);
+
+  /**
    * See {@link Cache#getIfPresent(K)}. This method differs by accepting a parameter of whether
    * to record the hit-and-miss statistics based on the success of this operation.
    */

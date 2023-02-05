@@ -42,7 +42,6 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.testng.Assert;
@@ -192,11 +191,15 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getAll(Cache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
-    var collected = getExpectedAfterGc(context, context.isStrongValues()
-        ? Maps.filterKeys(context.original(), not(keys::contains))
-        : context.original());
-    context.clear();
+    List<Map.Entry<Int, Int>> collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(keys::contains)));
+    if (!context.isStrongValues()) {
+      for (var key : keys) {
+        collected.add(new SimpleEntry<>(key, null));
+      }
+    }
 
+    context.clear();
     GcFinalization.awaitFullGc();
     assertThat(cache.getAll(keys, keysToLoad -> Maps.asMap(keysToLoad, Int::negate)))
         .containsExactlyEntriesIn(Maps.asMap(keys, Int::negate));
@@ -212,12 +215,14 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void put(Cache<Int, Int> cache, CacheContext context) {
-    var collected = getExpectedAfterGc(context, context.isStrongValues()
-        ? Maps.filterKeys(context.original(), not(equalTo(context.firstKey())))
-        : context.original());
     var key = intern(context.firstKey());
-    context.clear();
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    if (!context.isStrongValues()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
+    context.clear();
     GcFinalization.awaitFullGc();
     cache.put(key, context.absentValue());
     assertThat(cache).whenCleanedUp().hasSize(1);
@@ -288,7 +293,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidateAll_iterable(Cache<Int, Int> cache, CacheContext context) {
     Map<Int, Int> retained;
-    Entry<?, ?>[] collected;
+    List<Map.Entry<Int, Int>> collected;
     var keys = context.firstMiddleLastKeys();
     if (context.isStrongValues()) {
       retained = context.firstMiddleLastKeys().stream()
@@ -324,16 +329,17 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidateAll_full(Cache<Int, Int> cache, CacheContext context) {
     Map<Int, Int> retained;
-    Entry<?, ?>[] collected;
     var keys = context.firstMiddleLastKeys();
+    List<Map.Entry<Int, Int>> collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(keys::contains)));
     if (context.isStrongValues()) {
       retained = context.firstMiddleLastKeys().stream()
           .collect(toImmutableMap(identity(), key -> context.original().get(key)));
-      collected = getExpectedAfterGc(context,
-          Maps.filterKeys(context.original(), not(keys::contains)));
     } else {
       retained = Map.of();
-      collected = getExpectedAfterGc(context, context.original());
+      for (var key : keys) {
+        collected.add(new SimpleEntry<>(key, null));
+      }
     }
 
     context.clear();
@@ -414,9 +420,13 @@ public final class ReferenceTest {
       loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE})
   public void getAll_loading(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
-    var collected = context.isStrongValues()
-        ? getExpectedAfterGc(context, Maps.filterKeys(context.original(), not(keys::contains)))
-        : getExpectedAfterGc(context, context.original());
+    List<Map.Entry<Int, Int>> collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(keys::contains)));
+    if (!context.isStrongValues()) {
+      for (var key : keys) {
+        collected.add(new SimpleEntry<>(key, null));
+      }
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -604,9 +614,11 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void putIfAbsent(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    Entry<?, ?>[] collected = context.isStrongValues()
-        ? getExpectedAfterGc(context, Maps.filterKeys(context.original(), not(equalTo(key))))
-        : getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    if (!context.isStrongValues()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -667,9 +679,11 @@ public final class ReferenceTest {
   public void put_map(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int replaced = new Int(context.original().get(key));
-    var collected = context.isStrongValues()
-        ? getExpectedAfterGc(context, Maps.filterKeys(context.original(), not(equalTo(key))))
-        : getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    if (!context.isStrongValues()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -752,9 +766,11 @@ public final class ReferenceTest {
   public void remove(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int removed = new Int(context.original().get(key));
-    Entry<?, ?>[] collected = context.isStrongValues()
-        ? getExpectedAfterGc(context, Maps.filterKeys(context.original(), not(equalTo(key))))
-        : getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    if (!context.isStrongValues()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -807,8 +823,10 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void removeConditionally_notFound(Map<Int, Int> map, CacheContext context) {
-    var collected = getExpectedAfterGc(context, context.original());
     Int key = context.firstKey();
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    collected.add(new SimpleEntry<>(key, null));
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -825,9 +843,11 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void computeIfAbsent(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    var collected = context.isStrongValues()
-        ? getExpectedAfterGc(context, Maps.filterKeys(context.original(), not(equalTo(key))))
-        : getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    if (!context.isStrongValues()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -849,7 +869,9 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void computeIfAbsent_nullValue(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    var collected = getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    collected.add(new SimpleEntry<>(key, null));
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -902,9 +924,11 @@ public final class ReferenceTest {
   public void computeIfPresent(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int replaced = new Int(context.original().get(key));
-    var collected = context.isStrongValues()
-        ? getExpectedAfterGc(context, Maps.filterKeys(context.original(), not(equalTo(key))))
-        : getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    if (!context.isStrongValues()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -934,9 +958,11 @@ public final class ReferenceTest {
   public void compute(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int replaced = new Int(context.original().get(key));
-    Entry<?, ?>[] collected = context.isStrongValues()
-        ? getExpectedAfterGc(context, Maps.filterKeys(context.original(), not(equalTo(key))))
-        : getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    if (!context.isStrongValues()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -970,7 +996,9 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void compute_nullValue(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    var collected = getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    collected.add(new SimpleEntry<>(key, null));
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -1022,9 +1050,11 @@ public final class ReferenceTest {
   public void merge(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int replaced = new Int(context.original().get(key));
-    var collected = context.isStrongValues()
-        ? getExpectedAfterGc(context, Maps.filterKeys(context.original(), not(equalTo(key))))
-        : getExpectedAfterGc(context, context.original());
+    var collected = getExpectedAfterGc(context,
+        Maps.filterKeys(context.original(), not(equalTo(key))));
+    if (!context.isStrongValues()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -1285,13 +1315,14 @@ public final class ReferenceTest {
     };
   }
 
-  private Entry<?, ?>[] getExpectedAfterGc(CacheContext context, Map<Int, Int> original) {
+  private List<Map.Entry<Int, Int>> getExpectedAfterGc(
+      CacheContext context, Map<Int, Int> original) {
     var expected = new ArrayList<Map.Entry<Int, Int>>();
     original.forEach((key, value) -> {
       key = context.isStrongKeys() ? new Int(key) : null;
       value = context.isStrongValues() ? new Int(value) : null;
       expected.add(new SimpleEntry<>(key, value));
     });
-    return expected.toArray(Map.Entry[]::new);
+    return expected;
   }
 }

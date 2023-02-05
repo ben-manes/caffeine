@@ -112,6 +112,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     return key;
   }
 
+  @Override
+  public boolean isPendingEviction(Object key) {
+    return false;
+  }
+
   /* --------------- Cache --------------- */
 
   @Override

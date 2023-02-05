@@ -217,7 +217,7 @@ abstract class LocalAsyncLoadingCache<K, V>
       @SuppressWarnings("unchecked")
       var lastRefresh = (CompletableFuture<V>) asyncCache.cache().refreshes().get(keyReference);
       if (lastRefresh != null) {
-        if (Async.isReady(lastRefresh)) {
+        if (Async.isReady(lastRefresh) || asyncCache.cache().isPendingEviction(key)) {
           asyncCache.cache().refreshes().remove(keyReference, lastRefresh);
         } else {
           return lastRefresh;

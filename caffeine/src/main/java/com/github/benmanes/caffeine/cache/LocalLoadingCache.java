@@ -106,7 +106,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     Object keyReference = cache().referenceKey(key);
 
     var future = cache().refreshes().compute(keyReference, (k, existing) -> {
-      if ((existing != null) && !Async.isReady(existing)) {
+      if ((existing != null) && !Async.isReady(existing) && !cache().isPendingEviction(key)) {
         return existing;
       }
 

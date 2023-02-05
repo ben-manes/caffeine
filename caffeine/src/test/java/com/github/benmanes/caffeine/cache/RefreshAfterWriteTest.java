@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
@@ -215,22 +216,72 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
-      loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
-  public void refreshIfNeeded_discard(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.executor().pause();
+      loader = Loader.ASYNC_INCOMPLETE)
+  public void refreshIfNeeded_replaced(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.get(context.firstKey());
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = cache.policy().refreshes().get(context.firstKey());
+
     cache.put(context.firstKey(), context.absentValue());
-    context.executor().resume();
+    future.complete(context.absentKey().negate());
 
-    await().until(() -> context.executor().submitted() == context.executor().completed());
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
-
     assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(Map.entry(context.firstKey(), context.original().get(context.firstKey())),
-            Map.entry(context.firstKey(), context.firstKey()))
+        .contains(
+            Map.entry(context.firstKey(), context.original().get(context.firstKey())),
+            Map.entry(context.firstKey(), context.absentKey().negate()))
+        .exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MILLISECOND, removalListener = Listener.CONSUMING,
+      loader = Loader.ASYNC_INCOMPLETE, mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void refreshIfNeeded_expired(LoadingCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(10, TimeUnit.SECONDS);
+    cache.get(context.firstKey());
+
+    assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = cache.policy().refreshes().get(context.firstKey());
+
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    future.complete(context.absentValue());
+    assertThat(cache).isEmpty();
+
+    assertThat(context).removalNotifications().withCause(EXPIRED)
+        .contains(context.original());
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(Map.entry(context.firstKey(), context.absentValue()));
+    assertThat(context).removalNotifications().hasSize(context.original().size() + 1);
+  }
+
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
+      loader = Loader.ASYNC_INCOMPLETE)
+  public void refreshIfNeeded_absent_newValue(LoadingCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    cache.get(context.firstKey());
+
+    assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = cache.policy().refreshes().get(context.firstKey());
+
+    cache.invalidate(context.firstKey());
+    assertThat(cache).doesNotContainKey(context.firstKey());
+
+    future.complete(context.absentValue());
+    assertThat(cache).doesNotContainKey(context.firstKey());
+
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(
+            Map.entry(context.firstKey(), context.original().get(context.firstKey())),
+            Map.entry(context.firstKey(), context.absentValue()))
         .exclusively();
   }
 
@@ -238,43 +289,18 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
-      loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
-  public void refreshIfNeeded_absent_newValue(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.executor().pause();
-    context.ticker().advance(2, TimeUnit.MINUTES);
-    cache.get(context.firstKey());
-
-    assertThat(cache.policy().refreshes()).isNotEmpty();
-    cache.invalidate(context.firstKey());
-    context.executor().resume();
-
-    await().until(() -> context.executor().submitted() == context.executor().completed());
-    assertThat(cache).doesNotContainKey(context.firstKey());
-
-    assertThat(context).removalNotifications().withCause(REPLACED)
-        .contains(context.firstKey(), context.firstKey());
-    assertThat(context).removalNotifications().withCause(EXPLICIT)
-        .contains(context.firstKey(), context.firstKey());
-    assertThat(context).removalNotifications().hasSize(2);
-  }
-
-  @CheckNoEvictions
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
-      refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
-      loader = Loader.NULL, executor = CacheExecutor.THREADED)
+      loader = Loader.ASYNC_INCOMPLETE, executor = CacheExecutor.THREADED)
   public void refreshIfNeeded_absent_nullValue(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.executor().pause();
     context.ticker().advance(2, TimeUnit.MINUTES);
     cache.get(context.firstKey());
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = cache.policy().refreshes().get(context.firstKey());
+
     cache.invalidate(context.firstKey());
-    context.executor().resume();
+    future.complete(null);
 
-    await().until(() -> context.executor().submitted() == context.executor().completed());
     assertThat(cache).doesNotContainKey(context.firstKey());
-
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.firstKey(), context.original().get(context.firstKey()))
         .exclusively();
@@ -802,9 +828,9 @@ public final class RefreshAfterWriteTest {
     } else {
       // Maintain linearizability by discarding the refresh if completing after an explicit removal
       assertThat(cache.getIfPresent(key)).isNull();
-      assertThat(context).removalNotifications().hasSize(2);
-      assertThat(context).removalNotifications().withCause(REPLACED).contains(key, original);
-      assertThat(context).removalNotifications().withCause(EXPLICIT).contains(key, refreshed);
+      assertThat(context).removalNotifications().withCause(EXPLICIT)
+          .contains(Map.entry(key, original), Map.entry(key, refreshed))
+          .exclusively();
     }
     assertThat(context).stats().success(1).failures(0);
   }

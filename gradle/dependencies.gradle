@@ -27,7 +27,7 @@ ext {
   versions = [
     autoValue: '1.10.1',
     cache2k: '2.6.1.Final',
-    checkerFramework: '3.29.0',
+    checkerFramework: '3.30.0',
     coherence: '22.06.2',
     commonsCompress: '1.22',
     commonsLang3: '3.12.0',
@@ -112,7 +112,7 @@ ext {
   ]
   platformVersions = [
     asm: '9.4',
-    kotlin: '1.8.0',
+    kotlin: '1.8.10',
   ]
 
   libraries = [

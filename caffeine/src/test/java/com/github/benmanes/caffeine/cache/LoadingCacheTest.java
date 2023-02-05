@@ -21,6 +21,9 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
 import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
@@ -54,6 +57,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
@@ -783,7 +787,10 @@ public final class LoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
-      expireAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING)
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, removalListener = Listener.CONSUMING)
   public void refresh_expired(CacheContext context) {
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
@@ -822,6 +829,22 @@ public final class LoadingCacheTest {
       assertThat(context).removalNotifications().hasSize(2);
     }
     assertThat(context).stats().success(1).failures(0);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, loader = Loader.ASYNC_INCOMPLETE,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, removalListener = Listener.CONSUMING)
+  public void refresh_expired_inFlight(LoadingCache<Int, Int> cache, CacheContext context) {
+    var future1 = cache.refresh(context.firstKey());
+    context.ticker().advance(10, TimeUnit.MINUTES);
+    var future2 = cache.refresh(context.firstKey());
+
+    future1.complete(null);
+    future2.complete(null);
+    assertThat(future2).isNotSameInstanceAs(future1);
   }
 
   @Test(dataProvider = "caches")
@@ -866,7 +889,7 @@ public final class LoadingCacheTest {
       await().untilAsserted(() -> assertThat(cache).doesNotContainKey(key1));
       await().untilAsserted(() -> assertThat(cache).containsEntry(key2, original));
       assertThat(context).removalNotifications().withCause(SIZE).contains(key1, original);
-      assertThat(context).removalNotifications().withCause(EXPLICIT).contains(key1, original);
+      assertThat(context).removalNotifications().withCause(EXPLICIT).contains(key1, refreshed);
       assertThat(context).removalNotifications().hasSize(2);
     }
     assertThat(context).stats().success(1).failures(0);
