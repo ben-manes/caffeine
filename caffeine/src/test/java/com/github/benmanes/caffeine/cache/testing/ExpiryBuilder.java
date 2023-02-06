@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.Serializable;
 
 import com.github.benmanes.caffeine.cache.Expiry;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * A builder for unit test convenience.
@@ -46,14 +45,12 @@ public final class ExpiryBuilder {
   }
 
   /** Sets the fixed update expiration time. */
-  @CanIgnoreReturnValue
   public ExpiryBuilder expiringAfterUpdate(long nanos) {
     updateNanos = nanos;
     return this;
   }
 
   /** Sets the fixed read expiration time. */
-  @CanIgnoreReturnValue
   public ExpiryBuilder expiringAfterRead(long nanos) {
     readNanos = nanos;
     return this;

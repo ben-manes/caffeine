@@ -25,7 +25,6 @@ import org.eclipse.collections.api.map.ConcurrentMutableMap;
 import org.eclipse.collections.impl.map.mutable.MapAdapter;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -91,7 +90,6 @@ public interface CaffeineMutableMapTestCase {
     @Override public boolean replace(K key, V oldValue, V newValue) {
       return delegate.replace(key, oldValue, newValue);
     }
-    @CanIgnoreReturnValue
     @SuppressWarnings("FunctionalInterfaceClash")
     @Override public ConcurrentMutableMap<K, V> tap(Procedure<? super V> procedure) {
       each(procedure);

@@ -77,7 +77,6 @@ public final class GuavaCacheFromContext {
   private static final ThreadLocal<Throwable> error = new ThreadLocal<>();
 
   /** Returns a Guava-backed cache. */
-  @SuppressWarnings("CheckReturnValue")
   public static <K, V> Cache<K, V> newGuavaCache(CacheContext context) {
     checkState(!context.isAsync(), "Guava caches are synchronous only");
 

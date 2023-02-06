@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache,
  * and are stored in the cache until either evicted or manually invalidated.
@@ -104,6 +106,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @return the future that is loading the value
    * @throws NullPointerException if the specified key is null
    */
+  @CanIgnoreReturnValue
   CompletableFuture<V> refresh(K key);
 
   /**
@@ -123,5 +126,6 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    *         that are loading the values
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
+  @CanIgnoreReturnValue
   CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys);
 }

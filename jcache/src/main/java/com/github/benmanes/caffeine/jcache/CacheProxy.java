@@ -279,6 +279,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Performs the bulk load where the existing entries are replaced. */
+  @SuppressWarnings("CheckReturnValue")
   private void loadAllAndReplaceExisting(Set<? extends K> keys) {
     Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
     for (var entry : loaded.entrySet()) {
@@ -287,6 +288,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Performs the bulk load where the existing entries are retained. */
+  @SuppressWarnings("CheckReturnValue")
   private void loadAllAndKeepExisting(Set<? extends K> keys) {
     List<K> keysToLoad = keys.stream()
         .filter(key -> !cache.asMap().containsKey(key))
@@ -1236,6 +1238,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("CheckReturnValue")
     public void remove() {
       if (current == null) {
         throw new IllegalStateException();

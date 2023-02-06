@@ -60,8 +60,8 @@ import junit.framework.TestCase;
  * Unit tests for Caffeine.
  */
 @GwtCompatible(emulated = true)
-@SuppressWarnings(
-    {"CacheLoaderNull", "CanonicalDuration", "PreferJavaTimeOverload", "ThreadPriorityCheck"})
+@SuppressWarnings({"CacheLoaderNull", "CanonicalDuration",
+  "CheckReturnValue", "PreferJavaTimeOverload", "ThreadPriorityCheck"})
 public class CacheBuilderTest extends TestCase {
 
   public void testNewBuilder() {

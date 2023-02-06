@@ -197,6 +197,7 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
     evict();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   private void evict() {
     policyStats.recordEviction();
     while (maxSize < sizeCold + sizeHot) {

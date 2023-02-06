@@ -61,6 +61,10 @@
 
   <!-- Caffeine -->
   <Match>
+    <Package name="~com\.github\.benmanes\.caffeine\.cache.*"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.AbstractLinkedDeque$AbstractLinkedIterator"/>
     <Method name="&lt;init&gt;"/>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
@@ -294,6 +298,24 @@
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
     <Method name="close"/>
     <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
+    <Or>
+      <Method name="loadAllAndKeepExisting"/>
+      <Method name="loadAllAndReplaceExisting"/>
+    </Or>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy$EntryIterator"/>
+    <Method name="remove"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.LoadingCacheProxy"/>
+    <Method name="lambda$loadAll$2"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.LoadingCacheProxy"/>

@@ -618,7 +618,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(future).succeedsWith(-1);
   }
 
-  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void bulk_function_null() {
     Function<Set<? extends Int>, Map<Int, Int>> f = null;
@@ -642,7 +641,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(loader.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
   }
 
-  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void bulk_bifunction_null() {
     BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;

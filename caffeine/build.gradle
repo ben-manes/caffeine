@@ -121,9 +121,11 @@ tasks.named('compileJavaPoetJava').configure {
 tasks.named('compileJava').configure {
   dependsOn generateLocalCaches, generateNodes
   finalizedBy compileCodeGenJava
+  options.errorprone.disable('CheckReturnValue')
 }
 tasks.named('compileTestJava').configure {
   dependsOn jar, compileCodeGenJava
+  options.errorprone.disable('CheckReturnValue')
 }
 tasks.named('sourcesJar').configure {
   dependsOn generateLocalCaches, generateNodes

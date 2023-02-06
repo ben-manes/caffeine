@@ -44,12 +44,16 @@ tasks.named('forbiddenApisTest').configure {
 tasks.named('compileJava').configure {
   modularity.inferModulePath = false
 }
+tasks.named('compileTestJava').configure {
+  options.errorprone.disable('CheckReturnValue')
+}
 
 tasks.named('jar').configure {
   bundle.bnd(
     'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.jcache',
     'Import-Package': [
       '!org.checkerframework.checker.*',
+      '!com.google.errorprone.annotations.*',
       '*'].join(','),
     'Export-Package': [
       'com.github.benmanes.caffeine.jcache.spi',

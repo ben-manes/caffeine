@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 
 import java.util.Random;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+
 /**
  * This is the TinyCache model that takes advantage of random eviction policy with a ghost cache as
  * admission policy. It offers a very dense memory layout combined with (relative) speed at the
@@ -72,6 +74,7 @@ public final class TinyCache {
    * Implementing add and remove together in one function means that fewer items are shifted
    * (reduction of 3 times from the trivial implementation).
    */
+  @CanIgnoreReturnValue
   private int replace(HashedItem fpaux, byte victim, int bucketStart, int removedOffset) {
     byte chainId = fpaux.chainId;
     fpaux.chainId = victim;

@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 
 import java.util.Random;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+
 /**
  * This is the TinyCache sketch that is based on TinySet and TinyTable. It is adopted for fast
  * operation and bounded memory footprint. When a set is full, a victim is selected at random from
@@ -74,6 +76,7 @@ public final class TinyCacheSketch {
    * Implementing add and remove together in one function means that fewer items are shifted
    * (reduction of 3 times from the trivial implementation).
    */
+  @CanIgnoreReturnValue
   private int replace(HashedItem fpaux, byte victim, int bucketStart, int removedOffset) {
     byte chainId = fpaux.chainId;
     fpaux.chainId = victim;

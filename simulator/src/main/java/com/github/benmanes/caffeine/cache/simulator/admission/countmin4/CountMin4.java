@@ -126,6 +126,7 @@ public abstract class CountMin4 implements Frequency {
   }
 
   /** Increments the associated counters that are at the observed minimum. */
+  @SuppressWarnings("CheckReturnValue")
   void conservativeIncrement(long e) {
     int hash = spread(Long.hashCode(e));
     int start = (hash & 3) << 2;

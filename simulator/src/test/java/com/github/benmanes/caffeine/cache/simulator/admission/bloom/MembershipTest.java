@@ -81,7 +81,7 @@ public class MembershipTest {
   public void caffeine_ensureCapacity(int expectedInsertions, double fpp) {
     BloomFilter filter = new BloomFilter();
     filter.ensureCapacity(expectedInsertions, fpp);
-    filter.put(-1);
+    assertThat(filter.put(-1)).isTrue();
   }
 
   @DataProvider(name = "ensureCapacity")

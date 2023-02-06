@@ -19,6 +19,7 @@ import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.CacheType;
+
 import site.ycsb.generator.NumberGenerator;
 import site.ycsb.generator.ScrambledZipfianGenerator;
 
@@ -68,6 +69,7 @@ public final class CacheProfiler extends ProfilerHook {
   }
 
   /** Spins forever reading from the cache. */
+  @SuppressWarnings("CheckReturnValue")
   private void reads() {
     int index = random.nextInt();
     for (;;) {

@@ -36,7 +36,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  *
  * @author mike nonemacher
  */
-@SuppressWarnings("CanIgnoreReturnValueSuggester")
+@SuppressWarnings({"CanIgnoreReturnValueSuggester", "CheckReturnValue"})
 class CacheBuilderFactory {
   // Default values contain only 'null', which means don't call the CacheBuilder method (just give
   // the CacheBuilder default).

@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+
 /**
  * This is a hash function and parser tp simplify parsing the hash value, it split it to . This
  * class provide hash utilities, and parse the items.
@@ -39,6 +41,7 @@ public final class HashFunctionParser {
     fpaux = new HashedItem(fpMask, fpMask, fpMask, 0L);
   }
 
+  @CanIgnoreReturnValue
   public HashedItem createHash(long item) {
     long h = (Seed64 ^ m);
     item *= m;

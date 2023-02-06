@@ -9,8 +9,6 @@
  */
 package com.github.benmanes.caffeine.eclipse.mutable;
 
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
-
 /**
  * A mutable sum which uses an int as the storage mechanism.
  *
@@ -33,25 +31,21 @@ public final class IntegerSum implements Sum {
   }
 
   @Override
-  @CanIgnoreReturnValue
   public Sum add(Object number) {
     return this.add((Number) number);
   }
 
   @Override
-  @CanIgnoreReturnValue
   public Sum add(Number number) {
     return this.add(number.intValue());
   }
 
   @Override
-  @CanIgnoreReturnValue
   public Sum add(Sum otherSum) {
     return this.add(otherSum.getValue());
   }
 
   @Override
-  @CanIgnoreReturnValue
   public Sum add(int value) {
     this.sum += value;
     return this;

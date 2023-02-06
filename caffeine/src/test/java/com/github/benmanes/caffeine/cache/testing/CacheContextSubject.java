@@ -55,8 +55,6 @@ import com.google.common.collect.ImmutableMultiset;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.StandardSubjectBuilder;
 import com.google.common.truth.Subject;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
  * Propositions for {@link CacheContext} subjects.
@@ -116,7 +114,6 @@ public final class CacheContextSubject extends Subject {
   }
 
   /** Propositions for {@link CacheStats} subjects. */
-  @CheckReturnValue
   public StatsSubject stats() {
     return actual.isRecordingStats()
         ? check("stats").about(STATS_FACTORY).that(actual)
@@ -124,19 +121,16 @@ public final class CacheContextSubject extends Subject {
   }
 
   /** Propositions for the removal listener's notifications. */
-  @CheckReturnValue
   public ListenerSubject removalNotifications() {
     return check("context").about(REMOVAL_LISTENER_FACTORY).that(actual);
   }
 
   /** Propositions for the eviction listener's notifications. */
-  @CheckReturnValue
   public ListenerSubject evictionNotifications() {
     return check("context").about(EVICTION_LISTENER_FACTORY).that(actual);
   }
 
   /** Propositions for the removal and eviction listener's notifications. */
-  @CheckReturnValue
   public ListenerSubject notifications() {
     return check("context").about(LISTENERS_FACTORY).that(actual);
   }
@@ -225,37 +219,30 @@ public final class CacheContextSubject extends Subject {
           || (context.executorType() == CacheExecutor.DIRECT);
     }
 
-    @CanIgnoreReturnValue
     public StatsSubject hits(long count) {
       return awaitStatistic("hitCount", CacheStats::hitCount, count);
     }
 
-    @CanIgnoreReturnValue
     public StatsSubject misses(long count) {
       return awaitStatistic("missCount", CacheStats::missCount, count);
     }
 
-    @CanIgnoreReturnValue
     public StatsSubject evictions(long count) {
       return awaitStatistic("evictionCount", CacheStats::evictionCount, count);
     }
 
-    @CanIgnoreReturnValue
     public StatsSubject evictionWeight(long count) {
       return awaitStatistic("evictionWeight", CacheStats::evictionWeight, count);
     }
 
-    @CanIgnoreReturnValue
     public StatsSubject success(long count) {
       return awaitStatistic("loadSuccessCount", CacheStats::loadSuccessCount, count);
     }
 
-    @CanIgnoreReturnValue
     public StatsSubject failures(long count) {
       return awaitStatistic("loadFailureCount", CacheStats::loadFailureCount, count);
     }
 
-    @CanIgnoreReturnValue
     private StatsSubject awaitStatistic(String label,
         ToLongFunction<CacheStats> supplier, long expectedValue) {
       if (isDirect) {
@@ -304,7 +291,6 @@ public final class CacheContextSubject extends Subject {
     }
 
     /** Returns a subject with a qualifying removal cause. */
-    @CheckReturnValue
     public WithCause withCause(RemovalCause cause) {
       return new WithCause(cause);
     }
