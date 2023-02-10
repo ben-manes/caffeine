@@ -52,7 +52,7 @@ tasks.named('jar').configure {
   bundle.bnd(
     'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.jcache',
     'Import-Package': [
-      '!org.checkerframework.checker.*',
+      '!org.checkerframework.*',
       '!com.google.errorprone.annotations.*',
       '*'].join(','),
     'Export-Package': [
