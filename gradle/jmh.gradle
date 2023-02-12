@@ -17,13 +17,8 @@ eclipse.classpath.file.whenMerged {
 
 configurations {
   jmh {
+    extendsFrom testImplementation
     exclude module: 'slf4j-test'
-  }
-}
-
-dependencies {
-  afterEvaluate {
-    jmh configurations.testImplementation.allDependencies
   }
 }
 
@@ -91,12 +86,12 @@ jmhReport {
 
 tasks.named('jmhReport').configure {
   notCompatibleWithConfigurationCache(
-    'The jmhReport task is not compatible with the configuration cache')
+    "The ${name} task is not compatible with the configuration cache")
 }
 
 tasks.named('jmhJar').configure {
   notCompatibleWithConfigurationCache(
-    'The jmhJar task is not compatible with the configuration cache')
+    "The ${name} task is not compatible with the configuration cache")
 }
 
 tasks.named('jmh').configure {

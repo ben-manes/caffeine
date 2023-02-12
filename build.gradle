@@ -25,7 +25,7 @@ buildscript {
     classpath gradlePlugins.values()
     classpath platforms.collect { platform(it) }
 
-    configurations.all { configuration ->
+    configurations.configureEach { configuration ->
       restrictions.each { module, version ->
         constraints.add(configuration.name, module).version { require version }
       }
@@ -50,7 +50,7 @@ allprojects {
       'api', 'apiElements', 'archives', 'compileClasspath', 'compileOnlyApi', 'default',
       'implementation', 'javadocElements', 'runtimeClasspath', 'runtimeElements', 'runtimeOnly',
       'sourcesElements', 'testCompileClasspath', 'testRuntimeClasspath']
-    configurations.all { configuration ->
+    configurations.configureEach { configuration ->
       if (name !in ignored) {
         restrictions.each { module, version ->
           constraints.add(configuration.name, module).version { require version }
@@ -71,7 +71,7 @@ subprojects {
   apply from: "${rootDir}/gradle/dependencies.gradle"
   apply from: "${rootDir}/gradle/objectLayout.gradle"
 
-  configurations.all {
+  configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
       substitute module('org.hamcrest:hamcrest-core') using module(testLibraries.hamcrest)
     }
@@ -158,9 +158,9 @@ snyk {
 }
 tasks.named('snyk-test').configure {
   notCompatibleWithConfigurationCache(
-    'The snyk-test task is not compatible with the configuration cache')
+    "The ${name} task is not compatible with the configuration cache")
 }
 tasks.named('snyk-monitor').configure {
   notCompatibleWithConfigurationCache(
-    'The snyk-monitor task is not compatible with the configuration cache')
+    "The ${name} task is not compatible with the configuration cache")
 }

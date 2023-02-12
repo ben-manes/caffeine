@@ -221,18 +221,20 @@ tasks.withType(Checkstyle).configureEach {
   }
 }
 
-afterEvaluate {
-  tasks.findAll { it.name.startsWith('forbiddenApis') }*.configure {
-    enabled = System.properties.containsKey('forbiddenApis')
-  }
-  tasks.findAll { it.name.startsWith('spotbugs') }*.configure {
-    notCompatibleWithConfigurationCache('Spotbugs is not compatible with the configuration cache')
-    enabled = System.properties.containsKey('spotbugs')
-    group = 'SpotBugs'
-    reports {
-      html.required = true
-      sarif.required = true
-    }
+tasks.matching { it.name.startsWith('forbiddenApis') }.configureEach {
+  notCompatibleWithConfigurationCache(
+    "The ${name} task is not compatible with the configuration cache")
+  enabled = System.properties.containsKey('forbiddenApis')
+}
+
+tasks.matching { it.name.startsWith('spotbugs') }.configureEach {
+  notCompatibleWithConfigurationCache(
+    "The ${name} task is not compatible with the configuration cache")
+  enabled = System.properties.containsKey('spotbugs')
+  group = 'SpotBugs'
+  reports {
+    html.required = true
+    sarif.required = true
   }
 }
 

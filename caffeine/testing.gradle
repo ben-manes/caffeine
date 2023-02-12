@@ -127,7 +127,7 @@ tasks.register('stress', Stresser) {
   group = 'Cache tests'
   description = 'Executes a stress test'
   notCompatibleWithConfigurationCache(
-    'The stress task is not compatible with the configuration cache')
+    "The ${name} task is not compatible with the configuration cache")
   outputs.upToDateWhen { false }
   dependsOn compileTestJava
 }

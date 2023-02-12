@@ -164,7 +164,7 @@ tasks.register('simulate', Simulate) {
   group 'Application'
   description 'Runs multiple simulations and generates an aggregate report'
   notCompatibleWithConfigurationCache(
-    'The simulate task is not compatible with the configuration cache')
+    "The ${name} task is not compatible with the configuration cache")
   dependsOn processResources, compileJava
   outputs.upToDateWhen { false }
 }
@@ -205,7 +205,7 @@ tasks.register('rewrite', Rewrite) {
   group 'Application'
   description 'Rewrite traces into the format used by other simulators'
   notCompatibleWithConfigurationCache(
-    'The rewrite task is not compatible with the configuration cache')
+    "The ${name} task is not compatible with the configuration cache")
   dependsOn processResources, compileJava
   outputs.upToDateWhen { false }
 }

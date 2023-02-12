@@ -58,7 +58,7 @@ tasks.named('coveralls').configure {
   group = 'Coverage reports'
   description = 'Uploads the aggregated coverage report to Coveralls'
   notCompatibleWithConfigurationCache(
-    'The coveralls task is not compatible with the configuration cache')
+    "The ${name} task is not compatible with the configuration cache")
   dependsOn jacocoFullReport
   onlyIf { System.env.CI }
 }

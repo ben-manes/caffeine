@@ -8,12 +8,10 @@ import org.gradle.plugins.ide.eclipse.model.SourceFolder
 apply plugin: 'eclipse'
 
 // Exclude module-info when compiling through Eclipse
-afterEvaluate {
-  eclipse.classpath.file.whenMerged {
-    def main = entries.find { it instanceof SourceFolder && it.path == 'src/main/java' }
-    if (main != null) {
-      main.excludes.add('module-info.java')
-    }
+eclipse.classpath.file.whenMerged {
+  def main = entries.find { it instanceof SourceFolder && it.path == 'src/main/java' }
+  if (main != null) {
+    main.excludes.add('module-info.java')
   }
 }
 
