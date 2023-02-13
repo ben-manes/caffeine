@@ -40,7 +40,6 @@ public final class CaffeinePolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
-  @SuppressWarnings("CheckReturnValue")
   public CaffeinePolicy(Config config, Set<Characteristic> characteristics) {
     policyStats = new PolicyStats(name());
     BasicSettings settings = new BasicSettings(config);

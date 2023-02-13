@@ -471,6 +471,7 @@ public final class Caffeine<K, V> {
    *         remaining configuration and cache building
    * @throws IllegalStateException if a weigher was already set
    */
+  @CanIgnoreReturnValue
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> weigher(
       Weigher<? super K1, ? super V1> weigher) {
     requireNonNull(weigher);
@@ -746,6 +747,7 @@ public final class Caffeine<K, V> {
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if expiration was already set
    */
+  @CanIgnoreReturnValue
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> expireAfter(
       Expiry<? super K1, ? super V1> expiry) {
     requireNonNull(expiry);
@@ -899,6 +901,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a removal listener was already set
    * @throws NullPointerException if the specified removal listener is null
    */
+  @CanIgnoreReturnValue
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> evictionListener(
       RemovalListener<? super K1, ? super V1> evictionListener) {
     requireState(this.evictionListener == null,
@@ -950,6 +953,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a removal listener was already set
    * @throws NullPointerException if the specified removal listener is null
    */
+  @CanIgnoreReturnValue
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> removalListener(
       RemovalListener<? super K1, ? super V1> removalListener) {
     requireState(this.removalListener == null,

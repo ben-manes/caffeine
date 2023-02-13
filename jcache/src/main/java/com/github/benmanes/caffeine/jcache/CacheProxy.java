@@ -73,6 +73,7 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.github.benmanes.caffeine.jcache.management.JmxRegistration;
 import com.github.benmanes.caffeine.jcache.management.JmxRegistration.MBeanType;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine cache.
@@ -279,7 +280,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Performs the bulk load where the existing entries are replaced. */
-  @SuppressWarnings("CheckReturnValue")
   private void loadAllAndReplaceExisting(Set<? extends K> keys) {
     Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
     for (var entry : loaded.entrySet()) {
@@ -288,7 +288,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Performs the bulk load where the existing entries are retained. */
-  @SuppressWarnings("CheckReturnValue")
   private void loadAllAndKeepExisting(Set<? extends K> keys) {
     List<K> keysToLoad = keys.stream()
         .filter(key -> !cache.asMap().containsKey(key))
@@ -351,6 +350,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param publishToWriter if the writer should be notified
    * @return the old value
    */
+  @CanIgnoreReturnValue
   protected PutResult<V> putNoCopyOrAwait(K key, V value, boolean publishToWriter) {
     requireNonNull(key);
     requireNonNull(value);
@@ -474,6 +474,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param publishToWriter if the writer should be notified
    * @return if the mapping was successful
    */
+  @CanIgnoreReturnValue
   private boolean putIfAbsentNoAwait(K key, V value, boolean publishToWriter) {
     boolean[] absent = { false };
     cache.asMap().compute(copyOf(key), (k, expirable) -> {
@@ -552,6 +553,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @CanIgnoreReturnValue
   public boolean remove(K key, V oldValue) {
     requireNotClosed();
     requireNonNull(key);
@@ -1238,7 +1240,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
 
     @Override
-    @SuppressWarnings("CheckReturnValue")
     public void remove() {
       if (current == null) {
         throw new IllegalStateException();

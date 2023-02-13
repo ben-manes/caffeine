@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
 import com.google.common.math.IntMath;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.typesafe.config.Config;
 
 /**
@@ -126,7 +127,6 @@ public abstract class CountMin4 implements Frequency {
   }
 
   /** Increments the associated counters that are at the observed minimum. */
-  @SuppressWarnings("CheckReturnValue")
   void conservativeIncrement(long e) {
     int hash = spread(Long.hashCode(e));
     int start = (hash & 3) << 2;
@@ -164,6 +164,7 @@ public abstract class CountMin4 implements Frequency {
    * @param step the increase amount
    * @return if incremented
    */
+  @CanIgnoreReturnValue
   boolean incrementAt(int i, int j, long step) {
     int offset = j << 2;
     long mask = (0xfL << offset);

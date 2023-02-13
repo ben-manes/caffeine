@@ -44,7 +44,6 @@ import com.google.common.collect.ImmutableSet;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("CheckReturnValue")
 public final class JavaSerializationCopierTest {
 
   @Test(dataProvider = "nullArgs", expectedExceptions = NullPointerException.class)

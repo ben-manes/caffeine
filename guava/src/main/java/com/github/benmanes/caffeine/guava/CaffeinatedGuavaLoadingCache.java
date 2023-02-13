@@ -123,7 +123,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   }
 
   @Override
-  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored"})
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void refresh(K key) {
     cache.refresh(key);
   }
