@@ -170,7 +170,7 @@ tasks.withType(JavaCompile).configureEach {
       'LexicographicalAnnotationListing', 'MissingSummary', 'StaticImport' ]
     disabledChecks.each { disable(it) }
 
-    def errorChecks = [ 'NullAway' ]
+    def errorChecks = [ 'CanIgnoreReturnValueSuggester', 'NullAway' ]
     errorChecks.each { error(it) }
 
     nullaway {
