@@ -40,6 +40,7 @@ import com.google.common.collect.ForwardingSet;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * A Caffeine-backed cache through a Guava facade.
@@ -240,6 +241,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     CacheLoaderException(Exception e) {
       super(e);
     }
+    @CanIgnoreReturnValue
     @SuppressWarnings({"lgtm [java/non-sync-override]", "UnsynchronizedOverridesSynchronized"})
     @Override public Throwable fillInStackTrace() {
       return this;
