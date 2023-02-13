@@ -444,6 +444,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @CanIgnoreReturnValue
   public boolean putIfAbsent(K key, V value) {
     requireNotClosed();
     requireNonNull(value);
@@ -508,6 +509,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @CanIgnoreReturnValue
   public boolean remove(K key) {
     requireNotClosed();
     requireNonNull(key);
@@ -621,6 +623,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @CanIgnoreReturnValue
   public boolean replace(K key, V oldValue, V newValue) {
     requireNotClosed();
     requireNonNull(oldValue);
@@ -673,6 +676,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @CanIgnoreReturnValue
   public boolean replace(K key, V value) {
     requireNotClosed();
     boolean statsEnabled = statistics.isEnabled();
