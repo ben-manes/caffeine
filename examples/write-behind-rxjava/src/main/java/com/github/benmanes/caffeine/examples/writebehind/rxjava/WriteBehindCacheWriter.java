@@ -27,6 +27,8 @@ import java.util.function.Consumer;
 
 import io.reactivex.subjects.PublishSubject;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+
 /**
  * This class allows a cache to have "write-behind" semantics. The passed in writeAction will only
  * be called every 'bufferTime' time with a Map containing the keys and the values that have been
@@ -67,18 +69,21 @@ public final class WriteBehindCacheWriter<K, V> {
      * The duration that the calls to the cache should be buffered before calling the
      * <code>writeAction</code>.
      */
+    @CanIgnoreReturnValue
     public Builder<K, V> bufferTime(long duration, TimeUnit unit) {
       this.bufferTimeNanos = TimeUnit.NANOSECONDS.convert(duration, unit);
       return this;
     }
 
     /** The callback to perform the writing to the database or repository. */
+    @CanIgnoreReturnValue
     public Builder<K, V> writeAction(Consumer<Map<K, V>> writeAction) {
       this.writeAction = requireNonNull(writeAction);
       return this;
     }
 
     /** The action that decides which value to take in case a key was updated multiple times. */
+    @CanIgnoreReturnValue
     public Builder<K, V> coalesce(BinaryOperator<V> coalescer) {
       this.coalescer = requireNonNull(coalescer);
       return this;

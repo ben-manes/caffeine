@@ -126,7 +126,6 @@ final class CacheFactory {
   }
 
   /** A one-shot builder for creating a cache instance. */
-  @SuppressWarnings("CheckReturnValue")
   private static final class Builder<K, V> {
     final Ticker ticker;
     final String cacheName;

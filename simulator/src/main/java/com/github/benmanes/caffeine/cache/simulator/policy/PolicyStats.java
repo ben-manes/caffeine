@@ -36,6 +36,7 @@ import com.google.auto.value.AutoValue;
 import com.google.auto.value.AutoValue.CopyAnnotations;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Statistics gathered by a policy execution. A policy can extend this class as a convenient way to
@@ -318,6 +319,7 @@ public class PolicyStats {
       public abstract ImmutableSet.Builder<Characteristic> characteristicsBuilder();
       public abstract Metric build();
 
+      @CanIgnoreReturnValue
       public final Builder addCharacteristic(Characteristic characteristic) {
         characteristicsBuilder().add(characteristic);
         return this;

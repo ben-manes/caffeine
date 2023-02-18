@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -197,7 +198,6 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
     evict();
   }
 
-  @SuppressWarnings("CheckReturnValue")
   private void evict() {
     policyStats.recordEviction();
     while (maxSize < sizeCold + sizeHot) {
@@ -272,6 +272,7 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
 
   // ScanHot demotes a hot entry between the oldest hot entry's epoch and the given epoch.
   // If the demotion was successful it returns true, otherwise it returns false.
+  @CanIgnoreReturnValue
   private boolean scanHot(long epoch) {
     for (Node victim = headHot.prev; victim.epoch <= epoch; victim = headHot.prev) {
       policyStats.recordOperation();

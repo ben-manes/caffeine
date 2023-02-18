@@ -65,7 +65,6 @@ tasks.named('sourcesJar').configure {
 
 tasks.withType(JavaCompile).configureEach {
   options.errorprone {
-    disable('CanIgnoreReturnValueSuggester')
     nullaway.disable()
   }
 }
