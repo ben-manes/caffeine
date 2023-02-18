@@ -63,6 +63,7 @@ public final class InternerTest extends TestCase {
         .createTestSuite();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "interners", expectedExceptions = NullPointerException.class)
   public void intern_null(Interner<Int> interner) {
     interner.intern(null);
@@ -123,11 +124,13 @@ public final class InternerTest extends TestCase {
     interner.cache.drainStatus = BoundedLocalCache.REQUIRED;
 
     var canonical = new Int(1);
-    interner.intern(canonical);
+    var interned1 = interner.intern(canonical);
+    assertThat(interned1).isSameInstanceAs(canonical);
     assertThat(interner.cache.drainStatus).isEqualTo(BoundedLocalCache.IDLE);
 
     interner.cache.drainStatus = BoundedLocalCache.REQUIRED;
-    interner.intern(canonical);
+    var interned2 = interner.intern(canonical);
+    assertThat(interned2).isSameInstanceAs(canonical);
     assertThat(interner.cache.drainStatus).isEqualTo(BoundedLocalCache.IDLE);
   }
 

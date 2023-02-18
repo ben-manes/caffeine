@@ -103,6 +103,7 @@ public final class CacheTest {
   /* --------------- getIfPresent --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getIfPresent_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -130,6 +131,7 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_nullKey(Cache<Int, Int> cache, CacheContext context) {
     cache.get(null, identity());
@@ -137,6 +139,7 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_nullLoader(Cache<Int, Int> cache, CacheContext context) {
     cache.get(context.absentKey(), null);
@@ -144,6 +147,7 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_nullKeyAndLoader(Cache<Int, Int> cache, CacheContext context) {
     cache.get(null, null);
@@ -157,6 +161,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_absent_throwsException(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -167,6 +172,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = UnknownError.class)
   public void get_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -201,6 +207,7 @@ public final class CacheTest {
   /* --------------- getAllPresent --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAllPresent_iterable_null(Cache<Int, Int> cache, CacheContext context) {
@@ -208,6 +215,7 @@ public final class CacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAllPresent_iterable_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -324,12 +332,14 @@ public final class CacheTest {
 
   /* --------------- getAll --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_null(Cache<Int, Int> cache, CacheContext context) {
     cache.getAll(null, keys -> { throw new AssertionError(); });
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -344,12 +354,14 @@ public final class CacheTest {
     assertThat(context).stats().hits(0).misses(0);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_function_null(Cache<Int, Int> cache, CacheContext context) {
     cache.getAll(context.absentKeys(), null);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_function_nullValue(Cache<Int, Int> cache, CacheContext context) {
@@ -362,6 +374,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_keys(Cache<Int, Int> cache, CacheContext context) {
     cache.getAll(context.absentKeys(), keys -> {
@@ -387,6 +400,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getAll_absent_throwsException(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -398,6 +412,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = UnknownError.class)
   public void getAll_function_throwsError(Cache<Int, Int> cache, CacheContext context) {
     try {
@@ -906,6 +921,7 @@ public final class CacheTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   public void stats(Cache<Int, Int> cache, CacheContext context) {
     var stats = cache.stats()
         .plus(CacheStats.of(1, 2, 3, 4, 5, 6, 7)
@@ -917,6 +933,7 @@ public final class CacheTest {
   /* --------------- Policy: getIfPresentQuietly --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getIfPresentQuietly_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -943,6 +960,7 @@ public final class CacheTest {
   /* --------------- Policy: getEntryIfPresentQuietly --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getEntryIfPresentQuietly_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -978,6 +996,7 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void refreshes_unmodifiable(Cache<Int, Int> cache, CacheContext context) {
     cache.policy().refreshes().clear();
@@ -993,6 +1012,7 @@ public final class CacheTest {
 
   /* --------------- Policy: CacheEntry --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = UnsupportedOperationException.class)
   public void cacheEntry_setValue() {
     SnapshotEntry.forEntry(1, 2).setValue(3);

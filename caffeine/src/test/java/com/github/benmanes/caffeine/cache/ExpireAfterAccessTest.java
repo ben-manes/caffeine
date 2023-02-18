@@ -78,7 +78,9 @@ public final class ExpireAfterAccessTest {
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getIfPresent(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.getIfPresent(context.firstKey());
+    var value = cache.getIfPresent(context.firstKey());
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getIfPresent(context.firstKey())).isEqualTo(context.firstKey().negate());
     assertThat(cache.getIfPresent(context.lastKey())).isNull();
@@ -99,10 +101,15 @@ public final class ExpireAfterAccessTest {
   public void get(Cache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> mappingFunction = context.original()::get;
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.get(context.firstKey(), mappingFunction);
+    var value1 = cache.get(context.firstKey(), mappingFunction);
+    assertThat(value1).isEqualTo(context.original().get(context.firstKey()));
+
     context.ticker().advance(45, TimeUnit.SECONDS);
-    cache.get(context.firstKey(), mappingFunction);
-    cache.get(context.lastKey(), mappingFunction); // recreated
+    var value2 = cache.get(context.firstKey(), mappingFunction);
+    assertThat(value2).isEqualTo(context.original().get(context.firstKey()));
+
+    var value3 = cache.get(context.lastKey(), mappingFunction); // recreated
+    assertThat(value3).isEqualTo(context.original().get(context.lastKey()));
 
     cache.cleanUp();
     assertThat(cache).hasSize(2);
@@ -119,7 +126,9 @@ public final class ExpireAfterAccessTest {
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getAllPresent(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.getAllPresent(context.firstMiddleLastKeys());
+    var results = cache.getAllPresent(context.firstMiddleLastKeys());
+    assertThat(results).hasSize(3);
+
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getAllPresent(context.firstMiddleLastKeys())).hasSize(3);
 
@@ -172,7 +181,9 @@ public final class ExpireAfterAccessTest {
       loader = Loader.IDENTITY, population = { Population.PARTIAL, Population.FULL })
   public void get_loading(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.get(context.firstKey());
+    var value = cache.get(context.firstKey());
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.get(context.lastKey())).isEqualTo(context.lastKey());
     cache.cleanUp();
@@ -268,7 +279,9 @@ public final class ExpireAfterAccessTest {
     var original = expireAfterAccess.ageOf(context.firstKey()).orElseThrow();
     var advancement = Duration.ofSeconds(30);
     context.ticker().advance(advancement);
-    cache.policy().getIfPresentQuietly(context.firstKey());
+    var value = cache.policy().getIfPresentQuietly(context.firstKey());
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+
     var current = cache.policy().expireAfterAccess()
         .flatMap(policy -> policy.ageOf(context.firstKey())).orElseThrow();
     assertThat(current.minus(advancement)).isEqualTo(original);
@@ -371,6 +384,7 @@ public final class ExpireAfterAccessTest {
 
   /* --------------- Policy: oldest --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void oldest_unmodifiable(CacheContext context,
@@ -378,6 +392,7 @@ public final class ExpireAfterAccessTest {
     expireAfterAccess.oldest(Integer.MAX_VALUE).clear();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void oldest_negative(CacheContext context,
@@ -419,6 +434,7 @@ public final class ExpireAfterAccessTest {
     assertThat(oldest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void oldestFunc_null(CacheContext context,
@@ -435,6 +451,7 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void oldestFunc_throwsException(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
@@ -447,8 +464,9 @@ public final class ExpireAfterAccessTest {
     }
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
   public void oldestFunc_concurrentModification(Cache<Int, Int> cache,
       CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     expireAfterAccess.oldest(stream -> {
@@ -518,6 +536,7 @@ public final class ExpireAfterAccessTest {
 
   /* --------------- Policy: youngest --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void youngest_unmodifiable(CacheContext context,
@@ -525,6 +544,7 @@ public final class ExpireAfterAccessTest {
     expireAfterAccess.youngest(Integer.MAX_VALUE).clear();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void youngest_negative(CacheContext context,
@@ -567,6 +587,7 @@ public final class ExpireAfterAccessTest {
     assertThat(youngest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void youngestFunc_null(CacheContext context,
@@ -583,6 +604,7 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void youngestFunc_throwsException(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
@@ -595,8 +617,9 @@ public final class ExpireAfterAccessTest {
     }
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
+  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
   public void youngestFunc_concurrentModification(Cache<Int, Int> cache,
       CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     expireAfterAccess.youngest(stream -> {

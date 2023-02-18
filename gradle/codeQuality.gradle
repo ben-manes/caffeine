@@ -33,7 +33,7 @@ dependencies {
 // Gradle rewrites ErrorProne's dependency on Caffeine to a project dependency, which then fails.
 // Instead we have to download and trick the build to put the jar on the compiler's classpath.
 tasks.register('downloadCaffeineLocal') {
-  inputs.property('version', '3.1.2')
+  inputs.property('version', '3.1.3')
 
   def local = file(layout.buildDirectory.file('libs/caffeine-local.jar'))
   outputs.cacheIf { true }
@@ -147,9 +147,10 @@ tasks.withType(JavaCompile).configureEach {
 
   options.forkOptions.jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
   options.compilerArgs << [
-    '-Xlint:all,-processing,-exports', '-auxiliaryclass',
+    '-Xlint:all', '-processing', '-exports', '-auxiliaryclass',
     '-requires-automatic', '-requires-transitive-automatic',
   ].join(',')
+  options.compilerArgs += ['-Xmaxerrs', '500', '-Xmaxwarns', '500' ]
   options.encoding = 'UTF-8'
   options.errorprone {
     def enabledChecks = [
@@ -184,10 +185,6 @@ tasks.withType(JavaCompile).configureEach {
       checkContracts = true
     }
   }
-}
-
-tasks.named('compileTestJava').configure {
-  options.errorprone.disable('NullAway')
 }
 
 tasks.withType(Test).configureEach {

@@ -71,7 +71,7 @@ public final class Stresser implements Runnable {
     execute();
   }
 
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored"})
   private void initialize() {
     var threadFactory = new ThreadFactoryBuilder()
         .setPriority(Thread.MAX_PRIORITY)
@@ -95,7 +95,7 @@ public final class Stresser implements Runnable {
     status();
   }
 
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored"})
   private void execute() {
     ConcurrentTestHarness.timeTasks(workload.maxThreads, () -> {
       int index = ThreadLocalRandom.current().nextInt();

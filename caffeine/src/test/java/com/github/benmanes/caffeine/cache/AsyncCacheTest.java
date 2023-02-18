@@ -81,6 +81,7 @@ public final class AsyncCacheTest {
 
   /* --------------- getIfPresent --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getIfPresent_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -107,18 +108,21 @@ public final class AsyncCacheTest {
   /* --------------- getFunc --------------- */
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getFunc_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.get(null, key -> null);
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getFunc_nullLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.get(context.absentKey(), (Function<Int, Int>) null);
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getFunc_nullKeyAndLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.get(null, (Function<Int, Int>) null);
@@ -227,12 +231,14 @@ public final class AsyncCacheTest {
   /* --------------- getBiFunc --------------- */
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.get(null, (key, executor) -> CompletableFuture.completedFuture(null));
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_nullLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     BiFunction<Int, Executor, CompletableFuture<Int>> mappingFunction = null;
@@ -240,6 +246,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_nullKeyAndLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     BiFunction<Int, Executor, CompletableFuture<Int>> mappingFunction = null;
@@ -247,6 +254,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getBiFunc_throwsException(AsyncCache<Int, Int> cache, CacheContext context) {
     try {
@@ -258,6 +266,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = UnknownError.class)
   public void getBiFunc_throwsError(AsyncCache<Int, Int> cache, CacheContext context) {
     try {
@@ -269,6 +278,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.get(context.absentKey(), (k, executor) -> null);
@@ -304,6 +314,7 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   public void getBiFunc_absent_cancelled(AsyncCache<Int, Int> cache, CacheContext context) {
     var cancelledFuture = new CompletableFuture<Int>();
     cache.get(context.absentKey(), (k, executor) -> cancelledFuture);
@@ -339,6 +350,7 @@ public final class AsyncCacheTest {
   /* --------------- getAllFunc --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKeys(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -346,6 +358,7 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKeys_nullFunction(
@@ -354,6 +367,7 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullFunction(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -361,6 +375,7 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -564,6 +579,7 @@ public final class AsyncCacheTest {
   /* --------------- getAllBiFunc --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKeys(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -571,6 +587,7 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKeys_nullBifunction(
@@ -580,6 +597,7 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullBifunction(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -588,6 +606,7 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -615,6 +634,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllBifunction_immutable_keys(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getAll(context.absentKeys(), (keys, executor) -> {
@@ -642,6 +662,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAllBifunction_absent_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.getAll(context.absentKeys(), (keys, executor) -> null);
@@ -658,6 +679,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getAllBifunction_absent_throwsException(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -672,6 +694,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = UnknownError.class)
   public void getAllBifunction_absent_throwsError(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -829,6 +852,7 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_badLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     try {

@@ -514,6 +514,7 @@ public final class TimerWheelTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void sentinel_unsupported() {
     var node = new Sentinel<>();
     List<Runnable> methods = List.of(node::getKeyReference, node::getValueReference);

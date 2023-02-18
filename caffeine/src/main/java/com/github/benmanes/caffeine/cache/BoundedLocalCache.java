@@ -2220,8 +2220,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<Object, Object>(calculateHashMapCapacity(keys));
-    for (Object key : keys) {
+    var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(keys));
+    for (K key : keys) {
       result.put(key, null);
     }
 
@@ -2235,9 +2235,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         iter.remove();
       } else {
         if (!isComputingAsync(node)) {
-          @SuppressWarnings("unchecked")
-          K castedKey = (K) entry.getKey();
-          tryExpireAfterRead(node, castedKey, value, expiry(), now);
+          tryExpireAfterRead(node, entry.getKey(), value, expiry(), now);
           setAccessTime(node, now);
         }
         V refreshed = afterRead(node, now, /* recordHit */ false);
@@ -2247,9 +2245,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     statsCounter().recordHits(result.size());
     statsCounter().recordMisses(uniqueKeys - result.size());
 
-    @SuppressWarnings("unchecked")
-    Map<K, V> castedResult = (Map<K, V>) result;
-    return Collections.unmodifiableMap(castedResult);
+    return Collections.unmodifiableMap(result);
   }
 
   @Override

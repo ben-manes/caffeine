@@ -82,10 +82,13 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
   public static <K, V> SnapshotEntry<K, V> forEntry(K key, V value,
       long snapshot, int weight, long expiresAt, long refreshableAt) {
     long unsetTicks = snapshot + Long.MAX_VALUE;
-    int features = 0
-        | ((refreshableAt == unsetTicks) ? 0b000 : 0b100)
-        | ((expiresAt == unsetTicks) ? 0b000 : 0b010)
-        | ((weight < 0) || (weight == 1) ? 0b000 : 0b001);
+    boolean refresh = (refreshableAt == unsetTicks);
+    boolean weights = (weight < 0) || (weight == 1);
+    boolean expires = (expiresAt == unsetTicks);
+    int features =
+          (refresh ? 0b000 : 0b100)
+        | (expires ? 0b000 : 0b010)
+        | (weights ? 0b000 : 0b001);
     switch (features) { // optimized for common cases
       case 0b000: return new SnapshotEntry<>(key, value, snapshot);
       case 0b001: return new WeightedEntry<>(key, value, snapshot, weight);

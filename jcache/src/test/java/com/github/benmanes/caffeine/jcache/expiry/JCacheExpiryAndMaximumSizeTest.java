@@ -87,7 +87,8 @@ public class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_2);
     verify(expiry).expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong());
 
-    jcache.get(KEY_1);
+    var value = jcache.get(KEY_1);
+    assertThat(value).isEqualTo(VALUE_2);
     verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
   }
 

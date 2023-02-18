@@ -154,6 +154,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
       values = {ReferenceType.WEAK, ReferenceType.SOFT})
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
@@ -395,6 +396,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, loader = Loader.IDENTITY)
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)

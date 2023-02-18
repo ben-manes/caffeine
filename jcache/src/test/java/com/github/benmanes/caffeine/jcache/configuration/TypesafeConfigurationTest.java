@@ -72,6 +72,7 @@ public final class TypesafeConfigurationTest {
     assertThat(TypesafeConfigurator.from(ConfigFactory.load(), "#")).isEmpty();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void invalidCache() {
     TypesafeConfigurator.from(ConfigFactory.load(), "invalid-cache");

@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * A testing harness for concurrency related executions.
@@ -63,6 +64,7 @@ public final class ConcurrentTestHarness {
    * @param task the task to execute in each thread
    * @return the execution time for all threads to complete, in nanoseconds
    */
+  @CanIgnoreReturnValue
   public static long timeTasks(int nThreads, Runnable task) {
     return timeTasks(nThreads, Executors.callable(task)).executionTime();
   }
@@ -74,6 +76,7 @@ public final class ConcurrentTestHarness {
    * @param task the task to execute in each thread
    * @return the result of each task and the full execution time, in nanoseconds
    */
+  @CanIgnoreReturnValue
   public static <T> TestResult<T> timeTasks(int nThreads, Callable<T> task) {
     var startGate = new CountDownLatch(1);
     var endGate = new CountDownLatch(nThreads);

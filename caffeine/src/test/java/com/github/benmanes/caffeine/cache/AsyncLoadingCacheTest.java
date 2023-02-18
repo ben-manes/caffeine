@@ -81,6 +81,7 @@ public final class AsyncLoadingCacheTest {
   /* --------------- get --------------- */
 
   @CacheSpec
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     cache.get(null);
@@ -164,16 +165,18 @@ public final class AsyncLoadingCacheTest {
   /* --------------- getAll --------------- */
 
   @CheckNoStats
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(null);
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_nullKey(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(Collections.singletonList(null));
   }
@@ -195,6 +198,7 @@ public final class AsyncLoadingCacheTest {
         .hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = Loader.ASYNC_BULK_MODIFY_KEYS)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_keys_asyncLoader(
@@ -261,6 +265,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = { Loader.ASYNC_INTERRUPTED, Loader.ASYNC_BULK_INTERRUPTED })
   public void getAll_absent_interrupted(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     try {
@@ -394,6 +399,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(compute = Compute.ASYNC, removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_badLoader(CacheContext context) {
     var loader = new AsyncCacheLoader<Int, Int>() {
@@ -605,6 +611,7 @@ public final class AsyncLoadingCacheTest {
 
   /* --------------- AsyncCacheLoader --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = UnsupportedOperationException.class)
   public void asyncLoadAll() throws Exception {
     AsyncCacheLoader<Int, Int> loader = (key, executor) -> key.negate().asFuture();
@@ -618,6 +625,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(future).succeedsWith(-1);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void bulk_function_null() {
     Function<Set<? extends Int>, Map<Int, Int>> f = null;
@@ -641,6 +649,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(loader.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void bulk_bifunction_null() {
     BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;

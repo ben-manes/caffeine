@@ -93,6 +93,7 @@ public final class CaffeineTest {
         .isNotEqualTo(Caffeine.newBuilder().maximumWeight(1).toString());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void fromSpec_null() {
     Caffeine.from((CaffeineSpec) null);
@@ -100,7 +101,8 @@ public final class CaffeineTest {
 
   @Test
   public void fromSpec_lenientParsing() {
-    Caffeine.from(CaffeineSpec.parse("maximumSize=100")).weigher((k, v) -> 0).build();
+    var cache = Caffeine.from(CaffeineSpec.parse("maximumSize=100")).weigher((k, v) -> 0).build();
+    assertThat(cache).isNotNull();
   }
 
   @Test
@@ -108,6 +110,7 @@ public final class CaffeineTest {
     assertThat(Caffeine.from(CaffeineSpec.parse(""))).isNotNull();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void fromString_null() {
     Caffeine.from((String) null);
@@ -115,7 +118,8 @@ public final class CaffeineTest {
 
   @Test
   public void fromString_lenientParsing() {
-    Caffeine.from("maximumSize=100").weigher((k, v) -> 0).build();
+    var cache = Caffeine.from("maximumSize=100").weigher((k, v) -> 0).build();
+    assertThat(cache).isNotNull();
   }
 
   @Test
@@ -176,6 +180,7 @@ public final class CaffeineTest {
 
   /* --------------- loading --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void loading_nullLoader() {
     Caffeine.newBuilder().build(null);
@@ -183,16 +188,19 @@ public final class CaffeineTest {
 
   /* --------------- async --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void async_weakValues() {
     Caffeine.newBuilder().weakValues().buildAsync(loader);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void async_softValues() {
     Caffeine.newBuilder().softValues().buildAsync(loader);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void async_weakKeys_evictionListener() {
     RemovalListener<Object, Object> evictionListener = (k, v, c) -> {};
@@ -202,6 +210,7 @@ public final class CaffeineTest {
   /* --------------- async loader --------------- */
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void asyncLoader_nullLoader() {
     try {
       Caffeine.newBuilder().buildAsync((CacheLoader<Object, Object>) null);
@@ -217,19 +226,23 @@ public final class CaffeineTest {
   @Test
   @SuppressWarnings("UnnecessaryMethodReference")
   public void asyncLoader() {
-    Caffeine.newBuilder().buildAsync(loader::asyncLoad);
+    var cache = Caffeine.newBuilder().buildAsync(loader::asyncLoad);
+    assertThat(cache).isNotNull();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void asyncLoader_weakValues() {
     Caffeine.newBuilder().weakValues().buildAsync(loader);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void asyncLoader_softValues() {
     Caffeine.newBuilder().softValues().buildAsync(loader);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void async_asyncLoader_weakKeys_evictionListener() {
     RemovalListener<Object, Object> evictionListener = (k, v, c) -> {};
@@ -253,7 +266,7 @@ public final class CaffeineTest {
     // can't check, so just assert that it builds
     var builder = Caffeine.newBuilder().initialCapacity(0);
     assertThat(builder.initialCapacity).isEqualTo(0);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   @Test
@@ -313,6 +326,7 @@ public final class CaffeineTest {
     Caffeine.newBuilder().maximumWeight(1).maximumWeight(1);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void maximumWeight_noWeigher() {
     Caffeine.newBuilder().maximumWeight(1).build();
@@ -363,6 +377,7 @@ public final class CaffeineTest {
     Caffeine.newBuilder().maximumSize(1).weigher(Weigher.singletonWeigher());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void weigher_noMaximumWeight() {
     Caffeine.newBuilder().weigher(Weigher.singletonWeigher()).build();
@@ -373,7 +388,7 @@ public final class CaffeineTest {
     Weigher<Object, Object> weigher = (k, v) -> 0;
     var builder = Caffeine.newBuilder().maximumWeight(0).weigher(weigher);
     assertThat(builder.weigher).isSameInstanceAs(weigher);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   /* --------------- expireAfterAccess --------------- */
@@ -555,7 +570,7 @@ public final class CaffeineTest {
   public void expireAfter() {
     var builder = Caffeine.newBuilder().expireAfter(expiry);
     assertThat(builder.expiry).isSameInstanceAs(expiry);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   /* --------------- refreshAfterWrite --------------- */
@@ -571,6 +586,7 @@ public final class CaffeineTest {
         .refreshAfterWrite(1, TimeUnit.MILLISECONDS);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void refreshAfterWrite_noCacheLoader() {
     Caffeine.newBuilder().refreshAfterWrite(1, TimeUnit.MILLISECONDS).build();
@@ -586,7 +602,7 @@ public final class CaffeineTest {
     var builder = Caffeine.newBuilder()
         .refreshAfterWrite(1, TimeUnit.MILLISECONDS);
     assertThat(builder.getRefreshAfterWriteNanos()).isEqualTo(TimeUnit.MILLISECONDS.toNanos(1));
-    builder.build(k -> k);
+    assertThat(builder.build(k -> k)).isNotNull();
   }
 
   /* --------------- refreshAfterWrite: java.time --------------- */
@@ -602,6 +618,7 @@ public final class CaffeineTest {
         .refreshAfterWrite(Duration.ofMillis(1));
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void refreshAfterWrite_duration_noCacheLoader() {
     Caffeine.newBuilder().refreshAfterWrite(Duration.ofMillis(1)).build();
@@ -616,14 +633,14 @@ public final class CaffeineTest {
   public void refreshAfterWrite_duration() {
     var builder = Caffeine.newBuilder().refreshAfterWrite(Duration.ofMinutes(1));
     assertThat(builder.getRefreshAfterWriteNanos()).isEqualTo(Duration.ofMinutes(1).toNanos());
-    builder.build(k -> k);
+    assertThat(builder.build(k -> k)).isNotNull();
   }
 
   @Test
   public void refreshAfterWrite_excessive() {
     var builder = Caffeine.newBuilder().refreshAfterWrite(ChronoUnit.FOREVER.getDuration());
     assertThat(builder.getRefreshAfterWriteNanos()).isEqualTo(Long.MAX_VALUE);
-    builder.build(k -> k);
+    assertThat(builder.build(k -> k)).isNotNull();
   }
 
   /* --------------- weakKeys --------------- */
@@ -635,7 +652,8 @@ public final class CaffeineTest {
 
   @Test
   public void weakKeys() {
-    Caffeine.newBuilder().weakKeys().build();
+    var cache = Caffeine.newBuilder().weakKeys().build();
+    assertThat(cache).isNotNull();
   }
 
   /* --------------- weakValues --------------- */
@@ -647,7 +665,8 @@ public final class CaffeineTest {
 
   @Test
   public void weakValues() {
-    Caffeine.newBuilder().weakValues().build();
+    var cache = Caffeine.newBuilder().weakValues().build();
+    assertThat(cache).isNotNull();
   }
 
   /* --------------- softValues --------------- */
@@ -659,7 +678,8 @@ public final class CaffeineTest {
 
   @Test
   public void softValues() {
-    Caffeine.newBuilder().softValues().build();
+    var cache = Caffeine.newBuilder().softValues().build();
+    assertThat(cache).isNotNull();
   }
 
   /* --------------- scheduler --------------- */
@@ -679,7 +699,7 @@ public final class CaffeineTest {
   public void scheduler_system() {
     var builder = Caffeine.newBuilder().scheduler(Scheduler.systemScheduler());
     assertThat(builder.getScheduler()).isSameInstanceAs(Scheduler.systemScheduler());
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   @Test
@@ -687,7 +707,7 @@ public final class CaffeineTest {
     Scheduler scheduler = (executor, task, delay, unit) -> DisabledFuture.INSTANCE;
     var builder = Caffeine.newBuilder().scheduler(scheduler);
     assertThat(((GuardedScheduler) builder.getScheduler()).delegate).isSameInstanceAs(scheduler);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   /* --------------- executor --------------- */
@@ -707,7 +727,7 @@ public final class CaffeineTest {
   public void executor() {
     var builder = Caffeine.newBuilder().executor(directExecutor());
     assertThat(builder.getExecutor()).isSameInstanceAs(directExecutor());
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   /* --------------- ticker --------------- */
@@ -727,7 +747,7 @@ public final class CaffeineTest {
     Ticker ticker = new FakeTicker()::read;
     var builder = Caffeine.newBuilder().ticker(ticker);
     assertThat(builder.ticker).isSameInstanceAs(ticker);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   /* --------------- stats --------------- */
@@ -758,7 +778,7 @@ public final class CaffeineTest {
   public void recordStats() {
     var builder = Caffeine.newBuilder().recordStats();
     assertThat(builder.statsCounterSupplier).isEqualTo(Caffeine.ENABLED_STATS_COUNTER_SUPPLIER);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   @Test
@@ -767,7 +787,7 @@ public final class CaffeineTest {
     var builder = Caffeine.newBuilder().recordStats(supplier);
     builder.statsCounterSupplier.get().recordEviction(1, RemovalCause.SIZE);
     verify(statsCounter).recordEviction(1, RemovalCause.SIZE);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   /* --------------- removalListener --------------- */
@@ -787,7 +807,7 @@ public final class CaffeineTest {
     RemovalListener<Object, Object> removalListener = (k, v, c) -> {};
     var builder = Caffeine.newBuilder().removalListener(removalListener);
     assertThat(builder.getRemovalListener(false)).isSameInstanceAs(removalListener);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 
   /* --------------- removalListener --------------- */
@@ -807,6 +827,6 @@ public final class CaffeineTest {
     RemovalListener<Object, Object> removalListener = (k, v, c) -> {};
     var builder = Caffeine.newBuilder().evictionListener(removalListener);
     assertThat(builder.evictionListener).isSameInstanceAs(removalListener);
-    builder.build();
+    assertThat(builder.build()).isNotNull();
   }
 }

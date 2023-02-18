@@ -81,7 +81,9 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
     advanceHalfExpiry();
 
-    jcache.getAndPut(KEY_1, VALUE_1);
+    var value = jcache.getAndPut(KEY_1, VALUE_1);
+    assertThat(value).isEqualTo(VALUE_1);
+
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
     assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
   }

@@ -113,7 +113,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */
-@SuppressWarnings({"all", "deprecation", "CheckReturnValue", "JdkObsolete", "rawtypes", "serial",
+@SuppressWarnings({"all", "CheckReturnValue", "deprecation", "JdkObsolete", "rawtypes", "serial",
   "unchecked", "UnnecessaryParentheses", "UnusedNestedClass", "UnusedVariable", "YodaCondition"})
 public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
         implements ConcurrentMap<K, V>, Serializable {

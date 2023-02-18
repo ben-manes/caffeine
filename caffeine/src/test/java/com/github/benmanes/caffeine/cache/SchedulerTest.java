@@ -61,7 +61,8 @@ public final class SchedulerTest {
       executed.set(true);
       throw new IllegalStateException();
     };
-    scheduler.schedule(executor, () -> {}, 1L, TimeUnit.NANOSECONDS);
+    var future = scheduler.schedule(executor, () -> {}, 1L, TimeUnit.NANOSECONDS);
+    assertThat(future).isNotNull();
     await().untilTrue(executed);
   }
 
@@ -69,7 +70,8 @@ public final class SchedulerTest {
   public void scheduler(Scheduler scheduler) {
     var executed = new AtomicBoolean();
     Runnable task = () -> executed.set(true);
-    scheduler.schedule(executor, task, 1L, TimeUnit.NANOSECONDS);
+    var future = scheduler.schedule(executor, task, 1L, TimeUnit.NANOSECONDS);
+    assertThat(future).isNotNull();
     await().untilTrue(executed);
   }
 
@@ -99,6 +101,7 @@ public final class SchedulerTest {
 
   /* --------------- guarded --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void guardedScheduler_null() {
     Scheduler.guardedScheduler(null);
@@ -133,6 +136,7 @@ public final class SchedulerTest {
 
   /* --------------- ScheduledExecutorService --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void scheduledExecutorService_null() {
     Scheduler.forScheduledExecutorService(null);

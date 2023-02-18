@@ -72,6 +72,7 @@ public final class ExpireAfterWriteTest {
   /* --------------- Cache --------------- */
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE },
       expireAfterWrite = { Expire.DISABLED, Expire.ONE_MINUTE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE,
@@ -89,6 +90,7 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
@@ -106,6 +108,7 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
@@ -147,6 +150,7 @@ public final class ExpireAfterWriteTest {
   /* --------------- LoadingCache --------------- */
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
@@ -226,6 +230,7 @@ public final class ExpireAfterWriteTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
   public void getIfPresentQuietly(Cache<Int, Int> cache, CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
@@ -342,6 +347,7 @@ public final class ExpireAfterWriteTest {
     expireAfterWrite.oldest(Integer.MAX_VALUE).clear();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void oldest_negative(CacheContext context,
@@ -383,6 +389,7 @@ public final class ExpireAfterWriteTest {
     assertThat(oldest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_null(CacheContext context,
@@ -399,6 +406,7 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_throwsException(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
@@ -411,6 +419,7 @@ public final class ExpireAfterWriteTest {
     }
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_concurrentModification(Cache<Int, Int> cache,
@@ -489,6 +498,7 @@ public final class ExpireAfterWriteTest {
     expireAfterWrite.youngest(Integer.MAX_VALUE).clear();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void youngest_negative(CacheContext context,
@@ -531,6 +541,7 @@ public final class ExpireAfterWriteTest {
     assertThat(youngest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_null(CacheContext context,
@@ -547,6 +558,7 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_throwsException(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
@@ -559,6 +571,7 @@ public final class ExpireAfterWriteTest {
     }
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_concurrentModification(Cache<Int, Int> cache,

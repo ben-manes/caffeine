@@ -31,6 +31,7 @@ import com.google.common.truth.Correspondence;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Ordered;
 import com.google.common.truth.Subject;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Propositions for {@link Cache} subjects.
@@ -92,6 +93,7 @@ public final class CacheSubject extends Subject {
   }
 
   /** Fails if the cache does not contain the given keys, where duplicate keys are ignored. */
+  @CanIgnoreReturnValue
   public Ordered containsExactlyKeys(Iterable<?> keys) {
     return check("containsKeys").about(map()).that(actual.asMap()).containsExactlyKeys(keys);
   }

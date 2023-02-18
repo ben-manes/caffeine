@@ -58,6 +58,7 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test(dataProvider = "throwables")
+  @SuppressWarnings("CheckReturnValue")
   public void load_failure(Throwable throwable) {
     try {
       when(cacheLoader.load(any())).thenThrow(throwable);
@@ -71,6 +72,7 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void load_failure_expiry() {
     try {
       when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
@@ -92,6 +94,7 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
     assertThat(result).containsExactly(1, -1, 2, -2, 3, -3);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = CacheLoaderException.class)
   public void loadAll_null() {
     when(cacheLoader.loadAll(anyIterable())).thenReturn(null);
@@ -106,6 +109,7 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test(dataProvider = "throwables")
+  @SuppressWarnings("CheckReturnValue")
   public void loadAll_failure(Throwable throwable) {
     try {
       when(cacheLoader.loadAll(any())).thenThrow(throwable);
@@ -119,6 +123,7 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void loadAll_failure_expiry() {
     try {
       when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);

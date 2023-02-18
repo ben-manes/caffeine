@@ -1,0 +1,34 @@
+version: "1.0"
+profile:
+  name: qodana.recommended
+exclude:
+  - name: CastCanBeRemovedNarrowingVariableType
+  - name: CommentedOutCode
+  - name: ConstantValue
+  - name: DataFlowIssue
+  - name: EmptyStatementBody
+  - name: EqualsWhichDoesntCheckParameterClass
+  - name: GrUnnecessarySemicolon
+  - name: GroovyEmptyStatementBody
+  - name: GroovyUnnecessaryReturn
+  - name: IgnoreResultOfCall
+  - name: Java9CollectionFactory
+  - name: JavaAnnotator
+  - name: JavaRequiresAutoModule
+  - name: NonSynchronizedMethodOverridesSynchronizedMethod
+  - name: NotNullFieldNotInitialized
+  - name: NullableProblems
+  - name: OptionalAssignedToNull
+  - name: OptionalUsedAsFieldOrParameterType
+  - name: RedundantCollectionOperation
+  - name: RedundantUnmodifiable
+  - name: ReplaceAssignmentWithOperatorAssignment
+  - name: ReturnNull
+  - name: SuspiciousSystemArraycopy
+  - name: SynchronizationOnLocalVariableOrMethodParameter
+  - name: SystemOutErr
+  - name: UnnecessaryReturn
+  - name: UnnecessarySemicolon
+  - name: UnsatisfiedRange
+  - name: UnstableApiUsage
+  - name: WhileLoopSpinsOnField

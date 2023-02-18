@@ -66,6 +66,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.FakeTicker;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * The cache configuration context for a test case.
@@ -165,6 +166,7 @@ public final class CacheContext {
   }
 
   /** Returns a thread local interned value. */
+  @CanIgnoreReturnValue
   @SuppressWarnings("unchecked")
   public static <T> T intern(T o) {
     return (T) interner.get().computeIfAbsent(o, identity());
@@ -275,6 +277,7 @@ public final class CacheContext {
         (Integer.MAX_VALUE / 2), Integer.MAX_VALUE));
   }
 
+  @CanIgnoreReturnValue
   public long initialSize() {
     return (initialSize < 0) ? (initialSize = original.size()) : initialSize;
   }

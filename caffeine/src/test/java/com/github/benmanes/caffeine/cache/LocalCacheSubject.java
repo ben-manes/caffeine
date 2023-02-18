@@ -41,6 +41,7 @@ import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Sets;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Propositions for {@link LocalCache}-based subjects.
@@ -313,6 +314,7 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
+  @CanIgnoreReturnValue
   private long scanLinks(BoundedLocalCache<Object, Object> bounded,
       LinkedDeque<Node<Object, Object>> deque, Set<Node<Object, Object>> seen) {
     long weightedSize = 0;

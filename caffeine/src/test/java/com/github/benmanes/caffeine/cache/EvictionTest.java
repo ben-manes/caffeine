@@ -859,6 +859,7 @@ public final class EvictionTest {
     eviction.coldest(Integer.MAX_VALUE).clear();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void coldest_negative(CacheContext context, Eviction<Int, Int> eviction) {
@@ -902,6 +903,7 @@ public final class EvictionTest {
     assertThat(coldest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void coldestFunc_null(CacheContext context, Eviction<Int, Int> eviction) {
@@ -916,6 +918,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void coldestFunc_throwsException(CacheContext context, Eviction<Int, Int> eviction) {
     var expected = new IllegalStateException();
@@ -927,6 +930,7 @@ public final class EvictionTest {
     }
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void coldestFunc_concurrentModification(Cache<Int, Int> cache,
@@ -995,6 +999,7 @@ public final class EvictionTest {
     eviction.coldestWeighted(Long.MAX_VALUE).clear();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void coldestWeighted_negative(CacheContext context, Eviction<Int, Int> eviction) {
@@ -1062,6 +1067,7 @@ public final class EvictionTest {
     eviction.hottest(Integer.MAX_VALUE).clear();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void hottest_negative(CacheContext context, Eviction<Int, Int> eviction) {
@@ -1105,6 +1111,7 @@ public final class EvictionTest {
     assertThat(hottest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void hottestFunc_null(CacheContext context, Eviction<Int, Int> eviction) {
@@ -1119,6 +1126,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void hottestFunc_throwsException(CacheContext context, Eviction<Int, Int> eviction) {
     var expected = new IllegalStateException();
@@ -1130,6 +1138,7 @@ public final class EvictionTest {
     }
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void hottestFunc_concurrentModification(Cache<Int, Int> cache,
@@ -1207,6 +1216,7 @@ public final class EvictionTest {
     eviction.hottestWeighted(Long.MAX_VALUE).clear();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void hottestWeighted_negative(CacheContext context, Eviction<Int, Int> eviction) {

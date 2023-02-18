@@ -24,6 +24,7 @@ import java.util.concurrent.CompletionException;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
 import com.google.common.truth.ThrowableSubject;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Propositions for {@link CompletableFuture} subjects.
@@ -88,6 +89,7 @@ public final class FutureSubject extends Subject {
   }
 
   /** Fails if the future is did not fail with the given join() exception. */
+  @CanIgnoreReturnValue
   public ThrowableSubject failsWith(Class<? extends RuntimeException> clazz) {
     try {
       failWithActual("join", actual.join());

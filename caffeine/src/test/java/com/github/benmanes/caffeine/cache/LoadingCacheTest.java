@@ -93,6 +93,7 @@ public final class LoadingCacheTest {
 
   @CacheSpec
   @CheckNoEvictions @CheckNoStats
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_null(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.get(null);
@@ -107,6 +108,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_absent_throwsException(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -119,6 +121,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = Loader.CHECKED_EXCEPTIONAL)
   public void get_absent_throwsCheckedException(
       LoadingCache<Int, Int> cache, CacheContext context) {
@@ -133,6 +136,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(compute = Compute.SYNC, loader = Loader.INTERRUPTED)
   public void get_absent_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
     try {
@@ -167,6 +171,7 @@ public final class LoadingCacheTest {
   /* --------------- getAll --------------- */
 
   @CheckNoEvictions
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_null(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -174,6 +179,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -191,6 +197,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = Loader.BULK_MODIFY_KEYS)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_keys(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -199,6 +206,7 @@ public final class LoadingCacheTest {
 
   @CacheSpec
   @CheckNoEvictions
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_result(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.getAll(context.firstMiddleLastKeys()).clear();
@@ -221,6 +229,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = Loader.BULK_NULL)
   @Test(dataProvider = "caches", expectedExceptions = Exception.class)
   public void getAll_absent_bulkNull(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -228,6 +237,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getAll_absent_throwsExecption(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -242,6 +252,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = { Loader.CHECKED_EXCEPTIONAL, Loader.BULK_CHECKED_EXCEPTIONAL })
   public void getAll_absent_throwsCheckedExecption(
       LoadingCache<Int, Int> cache, CacheContext context) {
@@ -258,6 +269,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getAll_absent_throwsExecption_iterable(
@@ -273,6 +285,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = { Loader.INTERRUPTED, Loader.BULK_INTERRUPTED })
   public void getAll_absent_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
     try {
@@ -1115,6 +1128,7 @@ public final class LoadingCacheTest {
 
   /* --------------- CacheLoader --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = UnsupportedOperationException.class)
   public void loadAll() throws Exception {
     CacheLoader<Object, ?> loader = key -> key;
@@ -1180,6 +1194,7 @@ public final class LoadingCacheTest {
     assertThat(future).succeedsWith(-1);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void bulk_null() {
     CacheLoader.bulk(null);

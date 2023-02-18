@@ -39,6 +39,7 @@ public final class BoundedBufferTest {
   }
 
   @Test(dataProvider = "buffer")
+  @SuppressWarnings("CheckReturnValue")
   public void offer(BoundedBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 100; i++) {
@@ -50,6 +51,7 @@ public final class BoundedBufferTest {
   }
 
   @Test(dataProvider = "buffer")
+  @SuppressWarnings("CheckReturnValue")
   public void drain(BoundedBuffer<Boolean> buffer) {
     for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
       buffer.offer(Boolean.TRUE);
@@ -81,6 +83,7 @@ public final class BoundedBufferTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void overflow() {
     var buffer = new BoundedBuffer.RingBuffer<Boolean>(null);
     buffer.writeCounter = Long.MAX_VALUE;

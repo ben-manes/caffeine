@@ -47,6 +47,7 @@ public final class HashClashTest {
   private static final boolean debug = false;
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.ONE_FIFTY, stats = Stats.ENABLED)
   public void testCache(Cache<Long, Long> cache, CacheContext context) {
     for (long j = 0; j < 300; ++j) {

@@ -450,11 +450,13 @@ public class CaffeineSpecGuavaTest extends TestCase {
         .testEquals();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   public void testMaximumWeight_withWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumWeight=9000"));
     builder.weigher((k, v) -> 42).build(k -> null);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   public void testMaximumWeight_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumWeight=9000"));
     try {
@@ -463,11 +465,13 @@ public class CaffeineSpecGuavaTest extends TestCase {
     } catch (IllegalStateException expected) {}
   }
 
+  @SuppressWarnings("CheckReturnValue")
   public void testMaximumSize_withWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumSize=9000"));
     builder.weigher((k, v) -> 42).build(k -> null);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   public void testMaximumSize_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumSize=9000"));
     builder.build(k -> null);

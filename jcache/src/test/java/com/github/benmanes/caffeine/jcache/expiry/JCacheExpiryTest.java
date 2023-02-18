@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
@@ -67,7 +68,8 @@ public final class JCacheExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_2);
     verify(expiry).expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong());
 
-    jcache.get(KEY_1);
+    var value = jcache.get(KEY_1);
+    assertThat(value).isEqualTo(VALUE_2);
     verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
   }
 }

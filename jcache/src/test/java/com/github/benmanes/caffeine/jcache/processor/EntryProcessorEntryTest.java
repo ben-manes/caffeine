@@ -30,6 +30,7 @@ import org.testng.annotations.Test;
 public final class EntryProcessorEntryTest {
   EntryProcessorEntry<Integer, Integer> entry = new EntryProcessorEntry<>(1, 2, Optional.empty());
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void unwrap_fail() {
     entry.unwrap(Map.Entry.class);

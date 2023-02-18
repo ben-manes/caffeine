@@ -356,18 +356,22 @@ public final class CacheContextSubject extends Subject {
         this.cause = requireNonNull(cause);
       }
 
+      @CanIgnoreReturnValue
       public Exclusive contains(Int key, Int value) {
         return contains(new SimpleEntry<>(key, value));
       }
 
+      @CanIgnoreReturnValue
       public Exclusive contains(Map<Int, Int> map) {
         return contains(map.entrySet().toArray(Map.Entry[]::new));
       }
 
+      @CanIgnoreReturnValue
       public Exclusive contains(List<Entry<Int, Int>> entries) {
         return contains(entries.toArray(Map.Entry[]::new));
       }
 
+      @CanIgnoreReturnValue
       public Exclusive contains(Entry<?, ?>... entries) {
         awaitUntil((type, listener) -> {
           var notifications = Stream.of(entries)

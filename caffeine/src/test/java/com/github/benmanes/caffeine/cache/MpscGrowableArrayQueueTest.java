@@ -38,16 +38,19 @@ public final class MpscGrowableArrayQueueTest {
 
   /* --------------- Constructor --------------- */
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void constructor_initialCapacity_tooSmall() {
     new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 1, /* maxCapacity */ 4);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void constructor_maxCapacity_tooSmall() {
     new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 1);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void constructor_inverted() {
     new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 8, /* maxCapacity */ 4);
@@ -162,7 +165,8 @@ public final class MpscGrowableArrayQueueTest {
   public void peek_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     for (int i = 0; i < FULL_SIZE; i++) {
       assertThat(buffer.peek()).isNotNull();
-      buffer.poll();
+      var item = buffer.poll();
+      assertThat(item).isNotNull();
     }
     assertThat(buffer.peek()).isNull();
   }
@@ -182,7 +186,8 @@ public final class MpscGrowableArrayQueueTest {
   public void relaxedPeek_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     for (int i = 0; i < FULL_SIZE; i++) {
       assertThat(buffer.relaxedPeek()).isNotNull();
-      buffer.poll();
+      var item = buffer.poll();
+      assertThat(item).isNotNull();
     }
     assertThat(buffer.relaxedPeek()).isNull();
   }
@@ -289,7 +294,7 @@ public final class MpscGrowableArrayQueueTest {
   static MpscGrowableArrayQueue<Integer> makePopulated(int items) {
     var buffer = new MpscGrowableArrayQueue<Integer>(4, FULL_SIZE);
     for (int i = 0; i < items; i++) {
-      buffer.offer(i);
+      buffer.add(i);
     }
     return buffer;
   }

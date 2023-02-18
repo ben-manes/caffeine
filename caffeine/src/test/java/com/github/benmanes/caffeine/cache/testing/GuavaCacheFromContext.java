@@ -77,6 +77,7 @@ public final class GuavaCacheFromContext {
   private static final ThreadLocal<Throwable> error = new ThreadLocal<>();
 
   /** Returns a Guava-backed cache. */
+  @SuppressWarnings("CheckReturnValue")
   public static <K, V> Cache<K, V> newGuavaCache(CacheContext context) {
     checkState(!context.isAsync(), "Guava caches are synchronous only");
 
@@ -344,6 +345,7 @@ public final class GuavaCacheFromContext {
         }
       }
       @Override
+      @SuppressWarnings("CheckReturnValue")
       public V computeIfPresent(K key,
           BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         requireNonNull(remappingFunction);
@@ -371,6 +373,7 @@ public final class GuavaCacheFromContext {
         }
       }
       @Override
+      @SuppressWarnings("CheckReturnValue")
       public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         requireNonNull(remappingFunction);
         V oldValue = get(key);

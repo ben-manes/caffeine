@@ -50,11 +50,3 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
-      - name: View Instructions
-        run: |
-          echo "Download and extract the report artifact"
-          echo "Start a http server"
-          echo "... python2 -m SimpleHTTPServer"
-          echo "... python3 -m http.server"
-          echo "The report is available at http://localhost:8000"
-          echo "For more details see https://www.jetbrains.com/help/qodana"

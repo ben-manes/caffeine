@@ -89,7 +89,9 @@ public final class Issue298Test {
   @SuppressWarnings("FutureReturnValueIgnored")
   public void readDuringCreate() {
     // Loaded value and waiting at expireAfterCreate (expire: infinite)
-    cache.get(key);
+    var initialValue = cache.get(key);
+    assertThat(initialValue).isNotNull();
+
     await().untilTrue(startedLoad);
     doLoad.set(true);
     await().untilTrue(startedCreate);
@@ -97,7 +99,8 @@ public final class Issue298Test {
     // Async read trying to wait at expireAfterRead
     var reader = CompletableFuture.runAsync(() -> {
       do {
-        cache.get(key);
+        var value = cache.get(key);
+        assertThat(value).isEqualTo(initialValue);
       } while (!endRead.get());
     }, executor);
 

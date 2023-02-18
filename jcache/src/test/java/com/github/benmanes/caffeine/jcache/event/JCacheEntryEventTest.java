@@ -46,6 +46,7 @@ public final class JCacheEntryEventTest {
     event = new JCacheEntryEvent<>(cache, EventType.CREATED, 1, true, 2, 3);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void unwrap_fail() {
     event.unwrap(Map.Entry.class);

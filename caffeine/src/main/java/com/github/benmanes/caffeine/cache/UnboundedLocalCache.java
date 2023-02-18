@@ -145,15 +145,15 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<Object, Object>(calculateHashMapCapacity(keys));
-    for (Object key : keys) {
+    var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(keys));
+    for (K key : keys) {
       result.put(key, null);
     }
 
     int uniqueKeys = result.size();
     for (var iter = result.entrySet().iterator(); iter.hasNext();) {
-      Map.Entry<Object, Object> entry = iter.next();
-      Object value = data.get(entry.getKey());
+      Map.Entry<K, V> entry = iter.next();
+      V value = data.get(entry.getKey());
       if (value == null) {
         iter.remove();
       } else {
@@ -163,9 +163,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     statsCounter.recordHits(result.size());
     statsCounter.recordMisses(uniqueKeys - result.size());
 
-    @SuppressWarnings("unchecked")
-    var castedResult = (Map<K, V>) result;
-    return Collections.unmodifiableMap(castedResult);
+    return Collections.unmodifiableMap(result);
   }
 
   @Override

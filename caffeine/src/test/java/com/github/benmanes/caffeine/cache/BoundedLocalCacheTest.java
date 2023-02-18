@@ -38,9 +38,11 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VA
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
@@ -273,10 +275,12 @@ public final class BoundedLocalCacheTest {
         .evictionListener(evictionListener)
         .maximumSize(0)
         .build());
-    cache.put(Int.valueOf(1), Int.valueOf(1));
+    var oldValue1 = cache.put(Int.valueOf(1), Int.valueOf(1));
+    assertThat(oldValue1).isNull();
     await().untilTrue(evicting);
 
-    cache.put(Int.valueOf(2), Int.valueOf(2));
+    var oldValue2 = cache.put(Int.valueOf(2), Int.valueOf(2));
+    assertThat(oldValue2).isAnyOf(Int.valueOf(1), null);
     assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
 
     done.set(true);
@@ -290,13 +294,15 @@ public final class BoundedLocalCacheTest {
       removalListener = Listener.CONSUMING)
   public void scheduleDrainBuffers_rejected(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    cache.put(context.absentKey(), context.absentValue());
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(oldValue).isNull();
 
     assertThat(cache.drainStatus).isEqualTo(IDLE);
     assertThat(cache.writeBuffer.isEmpty()).isTrue();
     assertThat(cache.evictionLock.isLocked()).isFalse();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = IllegalStateException.class)
   public void shouldDrainBuffers_invalidDrainStatus() {
     var cache = new BoundedLocalCache<Object, Object>(
@@ -441,9 +447,10 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING)
   public void afterWrite_drainFullWriteBuffer_discarded(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    cache.put(context.absentKey(), context.absentValue());
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
     assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_IDLE);
     assertThat(cache.evictionLock.isLocked()).isFalse();
+    assertThat(oldValue).isNull();
 
     int[] queued = { 1 };
     Runnable pendingTask = () -> queued[0]++;
@@ -490,7 +497,9 @@ public final class BoundedLocalCacheTest {
   public void weightedSize_maintenance(BoundedLocalCache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     cache.drainStatus = REQUIRED;
-    eviction.weightedSize();
+    var weight = eviction.weightedSize();
+
+    assertThat(weight).isPresent();
     assertThat(cache.drainStatus).isEqualTo(IDLE);
   }
 
@@ -499,7 +508,9 @@ public final class BoundedLocalCacheTest {
   public void maximumSize_maintenance(BoundedLocalCache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     cache.drainStatus = REQUIRED;
-    eviction.getMaximum();
+    var maximum = eviction.getMaximum();
+
+    assertThat(maximum).isEqualTo(context.maximumWeightOrSize());
     assertThat(cache.drainStatus).isEqualTo(IDLE);
   }
 
@@ -510,8 +521,9 @@ public final class BoundedLocalCacheTest {
   public void overflow_add_one(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long actualWeight = cache.weightedSize();
     cache.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
-    cache.put(context.absentKey(), context.absentValue());
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
 
+    assertThat(oldValue).isNull();
     assertThat(cache).hasSize(context.initialSize());
     assertThat(cache.weightedSize()).isEqualTo(BoundedLocalCache.MAXIMUM_CAPACITY);
 
@@ -556,9 +568,10 @@ public final class BoundedLocalCacheTest {
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
   public void overflow_update_one(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
-    cache.put(context.firstKey(), Int.MAX_VALUE);
+    var oldValue = cache.put(context.firstKey(), Int.MAX_VALUE);
 
     assertThat(cache).hasSizeLessThan(1 + context.initialSize());
+    assertThat(oldValue).isEqualTo(context.original().get(context.firstKey()));
     assertThat(cache.weightedSize()).isAtMost(BoundedLocalCache.MAXIMUM_CAPACITY);
 
     var removed = new HashMap<>(context.original());
@@ -604,16 +617,19 @@ public final class BoundedLocalCacheTest {
   public void evict_alreadyRemoved(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var oldEntry = Iterables.get(context.absent().entrySet(), 0);
     var newEntry = Iterables.get(context.absent().entrySet(), 1);
+    var oldValue = cache.put(oldEntry.getKey(), oldEntry.getValue());
+    assertThat(oldValue).isNull();
 
     var removed = new AtomicBoolean();
-    cache.put(oldEntry.getKey(), oldEntry.getValue());
     cache.evictionLock.lock();
     try {
       var lookupKey = cache.nodeFactory.newLookupKey(oldEntry.getKey());
       var node = cache.data.get(lookupKey);
       checkStatus(node, Status.ALIVE);
       ConcurrentTestHarness.execute(() -> {
-        cache.put(newEntry.getKey(), newEntry.getValue());
+        var value = cache.put(newEntry.getKey(), newEntry.getValue());
+        assertThat(value).isNull();
+
         assertThat(cache.remove(oldEntry.getKey())).isEqualTo(oldEntry.getValue());
         removed.set(true);
       });
@@ -681,7 +697,10 @@ public final class BoundedLocalCacheTest {
   }
 
   private void checkReorder(Cache<Int, Int> cache, List<Int> keys, List<Int> expect) {
-    keys.forEach(cache::getIfPresent);
+    for (var key : keys) {
+      var value = cache.getIfPresent(key);
+      assertThat(value).isNotNull();
+    }
     checkContainsInOrder(cache, expect);
   }
 
@@ -704,13 +723,15 @@ public final class BoundedLocalCacheTest {
     cache.setMainProtectedMaximum(0);
     cache.setWindowMaximum(context.maximumSize());
     for (int i = 0; i < context.maximumSize(); i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(i));
+      var oldValue = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(oldValue).isNull();
     }
 
     var expected = cache.accessOrderWindowDeque().stream()
         .map(Node::getKey).collect(toImmutableList());
     cache.setWindowMaximum(0L);
-    cache.evictFromWindow();
+    var candidate = cache.evictFromWindow();
+    assertThat(candidate).isNotNull();
 
     var actual = cache.accessOrderProbationDeque().stream()
         .map(Node::getKey).collect(toImmutableList());
@@ -723,7 +744,8 @@ public final class BoundedLocalCacheTest {
       removalListener = Listener.CONSUMING)
   public void evict_victim_lru(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.setWindowMaximum(0);
-    cache.evictFromWindow();
+    var candidate = cache.evictFromWindow();
+    assertThat(candidate).isNotNull();
 
     var expected = FluentIterable
         .from(cache.accessOrderProbationDeque())
@@ -746,7 +768,8 @@ public final class BoundedLocalCacheTest {
     cache.setMainProtectedMaximum(0);
 
     for (int i = 0; i < context.maximumSize(); i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(i));
+      var value = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(value).isNull();
     }
     Arrays.fill(cache.frequencySketch().table, 0L);
 
@@ -770,7 +793,8 @@ public final class BoundedLocalCacheTest {
     cache.setMainProtectedMaximum(0);
 
     for (int i = 0; i < context.maximumSize(); i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(i));
+      var value = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(value).isNull();
     }
     Arrays.fill(cache.frequencySketch().table, 0L);
 
@@ -793,11 +817,12 @@ public final class BoundedLocalCacheTest {
     cache.setWindowMaximum(context.maximumSize() / 2);
 
     for (int i = 0; i < context.maximumSize(); i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(i));
+      var value = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(value).isNull();
     }
     while (!cache.accessOrderProbationDeque().isEmpty()) {
       var node = cache.accessOrderProbationDeque().removeFirst();
-      cache.accessOrderProtectedDeque().offerLast(node);
+      cache.accessOrderProtectedDeque().addLast(node);
       node.makeMainProtected();
     }
     Arrays.fill(cache.frequencySketch().table, 0L);
@@ -824,7 +849,8 @@ public final class BoundedLocalCacheTest {
       removalListener = Listener.CONSUMING)
   public void evict_toZero(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (int i = 0; i < context.maximumSize(); i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(i));
+      var value = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(value).isNull();
     }
     Arrays.fill(cache.frequencySketch().table, 0L);
 
@@ -850,7 +876,10 @@ public final class BoundedLocalCacheTest {
       var expected = cache.accessOrderWindowDeque().peekFirst();
       var key = expected.getKey();
 
-      ConcurrentTestHarness.execute(() -> cache.remove(key));
+      ConcurrentTestHarness.execute(() -> {
+        var value = cache.remove(key);
+        assertThat(value).isNotNull();
+      });
       await().until(() -> !cache.containsKey(key));
       assertThat(expected.isRetired()).isTrue();
 
@@ -874,7 +903,10 @@ public final class BoundedLocalCacheTest {
       var expected = cache.accessOrderProbationDeque().peekFirst();
       var key = expected.getKey();
 
-      ConcurrentTestHarness.execute(() -> cache.remove(key));
+      ConcurrentTestHarness.execute(() -> {
+        var value = cache.remove(key);
+        assertThat(value).isNotNull();
+      });
       await().until(() -> !cache.containsKey(key));
       assertThat(expected.isRetired()).isTrue();
 
@@ -894,11 +926,18 @@ public final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE)
   public void evict_zeroWeight(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (int i = 0; i < context.maximumSize(); i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(1));
-      cache.get(Int.valueOf(i - 1));
+      var oldValue = intern(cache.put(Int.valueOf(i), Int.valueOf(1)));
+      assertThat(oldValue).isNull();
+
+      var value = cache.get(Int.valueOf(i - 1));
+      assertThat(value).isAnyOf(Int.valueOf(1), null);
     }
-    cache.put(cache.accessOrderWindowDeque().peekFirst().getKey(), Int.valueOf(0));
-    cache.put(cache.accessOrderProbationDeque().peekFirst().getKey(), Int.valueOf(0));
+
+    var window = cache.put(cache.accessOrderWindowDeque().peekFirst().getKey(), Int.valueOf(0));
+    assertThat(window).isNotNull();
+
+    var main = cache.put(cache.accessOrderProbationDeque().peekFirst().getKey(), Int.valueOf(0));
+    assertThat(main).isNotNull();
 
     cache.setMaximumSize(0);
     cache.evictEntries();
@@ -973,7 +1012,7 @@ public final class BoundedLocalCacheTest {
     started.set(true);
 
     ConcurrentTestHarness.execute(() -> {
-      localCache.compute(key, (k, v) -> {
+      var value = localCache.compute(key, (k, v) -> {
         if (started.get()) {
           writing.set(true);
           await().untilAsserted(() -> assertThat(evictor.getState()).isEqualTo(BLOCKED));
@@ -981,11 +1020,13 @@ public final class BoundedLocalCacheTest {
         previousValue.set(v);
         return newValue;
       });
+      assertThat(value).isEqualTo(newValue);
     });
     await().untilTrue(writing);
 
     var node = localCache.data.values().iterator().next();
-    localCache.evictEntry(node, RemovalCause.SIZE, 0);
+    var evicted = localCache.evictEntry(node, SIZE, 0);
+    assertThat(evicted).isTrue();
 
     await().untilAtomic(evictedValue, is(newValue));
     await().untilAtomic(previousValue, is(oldValue));
@@ -998,12 +1039,12 @@ public final class BoundedLocalCacheTest {
       initialCapacity = InitialCapacity.EXCESSIVE, removalListener = Listener.CONSUMING)
   public void evict_update_entryTooBig_window(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    cache.put(Int.valueOf(9), Int.valueOf(9));
-    cache.put(Int.valueOf(1), Int.valueOf(1));
+    cache.putAll(Map.of(Int.valueOf(9), Int.valueOf(9), Int.valueOf(1), Int.valueOf(1)));
 
     var lookupKey = cache.nodeFactory.newLookupKey(Int.valueOf(1));
     assertThat(cache.data.get(lookupKey).inWindow()).isTrue();
-    cache.put(Int.valueOf(1), Int.valueOf(20));
+    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(20));
+    assertThat(oldValue).isEqualTo(1);
 
     assertThat(cache.weightedSize()).isAtMost(context.maximumSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -1022,12 +1063,14 @@ public final class BoundedLocalCacheTest {
   public void evict_update_entryTooBig_probation(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (int i = 1; i <= 10; i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(1));
+      var oldValue = cache.put(Int.valueOf(i), Int.valueOf(1));
+      assertThat(oldValue).isNull();
     }
 
     var lookupKey = cache.nodeFactory.newLookupKey(Int.valueOf(1));
     assertThat(cache.data.get(lookupKey).inMainProbation()).isTrue();
-    cache.put(Int.valueOf(1), Int.valueOf(20));
+    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(20));
+    assertThat(oldValue).isEqualTo(1);
 
     assertThat(cache.weightedSize()).isAtMost(context.maximumSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -1046,14 +1089,18 @@ public final class BoundedLocalCacheTest {
   public void evict_update_entryTooBig_protected(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (int i = 1; i <= 10; i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(1));
-      cache.get(Int.valueOf(1));
+      var oldValue = cache.put(Int.valueOf(i), Int.valueOf(1));
+      assertThat(oldValue).isNull();
+
+      var value = cache.get(Int.valueOf(1));
+      assertThat(value).isEqualTo(1);
     }
     cache.cleanUp();
 
     var lookupKey = cache.nodeFactory.newLookupKey(Int.valueOf(1));
     assertThat(cache.data.get(lookupKey).inMainProtected()).isTrue();
-    cache.put(Int.valueOf(1), Int.valueOf(20));
+    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(20));
+    assertThat(oldValue).isEqualTo(1);
 
     assertThat(cache.weightedSize()).isAtMost(context.maximumSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -1073,7 +1120,9 @@ public final class BoundedLocalCacheTest {
     Int oldValue = Int.valueOf(2);
     Int newValue = Int.valueOf(3);
 
-    cache.put(key, oldValue);
+    var initialValue = cache.put(key, oldValue);
+    assertThat(initialValue).isNull();
+
     var node = cache.data.get(cache.referenceKey(key));
     @SuppressWarnings("unchecked")
     var ref = (Reference<Int>) node.getValueReference();
@@ -1082,7 +1131,7 @@ public final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
     var evictor = new AtomicReference<Thread>();
-    cache.compute(key, (k, v) -> {
+    var computed = cache.compute(key, (k, v) -> {
       assertThat(v).isNull();
       ConcurrentTestHarness.execute(() -> {
         evictor.set(Thread.currentThread());
@@ -1096,6 +1145,7 @@ public final class BoundedLocalCacheTest {
 
       return newValue;
     });
+    assertThat(computed).isEqualTo(newValue);
     await().untilTrue(done);
 
     assertThat(node.getValue()).isEqualTo(newValue);
@@ -1269,12 +1319,13 @@ public final class BoundedLocalCacheTest {
   public void evict_resurrect_expireAfterVar(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     Int key = Int.valueOf(1);
-    cache.put(key, key);
-    var node = cache.data.get(cache.referenceKey(key));
+    var oldValue = cache.put(key, key);
+    assertThat(oldValue).isNull();
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
     var evictor = new AtomicReference<Thread>();
+    var node = cache.data.get(cache.referenceKey(key));
     synchronized (node) {
       context.ticker().advance(Duration.ofHours(1));
       ConcurrentTestHarness.execute(() -> {
@@ -1307,7 +1358,9 @@ public final class BoundedLocalCacheTest {
     var keyReference = (WeakKeyReference<Int>) candidate.getKeyReference();
     keyReference.clear();
 
-    cache.put(context.absentKey(), context.absentValue());
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(oldValue).isNull();
+
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(null, value).exclusively();
   }
@@ -1335,28 +1388,40 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   public void updateRecency_onGet(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
-    updateRecency(cache, context, () -> cache.get(first.getKey()));
+    updateRecency(cache, context, () -> {
+      var value = cache.get(first.getKey());
+      assertThat(value).isNotNull();
+    });
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   public void updateRecency_onPutIfAbsent(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
-    updateRecency(cache, context, () -> cache.putIfAbsent(first.getKey(), first.getKey()));
+    updateRecency(cache, context, () -> {
+      var oldValue = cache.putIfAbsent(first.getKey(), first.getKey());
+      assertThat(oldValue).isNotNull();
+    });
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   public void updateRecency_onPut(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
-    updateRecency(cache, context, () -> cache.put(first.getKey(), first.getKey()));
+    updateRecency(cache, context, () -> {
+      var oldValue = cache.put(first.getKey(), first.getKey());
+      assertThat(oldValue).isNotNull();
+    });
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   public void updateRecency_onReplace(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
-    updateRecency(cache, context, () -> cache.replace(first.getKey(), first.getKey()));
+    updateRecency(cache, context, () -> {
+      var oldValue = cache.replace(first.getKey(), first.getKey());
+      assertThat(oldValue).isNotNull();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1366,7 +1431,10 @@ public final class BoundedLocalCacheTest {
     var first = firstBeforeAccess(cache, context);
     Int value = first.getValue();
 
-    updateRecency(cache, context, () -> cache.replace(first.getKey(), value, value));
+    updateRecency(cache, context, () -> {
+      boolean replaced = cache.replace(first.getKey(), value, value);
+      assertThat(replaced).isTrue();
+    });
   }
 
   private static Node<Int, Int> firstBeforeAccess(
@@ -1402,12 +1470,17 @@ public final class BoundedLocalCacheTest {
 
     var buffer = cache.readBuffer;
     for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
-      buffer.offer(dummy);
+      var result = buffer.offer(dummy);
+      assertThat(result).isEqualTo(Buffer.SUCCESS);
     }
-    assertThat(buffer.offer(dummy)).isEqualTo(Buffer.FULL);
+    var result = buffer.offer(dummy);
+    assertThat(result).isEqualTo(Buffer.FULL);
 
-    cache.afterRead(dummy, 0, /* recordHit */ true);
-    assertThat(buffer.offer(dummy)).isNotEqualTo(Buffer.FULL);
+    var refreshed = cache.afterRead(dummy, 0, /* recordHit */ true);
+    assertThat(refreshed).isNull();
+
+    result = buffer.offer(dummy);
+    assertThat(result).isEqualTo(Buffer.SUCCESS);
   }
 
   @Test(dataProvider = "caches")
@@ -1430,11 +1503,14 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.skipReadBuffer()).isTrue();
 
     for (int i = 0; i < (context.maximumSize() / 2) - 1; i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(-i));
+      var oldValue = cache.put(Int.valueOf(i), Int.valueOf(-i));
+      assertThat(oldValue).isNull();
     }
     assertThat(cache.skipReadBuffer()).isTrue();
 
-    cache.put(Int.valueOf(-1), Int.valueOf(-1));
+    var oldValue = cache.put(Int.valueOf(-1), Int.valueOf(-1));
+    assertThat(oldValue).isNull();
+
     assertThat(cache.skipReadBuffer()).isFalse();
     assertThat(cache.get(Int.valueOf(0))).isNotNull();
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
@@ -1448,22 +1524,27 @@ public final class BoundedLocalCacheTest {
   public void drain_onRead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var buffer = cache.readBuffer;
     for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
-      cache.get(context.firstKey());
+      var value = cache.get(context.firstKey());
+      assertThat(value).isEqualTo(context.original().get(context.firstKey()));
     }
 
     long pending = buffer.size();
     assertThat(buffer.writes()).isEqualTo(pending);
     assertThat(pending).isEqualTo(BoundedBuffer.BUFFER_SIZE);
 
-    cache.get(context.firstKey());
+    var value = cache.get(context.firstKey());
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+
     assertThat(buffer.size()).isEqualTo(0);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   public void drain_onRead_absent(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var value = cache.get(context.firstKey());
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+
     var buffer = cache.readBuffer;
-    cache.get(context.firstKey());
     assertThat(buffer.size()).isEqualTo(1);
 
     assertThat(cache.get(context.absentKey())).isNull();
@@ -1477,7 +1558,8 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
   public void drain_onWrite(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    cache.put(Int.valueOf(1), Int.valueOf(1));
+    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
+    assertThat(oldValue).isNull();
 
     int size = cache.accessOrderWindowDeque().size() + cache.accessOrderProbationDeque().size();
     assertThat(cache.writeBuffer).isEmpty();
@@ -1512,7 +1594,10 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
   public void drain_blocksOrderedMap(BoundedLocalCache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    checkDrainBlocks(cache, () -> eviction.coldest(((int) context.maximumSize())));
+    checkDrainBlocks(cache, () -> {
+      var results = eviction.coldest(((int) context.maximumSize()));
+      assertThat(results).isEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1589,8 +1674,14 @@ public final class BoundedLocalCacheTest {
     // Fill window and main spaces
     cache.clear();
     cache.putAll(context.original());
-    cache.keySet().forEach(cache::get);
-    cache.keySet().forEach(cache::get);
+    for (var key : cache.keySet()) {
+      var value = cache.get(key);
+      assertThat(value).isNotNull();
+    }
+    for (var key : cache.keySet()) {
+      var value = cache.get(key);
+      assertThat(value).isNotNull();
+    }
   }
 
   private void adapt(BoundedLocalCache<Int, Int> cache, int sampleSize) {
@@ -1600,7 +1691,10 @@ public final class BoundedLocalCacheTest {
     cache.climb();
 
     // Fill main protected space
-    cache.keySet().forEach(cache::get);
+    for (var key : cache.keySet()) {
+      var value = cache.get(key);
+      assertThat(value).isNotNull();
+    }
   }
 
   /* --------------- Expiration --------------- */
@@ -1613,11 +1707,13 @@ public final class BoundedLocalCacheTest {
     boolean mayCheckReads = context.isStrongKeys() && context.isStrongValues()
         && (cache.readBuffer != Buffer.<Node<Int, Int>>disabled());
 
-    cache.put(Int.valueOf(1), Int.valueOf(1));
+    var initialValue = cache.put(Int.valueOf(1), Int.valueOf(1));
+    assertThat(initialValue).isNull();
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
 
     // If within the tolerance, treat the update as a read
-    cache.put(Int.valueOf(1), Int.valueOf(2));
+    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(2));
+    assertThat(oldValue).isEqualTo(1);
     if (mayCheckReads) {
       assertThat(cache.readBuffer.reads()).isEqualTo(0);
       assertThat(cache.readBuffer.writes()).isEqualTo(1);
@@ -1626,7 +1722,8 @@ public final class BoundedLocalCacheTest {
 
     // If exceeds the tolerance, treat the update as a write
     context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
-    cache.put(Int.valueOf(1), Int.valueOf(3));
+    var lastValue = cache.put(Int.valueOf(1), Int.valueOf(3));
+    assertThat(lastValue).isEqualTo(2);
     if (mayCheckReads) {
       assertThat(cache.readBuffer.reads()).isEqualTo(1);
       assertThat(cache.readBuffer.writes()).isEqualTo(1);
@@ -1638,18 +1735,21 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void put_expireTolerance_expiry(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    cache.put(Int.valueOf(1), Int.valueOf(1));
+    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
+    assertThat(oldValue).isNull();
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
 
     // If within the tolerance, treat the update as a read
-    cache.put(Int.valueOf(1), Int.valueOf(2));
+    oldValue = cache.put(Int.valueOf(1), Int.valueOf(2));
+    assertThat(oldValue).isEqualTo(1);
     assertThat(cache.readBuffer.reads()).isEqualTo(0);
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
 
     // If exceeds the tolerance, treat the update as a write
     context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
-    cache.put(Int.valueOf(1), Int.valueOf(3));
+    oldValue = cache.put(Int.valueOf(1), Int.valueOf(3));
+    assertThat(oldValue).isEqualTo(2);
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(4);
@@ -1657,7 +1757,8 @@ public final class BoundedLocalCacheTest {
     // If the expiration time reduces by more than the tolerance, treat the update as a write
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
-    cache.put(Int.valueOf(1), Int.valueOf(4));
+    oldValue = cache.put(Int.valueOf(1), Int.valueOf(4));
+    assertThat(oldValue).isEqualTo(3);
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(6);
@@ -1665,7 +1766,8 @@ public final class BoundedLocalCacheTest {
     // If the expiration time increases by more than the tolerance, treat the update as a write
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenReturn(Expire.FOREVER.timeNanos());
-    cache.put(Int.valueOf(1), Int.valueOf(4));
+    oldValue = cache.put(Int.valueOf(1), Int.valueOf(4));
+    assertThat(oldValue).isEqualTo(4);
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(8);
@@ -1696,7 +1798,8 @@ public final class BoundedLocalCacheTest {
           if (done.get()) {
             return;
           }
-          cache.put(Int.valueOf(i), Int.valueOf(i));
+          var oldValue = cache.put(Int.valueOf(i), Int.valueOf(i));
+          assertThat(oldValue).isNull();
         }
       });
 
@@ -1722,15 +1825,18 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void put_spinToCompute(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    cache.put(context.absentKey(), context.absentValue());
+    var initialValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(initialValue).isNull();
+
     var node = cache.data.get(context.absentKey());
     node.retire();
 
-    cache.data.compute(context.absentKey(), (k, n) -> {
+    var value = cache.data.compute(context.absentKey(), (k, n) -> {
       var writer = new AtomicReference<Thread>();
       ConcurrentTestHarness.execute(() -> {
         writer.set(Thread.currentThread());
-        cache.put(context.absentKey(), context.absentKey());
+        var oldValue = cache.put(context.absentKey(), context.absentKey());
+        assertThat(oldValue).isAnyOf(context.absentValue(), null);
       });
 
       var threadState = EnumSet.of(BLOCKED, WAITING);
@@ -1739,6 +1845,7 @@ public final class BoundedLocalCacheTest {
 
       return null;
     });
+    assertThat(value).isNull();
 
     await().untilAsserted(() ->
         assertThat(cache).containsEntry(context.absentKey(), context.absentKey()));
@@ -1790,7 +1897,8 @@ public final class BoundedLocalCacheTest {
     doReturn(future).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
 
     for (int i = 0; i < 10; i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(-i));
+      var value = cache.put(Int.valueOf(i), Int.valueOf(-i));
+      assertThat(value).isNull();
     }
     assertThat(cache.pacer().nextFireTime).isNotEqualTo(0);
     assertThat(cache.pacer().future).isNotNull();
@@ -1815,7 +1923,8 @@ public final class BoundedLocalCacheTest {
     doReturn(future).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
 
     for (int i = 0; i < 10; i++) {
-      cache.put(Int.valueOf(i), Int.valueOf(-i));
+      var value = cache.put(Int.valueOf(i), Int.valueOf(-i));
+      assertThat(value).isNull();
     }
     assertThat(cache.pacer().nextFireTime).isNotEqualTo(0);
     assertThat(cache.pacer().future).isNotNull();
@@ -1834,7 +1943,9 @@ public final class BoundedLocalCacheTest {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * maximum);
     for (int i = 0; i < maximum; i++) {
       var key = CacheContext.intern(Int.valueOf(i));
-      cache.put(key, key);
+      var value = cache.put(key, key);
+      assertThat(value).isNull();
+
       context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
     }
 
@@ -1846,7 +1957,8 @@ public final class BoundedLocalCacheTest {
         node.setAccessTime(context.ticker().read());
       }
       for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
-        cache.get(node.getKey());
+        var value = cache.get(node.getKey());
+        assertThat(value).isEqualTo(node.getKey());
       }
       context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
       cache.cleanUp();
@@ -1864,7 +1976,9 @@ public final class BoundedLocalCacheTest {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
       var key = CacheContext.intern(Int.valueOf(i));
-      cache.put(key, key);
+      var value = cache.put(key, key);
+      assertThat(value).isNull();
+
       context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
     }
 
@@ -1875,7 +1989,8 @@ public final class BoundedLocalCacheTest {
       node.setAccessTime(context.ticker().read());
     }
     for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
-      cache.get(node.getKey());
+      var value = cache.get(node.getKey());
+      assertThat(value).isEqualTo(node.getKey());
     }
     context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
     cache.cleanUp();
@@ -1892,12 +2007,15 @@ public final class BoundedLocalCacheTest {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
       var key = CacheContext.intern(Int.valueOf(i));
-      cache.put(key, key);
+      var value = cache.put(key, key);
+      assertThat(value).isNull();
+
       context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
     }
 
     for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
-      cache.get(node.getKey());
+      var value = cache.get(node.getKey());
+      assertThat(value).isEqualTo(node.getKey());
     }
     context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
     cache.cleanUp();
@@ -1921,11 +2039,14 @@ public final class BoundedLocalCacheTest {
     long stepSize = context.expireAfterWrite().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
       var key = CacheContext.intern(Int.valueOf(i));
-      cache.put(key, key);
+      var value = cache.put(key, key);
+      assertThat(value).isNull();
+
       context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
     }
     for (var key : cache.keySet()) {
-      cache.get(key);
+      var value = cache.get(key);
+      assertThat(value).isEqualTo(key);
     }
     cache.cleanUp();
 
@@ -1943,11 +2064,14 @@ public final class BoundedLocalCacheTest {
     long stepSize = context.expiryTime().timeNanos() / (2 * maximum);
     for (int i = 0; i < maximum; i++) {
       var key = CacheContext.intern(Int.valueOf(i));
-      cache.put(key, key);
+      var value = cache.put(key, key);
+      assertThat(value).isNull();
+
       context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
     }
     for (var key : cache.keySet()) {
-      cache.get(key);
+      var value = cache.get(key);
+      assertThat(value).isEqualTo(key);
     }
     cache.cleanUp();
 
@@ -1980,13 +2104,15 @@ public final class BoundedLocalCacheTest {
     }));
 
     // Seed the cache
-    cache.put(context.absentKey(), context.absentValue());
-    var node = cache.data.get(context.absentKey());
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(oldValue).isNull();
 
     // Remove the entry after the read, but before the refresh, and leave it as retired
+    var node = cache.data.get(context.absentKey());
     doAnswer(invocation -> {
       ConcurrentTestHarness.execute(() -> {
-        cache.remove(context.absentKey());
+        var value = cache.remove(context.absentKey());
+        assertThat(value).isEqualTo(context.absentValue());
       });
       await().until(() -> !cache.containsKey(context.absentKey()));
       assertThat(node.isRetired()).isTrue();
@@ -2035,13 +2161,17 @@ public final class BoundedLocalCacheTest {
     var refreshes = localCache.refreshes();
 
     context.ticker().advance(2, TimeUnit.MINUTES);
-    ConcurrentTestHarness.execute(() -> cache.get(context.absentKey()));
+    ConcurrentTestHarness.execute(() -> {
+      var value = cache.get(context.absentKey());
+      assertThat(value).isEqualTo(context.absentValue());
+    });
 
     await().untilTrue(reloading);
     assertThat(node.getWriteTime() & 1L).isEqualTo(1);
 
     localCache.refreshes = null;
-    cache.get(context.absentKey());
+    var value = cache.get(context.absentKey());
+    assertThat(value).isEqualTo(context.absentValue());
     assertThat(localCache.refreshes).isNull();
 
     refresh.set(true);
@@ -2121,7 +2251,8 @@ public final class BoundedLocalCacheTest {
   public void brokenEquality_eviction(BoundedLocalCache<Object, Int> cache,
       CacheContext context, Eviction<?, ?> eviction) {
     var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
+    var value = cache.put(key, context.absentValue());
+    assertThat(value).isNull();
     key.increment();
 
     eviction.setMaximum(0);
@@ -2146,7 +2277,8 @@ public final class BoundedLocalCacheTest {
   public void brokenEquality_expiration(
       BoundedLocalCache<Object, Int> cache, CacheContext context) {
     var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
+    var value = cache.put(key, context.absentValue());
+    assertThat(value).isNull();
     key.increment();
 
     context.ticker().advance(1, TimeUnit.DAYS);
@@ -2168,7 +2300,8 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_clear(BoundedLocalCache<Object, Int> cache, CacheContext context) {
     var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
+    var value = cache.put(key, context.absentValue());
+    assertThat(value).isNull();
     key.increment();
 
     cache.clear();
@@ -2187,7 +2320,10 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_put(BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
-    testForBrokenEquality(cache, context, key -> cache.put(key, context.absentValue()));
+    testForBrokenEquality(cache, context, key -> {
+      var value = cache.put(key, context.absentValue());
+      assertThat(value).isEqualTo(context.absentValue());
+    });
   }
 
   @CheckMaxLogLevel(ERROR)
@@ -2195,7 +2331,10 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_putIfAbsent(
       BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
-    testForBrokenEquality(cache, context, key -> cache.putIfAbsent(key, context.absentValue()));
+    testForBrokenEquality(cache, context, key -> {
+      var value = cache.putIfAbsent(key, context.absentValue());
+      assertThat(value).isEqualTo(context.absentValue());
+    });
   }
 
   @CheckMaxLogLevel(ERROR)
@@ -2203,7 +2342,10 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_replace(
       BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
-    testForBrokenEquality(cache, context, key -> cache.replace(key, context.absentValue()));
+    testForBrokenEquality(cache, context, key -> {
+      var value = cache.replace(key, context.absentValue());
+      assertThat(value).isEqualTo(context.absentValue());
+    });
   }
 
   @CheckMaxLogLevel(ERROR)
@@ -2211,8 +2353,10 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_replaceConditionally(
       BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
-    testForBrokenEquality(cache, context, key ->
-        cache.replace(key, context.absentValue(), context.absentValue().negate()));
+    testForBrokenEquality(cache, context, key -> {
+      boolean replaced = cache.replace(key, context.absentValue(), context.absentValue().negate());
+      assertThat(replaced).isTrue();
+    });
   }
 
   @CheckMaxLogLevel(ERROR)
@@ -2220,7 +2364,10 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_remove(
       BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
-    testForBrokenEquality(cache, context, cache::remove);
+    testForBrokenEquality(cache, context, key -> {
+      var value = cache.remove(key);
+      assertThat(value).isEqualTo(context.absentValue());
+    });
   }
 
   @CheckMaxLogLevel(ERROR)
@@ -2228,13 +2375,17 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void brokenEquality_removeConditionally(
       BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
-    testForBrokenEquality(cache, context, key -> cache.remove(key, context.absentValue()));
+    testForBrokenEquality(cache, context, key -> {
+      boolean removed = cache.remove(key, context.absentValue());
+      assertThat(removed).isTrue();
+    });
   }
 
   private static void testForBrokenEquality(BoundedLocalCache<MutableInt, Int> cache,
       CacheContext context, Consumer<MutableInt> task) {
     var key = new MutableInt(context.absentKey().intValue());
-    cache.put(key, context.absentValue());
+    var value = cache.put(key, context.absentValue());
+    assertThat(value).isNull();
     key.increment();
 
     cache.clear();
@@ -2253,6 +2404,7 @@ public final class BoundedLocalCacheTest {
   /* --------------- Miscellaneous --------------- */
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void cacheFactory_invalid() {
     try {
       LocalCacheFactory.loadFactory(/* builder */ null, /* loader */ null,
@@ -2269,6 +2421,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void nodeFactory_invalid() {
     try {
       NodeFactory.loadFactory(/* className */ null);
@@ -2283,6 +2436,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void unsupported() {
     var cache = Mockito.mock(BoundedLocalCache.class, InvocationOnMock::callRealMethod);
     @SuppressWarnings("MethodReferenceUsage")
@@ -2317,10 +2471,11 @@ public final class BoundedLocalCacheTest {
   public void cleanupTask_ignore() {
     var task = new PerformCleanupTask(null);
     assertThat(task.getRawResult()).isNull();
+    assertThat(task.cancel(false)).isFalse();
+    assertThat(task.cancel(true)).isFalse();
     task.completeExceptionally(null);
     task.setRawResult(null);
     task.complete(null);
-    task.cancel(true);
   }
 
   @Test(dataProviderClass = CacheProvider.class, dataProvider = "caches")
@@ -2338,6 +2493,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void node_unsupported() {
     @SuppressWarnings("unchecked")
     Node<Object, Object> node = Mockito.mock(Node.class, InvocationOnMock::callRealMethod);
@@ -2368,7 +2524,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"CheckReturnValue", "unchecked"})
   public void policy_unsupported() {
     Policy<Object, Object> policy = Mockito.mock(Policy.class, InvocationOnMock::callRealMethod);
     var eviction = Mockito.mock(Eviction.class, InvocationOnMock::callRealMethod);

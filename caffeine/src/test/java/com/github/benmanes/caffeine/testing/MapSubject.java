@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Ordered;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Additional propositions for {@link Map} subjects.
@@ -64,6 +65,7 @@ public class MapSubject extends com.google.common.truth.MapSubject {
   }
 
   /** Fails if the map does not contain the given keys, where duplicate keys are ignored. */
+  @CanIgnoreReturnValue
   public Ordered containsExactlyKeys(Iterable<?> keys) {
     return check("containsKeys").that(actual.keySet())
         .containsExactlyElementsIn(ImmutableSet.copyOf(keys));

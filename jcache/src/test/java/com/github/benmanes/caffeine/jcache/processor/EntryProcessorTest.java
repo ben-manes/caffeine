@@ -74,6 +74,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void reload() {
     jcache.invoke(KEY_1, this::process);
     assertThat(loads).isEqualTo(1);
@@ -94,6 +95,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void writeOccursForInitialLoadOfEntry() {
     map.put(KEY_1, 100);
     jcache.invoke(KEY_1, this::process);

@@ -60,7 +60,7 @@ public final class StripedBufferTest {
   }
 
   @Test
-  @SuppressWarnings("ThreadPriorityCheck")
+  @SuppressWarnings({"CheckReturnValue", "ThreadPriorityCheck"})
   public void expand_concurrent() {
     var buffer = new FakeBuffer<Boolean>(Buffer.FAILED);
     ConcurrentTestHarness.timeTasks(10 * NCPU, () -> {
@@ -73,7 +73,7 @@ public final class StripedBufferTest {
   }
 
   @Test(dataProvider = "buffers")
-  @SuppressWarnings("ThreadPriorityCheck")
+  @SuppressWarnings({"CheckReturnValue", "ThreadPriorityCheck"})
   public void produce(FakeBuffer<Integer> buffer) {
     ConcurrentTestHarness.timeTasks(NCPU, () -> {
       for (int i = 0; i < 10; i++) {
@@ -85,6 +85,7 @@ public final class StripedBufferTest {
   }
 
   @Test(dataProvider = "buffers")
+  @SuppressWarnings("CheckReturnValue")
   public void drain(FakeBuffer<Integer> buffer) {
     buffer.drainTo(e -> {});
     assertThat(buffer.drains).isEqualTo(0);

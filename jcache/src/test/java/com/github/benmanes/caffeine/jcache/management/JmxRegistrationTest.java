@@ -57,6 +57,7 @@ public final class JmxRegistrationTest {
     JmxRegistration.unregister(server, name);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = CacheException.class)
   public void newObjectName_malformed() {
     JmxRegistration.newObjectName("a=b");

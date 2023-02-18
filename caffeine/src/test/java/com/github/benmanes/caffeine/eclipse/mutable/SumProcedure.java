@@ -60,6 +60,7 @@ public class SumProcedure<T>
   }
 
   @Override
+  @SuppressWarnings("CheckReturnValue")
   public void value(T object) {
     this.sum.add(object);
   }

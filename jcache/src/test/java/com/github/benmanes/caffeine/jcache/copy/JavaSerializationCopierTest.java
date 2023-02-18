@@ -46,38 +46,45 @@ import com.google.common.collect.ImmutableSet;
  */
 public final class JavaSerializationCopierTest {
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "nullArgs", expectedExceptions = NullPointerException.class)
   public void constructor_null(Set<Class<?>> immutableClasses,
       Map<Class<?>, Function<Object, Object>> deepCopyStrategies) {
     new JavaSerializationCopier(immutableClasses, deepCopyStrategies);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "copier", expectedExceptions = NullPointerException.class)
   public void null_object(Copier copier) {
     copy(copier, null);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "copier", expectedExceptions = NullPointerException.class)
   public void null_classLoader(Copier copier) {
     copier.copy(1, null);
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "copier", expectedExceptions = UncheckedIOException.class)
   public void serializable_fail(JavaSerializationCopier copier) {
     copier.serialize(new Object());
   }
 
   @Test
+  @SuppressWarnings("CheckReturnValue")
   public void deserializable_resolveClass() {
     var copier = new JavaSerializationCopier();
     copier.copy(ImmutableSet.of(), ClassLoader.getPlatformClassLoader());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(dataProvider = "copier", expectedExceptions = CacheException.class)
   public void deserializable_badData(JavaSerializationCopier copier) {
     copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader());
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = CacheException.class)
   public void deserializable_classNotFound() {
     var copier = new JavaSerializationCopier() {
@@ -131,6 +138,7 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test(dataProvider = "copier")
+  @SuppressWarnings("CheckReturnValue")
   public void array_primitive(Copier copier) {
     int[] ints = { 0, 1, 2, 3, 4 };
     assertThat(copy(copier, ints)).isEqualTo(ints);

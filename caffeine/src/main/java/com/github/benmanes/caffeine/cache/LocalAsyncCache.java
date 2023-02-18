@@ -486,17 +486,17 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-      var result = new LinkedHashMap<Object, Object>(calculateHashMapCapacity(keys));
-      for (Object key : keys) {
+      var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(keys));
+      for (K key : keys) {
         result.put(key, null);
       }
 
       int uniqueKeys = result.size();
       for (var iter = result.entrySet().iterator(); iter.hasNext();) {
-        Map.Entry<Object, Object> entry = iter.next();
+        Map.Entry<K, V> entry = iter.next();
 
         CompletableFuture<V> future = asyncCache().cache().get(entry.getKey());
-        Object value = Async.getIfReady(future);
+        V value = Async.getIfReady(future);
         if (value == null) {
           iter.remove();
         } else {
@@ -506,9 +506,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       asyncCache().cache().statsCounter().recordHits(result.size());
       asyncCache().cache().statsCounter().recordMisses(uniqueKeys - result.size());
 
-      @SuppressWarnings("unchecked")
-      var castedResult = (Map<K, V>) result;
-      return Collections.unmodifiableMap(castedResult);
+      return Collections.unmodifiableMap(result);
     }
 
     @Override

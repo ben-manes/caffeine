@@ -218,15 +218,13 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE },
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void get_writeTime(Cache<Int, Int> cache, CacheContext context) {
-    Int key = context.absentKey();
-    Int value = context.absentValue();
-
-    cache.get(key, k -> {
+    var value = cache.get(context.absentKey(), k -> {
       context.ticker().advance(5, TimeUnit.MINUTES);
-      return value;
+      return context.absentValue();
     });
     assertThat(cache).hasSize(1);
-    assertThat(cache).containsEntry(key, value);
+    assertThat(value).isEqualTo(context.absentValue());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   @Test(dataProvider = "caches")

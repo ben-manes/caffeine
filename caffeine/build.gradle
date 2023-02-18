@@ -125,7 +125,6 @@ tasks.named('compileJava').configure {
 }
 tasks.named('compileTestJava').configure {
   dependsOn jar, compileCodeGenJava
-  options.errorprone.disable('CheckReturnValue')
 }
 tasks.named('sourcesJar').configure {
   dependsOn generateLocalCaches, generateNodes
