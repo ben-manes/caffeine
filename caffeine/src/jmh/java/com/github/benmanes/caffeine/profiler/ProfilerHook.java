@@ -39,6 +39,7 @@ public abstract class ProfilerHook {
     calls = new LongAdder();
   }
 
+  @SuppressWarnings("CheckReturnValue")
   public final void run() {
     scheduleStatusTask();
     ConcurrentTestHarness.timeTasks(NUM_THREADS, this::profile);

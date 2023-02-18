@@ -55,6 +55,7 @@ public class LocalLoadingCacheTest extends TestCase {
 
   // constructor tests
 
+  @SuppressWarnings("CheckReturnValue")
   public void testComputingFunction() {
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
       @Override
