@@ -13,4 +13,4 @@ jobs:
           disable-sudo: true
           egress-policy: audit
       - uses: actions/checkout@v3
-      - uses: gradle/wrapper-validation-action@v1.0.5
+      - uses: gradle/wrapper-validation-action@v1.0.6
