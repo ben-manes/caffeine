@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceR
 import com.github.benmanes.caffeine.cache.simulator.parser.camelab.CamelabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cloud_physics.CloudPhysicsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.glcache.GLCacheTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kaggle.OutbrainTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
@@ -69,6 +70,7 @@ public enum TraceFormat {
   CAMELAB(CamelabTraceReader::new),
   CLOUD_PHYSICS(CloudPhysicsTraceReader::new),
   CORDA(CordaTraceReader::new),
+  GL_CACHE(GLCacheTraceReader::new),
   GRADLE(GradleTraceReader::new),
   LIRS(LirsTraceReader::new),
   LRB(LrbTraceReader::new),
