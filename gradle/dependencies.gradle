@@ -99,7 +99,7 @@ ext {
     jacoco: '0.8.7',
     jmh: '0.6.8',
     jmhReport: '0.9.0',
-    nexusPublish: '1.1.0',
+    nexusPublish: '1.2.0',
     nullaway: '1.5.0',
     pmd: '6.54.0',
     semanticVersioning: '1.1.0',
@@ -108,7 +108,7 @@ ext {
     spotbugs: '4.7.3',
     spotbugsContrib: '7.4.7',
     spotbugsPlugin: '5.0.13',
-    versions: '0.45.0',
+    versions: '0.46.0',
   ]
   platformVersions = [
     asm: '9.4',
@@ -258,15 +258,15 @@ ext {
   ]
   restrictions = [
     'com.beust:jcommander': '1.82',
-    'com.fasterxml.jackson:jackson-bom': '2.14.1',
+    'com.fasterxml.jackson:jackson-bom': '2.14.2',
     'com.google.protobuf:protobuf-java': '3.21.8',
     'com.thoughtworks.xstream:xstream': '1.4.20',
     'net.sourceforge.nekohtml:nekohtml': '1.9.22',
     'org.apache.bcel:bcel': '6.6.1',
     'org.apache.commons:commons-text': '1.10.0',
-    'org.apache.httpcomponents:httpclient': '4.5.13',
+    'org.apache.httpcomponents:httpclient': '4.5.14',
     'org.bouncycastle:bcprov-jdk15on': '1.70',
-    'org.jsoup:jsoup': '1.15.3',
+    'org.jsoup:jsoup': '1.15.4',
     'org.yaml:snakeyaml': '1.33',
     'xerces:xercesImpl': '2.12.2',
   ]

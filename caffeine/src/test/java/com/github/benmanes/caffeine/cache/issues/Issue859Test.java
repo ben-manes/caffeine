@@ -45,7 +45,7 @@ public final class Issue859Test {
   private static final int NUMBER_OF_KEYS = 10;
 
   @Test
-  void scheduleIfPendingWrites() {
+  public void scheduleIfPendingWrites() {
     var runs = new ArrayList<TestRun>();
     for (int i = 1; i <= NUMBER_OF_RUNS; i++) {
       runs.add(runTest());

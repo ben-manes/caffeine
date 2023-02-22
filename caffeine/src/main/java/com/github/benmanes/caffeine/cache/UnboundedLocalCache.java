@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -403,7 +404,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       data.clear();
       return;
     }
-    for (K key : data.keySet()) {
+    for (K key : List.copyOf(data.keySet())) {
       remove(key);
     }
   }

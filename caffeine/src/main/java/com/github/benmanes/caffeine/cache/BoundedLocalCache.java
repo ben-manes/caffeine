@@ -46,9 +46,11 @@ import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -2033,6 +2035,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   public void clear() {
+    Deque<Node<K, V>> entries;
     evictionLock.lock();
     try {
       // Discard all pending reads
@@ -2050,23 +2053,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         pacer.cancel();
       }
 
-      // Discard all entries
-      int threshold = (WRITE_BUFFER_MAX / 2);
+      // Discard all entries, falling back to one-by-one to avoid excessive lock hold times
       long now = expirationTicker().read();
-      for (var node : data.values()) {
-        if (writeBuffer.size() >= threshold) {
-          // Fallback to one-by-one to avoid excessive lock hold times
-          break;
-        }
-        removeNode(node, now);
+      int threshold = (WRITE_BUFFER_MAX / 2);
+      entries = new ArrayDeque<>(data.values());
+      while (!entries.isEmpty() && (writeBuffer.size() < threshold)) {
+        removeNode(entries.poll(), now);
       }
     } finally {
       evictionLock.unlock();
     }
 
-    // Remove any stragglers, such as if released early to more aggressively flush incoming writes
-    for (Object key : keySet()) {
-      remove(key);
+    // Remove any stragglers if released early to more aggressively flush incoming writes
+    while (!entries.isEmpty()) {
+      var node = entries.poll();
+      var key = node.getKey();
+      if (key != null) {
+        remove(key);
+      }
+    }
+    if (collectKeys()) {
+      cleanUp();
     }
   }
 

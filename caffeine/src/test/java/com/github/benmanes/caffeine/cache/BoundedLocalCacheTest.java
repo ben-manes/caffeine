@@ -163,6 +163,29 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer).isEmpty();
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.IDENTITY,
+      population = Population.FULL, removalListener = Listener.MOCKITO)
+  public void clear_pendingWrites_reload(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var populate = new boolean[] { true };
+    Answer<?> fillWriteBuffer = invocation -> {
+      while (populate[0] && cache.writeBuffer.offer(() -> {})) {
+        // ignored
+      }
+      var loadingCache = (LoadingCache<?, ?>) context.cache();
+      loadingCache.refresh(invocation.getArgument(0));
+      populate[0] = false;
+      return null;
+    };
+    doAnswer(fillWriteBuffer)
+      .when(context.removalListener())
+      .onRemoval(any(), any(), any());
+
+    cache.clear();
+    assertThat(cache.writeBuffer).isEmpty();
+    assertThat(cache).hasSize(context.initialSize());
+  }
+
   /* --------------- Maintenance --------------- */
 
   @Test

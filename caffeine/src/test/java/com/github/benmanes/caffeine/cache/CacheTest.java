@@ -25,6 +25,8 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.function.Function.identity;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static uk.org.lidalia.slf4jext.Level.ERROR;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
@@ -44,6 +46,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Triple;
+import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -75,6 +78,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.NullPointerTester;
@@ -809,10 +813,28 @@ public final class CacheTest {
   @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
       executorFailure = ExecutorFailure.IGNORED, executor = CacheExecutor.REJECTING,
       removalListener = Listener.CONSUMING)
-  public void removalListener_rejected(Cache<Int, Int> cache, CacheContext context) {
+  public void invalidateAll_removalListener_rejected(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.original()).exclusively();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = Listener.MOCKITO)
+  public void invalidateAll_removalListener_writeback(Cache<Int, Int> cache, CacheContext context) {
+    Answer<?> writeback = invocation -> {
+      cache.put(invocation.getArgument(0), invocation.getArgument(0));
+      return null;
+    };
+    doAnswer(writeback)
+        .when(context.removalListener())
+        .onRemoval(any(), any(), any());
+
+    cache.invalidateAll();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.original()).exclusively();
+    assertThat(cache).containsExactlyEntriesIn(Maps.asMap(context.original().keySet(), key -> key));
   }
 
   /* --------------- cleanup --------------- */
