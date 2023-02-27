@@ -2065,14 +2065,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     // Remove any stragglers if released early to more aggressively flush incoming writes
-    while (!entries.isEmpty()) {
-      var node = entries.poll();
+    boolean cleanUp = false;
+    for (var node : entries) {
       var key = node.getKey();
-      if (key != null) {
+      if (key == null) {
+        cleanUp = true;
+      } else {
         remove(key);
       }
     }
-    if (collectKeys()) {
+    if (collectKeys() && cleanUp) {
       cleanUp();
     }
   }

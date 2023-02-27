@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executo
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.testing.TestingExecutors.sameThreadScheduledExecutor;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -45,7 +46,6 @@ import com.google.common.util.concurrent.Futures;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("FutureReturnValueIgnored")
 public final class SchedulerTest {
   private final NullPointerTester npeTester = new NullPointerTester();
 
@@ -101,10 +101,8 @@ public final class SchedulerTest {
 
   /* --------------- guarded --------------- */
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = NullPointerException.class)
   public void guardedScheduler_null() {
-    Scheduler.guardedScheduler(null);
+    assertThrows(NullPointerException.class, () -> Scheduler.guardedScheduler(null));
   }
 
   @Test
@@ -136,10 +134,9 @@ public final class SchedulerTest {
 
   /* --------------- ScheduledExecutorService --------------- */
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = NullPointerException.class)
+  @Test
   public void scheduledExecutorService_null() {
-    Scheduler.forScheduledExecutorService(null);
+    assertThrows(NullPointerException.class, () -> Scheduler.forScheduledExecutorService(null));
   }
 
   @Test

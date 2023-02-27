@@ -20,6 +20,7 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -63,10 +64,8 @@ public final class CaffeineCachingProviderTest {
   @Test
   public void loadClass_notFound() {
     runWithClassloader(provider -> {
-      try {
-        provider.getDefaultClassLoader().loadClass("a.b.c");
-        Assert.fail();
-      } catch (ClassNotFoundException expected) {}
+      assertThrows(ClassNotFoundException.class, () ->
+          provider.getDefaultClassLoader().loadClass("a.b.c"));
     });
   }
 

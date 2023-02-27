@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.integration;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.Mockito.when;
@@ -30,7 +31,6 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 
 import org.mockito.Mockito;
-import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -58,30 +58,20 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test(dataProvider = "throwables")
-  @SuppressWarnings("CheckReturnValue")
   public void load_failure(Throwable throwable) {
-    try {
-      when(cacheLoader.load(any())).thenThrow(throwable);
-      jcacheLoading.get(1);
-      Assert.fail();
-    } catch (CacheLoaderException e) {
-      if (e != throwable) {
-        assertThat(e).hasCauseThat().isSameInstanceAs(throwable);
-      }
+    when(cacheLoader.load(any())).thenThrow(throwable);
+    var e = assertThrows(CacheLoaderException.class, () -> jcacheLoading.get(1));
+    if (e != throwable) {
+      assertThat(e).hasCauseThat().isSameInstanceAs(throwable);
     }
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void load_failure_expiry() {
-    try {
-      when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
-      when(cacheLoader.load(any())).thenReturn(-1);
-      jcacheLoading.get(1);
-      Assert.fail();
-    } catch (CacheLoaderException e) {
-      assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
-    }
+    when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
+    when(cacheLoader.load(any())).thenReturn(-1);
+    var e = assertThrows(CacheLoaderException.class, () -> jcacheLoading.get(1));
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -94,11 +84,10 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
     assertThat(result).containsExactly(1, -1, 2, -2, 3, -3);
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = CacheLoaderException.class)
+  @Test
   public void loadAll_null() {
     when(cacheLoader.loadAll(anyIterable())).thenReturn(null);
-    jcacheLoading.getAll(Set.of(1, 2, 3));
+    assertThrows(CacheLoaderException.class, () -> jcacheLoading.getAll(Set.of(1, 2, 3)));
   }
 
   @Test
@@ -109,30 +98,20 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test(dataProvider = "throwables")
-  @SuppressWarnings("CheckReturnValue")
   public void loadAll_failure(Throwable throwable) {
-    try {
-      when(cacheLoader.loadAll(any())).thenThrow(throwable);
-      jcacheLoading.getAll(Set.of(1, 2, 3));
-      Assert.fail();
-    } catch (CacheLoaderException e) {
-      if (e != throwable) {
-        assertThat(e).hasCauseThat().isSameInstanceAs(throwable);
-      }
+    when(cacheLoader.loadAll(any())).thenThrow(throwable);
+    var e = assertThrows(CacheLoaderException.class, () -> jcacheLoading.getAll(Set.of(1, 2, 3)));
+    if (e != throwable) {
+      assertThat(e).hasCauseThat().isSameInstanceAs(throwable);
     }
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void loadAll_failure_expiry() {
-    try {
-      when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
-      when(cacheLoader.loadAll(anyIterable())).thenReturn(Map.of(1, 1, 2, 2));
-      jcacheLoading.getAll(Set.of(1, 2, 3));
-      Assert.fail();
-    } catch (CacheLoaderException e) {
-      assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
-    }
+    when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
+    when(cacheLoader.loadAll(anyIterable())).thenReturn(Map.of(1, 1, 2, 2));
+    var e = assertThrows(CacheLoaderException.class, () -> jcacheLoading.getAll(Set.of(1, 2, 3)));
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
   }
 
   @DataProvider(name = "throwables")

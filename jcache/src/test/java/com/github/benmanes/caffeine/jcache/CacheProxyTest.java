@@ -14,6 +14,7 @@
 package com.github.benmanes.caffeine.jcache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -33,7 +34,6 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 
 import org.mockito.Mockito;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
@@ -61,39 +61,34 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"CheckReturnValue", "ObjectToString", "unchecked"})
+  @SuppressWarnings({"ObjectToString", "unchecked"})
   public void getConfiguration_immutable() {
     var config = jcache.getConfiguration(CaffeineConfiguration.class);
-    List<Runnable> modifiers = List.of(
-        () -> config.getCacheEntryListenerConfigurations().iterator().remove(),
-        () -> config.addCacheEntryListenerConfiguration(null),
-        () -> config.setCacheLoaderFactory(null),
-        () -> config.setCacheWriterFactory(null),
-        () -> config.setCopierFactory(null),
-        () -> config.setExecutorFactory(null),
-        () -> config.setExpireAfterAccess(OptionalLong.empty()),
-        () -> config.setExpireAfterWrite(OptionalLong.empty()),
-        () -> config.setExpiryFactory(Optional.empty()),
-        () -> config.setExpiryPolicyFactory(null),
-        () -> config.setManagementEnabled(false),
-        () -> config.setMaximumSize(OptionalLong.empty()),
-        () -> config.setMaximumWeight(OptionalLong.empty()),
-        () -> config.setNativeStatisticsEnabled(false),
-        () -> config.setReadThrough(false),
-        () -> config.setRefreshAfterWrite(OptionalLong.empty()),
-        () -> config.setSchedulerFactory(null),
-        () -> config.setStatisticsEnabled(false),
-        () -> config.setStoreByValue(false),
-        () -> config.setTickerFactory(null),
-        () -> config.setTypes(String.class, String.class),
-        () -> config.setWeigherFactory(Optional.empty()),
-        () -> config.setWriteThrough(false));
-    for (var modifier : modifiers) {
-      try {
-        modifier.run();
-        Assert.fail();
-      } catch (UnsupportedOperationException expected) {}
-    }
+    var type = UnsupportedOperationException.class;
+
+    assertThrows(type, () -> config.getCacheEntryListenerConfigurations().iterator().remove());
+    assertThrows(type, () -> config.addCacheEntryListenerConfiguration(null));
+    assertThrows(type, () -> config.setCacheLoaderFactory(null));
+    assertThrows(type, () -> config.setCacheWriterFactory(null));
+    assertThrows(type, () -> config.setCopierFactory(null));
+    assertThrows(type, () -> config.setExecutorFactory(null));
+    assertThrows(type, () -> config.setExpireAfterAccess(OptionalLong.empty()));
+    assertThrows(type, () -> config.setExpireAfterWrite(OptionalLong.empty()));
+    assertThrows(type, () -> config.setExpiryFactory(Optional.empty()));
+    assertThrows(type, () -> config.setExpiryPolicyFactory(null));
+    assertThrows(type, () -> config.setManagementEnabled(false));
+    assertThrows(type, () -> config.setMaximumSize(OptionalLong.empty()));
+    assertThrows(type, () -> config.setMaximumWeight(OptionalLong.empty()));
+    assertThrows(type, () -> config.setNativeStatisticsEnabled(false));
+    assertThrows(type, () -> config.setReadThrough(false));
+    assertThrows(type, () -> config.setRefreshAfterWrite(OptionalLong.empty()));
+    assertThrows(type, () -> config.setSchedulerFactory(null));
+    assertThrows(type, () -> config.setStatisticsEnabled(false));
+    assertThrows(type, () -> config.setStoreByValue(false));
+    assertThrows(type, () -> config.setTickerFactory(null));
+    assertThrows(type, () -> config.setTypes(String.class, String.class));
+    assertThrows(type, () -> config.setWeigherFactory(Optional.empty()));
+    assertThrows(type, () -> config.setWriteThrough(false));
 
     assertThat(config).isEqualTo(jcacheConfiguration);
     assertThat(config.toString()).isEqualTo(jcacheConfiguration.toString());
@@ -113,10 +108,9 @@ public final class CacheProxyTest extends AbstractJCacheTest {
         .isEqualTo(List.of(configuration).toString());
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void unwrap_fail() {
-    jcache.unwrap(CaffeineConfiguration.class);
+    assertThrows(IllegalArgumentException.class, () -> jcache.unwrap(CaffeineConfiguration.class));
   }
 
   @Test
@@ -127,17 +121,18 @@ public final class CacheProxyTest extends AbstractJCacheTest {
         .isSameInstanceAs(jcache.cache);
   }
 
-  @SuppressWarnings({"CheckReturnValue", "serial"})
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void unwrap_configuration() {
+    @SuppressWarnings("serial")
     abstract class Dummy implements Configuration<Integer, Integer> {};
-    jcache.getConfiguration(Dummy.class);
+    assertThrows(IllegalArgumentException.class, () -> jcache.getConfiguration(Dummy.class));
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void unwrap_entry() {
     jcache.put(KEY_1, VALUE_1);
-    jcache.iterator().next().unwrap(String.class);
+    var item = jcache.iterator().next();
+    assertThrows(IllegalArgumentException.class, () -> item.unwrap(String.class));
   }
 
   @Test

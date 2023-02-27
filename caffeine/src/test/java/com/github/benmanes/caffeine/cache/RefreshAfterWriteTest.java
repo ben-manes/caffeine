@@ -32,6 +32,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThrows;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.time.Duration;
@@ -85,7 +86,6 @@ public final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
   public void refreshIfNeeded_nonblocking(CacheContext context) {
@@ -110,12 +110,14 @@ public final class RefreshAfterWriteTest {
     });
     cache.put(key, original);
     context.ticker().advance(duration);
-    ConcurrentTestHarness.execute(() -> cache.get(key));
+    ConcurrentTestHarness.execute(() -> assertThat(cache.get(key)).isAnyOf(original, refresh1));
     await().untilAtomic(reloads, is(1));
 
     assertThat(cache.get(key)).isEqualTo(original);
     refresh.set(true);
-    cache.get(key);
+
+    Int refreshed = cache.get(key);
+    assertThat(refreshed).isAnyOf(original, refresh1);
 
     await().untilAsserted(() -> assertThat(reloads.get()).isEqualTo(1));
     await().untilAsserted(() -> assertThat(cache).containsEntry(key, refresh1));
@@ -939,11 +941,13 @@ public final class RefreshAfterWriteTest {
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(1);
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
   public void setRefreshAfter_negative(Cache<Int, Int> cache,
       CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
-    refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(-2));
+    var duration = Duration.ofMinutes(-2);
+    assertThrows(IllegalArgumentException.class, () ->
+        refreshAfterWrite.setRefreshesAfter(duration));
   }
 
   @Test(dataProvider = "caches")

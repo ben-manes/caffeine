@@ -74,33 +74,36 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void reload() {
-    jcache.invoke(KEY_1, this::process);
+    var value1 = jcache.invoke(KEY_1, this::process);
     assertThat(loads).isEqualTo(1);
+    assertThat(value1).isNull();
 
     ticker.advance(1, TimeUnit.MINUTES);
-    jcache.invoke(KEY_1, this::process);
+    var value2 = jcache.invoke(KEY_1, this::process);
     assertThat(loads).isEqualTo(1);
+    assertThat(value2).isNull();
 
     // Expire the entry
     ticker.advance(5, TimeUnit.MINUTES);
 
-    jcache.invoke(KEY_1, this::process);
+    var value3 = jcache.invoke(KEY_1, this::process);
     assertThat(loads).isEqualTo(2);
+    assertThat(value3).isNull();
 
     ticker.advance(1, TimeUnit.MINUTES);
-    jcache.invoke(KEY_1, this::process);
+    var value4 = jcache.invoke(KEY_1, this::process);
     assertThat(loads).isEqualTo(2);
+    assertThat(value4).isNull();
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void writeOccursForInitialLoadOfEntry() {
     map.put(KEY_1, 100);
-    jcache.invoke(KEY_1, this::process);
-    assertThat(loads).isEqualTo(1);
+    var value = jcache.invoke(KEY_1, this::process);
     assertThat(writes).isEqualTo(1);
+    assertThat(loads).isEqualTo(1);
+    assertThat(value).isNull();
   }
 
   private Object process(MutableEntry<Integer, Integer> entry, Object... arguments) {

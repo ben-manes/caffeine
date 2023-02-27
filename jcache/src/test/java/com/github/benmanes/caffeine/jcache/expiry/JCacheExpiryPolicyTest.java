@@ -50,9 +50,8 @@ public final class JCacheExpiryPolicyTest {
   }
 
   @Test
-  @SuppressWarnings("TruthIncompatibleType")
   public void equals_wrongType() {
-    assertThat(eternal).isNotEqualTo(1);
+    assertThat(eternal.equals(new Object())).isFalse();
   }
 
   @Test

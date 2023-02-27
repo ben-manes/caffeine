@@ -21,12 +21,14 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.ass
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static org.junit.Assert.assertThrows;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.time.Duration;
@@ -37,7 +39,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -72,14 +73,15 @@ public final class ExpireAfterWriteTest {
   /* --------------- Cache --------------- */
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE },
       expireAfterWrite = { Expire.DISABLED, Expire.ONE_MINUTE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
   public void getIfPresent(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.getIfPresent(context.firstKey());
+    var value = cache.getIfPresent(context.firstKey());
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getIfPresent(context.firstKey())).isNull();
 
@@ -90,16 +92,18 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
   public void get(Cache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> mappingFunction = context.original()::get;
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.get(context.firstKey(), mappingFunction);
+    var value = cache.get(context.firstKey(), mappingFunction);
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+
     context.ticker().advance(45, TimeUnit.SECONDS);
-    cache.get(context.lastKey(), mappingFunction); // recreated
+    var recreated = cache.get(context.lastKey(), mappingFunction);
+    assertThat(recreated).isEqualTo(context.lastKey().negate());
 
     cache.cleanUp();
     assertThat(cache).hasSize(1);
@@ -108,13 +112,15 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
   public void getAllPresent(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.getAllPresent(context.firstMiddleLastKeys());
+    var results = cache.getAllPresent(context.firstMiddleLastKeys());
+    assertThat(results).containsExactlyEntriesIn(Maps.filterKeys(
+        context.original(), context.firstMiddleLastKeys()::contains));
+
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getAllPresent(context.firstMiddleLastKeys())).isExhaustivelyEmpty();
 
@@ -150,14 +156,13 @@ public final class ExpireAfterWriteTest {
   /* --------------- LoadingCache --------------- */
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
   public void get_loading(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.get(context.firstKey());
-    cache.get(context.absentKey());
+    assertThat(cache.get(context.firstKey())).isEqualTo(context.original().get(context.firstKey()));
+    assertThat(cache.get(context.absentKey())).isEqualTo(context.absentKey().negate());
     context.ticker().advance(45, TimeUnit.SECONDS);
 
     cache.cleanUp();
@@ -197,7 +202,8 @@ public final class ExpireAfterWriteTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
   public void getIfPresent(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.getIfPresent(context.firstKey()).join();
+    assertThat(cache.getIfPresent(context.firstKey()))
+        .succeedsWith(context.original().get(context.firstKey()));
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache).doesNotContainKey(context.firstKey());
     assertThat(cache).doesNotContainKey(context.lastKey());
@@ -230,14 +236,14 @@ public final class ExpireAfterWriteTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
   public void getIfPresentQuietly(Cache<Int, Int> cache, CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
     var original = expireAfterWrite.ageOf(context.firstKey()).orElseThrow();
     var advancement = Duration.ofSeconds(30);
     context.ticker().advance(advancement);
-    cache.policy().getIfPresentQuietly(context.firstKey());
+    assertThat(cache.policy().getIfPresentQuietly(context.firstKey()))
+        .isEqualTo(context.original().get(context.firstKey()));
     var current = expireAfterWrite.ageOf(context.firstKey()).orElseThrow();
     assertThat(current.minus(advancement)).isEqualTo(original);
   }
@@ -256,11 +262,12 @@ public final class ExpireAfterWriteTest {
     assertThat(expireAfterWrite.getExpiresAfter()).isEqualTo(Duration.ofMinutes(1));
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void setExpiresAfter_negative(Cache<Int, Int> cache, CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.setExpiresAfter(Duration.ofMinutes(-2));
+    assertThrows(IllegalArgumentException.class, () ->
+        expireAfterWrite.setExpiresAfter(Duration.ofMinutes(-2)));
   }
 
   @Test(dataProvider = "caches")
@@ -340,19 +347,19 @@ public final class ExpireAfterWriteTest {
 
   /* --------------- Policy: oldest --------------- */
 
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void oldest_unmodifiable(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.oldest(Integer.MAX_VALUE).clear();
+    var results = expireAfterWrite.oldest(Integer.MAX_VALUE);
+    assertThrows(UnsupportedOperationException.class, results::clear);
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void oldest_negative(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.oldest(-1);
+    assertThrows(IllegalArgumentException.class, () -> expireAfterWrite.oldest(-1));
   }
 
   @Test(dataProvider = "caches")
@@ -389,12 +396,11 @@ public final class ExpireAfterWriteTest {
     assertThat(oldest).containsExactlyEntriesIn(context.original());
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_null(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.oldest(null);
+    assertThrows(NullPointerException.class, () -> expireAfterWrite.oldest(null));
   }
 
   @Test(dataProvider = "caches")
@@ -406,36 +412,34 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_throwsException(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
     var expected = new IllegalStateException();
-    try {
-      expireAfterWrite.oldest(stream -> { throw expected; });
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).isSameInstanceAs(expected);
-    }
+    var actual = assertThrows(IllegalStateException.class, () ->
+        expireAfterWrite.oldest(stream -> { throw expected; }));
+    assertThat(actual).isSameInstanceAs(expected);
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_concurrentModification(Cache<Int, Int> cache,
       CacheContext context, @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.oldest(stream -> {
-      cache.put(context.absentKey(), context.absentValue());
-      return stream.count();
+    assertThrows(ConcurrentModificationException.class, () -> {
+      expireAfterWrite.oldest(stream -> {
+        cache.put(context.absentKey(), context.absentValue());
+        throw assertThrows(ConcurrentModificationException.class, stream::count);
+      });
     });
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class,
-      expectedExceptionsMessageRegExp = "source already consumed or closed")
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_closed(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.oldest(stream -> stream).forEach(e -> {});
+    var stream = expireAfterWrite.oldest(identity());
+    var exception = assertThrows(IllegalStateException.class, () -> stream.forEach(e -> {}));
+    assertThat(exception).hasMessageThat().isEqualTo("source already consumed or closed");
   }
 
   @Test(dataProvider = "caches")
@@ -491,19 +495,19 @@ public final class ExpireAfterWriteTest {
 
   /* --------------- Policy: youngest --------------- */
 
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void youngest_unmodifiable(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.youngest(Integer.MAX_VALUE).clear();
+    var results = expireAfterWrite.youngest(Integer.MAX_VALUE);
+    assertThrows(UnsupportedOperationException.class, results::clear);
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void youngest_negative(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.youngest(-1);
+    assertThrows(IllegalArgumentException.class, () -> expireAfterWrite.youngest(-1));
   }
 
   @Test(dataProvider = "caches")
@@ -541,12 +545,11 @@ public final class ExpireAfterWriteTest {
     assertThat(youngest).containsExactlyEntriesIn(context.original());
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_null(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.youngest(null);
+    assertThrows(NullPointerException.class, () -> expireAfterWrite.youngest(null));
   }
 
   @Test(dataProvider = "caches")
@@ -558,36 +561,34 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_throwsException(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
     var expected = new IllegalStateException();
-    try {
-      expireAfterWrite.youngest(stream -> { throw expected; });
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).isSameInstanceAs(expected);
-    }
+    var actual = assertThrows(IllegalStateException.class, () ->
+        expireAfterWrite.youngest(stream -> { throw expected; }));
+    assertThat(actual).isSameInstanceAs(expected);
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_concurrentModification(Cache<Int, Int> cache,
       CacheContext context, @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.youngest(stream -> {
-      cache.put(context.absentKey(), context.absentValue());
-      return stream.count();
+    assertThrows(ConcurrentModificationException.class, () -> {
+      expireAfterWrite.youngest(stream -> {
+        cache.put(context.absentKey(), context.absentValue());
+        throw assertThrows(ConcurrentModificationException.class, stream::count);
+      });
     });
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class,
-      expectedExceptionsMessageRegExp = "source already consumed or closed")
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_closed(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    expireAfterWrite.youngest(stream -> stream).forEach(e -> {});
+    var stream = expireAfterWrite.youngest(identity());
+    var exception = assertThrows(IllegalStateException.class, () -> stream.forEach(e -> {}));
+    assertThat(exception).hasMessageThat().isEqualTo("source already consumed or closed");
   }
 
   @Test(dataProvider = "caches")

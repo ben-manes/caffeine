@@ -50,8 +50,10 @@ import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
@@ -66,6 +68,7 @@ import static uk.org.lidalia.slf4jext.Level.ERROR;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
 import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Arrays;
@@ -83,12 +86,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -146,12 +149,12 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, removalListener = Listener.MOCKITO)
   public void clear_pendingWrites(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var populate = new boolean[] { true };
+    var populated = new boolean[1];
     Answer<?> fillWriteBuffer = invocation -> {
-      while (populate[0] && cache.writeBuffer.offer(() -> {})) {
+      while (!populated[0] && cache.writeBuffer.offer(() -> {})) {
         // ignored
       }
-      populate[0] = false;
+      populated[0] = true;
       return null;
     };
     doAnswer(fillWriteBuffer)
@@ -159,6 +162,7 @@ public final class BoundedLocalCacheTest {
       .onRemoval(any(), any(), any());
 
     cache.clear();
+    assertThat(populated[0]).isTrue();
     assertThat(cache).isExhaustivelyEmpty();
     assertThat(cache.writeBuffer).isEmpty();
   }
@@ -167,14 +171,14 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.IDENTITY,
       population = Population.FULL, removalListener = Listener.MOCKITO)
   public void clear_pendingWrites_reload(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var populate = new boolean[] { true };
+    var populated = new boolean[1];
     Answer<?> fillWriteBuffer = invocation -> {
-      while (populate[0] && cache.writeBuffer.offer(() -> {})) {
+      while (!populated[0] && cache.writeBuffer.offer(() -> {})) {
         // ignored
       }
       var loadingCache = (LoadingCache<?, ?>) context.cache();
       loadingCache.refresh(invocation.getArgument(0));
-      populate[0] = false;
+      populated[0] = true;
       return null;
     };
     doAnswer(fillWriteBuffer)
@@ -182,8 +186,43 @@ public final class BoundedLocalCacheTest {
       .onRemoval(any(), any(), any());
 
     cache.clear();
+    assertThat(populated[0]).isTrue();
     assertThat(cache.writeBuffer).isEmpty();
     assertThat(cache).hasSize(context.initialSize());
+  }
+
+  @Test(dataProvider = "caches", groups = "slow")
+  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.IDENTITY,
+      population = Population.FULL, keys = ReferenceType.WEAK, removalListener = Listener.MOCKITO)
+  public void clear_pendingWrites_weakKeys(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var collected = new boolean[1];
+    var populated = new boolean[1];
+    Answer<?> fillWriteBuffer = invocation -> {
+      while (!populated[0] && cache.writeBuffer.offer(() -> {})) {
+        // ignored
+      }
+      populated[0] = true;
+
+      if (!collected[0]) {
+        context.clear();
+        for (var keyRef : cache.data.keySet()) {
+          var ref = (WeakReference<?>) keyRef;
+          ref.enqueue();
+        }
+        GcFinalization.awaitFullGc();
+        collected[0] = (invocation.getArgument(2, RemovalCause.class) == COLLECTED);
+      }
+      return null;
+    };
+    doAnswer(fillWriteBuffer)
+      .when(context.removalListener())
+      .onRemoval(any(), any(), any());
+
+    cache.clear();
+    assertThat(populated[0]).isTrue();
+    assertThat(collected[0]).isTrue();
+    assertThat(cache.writeBuffer).isEmpty();
   }
 
   /* --------------- Maintenance --------------- */
@@ -246,19 +285,17 @@ public final class BoundedLocalCacheTest {
     });
   }
 
-  @Test(expectedExceptions = IllegalStateException.class)
+  @Test
   public void scheduleAfterWrite_invalidDrainStatus() {
     var cache = new BoundedLocalCache<Object, Object>(
         Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
     var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
-    for (;;) {
-      int state = ThreadLocalRandom.current().nextInt();
-      if (!valid.contains(state)) {
-        cache.drainStatus = state;
-        cache.scheduleAfterWrite();
-        Assert.fail("Should not be valid: " + state);
-      }
-    }
+    var invalid = IntStream.generate(ThreadLocalRandom.current()::nextInt).boxed()
+        .filter(Predicate.not(valid::contains))
+        .findFirst().orElseThrow();
+
+    cache.drainStatus = invalid;
+    assertThrows(IllegalStateException.class, cache::scheduleAfterWrite);
   }
 
   @Test
@@ -325,20 +362,17 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.evictionLock.isLocked()).isFalse();
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalStateException.class)
+  @Test
   public void shouldDrainBuffers_invalidDrainStatus() {
     var cache = new BoundedLocalCache<Object, Object>(
         Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
     var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
-    for (;;) {
-      int state = ThreadLocalRandom.current().nextInt();
-      if (!valid.contains(state)) {
-        cache.drainStatus = state;
-        cache.shouldDrainBuffers(true);
-        Assert.fail("Should not be valid: " + state);
-      }
-    }
+    var invalid = IntStream.generate(ThreadLocalRandom.current()::nextInt).boxed()
+        .filter(Predicate.not(valid::contains))
+        .findFirst().orElseThrow();
+
+    cache.drainStatus = invalid;
+    assertThrows(IllegalStateException.class, () -> cache.shouldDrainBuffers(true));
   }
 
   @Test(dataProvider = "caches")
@@ -2414,80 +2448,77 @@ public final class BoundedLocalCacheTest {
     cache.clear();
     key.decrement();
 
-    try {
-      task.accept(key);
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).hasMessageThat().contains("An invalid state was detected");
-    } finally {
-      cache.data.clear();
-    }
+    var e = assertThrows(IllegalStateException.class, () -> task.accept(key));
+    assertThat(e).hasMessageThat().contains("An invalid state was detected");
+    cache.data.clear();
   }
 
   /* --------------- Miscellaneous --------------- */
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void cacheFactory_invalid() {
-    try {
+    assertThrows(NullPointerException.class, () -> {
       LocalCacheFactory.loadFactory(/* builder */ null, /* loader */ null,
           /* async */ false, /* className */ null);
-      Assert.fail();
-    } catch (NullPointerException expected) {}
-    try {
+    });
+
+    var expected = assertThrows(IllegalStateException.class, () -> {
       LocalCacheFactory.loadFactory(/* builder */ null, /* loader */ null,
           /* async */ false, /* className */ "");
-      Assert.fail();
-    } catch (IllegalStateException expected) {
-      assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
-    }
+    });
+    assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void nodeFactory_invalid() {
-    try {
-      NodeFactory.loadFactory(/* className */ null);
-      Assert.fail();
-    } catch (NullPointerException expected) {}
-    try {
-      NodeFactory.loadFactory(/* className */ "");
-      Assert.fail();
-    } catch (IllegalStateException expected) {
-      assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
-    }
+    assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(/* className */ null));
+
+    var expected = assertThrows(IllegalStateException.class, () ->
+        NodeFactory.loadFactory(/* className */ ""));
+    assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
-  public void unsupported() {
-    var cache = Mockito.mock(BoundedLocalCache.class, InvocationOnMock::callRealMethod);
-    @SuppressWarnings("MethodReferenceUsage")
-    List<Runnable> methods = List.of(
-        () -> cache.accessOrderWindowDeque(),       () -> cache.accessOrderProbationDeque(),
-        () -> cache.accessOrderProtectedDeque(),    () -> cache.writeOrderDeque(),
-        () -> cache.expiresAfterAccessNanos(),      () -> cache.setExpiresAfterAccessNanos(1L),
-        () -> cache.expiresAfterWriteNanos(),       () -> cache.setExpiresAfterWriteNanos(1L),
-        () -> cache.refreshAfterWriteNanos(),       () -> cache.setRefreshAfterWriteNanos(1L),
-        () -> cache.timerWheel(),                   () -> cache.frequencySketch(),
-        () -> cache.maximum(),                      () -> cache.windowMaximum(),
-        () -> cache.mainProtectedMaximum(),         () -> cache.setMaximum(1L),
-        () -> cache.setWindowMaximum(1L),           () -> cache.setMainProtectedMaximum(1L),
-        () -> cache.weightedSize(),                 () -> cache.windowWeightedSize(),
-        () -> cache.mainProtectedWeightedSize(),    () -> cache.setWeightedSize(1L),
-        () -> cache.setWindowWeightedSize(0),       () -> cache.setMainProtectedWeightedSize(1L),
-        () -> cache.hitsInSample(),                 () -> cache.missesInSample(),
-        () -> cache.sampleCount(),                  () -> cache.stepSize(),
-        () -> cache.previousSampleHitRate(),        () -> cache.adjustment(),
-        () -> cache.setHitsInSample(1),             () -> cache.setMissesInSample(1),
-        () -> cache.setSampleCount(1),              () -> cache.setStepSize(1.0),
-        () -> cache.setPreviousSampleHitRate(1.0),  () -> cache.setAdjustment(1L));
-    for (var method : methods) {
-      try {
-        method.run();
-        Assert.fail();
-      } catch (UnsupportedOperationException expected) {}
-    }
+  public void cache_unsupported() {
+    BoundedLocalCache<Object, Object> cache = Mockito.mock(CALLS_REAL_METHODS);
+    var type = UnsupportedOperationException.class;
+
+    assertThrows(type, cache::accessOrderWindowDeque);
+    assertThrows(type, cache::accessOrderProbationDeque);
+    assertThrows(type, cache::accessOrderProtectedDeque);
+    assertThrows(type, cache::writeOrderDeque);
+    assertThrows(type, cache::expiresAfterAccessNanos);
+    assertThrows(type, () -> cache.setExpiresAfterAccessNanos(1L));
+    assertThrows(type, cache::expiresAfterWriteNanos);
+    assertThrows(type, () -> cache.setExpiresAfterWriteNanos(1L));
+    assertThrows(type, cache::refreshAfterWriteNanos);
+    assertThrows(type, () -> cache.setRefreshAfterWriteNanos(1L));
+    assertThrows(type, cache::timerWheel);
+    assertThrows(type, cache::frequencySketch);
+    assertThrows(type, cache::maximum);
+    assertThrows(type, cache::windowMaximum);
+    assertThrows(type, cache::mainProtectedMaximum);
+    assertThrows(type, () -> cache.setMaximum(1L));
+    assertThrows(type, () -> cache.setWindowMaximum(1L));
+    assertThrows(type, () -> cache.setMainProtectedMaximum(1L));
+    assertThrows(type, cache::weightedSize);
+    assertThrows(type, cache::windowWeightedSize);
+    assertThrows(type, cache::mainProtectedWeightedSize);
+    assertThrows(type, () -> cache.setWeightedSize(1L));
+    assertThrows(type, () -> cache.setWindowWeightedSize(0));
+    assertThrows(type, () -> cache.setMainProtectedWeightedSize(1L));
+    assertThrows(type, cache::hitsInSample);
+    assertThrows(type, cache::missesInSample);
+    assertThrows(type, cache::sampleCount);
+    assertThrows(type, cache::stepSize);
+    assertThrows(type, cache::previousSampleHitRate);
+    assertThrows(type, cache::adjustment);
+    assertThrows(type, () -> cache.setHitsInSample(1));
+    assertThrows(type, () -> cache.setMissesInSample(1));
+    assertThrows(type, () -> cache.setSampleCount(1));
+    assertThrows(type, () -> cache.setStepSize(1.0));
+    assertThrows(type, () -> cache.setPreviousSampleHitRate(1.0));
+    assertThrows(type, () -> cache.setAdjustment(1L));
   }
 
   @Test
@@ -2516,55 +2547,49 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void node_unsupported() {
-    @SuppressWarnings("unchecked")
-    Node<Object, Object> node = Mockito.mock(Node.class, InvocationOnMock::callRealMethod);
-    @SuppressWarnings("MethodReferenceUsage")
-    List<Runnable> methods = List.of(
-        () -> node.getPreviousInVariableOrder(),    () -> node.getNextInVariableOrder(),
-        () -> node.setPreviousInVariableOrder(node),() -> node.setNextInVariableOrder(node),
-        () -> node.setPreviousInAccessOrder(node),  () -> node.setNextInAccessOrder(node),
-        () -> node.setPreviousInWriteOrder(node),   () -> node.setNextInWriteOrder(node),
-        () -> node.casVariableTime(1L, 2L),         () -> node.casWriteTime(1L, 2L),
-        () -> node.setQueueType(WINDOW));
-    for (var method : methods) {
-      try {
-        method.run();
-        Assert.fail();
-      } catch (UnsupportedOperationException expected) {}
-    }
+    Node<Object, Object> node = Mockito.mock(CALLS_REAL_METHODS);
+    var type = UnsupportedOperationException.class;
+
+    assertThrows(type, node::getPreviousInVariableOrder);
+    assertThrows(type, node::getNextInVariableOrder);
+    assertThrows(type, () -> node.setPreviousInVariableOrder(node));
+    assertThrows(type, () -> node.setNextInVariableOrder(node));
+    assertThrows(type, () -> node.setPreviousInAccessOrder(node));
+    assertThrows(type, () -> node.setNextInAccessOrder(node));
+    assertThrows(type, () -> node.setPreviousInWriteOrder(node));
+    assertThrows(type, () -> node.setNextInWriteOrder(node));
+    assertThrows(type, () -> node.casVariableTime(1L, 2L));
+    assertThrows(type, () -> node.casWriteTime(1L, 2L));
+    assertThrows(type, () -> node.setQueueType(WINDOW));
   }
 
   @Test
   public void node_ignored() {
-    var node = Mockito.mock(Node.class, InvocationOnMock::callRealMethod);
-    List<Runnable> methods = List.of(() -> node.setVariableTime(1L),
-        () -> node.setAccessTime(1L), () -> node.setWriteTime(1L));
-    for (var method : methods) {
-      method.run();
-    }
+    Node<Object, Object> node = Mockito.mock(CALLS_REAL_METHODS);
+    node.setVariableTime(1L);
+    node.setAccessTime(1L);
+    node.setWriteTime(1L);
   }
 
   @Test
-  @SuppressWarnings({"CheckReturnValue", "unchecked"})
   public void policy_unsupported() {
-    Policy<Object, Object> policy = Mockito.mock(Policy.class, InvocationOnMock::callRealMethod);
-    var eviction = Mockito.mock(Eviction.class, InvocationOnMock::callRealMethod);
-    var fixedExpiration = Mockito.mock(FixedExpiration.class, InvocationOnMock::callRealMethod);
-    var varExpiration = Mockito.mock(VarExpiration.class, InvocationOnMock::callRealMethod);
-    List<Runnable> methods = List.of(() -> policy.getEntryIfPresentQuietly(new Object()),
-        () -> eviction.coldestWeighted(1L), () -> eviction.coldest(identity()),
-        () -> eviction.hottestWeighted(1L), () -> eviction.hottest(identity()),
-        () -> fixedExpiration.oldest(identity()), () -> fixedExpiration.youngest(identity()),
-        () -> varExpiration.compute(new Object(), (k, v) -> v, Duration.ZERO),
-        () -> varExpiration.oldest(identity()), () -> varExpiration.youngest(identity()));
-    for (var method : methods) {
-      try {
-        method.run();
-        Assert.fail();
-      } catch (UnsupportedOperationException expected) {}
-    }
+    Policy<Int, Int> policy = Mockito.mock(CALLS_REAL_METHODS);
+    Eviction<Int, Int> eviction = Mockito.mock(CALLS_REAL_METHODS);
+    VarExpiration<Int, Int> varExpiration = Mockito.mock(CALLS_REAL_METHODS);
+    FixedExpiration<Int, Int> fixedExpiration = Mockito.mock(CALLS_REAL_METHODS);
+
+    var type = UnsupportedOperationException.class;
+    assertThrows(type, () -> policy.getEntryIfPresentQuietly(Int.MAX_VALUE));
+    assertThrows(type, () -> eviction.coldestWeighted(1L));
+    assertThrows(type, () -> eviction.coldest(identity()));
+    assertThrows(type, () -> eviction.hottestWeighted(1L));
+    assertThrows(type, () -> eviction.hottest(identity()));
+    assertThrows(type, () -> fixedExpiration.oldest(identity()));
+    assertThrows(type, () -> fixedExpiration.youngest(identity()));
+    assertThrows(type, () -> varExpiration.oldest(identity()));
+    assertThrows(type, () -> varExpiration.youngest(identity()));
+    assertThrows(type, () -> varExpiration.compute(Int.MAX_VALUE, (k, v) -> v, Duration.ZERO));
   }
 
   @Test

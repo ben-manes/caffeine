@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
 import static com.github.benmanes.caffeine.cache.CaffeineSpec.parse;
+import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -450,31 +452,24 @@ public class CaffeineSpecGuavaTest extends TestCase {
         .testEquals();
   }
 
-  @SuppressWarnings("CheckReturnValue")
   public void testMaximumWeight_withWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumWeight=9000"));
-    builder.weigher((k, v) -> 42).build(k -> null);
+    assertThat(builder.weigher((k, v) -> 42).build(k -> null)).isNotNull();
   }
 
-  @SuppressWarnings("CheckReturnValue")
   public void testMaximumWeight_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumWeight=9000"));
-    try {
-      builder.build(k -> null);
-      fail();
-    } catch (IllegalStateException expected) {}
+    assertThrows(IllegalStateException.class, () -> builder.build(k -> null));
   }
 
-  @SuppressWarnings("CheckReturnValue")
   public void testMaximumSize_withWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumSize=9000"));
-    builder.weigher((k, v) -> 42).build(k -> null);
+    assertThat(builder.weigher((k, v) -> 42).build(k -> null)).isNotNull();
   }
 
-  @SuppressWarnings("CheckReturnValue")
   public void testMaximumSize_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumSize=9000"));
-    builder.build(k -> null);
+    assertThat(builder.build(k -> null)).isNotNull();
   }
 
   public void testCaffeineFrom_string() {

@@ -33,6 +33,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
+import static org.junit.Assert.assertThrows;
 import static uk.org.lidalia.slf4jext.Level.TRACE;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
@@ -49,7 +50,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -72,6 +72,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
@@ -85,18 +86,16 @@ import com.google.common.primitives.Ints;
  */
 @CheckMaxLogLevel(WARN)
 @Listeners(CacheValidationListener.class)
-@SuppressWarnings("FutureReturnValueIgnored")
 @Test(dataProviderClass = CacheProvider.class)
 public final class LoadingCacheTest {
 
   /* --------------- get --------------- */
 
   @CacheSpec
+  @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_null(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.get(null);
+    assertThrows(NullPointerException.class, () -> cache.get(null));
   }
 
   @CheckNoEvictions
@@ -108,45 +107,31 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_absent_throwsException(LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.get(context.absentKey());
-    } finally {
-      assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
-    }
+    assertThrows(IllegalStateException.class, () -> cache.get(context.absentKey()));
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
   }
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(loader = Loader.CHECKED_EXCEPTIONAL)
   public void get_absent_throwsCheckedException(
       LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.get(context.absentKey());
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(e).hasCauseThat().isInstanceOf(ExecutionException.class);
-      assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
-    }
+    var exception = assertThrows(CompletionException.class, () -> cache.get(context.absentKey()));
+    assertThat(exception).hasCauseThat().isInstanceOf(ExecutionException.class);
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
   }
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(compute = Compute.SYNC, loader = Loader.INTERRUPTED)
   public void get_absent_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.get(context.absentKey());
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(Thread.interrupted()).isTrue();
-      assertThat(e).hasCauseThat().isInstanceOf(InterruptedException.class);
-      assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
-    }
+    var exception = assertThrows(CompletionException.class, () -> cache.get(context.absentKey()));
+    assertThat(Thread.interrupted()).isTrue();
+    assertThat(exception).hasCauseThat().isInstanceOf(InterruptedException.class);
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
   }
 
   @CacheSpec
@@ -171,20 +156,19 @@ public final class LoadingCacheTest {
   /* --------------- getAll --------------- */
 
   @CheckNoEvictions
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_null(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.getAll(null);
+    assertThrows(NullPointerException.class, () -> cache.getAll(null));
   }
 
   @CheckNoEvictions
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_nullKey(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.getAll(Collections.singletonList(null));
+    List<Int> keys = Collections.singletonList(null);
+    assertThrows(NullPointerException.class, () -> cache.getAll(keys));
   }
 
   @CheckNoEvictions
@@ -197,19 +181,18 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_MODIFY_KEYS)
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable_keys(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.getAll(context.absentKeys());
+    assertThrows(UnsupportedOperationException.class, () -> cache.getAll(context.absentKeys()));
   }
 
   @CacheSpec
   @CheckNoEvictions
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  @Test(dataProvider = "caches")
   public void getAll_immutable_result(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.getAll(context.firstMiddleLastKeys()).clear();
+    var results = cache.getAll(context.firstMiddleLastKeys());
+    assertThrows(UnsupportedOperationException.class, results::clear);
   }
 
   @CacheSpec
@@ -229,78 +212,62 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NULL)
-  @Test(dataProvider = "caches", expectedExceptions = Exception.class)
   public void getAll_absent_bulkNull(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.getAll(context.absentKeys());
-  }
-
-  @CheckNoEvictions
-  @SuppressWarnings("CheckReturnValue")
-  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
-  public void getAll_absent_throwsExecption(LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.getAll(context.absentKeys());
-    } finally {
-      int misses = context.absentKeys().size();
-      int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
-      assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
-    }
+    var exception = assertThrows(Exception.class, () -> cache.getAll(context.absentKeys()));
+    assertThat(exception).isInstanceOf(
+        context.isGuava() ? InvalidCacheLoadException.class : NullPointerException.class);
   }
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
+  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
+  public void getAll_absent_throwsExecption(LoadingCache<Int, Int> cache, CacheContext context) {
+    assertThrows(IllegalStateException.class, () -> cache.getAll(context.absentKeys()));
+    int misses = context.absentKeys().size();
+    int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
+  }
+
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.CHECKED_EXCEPTIONAL, Loader.BULK_CHECKED_EXCEPTIONAL })
   public void getAll_absent_throwsCheckedExecption(
       LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.getAll(context.absentKeys());
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(e).hasCauseThat().isInstanceOf(ExecutionException.class);
+    var e = assertThrows(CompletionException.class, () -> cache.getAll(context.absentKeys()));
+    assertThat(e).hasCauseThat().isInstanceOf(ExecutionException.class);
 
-      int misses = context.absentKeys().size();
-      int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
-      assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
-    }
-  }
-
-  @CheckNoEvictions
-  @SuppressWarnings("CheckReturnValue")
-  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
-  public void getAll_absent_throwsExecption_iterable(
-      LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.getAll(() -> context.absentKeys().iterator());
-    } finally {
-      int misses = context.absentKeys().size();
-      int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
-      assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
-    }
+    int misses = context.absentKeys().size();
+    int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
   }
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
+  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
+  public void getAll_absent_throwsExecption_iterable(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    assertThrows(IllegalStateException.class, () ->
+        cache.getAll(() -> context.absentKeys().iterator()));
+    int misses = context.absentKeys().size();
+    int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
+  }
+
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.INTERRUPTED, Loader.BULK_INTERRUPTED })
   public void getAll_absent_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.getAll(context.absentKeys());
-      Assert.fail();
-    } catch (CompletionException e) {
-      if (context.isSync()) {
-        assertThat(Thread.interrupted()).isTrue();
-      }
-      assertThat(e).hasCauseThat().isInstanceOf(InterruptedException.class);
-
-      int misses = context.absentKeys().size();
-      int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
-      assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
+    var e = assertThrows(CompletionException.class, () -> cache.getAll(context.absentKeys()));
+    if (context.isSync()) {
+      assertThat(Thread.interrupted()).isTrue();
     }
+    assertThat(e).hasCauseThat().isInstanceOf(InterruptedException.class);
+
+    int misses = context.absentKeys().size();
+    int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
   }
 
   @CheckNoEvictions
@@ -462,10 +429,10 @@ public final class LoadingCacheTest {
   /* --------------- refresh --------------- */
 
   @CheckNoEvictions
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void refresh_null(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.refresh(null);
+    assertThrows(NullPointerException.class, () -> cache.refresh(null));
   }
 
   @CheckNoEvictions
@@ -524,38 +491,30 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions @CheckNoStats
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.REFRESH_EXCEPTIONAL)
   public void refresh_throwsException(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.refresh(context.absentKey());
+    assertThrows(IllegalStateException.class, () -> cache.refresh(context.absentKey()));
   }
 
   @CheckNoEvictions @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.REFRESH_CHECKED_EXCEPTIONAL)
   public void refresh_throwsCheckedException(LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.refresh(context.absentKey());
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(e).hasCauseThat().isInstanceOf(ExecutionException.class);
-    }
+    var e = assertThrows(CompletionException.class, () -> cache.refresh(context.absentKey()));
+    assertThat(e).hasCauseThat().isInstanceOf(ExecutionException.class);
   }
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.REFRESH_INTERRUPTED)
   public void refresh_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.refresh(context.absentKey());
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(Thread.interrupted()).isTrue();
-      assertThat(e).hasCauseThat().isInstanceOf(InterruptedException.class);
+    var e = assertThrows(CompletionException.class, () -> cache.refresh(context.absentKey()));
+    assertThat(Thread.interrupted()).isTrue();
+    assertThat(e).hasCauseThat().isInstanceOf(InterruptedException.class);
 
-      int failures = context.isGuava() ? 1 : 0;
-      assertThat(context).stats().hits(0).misses(0).success(0).failures(failures);
-    }
+    int failures = context.isGuava() ? 1 : 0;
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(failures);
   }
 
   @CheckNoEvictions
@@ -716,8 +675,8 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.EMPTY,
+      executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
   public void refresh_put(CacheContext context) {
     var started = new AtomicBoolean();
     var refresh = new AtomicBoolean();
@@ -757,8 +716,8 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(population = Population.EMPTY,
+      executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
   public void refresh_invalidate(CacheContext context) {
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
@@ -966,7 +925,7 @@ public final class LoadingCacheTest {
     assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refresh_nullFuture_load(CacheContext context) {
     var cache = context.build(new CacheLoader<Int, Int>() {
@@ -977,10 +936,10 @@ public final class LoadingCacheTest {
         return null;
       }
     });
-    cache.refresh(context.absentKey());
+    assertThrows(NullPointerException.class, () -> cache.refresh(context.absentKey()));
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refresh_nullFuture_reload(CacheContext context) {
     var cache = context.build(new CacheLoader<Int, Int>() {
@@ -993,23 +952,24 @@ public final class LoadingCacheTest {
       }
     });
     cache.put(context.absentKey(), context.absentValue());
-    cache.refresh(context.absentKey());
+    assertThrows(NullPointerException.class, () -> cache.refresh(context.absentKey()));
   }
 
   /* --------------- refreshAll --------------- */
 
+  @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void refreshAll_null(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.refreshAll(null);
+    assertThrows(NullPointerException.class, () -> cache.refreshAll(null));
   }
 
+  @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void refreshAll_nullKey(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.refreshAll(Collections.singletonList(null));
+    List<Int> keys = Collections.singletonList(null);
+    assertThrows(NullPointerException.class, () -> cache.refreshAll(keys));
   }
 
   @CacheSpec
@@ -1024,9 +984,10 @@ public final class LoadingCacheTest {
 
   @CacheSpec
   @CheckNoEvictions
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  @Test(dataProvider = "caches")
   public void refreshAll_immutable(LoadingCache<Int, Int> cache, CacheContext context) {
-    cache.refreshAll(context.firstMiddleLastKeys()).join().clear();
+    var results = cache.refreshAll(context.firstMiddleLastKeys()).join();
+    assertThrows(UnsupportedOperationException.class, results::clear);
   }
 
   @CheckNoEvictions
@@ -1068,16 +1029,12 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.REFRESH_INTERRUPTED)
   public void refreshAll_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
-    try {
-      cache.refreshAll(context.absentKeys());
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(Thread.interrupted()).isTrue();
-      assertThat(e).hasCauseThat().isInstanceOf(InterruptedException.class);
+    var e = assertThrows(CompletionException.class, () -> cache.refreshAll(context.absentKeys()));
+    assertThat(Thread.interrupted()).isTrue();
+    assertThat(e).hasCauseThat().isInstanceOf(InterruptedException.class);
 
-      int failures = context.isGuava() ? 1 : 0;
-      assertThat(context).stats().hits(0).misses(0).success(0).failures(failures);
-    }
+    int failures = context.isGuava() ? 1 : 0;
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(failures);
   }
 
   @CheckNoEvictions
@@ -1096,7 +1053,7 @@ public final class LoadingCacheTest {
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refreshAll_nullFuture_load(CacheContext context) {
     var cache = context.build(new CacheLoader<Int, Int>() {
@@ -1107,10 +1064,10 @@ public final class LoadingCacheTest {
         return null;
       }
     });
-    cache.refreshAll(context.absent().keySet());
+    assertThrows(NullPointerException.class, () -> cache.refreshAll(context.absent().keySet()));
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refreshAll_nullFuture_reload(CacheContext context) {
     var cache = context.build(new CacheLoader<Int, Int>() {
@@ -1123,16 +1080,15 @@ public final class LoadingCacheTest {
       }
     });
     cache.put(context.absentKey(), context.absentValue());
-    cache.refreshAll(context.absent().keySet());
+    assertThrows(NullPointerException.class, () -> cache.refreshAll(context.absent().keySet()));
   }
 
   /* --------------- CacheLoader --------------- */
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = UnsupportedOperationException.class)
+  @Test
   public void loadAll() throws Exception {
     CacheLoader<Object, ?> loader = key -> key;
-    loader.loadAll(Set.of());
+    assertThrows(UnsupportedOperationException.class, () -> loader.loadAll(Set.of()));
   }
 
   @Test
@@ -1194,10 +1150,9 @@ public final class LoadingCacheTest {
     assertThat(future).succeedsWith(-1);
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = NullPointerException.class)
+  @Test
   public void bulk_null() {
-    CacheLoader.bulk(null);
+    assertThrows(NullPointerException.class, () -> CacheLoader.bulk(null));
   }
 
   @Test

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
@@ -72,10 +73,10 @@ public final class TypesafeConfigurationTest {
     assertThat(TypesafeConfigurator.from(ConfigFactory.load(), "#")).isEmpty();
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalStateException.class)
+  @Test
   public void invalidCache() {
-    TypesafeConfigurator.from(ConfigFactory.load(), "invalid-cache");
+    assertThrows(IllegalStateException.class, () ->
+        TypesafeConfigurator.from(ConfigFactory.load(), "invalid-cache"));
   }
 
   @Test

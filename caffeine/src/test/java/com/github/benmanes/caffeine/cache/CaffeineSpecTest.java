@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
+import static org.junit.Assert.assertThrows;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -53,22 +54,19 @@ import com.google.common.base.Joiner;
 public final class CaffeineSpecTest {
   static final long UNSET_LONG = UNSET_INT;
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void parseInt_exception() {
-    CaffeineSpec.parseInt("key", "value");
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parseInt("key", "value"));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void parseLong_exception() {
-    CaffeineSpec.parseLong("key", "value");
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parseLong("key", "value"));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void parseTimeUnit_exception() {
-    CaffeineSpec.parseTimeUnit("key", "value");
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parseTimeUnit("key", "value"));
   }
 
   @Test(dataProvider = "caches")

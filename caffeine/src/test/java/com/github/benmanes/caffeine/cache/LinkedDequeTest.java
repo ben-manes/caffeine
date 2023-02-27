@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -218,9 +219,9 @@ public final class LinkedDequeTest {
 
   /* --------------- Get --------------- */
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void getFirst_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    deque.getFirst();
+    assertThrows(NoSuchElementException.class, deque::getFirst);
   }
 
   @Test(dataProvider = "full")
@@ -232,9 +233,9 @@ public final class LinkedDequeTest {
     assertThat(deque.getFirst()).isSameInstanceAs(first);
   }
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void getLast_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    deque.getLast();
+    assertThrows(NoSuchElementException.class, deque::getLast);
   }
 
   @Test(dataProvider = "full")
@@ -248,9 +249,9 @@ public final class LinkedDequeTest {
 
   /* --------------- Element --------------- */
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void element_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    deque.element();
+    assertThrows(NoSuchElementException.class, deque::element);
   }
 
   @Test(dataProvider = "full")
@@ -379,9 +380,9 @@ public final class LinkedDequeTest {
     assertThat(deque).hasSize(SIZE + 1);
   }
 
-  @Test(dataProvider = "full", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "full")
   public void addFirst_whenLinked(LinkedDeque<LinkedValue> deque) {
-    deque.addFirst(deque.peek());
+    assertThrows(IllegalArgumentException.class, () -> deque.addFirst(deque.peek()));
   }
 
   @Test(dataProvider = "empty")
@@ -402,9 +403,9 @@ public final class LinkedDequeTest {
     assertThat(deque).hasSize(SIZE + 1);
   }
 
-  @Test(dataProvider = "full", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "full")
   public void addLast_whenLinked(LinkedDeque<LinkedValue> deque) {
-    deque.addLast(deque.peek());
+    assertThrows(IllegalArgumentException.class, () -> deque.addLast(deque.peek()));
   }
 
   @Test(dataProvider = "empty")
@@ -497,9 +498,9 @@ public final class LinkedDequeTest {
 
   /* --------------- Remove --------------- */
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void remove_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    deque.remove();
+    assertThrows(NoSuchElementException.class, deque::remove);
   }
 
   @Test(dataProvider = "full")
@@ -542,9 +543,9 @@ public final class LinkedDequeTest {
     assertThat(deque).isExhaustivelyEmpty();
   }
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void removeFirst_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    deque.removeFirst();
+    assertThrows(NoSuchElementException.class, deque::removeFirst);
   }
 
   @Test(dataProvider = "full")
@@ -564,9 +565,9 @@ public final class LinkedDequeTest {
     assertThat(deque).isExhaustivelyEmpty();
   }
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void removeLast_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    deque.removeLast();
+    assertThrows(NoSuchElementException.class, deque::removeLast);
   }
 
   @Test(dataProvider = "full")
@@ -672,14 +673,14 @@ public final class LinkedDequeTest {
     assertThat(deque).hasSize(SIZE + 1);
   }
 
-  @Test(dataProvider = "full", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "full")
   public void push_whenLinked(LinkedDeque<LinkedValue> deque) {
-    deque.push(deque.peek());
+    assertThrows(IllegalArgumentException.class, () -> deque.push(deque.peek()));
   }
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void pop_whenEmpty(LinkedDeque<LinkedValue> deque) {
-    deque.pop();
+    assertThrows(NoSuchElementException.class, deque::pop);
   }
 
   @Test(dataProvider = "full")
@@ -701,9 +702,10 @@ public final class LinkedDequeTest {
 
   /* --------------- Iterators --------------- */
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void iterator_noMoreElements(LinkedDeque<LinkedValue> deque) {
-    deque.iterator().next();
+    var iterator = deque.iterator();
+    assertThrows(NoSuchElementException.class, iterator::next);
   }
 
   @Test(dataProvider = "empty")
@@ -737,17 +739,18 @@ public final class LinkedDequeTest {
     assertThat(deque).hasSize(SIZE - 1);
   }
 
-  @Test(dataProvider = "full", expectedExceptions = IllegalStateException.class)
+  @Test(dataProvider = "full")
   public void iterator_removal_exception(LinkedDeque<LinkedValue> deque) {
     var iterator = deque.iterator();
     iterator.next();
     iterator.remove();
-    iterator.remove();
+    assertThrows(IllegalStateException.class, iterator::remove);
   }
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void descendingIterator_noMoreElements(LinkedDeque<LinkedValue> deque) {
-    deque.descendingIterator().next();
+    var iterator = deque.descendingIterator();
+    assertThrows(NoSuchElementException.class, iterator::next);
   }
 
   @Test(dataProvider = "empty")
@@ -800,9 +803,10 @@ public final class LinkedDequeTest {
     assertThat(iterator.peek()).isNull();
   }
 
-  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty")
   public void concat_noMoreElements(LinkedDeque<LinkedValue> deque) {
-    PeekingIterator.concat(deque.iterator(), deque.iterator()).next();
+    var iterator = PeekingIterator.concat(deque.iterator(), deque.iterator());
+    assertThrows(NoSuchElementException.class, iterator::next);
   }
 
   @Test(dataProvider = "full")

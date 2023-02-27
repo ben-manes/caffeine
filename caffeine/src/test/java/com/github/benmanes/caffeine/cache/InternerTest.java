@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
@@ -63,10 +64,9 @@ public final class InternerTest extends TestCase {
         .createTestSuite();
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "interners", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "interners")
   public void intern_null(Interner<Int> interner) {
-    interner.intern(null);
+    assertThrows(NullPointerException.class, () -> interner.intern(null));
   }
 
   @Test(dataProvider = "interners")

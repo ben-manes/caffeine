@@ -29,6 +29,7 @@ import static com.google.common.base.Functions.identity;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.util.Map.entry;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,7 +51,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -1032,12 +1032,10 @@ public final class ExpirationTest {
       expireAfterWrite = { Expire.DISABLED, Expire.ONE_MINUTE })
   public void computeIfAbsent_error(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(2, TimeUnit.MINUTES);
-    try {
+    assertThrows(IllegalStateException.class, () -> {
       cache.asMap().computeIfAbsent(context.firstKey(),
           key -> { throw new IllegalStateException(); });
-      Assert.fail();
-    } catch (IllegalStateException expected) {}
-
+    });
     assertThat(cache.policy().expireAfterAccess()
         .flatMap(policy -> policy.ageOf(context.firstKey()))).isEmpty();
     assertThat(cache.policy().expireAfterWrite()
@@ -1140,11 +1138,10 @@ public final class ExpirationTest {
         .flatMap(policy -> policy.ageOf(context.firstKey()));
     var variable = cache.policy().expireVariably()
         .flatMap(policy -> policy.getExpiresAfter(context.firstKey()));
-    try {
+    assertThrows(IllegalStateException.class, () -> {
       cache.asMap().computeIfPresent(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); });
-      Assert.fail();
-    } catch (IllegalStateException expected) {}
+    });
 
     assertThat(access).isEqualTo(cache.policy().expireAfterAccess()
         .flatMap(policy -> policy.ageOf(context.firstKey())));
@@ -1257,11 +1254,10 @@ public final class ExpirationTest {
       expireAfterWrite = { Expire.DISABLED, Expire.ONE_MINUTE })
   public void compute_absent_error(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(2, TimeUnit.MINUTES);
-    try {
+    assertThrows(IllegalStateException.class, () -> {
       cache.asMap().compute(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); });
-      Assert.fail();
-    } catch (IllegalStateException expected) {}
+    });
 
     assertThat(cache.policy().expireAfterAccess()
         .flatMap(policy -> policy.ageOf(context.firstKey()))).isEmpty();
@@ -1283,11 +1279,10 @@ public final class ExpirationTest {
         .flatMap(policy -> policy.ageOf(context.firstKey()));
     var variable = cache.policy().expireVariably()
         .flatMap(policy -> policy.getExpiresAfter(context.firstKey()));
-    try {
+    assertThrows(IllegalStateException.class, () -> {
       cache.asMap().compute(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); });
-      Assert.fail();
-    } catch (IllegalStateException expected) {}
+    });
 
     assertThat(access).isEqualTo(cache.policy().expireAfterAccess()
         .flatMap(policy -> policy.ageOf(context.firstKey())));

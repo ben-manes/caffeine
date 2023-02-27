@@ -12,13 +12,7 @@ buildscript {
 
   repositories {
     mavenCentral()
-    gradlePluginPortal {
-      metadataSources {
-        ignoreGradleMetadataRedirection()
-        mavenPom()
-        artifact()
-      }
-    }
+    gradlePluginPortal()
   }
 
   dependencies {

@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import junit.framework.TestCase;
 
@@ -44,6 +45,7 @@ import junit.framework.TestCase;
 public class LocalLoadingCacheTest extends TestCase {
   static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0);
 
+  @CanIgnoreReturnValue
   private static <K, V> LoadingCache<K, V> makeCache(
       Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
     return CaffeinatedGuava.build(builder, loader);
@@ -55,7 +57,6 @@ public class LocalLoadingCacheTest extends TestCase {
 
   // constructor tests
 
-  @SuppressWarnings("CheckReturnValue")
   public void testComputingFunction() {
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
       @Override

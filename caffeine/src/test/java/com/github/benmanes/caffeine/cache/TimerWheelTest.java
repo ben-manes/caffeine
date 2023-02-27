@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Locale.US;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
@@ -48,7 +49,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.testng.Assert;
 import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -166,19 +166,15 @@ public final class TimerWheelTest {
 
   @Test
   public void advance_exception() {
-    doThrow(new IllegalStateException())
+    doThrow(new IllegalArgumentException())
         .when(cache).evictEntry(captor.capture(), any(), anyLong());
     var timer = new Timer(timerWheel.nanos + SPANS[1]);
 
     timerWheel.nanos = 0L;
     timerWheel.schedule(timer);
-    try {
-      timerWheel.advance(cache, Long.MAX_VALUE);
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(timerWheel.nanos).isEqualTo(0);
-      assertThat(timerWheel.wheel[1][1].getNextInVariableOrder()).isSameInstanceAs(timer);
-    }
+    assertThrows(IllegalArgumentException.class, () -> timerWheel.advance(cache, Long.MAX_VALUE));
+    assertThat(timerWheel.wheel[1][1].getNextInVariableOrder()).isSameInstanceAs(timer);
+    assertThat(timerWheel.nanos).isEqualTo(0);
   }
 
   @Test(dataProvider = "clock")
@@ -442,10 +438,7 @@ public final class TimerWheelTest {
     iterator.next();
     assertThat(iterator.hasNext()).isFalse();
 
-    try {
-      iterator.next();
-      Assert.fail();
-    } catch (NoSuchElementException expected) {}
+    assertThrows(NoSuchElementException.class, iterator::next);
   }
 
   @DataProvider(name = "iterator")
@@ -514,16 +507,10 @@ public final class TimerWheelTest {
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void sentinel_unsupported() {
     var node = new Sentinel<>();
-    List<Runnable> methods = List.of(node::getKeyReference, node::getValueReference);
-    for (var method : methods) {
-      try {
-        method.run();
-        Assert.fail();
-      } catch (UnsupportedOperationException expected) {}
-    }
+    assertThrows(UnsupportedOperationException.class, node::getKeyReference);
+    assertThrows(UnsupportedOperationException.class, node::getValueReference);
   }
 
   /** Returns a snapshot roughly ordered by the expiration time. */

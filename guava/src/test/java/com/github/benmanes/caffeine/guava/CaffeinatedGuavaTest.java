@@ -16,16 +16,14 @@
 package com.github.benmanes.caffeine.guava;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.lang.reflect.Constructor;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 
-import org.junit.Assert;
-
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache.CacheLoaderException;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.CaffeinatedLoader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalBulkLoader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalSingleLoader;
@@ -70,72 +68,56 @@ public final class CaffeinatedGuavaTest extends TestCase {
   }
 
   public void testReload_interrupted() {
-    try {
-      LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
-          Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
-          new CacheLoader<Integer, Integer>() {
-            @Override public Integer load(Integer key) throws InterruptedException {
-              throw new InterruptedException();
-            }
-          });
-      cache.put(1, 1);
-      cache.refresh(1);
-    } catch (CacheLoaderException e) {
-      assertTrue(Thread.currentThread().isInterrupted());
-    }
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
+        new CacheLoader<Integer, Integer>() {
+          @Override public Integer load(Integer key) throws InterruptedException {
+            throw new InterruptedException();
+          }
+        });
+    cache.put(1, 1);
+
+    // Unlike Guava, Caffeine does not leak the exception to the caller
+    cache.refresh(1);
   }
 
   public void testReload_throwable() {
-    try {
-      LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
-          Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
-          new CacheLoader<Integer, Integer>() {
-            @Override public Integer load(Integer key) throws Exception {
-              throw new Exception();
-            }
-          });
-      cache.put(1, 1);
-      cache.refresh(1);
-    } catch (CacheLoaderException e) {
-      assertTrue(Thread.currentThread().isInterrupted());
-    }
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
+        new CacheLoader<Integer, Integer>() {
+          @Override public Integer load(Integer key) throws Exception {
+            throw new Exception();
+          }
+        });
+    cache.put(1, 1);
+
+    // Unlike Guava, Caffeine does not leak the exception to the caller
+    cache.refresh(1);
   }
 
   public void testCacheLoader_null() throws Exception {
-    try {
-      CaffeinatedGuava.caffeinate(null);
-      Assert.fail();
-    } catch (NullPointerException expected) {}
+    assertThrows(NullPointerException.class, () -> CaffeinatedGuava.caffeinate(null));
 
-    try {
-      var caffeine = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> null));
-      caffeine.load(1);
-      Assert.fail();
-    } catch (InvalidCacheLoadException expected) {}
+    var caffeine1 = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> null));
+    assertThrows(InvalidCacheLoadException.class, () -> caffeine1.load(1));
 
-    try {
-      var caffeine = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> null));
-      caffeine.asyncReload(1, 2, Runnable::run).join();
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(e).hasCauseThat().isInstanceOf(InvalidCacheLoadException.class);
-    }
+    var caffeine2 = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> null));
+    var e1 = assertThrows(CompletionException.class, () ->
+        caffeine2.asyncReload(1, 2, Runnable::run).join());
+    assertThat(e1).hasCauseThat().isInstanceOf(InvalidCacheLoadException.class);
 
-    try {
-      var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
-        @Override public Integer load(Integer key) {
-          throw new UnsupportedOperationException();
-        }
-        @Override
-        public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
-          return null;
-        }
-      });
-      caffeine.asyncReload(1, 2, Runnable::run).join();
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(e).hasCauseThat().isInstanceOf(InvalidCacheLoadException.class);
-    }
+    var caffeine3 = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override
+      public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
+        return null;
+      }
+    });
+    var e2 = assertThrows(CompletionException.class, () ->
+        caffeine3.asyncReload(1, 2, Runnable::run).join());
+    assertThat(e2).hasCauseThat().isInstanceOf(InvalidCacheLoadException.class);
   }
 
   public void testCacheLoader_exception() throws Exception {
@@ -155,24 +137,15 @@ public final class CaffeinatedGuavaTest extends TestCase {
       }
     };
     var caffeine = CaffeinatedGuava.caffeinate(guava);
-    try {
-      caffeine.load(1);
-      Assert.fail();
-    } catch (Exception e) {
-      assertThat(e).isSameInstanceAs(error);
-    }
-    try {
-      caffeine.loadAll(Set.of(1, 2));
-      Assert.fail();
-    } catch (Exception e) {
-      assertThat(e).isSameInstanceAs(error);
-    }
-    try {
-      caffeine.asyncReload(1, 2, Runnable::run).join();
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(e).hasCauseThat().isSameInstanceAs(error);
-    }
+    var e1 = assertThrows(error.getClass(), () -> caffeine.load(1));
+    assertThat(e1).isSameInstanceAs(error);
+
+    var e2 = assertThrows(error.getClass(), () -> caffeine.loadAll(Set.of(1, 2)));
+    assertThat(e2).isSameInstanceAs(error);
+
+    var e3 = assertThrows(CompletionException.class, () ->
+        caffeine.asyncReload(1, 2, Runnable::run).join());
+    assertThat(e3).hasCauseThat().isSameInstanceAs(error);
   }
 
   public void testCacheLoader_single() throws Exception {
@@ -249,12 +222,9 @@ public final class CaffeinatedGuavaTest extends TestCase {
     var error = new IllegalStateException();
     reloader.setException(error);
     assertTrue(future.isCompletedExceptionally());
-    try {
-      future.join();
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(e).hasCauseThat().isSameInstanceAs(error);
-    }
+
+    var e = assertThrows(CompletionException.class, future::join);
+    assertThat(e).hasCauseThat().isSameInstanceAs(error);
   }
 
   private static void checkSingleLoader(Exception error, CacheLoader<Integer, Integer> guava,
@@ -265,32 +235,21 @@ public final class CaffeinatedGuavaTest extends TestCase {
     assertThat(((CaffeinatedLoader<?, ?>) caffeine).cacheLoader).isSameInstanceAs(guava);
 
     assertThat(caffeine.load(1)).isEqualTo(-1);
-    try {
-      caffeine.load(-1);
-      Assert.fail();
-    } catch (Exception e) {
-      assertThat(e).isSameInstanceAs(error);
-    }
+    var e1 = assertThrows(error.getClass(), () -> caffeine.load(-1));
+    assertThat(e1).isSameInstanceAs(error);
 
     assertThat(caffeine.asyncReload(1, 2, Runnable::run).join()).isEqualTo(-1);
-    try {
-      caffeine.asyncReload(-1, 2, Runnable::run).join();
-      Assert.fail();
-    } catch (CompletionException e) {
-      assertThat(e).hasCauseThat().isSameInstanceAs(error);
-    }
+    var e2 = assertThrows(CompletionException.class, () ->
+        caffeine.asyncReload(-1, 2, Runnable::run).join());
+    assertThat(e2).hasCauseThat().isSameInstanceAs(error);
   }
 
   private static void checkBulkLoader(Exception error,
       com.github.benmanes.caffeine.cache.CacheLoader<Integer, Integer> caffeine) throws Exception {
     assertThat(caffeine).isInstanceOf(ExternalBulkLoader.class);
     assertThat(caffeine.loadAll(Set.of(1, 2, 3))).isEqualTo(Map.of(1, -1, 2, -2, 3, -3));
-    try {
-      caffeine.loadAll(Set.of(1, -1));
-      Assert.fail();
-    } catch (Exception e) {
-      assertThat(e).isSameInstanceAs(error);
-    }
+    var e = assertThrows(error.getClass(), () -> caffeine.loadAll(Set.of(1, -1)));
+    assertThat(e).isSameInstanceAs(error);
   }
 
   enum IdentityLoader implements com.github.benmanes.caffeine.cache.CacheLoader<Object, Object> {

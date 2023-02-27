@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.integration;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
@@ -31,7 +32,6 @@ import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
 
 import org.mockito.Mockito;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
@@ -53,10 +53,10 @@ public final class CacheWriterTest extends AbstractJCacheTest {
     return configuration;
   }
 
-  @Test(expectedExceptions = CacheWriterException.class)
+  @Test
   public void put_fails() {
     doThrow(CacheWriterException.class).when(writer).write(any());
-    jcache.put(KEY_1, VALUE_1);
+    assertThrows(CacheWriterException.class, () -> jcache.put(KEY_1, VALUE_1));
   }
 
   @Test
@@ -65,12 +65,8 @@ public final class CacheWriterTest extends AbstractJCacheTest {
     var map = new HashMap<Integer, Integer>();
     map.put(KEY_1, VALUE_1);
 
-    try {
-      jcache.putAll(map);
-      Assert.fail();
-    } catch (CacheWriterException e) {
-      assertThat(map).containsExactly(KEY_1, VALUE_1);
-    }
+    assertThrows(CacheWriterException.class, () -> jcache.putAll(map));
+    assertThat(map).containsExactly(KEY_1, VALUE_1);
   }
 
   @Test
@@ -78,29 +74,25 @@ public final class CacheWriterTest extends AbstractJCacheTest {
     doThrow(CacheWriterException.class).when(writer).writeAll(any());
     var map = Map.of(KEY_1, VALUE_1);
 
-    try {
-      jcache.putAll(map);
-      Assert.fail();
-    } catch (CacheWriterException e) {
-      assertThat(map).containsExactly(KEY_1, VALUE_1);
-    }
+    assertThrows(CacheWriterException.class, () -> jcache.putAll(map));
+    assertThat(map).containsExactly(KEY_1, VALUE_1);
   }
 
-  @Test(expectedExceptions = CacheWriterException.class)
+  @Test
   public void remove_fails() {
     jcache.put(KEY_1, VALUE_1);
 
     doThrow(CacheWriterException.class).when(writer).delete(any());
-    jcache.remove(KEY_1);
+    assertThrows(CacheWriterException.class, () -> jcache.remove(KEY_1));
   }
 
-  @Test(expectedExceptions = CacheWriterException.class)
+  @Test
   public void removeAll_fails() {
     doThrow(CacheWriterException.class).when(writer).deleteAll(any());
     var keys = new HashSet<Integer>();
     keys.add(KEY_1);
 
-    jcache.removeAll(keys);
+    assertThrows(CacheWriterException.class, () -> jcache.removeAll(keys));
   }
 
   @Test

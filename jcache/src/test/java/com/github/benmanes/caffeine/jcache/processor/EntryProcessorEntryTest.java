@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.processor;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.util.Map;
 import java.util.Optional;
@@ -30,10 +31,9 @@ import org.testng.annotations.Test;
 public final class EntryProcessorEntryTest {
   EntryProcessorEntry<Integer, Integer> entry = new EntryProcessorEntry<>(1, 2, Optional.empty());
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void unwrap_fail() {
-    entry.unwrap(Map.Entry.class);
+    assertThrows(IllegalArgumentException.class, () -> entry.unwrap(Map.Entry.class));
   }
 
   @Test

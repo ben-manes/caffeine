@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.event;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -46,10 +47,9 @@ public final class JCacheEntryEventTest {
     event = new JCacheEntryEvent<>(cache, EventType.CREATED, 1, true, 2, 3);
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void unwrap_fail() {
-    event.unwrap(Map.Entry.class);
+    assertThrows(IllegalArgumentException.class, () -> event.unwrap(Map.Entry.class));
   }
 
   @Test

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.Truth.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThrows;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,22 +39,22 @@ public final class MpscGrowableArrayQueueTest {
 
   /* --------------- Constructor --------------- */
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void constructor_initialCapacity_tooSmall() {
-    new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 1, /* maxCapacity */ 4);
+    assertThrows(IllegalArgumentException.class, () ->
+        new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 1, /* maxCapacity */ 4));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void constructor_maxCapacity_tooSmall() {
-    new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 1);
+    assertThrows(IllegalArgumentException.class, () ->
+        new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 1));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void constructor_inverted() {
-    new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 8, /* maxCapacity */ 4);
+    assertThrows(IllegalArgumentException.class, () ->
+        new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 8, /* maxCapacity */ 4));
   }
 
   @Test
@@ -194,10 +195,9 @@ public final class MpscGrowableArrayQueueTest {
 
   /* --------------- Miscellaneous --------------- */
 
-  @SuppressWarnings("ReturnValueIgnored")
-  @Test(dataProvider = "full", expectedExceptions = UnsupportedOperationException.class)
+  @Test(dataProvider = "full")
   public void iterator(MpscGrowableArrayQueue<Integer> buffer) {
-    buffer.iterator();
+    assertThrows(UnsupportedOperationException.class, buffer::iterator);
   }
 
   @Test(dataProvider = "populated")

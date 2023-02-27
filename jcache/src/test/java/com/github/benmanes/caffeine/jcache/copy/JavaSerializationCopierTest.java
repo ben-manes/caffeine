@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.copy;
 import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaDeepCopyStrategies;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
+import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,46 +47,42 @@ import com.google.common.collect.ImmutableSet;
  */
 public final class JavaSerializationCopierTest {
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "nullArgs", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "nullArgs")
   public void constructor_null(Set<Class<?>> immutableClasses,
       Map<Class<?>, Function<Object, Object>> deepCopyStrategies) {
-    new JavaSerializationCopier(immutableClasses, deepCopyStrategies);
+    assertThrows(NullPointerException.class, () ->
+        new JavaSerializationCopier(immutableClasses, deepCopyStrategies));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "copier", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "copier")
   public void null_object(Copier copier) {
-    copy(copier, null);
+    assertThrows(NullPointerException.class, () -> copy(copier, null));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "copier", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "copier")
   public void null_classLoader(Copier copier) {
-    copier.copy(1, null);
+    assertThrows(NullPointerException.class, () -> copier.copy(1, null));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "copier", expectedExceptions = UncheckedIOException.class)
+  @Test(dataProvider = "copier")
   public void serializable_fail(JavaSerializationCopier copier) {
-    copier.serialize(new Object());
+    assertThrows(UncheckedIOException.class, () -> copier.serialize(new Object()));
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
   public void deserializable_resolveClass() {
     var copier = new JavaSerializationCopier();
-    copier.copy(ImmutableSet.of(), ClassLoader.getPlatformClassLoader());
+    var copy = copier.copy(ImmutableSet.of(), ClassLoader.getPlatformClassLoader());
+    assertThat(copy).isInstanceOf(ImmutableSet.class);
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "copier", expectedExceptions = CacheException.class)
+  @Test(dataProvider = "copier")
   public void deserializable_badData(JavaSerializationCopier copier) {
-    copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader());
+    assertThrows(CacheException.class, () ->
+        copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader()));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = CacheException.class)
+  @Test
   public void deserializable_classNotFound() {
     var copier = new JavaSerializationCopier() {
       @Override protected ObjectInputStream newInputStream(
@@ -98,7 +95,8 @@ public final class JavaSerializationCopierTest {
         };
       }
     };
-    copier.roundtrip(100, Thread.currentThread().getContextClassLoader());
+    assertThrows(CacheException.class, () ->
+        copier.roundtrip(100, Thread.currentThread().getContextClassLoader()));
   }
 
   @Test(dataProvider = "copier")
@@ -138,7 +136,6 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test(dataProvider = "copier")
-  @SuppressWarnings("CheckReturnValue")
   public void array_primitive(Copier copier) {
     int[] ints = { 0, 1, 2, 3, 4 };
     assertThat(copy(copier, ints)).isEqualTo(ints);

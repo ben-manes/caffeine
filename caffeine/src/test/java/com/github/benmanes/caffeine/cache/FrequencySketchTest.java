@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -38,9 +39,9 @@ public final class FrequencySketchTest {
     assertThat(sketch.frequency(item)).isEqualTo(0);
   }
 
-  @Test(dataProvider = "sketch", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "sketch")
   public void ensureCapacity_negative(FrequencySketch<Integer> sketch) {
-    sketch.ensureCapacity(-1);
+    assertThrows(IllegalArgumentException.class, () -> sketch.ensureCapacity(-1));
   }
 
   @Test(dataProvider = "sketch")

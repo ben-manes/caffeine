@@ -34,6 +34,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.util.function.Function.identity;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
@@ -275,16 +276,14 @@ public final class ExpireAfterVarTest {
     assertThat(map).isExhaustivelyEmpty();
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void replace_expiryFails(Map<Int, Int> map, CacheContext context) {
-    try {
-      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      map.replace(context.firstKey(), context.absentValue());
-    } finally {
-      assertThat(map).containsExactlyEntriesIn(context.original());
-    }
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        map.replace(context.firstKey(), context.absentValue()));
+    assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
@@ -300,136 +299,111 @@ public final class ExpireAfterVarTest {
     assertThat(map).isExhaustivelyEmpty();
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void replaceConditionally_expiryFails(Map<Int, Int> map, CacheContext context) {
-    try {
-      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      Int oldValue = context.original().get(context.firstKey());
-      map.replace(context.firstKey(), oldValue, context.absentValue());
-    } finally {
-      assertThat(map).containsExactlyEntriesIn(context.original());
-    }
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    Int oldValue = context.original().get(context.firstKey());
+    assertThrows(ExpirationException.class, () ->
+        map.replace(context.firstKey(), oldValue, context.absentValue()));
+    assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
   /* --------------- Exceptional --------------- */
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void getIfPresent_expiryFails(Cache<Int, Int> cache, CacheContext context) {
-    try {
-      context.ticker().advance(1, TimeUnit.HOURS);
-      when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      cache.getIfPresent(context.firstKey());
-    } finally {
-      context.ticker().advance(-1, TimeUnit.HOURS);
-      assertThat(cache).containsExactlyEntriesIn(context.original());
-    }
+    context.ticker().advance(1, TimeUnit.HOURS);
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () -> cache.getIfPresent(context.firstKey()));
+    context.ticker().advance(-1, TimeUnit.HOURS);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void get_expiryFails_create(Cache<Int, Int> cache, CacheContext context) {
-    try {
-      context.ticker().advance(1, TimeUnit.HOURS);
-      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      cache.get(context.absentKey(), identity());
-    } finally {
-      context.ticker().advance(-1, TimeUnit.HOURS);
-      assertThat(cache).containsExactlyEntriesIn(context.original());
-    }
+    context.ticker().advance(1, TimeUnit.HOURS);
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () -> cache.get(context.absentKey(), identity()));
+    context.ticker().advance(-1, TimeUnit.HOURS);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void get_expiryFails_read(Cache<Int, Int> cache, CacheContext context) {
-    try {
-      context.ticker().advance(1, TimeUnit.HOURS);
-      when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      cache.get(context.firstKey(), identity());
-    } finally {
-      context.ticker().advance(-1, TimeUnit.HOURS);
-      assertThat(cache).containsExactlyEntriesIn(context.original());
-    }
+    context.ticker().advance(1, TimeUnit.HOURS);
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () -> cache.get(context.firstKey(), identity()));
+    context.ticker().advance(-1, TimeUnit.HOURS);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void getAllPresent_expiryFails(Cache<Int, Int> cache, CacheContext context) {
-    try {
-      context.ticker().advance(1, TimeUnit.HOURS);
-      when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      cache.getAllPresent(context.firstMiddleLastKeys());
-    } finally {
-      context.ticker().advance(-1, TimeUnit.HOURS);
-      assertThat(cache).containsExactlyEntriesIn(context.original());
-    }
+    context.ticker().advance(1, TimeUnit.HOURS);
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        cache.getAllPresent(context.firstMiddleLastKeys()));
+    context.ticker().advance(-1, TimeUnit.HOURS);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void put_insert_expiryFails(Cache<Int, Int> cache, CacheContext context) {
-    try {
-      context.ticker().advance(1, TimeUnit.HOURS);
-      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      cache.put(context.absentKey(), context.absentValue());
-    } finally {
-      context.ticker().advance(-1, TimeUnit.HOURS);
-      assertThat(cache).containsExactlyEntriesIn(context.original());
-    }
+    context.ticker().advance(1, TimeUnit.HOURS);
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        cache.put(context.absentKey(), context.absentValue()));
+    context.ticker().advance(-1, TimeUnit.HOURS);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void put_insert_replaceExpired_expiryFails(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireVariably) {
     var expectedDuration = expireVariably.getExpiresAfter(context.firstKey(), TimeUnit.NANOSECONDS);
-    try {
-      context.ticker().advance(1, TimeUnit.HOURS);
-      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      cache.put(context.firstKey(), context.absentValue());
-    } finally {
-      context.ticker().advance(-1, TimeUnit.HOURS);
-      assertThat(cache).containsExactlyEntriesIn(context.original());
-      var currentDuration = expireVariably.getExpiresAfter(
-          context.firstKey(), TimeUnit.NANOSECONDS);
-      assertThat(currentDuration).isEqualTo(expectedDuration);
-    }
+    context.ticker().advance(1, TimeUnit.HOURS);
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        cache.put(context.firstKey(), context.absentValue()));
+
+    context.ticker().advance(-1, TimeUnit.HOURS);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    var currentDuration = expireVariably.getExpiresAfter(
+        context.firstKey(), TimeUnit.NANOSECONDS);
+    assertThat(currentDuration).isEqualTo(expectedDuration);
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void put_update_expiryFails(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireVariably) {
     var expectedDuration = expireVariably.getExpiresAfter(context.firstKey(), TimeUnit.NANOSECONDS);
-    try {
-      context.ticker().advance(1, TimeUnit.HOURS);
-      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      cache.put(context.firstKey(), context.absentValue());
-    } finally {
-      context.ticker().advance(-1, TimeUnit.HOURS);
-      assertThat(cache).containsExactlyEntriesIn(context.original());
-      var currentDuration = expireVariably.getExpiresAfter(
-          context.firstKey(), TimeUnit.NANOSECONDS);
-      assertThat(currentDuration).isEqualTo(expectedDuration);
-    }
-  }
+    context.ticker().advance(1, TimeUnit.HOURS);
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        cache.put(context.firstKey(), context.absentValue()));
 
-  static final class ExpirationException extends RuntimeException {
-    private static final long serialVersionUID = 1L;
+    context.ticker().advance(-1, TimeUnit.HOURS);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    var currentDuration = expireVariably.getExpiresAfter(
+        context.firstKey(), TimeUnit.NANOSECONDS);
+    assertThat(currentDuration).isEqualTo(expectedDuration);
   }
 
   /* --------------- Compute --------------- */
@@ -457,16 +431,14 @@ public final class ExpireAfterVarTest {
     verifyNoMoreInteractions(context.expiry());
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void computeIfAbsent_expiryFails(Map<Int, Int> map, CacheContext context) {
-    try {
-      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      map.computeIfAbsent(context.absentKey(), identity());
-    } finally {
-      assertThat(map).containsExactlyEntriesIn(context.original());
-    }
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        map.computeIfAbsent(context.absentKey(), identity()));
+    assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
@@ -499,16 +471,14 @@ public final class ExpireAfterVarTest {
     verifyNoMoreInteractions(context.expiry());
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void computeIfPresent_expiryFails(Map<Int, Int> map, CacheContext context) {
-    try {
-      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      map.computeIfPresent(context.firstKey(), (k, v) -> v.negate());
-    } finally {
-      assertThat(map).containsExactlyEntriesIn(context.original());
-    }
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        map.computeIfPresent(context.firstKey(), (k, v) -> v.negate()));
+    assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
@@ -670,11 +640,13 @@ public final class ExpireAfterVarTest {
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void setExpiresAfter_negative(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(-2));
+    var duration = Duration.ofMinutes(-2);
+    assertThrows(IllegalArgumentException.class, () ->
+        expireAfterVar.setExpiresAfter(context.absentKey(), duration));
   }
 
   @Test(dataProvider = "caches")
@@ -746,53 +718,53 @@ public final class ExpireAfterVarTest {
   /* --------------- Policy: putIfAbsent --------------- */
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void putIfAbsent_nullKey(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.putIfAbsent(null, Int.valueOf(2), 3, TimeUnit.SECONDS);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.putIfAbsent(null, Int.valueOf(2), 3, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void putIfAbsent_nullValue(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.putIfAbsent(Int.valueOf(1), null, 3, TimeUnit.SECONDS);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.putIfAbsent(Int.valueOf(1), null, 3, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void putIfAbsent_nullTimeUnit(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), 3, null);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), 3, null));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void putIfAbsent_negativeDuration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), -10, TimeUnit.SECONDS);
+    assertThrows(IllegalArgumentException.class, () ->
+        expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), -10, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void putIfAbsent_nullDuration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), null);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), null));
   }
 
   @CheckNoStats
@@ -847,43 +819,43 @@ public final class ExpireAfterVarTest {
   /* --------------- Policy: put --------------- */
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKey(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.put(null, Int.valueOf(2), 3, TimeUnit.SECONDS);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.put(null, Int.valueOf(2), 3, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullValue(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.put(Int.valueOf(1), null, 3, TimeUnit.SECONDS);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.put(Int.valueOf(1), null, 3, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullTimeUnit(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), 3, null);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), 3, null));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void put_negativeDuration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), -10, TimeUnit.SECONDS);
+    assertThrows(IllegalArgumentException.class, () ->
+        expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), -10, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
@@ -900,13 +872,13 @@ public final class ExpireAfterVarTest {
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullDuration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), null);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), null));
   }
 
   @Test(dataProvider = "caches")
@@ -947,29 +919,30 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy: compute --------------- */
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_nullKey(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.compute(null, (key, value) -> key.negate(), Duration.ZERO);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.compute(null, (key, value) -> key.negate(), Duration.ZERO));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_nullMappingFunction(CacheContext context,
       VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.compute(Int.valueOf(1), null, Duration.ZERO);
+    assertThrows(NullPointerException.class, () ->
+        expireAfterVar.compute(Int.valueOf(1), null, Duration.ZERO));
   }
 
   @CheckNoStats
-  @SuppressWarnings("CheckReturnValue")
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_negativeDuration(
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.compute(Int.valueOf(1), (key, value) -> key.negate(), Duration.ofMinutes(-1));
+    var duration = Duration.ofMinutes(-1);
+    assertThrows(IllegalArgumentException.class, () ->
+        expireAfterVar.compute(Int.valueOf(1), (key, value) -> key.negate(), duration));
   }
 
   @Test(dataProvider = "caches")
@@ -1040,15 +1013,13 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expiry = CacheExpiry.MOCKITO)
   public void compute_error(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    try {
+    assertThrows(IllegalStateException.class, () -> {
       expireAfterVar.compute(context.absentKey(),
           (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
-      Assert.fail();
-    } catch (IllegalStateException e) { /* ignored */ }
+    });
 
     verifyNoInteractions(context.expiry());
     assertThat(cache).containsExactlyEntriesIn(context.original());
@@ -1346,73 +1317,62 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void compute_absent_error(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     context.ticker().advance(2, TimeUnit.MINUTES);
-    try {
+    assertThrows(IllegalStateException.class, () -> {
       expireAfterVar.compute(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
-      Assert.fail();
-    } catch (IllegalStateException expected) {}
-
+    });
     assertThat(expireAfterVar.getExpiresAfter(context.firstKey())).isEmpty();
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void compute_present_error(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     context.ticker().advance(30, TimeUnit.SECONDS);
     var variable = expireAfterVar.getExpiresAfter(context.firstKey());
-    try {
+    assertThrows(IllegalStateException.class, () -> {
       expireAfterVar.compute(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
-      Assert.fail();
-    } catch (IllegalStateException expected) {}
-
+    });
     assertThat(variable).isEqualTo(expireAfterVar.getExpiresAfter(context.firstKey()));
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void compute_absent_expiryFails(Map<Int, Int> map, CacheContext context) {
-    try {
-      when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      map.compute(context.absentKey(), (k, v) -> k);
-    } finally {
-      assertThat(map).containsExactlyEntriesIn(context.original());
-    }
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () -> map.compute(context.absentKey(), (k, v) -> k));
+    assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
   public void compute_present_expiryFails(Map<Int, Int> map, CacheContext context) {
-    try {
-      when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
-          .thenThrow(ExpirationException.class);
-      map.compute(context.firstKey(), (k, v) -> v.negate());
-    } finally {
-      assertThat(map).containsExactlyEntriesIn(context.original());
-    }
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        map.compute(context.firstKey(), (k, v) -> v.negate()));
+    assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
   /* --------------- Policy: oldest --------------- */
 
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void oldest_unmodifiable(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.oldest(Integer.MAX_VALUE).clear();
+    var results = expireAfterVar.oldest(Integer.MAX_VALUE);
+    assertThrows(UnsupportedOperationException.class, results::clear);
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void oldest_negative(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.oldest(-1);
+    assertThrows(IllegalArgumentException.class, () -> expireAfterVar.oldest(-1));
   }
 
   @Test(dataProvider = "caches")
@@ -1445,11 +1405,10 @@ public final class ExpireAfterVarTest {
     assertThat(oldest).containsExactlyEntriesIn(context.original());
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void oldestFunc_null(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.oldest(null);
+    assertThrows(NullPointerException.class, () -> expireAfterVar.oldest(null));
   }
 
   @Test(dataProvider = "caches")
@@ -1460,36 +1419,34 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void oldestFunc_throwsException(CacheContext context,
       VarExpiration<Int, Int> expireAfterVar) {
     var expected = new IllegalStateException();
-    try {
-      expireAfterVar.oldest(stream -> { throw expected; });
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).isSameInstanceAs(expected);
-    }
+    var actual = assertThrows(IllegalStateException.class, () ->
+        expireAfterVar.oldest(stream -> { throw expected; }));
+    assertThat(actual).isSameInstanceAs(expected);
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
   public void oldestFunc_concurrentModification(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.oldest(stream -> {
-      context.ticker().advance(1, TimeUnit.NANOSECONDS);
-      cache.put(context.absentKey(), context.absentValue());
-      return stream.count();
+    assertThrows(ConcurrentModificationException.class, () -> {
+      expireAfterVar.oldest(stream -> {
+        context.ticker().advance(1, TimeUnit.NANOSECONDS);
+        cache.put(context.absentKey(), context.absentValue());
+        throw assertThrows(ConcurrentModificationException.class, stream::count);
+      });
     });
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class,
-      expectedExceptionsMessageRegExp = "source already consumed or closed")
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void oldestFunc_closed(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.oldest(stream -> stream).forEach(e -> {});
+    var stream = expireAfterVar.oldest(identity());
+    var exception = assertThrows(IllegalStateException.class, () -> stream.forEach(e -> {}));
+    assertThat(exception).hasMessageThat().isEqualTo("source already consumed or closed");
   }
 
   @Test(dataProvider = "caches")
@@ -1544,17 +1501,17 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy: youngest --------------- */
 
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void youngest_unmodifiable(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.youngest(Integer.MAX_VALUE).clear();
+    var results = expireAfterVar.youngest(Integer.MAX_VALUE);
+    assertThrows(UnsupportedOperationException.class, results::clear);
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void youngest_negative(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.youngest(-1);
+    assertThrows(IllegalArgumentException.class, () -> expireAfterVar.youngest(-1));
   }
 
   @Test(dataProvider = "caches")
@@ -1588,11 +1545,10 @@ public final class ExpireAfterVarTest {
     assertThat(youngest).containsExactlyEntriesIn(context.original());
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void youngestFunc_null(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.youngest(null);
+    assertThrows(NullPointerException.class, () -> expireAfterVar.youngest(null));
   }
 
   @Test(dataProvider = "caches")
@@ -1604,36 +1560,34 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void youngestFunc_throwsException(CacheContext context,
       VarExpiration<Int, Int> expireAfterVar) {
     var expected = new IllegalStateException();
-    try {
-      expireAfterVar.youngest(stream -> { throw expected; });
-      Assert.fail();
-    } catch (IllegalStateException e) {
-      assertThat(e).isSameInstanceAs(expected);
-    }
+    var actual = assertThrows(IllegalStateException.class, () ->
+        expireAfterVar.youngest(stream -> { throw expected; }));
+    assertThat(actual).isSameInstanceAs(expected);
   }
 
-  @SuppressWarnings("CheckReturnValue")
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @Test(dataProvider = "caches", expectedExceptions = ConcurrentModificationException.class)
   public void youngestFunc_concurrentModification(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.youngest(stream -> {
-      context.ticker().advance(1, TimeUnit.NANOSECONDS);
-      cache.put(context.absentKey(), context.absentValue());
-      return stream.count();
+    assertThrows(ConcurrentModificationException.class, () -> {
+      expireAfterVar.youngest(stream -> {
+        context.ticker().advance(1, TimeUnit.NANOSECONDS);
+        cache.put(context.absentKey(), context.absentValue());
+        throw assertThrows(ConcurrentModificationException.class, stream::count);
+      });
     });
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class,
-      expectedExceptionsMessageRegExp = "source already consumed or closed")
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void youngestFunc_closed(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.youngest(stream -> stream).forEach(e -> {});
+    var stream = expireAfterVar.youngest(identity());
+    var exception = assertThrows(IllegalStateException.class, () -> stream.forEach(e -> {}));
+    assertThat(exception).hasMessageThat().isEqualTo("source already consumed or closed");
   }
 
   @Test(dataProvider = "caches")
@@ -1658,8 +1612,7 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = {Population.PARTIAL, Population.FULL},
-      removalListener = { Listener.DISABLED, Listener.REJECTING },
-      expiry = CacheExpiry.ACCESS)
+      removalListener = { Listener.DISABLED, Listener.REJECTING }, expiry = CacheExpiry.ACCESS)
   public void youngestFunc_order(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var youngest = expireAfterVar.youngest(
         stream -> stream.map(Map.Entry::getKey).collect(toImmutableList()));
@@ -1685,5 +1638,9 @@ public final class ExpireAfterVarTest {
     var entries = expireAfterVar.youngest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);
+  }
+
+  static final class ExpirationException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
   }
 }

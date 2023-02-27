@@ -60,12 +60,12 @@ public final class StripedBufferTest {
   }
 
   @Test
-  @SuppressWarnings({"CheckReturnValue", "ThreadPriorityCheck"})
+  @SuppressWarnings("ThreadPriorityCheck")
   public void expand_concurrent() {
     var buffer = new FakeBuffer<Boolean>(Buffer.FAILED);
     ConcurrentTestHarness.timeTasks(10 * NCPU, () -> {
       for (int i = 0; i < 1000; i++) {
-        buffer.offer(Boolean.TRUE);
+        assertThat(buffer.offer(Boolean.TRUE)).isAnyOf(Buffer.SUCCESS, Buffer.FULL, Buffer.FAILED);
         Thread.yield();
       }
     });
@@ -73,11 +73,11 @@ public final class StripedBufferTest {
   }
 
   @Test(dataProvider = "buffers")
-  @SuppressWarnings({"CheckReturnValue", "ThreadPriorityCheck"})
+  @SuppressWarnings("ThreadPriorityCheck")
   public void produce(FakeBuffer<Integer> buffer) {
     ConcurrentTestHarness.timeTasks(NCPU, () -> {
       for (int i = 0; i < 10; i++) {
-        buffer.offer(ELEMENT);
+        assertThat(buffer.offer(ELEMENT)).isAnyOf(Buffer.SUCCESS, Buffer.FULL, Buffer.FAILED);
         Thread.yield();
       }
     });
@@ -85,13 +85,13 @@ public final class StripedBufferTest {
   }
 
   @Test(dataProvider = "buffers")
-  @SuppressWarnings("CheckReturnValue")
   public void drain(FakeBuffer<Integer> buffer) {
     buffer.drainTo(e -> {});
     assertThat(buffer.drains).isEqualTo(0);
 
     // Expand and drain
-    buffer.offer(ELEMENT);
+    assertThat(buffer.offer(ELEMENT)).isEqualTo(Buffer.SUCCESS);
+
     buffer.drainTo(e -> {});
     assertThat(buffer.drains).isEqualTo(1);
   }

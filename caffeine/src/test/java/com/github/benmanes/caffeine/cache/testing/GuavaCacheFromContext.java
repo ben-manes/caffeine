@@ -594,7 +594,7 @@ public final class GuavaCacheFromContext {
     final com.github.benmanes.caffeine.cache.Weigher<K, V> weigher;
 
     GuavaWeigher(com.github.benmanes.caffeine.cache.Weigher<K, V> weigher) {
-      this.weigher = weigher;
+      this.weigher = com.github.benmanes.caffeine.cache.Weigher.boundedWeigher(weigher);
     }
 
     @Override public int weigh(K key, V value) {

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.management;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -39,28 +40,27 @@ import org.testng.annotations.Test;
  */
 public final class JmxRegistrationTest {
 
-  @Test(dataProvider = "registerExceptions", expectedExceptions = CacheException.class)
+  @Test(dataProvider = "registerExceptions")
   public void register_error(Class<? extends Throwable> throwableType) throws JMException {
     var name = new ObjectName("");
     var bean = new JCacheStatisticsMXBean();
     var server = Mockito.mock(MBeanServer.class);
     when(server.registerMBean(bean, name)).thenThrow(throwableType);
-    JmxRegistration.register(server, name, bean);
+    assertThrows(CacheException.class, () -> JmxRegistration.register(server, name, bean));
   }
 
-  @Test(dataProvider = "unegisterExceptions", expectedExceptions = CacheException.class)
+  @Test(dataProvider = "unegisterExceptions")
   public void unregister_error(Class<? extends Throwable> throwableType) throws JMException {
     var name = new ObjectName("");
     var server = Mockito.mock(MBeanServer.class);
     when(server.queryNames(any(), any())).thenReturn(Set.of(name));
     doThrow(throwableType).when(server).unregisterMBean(any());
-    JmxRegistration.unregister(server, name);
+    assertThrows(CacheException.class, () -> JmxRegistration.unregister(server, name));
   }
 
-  @SuppressWarnings("CheckReturnValue")
-  @Test(expectedExceptions = CacheException.class)
+  @Test
   public void newObjectName_malformed() {
-    JmxRegistration.newObjectName("a=b");
+    assertThrows(CacheException.class, () -> JmxRegistration.newObjectName("a=b"));
   }
 
   @DataProvider(name = "registerExceptions")
