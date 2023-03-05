@@ -19,8 +19,10 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
+import java.io.File;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.net.URI;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,6 +30,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import javax.cache.CacheManager;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
@@ -44,6 +47,8 @@ import com.github.benmanes.caffeine.jcache.expiry.JCacheExpiryPolicy;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigParseOptions;
+import com.typesafe.config.ConfigSyntax;
 
 /**
  * Static utility methods pertaining to externalized {@link CaffeineConfiguration} entries using the
@@ -55,8 +60,8 @@ import com.typesafe.config.ConfigFactory;
 public final class TypesafeConfigurator {
   static final Logger logger = System.getLogger(TypesafeConfigurator.class.getName());
 
+  static ConfigSource configSource = TypesafeConfigurator::resolveConfig;
   static FactoryCreator factoryCreator = FactoryBuilder::factoryOf;
-  static Supplier<Config> configSource = ConfigFactory::load;
 
   private TypesafeConfigurator() {}
 
@@ -118,19 +123,66 @@ public final class TypesafeConfigurator {
   }
 
   /**
-   * Specifies how the {@link Config} instance should be loaded. The default strategy uses
-   * {@link ConfigFactory#load()}. The configuration is retrieved on-demand, allowing for it to be
-   * reloaded, and it is assumed that the source caches it as needed.
+   * Specifies how the {@link Config} instance should be loaded. The default strategy uses the uri
+   * provided by {@link CacheManager#getURI()} as an optional override location to parse from a
+   * file system or classpath resource, or else returns {@link ConfigFactory#load(ClassLoader)}.
+   * The configuration is retrieved on-demand, allowing for it to be reloaded, and it is assumed
+   * that the source caches it as needed.
    *
    * @param configSource the strategy for loading the configuration
    */
   public static void setConfigSource(Supplier<Config> configSource) {
+    requireNonNull(configSource);
+    setConfigSource((uri, classloader) -> configSource.get());
+  }
+
+  /**
+   * Specifies how the {@link Config} instance should be loaded. The default strategy uses the uri
+   * provided by {@link CacheManager#getURI()} as an optional override location to parse from a
+   * file system or classpath resource, or else returns {@link ConfigFactory#load(ClassLoader)}.
+   * The configuration is retrieved on-demand, allowing for it to be reloaded, and it is assumed
+   * that the source caches it as needed.
+   *
+   * @param configSource the strategy for loading the configuration from a uri
+   */
+  public static void setConfigSource(ConfigSource configSource) {
     TypesafeConfigurator.configSource = requireNonNull(configSource);
   }
 
   /** Returns the strategy for loading the configuration. */
-  public static Supplier<Config> configSource() {
+  public static ConfigSource configSource() {
     return TypesafeConfigurator.configSource;
+  }
+
+  /** Returns the configuration by applying the default strategy. */
+  private static Config resolveConfig(URI uri, ClassLoader classloader) {
+    requireNonNull(uri);
+    requireNonNull(classloader);
+    var options = ConfigParseOptions.defaults().setAllowMissing(false);
+    if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("file")) {
+      return ConfigFactory.parseFile(new File(uri), options);
+    } else if (isResource(uri)) {
+      return ConfigFactory.parseResources(uri.getSchemeSpecificPart(), options);
+    }
+    return ConfigFactory.load(classloader);
+  }
+
+  /** Returns if the uri is a file or classpath resource. */
+  private static boolean isResource(URI uri) {
+    if ((uri.getScheme() != null) && !uri.getScheme().equalsIgnoreCase("classpath")) {
+      return false;
+    }
+    var path = uri.getSchemeSpecificPart();
+    int dotIndex = path.lastIndexOf('.');
+    if (dotIndex != -1) {
+      var extension = path.substring(dotIndex + 1);
+      for (var format : ConfigSyntax.values()) {
+        if (format.toString().equalsIgnoreCase(extension)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /** A one-shot builder for creating a configuration instance. */

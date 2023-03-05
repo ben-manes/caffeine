@@ -39,9 +39,7 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 
 import com.github.benmanes.caffeine.jcache.CacheManagerImpl;
-import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import com.typesafe.config.ConfigFactory;
 
 /**
  * A provider that produces a JCache implementation backed by Caffeine. Typically, this provider is
@@ -103,7 +101,8 @@ public final class CaffeineCachingProvider implements CachingProvider {
           managerClassLoader, any -> new HashMap<>());
       return cacheManagersByURI.computeIfAbsent(managerURI, any -> {
         Properties managerProperties = (properties == null) ? getDefaultProperties() : properties;
-        return new CacheManagerImpl(this, managerURI, managerClassLoader, managerProperties);
+        return new CacheManagerImpl(this, isOsgiComponent,
+            managerURI, managerClassLoader, managerProperties);
       });
     }
   }
@@ -267,10 +266,5 @@ public final class CaffeineCachingProvider implements CachingProvider {
   @SuppressWarnings("unused")
   private void activate() {
     isOsgiComponent = true;
-    TypesafeConfigurator.setConfigSource(() -> ConfigFactory.load(DEFAULT_CLASS_LOADER));
-  }
-
-  public boolean isOsgiComponent() {
-    return isOsgiComponent;
   }
 }

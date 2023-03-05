@@ -35,8 +35,6 @@ import javax.cache.spi.CachingProvider;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
-
 /**
  * An implementation of JSR-107 {@link CacheManager} that manages Caffeine-based caches.
  *
@@ -55,12 +53,11 @@ public final class CacheManagerImpl implements CacheManager {
 
   private volatile boolean closed;
 
-  public CacheManagerImpl(CachingProvider cacheProvider,
+  public CacheManagerImpl(CachingProvider cacheProvider, boolean runsAsAnOsgiBundle,
       URI uri, ClassLoader classLoader, Properties properties) {
-    this.runsAsAnOsgiBundle = (cacheProvider instanceof CaffeineCachingProvider)
-        && ((CaffeineCachingProvider) cacheProvider).isOsgiComponent();
     this.classLoaderReference = new WeakReference<>(requireNonNull(classLoader));
     this.cacheProvider = requireNonNull(cacheProvider);
+    this.runsAsAnOsgiBundle = runsAsAnOsgiBundle;
     this.properties = requireNonNull(properties);
     this.caches = new ConcurrentHashMap<>();
     this.uri = requireNonNull(uri);
@@ -102,7 +99,7 @@ public final class CacheManagerImpl implements CacheManager {
       CacheProxy<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
         if ((existing != null) && !existing.isClosed()) {
           throw new CacheException("Cache " + cacheName + " already exists");
-        } else if (CacheFactory.isDefinedExternally(cacheName)) {
+        } else if (CacheFactory.isDefinedExternally(this, cacheName)) {
           throw new CacheException("Cache " + cacheName + " is configured externally");
         }
         return CacheFactory.createCache(this, cacheName, configuration);

@@ -335,6 +335,21 @@
     <Bug pattern="OBJECT_DESERIALIZATION"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator"/>
+    <Method name="resolveConfig"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator"/>
+    <Method name="resolveConfig"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator"/>
+    <Method name="isResource"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator$Configurator"/>
     <Method name="addLazyExpiration"/>
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>

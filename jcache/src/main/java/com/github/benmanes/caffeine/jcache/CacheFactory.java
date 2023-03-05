@@ -56,23 +56,24 @@ final class CacheFactory {
   /**
    * Returns if the cache definition is found in the external settings file.
    *
+   * @param cacheManager the owner
    * @param cacheName the name of the cache
    * @return {@code true} if a definition exists
    */
-  public static boolean isDefinedExternally(String cacheName) {
-    return TypesafeConfigurator.cacheNames(rootConfig()).contains(cacheName);
+  public static boolean isDefinedExternally(CacheManager cacheManager, String cacheName) {
+    return TypesafeConfigurator.cacheNames(rootConfig(cacheManager)).contains(cacheName);
   }
 
   /**
    * Returns a newly created cache instance if a definition is found in the external settings file.
    *
-   * @param cacheManager the owner of the cache instance
+   * @param cacheManager the owner
    * @param cacheName the name of the cache
    * @return a new cache instance or null if the named cache is not defined in the settings file
    */
   public static @Nullable <K, V> CacheProxy<K, V> tryToCreateFromExternalSettings(
       CacheManager cacheManager, String cacheName) {
-    return TypesafeConfigurator.<K, V>from(rootConfig(), cacheName)
+    return TypesafeConfigurator.<K, V>from(rootConfig(cacheManager), cacheName)
         .map(configuration -> createCache(cacheManager, cacheName, configuration))
         .orElse(null);
   }
@@ -87,24 +88,25 @@ final class CacheFactory {
    */
   public static <K, V> CacheProxy<K, V> createCache(CacheManager cacheManager,
       String cacheName, Configuration<K, V> configuration) {
-    CaffeineConfiguration<K, V> config = resolveConfigurationFor(configuration);
+    CaffeineConfiguration<K, V> config = resolveConfigurationFor(cacheManager, configuration);
     return new Builder<>(cacheManager, cacheName, config).build();
   }
 
   /** Returns the resolved configuration. */
-  private static Config rootConfig() {
-    return requireNonNull(TypesafeConfigurator.configSource().get());
+  private static Config rootConfig(CacheManager cacheManager) {
+    return requireNonNull(TypesafeConfigurator.configSource().get(
+        cacheManager.getURI(), cacheManager.getClassLoader()));
   }
 
   /** Copies the configuration and overlays it on top of the default settings. */
   @SuppressWarnings("PMD.AccessorMethodGeneration")
   private static <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
-      Configuration<K, V> configuration) {
+      CacheManager cacheManager, Configuration<K, V> configuration) {
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       return new CaffeineConfiguration<>((CaffeineConfiguration<K, V>) configuration);
     }
 
-    CaffeineConfiguration<K, V> template = TypesafeConfigurator.defaults(rootConfig());
+    CaffeineConfiguration<K, V> template = TypesafeConfigurator.defaults(rootConfig(cacheManager));
     if (configuration instanceof CompleteConfiguration<?, ?>) {
       CompleteConfiguration<K, V> complete = (CompleteConfiguration<K, V>) configuration;
       template.setReadThrough(complete.isReadThrough());

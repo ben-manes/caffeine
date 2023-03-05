@@ -15,10 +15,13 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
+import static com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator.configSource;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -29,24 +32,100 @@ import javax.cache.Caching;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
 import com.google.common.collect.Iterables;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TypesafeConfigurationTest {
+  final ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+  final ConfigSource defaultConfigSource = configSource();
+
+  @BeforeMethod
+  public void before() {
+    TypesafeConfigurator.setConfigSource(defaultConfigSource);
+  }
 
   @Test
-  public void configSource() {
-    Config config = ConfigFactory.load();
-    Supplier<Config> configSource = () -> config;
-    TypesafeConfigurator.setConfigSource(configSource);
-    assertThat(TypesafeConfigurator.configSource()).isEqualTo(configSource);
+  public void setConfigSource_supplier() {
+    TypesafeConfigurator.setConfigSource(() -> null);
+    assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
+
+    assertThrows(NullPointerException.class, () ->
+        TypesafeConfigurator.setConfigSource((Supplier<Config>) null));
+  }
+
+  @Test
+  public void setConfigSource_function() {
+    TypesafeConfigurator.setConfigSource((uri, classloader) -> null);
+    assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
+
+    assertThrows(NullPointerException.class, () ->
+        TypesafeConfigurator.setConfigSource((ConfigSource) null));
+  }
+
+  @Test
+  public void configSource_null() {
+    assertThrows(NullPointerException.class, () -> configSource().get(null, null));
+    assertThrows(NullPointerException.class, () -> configSource().get(null, classloader));
+    assertThrows(NullPointerException.class, () -> configSource().get(URI.create(""), null));
+  }
+
+  @Test
+  public void configSource_load() {
+    assertThat(configSource().get(URI.create(getClass().getName()), classloader))
+        .isSameInstanceAs(ConfigFactory.load());
+    assertThat(configSource().get(URI.create("rmi:/abc"), classloader))
+        .isSameInstanceAs(ConfigFactory.load());
+  }
+
+  @Test
+  public void configSource_classpath_present() {
+    var inferred = configSource().get(URI.create("custom.properties"), classloader);
+    assertThat(inferred.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
+
+    var explicit = configSource().get(URI.create("classpath:custom.properties"), classloader);
+    assertThat(explicit.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
+  }
+
+  @Test
+  public void configSource_classpath_absent() {
+    assertThrows(ConfigException.IO.class, () ->
+        configSource().get(URI.create("absent.conf"), classloader));
+    assertThrows(ConfigException.IO.class, () ->
+        configSource().get(URI.create("classpath:absent.conf"), classloader));
+  }
+
+  @Test
+  public void configSource_classpath_invalid() {
+    assertThrows(ConfigException.Parse.class, () ->
+        configSource().get(URI.create("invalid.conf"), classloader));
+  }
+
+  @Test
+  public void configSource_file() throws URISyntaxException {
+    var config = configSource().get(
+        getClass().getResource("/custom.properties").toURI(), classloader);
+    assertThat(config.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
+  }
+
+  @Test
+  public void configSource_file_absent() {
+    assertThrows(ConfigException.IO.class, () ->
+        configSource().get(URI.create("file:/absent.conf"), classloader));
+  }
+
+  @Test
+  public void configSource_file_invalid() {
+    assertThrows(ConfigException.IO.class, () ->
+        configSource().get(URI.create("file:/invalid.conf"), classloader));
   }
 
   @Test
