@@ -79,7 +79,10 @@ jobs:
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
       - name: Write-behind (rxjava)
         working-directory: examples/write-behind-rxjava
-        run: mvn test
+        run: ./mvnw test
       - name: Coalescing Bulkloader
         working-directory: examples/coalescing-bulkloader
-        run: mvn test
+        run: ./mvnw test
+      - name: Hibernate JCache
+        working-directory: examples/hibernate
+        run: ./gradlew build

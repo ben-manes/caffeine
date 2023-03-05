@@ -1,0 +1,18 @@
+plugins {
+  id 'java-library'
+  alias libs.plugins.versions
+}
+
+dependencies {
+  implementation libs.bundles.hibernate
+  implementation libs.caffeine
+  implementation libs.slf4j
+  runtimeOnly libs.h2
+
+  testImplementation libs.junit
+  testImplementation libs.truth
+}
+
+tasks.named('test') {
+  useJUnitPlatform()
+}

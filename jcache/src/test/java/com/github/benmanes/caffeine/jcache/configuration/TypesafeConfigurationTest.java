@@ -84,15 +84,21 @@ public final class TypesafeConfigurationTest {
         .isSameInstanceAs(ConfigFactory.load());
     assertThat(configSource().get(URI.create("rmi:/abc"), classloader))
         .isSameInstanceAs(ConfigFactory.load());
+    assertThat(ConfigFactory.load().hasPath("caffeine.jcache.default.key-type")).isTrue();
+    assertThat(ConfigFactory.load().hasPath("caffeine.jcache.test-cache")).isTrue();
   }
 
   @Test
   public void configSource_classpath_present() {
     var inferred = configSource().get(URI.create("custom.properties"), classloader);
     assertThat(inferred.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
+    assertThat(inferred.hasPath("caffeine.jcache.default.key-type")).isTrue();
+    assertThat(inferred.hasPath("caffeine.jcache.test-cache")).isFalse();
 
     var explicit = configSource().get(URI.create("classpath:custom.properties"), classloader);
     assertThat(explicit.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
+    assertThat(explicit.hasPath("caffeine.jcache.default.key-type")).isTrue();
+    assertThat(explicit.hasPath("caffeine.jcache.test-cache")).isFalse();
   }
 
   @Test
@@ -114,6 +120,8 @@ public final class TypesafeConfigurationTest {
     var config = configSource().get(
         getClass().getResource("/custom.properties").toURI(), classloader);
     assertThat(config.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
+    assertThat(config.hasPath("caffeine.jcache.default.key-type")).isTrue();
+    assertThat(config.hasPath("caffeine.jcache.test-cache")).isFalse();
   }
 
   @Test

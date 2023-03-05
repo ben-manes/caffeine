@@ -160,9 +160,13 @@ public final class TypesafeConfigurator {
     requireNonNull(classloader);
     var options = ConfigParseOptions.defaults().setAllowMissing(false);
     if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("file")) {
-      return ConfigFactory.parseFile(new File(uri), options);
+      return ConfigFactory.defaultOverrides(classloader)
+          .withFallback(ConfigFactory.parseFile(new File(uri), options))
+          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
     } else if (isResource(uri)) {
-      return ConfigFactory.parseResources(uri.getSchemeSpecificPart(), options);
+      return ConfigFactory.defaultOverrides(classloader)
+          .withFallback(ConfigFactory.parseResources(uri.getSchemeSpecificPart(), options))
+          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
     }
     return ConfigFactory.load(classloader);
   }

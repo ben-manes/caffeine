@@ -1,0 +1,24 @@
+[versions]
+caffeine = "3.1.4"
+h2 = "2.1.214"
+hibernate = "6.2.0.CR3"
+junit = "5.9.2"
+slf4j = "2.0.6"
+truth = "1.1.3"
+versions = "0.46.0"
+
+[libraries]
+caffeine = { module = "com.github.ben-manes.caffeine:jcache", version.ref = "caffeine" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
+hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "hibernate" }
+hibernate-jcache = { module = "org.hibernate.orm:hibernate-jcache", version.ref = "hibernate" }
+hibernate-hikaricp = { module = "org.hibernate.orm:hibernate-hikaricp", version.ref = "hibernate" }
+junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+slf4j = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
+truth = { module = "com.google.truth:truth", version.ref = "truth" }
+
+[bundles]
+hibernate = ["hibernate-core", "hibernate-jcache", "hibernate-hikaricp"]
+
+[plugins]
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
