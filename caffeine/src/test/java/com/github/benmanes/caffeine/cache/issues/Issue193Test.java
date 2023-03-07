@@ -16,9 +16,9 @@ package com.github.benmanes.caffeine.cache.issues;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.testng.annotations.Test;
@@ -74,7 +74,7 @@ public final class Issue193Test {
     var removed = new ArrayList<Long>();
     AsyncLoadingCache<String, Long> cache = Caffeine.newBuilder()
         .removalListener((String key, Long value, RemovalCause reason) -> removed.add(value))
-        .refreshAfterWrite(10, TimeUnit.NANOSECONDS)
+        .refreshAfterWrite(Duration.ofNanos(10))
         .executor(Runnable::run)
         .ticker(ticker::read)
         .buildAsync(loader);
@@ -82,7 +82,7 @@ public final class Issue193Test {
     // Load so there is an initial value.
     assertThat(loadGet(cache, key)).isEqualTo(0);
 
-    ticker.advance(11); // Refresh should fire on next access
+    ticker.advance(Duration.ofNanos(11)); // Refresh should fire on next access
     assertThat(cache).containsEntry(key, 0); // Old value
 
     cache.synchronous().invalidate(key); // Invalidate key entirely

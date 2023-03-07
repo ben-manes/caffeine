@@ -21,8 +21,8 @@ import static java.util.function.Function.identity;
 
 import java.io.PrintStream;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import org.github.jamm.MemoryMeter;
@@ -46,8 +46,7 @@ import com.jakewharton.fliptables.FlipTable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"LexicographicalAnnotationAttributeListing",
-  "PreferJavaTimeOverload", "PMD.MethodNamingConventions"})
+@SuppressWarnings({"LexicographicalAnnotationAttributeListing", "PMD.MethodNamingConventions"})
 public final class MemoryBenchmark {
   // The number of entries added to minimize skew due to non-entry factors
   static final int FUZZY_SIZE = 25_000;
@@ -111,11 +110,11 @@ public final class MemoryBenchmark {
 
   private void maximumSize_expireAfterAccess() {
     Cache<Integer, Integer> caffeine = builder()
-        .expireAfterAccess(1, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(1))
         .maximumSize(MAXIMUM_SIZE)
         .build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(1))
         .maximumSize(MAXIMUM_SIZE)
         .build();
     compare("Maximum Size & Expire after Access", caffeine, guava);
@@ -123,11 +122,11 @@ public final class MemoryBenchmark {
 
   private void maximumSize_expireAfterWrite() {
     Cache<Integer, Integer> caffeine = builder()
-        .expireAfterWrite(1, TimeUnit.MINUTES)
+        .expireAfterWrite(Duration.ofMinutes(1))
         .maximumSize(MAXIMUM_SIZE)
         .build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
-        .expireAfterWrite(1, TimeUnit.MINUTES)
+        .expireAfterWrite(Duration.ofMinutes(1))
         .maximumSize(MAXIMUM_SIZE)
         .build();
     compare("Maximum Size & Expire after Write", caffeine, guava);
@@ -135,11 +134,11 @@ public final class MemoryBenchmark {
 
   private void maximumSize_refreshAfterWrite() {
     Cache<Integer, Integer> caffeine = builder()
-        .refreshAfterWrite(1, TimeUnit.MINUTES)
+        .refreshAfterWrite(Duration.ofMinutes(1))
         .maximumSize(MAXIMUM_SIZE)
         .build(k -> k);
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
-        .refreshAfterWrite(1, TimeUnit.MINUTES)
+        .refreshAfterWrite(Duration.ofMinutes(1))
         .maximumSize(MAXIMUM_SIZE)
         .build(CacheLoader.from(Functions.identity()));
     compare("Maximum Size & Refresh after Write", caffeine, guava);
@@ -147,28 +146,28 @@ public final class MemoryBenchmark {
 
   private void expireAfterAccess() {
     Cache<Integer, Integer> caffeine = builder()
-        .expireAfterAccess(1, TimeUnit.MINUTES).build();
+        .expireAfterAccess(Duration.ofMinutes(1)).build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.MINUTES).build();
+        .expireAfterAccess(Duration.ofMinutes(1)).build();
     compare("Expire after Access", caffeine, guava);
   }
 
   private void expireAfterWrite() {
     Cache<Integer, Integer> caffeine = builder()
-        .expireAfterWrite(1, TimeUnit.MINUTES).build();
+        .expireAfterWrite(Duration.ofMinutes(1)).build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
-        .expireAfterWrite(1, TimeUnit.MINUTES).build();
+        .expireAfterWrite(Duration.ofMinutes(1)).build();
     compare("Expire after Write", caffeine, guava);
   }
 
   private void expireAfterAccess_expireAfterWrite() {
     Cache<Integer, Integer> caffeine = builder()
-        .expireAfterAccess(1, TimeUnit.MINUTES)
-        .expireAfterWrite(1, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(1))
+        .expireAfterWrite(Duration.ofMinutes(1))
         .build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.MINUTES)
-        .expireAfterWrite(1, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(1))
+        .expireAfterWrite(Duration.ofMinutes(1))
         .build();
     compare("Expire after Access & after Write", caffeine, guava);
   }

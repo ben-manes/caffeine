@@ -84,7 +84,6 @@ import com.google.common.collect.ImmutableList;
  */
 @CheckMaxLogLevel(WARN)
 @Listeners(CacheValidationListener.class)
-@SuppressWarnings("PreferJavaTimeOverload")
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterVarTest {
 
@@ -92,7 +91,7 @@ public final class ExpireAfterVarTest {
   @CacheSpec(expiryTime = Expire.FOREVER,
       expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS })
   public void expiry_bounds(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(System.nanoTime());
+    context.ticker().advance(Duration.ofNanos(System.nanoTime()));
     var running = new AtomicBoolean();
     var done = new AtomicBoolean();
     Int key = context.absentKey();
@@ -101,7 +100,7 @@ public final class ExpireAfterVarTest {
     try {
       ConcurrentTestHarness.execute(() -> {
         while (!done.get()) {
-          context.ticker().advance(1, TimeUnit.MINUTES);
+          context.ticker().advance(Duration.ofMinutes(1));
           var value = cache.get(key, Int::new);
           assertThat(value).isSameInstanceAs(key);
           running.set(true);
@@ -170,13 +169,13 @@ public final class ExpireAfterVarTest {
   @CacheSpec(population = Population.FULL,
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
   public void put_replace(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
 
     cache.put(context.firstKey(), context.absentValue());
     cache.put(context.absentKey(), context.absentValue());
     context.clearRemovalNotifications(); // Ignore replacement notification
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache).doesNotContainKey(context.firstKey());
     assertThat(cache).doesNotContainKey(context.middleKey());
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
@@ -195,13 +194,13 @@ public final class ExpireAfterVarTest {
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
   public void put_replace(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = context.absentValue().asFuture();
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
 
     cache.put(context.firstKey(), future);
     cache.put(context.absentKey(), future);
     context.clearRemovalNotifications(); // Ignore replacement notification
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache).doesNotContainKey(context.firstKey());
     assertThat(cache).doesNotContainKey(context.middleKey());
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
@@ -219,13 +218,13 @@ public final class ExpireAfterVarTest {
   @CacheSpec(population = Population.FULL,
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
   public void put_replace(Map<Int, Int> map, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
 
     assertThat(map.put(context.firstKey(), context.absentValue())).isNotNull();
     assertThat(map.put(context.absentKey(), context.absentValue())).isNull();
     context.clearRemovalNotifications(); // Ignore replacement notification
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(map).doesNotContainKey(context.firstKey());
     assertThat(map).doesNotContainKey(context.middleKey());
     assertThat(map).containsEntry(context.absentKey(), context.absentValue());
@@ -243,14 +242,14 @@ public final class ExpireAfterVarTest {
   @CacheSpec(population = Population.FULL,
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
   public void putAll_replace(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
 
     cache.putAll(Map.of(
         context.firstKey(), context.absentValue(),
         context.absentKey(), context.absentValue()));
     context.clearRemovalNotifications(); // Ignore replacement notification
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache).doesNotContainKey(context.firstKey());
     assertThat(cache).doesNotContainKey(context.middleKey());
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
@@ -268,9 +267,9 @@ public final class ExpireAfterVarTest {
   @CacheSpec(population = Population.FULL,
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
   public void replace_updated(Map<Int, Int> map, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(map.replace(context.firstKey(), context.absentValue())).isNotNull();
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
 
     context.cleanUp();
     assertThat(map).isExhaustivelyEmpty();
@@ -291,9 +290,9 @@ public final class ExpireAfterVarTest {
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
   public void replaceConditionally_updated(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(map.replace(key, context.original().get(key), context.absentValue())).isTrue();
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
 
     context.cleanUp();
     assertThat(map).isExhaustivelyEmpty();
@@ -315,57 +314,57 @@ public final class ExpireAfterVarTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void getIfPresent_expiryFails(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
         .thenThrow(ExpirationException.class);
     assertThrows(ExpirationException.class, () -> cache.getIfPresent(context.firstKey()));
-    context.ticker().advance(-1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void get_expiryFails_create(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(ExpirationException.class);
     assertThrows(ExpirationException.class, () -> cache.get(context.absentKey(), identity()));
-    context.ticker().advance(-1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void get_expiryFails_read(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
         .thenThrow(ExpirationException.class);
     assertThrows(ExpirationException.class, () -> cache.get(context.firstKey(), identity()));
-    context.ticker().advance(-1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void getAllPresent_expiryFails(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
         .thenThrow(ExpirationException.class);
     assertThrows(ExpirationException.class, () ->
         cache.getAllPresent(context.firstMiddleLastKeys()));
-    context.ticker().advance(-1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void put_insert_expiryFails(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(ExpirationException.class);
     assertThrows(ExpirationException.class, () ->
         cache.put(context.absentKey(), context.absentValue()));
-    context.ticker().advance(-1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
@@ -375,13 +374,13 @@ public final class ExpireAfterVarTest {
   public void put_insert_replaceExpired_expiryFails(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireVariably) {
     var expectedDuration = expireVariably.getExpiresAfter(context.firstKey(), TimeUnit.NANOSECONDS);
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(ExpirationException.class);
     assertThrows(ExpirationException.class, () ->
         cache.put(context.firstKey(), context.absentValue()));
 
-    context.ticker().advance(-1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
     var currentDuration = expireVariably.getExpiresAfter(
         context.firstKey(), TimeUnit.NANOSECONDS);
@@ -393,13 +392,13 @@ public final class ExpireAfterVarTest {
   public void put_update_expiryFails(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireVariably) {
     var expectedDuration = expireVariably.getExpiresAfter(context.firstKey(), TimeUnit.NANOSECONDS);
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenThrow(ExpirationException.class);
     assertThrows(ExpirationException.class, () ->
         cache.put(context.firstKey(), context.absentValue()));
 
-    context.ticker().advance(-1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
     var currentDuration = expireVariably.getExpiresAfter(
         context.firstKey(), TimeUnit.NANOSECONDS);
@@ -636,7 +635,7 @@ public final class ExpireAfterVarTest {
   public void getExpiresAfter_expired(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 
@@ -669,7 +668,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.setExpiresAfter(context.absentKey(), 4, TimeUnit.MINUTES);
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.MINUTES)).isEmpty();
 
-    context.ticker().advance(90, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).hasSize(1);
   }
@@ -685,7 +684,7 @@ public final class ExpireAfterVarTest {
     expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(4));
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey())).isEmpty();
 
-    context.ticker().advance(90, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).hasSize(1);
   }
@@ -695,8 +694,8 @@ public final class ExpireAfterVarTest {
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void setExpiresAfter_absent(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    expireAfterVar.setExpiresAfter(context.absentKey(), 1, TimeUnit.SECONDS);
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(1));
+    context.ticker().advance(Duration.ofSeconds(30));
     cache.cleanUp();
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
@@ -709,8 +708,8 @@ public final class ExpireAfterVarTest {
   public void setExpiresAfter_expired(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
-    expireAfterVar.setExpiresAfter(context.absentKey(), 1, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
+    expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(1));
     cache.cleanUp();
     assertThat(cache).isEmpty();
   }
@@ -793,7 +792,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsEntry(key, value);
     assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
 
-    context.ticker().advance(90, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).hasSize(1);
   }
@@ -811,7 +810,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsEntry(key, context.original().get(key));
     assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(1));
 
-    context.ticker().advance(90, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).isEmpty();
   }
@@ -894,7 +893,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsEntry(key, value);
     assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
 
-    context.ticker().advance(90, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).hasSize(1);
   }
@@ -912,7 +911,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsEntry(key, value);
     assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
 
-    context.ticker().advance(90, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).hasSize(1);
   }
@@ -1050,7 +1049,7 @@ public final class ExpireAfterVarTest {
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_absent(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
+    var duration = context.expiryTime().duration().dividedBy(2);
 
     Int result = expireAfterVar.compute(context.absentKey(),
         (key, value) -> context.absentValue(), duration);
@@ -1120,7 +1119,7 @@ public final class ExpireAfterVarTest {
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void compute_sameValue(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
+    var duration = context.expiryTime().duration().dividedBy(2);
     var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = intern(new Int(context.original().get(key)));
@@ -1146,7 +1145,7 @@ public final class ExpireAfterVarTest {
       removalListener = Listener.REJECTING)
   public void compute_sameInstance(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
+    var duration = context.expiryTime().duration().dividedBy(2);
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
       Int result = expireAfterVar.compute(key, (k, v) -> value, duration);
@@ -1173,7 +1172,7 @@ public final class ExpireAfterVarTest {
   public void compute_differentValue(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var replaced = new HashMap<Int, Int>();
-    var duration = Duration.ofNanos(context.expiryTime().timeNanos() / 2);
+    var duration = context.expiryTime().duration().dividedBy(2);
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
       Int result = expireAfterVar.compute(key, (k, v) -> value.negate(), duration);
@@ -1303,12 +1302,11 @@ public final class ExpireAfterVarTest {
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Int key = context.firstKey();
     Int value = context.absentValue();
-    var duration = Duration.ofNanos(context.expiryTime().timeNanos());
 
     var computed = expireAfterVar.compute(key, (k, v) -> {
-      context.ticker().advance(5, TimeUnit.MINUTES);
+      context.ticker().advance(Duration.ofMinutes(5));
       return value;
-    }, duration);
+    }, context.expiryTime().duration());
     assertThat(computed).isNotNull();
 
     context.cleanUp();
@@ -1320,7 +1318,7 @@ public final class ExpireAfterVarTest {
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void compute_absent_error(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThrows(IllegalStateException.class, () -> {
       expireAfterVar.compute(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
@@ -1332,7 +1330,7 @@ public final class ExpireAfterVarTest {
   @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void compute_present_error(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var variable = expireAfterVar.getExpiresAfter(context.firstKey());
     assertThrows(IllegalStateException.class, () -> {
       expireAfterVar.compute(context.firstKey(),
@@ -1434,7 +1432,7 @@ public final class ExpireAfterVarTest {
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(ConcurrentModificationException.class, () -> {
       expireAfterVar.oldest(stream -> {
-        context.ticker().advance(1, TimeUnit.NANOSECONDS);
+        context.ticker().advance(Duration.ofNanos(1));
         cache.put(context.absentKey(), context.absentValue());
         throw assertThrows(ConcurrentModificationException.class, stream::count);
       });
@@ -1493,7 +1491,7 @@ public final class ExpireAfterVarTest {
       expiry = CacheExpiry.ACCESS, expiryTime = Expire.ONE_MINUTE)
   public void oldestFunc_metadata_expiresInTraversal(CacheContext context,
       VarExpiration<Int, Int> expireAfterVar) {
-    context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
+    context.ticker().setAutoIncrementStep(Duration.ofSeconds(30));
     var entries = expireAfterVar.oldest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);
@@ -1575,7 +1573,7 @@ public final class ExpireAfterVarTest {
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(ConcurrentModificationException.class, () -> {
       expireAfterVar.youngest(stream -> {
-        context.ticker().advance(1, TimeUnit.NANOSECONDS);
+        context.ticker().advance(Duration.ofNanos(1));
         cache.put(context.absentKey(), context.absentValue());
         throw assertThrows(ConcurrentModificationException.class, stream::count);
       });
@@ -1634,7 +1632,7 @@ public final class ExpireAfterVarTest {
       expiry = CacheExpiry.ACCESS, expiryTime = Expire.ONE_MINUTE)
   public void youngestFunc_metadata_expiresInTraversal(CacheContext context,
       VarExpiration<Int, Int> expireAfterVar) {
-    context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
+    context.ticker().setAutoIncrementStep(Duration.ofSeconds(30));
     var entries = expireAfterVar.youngest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);

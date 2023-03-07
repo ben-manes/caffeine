@@ -25,7 +25,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-import java.util.function.LongFunction;
+import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -102,14 +102,14 @@ public final class CaffeineSpecTest {
   }
 
   private void runScenarios(CacheContext context, Epoch epoch) {
-    runTest(context, epoch, nanos -> epoch.toUnitString(nanos).toLowerCase(US));
-    runTest(context, epoch, nanos -> epoch.toUnitString(nanos).toUpperCase(US));
-    runTest(context, epoch, nanos -> epoch.toDuration(nanos).toString().toLowerCase(US));
-    runTest(context, epoch, nanos -> epoch.toDuration(nanos).toString().toUpperCase(US));
+    runTest(context, epoch, duration -> epoch.toUnitString(duration).toLowerCase(US));
+    runTest(context, epoch, duration -> epoch.toUnitString(duration).toUpperCase(US));
+    runTest(context, epoch, duration -> epoch.truncate(duration).toString().toLowerCase(US));
+    runTest(context, epoch, duration -> epoch.truncate(duration).toString().toUpperCase(US));
   }
 
-  private void runTest(CacheContext context, Epoch epoch, LongFunction<String> nanosToString) {
-    CaffeineSpec spec = toSpec(context, epoch, nanosToString);
+  private void runTest(CacheContext context, Epoch epoch, Function<Duration, String> formatter) {
+    CaffeineSpec spec = toSpec(context, epoch, formatter);
     Caffeine<Object, Object> builder = Caffeine.from(spec);
 
     checkInitialCapacity(spec, context, builder);
@@ -125,7 +125,7 @@ public final class CaffeineSpecTest {
   }
 
   static CaffeineSpec toSpec(CacheContext context,
-      Epoch epoch, LongFunction<String> nanosToString) {
+      Epoch epoch, Function<Duration, String> formatter) {
     var options = new ArrayList<String>();
     if (context.initialCapacity() != InitialCapacity.DEFAULT) {
       options.add("initialCapacity=" + context.initialCapacity().size());
@@ -144,15 +144,15 @@ public final class CaffeineSpecTest {
       options.add("softValues");
     }
     if (context.expireAfterWrite() != Expire.DISABLED) {
-      String duration = nanosToString.apply(context.expireAfterWrite().timeNanos());
+      String duration = formatter.apply(context.expireAfterWrite().duration());
       options.add("expireAfterWrite=" + duration);
     }
     if (context.expireAfterAccess() != Expire.DISABLED) {
-      String duration = nanosToString.apply(context.expireAfterAccess().timeNanos());
+      String duration = formatter.apply(context.expireAfterAccess().duration());
       options.add("expireAfterAccess=" + duration);
     }
     if (context.refreshAfterWrite() != Expire.DISABLED) {
-      String duration = nanosToString.apply(context.refreshAfterWrite().timeNanos());
+      String duration = formatter.apply(context.refreshAfterWrite().duration());
       options.add("refreshAfterWrite=" + duration);
     }
     if (context.isRecordingStats()) {
@@ -233,9 +233,9 @@ public final class CaffeineSpecTest {
       assertThat(spec.expireAfterAccess).isNull();
       assertThat(builder.expireAfterAccessNanos).isEqualTo(UNSET_LONG);
     } else {
-      long nanos = context.expireAfterAccess().timeNanos();
-      assertThat(spec.expireAfterAccess).isEqualTo(epoch.toDuration(nanos));
-      assertThat(builder.expireAfterAccessNanos).isEqualTo(epoch.truncate(nanos));
+      var duration = epoch.truncate(context.expireAfterAccess().duration());
+      assertThat(spec.expireAfterAccess).isEqualTo(duration);
+      assertThat(builder.expireAfterAccessNanos).isEqualTo(duration.toNanos());
     }
   }
 
@@ -245,9 +245,9 @@ public final class CaffeineSpecTest {
       assertThat(spec.expireAfterWrite).isNull();
       assertThat(builder.expireAfterWriteNanos).isEqualTo(UNSET_LONG);
     } else {
-      long nanos = context.expireAfterWrite().timeNanos();
-      assertThat(spec.expireAfterWrite).isEqualTo(epoch.toDuration(nanos));
-      assertThat(builder.expireAfterWriteNanos).isEqualTo(epoch.truncate(nanos));
+      var duration = epoch.truncate(context.expireAfterWrite().duration());
+      assertThat(spec.expireAfterWrite).isEqualTo(duration);
+      assertThat(builder.expireAfterWriteNanos).isEqualTo(duration.toNanos());
     }
   }
 
@@ -257,9 +257,9 @@ public final class CaffeineSpecTest {
       assertThat(spec.refreshAfterWrite).isNull();
       assertThat(builder.refreshAfterWriteNanos).isEqualTo(UNSET_LONG);
     } else {
-      long nanos = context.refreshAfterWrite().timeNanos();
-      assertThat(spec.refreshAfterWrite).isEqualTo(epoch.toDuration(nanos));
-      assertThat(builder.refreshAfterWriteNanos).isEqualTo(epoch.truncate(nanos));
+      var duration = epoch.truncate(context.refreshAfterWrite().duration());
+      assertThat(spec.refreshAfterWrite).isEqualTo(duration);
+      assertThat(builder.refreshAfterWriteNanos).isEqualTo(duration.toNanos());
     }
   }
 
@@ -271,14 +271,11 @@ public final class CaffeineSpecTest {
       this.symbol = requireNonNull(symbol);
       this.unit = requireNonNull(unit);
     }
-    long truncate(long nanos) {
-      return unit.toNanos(unit.convert(nanos, TimeUnit.NANOSECONDS));
+    Duration truncate(Duration duration) {
+      return Duration.ofNanos(unit.toNanos(unit.convert(duration)));
     }
-    public String toUnitString(long nanos) {
-      return unit.convert(nanos, TimeUnit.NANOSECONDS) + symbol;
-    }
-    public Duration toDuration(long nanos) {
-      return Duration.ofNanos(truncate(nanos));
+    public String toUnitString(Duration duration) {
+      return unit.convert(duration) + symbol;
     }
   }
 }

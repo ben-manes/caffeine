@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -283,24 +284,24 @@ public @interface CacheSpec {
     CREATE {
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
         return ExpiryBuilder
-            .expiringAfterCreate(expiryTime.timeNanos())
+            .expiringAfterCreate(expiryTime.duration())
             .build();
       }
     },
     WRITE {
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
         return ExpiryBuilder
-            .expiringAfterCreate(expiryTime.timeNanos())
-            .expiringAfterUpdate(expiryTime.timeNanos())
+            .expiringAfterCreate(expiryTime.duration())
+            .expiringAfterUpdate(expiryTime.duration())
             .build();
       }
     },
     ACCESS {
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
         return ExpiryBuilder
-            .expiringAfterCreate(expiryTime.timeNanos())
-            .expiringAfterUpdate(expiryTime.timeNanos())
-            .expiringAfterRead(expiryTime.timeNanos())
+            .expiringAfterCreate(expiryTime.duration())
+            .expiringAfterUpdate(expiryTime.duration())
+            .expiringAfterRead(expiryTime.duration())
             .build();
       }
     };
@@ -322,11 +323,15 @@ public @interface CacheSpec {
     FOREVER(Long.MAX_VALUE);
 
     private final long timeNanos;
+    private final Duration duration;
 
     Expire(long timeNanos) {
       this.timeNanos = timeNanos;
+      this.duration = Duration.ofNanos(timeNanos);
     }
-
+    public Duration duration() {
+      return duration;
+    }
     public long timeNanos() {
       return timeNanos;
     }

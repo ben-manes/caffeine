@@ -33,7 +33,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -71,7 +70,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"PreferJavaTimeOverload", "serial"})
+@SuppressWarnings("serial")
 public final class GuavaCacheFromContext {
   private GuavaCacheFromContext() {}
   private static final ThreadLocal<Throwable> error = new ThreadLocal<>();
@@ -100,13 +99,13 @@ public final class GuavaCacheFromContext {
       }
     }
     if (context.expiresAfterAccess()) {
-      builder.expireAfterAccess(context.expireAfterAccess().timeNanos(), TimeUnit.NANOSECONDS);
+      builder.expireAfterAccess(context.expireAfterAccess().duration());
     }
     if (context.expiresAfterWrite()) {
-      builder.expireAfterWrite(context.expireAfterWrite().timeNanos(), TimeUnit.NANOSECONDS);
+      builder.expireAfterWrite(context.expireAfterWrite().duration());
     }
     if (context.refreshes()) {
-      builder.refreshAfterWrite(context.refreshAfterWrite().timeNanos(), TimeUnit.NANOSECONDS);
+      builder.refreshAfterWrite(context.refreshAfterWrite().duration());
     }
     if (context.expires() || context.refreshes()) {
       builder.ticker(context.ticker());

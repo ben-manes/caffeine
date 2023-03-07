@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.lincheck;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import org.testng.annotations.Factory;
 import org.testng.annotations.Test;
@@ -39,7 +39,7 @@ public final class CaffeineLincheckTest {
     public BoundedLincheckTest() {
       super(Caffeine.newBuilder()
           .maximumSize(Long.MAX_VALUE)
-          .expireAfterWrite(Long.MAX_VALUE, TimeUnit.DAYS));
+          .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE)));
     }
   }
 

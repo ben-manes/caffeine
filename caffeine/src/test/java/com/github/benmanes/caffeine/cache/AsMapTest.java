@@ -3077,6 +3077,7 @@ public final class AsMapTest {
     assertThat(entry.toString()).isNotEqualTo(other.toString());
   }
 
-  @SuppressWarnings("serial")
-  static final class ExpectedError extends Error {}
+  static final class ExpectedError extends Error {
+    private static final long serialVersionUID = 1L;
+  }
 }

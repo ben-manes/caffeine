@@ -37,6 +37,7 @@ import static org.junit.Assert.assertThrows;
 import static uk.org.lidalia.slf4jext.Level.TRACE;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -779,7 +780,7 @@ public final class LoadingCacheTest {
     var future = cache.refresh(key);
 
     await().untilTrue(started);
-    context.ticker().advance(10, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(10));
     assertThat(cache).doesNotContainKey(key);
 
     done.set(true);
@@ -811,7 +812,7 @@ public final class LoadingCacheTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, removalListener = Listener.CONSUMING)
   public void refresh_expired_inFlight(LoadingCache<Int, Int> cache, CacheContext context) {
     var future1 = cache.refresh(context.firstKey());
-    context.ticker().advance(10, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(10));
     var future2 = cache.refresh(context.firstKey());
 
     future1.complete(null);

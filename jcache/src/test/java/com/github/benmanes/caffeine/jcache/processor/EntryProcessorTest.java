@@ -19,16 +19,16 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
+import static javax.cache.expiry.Duration.FIVE_MINUTES;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalLong;
-import java.util.concurrent.TimeUnit;
 
 import javax.cache.Cache;
 import javax.cache.expiry.CreatedExpiryPolicy;
-import javax.cache.expiry.Duration;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriter;
@@ -46,7 +46,6 @@ import com.google.common.collect.Streams;
  * @author chrisstockton (Chris Stockton)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PreferJavaTimeOverload")
 public final class EntryProcessorTest extends AbstractJCacheTest {
   private final Map<Integer, Integer> map = new HashMap<>();
 
@@ -63,7 +62,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
     var config = new CaffeineConfiguration<Integer, Integer>();
-    config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(Duration.FIVE_MINUTES));
+    config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(FIVE_MINUTES));
     config.setCacheLoaderFactory(MapLoader::new);
     config.setCacheWriterFactory(MapWriter::new);
     config.setTickerFactory(() -> ticker::read);
@@ -79,19 +78,19 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     assertThat(loads).isEqualTo(1);
     assertThat(value1).isNull();
 
-    ticker.advance(1, TimeUnit.MINUTES);
+    ticker.advance(Duration.ofMinutes(1));
     var value2 = jcache.invoke(KEY_1, this::process);
     assertThat(loads).isEqualTo(1);
     assertThat(value2).isNull();
 
     // Expire the entry
-    ticker.advance(5, TimeUnit.MINUTES);
+    ticker.advance(Duration.ofMinutes(5));
 
     var value3 = jcache.invoke(KEY_1, this::process);
     assertThat(loads).isEqualTo(2);
     assertThat(value3).isNull();
 
-    ticker.advance(1, TimeUnit.MINUTES);
+    ticker.advance(Duration.ofMinutes(1));
     var value4 = jcache.invoke(KEY_1, this::process);
     assertThat(loads).isEqualTo(2);
     assertThat(value4).isNull();

@@ -66,7 +66,6 @@ import com.google.common.collect.Maps;
  */
 @CheckMaxLogLevel(WARN)
 @Listeners(CacheValidationListener.class)
-@SuppressWarnings("PreferJavaTimeOverload")
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterAccessTest {
 
@@ -77,11 +76,11 @@ public final class ExpireAfterAccessTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getIfPresent(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.getIfPresent(context.firstKey());
     assertThat(value).isEqualTo(context.original().get(context.firstKey()));
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getIfPresent(context.firstKey())).isEqualTo(context.firstKey().negate());
     assertThat(cache.getIfPresent(context.lastKey())).isNull();
 
@@ -100,11 +99,11 @@ public final class ExpireAfterAccessTest {
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void get(Cache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> mappingFunction = context.original()::get;
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var value1 = cache.get(context.firstKey(), mappingFunction);
     assertThat(value1).isEqualTo(context.original().get(context.firstKey()));
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     var value2 = cache.get(context.firstKey(), mappingFunction);
     assertThat(value2).isEqualTo(context.original().get(context.firstKey()));
 
@@ -125,11 +124,11 @@ public final class ExpireAfterAccessTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getAllPresent(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var results = cache.getAllPresent(context.firstMiddleLastKeys());
     assertThat(results).hasSize(3);
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getAllPresent(context.firstMiddleLastKeys())).hasSize(3);
 
     cache.cleanUp();
@@ -146,20 +145,20 @@ public final class ExpireAfterAccessTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getAll(Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var result1 = cache.getAll(List.of(context.firstKey(), context.middleKey()),
         keys -> Maps.asMap(keys, identity()));
     assertThat(result1).containsExactly(context.firstKey(), context.firstKey().negate(),
         context.middleKey(), context.middleKey().negate());
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     cache.cleanUp();
     var result2 = cache.getAll(List.of(context.firstKey(), context.absentKey()),
         keys -> Maps.asMap(keys, identity()));
     assertThat(result2).containsExactly(context.firstKey(), context.firstKey().negate(),
         context.absentKey(), context.absentKey());
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     cache.cleanUp();
     var result3 = cache.getAll(List.of(context.middleKey(), context.absentKey()),
         keys -> Maps.asMap(keys, identity()));
@@ -180,16 +179,16 @@ public final class ExpireAfterAccessTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expireAfterAccess = Expire.ONE_MINUTE,
       loader = Loader.IDENTITY, population = { Population.PARTIAL, Population.FULL })
   public void get_loading(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey());
     assertThat(value).isEqualTo(context.original().get(context.firstKey()));
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.get(context.lastKey())).isEqualTo(context.lastKey());
     cache.cleanUp();
     assertThat(cache).hasSize(2);
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     cache.cleanUp();
 
     assertThat(cache).hasSize(1);
@@ -203,18 +202,18 @@ public final class ExpireAfterAccessTest {
       expireAfterAccess = Expire.ONE_MINUTE, loader = {Loader.IDENTITY, Loader.BULK_IDENTITY},
       population = { Population.PARTIAL, Population.FULL })
   public void getAll_loading(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getAll(List.of(context.firstKey(), context.middleKey())))
         .containsExactly(context.firstKey(), context.firstKey().negate(),
             context.middleKey(), context.middleKey().negate());
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     cache.cleanUp();
     assertThat(cache.getAll(List.of(context.firstKey(), context.absentKey())))
         .containsExactly(context.firstKey(), context.firstKey().negate(),
             context.absentKey(), context.absentKey());
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     cache.cleanUp();
     assertThat(cache.getAll(List.of(context.middleKey(), context.absentKey())))
         .containsExactly(context.middleKey(), context.middleKey(),
@@ -234,9 +233,9 @@ public final class ExpireAfterAccessTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getIfPresent_async(AsyncCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     cache.getIfPresent(context.firstKey()).join();
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache).containsKey(context.firstKey());
     assertThat(cache).doesNotContainKey(context.lastKey());
 
@@ -256,10 +255,10 @@ public final class ExpireAfterAccessTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
   public void putIfAbsent(Map<Int, Int> map, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(map.putIfAbsent(context.firstKey(), context.absentValue())).isNotNull();
 
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(map.putIfAbsent(context.lastKey(), context.absentValue())).isNull();
 
     assertThat(map).hasSize(2);
@@ -318,13 +317,14 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("PreferJavaTimeOverload")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void setExpiresAfter(Cache<Int, Int> cache, CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     expireAfterAccess.setExpiresAfter(2, TimeUnit.MINUTES);
     assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES)).isEqualTo(2);
 
-    context.ticker().advance(90, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).hasSize(context.initialSize());
   }
@@ -336,7 +336,7 @@ public final class ExpireAfterAccessTest {
     expireAfterAccess.setExpiresAfter(Duration.ofMinutes(2));
     assertThat(expireAfterAccess.getExpiresAfter()).isEqualTo(Duration.ofMinutes(2));
 
-    context.ticker().advance(90, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).hasSize(context.initialSize());
   }
@@ -347,9 +347,9 @@ public final class ExpireAfterAccessTest {
   public void ageOf(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(0);
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(30);
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS)).isEmpty();
   }
 
@@ -359,9 +359,9 @@ public final class ExpireAfterAccessTest {
   public void ageOf_duration(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     assertThat(expireAfterAccess.ageOf(context.firstKey())).hasValue(Duration.ZERO);
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(expireAfterAccess.ageOf(context.firstKey())).hasValue(Duration.ofSeconds(30));
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(expireAfterAccess.ageOf(context.firstKey())).isEmpty();
   }
 
@@ -379,7 +379,7 @@ public final class ExpireAfterAccessTest {
   public void ageOf_expired(Cache<Int, Int> cache, CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThat(expireAfterAccess.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 
@@ -525,7 +525,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
   public void oldestFunc_metadata_expiresInTraversal(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
+    context.ticker().setAutoIncrementStep(Duration.ofSeconds(30));
     var entries = expireAfterAccess.oldest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);
@@ -675,7 +675,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
   public void youngestFunc_metadata_expiresInTraversal(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    context.ticker().setAutoIncrementStep(30, TimeUnit.SECONDS);
+    context.ticker().setAutoIncrementStep(Duration.ofSeconds(30));
     var entries = expireAfterAccess.youngest(stream -> stream.collect(toImmutableList()));
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);

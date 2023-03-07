@@ -29,6 +29,7 @@ import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,7 +40,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -392,8 +392,9 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache).isEmpty();
   }
 
-  @SuppressWarnings("serial")
-  private static final class LoadAllException extends RuntimeException {}
+  private static final class LoadAllException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+  }
 
   /* --------------- put --------------- */
 
@@ -428,7 +429,7 @@ public final class AsyncLoadingCacheTest {
     cache.synchronous().put(key, key);
     var original = cache.get(key);
     for (int i = 0; i < 10; i++) {
-      context.ticker().advance(1, TimeUnit.SECONDS);
+      context.ticker().advance(Duration.ofSeconds(1));
       cache.synchronous().refresh(key);
 
       var next = cache.get(key);

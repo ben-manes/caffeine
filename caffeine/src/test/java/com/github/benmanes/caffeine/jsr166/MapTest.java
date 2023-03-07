@@ -227,6 +227,7 @@ public class MapTest extends JSR166TestCase {
     /**
      * Concurrent access by compute methods behaves as expected
      */
+    @SuppressWarnings("PreferJavaTimeOverload")
     public void testConcurrentAccess() throws Throwable {
         final Map map = impl.emptyMap();
         final long testDurationMillis = expensiveTests ? 1000 : 2;

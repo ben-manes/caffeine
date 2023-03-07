@@ -50,7 +50,6 @@ import com.google.common.testing.NullPointerTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PreferJavaTimeOverload")
 public final class CaffeineTest {
   @Mock StatsCounter statsCounter;
   @Mock Expiry<Object, Object> expiry;
@@ -80,14 +79,15 @@ public final class CaffeineTest {
   public void configured() {
     var configured = Caffeine.newBuilder()
         .initialCapacity(1).weakKeys()
-        .expireAfterAccess(1, TimeUnit.SECONDS).expireAfterWrite(1, TimeUnit.SECONDS)
+        .expireAfterAccess(Duration.ofSeconds(1))
+        .expireAfterWrite(Duration.ofSeconds(1))
         .removalListener((k, v, c) -> {}).recordStats();
     assertThat(configured.build()).isNotNull();
     assertThat(configured.buildAsync()).isNotNull();
     assertThat(configured.build(loader)).isNotNull();
     assertThat(configured.buildAsync(loader)).isNotNull();
 
-    assertThat(configured.refreshAfterWrite(1, TimeUnit.SECONDS).toString())
+    assertThat(configured.refreshAfterWrite(Duration.ofSeconds(1)).toString())
         .isNotEqualTo(Caffeine.newBuilder().toString());
     assertThat(Caffeine.newBuilder().maximumSize(1).toString())
         .isNotEqualTo(Caffeine.newBuilder().maximumWeight(1).toString());
@@ -392,12 +392,14 @@ public final class CaffeineTest {
   /* --------------- expireAfterAccess --------------- */
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterAccess_negative() {
     assertThrows(IllegalArgumentException.class, () ->
         Caffeine.newBuilder().expireAfterAccess(-1, TimeUnit.MILLISECONDS));
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterAccess_expiry() {
     var builder = Caffeine.newBuilder().expireAfter(expiry);
     assertThrows(IllegalStateException.class, () ->
@@ -405,6 +407,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterAccess_twice() {
     var builder = Caffeine.newBuilder().expireAfterAccess(1, TimeUnit.MILLISECONDS);
     assertThrows(IllegalStateException.class, () ->
@@ -412,6 +415,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterAccess_small() {
     var builder = Caffeine.newBuilder().expireAfterAccess(0, TimeUnit.MILLISECONDS);
     assertThat(builder.expireAfterAccessNanos).isEqualTo(0);
@@ -420,6 +424,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterAccess_large() {
     var builder = Caffeine.newBuilder().expireAfterAccess(Integer.MAX_VALUE, TimeUnit.NANOSECONDS);
     assertThat(builder.expireAfterAccessNanos).isEqualTo(Integer.MAX_VALUE);
@@ -476,12 +481,14 @@ public final class CaffeineTest {
   /* --------------- expireAfterWrite --------------- */
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterWrite_negative() {
     assertThrows(IllegalArgumentException.class, () ->
         Caffeine.newBuilder().expireAfterWrite(-1, TimeUnit.MILLISECONDS));
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterWrite_expiry() {
     var builder = Caffeine.newBuilder().expireAfter(expiry);
     assertThrows(IllegalStateException.class, () ->
@@ -489,6 +496,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterWrite_twice() {
     var builder = Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MILLISECONDS);
     assertThrows(IllegalStateException.class, () ->
@@ -496,6 +504,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterWrite_small() {
     var builder = Caffeine.newBuilder().expireAfterWrite(0, TimeUnit.MILLISECONDS);
     assertThat(builder.expireAfterWriteNanos).isEqualTo(0);
@@ -504,6 +513,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterWrite_large() {
     var builder = Caffeine.newBuilder()
         .expireAfterWrite(Integer.MAX_VALUE, TimeUnit.NANOSECONDS);
@@ -541,6 +551,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterWrite_duration_immediate() {
     var builder = Caffeine.newBuilder().expireAfterWrite(Duration.ZERO);
     assertThat(builder.expireAfterWriteNanos).isEqualTo(0);
@@ -549,6 +560,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void expireAfterWrite_duration_excessive() {
     var builder = Caffeine.newBuilder().expireAfterWrite(ChronoUnit.FOREVER.getDuration());
     assertThat(builder.expireAfterWriteNanos).isEqualTo(Long.MAX_VALUE);
@@ -571,13 +583,13 @@ public final class CaffeineTest {
 
   @Test
   public void expireAfter_access() {
-    var builder = Caffeine.newBuilder().expireAfterAccess(1, TimeUnit.MILLISECONDS);
+    var builder = Caffeine.newBuilder().expireAfterAccess(Duration.ofMillis(1));
     assertThrows(IllegalStateException.class, () -> builder.expireAfter(expiry));
   }
 
   @Test
   public void expireAfter_write() {
-    var builder = Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MILLISECONDS);
+    var builder = Caffeine.newBuilder().expireAfterWrite(Duration.ofMillis(1));
     assertThrows(IllegalStateException.class, () -> builder.expireAfter(expiry));
   }
 
@@ -591,12 +603,14 @@ public final class CaffeineTest {
   /* --------------- refreshAfterWrite --------------- */
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void refreshAfterWrite_negative() {
     assertThrows(IllegalArgumentException.class, () ->
         Caffeine.newBuilder().refreshAfterWrite(-1, TimeUnit.MILLISECONDS));
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void refreshAfterWrite_twice() {
     var builder = Caffeine.newBuilder().refreshAfterWrite(1, TimeUnit.MILLISECONDS);
     assertThrows(IllegalStateException.class, () ->
@@ -604,18 +618,21 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void refreshAfterWrite_noCacheLoader() {
     assertThrows(IllegalStateException.class, () ->
         Caffeine.newBuilder().refreshAfterWrite(1, TimeUnit.MILLISECONDS).build());
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void refreshAfterWrite_zero() {
     assertThrows(IllegalArgumentException.class, () ->
         Caffeine.newBuilder().refreshAfterWrite(0, TimeUnit.MILLISECONDS));
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
   public void refreshAfterWrite() {
     var builder = Caffeine.newBuilder()
         .refreshAfterWrite(1, TimeUnit.MILLISECONDS);

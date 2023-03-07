@@ -210,7 +210,7 @@ public final class CacheGenerator {
   }
 
   /** Fills the cache up to the population size. */
-  @SuppressWarnings({"PreferJavaTimeOverload", "unchecked"})
+  @SuppressWarnings("unchecked")
   private static void populate(CacheContext context, Cache<Int, Int> cache) {
     if (context.population.size() == 0) {
       return;

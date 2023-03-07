@@ -1778,7 +1778,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
 
     // If exceeds the tolerance, treat the update as a write
-    context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
+    context.ticker().advance(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE + 1));
     var lastValue = cache.put(Int.valueOf(1), Int.valueOf(3));
     assertThat(lastValue).isEqualTo(2);
     if (mayCheckReads) {
@@ -1804,7 +1804,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
 
     // If exceeds the tolerance, treat the update as a write
-    context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
+    context.ticker().advance(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE + 1));
     oldValue = cache.put(Int.valueOf(1), Int.valueOf(3));
     assertThat(oldValue).isEqualTo(2);
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
@@ -1914,7 +1914,7 @@ public final class BoundedLocalCacheTest {
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_expireAfterRead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     var result = new AtomicReference<Int>();
     long currentDuration = 1;
 
@@ -1960,7 +1960,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.pacer().nextFireTime).isNotEqualTo(0);
     assertThat(cache.pacer().future).isNotNull();
 
-    context.ticker().advance(1, TimeUnit.HOURS);
+    context.ticker().advance(Duration.ofHours(1));
     cache.cleanUp();
 
     verify(future).cancel(false);
@@ -2003,7 +2003,7 @@ public final class BoundedLocalCacheTest {
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
-      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+      context.ticker().advance(Duration.ofNanos(stepSize));
     }
 
     if (cache.evicts()) {
@@ -2017,7 +2017,7 @@ public final class BoundedLocalCacheTest {
         var value = cache.get(node.getKey());
         assertThat(value).isEqualTo(node.getKey());
       }
-      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+      context.ticker().advance(Duration.ofNanos(stepSize));
       cache.cleanUp();
     }
 
@@ -2036,7 +2036,7 @@ public final class BoundedLocalCacheTest {
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
-      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+      context.ticker().advance(Duration.ofNanos(stepSize));
     }
 
     for (var node : List.copyOf(cache.accessOrderWindowDeque())) {
@@ -2049,7 +2049,7 @@ public final class BoundedLocalCacheTest {
       var value = cache.get(node.getKey());
       assertThat(value).isEqualTo(node.getKey());
     }
-    context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    context.ticker().advance(Duration.ofNanos(stepSize));
     cache.cleanUp();
 
     var expectedDelay = context.expireAfterAccess().timeNanos()
@@ -2067,14 +2067,14 @@ public final class BoundedLocalCacheTest {
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
-      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+      context.ticker().advance(Duration.ofNanos(stepSize));
     }
 
     for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
       var value = cache.get(node.getKey());
       assertThat(value).isEqualTo(node.getKey());
     }
-    context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+    context.ticker().advance(Duration.ofNanos(stepSize));
     cache.cleanUp();
 
     for (var node : List.copyOf(cache.accessOrderWindowDeque())) {
@@ -2099,7 +2099,7 @@ public final class BoundedLocalCacheTest {
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
-      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+      context.ticker().advance(Duration.ofNanos(stepSize));
     }
     for (var key : cache.keySet()) {
       var value = cache.get(key);
@@ -2124,7 +2124,7 @@ public final class BoundedLocalCacheTest {
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
-      context.ticker().advance(stepSize, TimeUnit.NANOSECONDS);
+      context.ticker().advance(Duration.ofNanos(stepSize));
     }
     for (var key : cache.keySet()) {
       var value = cache.get(key);
@@ -2179,7 +2179,7 @@ public final class BoundedLocalCacheTest {
     // Ensure that the refresh operation was skipped
     cache.evictionLock.lock();
     try {
-      context.ticker().advance(10, TimeUnit.MINUTES);
+      context.ticker().advance(Duration.ofMinutes(10));
       var value = cache.getIfPresent(context.absentKey(), /* recordStats */ true);
       assertThat(value).isEqualTo(context.absentValue());
       assertThat(refreshEntry.get()).isNull();
@@ -2217,7 +2217,7 @@ public final class BoundedLocalCacheTest {
     var node = localCache.data.get(lookupKey);
     var refreshes = localCache.refreshes();
 
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     ConcurrentTestHarness.execute(() -> {
       var value = cache.get(context.absentKey());
       assertThat(value).isEqualTo(context.absentValue());
@@ -2338,7 +2338,7 @@ public final class BoundedLocalCacheTest {
     assertThat(value).isNull();
     key.increment();
 
-    context.ticker().advance(1, TimeUnit.DAYS);
+    context.ticker().advance(Duration.ofDays(1));
     cache.cleanUp();
 
     assertThat(Map.copyOf(cache)).isEmpty();

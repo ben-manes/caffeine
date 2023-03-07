@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.testing;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
+import java.time.Duration;
 
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -28,71 +29,67 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ExpiryBuilder {
-  private static final int UNSET = -1;
+  private final Duration create;
+  private Duration update;
+  private Duration read;
 
-  private final long createNanos;
-  private long updateNanos;
-  private long readNanos;
-
-  private ExpiryBuilder(long createNanos) {
-    this.createNanos = createNanos;
-    this.updateNanos = UNSET;
-    this.readNanos = UNSET;
+  private ExpiryBuilder(Duration create) {
+    this.create = create;
   }
 
   /** Sets the fixed creation expiration time. */
-  public static ExpiryBuilder expiringAfterCreate(long nanos) {
-    return new ExpiryBuilder(nanos);
+  public static ExpiryBuilder expiringAfterCreate(Duration duration) {
+    return new ExpiryBuilder(duration);
   }
 
   /** Sets the fixed update expiration time. */
   @CanIgnoreReturnValue
-  public ExpiryBuilder expiringAfterUpdate(long nanos) {
-    updateNanos = nanos;
+  public ExpiryBuilder expiringAfterUpdate(Duration duration) {
+    update = duration;
     return this;
   }
 
   /** Sets the fixed read expiration time. */
   @CanIgnoreReturnValue
-  public ExpiryBuilder expiringAfterRead(long nanos) {
-    readNanos = nanos;
+  public ExpiryBuilder expiringAfterRead(Duration duration) {
+    read = duration;
     return this;
   }
 
   public <K, V> Expiry<K, V> build() {
-    return new FixedExpiry<K, V>(createNanos, updateNanos, readNanos);
+    return new FixedExpiry<K, V>(create, update, read);
   }
 
   private static final class FixedExpiry<K, V> implements Expiry<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    private final long createNanos;
-    private final long updateNanos;
-    private final long readNanos;
+    private final Duration create;
+    private final Duration update;
+    private final Duration read;
 
-    FixedExpiry(long createNanos, long updateNanos, long readNanos) {
-      this.createNanos = createNanos;
-      this.updateNanos = updateNanos;
-      this.readNanos = readNanos;
+    FixedExpiry(Duration create, Duration update, Duration read) {
+      this.create = create;
+      this.update = update;
+      this.read = read;
     }
 
     @Override
     public long expireAfterCreate(K key, V value, long currentTime) {
       requireNonNull(key);
       requireNonNull(value);
-      return createNanos;
+      return create.toNanos();
     }
     @Override
     public long expireAfterUpdate(K key, V value, long currentTime, long currentDuration) {
       requireNonNull(key);
       requireNonNull(value);
-      return (updateNanos == UNSET) ? currentDuration : updateNanos;
+      return (update == null) ? currentDuration : update.toNanos();
     }
     @Override
     public long expireAfterRead(K key, V value, long currentTime, long currentDuration) {
       requireNonNull(key);
       requireNonNull(value);
-      return (readNanos == UNSET) ? currentDuration : readNanos;
+      return (read == null) ? currentDuration : read.toNanos();
     }
   }
 }

@@ -15,9 +15,9 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 import javax.cache.CacheManager;
 import javax.cache.Caching;
@@ -42,10 +42,9 @@ import com.google.common.testing.FakeTicker;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(singleThreaded = true)
-@SuppressWarnings("PreferJavaTimeOverload")
 public abstract class AbstractJCacheTest {
-  protected static final long EXPIRY_DURATION = TimeUnit.MINUTES.toMillis(1);
-  protected static final long START_TIME_MS = TimeUnit.NANOSECONDS.toMillis(
+  protected static final Duration EXPIRY_DURATION = Duration.ofMinutes(1);
+  protected static final Duration START_TIME = Duration.ofNanos(
       ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, Long.MAX_VALUE));
   protected static final Integer KEY_1 = 1, VALUE_1 = -1;
   protected static final Integer KEY_2 = 2, VALUE_2 = -2;
@@ -72,7 +71,7 @@ public abstract class AbstractJCacheTest {
   @BeforeMethod(alwaysRun = true)
   public void before() {
     jcacheConfiguration = getConfiguration();
-    ticker = new FakeTicker().advance(START_TIME_MS, TimeUnit.MILLISECONDS);
+    ticker = new FakeTicker().advance(START_TIME);
     jcache = (CacheProxy<Integer, Integer>) cacheManager.createCache("jcache", jcacheConfiguration);
     jcacheLoading = (LoadingCacheProxy<Integer, Integer>) cacheManager.createCache(
         "jcacheLoading", getLoadingConfiguration());
@@ -96,16 +95,16 @@ public abstract class AbstractJCacheTest {
   }
 
   protected void advanceHalfExpiry() {
-    ticker.advance(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+    ticker.advance(EXPIRY_DURATION.dividedBy(2));
   }
 
   protected void advancePastExpiry() {
-    ticker.advance(2 * EXPIRY_DURATION, TimeUnit.MILLISECONDS);
+    ticker.advance(EXPIRY_DURATION.multipliedBy(2));
   }
 
   /** @return the current time in milliseconds */
-  protected final long currentTimeMillis() {
-    return TimeUnit.NANOSECONDS.toMillis(ticker.read());
+  protected final Duration currentTime() {
+    return Duration.ofNanos(ticker.read());
   }
 
   /** The loading configuration used by the test. */

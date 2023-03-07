@@ -995,6 +995,7 @@ public class JSR166TestCase extends TestCase {
      * until time elapses.  Ensures that the given time, as measured
      * by System.nanoTime(), has elapsed.
      */
+    @SuppressWarnings("PreferJavaTimeOverload")
     static void delay(long millis) throws InterruptedException {
         long nanos = millis * (1000 * 1000);
         final long wakeupTime = System.nanoTime() + nanos;

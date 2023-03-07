@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 
 import java.io.Serializable;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -512,14 +513,14 @@ public final class CacheContext {
         .toString();
   }
 
-  @SuppressWarnings("serial")
   static final class SerializableFakeTicker extends FakeTicker implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     final long startTime;
 
-    @SuppressWarnings("PreferJavaTimeOverload")
     public SerializableFakeTicker() {
       startTime = ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, Long.MAX_VALUE);
-      advance(startTime);
+      advance(Duration.ofNanos(startTime));
     }
   }
 }

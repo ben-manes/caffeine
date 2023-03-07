@@ -31,7 +31,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("serial")
 final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V>
     implements Iterable<CacheEntryEvent<? extends K, ? extends V>> {
   private static final long serialVersionUID = 1L;

@@ -1310,6 +1310,7 @@ public abstract class UnifiedMapAcceptanceTest {
     return keys;
   }
 
+  @SuppressWarnings("PreferJavaTimeOverload")
   private void sleep(long millis) {
     long now = System.currentTimeMillis();
     long target = now + millis;

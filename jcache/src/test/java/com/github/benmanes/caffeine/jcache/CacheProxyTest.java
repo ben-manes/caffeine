@@ -123,8 +123,9 @@ public final class CacheProxyTest extends AbstractJCacheTest {
 
   @Test
   public void unwrap_configuration() {
-    @SuppressWarnings("serial")
-    abstract class Dummy implements Configuration<Integer, Integer> {};
+    abstract class Dummy implements Configuration<Integer, Integer> {
+      private static final long serialVersionUID = 1L;
+    };
     assertThrows(IllegalArgumentException.class, () -> jcache.getConfiguration(Dummy.class));
   }
 

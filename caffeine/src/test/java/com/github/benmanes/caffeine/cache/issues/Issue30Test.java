@@ -111,6 +111,7 @@ public final class Issue30Test {
     assertThat("should serve initial value", cache.get(B_KEY)).succeedsWith(B_ORIGINAL);
   }
 
+  @SuppressWarnings("PreferJavaTimeOverload")
   private void firstUpdate(AsyncLoadingCache<String, String> cache,
       ConcurrentMap<String, String> source) throws InterruptedException {
     source.put(A_KEY, A_UPDATE_1);
@@ -130,6 +131,7 @@ public final class Issue30Test {
     });
   }
 
+  @SuppressWarnings("PreferJavaTimeOverload")
   private void secondUpdate(AsyncLoadingCache<String, String> cache,
       ConcurrentMap<String, String> source) throws InterruptedException {
     source.put(A_KEY, A_UPDATE_2);

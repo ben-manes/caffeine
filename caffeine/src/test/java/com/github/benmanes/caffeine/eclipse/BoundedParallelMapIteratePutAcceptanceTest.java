@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.eclipse;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import org.eclipse.collections.api.map.ConcurrentMutableMap;
 
@@ -33,7 +33,7 @@ public final class BoundedParallelMapIteratePutAcceptanceTest
     extends ParallelMapIteratePutAcceptanceTest {
   @Override public <K, V> ConcurrentMutableMap<K, V> newMap(int initialCapacity) {
     Cache<K, V> cache = Caffeine.newBuilder()
-        .expireAfterWrite(Long.MAX_VALUE, TimeUnit.DAYS)
+        .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
         .initialCapacity(initialCapacity)
         .maximumSize(Long.MAX_VALUE)
         .build();

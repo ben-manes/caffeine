@@ -1012,6 +1012,7 @@ public final class AsyncCacheTest {
     assertThat(cache).isReserialize();
   }
 
-  @SuppressWarnings("serial")
-  private static final class LoadAllException extends RuntimeException {}
+  private static final class LoadAllException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+  }
 }

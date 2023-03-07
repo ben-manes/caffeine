@@ -50,6 +50,7 @@ public abstract class ParallelMapIteratePutAcceptanceTest {
 
   public abstract <K, V> ConcurrentMutableMap<K, V> newMap(int initialCapacity);
 
+  @SuppressWarnings("PreferJavaTimeOverload")
   private static void fullGc() {
     System.gc();
     Thread.yield();

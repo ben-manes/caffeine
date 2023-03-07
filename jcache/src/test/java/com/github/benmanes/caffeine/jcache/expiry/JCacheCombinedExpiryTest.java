@@ -43,7 +43,7 @@ public final class JCacheCombinedExpiryTest extends AbstractJCacheTest {
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
     var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
-        new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION)));
+        new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis())));
     configuration.setExpireAfterWrite(OptionalLong.of(Long.MAX_VALUE));
     configuration.setTickerFactory(() -> ticker::read);
     configuration.setStatisticsEnabled(true);
@@ -100,7 +100,8 @@ public final class JCacheCombinedExpiryTest extends AbstractJCacheTest {
 
     jcache.put(KEY_1, VALUE_2);
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
+    assertThat(expirable.getExpireTimeMS())
+        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
   }
 
   /* --------------- putIfAbsent --------------- */
@@ -113,7 +114,8 @@ public final class JCacheCombinedExpiryTest extends AbstractJCacheTest {
     assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isTrue();
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
     assertThat(expirable.get()).isEqualTo(VALUE_2);
-    assertThat(expirable.getExpireTimeMS()).isEqualTo(currentTimeMillis() + EXPIRY_DURATION);
+    assertThat(expirable.getExpireTimeMS())
+        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
   }
 
   /* --------------- remove --------------- */

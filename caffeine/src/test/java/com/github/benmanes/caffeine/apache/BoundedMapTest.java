@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.apache;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -32,7 +32,7 @@ public final class BoundedMapTest extends CaffeineMapTestCase {
   }
   @Override public Cache<Object, Object> makeCache() {
     return Caffeine.newBuilder()
-        .expireAfterWrite(Long.MAX_VALUE, TimeUnit.DAYS)
+        .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
         .maximumSize(Long.MAX_VALUE)
         .build();
   }

@@ -78,7 +78,6 @@ import com.google.common.collect.Maps;
  */
 @CheckMaxLogLevel(WARN)
 @Listeners(CacheValidationListener.class)
-@SuppressWarnings("PreferJavaTimeOverload")
 @Test(dataProviderClass = CacheProvider.class)
 public final class RefreshAfterWriteTest {
 
@@ -147,7 +146,7 @@ public final class RefreshAfterWriteTest {
     cache.put(key, key);
 
     for (int i = 0; i < 5; i++) {
-      context.ticker().advance(2, TimeUnit.MINUTES);
+      context.ticker().advance(Duration.ofMinutes(2));
       Int value = cache.get(key);
       assertThat(value).isEqualTo(key);
       await().untilAtomic(reloads, is(i + 1));
@@ -160,7 +159,7 @@ public final class RefreshAfterWriteTest {
       loader = Loader.REFRESH_INTERRUPTED, refreshAfterWrite = Expire.ONE_MINUTE,
       executor = CacheExecutor.DIRECT)
   public void refreshIfNeeded_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
 
     assertThat(value).isNotNull();
@@ -172,7 +171,7 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING)
   public void refreshIfNeeded_replace(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentKey());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
@@ -188,7 +187,7 @@ public final class RefreshAfterWriteTest {
       removalListener = Listener.CONSUMING, loader = Loader.NULL)
   public void refreshIfNeeded_remove(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
@@ -213,7 +212,7 @@ public final class RefreshAfterWriteTest {
       }
     });
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
@@ -226,7 +225,7 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)
   public void refreshIfNeeded_replaced(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
 
@@ -252,14 +251,14 @@ public final class RefreshAfterWriteTest {
       expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void refreshIfNeeded_expired(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(10, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(10));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
     var future = cache.policy().refreshes().get(context.firstKey());
 
-    context.ticker().advance(1, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(1));
     future.complete(context.absentValue());
     assertThat(cache).isEmpty();
 
@@ -276,7 +275,7 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)
   public void refreshIfNeeded_absent_newValue(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
 
@@ -302,7 +301,7 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE, executor = CacheExecutor.THREADED)
   public void refreshIfNeeded_absent_nullValue(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
 
@@ -338,7 +337,7 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
@@ -366,7 +365,7 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
@@ -384,7 +383,7 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
@@ -413,7 +412,7 @@ public final class RefreshAfterWriteTest {
         ? context.buildAsync(loader).synchronous()
         : context.build(loader);
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
 
     assertThat(value).isNotNull();
@@ -433,9 +432,9 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getIfPresent_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getIfPresent(context.middleKey())).isEqualTo(context.middleKey().negate());
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getIfPresent(context.middleKey())).isEqualTo(context.middleKey());
 
     assertThat(cache).hasSize(context.initialSize());
@@ -449,9 +448,9 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getIfPresent_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getIfPresent(context.middleKey())).isEqualTo(context.middleKey().negate());
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getIfPresent(context.middleKey())).isEqualTo(context.middleKey().negate());
 
     assertThat(cache).hasSize(context.initialSize());
@@ -470,9 +469,9 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NEGATIVE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getIfPresent_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getIfPresent(context.middleKey())).succeedsWith(context.middleKey().negate());
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getIfPresent(context.middleKey())).succeedsWith(context.middleKey().negate());
 
     assertThat(cache).hasSize(context.initialSize());
@@ -488,11 +487,11 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,  loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
   public void getAllPresent_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var results = cache.getAllPresent(context.firstMiddleLastKeys());
 
     assertThat(results).isNotEmpty();
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getAllPresent(context.firstMiddleLastKeys()))
         .containsExactlyEntriesIn(Maps.asMap(context.firstMiddleLastKeys(), key -> key));
 
@@ -507,9 +506,9 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getAllPresent_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var expected = cache.getAllPresent(context.firstMiddleLastKeys());
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getAllPresent(context.firstMiddleLastKeys()))
         .containsExactlyEntriesIn(expected);
 
@@ -531,11 +530,11 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
   public void getFunc_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey(), identity());
     assertThat(value).isEqualTo(context.original().get(context.firstKey()));
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.get(context.lastKey(), identity())).isEqualTo(context.lastKey());
 
     assertThat(cache).hasSize(context.initialSize());
@@ -550,11 +549,11 @@ public final class RefreshAfterWriteTest {
       population = { Population.PARTIAL, Population.FULL })
   public void getFunc_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> mappingFunction = context.original()::get;
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey(), mappingFunction);
     assertThat(value).isNotNull();
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.get(context.lastKey(), mappingFunction)).isEqualTo(context.lastKey().negate());
 
     if (context.isCaffeine()) {
@@ -571,9 +570,9 @@ public final class RefreshAfterWriteTest {
       population = { Population.PARTIAL, Population.FULL })
   public void getFunc_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> mappingFunction = context.original()::get;
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     cache.get(context.firstKey(), mappingFunction).join();
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     cache.get(context.lastKey(), mappingFunction).join(); // refreshed
 
     assertThat(cache).hasSize(context.initialSize());
@@ -589,11 +588,11 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
   public void get_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.get(context.firstKey())).isEqualTo(context.firstKey());
 
     assertThat(cache).hasSize(context.initialSize());
@@ -607,11 +606,11 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
       population = { Population.PARTIAL, Population.FULL })
   public void get_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
 
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.get(context.firstKey())).isEqualTo(context.firstKey().negate());
 
     if (context.isCaffeine()) {
@@ -627,10 +626,10 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
   public void get_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     cache.get(context.firstKey()).join();
     cache.get(context.absentKey()).join();
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
 
     var value = cache.getIfPresent(context.firstKey());
     assertThat(value).succeedsWith(context.firstKey());
@@ -657,7 +656,7 @@ public final class RefreshAfterWriteTest {
     cache.synchronous().put(key, key);
     var original = cache.get(key);
     for (int i = 0; i < 10; i++) {
-      context.ticker().advance(1, TimeUnit.MINUTES);
+      context.ticker().advance(Duration.ofMinutes(1));
       var next = cache.get(key);
       assertThat(next).isSameInstanceAs(original);
     }
@@ -683,13 +682,13 @@ public final class RefreshAfterWriteTest {
 
     cache.put(key, originalValue);
 
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThat(cache.get(key)).isEqualTo(originalValue);
 
     await().untilTrue(started);
     assertThat(cache).containsEntry(key, originalValue);
 
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThat(cache.get(key)).isEqualTo(originalValue);
 
     done.set(true);
@@ -702,7 +701,7 @@ public final class RefreshAfterWriteTest {
   public void get_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     Int key = Int.valueOf(1);
     cache.synchronous().put(key, key);
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThat(cache.get(key)).succeedsWith(key);
     assertThat(cache.get(key)).succeedsWithNull();
     assertThat(cache).doesNotContainKey(key);
@@ -716,13 +715,13 @@ public final class RefreshAfterWriteTest {
       population = { Population.PARTIAL, Population.FULL })
   public void getAll_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = List.of(context.firstKey(), context.absentKey());
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getAll(keys)).containsExactly(
         context.firstKey(), context.firstKey().negate(),
         context.absentKey(), context.absentKey());
 
     // Trigger a refresh, ensure new values are present
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getAll(keys)).containsExactly(
         context.firstKey(), context.firstKey(), context.absentKey(), context.absentKey());
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -737,11 +736,11 @@ public final class RefreshAfterWriteTest {
   public void getAll_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     var expected = Maps.toMap(context.firstMiddleLastKeys(), Int::negate);
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getAll(keys)).containsExactlyEntriesIn(expected);
 
     // Trigger a refresh, returns old values
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache.getAll(keys)).containsExactlyEntriesIn(expected);
 
     if (context.isCaffeine()) {
@@ -760,13 +759,13 @@ public final class RefreshAfterWriteTest {
       population = { Population.PARTIAL, Population.FULL })
   public void getAll_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = List.of(context.firstKey(), context.absentKey());
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getAll(keys).join()).containsExactly(
         context.firstKey(), context.firstKey().negate(),
         context.absentKey(), context.absentKey());
 
     // Trigger a refresh, may return old values
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     cache.getAll(keys).join();
 
     // Ensure new values are present
@@ -797,7 +796,7 @@ public final class RefreshAfterWriteTest {
     });
 
     cache.put(key, original);
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
 
     assertThat(started.get()).isFalse();
     assertThat(cache.getIfPresent(key)).isEqualTo(original);
@@ -834,7 +833,7 @@ public final class RefreshAfterWriteTest {
     });
 
     cache.put(key, original);
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
 
     assertThat(started.get()).isFalse();
     assertThat(cache.getIfPresent(key)).isEqualTo(original);
@@ -871,7 +870,7 @@ public final class RefreshAfterWriteTest {
 
     // trigger an automatic refresh
     submitted = context.executor().submitted();
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value1 = cache.getIfPresent(context.absentKey());
     assertThat(value1).isEqualTo(context.absentValue());
     assertThat(context.executor().submitted()).isEqualTo(submitted + 1);
@@ -885,7 +884,7 @@ public final class RefreshAfterWriteTest {
 
     // trigger a new automatic refresh
     submitted = context.executor().submitted();
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value2 = cache.getIfPresent(context.absentKey());
     assertThat(value2).isEqualTo(context.absentValue().negate());
     assertThat(context.executor().submitted()).isEqualTo(submitted + 1);
@@ -903,7 +902,7 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
       refreshAfterWrite = Expire.ONE_MINUTE, population = Population.FULL)
   public void refreshes(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.getIfPresent(context.firstKey());
     assertThat(cache.policy().refreshes()).hasSize(1);
     assertThat(value).isNotNull();
@@ -920,7 +919,7 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
       refreshAfterWrite = Expire.ONE_MINUTE, population = Population.FULL)
   public void refreshes_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.getIfPresent(context.firstKey());
     assertThat(value).isNotNull();
 
@@ -961,7 +960,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
   public void setRefreshesAfter(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
-    refreshAfterWrite.setRefreshesAfter(2, TimeUnit.MINUTES);
+    refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(2));
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(2);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(2);
   }
@@ -980,9 +979,9 @@ public final class RefreshAfterWriteTest {
       refreshAfterWrite = Expire.ONE_MINUTE)
   public void ageOf(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(0);
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(30);
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(75);
   }
 
@@ -992,9 +991,9 @@ public final class RefreshAfterWriteTest {
   public void ageOf_duration(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     // Truncated to seconds to ignore the LSB (nanosecond) used for refreshAfterWrite's lock
     assertThat(refreshAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(0);
-    context.ticker().advance(30, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(30));
     assertThat(refreshAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(30);
-    context.ticker().advance(45, TimeUnit.SECONDS);
+    context.ticker().advance(Duration.ofSeconds(45));
     assertThat(refreshAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(75);
   }
 
@@ -1014,7 +1013,7 @@ public final class RefreshAfterWriteTest {
   public void ageOf_expired(Cache<Int, Int> cache,
       CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     cache.put(context.absentKey(), context.absentValue());
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 }

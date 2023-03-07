@@ -39,13 +39,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
+import java.time.Duration;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.annotations.Listeners;
@@ -738,7 +738,7 @@ public final class EvictionTest {
   public void weightOf_expired(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     cache.put(context.absentKey(), Int.valueOf(1));
-    context.ticker().advance(2, TimeUnit.MINUTES);
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThat(eviction.weightOf(context.absentKey())).isEmpty();
   }
 

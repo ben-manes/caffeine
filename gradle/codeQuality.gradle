@@ -161,11 +161,12 @@ tasks.withType(JavaCompile).configureEach {
       'ForEachIterable', 'FuzzyEqualsShouldNotBeUsedInEqualsMethod', 'FunctionalInterfaceClash',
       'IterablePathParameter', 'LongLiteralLowerCaseSuffix', 'MissingBraces', 'MissingDefault',
       'MixedArrayDimensions', 'MissingDefault', 'NoAllocation', 'PackageLocation',
-      'PreferredInterfaceType', 'RedundantThrows', 'RemoveUnusedImports', 'ReturnsNullCollection',
-      'SelfAlwaysReturnsThis', 'StronglyTypeByteString', 'StronglyTypeTime', 'SwitchDefault',
-      'TimeUnitMismatch', 'TransientMisuse', 'UnnecessarilyVisible', 'UnnecessaryAnonymousClass',
-      'UnnecessaryOptionalGet', 'UnnecessarilyUsedValue', 'UnsafeLocaleUsage',
-      'UnusedTypeParameter', 'UsingJsr305CheckReturnValue', 'YodaCondition']
+      'PreferredInterfaceType', 'PreferJavaTimeOverload', 'RedundantThrows', 'RemoveUnusedImports',
+      'ReturnsNullCollection', 'SelfAlwaysReturnsThis', 'StronglyTypeByteString',
+      'StronglyTypeTime', 'SwitchDefault', 'TimeUnitMismatch', 'TransientMisuse',
+      'UnnecessarilyVisible', 'UnnecessaryAnonymousClass', 'UnnecessaryOptionalGet',
+      'UnnecessarilyUsedValue', 'UnsafeLocaleUsage', 'UnusedTypeParameter',
+      'UsingJsr305CheckReturnValue', 'YodaCondition']
     enabledChecks.each { enable(it) }
 
     def disabledChecks = [ 'AvoidObjectArrays', 'IsInstanceLambdaUsage',

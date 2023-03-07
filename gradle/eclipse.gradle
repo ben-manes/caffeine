@@ -18,6 +18,18 @@ eclipse.classpath.file.whenMerged {
   }
 }
 
+// Set the project encoding
+eclipse.classpath.file.whenMerged {
+  def prefs = file('.settings/org.eclipse.core.resources.prefs')
+  if (!prefs.exists()) {
+    prefs.parentFile.mkdirs()
+    prefs.write("eclipse.preferences.version=1\n")
+  }
+  if (!prefs.text.contains('encoding/<project>')) {
+    prefs.append('encoding/<project>=UTF-8\n')
+  }
+}
+
 // For the Gradle Eclipse plugin
 eclipse.project.file.withXml { provider ->
   ignoreDerivedResources(provider.asNode())

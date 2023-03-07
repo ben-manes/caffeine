@@ -719,6 +719,7 @@ public class Collection8Test extends JSR166TestCase {
         assertTrue(found.isEmpty());
     }
 
+    @SuppressWarnings("PreferJavaTimeOverload")
     public void testStreamForEachConcurrentStressTest() throws Throwable {
         if (!impl.isConcurrent()) {
           return;
@@ -847,6 +848,7 @@ public class Collection8Test extends JSR166TestCase {
     /**
      * Motley crew of threads concurrently randomly hammer the collection.
      */
+    @SuppressWarnings("PreferJavaTimeOverload")
     public void testDetectRaces() throws Throwable {
         if (!impl.isConcurrent()) {
           return;

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -242,22 +243,20 @@ final class CacheFactory {
     }
 
     /** Configures write expiration and returns if set. */
-    @SuppressWarnings("PreferJavaTimeOverload")
     private boolean configureExpireAfterWrite() {
       if (config.getExpireAfterWrite().isEmpty()) {
         return false;
       }
-      caffeine.expireAfterWrite(config.getExpireAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
+      caffeine.expireAfterWrite(Duration.ofNanos(config.getExpireAfterWrite().getAsLong()));
       return true;
     }
 
     /** Configures access expiration and returns if set. */
-    @SuppressWarnings("PreferJavaTimeOverload")
     private boolean configureExpireAfterAccess() {
       if (config.getExpireAfterAccess().isEmpty()) {
         return false;
       }
-      caffeine.expireAfterAccess(config.getExpireAfterAccess().getAsLong(), TimeUnit.NANOSECONDS);
+      caffeine.expireAfterAccess(Duration.ofNanos(config.getExpireAfterAccess().getAsLong()));
       return true;
     }
 
@@ -278,10 +277,9 @@ final class CacheFactory {
       return true;
     }
 
-    @SuppressWarnings("PreferJavaTimeOverload")
     private void configureRefreshAfterWrite() {
       if (config.getRefreshAfterWrite().isPresent()) {
-        caffeine.refreshAfterWrite(config.getRefreshAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
+        caffeine.refreshAfterWrite(Duration.ofNanos(config.getRefreshAfterWrite().getAsLong()));
       }
     }
   }

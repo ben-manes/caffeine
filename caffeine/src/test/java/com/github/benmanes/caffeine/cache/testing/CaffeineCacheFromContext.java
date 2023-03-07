@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.testing;
 
 import java.io.Serializable;
-import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -37,7 +36,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PreferJavaTimeOverload")
 public final class CaffeineCacheFromContext {
   interface SerializableTicker extends Ticker, Serializable {}
 
@@ -65,13 +63,13 @@ public final class CaffeineCacheFromContext {
       builder.expireAfter(context.expiry());
     }
     if (context.expiresAfterAccess()) {
-      builder.expireAfterAccess(context.expireAfterAccess().timeNanos(), TimeUnit.NANOSECONDS);
+      builder.expireAfterAccess(context.expireAfterAccess().duration());
     }
     if (context.expiresAfterWrite()) {
-      builder.expireAfterWrite(context.expireAfterWrite().timeNanos(), TimeUnit.NANOSECONDS);
+      builder.expireAfterWrite(context.expireAfterWrite().duration());
     }
     if (context.refreshes()) {
-      builder.refreshAfterWrite(context.refreshAfterWrite().timeNanos(), TimeUnit.NANOSECONDS);
+      builder.refreshAfterWrite(context.refreshAfterWrite().duration());
     }
     if (context.expires() || context.refreshes()) {
       SerializableTicker ticker = context.ticker()::read;
