@@ -107,7 +107,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
     V value = null;
     if (expirable != null) {
-      setAccessExpirationTime(key, expirable, millis);
+      setAccessExpireTime(key, expirable, millis);
       value = copyValue(expirable);
     }
     if (statsEnabled) {

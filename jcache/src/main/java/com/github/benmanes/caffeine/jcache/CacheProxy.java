@@ -182,7 +182,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       start = millis = 0L;
     }
 
-    setAccessExpirationTime(key, expirable, millis);
+    setAccessExpireTime(key, expirable, millis);
     V value = copyValue(expirable);
     if (statsEnabled) {
       statistics.recordHits(1L);
@@ -232,7 +232,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return true;
       }
       if (updateAccessTime) {
-        setAccessExpirationTime(entry.getKey(), entry.getValue(), millis[0]);
+        setAccessExpireTime(entry.getKey(), entry.getValue(), millis[0]);
       }
       return false;
     });
@@ -580,7 +580,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         removed[0] = true;
         return null;
       }
-      setAccessExpirationTime(key, expirable, millis);
+      setAccessExpireTime(key, expirable, millis);
       return expirable;
     });
     dispatcher.awaitSynchronous();
@@ -657,7 +657,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         replaced[0] = true;
       } else {
         result = expirable;
-        setAccessExpirationTime(key, expirable, millis);
+        setAccessExpireTime(key, expirable, millis);
       }
       return result;
     });
@@ -880,7 +880,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         }
         return expirable;
       case READ: {
-        setAccessExpirationTime(entry.getKey(), expirable, 0L);
+        setAccessExpireTime(entry.getKey(), expirable, 0L);
         return expirable;
       }
       case CREATED:
@@ -1164,7 +1164,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param expirable the entry that was operated on
    * @param currentTimeMS the current time, or 0 if not read yet
    */
-  protected final void setAccessExpirationTime(K key, Expirable<?> expirable, long currentTimeMS) {
+  protected final void setAccessExpireTime(K key, Expirable<?> expirable, long currentTimeMS) {
     try {
       Duration duration = expiry.getExpiryForAccess();
       if (duration == null) {
@@ -1224,7 +1224,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         Map.Entry<K, Expirable<V>> entry = delegate.next();
         long millis = entry.getValue().isEternal() ? 0L : currentTimeMillis();
         if (!entry.getValue().hasExpired(millis)) {
-          setAccessExpirationTime(entry.getKey(), entry.getValue(), millis);
+          setAccessExpireTime(entry.getKey(), entry.getValue(), millis);
           cursor = entry;
         }
       }

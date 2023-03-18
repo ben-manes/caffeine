@@ -4,6 +4,7 @@ apply plugin: 'io.github.gradle-nexus.publish-plugin'
 apply plugin: 'io.snyk.gradle.plugin.snykplugin'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'org.owasp.dependencycheck'
+apply plugin: 'jvm-ecosystem'
 
 apply from: "${rootDir}/gradle/coverage.gradle"
 
@@ -150,11 +151,7 @@ snyk {
   autoDownload = true
   autoUpdate = true
 }
-tasks.named('snyk-test').configure {
-  notCompatibleWithConfigurationCache(
-    "The ${name} task is not compatible with the configuration cache")
-}
-tasks.named('snyk-monitor').configure {
+['snyk-check-binary', 'snyk-test', 'snyk-monitor'].collect { tasks.named(it) }*.configure {
   notCompatibleWithConfigurationCache(
     "The ${name} task is not compatible with the configuration cache")
 }

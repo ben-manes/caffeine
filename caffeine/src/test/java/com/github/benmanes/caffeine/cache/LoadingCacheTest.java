@@ -74,8 +74,10 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 
 /**
@@ -276,12 +278,32 @@ public final class LoadingCacheTest {
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_absent(LoadingCache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.absentKeys());
+    var expect = Maps.toMap(context.absentKeys(), Int::negate);
+    var result = cache.getAll(expect.keySet());
+    assertThat(result).isEqualTo(expect);
 
-    int count = context.absentKeys().size();
-    int loads = context.loader().isBulk() ? 1 : count;
-    assertThat(result).hasSize(count);
-    assertThat(context).stats().hits(0).misses(count).success(loads).failures(0);
+    int misses = expect.size();
+    int loads = context.loader().isBulk() ? 1 : misses;
+    assertThat(context).stats().hits(0).misses(misses).success(loads).failures(0);
+  }
+
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void getAll_absent_partial(LoadingCache<Int, Int> cache, CacheContext context) {
+    var expect = new ImmutableMap.Builder<Int, Int>()
+        .putAll(Maps.toMap(context.firstMiddleLastKeys(), Int::negate))
+        .putAll(Maps.toMap(context.absentKeys(), Int::negate))
+        .build();
+    var result = cache.getAll(expect.keySet());
+    assertThat(result).isEqualTo(expect);
+
+    int misses = context.absentKeys().size();
+    int hits = context.firstMiddleLastKeys().size();
+    int loads = context.loader().isBulk() ? 1 : misses;
+    assertThat(context).stats().hits(hits).misses(misses).success(loads).failures(0);
   }
 
   @CheckNoEvictions
@@ -290,10 +312,7 @@ public final class LoadingCacheTest {
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_partial(LoadingCache<Int, Int> cache, CacheContext context) {
-    var expect = new HashMap<Int, Int>();
-    expect.put(context.firstKey(), context.firstKey().negate());
-    expect.put(context.middleKey(), context.middleKey().negate());
-    expect.put(context.lastKey(), context.lastKey().negate());
+    var expect = Maps.toMap(context.firstMiddleLastKeys(), Int::negate);
     var result = cache.getAll(expect.keySet());
 
     assertThat(result).containsExactlyEntriesIn(expect);

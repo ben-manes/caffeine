@@ -101,6 +101,11 @@ import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.CompleteEntry;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableEntry;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableWeightedEntry;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.RefreshableExpirableEntry;
+import com.github.benmanes.caffeine.cache.SnapshotEntry.WeightedEntry;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
@@ -2532,7 +2537,7 @@ public final class BoundedLocalCacheTest {
     task.complete(null);
   }
 
-  @Test(dataProviderClass = CacheProvider.class, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, compute = Compute.SYNC,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL})
   public void node_string(BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -2592,6 +2597,18 @@ public final class BoundedLocalCacheTest {
     assertThrows(type, () -> varExpiration.compute(Int.MAX_VALUE, (k, v) -> v, Duration.ZERO));
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.SINGLETON, expiryTime = Expire.ONE_MINUTE)
+  public void expireAfterRead_disabled(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = Iterables.getOnlyElement(cache.data.values());
+    long duration = cache.expireAfterRead(node, node.getKey(), node.getValue(),
+        cache.expiry(), context.ticker().read());
+    var expiresAt = cache.expiresVariable()
+        ? context.ticker().read() + context.expiryTime().timeNanos()
+        : 0;
+    assertThat(duration).isEqualTo(expiresAt);
+  }
+
   @Test
   public void fixedExpireAfterWrite() {
     int key = 1;
@@ -2606,6 +2623,18 @@ public final class BoundedLocalCacheTest {
         key, value, currentTime, currentDuration)).isEqualTo(duration);
     assertThat(expiry.expireAfterRead(
         key, value, currentTime, currentDuration)).isEqualTo(currentDuration);
+  }
+
+  @Test
+  public void snapshotEntry() {
+    assertThat(SnapshotEntry.forEntry(1, 2)).isInstanceOf(SnapshotEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 0, 0)).isInstanceOf(SnapshotEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 0, 0)).isInstanceOf(WeightedEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 3, 0)).isInstanceOf(ExpirableEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 3, 0)).isInstanceOf(ExpirableWeightedEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 3, 4))
+        .isInstanceOf(RefreshableExpirableEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 3, 4)).isInstanceOf(CompleteEntry.class);
   }
 
   static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {

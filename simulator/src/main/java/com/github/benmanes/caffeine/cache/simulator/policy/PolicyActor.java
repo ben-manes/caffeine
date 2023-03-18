@@ -54,7 +54,7 @@ public final class PolicyActor {
     submit(new Execute(events));
   }
 
-  /** Sends a shutdown signal after the pending messages are completed and blocks until done. */
+  /** Sends a shutdown signal after the pending messages are completed. */
   public CompletableFuture<Void> finish() {
     submit(new Finish());
     return future;

@@ -18,25 +18,31 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.concurrent.CompletableFuture;
 
 import javax.cache.Cache;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryListener;
+import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriter;
+import javax.cache.integration.CompletionListener;
 
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * @author github.com/kdombeck (Ken Dombeck)
@@ -52,10 +58,19 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     Mockito.reset(listener, expiry, loader, writer);
 
     var configuration = new CaffeineConfiguration<Integer, Integer>();
+    configuration.setExecutorFactory(MoreExecutors::directExecutor);
     configuration.setExpiryPolicyFactory(() -> expiry);
     configuration.setCacheLoaderFactory(() -> loader);
     configuration.setCacheWriterFactory(() -> writer);
     configuration.setWriteThrough(true);
+    configuration.setReadThrough(false);
+    return configuration;
+  }
+
+  /** The loading configuration used by the test. */
+  @Override
+  protected CaffeineConfiguration<Integer, Integer> getLoadingConfiguration() {
+    var configuration = getConfiguration();
     configuration.setReadThrough(true);
     return configuration;
   }
@@ -109,6 +124,43 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
+  public void load_cacheLoaderException() {
+    var listener = Mockito.mock(CompletionListener.class);
+    var e = new CacheLoaderException();
+    doThrow(e).when(listener).onCompletion();
+    jcache.loadAll(keys, true, listener);
+    verify(listener).onException(e);
+  }
+
+  @Test
+  public void copyValue_null() {
+    assertThat(jcache.copyValue(null)).isNull();
+  }
+
+  @Test
+  public void setAccessExpireTime_eternal() {
+    when(expiry.getExpiryForAccess()).thenReturn(Duration.ETERNAL);
+    var expirable = new Expirable<Integer>(KEY_1, 0);
+    jcache.setAccessExpireTime(KEY_1, expirable, 0);
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(Long.MAX_VALUE);
+  }
+
+  @Test
+  public void setAccessExpireTime_exception() {
+    when(expiry.getExpiryForAccess()).thenThrow(IllegalStateException.class);
+    var expirable = new Expirable<Integer>(KEY_1, 0);
+    jcache.setAccessExpireTime(KEY_1, expirable, 0);
+    assertThat(expirable.getExpireTimeMS()).isEqualTo(0);
+  }
+
+  @Test
+  public void getWriteExpireTime_exception() {
+    when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
+    long time = jcache.getWriteExpireTimeMS(true);
+    assertThat(time).isEqualTo(Long.MIN_VALUE);
+  }
+
+  @Test
   public void unwrap_fail() {
     assertThrows(IllegalArgumentException.class, () -> jcache.unwrap(CaffeineConfiguration.class));
   }
@@ -142,13 +194,14 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     doThrow(IOException.class).when(loader).close();
     doThrow(IOException.class).when(writer).close();
     doThrow(IOException.class).when(listener).close();
+    jcacheLoading.inFlight.add(CompletableFuture.failedFuture(new IllegalStateException()));
 
     var configuration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
         /* listener */ () -> listener, /* filter */ () -> event -> true,
         /* isOldValueRequired */ false, /* isSynchronous */ false);
-    jcache.registerCacheEntryListener(configuration);
+    jcacheLoading.registerCacheEntryListener(configuration);
 
-    jcache.close();
+    jcacheLoading.close();
     verify(expiry, atLeastOnce()).close();
     verify(loader, atLeastOnce()).close();
     verify(writer, atLeastOnce()).close();
