@@ -90,7 +90,7 @@ ext {
   ]
   pluginVersions = [
     bnd: '6.4.0',
-    checkstyle: '10.9.1',
+    checkstyle: '10.9.2',
     coveralls: '2.12.2',
     dependencyCheck: '8.1.2',
     errorprone: '3.0.1',

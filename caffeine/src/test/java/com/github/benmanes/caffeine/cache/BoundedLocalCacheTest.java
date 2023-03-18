@@ -986,25 +986,42 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE)
-  public void evict_zeroWeight(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  public void evict_zeroWeight_candidate(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (int i = 0; i < context.maximumSize(); i++) {
-      var oldValue = intern(cache.put(Int.valueOf(i), Int.valueOf(1)));
-      assertThat(oldValue).isNull();
-
-      var value = cache.get(Int.valueOf(i - 1));
-      assertThat(value).isAnyOf(Int.valueOf(1), null);
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(1))).isNull();
     }
 
-    var window = cache.put(cache.accessOrderWindowDeque().peekFirst().getKey(), Int.valueOf(0));
-    assertThat(window).isNotNull();
-
-    var main = cache.put(cache.accessOrderProbationDeque().peekFirst().getKey(), Int.valueOf(0));
-    assertThat(main).isNotNull();
+    var candidate = cache.accessOrderWindowDeque().peekFirst();
+    cache.setWindowWeightedSize(cache.windowWeightedSize() - candidate.getWeight());
+    cache.setWeightedSize(cache.weightedSize() - candidate.getWeight());
+    candidate.setPolicyWeight(0);
+    candidate.setWeight(0);
 
     cache.setMaximumSize(0);
     cache.evictEntries();
-    assertThat(cache).hasSize(2);
+
+    assertThat(cache).containsExactly(candidate.getKey(), candidate.getValue());
     assertThat(cache.weightedSize()).isEqualTo(0);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE)
+  public void evict_zeroWeight_victim(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (int i = 0; i < context.maximumSize(); i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(1))).isNull();
+    }
+
+    var victim = cache.accessOrderProbationDeque().peekFirst();
+    cache.setWeightedSize(cache.weightedSize() - victim.getWeight());
+    victim.setPolicyWeight(0);
+    victim.setWeight(0);
+
+    cache.setMaximumSize(0);
+    cache.evictEntries();
+
+    assertThat(cache.weightedSize()).isEqualTo(0);
+    assertThat(cache).containsExactly(victim.getKey(), victim.getValue());
   }
 
   @Test(dataProvider = "caches")
@@ -1444,6 +1461,25 @@ public final class BoundedLocalCacheTest {
 
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(null, value).exclusively();
+  }
+
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  public void evictEntry_absent(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var replaced = cache.nodeFactory.newNode(context.firstKey(), cache.keyReferenceQueue(),
+        context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
+    var absent = cache.nodeFactory.newNode(context.absentKey(), cache.keyReferenceQueue(),
+        context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
+    replaced.die();
+    absent.die();
+
+    // This can occur due to a node being concurrently removed, but the operation is pending in the
+    // write buffer. The stale node is unlinked and treated as if evicted to allow further
+    // evictions, but the removal notification and stats are skipped as already handled.
+    assertThat(cache.evictEntry(replaced, SIZE, context.ticker().read())).isTrue();
+    assertThat(cache.evictEntry(absent, SIZE, context.ticker().read())).isTrue();
+    assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
