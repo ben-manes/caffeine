@@ -129,7 +129,7 @@ def JVM_ARGS_STRONG_ENCAPSULATION = [
 ]
 
 tasks.withType(JavaExec).configureEach {
-  jvmArgs += JVM_ARGS_STRONG_ENCAPSULATION
+  jvmArgs JVM_ARGS_STRONG_ENCAPSULATION
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = java.toolchain.languageVersion
   }
@@ -227,8 +227,6 @@ tasks.matching { it.name.startsWith('forbiddenApis') }.configureEach {
 }
 
 tasks.matching { it.name.startsWith('spotbugs') }.configureEach {
-  notCompatibleWithConfigurationCache(
-    "The ${name} task is not compatible with the configuration cache")
   enabled = System.properties.containsKey('spotbugs')
   group = 'SpotBugs'
   reports {

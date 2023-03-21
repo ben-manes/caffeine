@@ -83,14 +83,14 @@ tasks.named('run').configure {
   }
 
   jvmArgs '-XX:+UseParallelGC', '-Xmx4g'
-  if (project.hasProperty('jvmArgs')) {
+  if (hasProperty('jvmArgs')) {
     jvmArgs project.jvmArgs.split(',')
   }
 }
 
 class Simulate extends DefaultTask {
   @Input @Optional @Option(option = 'jvmArgs', description = 'The jvm arguments')
-  String jvmArguments
+  String jvmOptions
   @Input @Option(option = 'maximumSize', description = 'The maximum cache sizes')
   List<String> maximumSizes = []
   @Input @Option(option = 'metric', description = 'The metric to compare')
@@ -100,14 +100,28 @@ class Simulate extends DefaultTask {
   @Input @Option(option = 'theme', description = 'The chart theme')
   String theme = 'light'
   @OutputDirectory
-  File reportDir = new File("${project.buildDir}/reports/${name}")
+  File reportDir
+
+  @Input
+  Map<String, String> systemProperties
+  @Input
+  List<String> defaultJvmArgs
+  @InputFiles @Classpath
+  FileCollection classpath
+  @Internal
+  ExecOperations external
+
+  @Inject
+  public Simulate(ExecOperations external, ProjectLayout layout) {
+    reportDir = new File(layout.buildDirectory.get().asFile, "/reports/${name}")
+    this.external = external
+  }
 
   @TaskAction def run() {
     if (maximumSizes.isEmpty()) {
       def yellow = { "\033[33m${it}\033[0m" }
       def italic = { "\033[3m${it}\033[0m" }
-      project.logger.error(
-        "\t${yellow('--maximumSize=')}${italic('<Long>[,<Long>...]')} is required")
+      logger.error("\t${yellow('--maximumSize=')}${italic('<Long>[,<Long>...]')} is required")
       return
     }
     def reports = [:]
@@ -120,13 +134,13 @@ class Simulate extends DefaultTask {
       printf 'Running with maximumSize=%,d...%n ', maximumSize
       def report = "${reportDir}/${baseName}_${maximumSize}.csv"
       reports[maximumSize] = new File(report)
-      project.javaexec {
-        systemProperties project.tasks.run.systemProperties
-        classpath = project.sourceSets.main.runtimeClasspath
-        mainClass = project.application.mainClass
-        jvmArgs project.tasks.run.allJvmArgs
-        if (jvmArguments) {
-          jvmArgs jvmArguments.split(',')
+      external.javaexec {
+        mainClass = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
+        systemProperties this.systemProperties
+        classpath = this.classpath
+        jvmArgs defaultJvmArgs
+        if (jvmOptions) {
+          jvmArgs (jvmOptions.split(',') as List)
         }
         systemProperties [
           'caffeine.simulator.report.format': 'csv',
@@ -137,9 +151,9 @@ class Simulate extends DefaultTask {
     }
 
     def combinedReport = "${reportDir}/${baseName}.csv"
-    project.javaexec {
+    external.javaexec {
       mainClass = 'com.github.benmanes.caffeine.cache.simulator.report.csv.CombinedCsvReport'
-      classpath = project.sourceSets.main.runtimeClasspath
+      classpath = this.classpath
       reports.each { maximumSize, report ->
         args '--inputFiles', "${maximumSize}=${report}"
       }
@@ -148,9 +162,9 @@ class Simulate extends DefaultTask {
     }
 
     def chart = "${reportDir}/${baseName}.png"
-    project.javaexec {
+    external.javaexec {
       mainClass = 'com.github.benmanes.caffeine.cache.simulator.report.csv.PlotCsv'
-      classpath = project.sourceSets.main.runtimeClasspath
+      classpath = this.classpath
       args '--inputFile', combinedReport
       args '--outputFile', chart
       args '--metric', metric
@@ -162,8 +176,9 @@ class Simulate extends DefaultTask {
 tasks.register('simulate', Simulate) {
   group 'Application'
   description 'Runs multiple simulations and generates an aggregate report'
-  notCompatibleWithConfigurationCache(
-    "The ${name} task is not compatible with the configuration cache")
+  systemProperties = tasks.run.systemProperties
+  classpath = sourceSets.main.runtimeClasspath
+  defaultJvmArgs = tasks.run.allJvmArgs
   dependsOn processResources, compileJava
   outputs.upToDateWhen { false }
 }
@@ -178,9 +193,19 @@ class Rewrite extends DefaultTask {
   @Input @Optional @Option(option = 'outputFormat', description = 'The trace output format')
   String outputFormat
 
+  @InputFiles @Classpath
+  FileCollection classpath
+  @Internal
+  ExecOperations external
+
+  @Inject
+  public Rewrite(ExecOperations external) {
+    this.external = external
+  }
+
   @TaskAction def run() {
-    project.javaexec {
-      classpath = project.sourceSets.main.runtimeClasspath
+    external.javaexec {
+      classpath = this.classpath
       mainClass = 'com.github.benmanes.caffeine.cache.simulator.parser.Rewriter'
       if (inputFiles) {
         args '--inputFiles', inputFiles.join(',')
@@ -203,8 +228,7 @@ class Rewrite extends DefaultTask {
 tasks.register('rewrite', Rewrite) {
   group 'Application'
   description 'Rewrite traces into the format used by other simulators'
-  notCompatibleWithConfigurationCache(
-    "The ${name} task is not compatible with the configuration cache")
+  classpath = sourceSets.main.runtimeClasspath
   dependsOn processResources, compileJava
   outputs.upToDateWhen { false }
 }

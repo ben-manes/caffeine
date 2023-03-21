@@ -159,7 +159,7 @@ tasks.register('memoryOverhead', JavaExec) {
   classpath sourceSets.jmh.runtimeClasspath
   classpath sourceSets.codeGen.runtimeClasspath
   mainClass = 'com.github.benmanes.caffeine.cache.MemoryBenchmark'
-  jvmArgs += [
+  jvmArgs [
     '--add-opens', 'java.base/java.util.concurrent.atomic=ALL-UNNAMED',
     '--add-opens', 'java.base/java.util.concurrent.locks=ALL-UNNAMED',
     '--add-opens', 'java.base/java.util.concurrent=ALL-UNNAMED',

@@ -29,7 +29,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: dependencyCheckAggregate
+          arguments: dependencyCheckAggregate --no-configuration-cache
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@v2

@@ -86,7 +86,7 @@ tasks.withType(Test).configureEach {
       maxHeapSize = '3g'
     } else if (name.startsWith('lincheck')) {
       options.includeGroups = ['lincheck']
-      jvmArgs += [
+      jvmArgs [
         '--add-opens', 'java.base/jdk.internal.vm=ALL-UNNAMED',
         '--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED',
         '--add-opens', 'java.base/jdk.internal.access=ALL-UNNAMED',
@@ -109,12 +109,13 @@ tasks.withType(Test).configureEach {
 class Stresser extends DefaultTask {
   @Input @Optional @Option(option = 'workload', description = 'The workload type')
   String operation
+  @InputFiles @Classpath
+  FileCollection classpath
 
   @TaskAction def run() {
     project.javaexec {
       mainClass = 'com.github.benmanes.caffeine.cache.Stresser'
-      classpath project.sourceSets.codeGen.runtimeClasspath
-      classpath project.sourceSets.test.runtimeClasspath
+      classpath this.classpath
       if (operation) {
         args '--workload', operation
       } else {
@@ -126,8 +127,7 @@ class Stresser extends DefaultTask {
 tasks.register('stress', Stresser) {
   group = 'Cache tests'
   description = 'Executes a stress test'
-  notCompatibleWithConfigurationCache(
-    "The ${name} task is not compatible with the configuration cache")
+  classpath = sourceSets.codeGen.runtimeClasspath + sourceSets.test.runtimeClasspath
   outputs.upToDateWhen { false }
   dependsOn compileTestJava
 }

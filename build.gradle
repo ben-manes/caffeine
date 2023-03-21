@@ -41,12 +41,10 @@ allprojects {
   }
 
   dependencies {
-    def ignored = [
-      'api', 'apiElements', 'archives', 'compileClasspath', 'compileOnlyApi', 'default',
-      'implementation', 'javadocElements', 'runtimeClasspath', 'runtimeElements', 'runtimeOnly',
-      'sourcesElements', 'testCompileClasspath', 'testRuntimeClasspath']
+    def ignored = ['api', 'compileOnlyApi', 'implementation',
+      'javadocElements', 'runtimeOnly', 'sourcesElements']
     configurations.configureEach { configuration ->
-      if (name !in ignored) {
+      if ((name !in ignored) && configuration.canBeDeclaredAgainst) {
         restrictions.each { module, version ->
           constraints.add(configuration.name, module).version { require version }
         }
