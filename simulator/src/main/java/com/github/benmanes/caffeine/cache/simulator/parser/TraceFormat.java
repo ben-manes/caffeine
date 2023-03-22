@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceR
 import com.github.benmanes.caffeine.cache.simulator.parser.address.penalties.AddressPenaltiesTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.cachelib.CachelibTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.camelab.CamelabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cloud_physics.CloudPhysicsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
@@ -67,6 +68,7 @@ public enum TraceFormat {
   ADAPT_SIZE(AdaptSizeTraceReader::new),
   ARC(ArcTraceReader::new),
   CACHE2K(Cache2kTraceReader::new),
+  CACHELIB(CachelibTraceReader::new),
   CAMELAB(CamelabTraceReader::new),
   CLOUD_PHYSICS(CloudPhysicsTraceReader::new),
   CORDA(CordaTraceReader::new),

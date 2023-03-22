@@ -67,7 +67,7 @@ public final class Repository {
     }
   }
 
-  public void persist(Project project, User user, Skill skill) {
+  public void persist(User user, Project project, Skill skill) {
     try (var session = sessionFactory.openSession()) {
       var txn = session.beginTransaction();
       session.persist(project);

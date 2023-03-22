@@ -137,7 +137,7 @@ public final class HibernateCacheTest {
 
     skill.setName(skillName);
 
-    repository.persist(project, user, skill);
+    repository.persist(user, project, skill);
     return project.getId();
   }
 }
