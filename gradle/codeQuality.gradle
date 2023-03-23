@@ -58,7 +58,13 @@ tasks.named('javadoc').configure {
 
 tasks.named('jar').configure {
   bundle {
-    bnd('Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0', '-reproducible': 'true')
+    bnd(
+      'Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0', 
+      'Build-Jdk-Spec': java.toolchain.languageVersion.get(),
+      'Implementation-Title': project.description,
+      'Bundle-Description': project.description,
+      'Implementation-Version': version,
+      '-reproducible': 'true')
     properties.empty()
   }
   metaInf {

@@ -32,6 +32,7 @@ allprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply from: "${rootDir}/gradle/eclipse.gradle"
 
+  description = 'A high performance caching library'
   group = 'com.github.ben-manes.caffeine'
   version.with {
     major = 3 // incompatible API changes
