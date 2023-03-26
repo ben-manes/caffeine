@@ -19,7 +19,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Locale.US;
 import static java.util.function.Function.identity;
 
-import java.io.PrintStream;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.Map;
@@ -59,13 +58,12 @@ public final class MemoryBenchmark {
   final MemoryMeter meter = new MemoryMeter()
       .withGuessing(Guess.FALLBACK_BEST)
       .ignoreKnownSingletons();
-  final PrintStream out = System.out;
 
   public void run() {
     if (!MemoryMeter.hasInstrumentation()) {
-      out.println("WARNING: Java agent not installed - guessing instead");
+      System.out.println("WARNING: Java agent not installed - guessing instead");
     }
-    out.println();
+    System.out.println();
     unbounded();
     maximumSize();
     maximumSize_expireAfterAccess();
@@ -213,12 +211,12 @@ public final class MemoryBenchmark {
     guava.cleanUp();
 
     int leftPadded = Math.max((36 - label.length()) / 2 - 1, 1);
-    out.printf(US, " %2$-" + leftPadded + "s %s%n", label, " ");
+    System.out.printf(US, " %2$-" + leftPadded + "s %s%n", label, " ");
     String result = FlipTable.of(new String[] { "Cache", "Baseline", "Per Entry" }, new String[][] {
         evaluate("Caffeine", caffeine.asMap()),
         evaluate("Guava", guava.asMap())
     });
-    out.println(result);
+    System.out.println(result);
   }
 
   private String[] evaluate(String label, Map<Integer, Integer> map) {

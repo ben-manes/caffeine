@@ -16,8 +16,8 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
-import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
-import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
+import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction; // NOPMD
+import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction; // NOPMD
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 
@@ -552,14 +552,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public String toString() {
-    var result = new StringBuilder().append('{');
+    var result = new StringBuilder(50).append('{');
     data.forEach((key, value) -> {
       if (result.length() != 1) {
-        result.append(',').append(' ');
+        result.append(", ");
       }
-      result.append((key == this) ? "(this Map)" : key);
-      result.append('=');
-      result.append((value == this) ? "(this Map)" : value);
+      result.append((key == this) ? "(this Map)" : key)
+          .append('=')
+          .append((value == this) ? "(this Map)" : value);
     });
     return result.append('}').toString();
   }

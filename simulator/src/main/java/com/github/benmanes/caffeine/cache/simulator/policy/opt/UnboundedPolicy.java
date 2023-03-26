@@ -28,6 +28,7 @@ import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 
 /**
  * A cache that has no maximum size. This demonstrates the upper bound of the hit rate due to
@@ -39,7 +40,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 @PolicySpec(name = "opt.Unbounded", characteristics = WEIGHTED)
 public final class UnboundedPolicy implements Policy {
   private final PolicyStats policyStats;
-  private final LongOpenHashSet data;
+  private final LongSet data;
 
   public UnboundedPolicy(Config config, Set<Characteristic> characteristics) {
     BasicSettings settings = new BasicSettings(config);

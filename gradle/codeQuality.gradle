@@ -22,6 +22,7 @@ dependencies {
   spotbugsPlugins gradlePlugins.spotbugsContrib
   spotbugsPlugins gradlePlugins.findsecbugs
   checkstyleConfig gradlePlugins.checkstyle
+  pmd gradlePlugins.pmd
 
   errorprone layout.buildDirectory.files('libs/caffeine-local.jar')
   errorprone libraries.errorproneMockito

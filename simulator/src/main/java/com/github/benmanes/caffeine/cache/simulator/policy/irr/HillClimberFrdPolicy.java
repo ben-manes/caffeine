@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
@@ -33,7 +34,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 @PolicySpec(name = "irr.HillClimberFrd")
 public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
-  final Long2ObjectOpenHashMap<Node> data;
+  final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final Node headFilter;
   final Node headMain;

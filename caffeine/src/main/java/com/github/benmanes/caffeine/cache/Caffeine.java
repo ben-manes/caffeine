@@ -1205,7 +1205,7 @@ public final class Caffeine<K, V> {
    */
   @Override
   public String toString() {
-    StringBuilder s = new StringBuilder(75);
+    StringBuilder s = new StringBuilder(200);
     s.append(getClass().getSimpleName()).append('{');
     int baseLength = s.length();
     if (initialCapacity != UNSET_INT) {

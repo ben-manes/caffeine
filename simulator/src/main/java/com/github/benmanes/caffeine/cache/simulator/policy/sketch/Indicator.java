@@ -83,9 +83,10 @@ public final class Indicator {
   }
 
   private static final class Hinter {
+    final int[] freq = new int[16];
+
     int sum;
     int count;
-    int[] freq = new int[16];
 
     public void increment(int i) {
       sum += i;
@@ -99,7 +100,7 @@ public final class Indicator {
     }
 
     public double getAverage() {
-      return ((double) sum) / ((double) count);
+      return sum / (double) count;
     }
   }
 

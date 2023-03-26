@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
-import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
+import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult; // NOPMD
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;

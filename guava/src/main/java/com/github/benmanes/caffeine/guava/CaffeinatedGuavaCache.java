@@ -154,9 +154,9 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   }
 
   final class AsMapView extends ForwardingConcurrentMap<K, V> {
-    @Nullable EntrySetView entrySet;
-    @Nullable KeySetView keySet;
-    @Nullable ValuesView values;
+    @Nullable Set<Entry<K, V>> entrySet;
+    @Nullable Collection<V> values;
+    @Nullable Set<K> keySet;
 
     @Override public boolean containsKey(@Nullable Object key) {
       return (key != null) && delegate().containsKey(key);

@@ -38,6 +38,7 @@ import net.jodah.expiringmap.ExpiringMap;
  */
 @PolicySpec(name = "product.ExpiringMap")
 public final class ExpiringMapPolicy implements KeyOnlyPolicy {
+  @SuppressWarnings("PMD.LooseCoupling")
   private final ExpiringMap<Long, Boolean> cache;
   private final PolicyStats policyStats;
 

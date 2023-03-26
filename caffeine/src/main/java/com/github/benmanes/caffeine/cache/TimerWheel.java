@@ -85,6 +85,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @param cache the instance that the entries belong to
    * @param currentTimeNanos the current time, in nanoseconds
    */
+  @SuppressWarnings("PMD.UnusedAssignment")
   public void advance(BoundedLocalCache<K, V> cache, long currentTimeNanos) {
     long previousTimeNanos = nanos;
     nanos = currentTimeNanos;

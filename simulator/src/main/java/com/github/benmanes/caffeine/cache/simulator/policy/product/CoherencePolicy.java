@@ -42,6 +42,7 @@ import com.typesafe.config.Config;
 @PolicySpec(name = "product.Coherence", characteristics = WEIGHTED)
 public final class CoherencePolicy implements Policy {
   private final PolicyStats policyStats;
+  @SuppressWarnings("PMD.LooseCoupling")
   private final LocalCache cache;
 
   public CoherencePolicy(CoherenceSettings settings, Eviction policy) {

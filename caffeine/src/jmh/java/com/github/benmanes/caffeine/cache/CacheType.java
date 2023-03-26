@@ -26,7 +26,6 @@ import com.github.benmanes.caffeine.cache.impl.CoherenceCache;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
 import com.github.benmanes.caffeine.cache.impl.Ehcache3;
-import com.github.benmanes.caffeine.cache.impl.ExpiringMapCache;
 import com.github.benmanes.caffeine.cache.impl.GuavaCache;
 import com.github.benmanes.caffeine.cache.impl.HazelcastCache;
 import com.github.benmanes.caffeine.cache.impl.LinkedHashMapCache;
@@ -36,6 +35,7 @@ import com.tangosol.net.cache.LocalCache;
 import com.trivago.triava.tcache.EvictionPolicy;
 
 import net.jodah.expiringmap.ExpirationPolicy;
+import net.jodah.expiringmap.ExpiringMap;
 
 /**
  * A factory for creating a {@link BasicCache} implementation.
@@ -111,12 +111,18 @@ public enum CacheType {
   },
   ExpiringMap_Fifo {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new ExpiringMapCache<>(maximumSize, ExpirationPolicy.CREATED);
+      return new ConcurrentMapCache<>(ExpiringMap.builder()
+          .expirationPolicy(ExpirationPolicy.CREATED)
+          .maxSize(maximumSize)
+          .build());
     }
   },
   ExpiringMap_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new ExpiringMapCache<>(maximumSize, ExpirationPolicy.ACCESSED);
+      return new ConcurrentMapCache<>(ExpiringMap.builder()
+          .expirationPolicy(ExpirationPolicy.ACCESSED)
+          .maxSize(maximumSize)
+          .build());
     }
   },
   Guava {

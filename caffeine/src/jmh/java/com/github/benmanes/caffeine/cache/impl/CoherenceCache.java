@@ -23,6 +23,7 @@ import com.tangosol.net.cache.LocalCache;
  */
 @SuppressWarnings({"deprecation", "unchecked"})
 public final class CoherenceCache<K, V> implements BasicCache<K, V> {
+  @SuppressWarnings("PMD.LooseCoupling")
   private final LocalCache cache;
 
   public CoherenceCache(int maximumSize, int evictionPolicyType) {

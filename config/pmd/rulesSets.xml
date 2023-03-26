@@ -8,26 +8,39 @@
 
   <rule ref="category/java/bestpractices.xml">
     <exclude name="UseVarargs"/>
+    <exclude name="LooseCoupling"/>
     <exclude name="SystemPrintln"/>
     <exclude name="MissingOverride"/>
     <exclude name="GuardLogStatement"/>
     <exclude name="OneDeclarationPerLine"/>
+    <exclude name="ReplaceHashtableWithMap"/>
     <exclude name="AvoidReassigningParameters"/>
     <exclude name="LiteralsFirstInComparisons"/>
-    <exclude name="PositionLiteralsFirstInComparisons"/>
-    <exclude name="PositionLiteralsFirstInCaseInsensitiveComparisons"/>
+  </rule>
+
+  <rule ref="category/java/bestpractices.xml/LooseCoupling">
+    <properties>
+      <property name="allowedTypes" value="
+        java.util.Properties
+        |java.util.concurrent.ConcurrentHashMap
+        |com.google.common.collect.ImmutableMap
+        |com.google.common.collect.ImmutableSet
+        |com.google.common.collect.ImmutableList
+        |com.github.benmanes.caffeine.cache.BoundedLocalCache
+        |com.github.benmanes.caffeine.cache.UnboundedLocalCache
+      "/>
+    </properties>
   </rule>
 
   <rule ref="category/java/codestyle.xml">
     <exclude name="LongVariable"/>
     <exclude name="OnlyOneReturn"/>
     <exclude name="ShortVariable"/>
-    <exclude name="AbstractNaming"/>
-    <exclude name="DefaultPackage"/>
+    <exclude name="GenericsNaming"/>
     <exclude name="ShortClassName"/>
     <exclude name="ShortMethodName"/>
     <exclude name="ConfusingTernary"/>
-    <exclude name="DontImportJavaLang"/>
+    <exclude name="UnnecessaryReturn"/>
     <exclude name="UseDiamondOperator"/>
     <exclude name="UselessParentheses"/>
     <exclude name="PrematureDeclaration"/>
@@ -37,15 +50,21 @@
     <exclude name="ClassNamingConventions"/>
     <exclude name="FieldNamingConventions"/>
     <exclude name="LocalVariableCouldBeFinal"/>
-    <exclude name="VariableNamingConventions"/>
     <exclude name="MethodArgumentCouldBeFinal"/>
     <exclude name="CommentDefaultAccessModifier"/>
+    <exclude name="UnnecessaryFullyQualifiedName"/>
     <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
     <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
   </rule>
   <rule ref="category/java/codestyle.xml/ConfusingTernary">
     <properties>
       <property name="ignoreElseIf" value="true"/>
+    </properties>
+  </rule>
+  <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName">
+    <properties>
+      <property name="reportStaticFields" value="false"/>
+      <property name="reportStaticMethods" value="false"/>
     </properties>
   </rule>
 
@@ -86,7 +105,6 @@
     <exclude name="UseProperClassLoader"/>
     <exclude name="AvoidCatchingThrowable"/>
     <exclude name="AvoidDuplicateLiterals"/>
-    <exclude name="DataflowAnomalyAnalysis"/>
     <exclude name="CompareObjectsWithEquals"/>
     <exclude name="AvoidLiteralsInIfCondition"/>
     <exclude name="AvoidFieldNameMatchingMethodName"/>

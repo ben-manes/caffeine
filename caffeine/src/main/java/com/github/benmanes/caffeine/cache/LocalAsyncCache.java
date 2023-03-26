@@ -474,7 +474,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   abstract class AbstractCacheView<K, V> implements Cache<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    transient @Nullable AsMapView<K, V> asMapView;
+    transient @Nullable ConcurrentMap<K, V> asMapView;
 
     abstract LocalAsyncCache<K, V> asyncCache();
 
@@ -1002,15 +1002,15 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public String toString() {
-      var result = new StringBuilder().append('{');
+      var result = new StringBuilder(50).append('{');
       for (var iterator = new EntryIterator(); iterator.hasNext();) {
         var entry = iterator.next();
-        result.append((entry.getKey() == this) ? "(this Map)" : entry.getKey());
-        result.append('=');
-        result.append((entry.getValue() == this) ? "(this Map)" : entry.getValue());
+        result.append((entry.getKey() == this) ? "(this Map)" : entry.getKey())
+            .append('=')
+            .append((entry.getValue() == this) ? "(this Map)" : entry.getValue());
 
         if (iterator.hasNext()) {
-          result.append(',').append(' ');
+          result.append(", ");
         }
       }
       return result.append('}').toString();
@@ -1059,7 +1059,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
         for (var entry : delegate.entrySet()) {
           V value = Async.getIfReady(entry.getValue());
-          if ((value != null) && o.equals(value) && AsMapView.this.remove(entry.getKey(), value)) {
+          if ((value != null) && value.equals(o) && AsMapView.this.remove(entry.getKey(), value)) {
             return true;
           }
         }
@@ -1103,7 +1103,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Override
       public Iterator<V> iterator() {
         return new Iterator<V>() {
-          Iterator<Entry<K, V>> iterator = entrySet().iterator();
+          final Iterator<Entry<K, V>> iterator = entrySet().iterator();
 
           @Override
           public boolean hasNext() {
@@ -1214,7 +1214,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     private final class EntryIterator implements Iterator<Entry<K, V>> {
-      Iterator<Entry<K, CompletableFuture<V>>> iterator;
+      final Iterator<Entry<K, CompletableFuture<V>>> iterator;
       @Nullable Entry<K, V> cursor;
       @Nullable K removalKey;
 
