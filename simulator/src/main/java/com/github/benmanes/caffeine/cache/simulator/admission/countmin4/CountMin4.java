@@ -45,6 +45,7 @@ public abstract class CountMin4 implements Frequency {
    * Creates a frequency sketch that can accurately estimate the popularity of elements given
    * the maximum size of the cache.
    */
+  @SuppressWarnings("this-escape")
   protected CountMin4(Config config) {
     BasicSettings settings = new BasicSettings(config);
     conservative = settings.tinyLfu().conservative();

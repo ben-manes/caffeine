@@ -917,6 +917,7 @@ public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
      *
      * @param m the map
      */
+    @SuppressWarnings("this-escape")
     public ConcurrentHashMapV7(Map<? extends K, ? extends V> m) {
         this(Math.max((int) (m.size() / DEFAULT_LOAD_FACTOR) + 1,
                       DEFAULT_INITIAL_CAPACITY),

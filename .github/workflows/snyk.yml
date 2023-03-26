@@ -7,7 +7,7 @@ permissions: read-all
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  JAVA_VERSION: 19
+  JAVA_VERSION: 20
 
 jobs:
   snyk:
@@ -25,11 +25,6 @@ jobs:
           disable-sudo: true
           egress-policy: audit
       - uses: actions/checkout@v3
-      - name: Downgrade Gradle (snyk-gradle-plugin/issues/252)
-        uses: ./.github/actions/run-gradle
-        with:
-          java: ${{ env.JAVA_VERSION }}
-          arguments: wrapper --gradle-version 7.6
       - name: Run Snyk test
         uses: ./.github/actions/run-gradle
         continue-on-error: true

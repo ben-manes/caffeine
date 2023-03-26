@@ -67,6 +67,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
   private int sizeCold;
   private final Node headCold;
 
+  @SuppressWarnings("this-escape")
   public TuQueuePolicy(Config config) {
     TuQueueSettings settings = new TuQueueSettings(config);
 

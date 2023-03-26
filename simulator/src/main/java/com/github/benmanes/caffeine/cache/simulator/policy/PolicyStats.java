@@ -61,7 +61,7 @@ public class PolicyStats {
   private long operationCount;
   private double percentAdaption;
 
-  @SuppressWarnings("AnnotateFormatMethod")
+  @SuppressWarnings({"AnnotateFormatMethod", "this-escape"})
   public PolicyStats(String format, Object... args) {
     this.stopwatch = Stopwatch.createUnstarted();
     this.name = String.format(US, format, args);

@@ -8,7 +8,7 @@ inputs:
     required: true
     description: The JDK version
   early-access:
-    default: '20'
+    default: '21'
     required: false
     description: The early access release
   token:
@@ -26,7 +26,7 @@ runs:
       shell: bash
       run: |
         echo "GRAALVM=true" >> $GITHUB_ENV
-        echo "JAVA_VERSION=19" >> $GITHUB_ENV
+        echo "JAVA_VERSION=20" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
       uses: actions/setup-java@v3
       if: (inputs.early-access != inputs.java) && (inputs.java != 'GraalVM')
@@ -44,7 +44,7 @@ runs:
       uses: graalvm/setup-graalvm@v1
       if: inputs.java == 'GraalVM'
       with:
-        version: 'latest'
+        version: 'dev'
         components: 'native-image'
         github-token: ${{ inputs.token }}
         java-version: ${{ env.JAVA_VERSION }}

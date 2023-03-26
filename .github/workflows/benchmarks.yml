@@ -5,14 +5,14 @@ on: [ push, pull_request ]
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  PUBLISH_JDK: 19
+  PUBLISH_JDK: 20
 
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 19, 20, GraalVM ]
+        java: [ 11, 20, 21, GraalVM ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

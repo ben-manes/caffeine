@@ -161,6 +161,10 @@ tasks.withType(JavaCompile).configureEach {
   options.compilerArgs += ['-Xmaxerrs', '500', '-Xmaxwarns', '500' ]
   options.encoding = 'UTF-8'
   options.errorprone {
+    if (System.env.JDK_EA == 'true') {
+      enabled = false
+    }
+
     def enabledChecks = [
       'AssertFalse', 'BuilderReturnThis', 'CatchingUnchecked', 'CheckedExceptionNotThrown',
       'ClassName', 'ComparisonContractViolated', 'CannotMockFinalClass', 'CannotMockFinalMethod',

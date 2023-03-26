@@ -32,7 +32,7 @@ env:
     services.gradle.org:443
     www.graalvm.org:443
   PUBLISH_JDK: 11
-  EA_JDK: 20
+  EA_JDK: 21
 
 jobs:
   compile:
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 19, 20, GraalVM ]
+        java: [ 11, 20, 21, GraalVM ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -53,13 +53,17 @@ jobs:
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Prepare GraalVM
+        if: matrix.java == 'GraalVM'
+        shell: bash
+        run: echo "GRADLE_ARGS=--no-build-cache" >> $GITHUB_ENV
       - name: Compile
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
-          arguments: check -x test
           early-access: ${{ env.EA_JDK }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          arguments: check -x test ${{ env.GRADLE_ARGS }}
       - name: Cancel if failed
         uses: andymckay/cancel-action@0.3
         continue-on-error: true

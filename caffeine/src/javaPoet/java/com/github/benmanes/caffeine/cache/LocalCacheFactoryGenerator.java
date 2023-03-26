@@ -108,6 +108,9 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private void reformat() throws FormatterException, IOException {
+    if (Boolean.parseBoolean(System.getenv("JDK_EA"))) {
+      return; // may be incompatible for EA builds
+    }
     try (Stream<Path> stream = Files.walk(directory)) {
       ImmutableList<Path> files = stream
           .filter(path -> path.toString().endsWith(".java"))
