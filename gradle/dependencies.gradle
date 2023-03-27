@@ -95,7 +95,7 @@ ext {
     dependencyCheck: '8.2.1',
     errorprone: '3.0.1',
     findsecbugs: '1.12.0',
-    forbiddenApis: '3.4',
+    forbiddenApis: '3.5',
     jacoco: '0.8.7',
     jmh: '0.7.0',
     jmhReport: '0.9.0',

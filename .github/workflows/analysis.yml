@@ -5,11 +5,12 @@ on: [ push, pull_request ]
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  JAVA_VERSION: 19
 
 jobs:
-  analyze:
+  forbiddenApis:
     runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: 20
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@1f99358870fe1c846a3ccba386cc2b2246836776
@@ -17,11 +18,40 @@ jobs:
           disable-sudo: true
           egress-policy: audit
       - uses: actions/checkout@v3
-      - name: Run analyzers
+      - name: Forbidden Apis
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: >
-            forbiddenApis -DforbiddenApis
-            pmdJavaPoet pmdMain pmdCodeGen pmdJmh -Dpmd
-            spotbugsJavaPoet spotbugsMain spotbugsCodeGen spotbugsJmh -Dspotbugs
+          arguments: forbiddenApis -DforbiddenApis
+  pmd:
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: 20
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1f99358870fe1c846a3ccba386cc2b2246836776
+        with:
+          disable-sudo: true
+          egress-policy: audit
+      - uses: actions/checkout@v3
+      - name: Pmd
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh -Dpmd
+  spotbugs:
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: 20
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1f99358870fe1c846a3ccba386cc2b2246836776
+        with:
+          disable-sudo: true
+          egress-policy: audit
+      - uses: actions/checkout@v3
+      - name: Spotbugs
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          arguments: spotbugsJavaPoet spotbugsMain spotbugsCodeGen spotbugsJmh -Dspotbugs
