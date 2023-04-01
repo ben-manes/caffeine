@@ -48,10 +48,10 @@ import com.google.common.util.concurrent.MoreExecutors;
  * @author github.com/kdombeck (Ken Dombeck)
  */
 public final class CacheProxyTest extends AbstractJCacheTest {
-  private CloseableCacheEntryListener listener = Mockito.mock(CloseableCacheEntryListener.class);
-  private CloseableExpiryPolicy expiry = Mockito.mock(CloseableExpiryPolicy.class);
-  private CloseableCacheLoader loader = Mockito.mock(CloseableCacheLoader.class);
-  private CloseableCacheWriter writer = Mockito.mock(CloseableCacheWriter.class);
+  private CloseableCacheEntryListener listener = Mockito.mock();
+  private CloseableExpiryPolicy expiry = Mockito.mock();
+  private CloseableCacheLoader loader = Mockito.mock();
+  private CloseableCacheWriter writer = Mockito.mock();
 
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {

@@ -164,8 +164,7 @@ public final class AsyncTest {
 
   private static AsyncExpiry<Integer, Integer> makeAsyncExpiry(
       long create, long update, long read) {
-    @SuppressWarnings("unchecked")
-    Expiry<Integer, Integer> mock = Mockito.mock(Expiry.class);
+    Expiry<Integer, Integer> mock = Mockito.mock();
     when(mock.expireAfterCreate(any(), any(), anyLong())).thenReturn(create);
     when(mock.expireAfterUpdate(any(), any(), anyLong(), anyLong())).thenReturn(update);
     when(mock.expireAfterRead(any(), any(), anyLong(), anyLong())).thenReturn(read);

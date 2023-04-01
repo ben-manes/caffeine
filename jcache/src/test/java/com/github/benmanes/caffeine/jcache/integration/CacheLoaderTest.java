@@ -119,10 +119,9 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
     return new Object[] { new IllegalStateException(), new CacheLoaderException() };
   }
 
-  @SuppressWarnings("unchecked")
   @Override protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    expiry = Mockito.mock(ExpiryPolicy.class, answer -> Duration.ZERO);
-    cacheLoader = Mockito.mock(CacheLoader.class);
+    expiry = Mockito.mock(answer -> Duration.ZERO);
+    cacheLoader = Mockito.mock();
 
     var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setExpiryPolicyFactory(() -> expiry);

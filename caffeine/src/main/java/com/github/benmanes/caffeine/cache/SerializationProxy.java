@@ -23,7 +23,7 @@ import java.time.Duration;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Serializes the configuration of the cache, reconsitituting it as a {@link Cache},
+ * Serializes the configuration of the cache, reconstituting it as a {@link Cache},
  * {@link LoadingCache}, {@link AsyncCache}, or {@link AsyncLoadingCache} using {@link Caffeine}
  * upon deserialization. The data held by the cache is not retained.
  *

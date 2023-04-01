@@ -36,7 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
-import org.testng.log4testng.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -48,7 +49,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Threads {
-  private static final Logger logger = Logger.getLogger(Threads.class);
+  private static final Logger logger = LoggerFactory.getLogger(Threads.class);
 
   public static final int ITERATIONS = 40_000;
   public static final int NTHREADS = 20;
@@ -66,23 +67,25 @@ public final class Threads {
 
   public static void executeWithTimeOut(Queue<String> failures, Callable<Long> task) {
     var es = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
-    var future = es.submit(task);
     try {
+      var future = es.submit(task);
       long timeNS = future.get(TIMEOUT, TimeUnit.SECONDS);
-      logger.debug("\nExecuted in " + TimeUnit.NANOSECONDS.toSeconds(timeNS) + " second(s)");
+      logger.debug("\nExecuted in {} second(s)", TimeUnit.NANOSECONDS.toSeconds(timeNS));
     } catch (ExecutionException e) {
       fail("Exception during test: " + e, e);
     } catch (TimeoutException e) {
       handleTimout(failures, es, e);
     } catch (InterruptedException e) {
       fail("", e);
+    } finally {
+      es.shutdown();
     }
   }
 
   public static void handleTimout(Queue<String> failures, ExecutorService es, TimeoutException e) {
     for (var trace : Thread.getAllStackTraces().values()) {
       for (var element : trace) {
-        logger.info("\tat " + element);
+        logger.info("\tat {}", element);
       }
       if (trace.length > 0) {
         logger.info("------");

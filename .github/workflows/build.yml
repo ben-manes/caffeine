@@ -37,7 +37,7 @@ env:
 jobs:
   compile:
     name: Compile
-    timeout-minutes: 5
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     strategy:
       matrix:

@@ -270,8 +270,7 @@ public @interface CacheSpec {
     },
     MOCKITO {
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
-        @SuppressWarnings("unchecked")
-        Expiry<K, V> mock = Mockito.mock(Expiry.class);
+        Expiry<K, V> mock = Mockito.mock();
         when(mock.expireAfterCreate(any(), any(), anyLong()))
             .thenReturn(expiryTime.timeNanos());
         when(mock.expireAfterUpdate(any(), any(), anyLong(), anyLong()))

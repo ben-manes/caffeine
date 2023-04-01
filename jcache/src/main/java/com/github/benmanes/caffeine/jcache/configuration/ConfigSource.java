@@ -30,7 +30,7 @@ public interface ConfigSource {
   /**
    * Returns a {@link Config} that provides the cache configurations.
    *
-   * @param uri a uri that may assist in resolve to the resource
+   * @param uri a uri that may assist in resolving the resource
    * @param classloader the classloader to load with
    * @return a configuration
    */

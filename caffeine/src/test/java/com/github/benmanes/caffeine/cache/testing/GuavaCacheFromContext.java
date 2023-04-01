@@ -673,9 +673,9 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Map<K, V> loadAll(Iterable<? extends K> keys) throws Exception {
       var keysToLoad = (keys instanceof Set) ? (Set<? extends K>) keys : ImmutableSet.copyOf(keys);
+      @SuppressWarnings("unchecked")
       var loaded = (Map<K, V>) delegate.loadAll(keysToLoad);
       return loaded;
     }
