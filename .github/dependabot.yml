@@ -20,4 +20,17 @@ updates:
       - gradle-plugin-portal
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+
+  # Maintain dependencies for examples
+  - package-ecosystem: maven
+    directory: examples/coalescing-bulkloader
+    schedule:
+      interval: weekly
+  - package-ecosystem: maven
+    directory: examples/write-behind-rxjava
+    schedule:
+      interval: weekly
+  - package-ecosystem: gradle
+    directory: examples/hibernate
+    schedule:
+      interval: weekly
