@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Arrays;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -28,7 +26,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
-import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 
 import site.ycsb.generator.NumberGenerator;
@@ -67,18 +64,23 @@ public class ComputeBenchmark {
     }
   }
 
+  BenchmarkFunctionFactory createFunctionFactory() {
+    switch (computeType) {
+      case "ConcurrentHashMap":
+        return new ConcurrentHashMapFunctionFactory();
+      case "Caffeine":
+        return new CaffeineFunctionFactory();
+      case "Guava":
+        return new GuavaFunctionFactory();
+      default:
+        throw new AssertionError("Unknown computeType: " + computeType);
+    }
+  }
+
   @Setup
   @SuppressWarnings("ReturnValueIgnored")
   public void setup() {
-    if (computeType.equals("ConcurrentHashMap")) {
-      setupConcurrentHashMap();
-    } else if (computeType.equals("Caffeine")) {
-      setupCaffeine();
-    } else if (computeType.equals("Guava")) {
-      setupGuava();
-    } else {
-      throw new AssertionError("Unknown computingType: " + computeType);
-    }
+    benchmarkFunction = createFunctionFactory().create();
     Arrays.stream(ints).forEach(benchmarkFunction::apply);
   }
 
@@ -90,21 +92,5 @@ public class ComputeBenchmark {
   @Benchmark @Threads(32)
   public Boolean compute_spread(ThreadState threadState) {
     return benchmarkFunction.apply(ints[threadState.index++ & MASK]);
-  }
-
-  private void setupConcurrentHashMap() {
-    ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>();
-    benchmarkFunction = key -> map.computeIfAbsent(key, mappingFunction);
-  }
-
-  private void setupCaffeine() {
-    Cache<Integer, Boolean> cache = Caffeine.newBuilder().build();
-    benchmarkFunction = key -> cache.get(key, mappingFunction);
-  }
-
-  private void setupGuava() {
-    com.google.common.cache.LoadingCache<Integer, Boolean> cache =
-        CacheBuilder.newBuilder().concurrencyLevel(64).build(cacheLoader);
-    benchmarkFunction = cache::getUnchecked;
   }
 }

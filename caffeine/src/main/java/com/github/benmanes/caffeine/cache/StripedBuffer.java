@@ -127,9 +127,9 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     boolean uncontended = true;
     Buffer<E>[] buffers = table;
     if ((buffers == null)
-        || ((mask = buffers.length - 1) < 0)
-        || ((buffer = buffers[h & mask]) == null)
-        || !(uncontended = ((result = buffer.offer(e)) != Buffer.FAILED))) {
+            || ((mask = buffers.length - 1) < 0)
+            || ((buffer = buffers[h & mask]) == null)
+            || !(uncontended = ((result = buffer.offer(e)) != Buffer.FAILED))) {
       return expandOrRetry(e, h, increment, uncontended);
     }
     return result;
@@ -156,20 +156,8 @@ abstract class StripedBuffer<E> implements Buffer<E> {
       if (((buffers = table) != null) && ((n = buffers.length) > 0)) {
         if ((buffer = buffers[(n - 1) & h]) == null) {
           if ((tableBusy == 0) && casTableBusy()) { // Try to attach new Buffer
-            boolean created = false;
-            try { // Recheck under lock
-              Buffer<E>[] rs;
-              int mask, j;
-              if (((rs = table) != null) && ((mask = rs.length) > 0)
-                  && (rs[j = (mask - 1) & h] == null)) {
-                rs[j] = create(e);
-                created = true;
-              }
-            } finally {
-              tableBusy = 0;
-            }
-            if (created) {
-              result = Buffer.SUCCESS;
+            result = createAndAttachBuffer(e, h);
+            if (result != Buffer.FAILED) {
               break;
             }
             continue; // Slot is now non-empty
@@ -196,26 +184,35 @@ abstract class StripedBuffer<E> implements Buffer<E> {
         }
         h += increment;
       } else if ((tableBusy == 0) && (table == buffers) && casTableBusy()) {
-        boolean init = false;
-        try { // Initialize table
-          if (table == buffers) {
-            @SuppressWarnings({"rawtypes", "unchecked"})
-            Buffer<E>[] rs = new Buffer[1];
-            rs[0] = create(e);
-            table = rs;
-            init = true;
-          }
-        } finally {
-          tableBusy = 0;
-        }
-        if (init) {
-          result = Buffer.SUCCESS;
+        result = createAndAttachBuffer(e, h);
+        if (result != Buffer.FAILED) {
           break;
         }
       }
     }
     return result;
   }
+
+  final int createAndAttachBuffer(E e, int h) {
+    boolean created = false;
+    int result = Buffer.FAILED;
+    try { // Recheck under lock
+      Buffer<E>[] rs;
+      int mask, j;
+      if (((rs = table) != null) && ((mask = rs.length) > 0)
+              && (rs[j = (mask - 1) & h] == null)) {
+        rs[j] = create(e);
+        created = true;
+      }
+    } finally {
+      tableBusy = 0;
+    }
+    if (created) {
+      result = Buffer.SUCCESS;
+    }
+    return result;
+  }
+
 
   @Override
   public void drainTo(Consumer<E> consumer) {
@@ -270,7 +267,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   static {
     try {
       TABLE_BUSY = MethodHandles.lookup()
-          .findVarHandle(StripedBuffer.class, "tableBusy", int.class);
+              .findVarHandle(StripedBuffer.class, "tableBusy", int.class);
     } catch (ReflectiveOperationException e) {
       throw new ExceptionInInitializerError(e);
     }
