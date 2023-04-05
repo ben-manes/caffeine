@@ -1012,7 +1012,7 @@ public final class CacheTest {
 
   @Test
   public void cacheEntry_setValue() {
-    var entry = SnapshotEntry.forEntry(1, 2);
+    var entry = SnapshotEntryFactory.forEntry(1, 2);
     assertThrows(UnsupportedOperationException.class, () -> entry.setValue(3));
   }
 
@@ -1034,7 +1034,7 @@ public final class CacheTest {
           new ExpirableEntry<>(key, value, snapshot, expiresAt),
           new ExpirableWeightedEntry<>(key, value, snapshot, weight, expiresAt),
           new RefreshableExpirableEntry<>(key, value, snapshot, expiresAt, refreshableAt),
-          new CompleteEntry<>(key, value, snapshot, weight, expiresAt, refreshableAt));
+          new CompleteEntry<>(key, value, snapshot, weight, expiresAt, refreshableAt, refreshableAt));
       for (var entry : group) {
         assertWithMessage("%s", entry.getClass())
             .that(entry.toString()).isEqualTo(key + "=" + value);

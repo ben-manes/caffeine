@@ -1069,7 +1069,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
     @Override public @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
       V value = transformer.apply(cache.data.get(key));
-      return (value == null) ? null : SnapshotEntry.forEntry(key, value);
+      return (value == null) ? null : SnapshotEntryFactory.forEntry(key, value);
     }
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;

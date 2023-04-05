@@ -2663,14 +2663,14 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void snapshotEntry() {
-    assertThat(SnapshotEntry.forEntry(1, 2)).isInstanceOf(SnapshotEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 0, 0)).isInstanceOf(SnapshotEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 0, 0)).isInstanceOf(WeightedEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 3, 0)).isInstanceOf(ExpirableEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 3, 0)).isInstanceOf(ExpirableWeightedEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 3, 4))
+    assertThat(SnapshotEntryFactory.forEntry(1, 2)).isInstanceOf(SnapshotEntry.class);
+    assertThat(SnapshotEntryFactory.forEntry(1, 2, 0, 1, 0, 0)).isInstanceOf(SnapshotEntry.class);
+    assertThat(SnapshotEntryFactory.forEntry(1, 2, 0, 2, 0, 0)).isInstanceOf(WeightedEntry.class);
+    assertThat(SnapshotEntryFactory.forEntry(1, 2, 0, 1, 3, 0)).isInstanceOf(ExpirableEntry.class);
+    assertThat(SnapshotEntryFactory.forEntry(1, 2, 0, 2, 3, 0)).isInstanceOf(ExpirableWeightedEntry.class);
+    assertThat(SnapshotEntryFactory.forEntry(1, 2, 0, 1, 3, 4))
         .isInstanceOf(RefreshableExpirableEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 3, 4)).isInstanceOf(CompleteEntry.class);
+    assertThat(SnapshotEntryFactory.forEntry(1, 2, 0, 2, 3, 4)).isInstanceOf(CompleteEntry.class);
   }
 
   static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {

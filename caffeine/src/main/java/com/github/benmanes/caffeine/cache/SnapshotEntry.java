@@ -1,18 +1,3 @@
-/*
- * Copyright 2022 Ben Manes. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
@@ -21,11 +6,6 @@ import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
 
-/**
- * An immutable entry that includes a snapshot of the policy metadata at its time of creation.
- *
- * @author ben.manes@gmail.com (Ben Manes)
- */
 class SnapshotEntry<K, V> implements CacheEntry<K, V> {
   private final long snapshot;
   private final V value;
@@ -36,28 +16,44 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     this.key = requireNonNull(key);
     this.value = requireNonNull(value);
   }
-  @Override public K getKey() {
+
+  @Override
+  public K getKey() {
     return key;
   }
-  @Override public V getValue() {
+
+  @Override
+  public V getValue() {
     return value;
   }
-  @Override public V setValue(V value) {
+
+  @Override
+  public V setValue(V value) {
     throw new UnsupportedOperationException();
   }
-  @Override public int weight() {
+
+  @Override
+  public int weight() {
     return 1;
   }
-  @Override public long expiresAt() {
+
+  @Override
+  public long expiresAt() {
     return snapshot + Long.MAX_VALUE;
   }
-  @Override public long refreshableAt() {
+
+  @Override
+  public long refreshableAt() {
     return snapshot + Long.MAX_VALUE;
   }
-  @Override public long snapshotAt() {
+
+  @Override
+  public long snapshotAt() {
     return snapshot;
   }
-  @Override public boolean equals(Object o) {
+
+  @Override
+  public boolean equals(Object o) {
     if (o == this) {
       return true;
     } else if (!(o instanceof Map.Entry)) {
@@ -66,38 +62,15 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     var entry = (Map.Entry<?, ?>) o;
     return key.equals(entry.getKey()) && value.equals(entry.getValue());
   }
-  @Override public int hashCode() {
+
+  @Override
+  public int hashCode() {
     return key.hashCode() ^ value.hashCode();
   }
-  @Override public String toString() {
+
+  @Override
+  public String toString() {
     return key + "=" + value;
-  }
-
-  /** Returns a cache entry containing the given key, value, and snapshot. */
-  public static <K, V> SnapshotEntry<K, V> forEntry(K key, V value) {
-    return new SnapshotEntry<>(key, value, /* snapshot */ 0);
-  }
-
-  /** Returns a cache entry with the specified metadata. */
-  public static <K, V> SnapshotEntry<K, V> forEntry(K key, V value,
-      long snapshot, int weight, long expiresAt, long refreshableAt) {
-    long unsetTicks = snapshot + Long.MAX_VALUE;
-    boolean refresh = (refreshableAt != unsetTicks);
-    boolean expires = (expiresAt != unsetTicks);
-    boolean weights = (weight != 1);
-    int features = // truth table
-          (weights ? 0b001 : 0b000)
-        | (expires ? 0b010 : 0b000)
-        | (refresh ? 0b100 : 0b000);
-    switch (features) { // optimized for common cases
-      case 0b000: return new SnapshotEntry<>(key, value, snapshot);
-      case 0b001: return new WeightedEntry<>(key, value, snapshot, weight);
-      case 0b010: return new ExpirableEntry<>(key, value, snapshot, expiresAt);
-      case 0b011: return new ExpirableWeightedEntry<>(key, value, snapshot, weight, expiresAt);
-      case 0b110: return new RefreshableExpirableEntry<>(
-          key, value, snapshot, expiresAt, refreshableAt);
-      default: return new CompleteEntry<>(key, value, snapshot, weight, expiresAt, refreshableAt);
-    }
   }
 
   static class WeightedEntry<K, V> extends SnapshotEntry<K, V> {
@@ -107,7 +80,9 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
       super(key, value, snapshot);
       this.weight = weight;
     }
-    @Override public int weight() {
+
+    @Override
+    public int weight() {
       return weight;
     }
   }
@@ -119,7 +94,9 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
       super(key, value, snapshot);
       this.expiresAt = expiresAt;
     }
-    @Override public long expiresAt() {
+
+    @Override
+    public long expiresAt() {
       return expiresAt;
     }
   }
@@ -131,7 +108,9 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
       super(key, value, snapshot, weight);
       this.expiresAt = expiresAt;
     }
-    @Override public long expiresAt() {
+
+    @Override
+    public long expiresAt() {
       return expiresAt;
     }
   }
@@ -143,7 +122,9 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
       super(key, value, snapshot, expiresAt);
       this.refreshableAt = refreshableAt;
     }
-    @Override public long refreshableAt() {
+
+    @Override
+    public long refreshableAt() {
       return refreshableAt;
     }
   }
@@ -151,11 +132,13 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
   static final class CompleteEntry<K, V> extends ExpirableWeightedEntry<K, V> {
     final long refreshableAt;
 
-    CompleteEntry(K key, V value, long snapshot, int weight, long expiresAt, long refreshableAt) {
+    CompleteEntry(K key, V value, long snapshot, int weight, long expiresAt, long refreshableAt, long at) {
       super(key, value, snapshot, weight, expiresAt);
       this.refreshableAt = refreshableAt;
     }
-    @Override public long refreshableAt() {
+
+    @Override
+    public long refreshableAt() {
       return refreshableAt;
     }
   }

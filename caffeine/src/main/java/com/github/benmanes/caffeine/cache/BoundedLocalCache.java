@@ -3195,7 +3195,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         ? node.getWriteTime() + refreshAfterWriteNanos()
         : now + Long.MAX_VALUE;
     int weight = node.getPolicyWeight();
-    return SnapshotEntry.forEntry(key, value, now, weight, now + expiresAfter, refreshableAt);
+    return SnapshotEntryFactory.forEntry(key, value, now, weight, now + expiresAfter, refreshableAt);
   }
 
   /** A function that produces an unmodifiable map up to the limit in stream order. */
