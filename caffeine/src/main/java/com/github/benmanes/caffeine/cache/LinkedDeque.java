@@ -102,6 +102,34 @@ interface LinkedDeque<E> extends Deque<E> {
   @Override
   PeekingIterator<E> descendingIterator();
 
+  /**
+   * Checks the given element to ensure that it is correctly linked to the deque.
+   *
+   * @throws IllegalArgumentException if the element is not linked to this deque.
+   */
+  default void checkElement(E element) {
+    E first = peekFirst();
+    E last = peekLast();
+    if (element == first) {
+      if (getPrevious(element) != null) {
+        throw new IllegalArgumentException("First element has non-null previous link");
+      }
+    }
+    if (element == last) {
+      if (getNext(element) != null) {
+        throw new IllegalArgumentException("Last element has non-null next link");
+      }
+    }
+    if ((element != first) && (element != last)) {
+      if (getPrevious(element) == null) {
+        throw new IllegalArgumentException("Middle element has null previous link");
+      }
+      if (getNext(element) == null) {
+        throw new IllegalArgumentException("Middle element has null next link");
+      }
+    }
+  }
+
   interface PeekingIterator<E> extends Iterator<E> {
 
     /** Returns the next element in the iteration, without advancing the iteration. */

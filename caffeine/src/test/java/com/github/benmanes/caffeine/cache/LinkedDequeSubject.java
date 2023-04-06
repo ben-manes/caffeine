@@ -57,25 +57,11 @@ final class LinkedDequeSubject extends CollectionSubject {
     var seen = Sets.newIdentityHashSet();
     while (iterator.hasNext()) {
       var element = iterator.next();
-      checkElement(element);
       check("loop").withMessage("Loop detected: %s in %s", element, seen)
-          .that(seen.add(element)).isTrue();
+              .that(seen.add(element)).isTrue();
+      actual.checkElement(element);
     }
     hasSize(seen.size());
   }
 
-  private void checkElement(Object element) {
-    var first = actual.peekFirst();
-    var last = actual.peekLast();
-    if (element == first) {
-      check("getPrevious(e)").that(actual.getPrevious(element)).isNull();
-    }
-    if (element == last) {
-      check("getNext(e)").that(actual.getNext(element)).isNull();
-    }
-    if ((element != first) && (element != last)) {
-      check("getPrevious(e)").that(actual.getPrevious(element)).isNotNull();
-      check("getNext(e)").that(actual.getNext(element)).isNotNull();
-    }
-  }
 }
