@@ -2359,7 +2359,10 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getMessage()).contains("An invalid state was detected");
+    assertThat(event.getFormattedMessage()).containsMatch(
+        "An invalid state was detected.*\\(key: \\d+, key type: MutableInt.*\\)");
+    assertThat(event.getThrowable().orElseThrow())
+        .isInstanceOf(IllegalStateException.class);
     assertThat(event.getLevel()).isEqualTo(ERROR);
 
     cache.data.clear();
@@ -2387,7 +2390,10 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getMessage()).contains("An invalid state was detected");
+    assertThat(event.getFormattedMessage()).containsMatch(
+        "An invalid state was detected.*\\(key: \\d+, key type: MutableInt.*\\)");
+    assertThat(event.getThrowable().orElseThrow())
+        .isInstanceOf(IllegalStateException.class);
     assertThat(event.getLevel()).isEqualTo(ERROR);
 
     cache.data.clear();
@@ -2408,7 +2414,10 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getMessage()).contains("An invalid state was detected");
+    assertThat(event.getFormattedMessage()).containsMatch(
+        "An invalid state was detected.*\\(key: \\d+, key type: MutableInt.*\\)");
+    assertThat(event.getThrowable().orElseThrow())
+        .isInstanceOf(IllegalStateException.class);
     assertThat(event.getLevel()).isEqualTo(ERROR);
 
     cache.data.clear();
@@ -2490,7 +2499,9 @@ public final class BoundedLocalCacheTest {
     key.decrement();
 
     var e = assertThrows(IllegalStateException.class, () -> task.accept(key));
-    assertThat(e).hasMessageThat().contains("An invalid state was detected");
+    assertThat(e).hasMessageThat().containsMatch(
+        "An invalid state was detected.*\\(key: \\d+, key type: MutableInt.*\\)");
+
     cache.data.clear();
   }
 

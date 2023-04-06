@@ -19,13 +19,13 @@ import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
-import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Caffeine.saturatedToNanos;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
 import static com.github.benmanes.caffeine.cache.Node.PROTECTED;
 import static com.github.benmanes.caffeine.cache.Node.WINDOW;
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static java.util.Spliterator.DISTINCT;
 import static java.util.Spliterator.IMMUTABLE;
@@ -289,19 +289,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /** Ensures that the node is alive during the map operation. */
-  static void requireIsAlive(Object key, Node<?, ?> node) {
-    requireState(node.isAlive(), "An invalid state was detected that occurs if the key's equals "
-        + "or hashCode was modified while it resided in the cache. This violation of the Map "
-        + "contract can lead to non-deterministic behavior (key: %s).", key);
+  void requireIsAlive(Object key, Node<?, ?> node) {
+    if (!node.isAlive()) {
+      throw new IllegalStateException(brokenEqualityMessage(key, node));
+    }
   }
 
   /** Logs if the node cannot be found in the map but is still alive. */
-  static void logIfAlive(Node<?, ?> node) {
+  void logIfAlive(Node<?, ?> node) {
     if (node.isAlive()) {
-      logger.log(Level.ERROR, "An invalid state was detected that occurs if the key's equals or "
-          + "hashCode was modified while it resided in the cache. This violation of the Map "
-          + "contract can lead to non-deterministic behavior (key: {}).", node.getKeyReference());
+      String message = brokenEqualityMessage(node.getKeyReference(), node);
+      logger.log(Level.ERROR, message, new IllegalStateException());
     }
+  }
+
+  /** Returns the formatted broken equality error message. */
+  String brokenEqualityMessage(Object key, Node<?, ?> node) {
+    return String.format(US, "An invalid state was detected that occurs if the key's equals or "
+        + "hashCode was modified while it resided in the cache. This violation of the Map  "
+        + "contract can lead to non-deterministic behavior (key: %s, key type: %s, "
+        + "node type: %s, cache type: %s).", key, key.getClass().getSimpleName(),
+        node.getClass().getSimpleName(), getClass().getSimpleName());
   }
 
   /* --------------- Shared --------------- */
