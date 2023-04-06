@@ -1,10 +1,12 @@
 package com.github.benmanes.caffeine.cache;
 
 public class SnapshotEntryFactory {
+    /** Returns a cache entry containing the given key, value, and snapshot. */
     public static <K, V> SnapshotEntry<K, V> forEntry(K key, V value) {
         return new SnapshotEntry<>(key, value, /* snapshot */ 0);
     }
 
+    /** Returns a cache entry with the specified metadata. */
     public static <K, V> Policy.CacheEntry<K, V> forEntry(K key, V value,
                                                           long snapshot, int weight, long expiresAt, long refreshableAt) {
         long unsetTicks = snapshot + Long.MAX_VALUE;
