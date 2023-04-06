@@ -106,7 +106,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     Object keyReference = cache().referenceKey(key);
 
     var future = cache().refreshes().compute(keyReference, (k, existing) -> {
-      if ((existing != null) && !Async.isReady(existing) && !cache().isPendingEviction(key)) {
+      if (shouldReturnExisting(existing, key)) {
         return existing;
       }
 
@@ -114,8 +114,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         startTime[0] = cache().statsTicker().read();
         oldValue[0] = cache().getIfPresentQuietly(key);
         var refreshFuture = (oldValue[0] == null)
-            ? cacheLoader().asyncLoad(key, cache().executor())
-            : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
+                ? cacheLoader().asyncLoad(key, cache().executor())
+                : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
         reloading[0] = requireNonNull(refreshFuture, "Null future");
         return refreshFuture;
       } catch (RuntimeException e) {
@@ -166,6 +166,11 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     CompletableFuture<V> castedFuture = (CompletableFuture<V>) future;
     return castedFuture;
   }
+
+  private boolean shouldReturnExisting(CompletableFuture<?> existing, K key) {
+    return (existing != null) && !Async.isReady(existing) && !cache().isPendingEviction(key);
+  }
+
 
   @Override
   default CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
