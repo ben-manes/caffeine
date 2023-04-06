@@ -61,7 +61,7 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
   int sampleSize;
   int tableMask;
   long[] table;
-  int size;
+  int distinctElementCount;
 
   public CountMinSketch(@NonNegative long maximumSize) {
     checkArgument(maximumSize >= 0);
@@ -72,7 +72,7 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
     if (sampleSize <= 0) {
       sampleSize = Integer.MAX_VALUE;
     }
-    size = 0;
+    distinctElementCount = 0;
   }
 
   /**
@@ -118,7 +118,7 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
     added |= incrementAt(index2, start + 2);
     added |= incrementAt(index3, start + 3);
 
-    if (added && (++size == sampleSize)) {
+    if (added && (++distinctElementCount == sampleSize)) {
       reset();
     }
   }
@@ -148,7 +148,7 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
       count += Long.bitCount(table[i] & ONE_MASK);
       table[i] = (table[i] >>> 1) & RESET_MASK;
     }
-    size = (size - (count >>> 2)) >>> 1;
+    distinctElementCount = (distinctElementCount - (count >>> 2)) >>> 1;
   }
 
   /**
