@@ -2359,10 +2359,8 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getFormattedMessage()).containsMatch(
-        "An invalid state was detected.*\\(key: \\d+, key type: MutableInt.*\\)");
-    assertThat(event.getThrowable().orElseThrow())
-        .isInstanceOf(IllegalStateException.class);
+    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
+    checkBrokenEqualityMessage(cache, key, event.getFormattedMessage());
     assertThat(event.getLevel()).isEqualTo(ERROR);
 
     cache.data.clear();
@@ -2390,10 +2388,8 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getFormattedMessage()).containsMatch(
-        "An invalid state was detected.*\\(key: \\d+, key type: MutableInt.*\\)");
-    assertThat(event.getThrowable().orElseThrow())
-        .isInstanceOf(IllegalStateException.class);
+    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
+    checkBrokenEqualityMessage(cache, key, event.getFormattedMessage());
     assertThat(event.getLevel()).isEqualTo(ERROR);
 
     cache.data.clear();
@@ -2414,10 +2410,8 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getFormattedMessage()).containsMatch(
-        "An invalid state was detected.*\\(key: \\d+, key type: MutableInt.*\\)");
-    assertThat(event.getThrowable().orElseThrow())
-        .isInstanceOf(IllegalStateException.class);
+    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
+    checkBrokenEqualityMessage(cache, key, event.getFormattedMessage());
     assertThat(event.getLevel()).isEqualTo(ERROR);
 
     cache.data.clear();
@@ -2499,10 +2493,18 @@ public final class BoundedLocalCacheTest {
     key.decrement();
 
     var e = assertThrows(IllegalStateException.class, () -> task.accept(key));
-    assertThat(e).hasMessageThat().containsMatch(
-        "An invalid state was detected.*\\(key: \\d+, key type: MutableInt.*\\)");
+    checkBrokenEqualityMessage(cache, key, e.getMessage());
 
     cache.data.clear();
+  }
+
+  private static void checkBrokenEqualityMessage(
+      BoundedLocalCache<?, ?> cache, Object key, String msg) {
+    assertThat(msg).contains("An invalid state was detected");
+    assertThat(msg).contains("cache type: " + cache.getClass().getSimpleName());
+    assertThat(msg).contains("node type: " + cache.nodeFactory.getClass().getSimpleName());
+    assertThat(msg).contains("key type: " + key.getClass().getSimpleName());
+    assertThat(msg).contains("key: " + key);
   }
 
   /* --------------- Miscellaneous --------------- */
