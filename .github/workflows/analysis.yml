@@ -5,6 +5,18 @@ on: [ push, pull_request ]
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  ALLOWED_ENDPOINTS: >
+    api.adoptium.net:443
+    api.github.com:443
+    caffeine.gradle-enterprise.cloud:443
+    github.com:443
+    jcenter.bintray.com:443
+    objects.githubusercontent.com:443
+    plugins.gradle.org:443
+    plugins-artifacts.gradle.org:443
+    repo.maven.apache.org:443
+    repo1.maven.org:443
+    services.gradle.org:443
 
 jobs:
   forbiddenApis:
@@ -13,43 +25,48 @@ jobs:
       JAVA_VERSION: 20
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f
+        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f # v2.3.0
         with:
           disable-sudo: true
-          egress-policy: audit
-      - uses: actions/checkout@v3
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Forbidden Apis
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           arguments: forbiddenApis -DforbiddenApis
+
   pmd:
     runs-on: ubuntu-latest
     env:
       JAVA_VERSION: 20
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f
+        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f # v2.3.0
         with:
           disable-sudo: true
-          egress-policy: audit
-      - uses: actions/checkout@v3
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Pmd
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh -Dpmd
+
   spotbugs:
     runs-on: ubuntu-latest
     env:
       JAVA_VERSION: 20
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f
+        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f # v2.3.0
         with:
           disable-sudo: true
-          egress-policy: audit
-      - uses: actions/checkout@v3
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Spotbugs
         uses: ./.github/actions/run-gradle
         with:

@@ -19,18 +19,18 @@ updates:
     registries:
       - gradle-plugin-portal
     schedule:
-      interval: weekly
+      interval: daily
 
   # Maintain dependencies for examples
   - package-ecosystem: maven
     directory: examples/coalescing-bulkloader
     schedule:
-      interval: weekly
+      interval: daily
   - package-ecosystem: maven
     directory: examples/write-behind-rxjava
     schedule:
-      interval: weekly
+      interval: daily
   - package-ecosystem: gradle
     directory: examples/hibernate
     schedule:
-      interval: weekly
+      interval: daily

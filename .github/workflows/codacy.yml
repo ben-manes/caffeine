@@ -11,12 +11,26 @@ jobs:
       security-events: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f
+        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f # v2.3.0
         with:
           disable-sudo: true
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            api.codacy.com:443
+            api.github.com:443
+            auth.docker.io:443
+            jcenter.bintray.com:443
+            github.com:443
+            plugins.gradle.org:443
+            plugins-artifacts.gradle.org:443
+            production.cloudflare.docker.com:443
+            repo.maven.apache.org:443
+            repo1.maven.org:443
+            raw.githubusercontent.com:443
+            registry-1.docker.io:443
+            services.gradle.org:443
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Run Codacy Analysis
         uses: codacy/codacy-analysis-cli-action@master
         continue-on-error: true
@@ -27,11 +41,11 @@ jobs:
           max-allowed-issues: 2147483647
       - name: Check file existence
         id: check_files
-        uses: andstor/file-existence-action@v2
+        uses: andstor/file-existence-action@20b4d2e596410855db8f9ca21e96fbe18e12930b # v2.0.0
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@d186a2a36cc67bfa1b860e6170d37fb9634742c7 # v2.2.11
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif

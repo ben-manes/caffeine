@@ -1,5 +1,5 @@
 [versions]
-caffeine = "3.1.5"
+caffeine = "3.1.6"
 h2 = "2.1.214"
 hibernate = "6.2.0.Final"
 junit = "5.9.2"

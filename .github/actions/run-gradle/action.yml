@@ -11,6 +11,10 @@ inputs:
     default: '21'
     required: false
     description: The early access release
+  graal:
+    default: '19'
+    required: false
+    description: The GraalVM version
   token:
     required: false
     description: 'A Github PAT'
@@ -26,25 +30,25 @@ runs:
       shell: bash
       run: |
         echo "GRAALVM=true" >> $GITHUB_ENV
-        echo "JAVA_VERSION=20" >> $GITHUB_ENV
+        echo "JAVA_VERSION=${{ inputs.graal }}" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@5ffc13f4174014e2d4d4572b3d74c3fa61aeb2c2 # v3.11.0
       if: (inputs.early-access != inputs.java) && (inputs.java != 'GraalVM')
       with:
         java-version: ${{ inputs.java }}
         distribution: temurin
     - name: Set up JDK ${{ inputs.java }}
-      uses: oracle-actions/setup-java@v1
+      uses: oracle-actions/setup-java@1f72fc84c0ae0b8ac40bfa0cfb3935ac9a28ffb7 # v1.3.1
       if: (inputs.early-access == inputs.java) && (inputs.java != 'GraalVM')
       with:
         release: ${{ inputs.java }}
         website: jdk.java.net
         version: latest
-    - name: Set up JDK 17 + GraalVM
-      uses: graalvm/setup-graalvm@v1
+    - name: Set up GraalVM
+      uses: graalvm/setup-graalvm@435648176569a02d52c0aaef2c055bf2cc7f0d28 # v1
       if: inputs.java == 'GraalVM'
       with:
-        version: 'dev'
+        version: 'latest'
         components: 'native-image'
         github-token: ${{ inputs.token }}
         java-version: ${{ env.JAVA_VERSION }}
@@ -55,14 +59,14 @@ runs:
         echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
     - name: Set up JDK 17
       id: setup-gradle-jdk
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@5ffc13f4174014e2d4d4572b3d74c3fa61aeb2c2 # v3.11.0
       if: inputs.java != 'GraalVM'
       with:
         java-version: 17
         distribution: temurin
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/gradle-build-action@v2
+      uses: gradle/gradle-build-action@6095a76664413da4c8c134ee32e8a8ae900f0f1f # v2.4.0
       continue-on-error: true
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}

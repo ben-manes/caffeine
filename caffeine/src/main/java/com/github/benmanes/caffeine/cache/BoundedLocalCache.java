@@ -308,7 +308,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     return String.format(US, "An invalid state was detected that occurs if the key's equals or "
         + "hashCode was modified while it resided in the cache. This violation of the Map  "
         + "contract can lead to non-deterministic behavior (key: %s, key type: %s, "
-        + "node type: %s, cache type: %s).", key, key.getClass().getSimpleName(),
+        + "node type: %s, cache type: %s).", key, key.getClass().getName(),
         node.getClass().getSimpleName(), getClass().getSimpleName());
   }
 
