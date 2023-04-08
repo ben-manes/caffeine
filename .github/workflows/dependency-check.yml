@@ -1,4 +1,4 @@
-name: dependency-check
+name: Dependency Check
 on:
   push:
   pull_request:
@@ -20,11 +20,28 @@ jobs:
       security-events: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f
+        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f # v2.3.0
         with:
           disable-sudo: true
-          egress-policy: audit
-      - uses: actions/checkout@v3
+          egress-policy: block
+          allowed-endpoints: >
+            api.adoptium.net:443
+            api.github.com:443
+            caffeine.gradle-enterprise.cloud:443
+            github.com:443
+            jcenter.bintray.com:443
+            jeremylong.github.io:443
+            nvd.nist.gov:443
+            objects.githubusercontent.com:443
+            ossindex.sonatype.org:443
+            plugins.gradle.org:443
+            plugins-artifacts.gradle.org:443
+            repo.maven.apache.org:443
+            repo1.maven.org:443
+            raw.githubusercontent.com:443
+            services.gradle.org:443
+            www.cisa.gov:443
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Run dependency-check
         uses: ./.github/actions/run-gradle
         with:
@@ -32,11 +49,11 @@ jobs:
           arguments: dependencyCheckAggregate --no-configuration-cache
       - name: Check file existence
         id: check_files
-        uses: andstor/file-existence-action@v2
+        uses: andstor/file-existence-action@20b4d2e596410855db8f9ca21e96fbe18e12930b # v2.0.0
         with:
           files: build/reports/dependency-check-report.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@d186a2a36cc67bfa1b860e6170d37fb9634742c7 # v2.2.11
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: build/reports/dependency-check-report.sarif

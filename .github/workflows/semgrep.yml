@@ -17,11 +17,11 @@ jobs:
       image: returntocorp/semgrep
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f
+        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f # v2.3.0
         with:
           disable-sudo: true
           egress-policy: audit
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - run: semgrep scan --sarif --output=semgrep.sarif
         env:
           SEMGREP_RULES: >-
@@ -31,11 +31,11 @@ jobs:
             p/semgrep-misconfigurations
       - name: Check file existence
         id: check_files
-        uses: andstor/file-existence-action@v2
+        uses: andstor/file-existence-action@20b4d2e596410855db8f9ca21e96fbe18e12930b # v2.0.0
         with:
           files: semgrep.sarif
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@d186a2a36cc67bfa1b860e6170d37fb9634742c7 # v2.2.11
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: semgrep.sarif

@@ -50,6 +50,7 @@ import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -2503,7 +2504,7 @@ public final class BoundedLocalCacheTest {
     assertThat(msg).contains("An invalid state was detected");
     assertThat(msg).contains("cache type: " + cache.getClass().getSimpleName());
     assertThat(msg).contains("node type: " + cache.nodeFactory.getClass().getSimpleName());
-    assertThat(msg).contains("key type: " + key.getClass().getSimpleName());
+    assertThat(msg).contains("key type: " + key.getClass().getName());
     assertThat(msg).contains("key: " + key);
   }
 

@@ -31,26 +31,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f
+        uses: step-security/harden-runner@03bee3930647ebbf994244c21ddbc0d4933aab4f # v2.3.0
         with:
-          egress-policy: audit
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.adoptium.net:443
+            api.github.com:443
+            caffeine.gradle-enterprise.cloud:443
+            github.com:443
+            jcenter.bintray.com:443
+            objects.githubusercontent.com:443
+            plugins.gradle.org:443
+            plugins-artifacts.gradle.org:443
+            repo.maven.apache.org:443
+            repo1.maven.org:443
+            uploads.github.com:443
+            services.gradle.org:443
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
       - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@v1.0.36
+        uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
         timeout-minutes: 5
         with:
-          action: actions/setup-java@v3
+          action: actions/setup-java@5ffc13f4174014e2d4d4572b3d74c3fa61aeb2c2 # v3.11.0
           with: |
             distribution: temurin
             java-version: ${{ env.JAVA_VERSION }}
           attempt_limit: 3
           attempt_delay: 2000
       - name: Setup Gradle
-        uses: Wandalen/wretry.action@v1.0.36
+        uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
         timeout-minutes: 5
         with:
-          action: gradle/gradle-build-action@v2
+          action: gradle/gradle-build-action@6095a76664413da4c8c134ee32e8a8ae900f0f1f # v2.4.0
           with: |
             cache-read-only: false
             arguments: help --no-scan
@@ -58,10 +72,10 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@d186a2a36cc67bfa1b860e6170d37fb9634742c7 # v2.2.11
         with:
           languages: java
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
+        uses: github/codeql-action/autobuild@d186a2a36cc67bfa1b860e6170d37fb9634742c7 # v2.2.11
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@d186a2a36cc67bfa1b860e6170d37fb9634742c7 # v2.2.11
