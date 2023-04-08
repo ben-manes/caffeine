@@ -68,7 +68,7 @@ jobs:
       - name: Build
         run: ./gradlew build -x test
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@e04c1d05b18f0de5123491eeb4e7fb55b259a9ac # v2022.3.4
+        uses: JetBrains/qodana-action@7afb26c0c2f325c0d5c21ea1f617c79c7f899337 # v2022.3.4
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
         uses: github/codeql-action/upload-sarif@d186a2a36cc67bfa1b860e6170d37fb9634742c7 # v2.2.11
         with:
