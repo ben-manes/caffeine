@@ -57,7 +57,7 @@ ext {
     nullaway: '0.10.10',
     ohc: '0.6.1',
     osgiComponentAnnotations: '1.5.1',
-    picocli: '4.7.1',
+    picocli: '4.7.2',
     slf4j: '2.0.7',
     tcache: '2.0.1',
     stream: '2.9.8',

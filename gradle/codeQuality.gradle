@@ -60,7 +60,7 @@ tasks.named('javadoc').configure {
 tasks.named('jar').configure {
   bundle {
     bnd(
-      'Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0', 
+      'Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0',
       'Build-Jdk-Spec': java.toolchain.languageVersion.get(),
       'Implementation-Title': project.description,
       'Bundle-Description': project.description,
@@ -158,7 +158,7 @@ tasks.withType(JavaCompile).configureEach {
     '-Xlint:all', '-processing', '-exports', '-auxiliaryclass',
     '-requires-automatic', '-requires-transitive-automatic',
   ].join(',')
-  options.compilerArgs += ['-Xmaxerrs', '500', '-Xmaxwarns', '500' ]
+  options.compilerArgs += ['-Xmaxerrs', '500', '-Xmaxwarns', '500']
   options.encoding = 'UTF-8'
   options.errorprone {
     if (System.env.JDK_EA == 'true') {

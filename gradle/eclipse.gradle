@@ -8,7 +8,7 @@ import org.gradle.plugins.ide.eclipse.model.SourceFolder
 apply plugin: 'eclipse'
 
 // Exclude module-info and package-info when compiling through Eclipse
-eclipse.classpath.file.whenMerged {  
+eclipse.classpath.file.whenMerged {
   var sourceFolders = entries.findAll { it instanceof SourceFolder }
   for (var sourceFolder : sourceFolders) {
     sourceFolder.excludes += 'module-info.java'

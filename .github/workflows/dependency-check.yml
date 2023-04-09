@@ -28,6 +28,7 @@ jobs:
             api.adoptium.net:443
             api.github.com:443
             caffeine.gradle-enterprise.cloud:443
+            downloads.gradle-dn.com:443
             github.com:443
             jcenter.bintray.com:443
             jeremylong.github.io:443

@@ -29,6 +29,7 @@ jobs:
             api.github.com:443
             api.snyk.io:443
             caffeine.gradle-enterprise.cloud:443
+            downloads.gradle-dn.com:443
             github.com:443
             jcenter.bintray.com:443
             objects.githubusercontent.com:443
