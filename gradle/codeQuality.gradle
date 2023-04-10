@@ -12,7 +12,8 @@ apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
 apply plugin: 'pmd'
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(System.env.JAVA_VERSION ?: 11)
+java.toolchain.languageVersion = JavaLanguageVersion.of(
+  (System.env.JAVA_VERSION ==~ /^[0-9]+$/) ? System.env.JAVA_VERSION : 11)
 
 configurations {
   checkstyleConfig

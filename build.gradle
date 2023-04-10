@@ -1,7 +1,6 @@
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
 
 apply plugin: 'io.github.gradle-nexus.publish-plugin'
-apply plugin: 'io.snyk.gradle.plugin.snykplugin'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'org.owasp.dependencycheck'
 apply plugin: 'jvm-ecosystem'
@@ -143,14 +142,3 @@ dependencyCheck {
   failOnError = false
 }
 dependencyCheckAggregate.dependsOn(subprojects*.tasks.jar)
-
-snyk {
-  arguments = "--all-sub-projects ${findProperty('snykArgs') ?: ''}"
-  api = System.env.SNYK_TOKEN
-  autoDownload = true
-  autoUpdate = true
-}
-['snyk-check-binary', 'snyk-test', 'snyk-monitor'].collect { tasks.named(it) }*.configure {
-  notCompatibleWithConfigurationCache(
-    "The ${name} task is not compatible with the configuration cache")
-}

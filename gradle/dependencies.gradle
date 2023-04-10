@@ -103,7 +103,6 @@ ext {
     nullaway: '1.5.0',
     pmd: '7.0.0-rc1',
     semanticVersioning: '1.1.0',
-    snyk: '0.4',
     sonarqube: '4.0.0.2929',
     spotbugs: '4.7.3',
     spotbugsContrib: '7.6.0',
@@ -243,7 +242,6 @@ ext {
       "net.sourceforge.pmd:pmd-java:${pluginVersions.pmd}",
     ],
     semanticVersioning: "io.ehdev:gradle-semantic-versioning:${pluginVersions.semanticVersioning}",
-    snyk: "gradle.plugin.io.snyk.gradle.plugin:snyk:${pluginVersions.snyk}",
     sonarqube: "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:${pluginVersions.sonarqube}",
     spotbugs: "com.github.spotbugs:spotbugs:${pluginVersions.spotbugs}",
     spotbugsContrib: dependencies.create("com.mebigfatguy.sb-contrib:sb-contrib:${pluginVersions.spotbugsContrib}") {

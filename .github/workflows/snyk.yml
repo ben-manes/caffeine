@@ -7,7 +7,6 @@ permissions: read-all
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  JAVA_VERSION: 20
 
 jobs:
   snyk:
@@ -16,8 +15,6 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    env:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@6b3083af2869dc3314a0257a42f4af696cc79ba3 # v2.3.1
@@ -40,11 +37,13 @@ jobs:
             services.gradle.org:443
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - name: Run Snyk test
-        uses: ./.github/actions/run-gradle
+        uses: snyk/actions/gradle@master
         continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          java: ${{ env.JAVA_VERSION }}
-          arguments: snyk-test -PsnykArgs="--sarif-file-output=snyk.sarif" --no-configuration-cache
+          command: test
+          args: --sarif-file-output=snyk.sarif
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@20b4d2e596410855db8f9ca21e96fbe18e12930b # v2.0.0
@@ -56,8 +55,9 @@ jobs:
         with:
           sarif_file: snyk.sarif
       - name: Run Snyk monitor
-        uses: ./.github/actions/run-gradle
+        uses: snyk/actions/gradle@master
         continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          java: ${{ env.JAVA_VERSION }}
-          arguments: snyk-monitor --no-configuration-cache
+          command: monitor
