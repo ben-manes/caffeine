@@ -19,6 +19,8 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.ref.ReferenceQueue;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.benmanes.caffeine.cache.References.LookupKeyReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
@@ -31,6 +33,7 @@ import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 interface NodeFactory<K, V> {
   MethodType FACTORY = MethodType.methodType(void.class);
   MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+  Map<String, MethodHandle> CONSTRUCTORS = new ConcurrentHashMap<>();
 
   RetiredStrongKey RETIRED_STRONG_KEY = new RetiredStrongKey();
   RetiredWeakKey RETIRED_WEAK_KEY = new RetiredWeakKey();
@@ -87,7 +90,7 @@ interface NodeFactory<K, V> {
   }
 
   static String getClassName(Caffeine<?, ?> builder, boolean isAsync) {
-    var className = new StringBuilder(Node.class.getPackageName()).append('.');
+    var className = new StringBuilder();
     if (builder.isStrongKeys()) {
       className.append('P');
     } else {
@@ -132,10 +135,21 @@ interface NodeFactory<K, V> {
   }
 
   static <K, V> NodeFactory<K, V> loadFactory(String className) {
+    var constructor = CONSTRUCTORS.get(className);
+    if (constructor == null) {
+      constructor = CONSTRUCTORS.computeIfAbsent(className, NodeFactory::newConstructor);
+    }
     try {
-      Class<?> clazz = Class.forName(className);
-      MethodHandle handle = LOOKUP.findConstructor(clazz, FACTORY);
-      return (NodeFactory<K, V>) handle.invoke();
+      return (NodeFactory<K, V>) constructor.invoke();
+    } catch (Throwable t) {
+      throw new IllegalStateException(className, t);
+    }
+  }
+
+  static MethodHandle newConstructor(String className) {
+    try {
+      Class<?> clazz = Class.forName(Node.class.getPackageName() + "." + className);
+      return LOOKUP.findConstructor(clazz, FACTORY);
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {

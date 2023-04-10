@@ -15,14 +15,15 @@
  */
 package com.github.benmanes.caffeine;
 
+import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.infra.Blackhole;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -34,23 +35,28 @@ public class FactoryBenchmark {
   private final MethodHandleFactory methodHandleFactory = new MethodHandleFactory();
 
   @Benchmark
-  public Alpha direct() {
-    return new Alpha();
+  public void direct(Blackhole blackhole) {
+    blackhole.consume(new Alpha());
   }
 
   @Benchmark
-  public Alpha methodHandle_invoke() {
-    return methodHandleFactory.invoke();
+  public void methodHandle_invoke(Blackhole blackhole) {
+    blackhole.consume(methodHandleFactory.invoke());
   }
 
   @Benchmark
-  public Alpha methodHandle_invokeExact() {
-    return methodHandleFactory.invokeExact();
+  public void methodHandle_invokeExact(Blackhole blackhole) {
+    blackhole.consume(methodHandleFactory.invokeExact());
   }
 
   @Benchmark
-  public Alpha reflection() {
-    return reflectionFactory.newInstance();
+  public void methodHandle_lambda(Blackhole blackhole) {
+    blackhole.consume(methodHandleFactory.lambda());
+  }
+
+  @Benchmark
+  public void reflection(Blackhole blackhole) {
+    blackhole.consume(reflectionFactory.newInstance());
   }
 
   static final class MethodHandleFactory {
@@ -58,11 +64,17 @@ public class FactoryBenchmark {
     private static final MethodType METHOD_TYPE = MethodType.methodType(void.class);
 
     private final MethodHandle methodHandle;
+    private final AlphaConstructor lambda;
 
     MethodHandleFactory() {
       try {
         methodHandle = LOOKUP.findConstructor(Alpha.class, METHOD_TYPE);
-      } catch (NoSuchMethodException | IllegalAccessException e) {
+        lambda =
+            (AlphaConstructor) LambdaMetafactory
+                .metafactory(LOOKUP, "construct", MethodType.methodType(AlphaConstructor.class),
+                    methodHandle.type(), methodHandle, methodHandle.type())
+                .getTarget().invokeExact();
+      } catch (Throwable e) {
         throw new RuntimeException(e);
       }
     }
@@ -81,6 +93,10 @@ public class FactoryBenchmark {
       } catch (Throwable e) {
         throw new RuntimeException(e);
       }
+    }
+
+    Alpha lambda() {
+      return lambda.construct();
     }
   }
 
@@ -106,5 +122,9 @@ public class FactoryBenchmark {
 
   static final class Alpha {
     public Alpha() {}
+  }
+
+  private interface AlphaConstructor {
+    Alpha construct();
   }
 }

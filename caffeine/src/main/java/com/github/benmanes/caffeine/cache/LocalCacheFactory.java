@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -30,6 +32,7 @@ final class LocalCacheFactory {
   private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
   private static final MethodType FACTORY = MethodType.methodType(
       void.class, Caffeine.class, AsyncCacheLoader.class, boolean.class);
+  private static final Map<String, MethodHandle> CONSTRUCTORS = new ConcurrentHashMap<>();
 
   private LocalCacheFactory() {}
 
@@ -41,7 +44,7 @@ final class LocalCacheFactory {
   }
 
   static String getClassName(Caffeine<?, ?> builder) {
-    var className = new StringBuilder(LocalCacheFactory.class.getPackageName()).append('.');
+    var className = new StringBuilder();
     if (builder.isStrongKeys()) {
       className.append('S');
     } else {
@@ -80,10 +83,21 @@ final class LocalCacheFactory {
 
   static <K, V> BoundedLocalCache<K, V> loadFactory(Caffeine<K, V> builder,
       @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async, String className) {
+    var constructor = CONSTRUCTORS.get(className);
+    if (constructor == null) {
+      constructor = CONSTRUCTORS.computeIfAbsent(className, LocalCacheFactory::newConstructor);
+    }
     try {
-      Class<?> clazz = Class.forName(className);
-      MethodHandle handle = LOOKUP.findConstructor(clazz, FACTORY);
-      return (BoundedLocalCache<K, V>) handle.invoke(builder, cacheLoader, async);
+      return (BoundedLocalCache<K, V>) constructor.invoke(builder, cacheLoader, async);
+    } catch (Throwable t) {
+      throw new IllegalStateException(className, t);
+    }
+  }
+
+  static MethodHandle newConstructor(String className) {
+    try {
+      Class<?> clazz = Class.forName(LocalCacheFactory.class.getPackageName() + "." + className);
+      return LOOKUP.findConstructor(clazz, FACTORY);
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {
