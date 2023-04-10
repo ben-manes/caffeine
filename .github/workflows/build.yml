@@ -13,6 +13,7 @@ env:
     cdn.azul.com:443
     cloudflare.com:443
     download.java.net:443
+    downloads.gradle.org:443
     downloads.gradle-dn.com:443
     ghcr.io:443
     github.com:443
@@ -331,10 +332,10 @@ jobs:
       - name: Publish Snapshot
         env:
           JAVA_VERSION: ${{ env.PUBLISH_JDK }}
-          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKeyId: 20BCF6B1
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.NEXUS_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
         run: |
           stopMarker=$(uuidgen)

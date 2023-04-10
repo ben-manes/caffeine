@@ -13,6 +13,7 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
+            downloads.gradle.org:443
             downloads.gradle-dn.com:443
             github.com:443
             services.gradle.org:443

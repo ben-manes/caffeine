@@ -24,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions;
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -41,7 +40,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  */
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
 @Param(name = "value", gen = IntGen.class, conf = "1:10")
-public abstract class AbstractLincheckCacheTest extends VerifierState {
+public abstract class AbstractLincheckCacheTest {
   private final LoadingCache<Integer, Integer> cache;
 
   public AbstractLincheckCacheTest(Caffeine<Object, Object> builder) {
@@ -78,18 +77,6 @@ public abstract class AbstractLincheckCacheTest extends VerifierState {
         .iterations(100)                  // the number of different scenarios
         .invocationsPerIteration(10_000); // how deeply each scenario is tested
     new LinChecker(getClass(), options).check();
-  }
-
-  /**
-   * Provides something with correct <tt>equals</tt> and <tt>hashCode</tt> methods that can be
-   * interpreted as an internal data structure state for faster verification. The only limitation is
-   * that it should be different for different data structure states.
-   *
-   * @return object representing internal state
-   */
-  @Override
-  protected Object extractState() {
-    return cache.asMap();
   }
 
   /* --------------- Cache --------------- */

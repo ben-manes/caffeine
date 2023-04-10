@@ -5,7 +5,7 @@ on: [ push, pull_request ]
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  JAVA_VERSION: 11
+  JAVA_VERSION: 20
 
 jobs:
   qodana:
@@ -22,11 +22,14 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
+            api.adoptium.net:443
+            api.foojay.io:443
             api.github.com:443
             auth.docker.io:443
             caffeine.gradle-enterprise.cloud:443
             checkerframework.org:443
             docs.oracle.com:443
+            downloads.gradle.org:443
             downloads.gradle-dn.com:443
             errorprone.info:443
             github.com:443
@@ -44,30 +47,13 @@ jobs:
             repo1.maven.org:443
             resources.jetbrains.com:443
             services.gradle.org:443
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
-        timeout-minutes: 5
-        with:
-          action: actions/setup-java@5ffc13f4174014e2d4d4572b3d74c3fa61aeb2c2 # v3.11.0
-          with: |
-            distribution: temurin
-            java-version: ${{ env.JAVA_VERSION }}
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Setup Gradle
-        uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
-        timeout-minutes: 5
-        with:
-          action: gradle/gradle-build-action@6095a76664413da4c8c134ee32e8a8ae900f0f1f # v2.4.0
-          with: |
-            cache-read-only: false
-            arguments: help --no-scan
-            generate-job-summary: false
-          attempt_limit: 3
-          attempt_delay: 2000
+      - name: Checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - name: Build
-        run: ./gradlew build -x test
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          arguments: build -x test
       - name: Qodana - Code Inspection
         uses: JetBrains/qodana-action@e04c1d05b18f0de5123491eeb4e7fb55b259a9ac # v2022.3.4
       - name: Upload SARIF file for GitHub Advanced Security Dashboard

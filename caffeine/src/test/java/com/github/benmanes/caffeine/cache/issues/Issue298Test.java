@@ -23,8 +23,6 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.annotation.Nonnull;
-
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -122,18 +120,17 @@ public final class Issue298Test {
     return Caffeine.newBuilder()
         .executor(ConcurrentTestHarness.executor)
         .expireAfter(new Expiry<String, String>() {
-          @Override public long expireAfterCreate(@Nonnull String key,
-              @Nonnull String value, long currentTime) {
+          @Override public long expireAfterCreate(String key, String value, long currentTime) {
             startedCreate.set(true);
             await().untilTrue(doCreate);
             return EXPIRE_NS;
           }
-          @Override public long expireAfterUpdate(@Nonnull String key,
-              @Nonnull String value, long currentTime, long currentDuration) {
+          @Override public long expireAfterUpdate(String key, String value,
+              long currentTime, long currentDuration) {
             return currentDuration;
           }
-          @Override public long expireAfterRead(@Nonnull String key,
-              @Nonnull String value, long currentTime, long currentDuration) {
+          @Override public long expireAfterRead(String key, String value,
+              long currentTime, long currentDuration) {
             startedRead.set(true);
             await().untilTrue(doRead);
             return currentDuration;
