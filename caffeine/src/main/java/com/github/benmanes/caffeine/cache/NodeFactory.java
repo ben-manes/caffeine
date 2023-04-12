@@ -140,7 +140,7 @@ interface NodeFactory<K, V> {
       constructor = CONSTRUCTORS.computeIfAbsent(className, NodeFactory::newConstructor);
     }
     try {
-      return (NodeFactory<K, V>) constructor.invoke();
+      return (NodeFactory<K, V>) constructor.invokeExact();
     } catch (Throwable t) {
       throw new IllegalStateException(className, t);
     }
@@ -148,8 +148,9 @@ interface NodeFactory<K, V> {
 
   static MethodHandle newConstructor(String className) {
     try {
-      Class<?> clazz = Class.forName(Node.class.getPackageName() + "." + className);
-      return LOOKUP.findConstructor(clazz, FACTORY);
+      Class<?> clazz = LOOKUP.findClass(Node.class.getPackageName() + "." + className);
+      MethodHandle constructor = LOOKUP.findConstructor(clazz, FACTORY);
+      return constructor.asType(constructor.type().changeReturnType(NodeFactory.class));
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {

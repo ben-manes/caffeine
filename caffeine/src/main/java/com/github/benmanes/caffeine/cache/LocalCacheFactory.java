@@ -88,7 +88,7 @@ final class LocalCacheFactory {
       constructor = CONSTRUCTORS.computeIfAbsent(className, LocalCacheFactory::newConstructor);
     }
     try {
-      return (BoundedLocalCache<K, V>) constructor.invoke(builder, cacheLoader, async);
+      return (BoundedLocalCache<K, V>) constructor.invokeExact(builder, cacheLoader, async);
     } catch (Throwable t) {
       throw new IllegalStateException(className, t);
     }
@@ -96,8 +96,9 @@ final class LocalCacheFactory {
 
   static MethodHandle newConstructor(String className) {
     try {
-      Class<?> clazz = Class.forName(LocalCacheFactory.class.getPackageName() + "." + className);
-      return LOOKUP.findConstructor(clazz, FACTORY);
+      Class<?> clazz = LOOKUP.findClass(LocalCacheFactory.class.getPackageName() + "." + className);
+      MethodHandle constructor = LOOKUP.findConstructor(clazz, FACTORY);
+      return constructor.asType(constructor.type().changeReturnType(BoundedLocalCache.class));
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {
