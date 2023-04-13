@@ -52,7 +52,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+        uses: actions/checkout@83b7061638ee4956cf7545a6f7efe594e5ad0247 # v3.5.1
       - name: Prepare GraalVM
         if: matrix.java == 'GraalVM'
         shell: bash
@@ -144,7 +144,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+        uses: actions/checkout@83b7061638ee4956cf7545a6f7efe594e5ad0247 # v3.5.1
       - name: Run tests (${{ matrix.suite }})
         uses: ./.github/actions/run-gradle
         with:
@@ -199,7 +199,7 @@ jobs:
             storage.googleapis.com:443
             uploader.codecov.io:443
       - name: Checkout
-        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+        uses: actions/checkout@83b7061638ee4956cf7545a6f7efe594e5ad0247 # v3.5.1
         with:
           fetch-depth: 0
       - name: Download Tests Results
@@ -307,7 +307,7 @@ jobs:
             docs.oracle.com:443
             lightbend.github.io:443
             guava.dev:443
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: actions/checkout@83b7061638ee4956cf7545a6f7efe594e5ad0247 # v3.5.1
       - name: Set up JDK ${{ env.PUBLISH_JDK }}
         uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
         with:
