@@ -96,8 +96,8 @@ final class LocalCacheFactory {
 
   static MethodHandle newConstructor(String className) {
     try {
-      Class<?> clazz = LOOKUP.findClass(LocalCacheFactory.class.getPackageName() + "." + className);
-      MethodHandle constructor = LOOKUP.findConstructor(clazz, FACTORY);
+      var clazz = LOOKUP.findClass(LocalCacheFactory.class.getPackageName() + "." + className);
+      var constructor = LOOKUP.findConstructor(clazz, FACTORY);
       return constructor.asType(constructor.type().changeReturnType(BoundedLocalCache.class));
     } catch (RuntimeException | Error e) {
       throw e;

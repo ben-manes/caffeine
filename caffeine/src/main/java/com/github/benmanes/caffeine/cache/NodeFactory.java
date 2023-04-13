@@ -148,8 +148,8 @@ interface NodeFactory<K, V> {
 
   static MethodHandle newConstructor(String className) {
     try {
-      Class<?> clazz = LOOKUP.findClass(Node.class.getPackageName() + "." + className);
-      MethodHandle constructor = LOOKUP.findConstructor(clazz, FACTORY);
+      var clazz = LOOKUP.findClass(Node.class.getPackageName() + "." + className);
+      var constructor = LOOKUP.findConstructor(clazz, FACTORY);
       return constructor.asType(constructor.type().changeReturnType(NodeFactory.class));
     } catch (RuntimeException | Error e) {
       throw e;
