@@ -27,7 +27,7 @@ jobs:
             api.github.com:443
             github.com:443
       - name: Checkout code
-        uses: actions/checkout@83b7061638ee4956cf7545a6f7efe594e5ad0247 # v3.5.1
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - name: Run DevSkim scanner
         uses: microsoft/DevSkim-Action@a8a9e06bab570db990fe7351ae9d4d444b9489ca # v1.0.5
       - name: Upload DevSkim scan results to GitHub Security tab
