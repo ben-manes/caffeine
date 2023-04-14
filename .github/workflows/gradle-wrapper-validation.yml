@@ -16,5 +16,5 @@ jobs:
             downloads.gradle-dn.com:443
             github.com:443
             services.gradle.org:443
-      - uses: actions/checkout@83b7061638ee4956cf7545a6f7efe594e5ad0247 # v3.5.1
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - uses: gradle/wrapper-validation-action@8d49e559aae34d3e0eb16cde532684bc9702762b # v1.0.6
