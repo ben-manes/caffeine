@@ -51,7 +51,7 @@ jobs:
         with:
           files: snyk.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@d186a2a36cc67bfa1b860e6170d37fb9634742c7 # v2.2.11
+        uses: github/codeql-action/upload-sarif@7df0ce34898d659f95c0c4a09eaa8d4e32ee64db # v2.2.12
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: snyk.sarif
