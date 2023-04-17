@@ -1,7 +1,7 @@
 [versions]
 caffeine = "3.1.6"
 h2 = "2.1.214"
-hibernate = "6.2.0.Final"
+hibernate = "6.2.1.Final"
 junit = "5.9.2"
 slf4j = "2.0.7"
 truth = "1.1.3"
