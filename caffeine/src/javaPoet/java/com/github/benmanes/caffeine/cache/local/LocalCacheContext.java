@@ -32,6 +32,7 @@ import com.squareup.javapoet.TypeSpec;
  */
 public final class LocalCacheContext {
   public final boolean isFinal;
+  public final String className;
   public final TypeName superClass;
   public final TypeSpec.Builder cache;
   public final MethodSpec.Builder constructor;
@@ -42,6 +43,7 @@ public final class LocalCacheContext {
   public LocalCacheContext(TypeName superClass, String className, boolean isFinal,
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
     this.isFinal = isFinal;
+    this.className = className;
     this.superClass = superClass;
     this.suppressedWarnings = new TreeSet<>();
     this.cache = TypeSpec.classBuilder(className);

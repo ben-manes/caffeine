@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,13 +26,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class LocalCacheFactory {
-  private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-  private static final MethodType FACTORY = MethodType.methodType(
-      void.class, Caffeine.class, AsyncCacheLoader.class, boolean.class);
-  private static final Map<String, MethodHandle> CONSTRUCTORS = new ConcurrentHashMap<>();
+interface LocalCacheFactory {
+  static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+  static final Map<String, LocalCacheFactory> FACTORIES = new ConcurrentHashMap<>();
 
-  private LocalCacheFactory() {}
+  <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
+      @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async);
 
   /** Returns a cache optimized for this configuration. */
   static <K, V> BoundedLocalCache<K, V> newBoundedLocalCache(Caffeine<K, V> builder,
@@ -83,22 +80,18 @@ final class LocalCacheFactory {
 
   static <K, V> BoundedLocalCache<K, V> loadFactory(Caffeine<K, V> builder,
       @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async, String className) {
-    var constructor = CONSTRUCTORS.get(className);
-    if (constructor == null) {
-      constructor = CONSTRUCTORS.computeIfAbsent(className, LocalCacheFactory::newConstructor);
+    var factory = FACTORIES.get(className);
+    if (factory == null) {
+      factory = FACTORIES.computeIfAbsent(className, LocalCacheFactory::newFactory);
     }
-    try {
-      return (BoundedLocalCache<K, V>) constructor.invokeExact(builder, cacheLoader, async);
-    } catch (Throwable t) {
-      throw new IllegalStateException(className, t);
-    }
+    return factory.newInstance(builder, cacheLoader, async);
   }
 
-  static MethodHandle newConstructor(String className) {
+  static LocalCacheFactory newFactory(String className) {
     try {
       var clazz = LOOKUP.findClass(LocalCacheFactory.class.getPackageName() + "." + className);
-      var constructor = LOOKUP.findConstructor(clazz, FACTORY);
-      return constructor.asType(constructor.type().changeReturnType(BoundedLocalCache.class));
+      return (LocalCacheFactory) LOOKUP
+          .findStaticVarHandle(clazz, "FACTORY", LocalCacheFactory.class).get();
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {

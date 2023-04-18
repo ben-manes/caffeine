@@ -19,7 +19,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
-
+import org.checkerframework.checker.nullness.qual.Nullable;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -82,7 +82,7 @@ public final class Specifications {
   public static final ParameterizedTypeName ASYNC_CACHE_LOADER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "AsyncCacheLoader"), TypeVariableName.get("? super K"), vTypeVar);
   public static final ParameterSpec ASYNC_CACHE_LOADER_PARAM =
-      ParameterSpec.builder(ASYNC_CACHE_LOADER, "cacheLoader").build();
+      ParameterSpec.builder(ASYNC_CACHE_LOADER, "cacheLoader").addAnnotation(Nullable.class).build();
 
   public static final TypeName REMOVAL_LISTENER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "RemovalListener"), kTypeVar, vTypeVar);

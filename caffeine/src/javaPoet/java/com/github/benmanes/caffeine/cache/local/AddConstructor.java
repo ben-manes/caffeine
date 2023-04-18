@@ -16,8 +16,11 @@
 package com.github.benmanes.caffeine.cache.local;
 
 import static com.github.benmanes.caffeine.cache.Specifications.ASYNC_CACHE_LOADER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
+import javax.lang.model.element.Modifier;
+import com.squareup.javapoet.FieldSpec;
 
 /**
  * Adds the constructor to the cache.
@@ -44,5 +47,8 @@ public final class AddConstructor extends LocalCacheRule {
     } else {
       context.constructor.addStatement("super(builder, cacheLoader, async)");
     }
+    context.cache
+        .addField(FieldSpec.builder(LOCAL_CACHE_FACTORY, "FACTORY", Modifier.STATIC, Modifier.FINAL)
+            .initializer("$N::new", context.className).build());
   }
 }
