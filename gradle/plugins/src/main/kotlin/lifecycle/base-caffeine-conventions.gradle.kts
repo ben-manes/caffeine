@@ -6,15 +6,12 @@ plugins {
   id("eclipse-caffeine-conventions")
 }
 
-apply(from = "${rootDir}/gradle/constraints.gradle.kts")
-val restrictions: List<MinimalExternalModuleDependency> by extra
-
 dependencies {
   val ignored = listOf("api", "compileOnlyApi", "implementation",
     "javadocElements", "runtimeOnly", "sourcesElements")
   configurations.configureEach {
     if ((name !in ignored) && (this is DefaultConfiguration) && isCanBeDeclaredAgainst) {
-      restrictions.forEach { library ->
+      libs.bundles.restrictions.get().forEach { library ->
         constraints.add(name, library.module.toString()).version { require(library.version!!) }
       }
     }

@@ -23,9 +23,9 @@ dependencies {
   testImplementation(libs.bundles.truth)
   testImplementation(libs.bundles.osgi.test.compile)
 
-  testImplementation(platform(libs.platforms.asm))
-  testImplementation(platform(libs.platforms.kotlin))
-  testImplementation(platform(libs.platforms.junit5))
+  testImplementation(platform(libs.asm.bom))
+  testImplementation(platform(libs.kotlin.bom))
+  testImplementation(platform(libs.junit5.bom))
 
   testRuntimeOnly(libs.bundles.junit.engines)
   testRuntimeOnly(libs.bundles.osgi.test.runtime)

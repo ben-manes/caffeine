@@ -14,8 +14,8 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(platform(libs.platforms.asm))
-  annotationProcessor(platform(libs.platforms.kotlin))
+  annotationProcessor(platform(libs.asm.bom))
+  annotationProcessor(platform(libs.kotlin.bom))
 }
 
 java.toolchain.languageVersion.set(JavaLanguageVersion.of(System.getenv("JAVA_VERSION") ?: "11"))

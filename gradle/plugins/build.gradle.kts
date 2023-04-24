@@ -4,10 +4,8 @@ plugins {
   `kotlin-dsl`
   alias(libs.plugins.versions)
 }
-apply(from = "../constraints.gradle.kts")
 
 java.toolchain.languageVersion.set(JavaLanguageVersion.of(11))
-val restrictions: List<MinimalExternalModuleDependency> by extra
 
 dependencies {
   implementation(libs.bnd)
@@ -23,13 +21,13 @@ dependencies {
   implementation(libs.dependency.check)
   implementation(libs.errorprone.plugin)
   implementation(libs.dependency.versions)
-  implementation(platform(libs.platforms.asm))
-  implementation(platform(libs.platforms.junit5))
-  implementation(platform(libs.platforms.kotlin))
-  implementation(platform(libs.platforms.jackson))
+  implementation(platform(libs.asm.bom))
+  implementation(platform(libs.junit5.bom))
+  implementation(platform(libs.kotlin.bom))
+  implementation(platform(libs.jackson.bom))
   implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 
-  restrictions.forEach { library ->
+  libs.bundles.restrictions.get().forEach { library ->
     constraints.add("implementation", library.module.toString())
       .version { require(library.version!!) }
   }

@@ -95,10 +95,13 @@ ycsb = "0.17.0"
 zstd = "1.5.5-2"
 
 [libraries]
+asm-bom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }
 auto-value-annotations = { module = "com.google.auto.value:auto-value-annotations", version.ref = "auto-value" }
 auto-value-processor = { module = "com.google.auto.value:auto-value", version.ref = "auto-value" }
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+bcel = { module = "org.apache.bcel:bcel", version.ref = "bcel" }
 bnd = { module = "biz.aQute.bnd:biz.aQute.bnd.gradle", version.ref = "bnd" }
+bouncycastle = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
 cache2k = { module = "org.cache2k:cache2k-core", version.ref = "cache2k" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 checker-annotations = { module = "org.checkerframework:checker-qual", version.ref = "checker-framework" }
@@ -109,19 +112,9 @@ commons-compress = { module = "org.apache.commons:commons-compress", version.ref
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
 commons-math3 = { module = "org.apache.commons:commons-math3", version.ref = "commons-math3" }
+commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
 concurrentlinkedhashmap = { module = "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru", version.ref = "concurrentlinkedhashmap" }
 config = { module = "com.typesafe:config", version.ref = "config" }
-constraints-bcel = { module = "org.apache.bcel:bcel", version.ref = "bcel" }
-constraints-bouncycastle = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
-constraints-commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
-constraints-httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpclient" }
-constraints-jcommander = { module = "com.beust:jcommander", version.ref = "jcommander" }
-constraints-jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
-constraints-nekohtml = { module = "net.sourceforge.nekohtml:nekohtml", version.ref = "nekohtml" }
-constraints-protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
-constraints-snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
-constraints-xerces = { module = "xerces:xercesImpl", version.ref = "xerces" }
-constraints-xstream = { module = "com.thoughtworks.xstream:xstream", version.ref = "xstream" }
 coveralls = { module = "gradle.plugin.org.kt3k.gradle.plugin:coveralls-gradle-plugin", version.ref = "coveralls" }
 dependency-check = { module = "org.owasp:dependency-check-gradle", version.ref = "dependency-check" }
 dependency-versions = { module = "com.github.ben-manes:gradle-versions-plugin", version.ref = "versions" }
@@ -146,7 +139,9 @@ guava-testlib = { module = "com.google.guava:guava-testlib", version.ref = "guav
 guice = { module = "com.google.inject:guice", version.ref = "guice" }
 hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
 hazelcast = { module = "com.hazelcast:hazelcast", version.ref = "hazelcast" }
+httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpclient" }
 jackrabbit = { module = "org.apache.jackrabbit:oak-core", version.ref = "jackrabbit" }
+jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
 jacoco = { module = "org.jacoco:jacoco", version.ref = "jacoco" }
 jacoco-agent = { module = "org.jacoco:org.jacoco.agent", version.ref = "jacoco" }
 jacoco-ant = { module = "org.jacoco:org.jacoco.ant", version.ref = "jacoco" }
@@ -156,6 +151,7 @@ javapoet = { module = "com.squareup:javapoet", version.ref = "javapoet" }
 jcache = { module = "javax.cache:cache-api", version.ref = "jcache" }
 jcache-guice = { module = "org.jsr107.ri:cache-annotations-ri-guice", version.ref = "jcache" }
 jcache-tck = { module = "javax.cache:cache-tests", version.ref = "jcache" }
+jcommander = { module = "com.beust:jcommander", version.ref = "jcommander" }
 jctools = { module = "org.jctools:jctools-core", version.ref = "jctools" }
 jfreechart = { module = "org.jfree:jfreechart", version.ref = "jfreechart" }
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh-core" }
@@ -163,13 +159,17 @@ jmh-plugin = { module = "me.champeau.jmh:jmh-gradle-plugin", version.ref = "jmh-
 jmh-report = { module = "gradle.plugin.io.morethan.jmhreport:gradle-jmh-report", version.ref = "jmh-report" }
 joor = { module = "org.jooq:joor", version.ref = "joor" }
 json-bind = { module = "javax.json.bind:javax.json.bind-api", version.ref = "json-bind" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 jsr330 = { module = "javax.inject:javax.inject", version.ref = "jsr330" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 junit5 = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit5" }
+junit5-bom = { module = "org.junit:junit-bom", version.ref = "junit5" }
 junit5-testng = { module = "org.junit.support:testng-engine", version.ref = "junit-testng" }
 junit5-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit5" }
+kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 lincheck = { module = "org.jetbrains.kotlinx:lincheck-jvm", version.ref = "lincheck" }
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+nekohtml = { module = "net.sourceforge.nekohtml:nekohtml", version.ref = "nekohtml" }
 nexus-publish = { module = "io.github.gradle-nexus:publish-plugin", version.ref = "nexus-publish" }
 nullaway-core = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway-core" }
 nullaway-plugin = { module = "net.ltgt.gradle:gradle-nullaway-plugin", version.ref = "nullaway-plugin" }
@@ -182,17 +182,15 @@ pax-exam-junit4 = { module = "org.ops4j.pax.exam:pax-exam-junit4", version.ref =
 pax-exam-link-mvn = { module = "org.ops4j.pax.exam:pax-exam-link-mvn", version.ref = "pax-exam" }
 pax-url-aether = { module = "org.ops4j.pax.url:pax-url-aether", version.ref = "pax-url" }
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
-platforms-asm = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }
-platforms-jackson = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
-platforms-junit5 = { module = "org.junit:junit-bom", version.ref = "junit5" }
-platforms-kotlin = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 pmd = { module = "net.sourceforge.pmd:pmd", version.ref = "pmd" }
 pmd-ant = { module = "net.sourceforge.pmd:pmd-ant", version.ref = "pmd" }
 pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
+protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 slf4j-jdk-platform-logging = { module = "org.slf4j:slf4j-jdk-platform-logging", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 slf4j-test = { module = "com.github.valfirst:slf4j-test", version.ref = "slf4j-test" }
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
 sonarqube = { module = "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin", version.ref = "sonarqube" }
 spotbugs-contrib = { module = "com.mebigfatguy.sb-contrib:sb-contrib", version.ref = "spotbugs-contrib" }
 spotbugs-core = { module = "com.github.spotbugs:spotbugs", version.ref = "spotbugs-core" }
@@ -203,6 +201,8 @@ testng = { module = "org.testng:testng", version.ref = "testng" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
 truth-java8 = { module = "com.google.truth.extensions:truth-java8-extension", version.ref = "truth" }
 univocity-parsers = { module = "com.univocity:univocity-parsers", version.ref = "univocity-parsers" }
+xerces = { module = "xerces:xercesImpl", version.ref = "xerces" }
+xstream = { module = "com.thoughtworks.xstream:xstream", version.ref = "xstream" }
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
 ycsb = { module = "site.ycsb:core", version.ref = "ycsb" }
 zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
@@ -216,6 +216,8 @@ osgi-test-compile = ["pax-exam-junit4"]
 osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function",
   "osgi-promise", "pax-exam-container-native", "pax-exam-link-mvn", "pax-url-aether"]
 pmd = ["pmd", "pmd-ant", "pmd-java"]
+restrictions = ["bcel", "bouncycastle", "commons-text", "httpclient", "jcommander",
+  "jsoup", "nekohtml", "protobuf", "snakeyaml", "xerces", "xstream" ]
 slf4j-jdk = ["slf4j-jdk-platform-logging", "slf4j-jdk14"]
 slf4j-nop = ["slf4j-jdk-platform-logging", "slf4j-nop"]
 slf4j-test = ["slf4j-jdk-platform-logging", "slf4j-test"]
