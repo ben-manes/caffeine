@@ -6,3 +6,9 @@ plugins {
   id("io.github.gradle-nexus.publish-plugin")
   id("dependency-versions-caffeine-conventions")
 }
+
+nexusPublishing {
+  repositories {
+    sonatype()
+  }
+}

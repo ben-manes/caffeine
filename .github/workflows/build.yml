@@ -306,6 +306,7 @@ jobs:
             ${{ env.ALLOWED_ENDPOINTS }}
             checkerframework.org:443
             docs.oracle.com:443
+            errorprone.info:443
             lightbend.github.io:443
             guava.dev:443
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
