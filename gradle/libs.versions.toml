@@ -2,7 +2,7 @@
 asm = "9.5"
 auto-value = "1.10.1"
 awaitility = "4.2.0"
-bcel = "6.6.1"
+bcel = "6.7.0"
 bnd = "6.4.0"
 bouncycastle = "1.70"
 cache2k = "2.6.1.Final"
