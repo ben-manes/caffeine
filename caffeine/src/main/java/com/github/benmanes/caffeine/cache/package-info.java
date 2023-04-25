@@ -18,7 +18,7 @@
  * This package contains in-memory caching functionality. All cache variants are configured and
  * created by using the {@link com.github.benmanes.caffeine.cache.Caffeine} builder.
  * <p>
- * A {@link Cache} provides similar characteristics as
+ * A {@link com.github.benmanes.caffeine.cache.Cache} provides similar characteristics as
  * {@link java.util.concurrent.ConcurrentHashMap} with additional support for policies to bound the
  * map by. When built with a {@link com.github.benmanes.caffeine.cache.CacheLoader}, the
  * {@link com.github.benmanes.caffeine.cache.LoadingCache} variant allows the cache to populate

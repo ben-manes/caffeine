@@ -39,12 +39,14 @@ jobs:
             jcenter.bintray.com:443
             lightbend.github.io:443
             objects.githubusercontent.com:443
+            packages.jetbrains.team:443
             plugins.gradle.org:443
             plugins.jetbrains.com:443
             plugins-artifacts.gradle.org:443
             prod.fus.aws.intellij.net:443
             production.cloudflare.docker.com:443
             registry-1.docker.io:443
+            repo.gradle.org:443
             repo.maven.apache.org:443
             repo1.maven.org:443
             resources.jetbrains.com:443

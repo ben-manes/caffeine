@@ -24,6 +24,7 @@ exclude:
   - name: NullableProblems
   - name: OptionalAssignedToNull
   - name: OptionalUsedAsFieldOrParameterType
+  - name: PackageDirectoryMismatch
   - name: RedundantCollectionOperation
   - name: RedundantUnmodifiable
   - name: ReplaceAssignmentWithOperatorAssignment
