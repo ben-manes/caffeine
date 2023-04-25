@@ -90,8 +90,7 @@ abstract class LocalAsyncLoadingCache<K, V>
     return (keysToLoad, executor) -> {
       try {
         @SuppressWarnings("unchecked")
-        var loaded = (CompletableFuture<Map<K, V>>) (Object) cacheLoader
-            .asyncLoadAll(keysToLoad, executor);
+        var loaded = (CompletableFuture<Map<K, V>>) cacheLoader.asyncLoadAll(keysToLoad, executor);
         return loaded;
       } catch (RuntimeException e) {
         throw e;

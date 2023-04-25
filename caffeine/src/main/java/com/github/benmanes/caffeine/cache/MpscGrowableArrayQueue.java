@@ -599,7 +599,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * An ordered store(store + StoreStore barrier) of an element to a given offset
    *
    * @param buffer this.buffer
-   * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset}
+   * @param offset computed
    * @param e an orderly kitty
    */
   static <E> void soElement(E[] buffer, long offset, E e) {

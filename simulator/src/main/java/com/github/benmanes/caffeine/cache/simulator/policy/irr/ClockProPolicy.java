@@ -481,9 +481,9 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
   /** Prints out the internal state of the policy. */
   private void printClock() {
     System.out.println("** CLOCK-Pro list HEAD (small recency) **");
-    System.out.println(listHead.toString());
+    System.out.println(listHead);
     for (Node n = listHead.next; n != listHead; n = n.next) {
-      System.out.println(n.toString());
+      System.out.println(n);
     }
     System.out.println("** CLOCK-Pro list TAIL (large recency) **");
   }

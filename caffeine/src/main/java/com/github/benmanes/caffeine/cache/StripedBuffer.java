@@ -31,7 +31,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A base class providing the mechanics for supporting dynamic striping of bounded buffers. This
- * implementation is an adaption of the numeric 64-bit {@link java.util.concurrent.atomic.Striped64}
+ * implementation is an adaption of the numeric 64-bit <i>java.util.concurrent.atomic.Striped64</i>
  * class, which is used by atomic counters. The approach was modified to lazily grow an array of
  * buffers in order to minimize memory usage for caches that are not heavily contended on.
  *

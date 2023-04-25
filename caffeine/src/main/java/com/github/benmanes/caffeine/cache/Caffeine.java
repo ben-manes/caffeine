@@ -518,8 +518,8 @@ public final class Caffeine<K, V> {
    * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
    * entries are cleaned up as part of the routine maintenance described in the class javadoc.
    * <p>
-   * This feature cannot be used in conjunction when {@link #weakKeys()} is combined with
-   * {@link #buildAsync}.
+   * This feature cannot be used in conjunction when {@link #evictionListener(RemovalListener)} is
+   * combined with {@link #buildAsync}.
    *
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if the key strength was already set
