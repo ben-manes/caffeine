@@ -29,6 +29,8 @@ jobs:
             caffeine.gradle-enterprise.cloud:443
             checkerframework.org:443
             docs.oracle.com:443
+            download.jetbrains.com:443
+            download-cdn.jetbrains.com:443
             downloads.gradle.org:443
             downloads.gradle-dn.com:443
             errorprone.info:443
@@ -55,7 +57,7 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           arguments: build -x test
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@e04c1d05b18f0de5123491eeb4e7fb55b259a9ac # v2022.3.4
+        uses: JetBrains/qodana-action@61b94e7e3a716dcb9e2030cfd79cd46149d56c26 # v2023.1.0
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
         uses: github/codeql-action/upload-sarif@b2c19fb9a2a485599ccf4ed5d65527d94bc57226 # v2.3.0
         with:
