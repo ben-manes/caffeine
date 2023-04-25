@@ -49,11 +49,14 @@ jobs:
             services.gradle.org:443
       - name: Checkout
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - name: Build
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          arguments: build -x test
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@61b94e7e3a716dcb9e2030cfd79cd46149d56c26 # v2023.1.0
-        continue-on-error: true
+        uses: JetBrains/qodana-action@e04c1d05b18f0de5123491eeb4e7fb55b259a9ac # v2022.3.4
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
         uses: github/codeql-action/upload-sarif@b2c19fb9a2a485599ccf4ed5d65527d94bc57226 # v2.3.0
-        continue-on-error: true
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json

@@ -23,6 +23,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             api.adoptium.net:443
+            api.foojay.io
             api.github.com:443
             api.snyk.io:443
             caffeine.gradle-enterprise.cloud:443

@@ -1,5 +1,4 @@
 version: "1.0"
-projectJDK: temurin-11
 profile:
   name: qodana.recommended
 exclude:
