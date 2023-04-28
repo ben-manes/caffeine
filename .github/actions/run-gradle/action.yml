@@ -12,7 +12,7 @@ inputs:
     required: false
     description: The early access release
   graal:
-    default: '19'
+    default: '17'
     required: false
     description: The GraalVM version
   token:

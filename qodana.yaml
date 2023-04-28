@@ -1,25 +1,30 @@
 version: "1.0"
+projectJDK: temurin-11
+linter: jetbrains/qodana-jvm-community:2023.1
 profile:
   name: qodana.recommended
 exclude:
   - name: CastCanBeRemovedNarrowingVariableType
   - name: CommentedOutCode
   - name: ConstantValue
+  - name: DanglingJavadoc
   - name: DataFlowIssue
   - name: EmptyStatementBody
   - name: EqualsWhichDoesntCheckParameterClass
-  - name: GrUnnecessarySemicolon
   - name: GroovyEmptyStatementBody
   - name: GroovyUnnecessaryReturn
+  - name: GrUnnecessarySemicolon
   - name: IgnoreResultOfCall
   - name: Java9CollectionFactory
   - name: JavaAnnotator
+  - name: JavadocLinkAsPlainText
   - name: JavaRequiresAutoModule
   - name: NonSynchronizedMethodOverridesSynchronizedMethod
   - name: NotNullFieldNotInitialized
   - name: NullableProblems
   - name: OptionalAssignedToNull
   - name: OptionalUsedAsFieldOrParameterType
+  - name: PackageDirectoryMismatch
   - name: RedundantCollectionOperation
   - name: RedundantUnmodifiable
   - name: ReplaceAssignmentWithOperatorAssignment

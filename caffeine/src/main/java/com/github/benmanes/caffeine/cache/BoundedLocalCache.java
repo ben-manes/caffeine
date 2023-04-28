@@ -964,7 +964,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
-  /** Returns the duration until the next item expires, or {@link Long.MAX_VALUE} if none. */
+  /** Returns the duration until the next item expires, or {@link Long#MAX_VALUE} if none. */
   @GuardedBy("evictionLock")
   long getExpirationDelay(long now) {
     long delay = Long.MAX_VALUE;

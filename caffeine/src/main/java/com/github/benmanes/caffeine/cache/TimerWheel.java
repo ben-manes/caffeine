@@ -232,7 +232,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
     }
   }
 
-  /** Returns the duration until the next bucket expires, or {@link Long.MAX_VALUE} if none. */
+  /** Returns the duration until the next bucket expires, or {@link Long#MAX_VALUE} if none. */
   @SuppressWarnings("IntLongMath")
   public long getExpirationDelay() {
     for (int i = 0; i < SHIFT.length; i++) {
@@ -265,7 +265,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   }
 
   /**
-   * Returns the duration when the wheel's next bucket expires, or {@link Long.MAX_VALUE} if empty.
+   * Returns the duration when the wheel's next bucket expires, or {@link Long#MAX_VALUE} if empty.
    *
    * @param index the timing wheel being operated on
    */

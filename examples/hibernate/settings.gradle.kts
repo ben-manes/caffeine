@@ -1,7 +1,7 @@
-rootProject.name = 'hibernate'
-
 dependencyResolutionManagement {
   repositories {
     mavenCentral()
   }
 }
+
+rootProject.name = "hibernate"

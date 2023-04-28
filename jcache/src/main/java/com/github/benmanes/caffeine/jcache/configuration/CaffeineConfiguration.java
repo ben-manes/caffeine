@@ -276,7 +276,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     delegate.setStatisticsEnabled(enabled);
   }
 
-  /** See {@link MutableConfiguration#isManagementEnabled}. */
+  /** See {@link CompleteConfiguration#isManagementEnabled}. */
   @Override
   public boolean isManagementEnabled() {
     return delegate.isManagementEnabled();

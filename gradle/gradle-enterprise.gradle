@@ -1,9 +1,3 @@
-plugins {
-  id 'com.gradle.enterprise' version '3.12.6'
-  id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.10'
-  id 'org.gradle.toolchains.foojay-resolver-convention' version '0.4.0'
-}
-
 gradleEnterprise {
   if (!gradle.startParameter.isBuildScan()) {
     server = 'https://caffeine.gradle-enterprise.cloud/'
@@ -40,14 +34,3 @@ buildCache {
     }
   }
 }
-
-dependencyResolutionManagement.repositories {
-  mavenCentral()
-}
-
-rootProject.name = 'caffeine'
-
-include 'caffeine'
-include 'guava'
-include 'jcache'
-include 'simulator'

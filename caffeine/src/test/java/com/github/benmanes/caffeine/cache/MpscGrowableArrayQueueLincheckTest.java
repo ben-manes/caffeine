@@ -15,18 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.ArrayList;
-import java.util.Map;
 import java.util.Queue;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
-import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions;
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.testng.annotations.Test;
 
 /**
@@ -35,9 +31,8 @@ import org.testng.annotations.Test;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@OpGroupConfig(name = "consumer", nonParallel = true)
 @Param(name = "element", gen = IntGen.class, conf = "1:5")
-public final class MpscGrowableArrayQueueLincheckTest extends VerifierState {
+public final class MpscGrowableArrayQueueLincheckTest {
   private final Queue<Integer> queue;
 
   public MpscGrowableArrayQueueLincheckTest() {
@@ -49,7 +44,7 @@ public final class MpscGrowableArrayQueueLincheckTest extends VerifierState {
     return queue.offer(e);
   }
 
-  @Operation(group = "consumer")
+  @Operation(nonParallelGroup = "consumer")
   public Integer poll() {
     return queue.poll();
   }
@@ -81,18 +76,5 @@ public final class MpscGrowableArrayQueueLincheckTest extends VerifierState {
         .iterations(100)                  // the number of different scenarios
         .invocationsPerIteration(10_000); // how deeply each scenario is tested
     new LinChecker(getClass(), options).check();
-  }
-
-  /**
-   * Provides something with correct <tt>equals</tt> and <tt>hashCode</tt> methods that can be
-   * interpreted as an internal data structure state for faster verification. The only limitation is
-   * that it should be different for different data structure states. For {@link Map} it itself is
-   * used.
-   *
-   * @return object representing internal state
-   */
-  @Override
-  protected Object extractState() {
-    return new ArrayList<Integer>(queue);
   }
 }

@@ -23,7 +23,7 @@ import org.eclipse.collections.impl.parallel.ProcedureFactory;
  * @deprecated Don't use in new tests
  */
 @Deprecated
-@SuppressWarnings({"all", "unchecked"})
+@SuppressWarnings({"all", "overloads", "unchecked"})
 public class SumProcedure<T>
     implements Procedure<T>, Function2<Sum, T, Sum>, ProcedureFactory<SumProcedure<T>> {
   private static final long serialVersionUID = 1L;

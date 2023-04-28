@@ -333,21 +333,21 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
     if (sizeCold > 0) {
       System.out.println("** CLOCK-Pro list COLD HEAD (small recency) **");
       for (Node n = headCold.next; n != headCold; n = n.next) {
-        System.out.println(n.toString());
+        System.out.println(n);
       }
       System.out.println("** CLOCK-Pro list COLD TAIL (large recency) **");
     }
     if (sizeHot > 0) {
       System.out.println("** CLOCK-Pro list HOT HEAD (small recency) **");
       for (Node n = headHot.next; n != headHot; n = n.next) {
-        System.out.println(n.toString());
+        System.out.println(n);
       }
       System.out.println("** CLOCK-Pro list HOT TAIL (large recency) **");
     }
     if (sizeNR > 0) {
       System.out.println("** CLOCK-Pro list NR HEAD (small recency) **");
       for (Node n = headNonResident.next; n != headNonResident; n = n.next) {
-        System.out.println(n.toString());
+        System.out.println(n);
       }
       System.out.println("** CLOCK-Pro list NR TAIL (large recency) **");
     }
