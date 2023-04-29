@@ -15,10 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.ref.ReferenceQueue;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.benmanes.caffeine.cache.References.LookupKeyReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
@@ -31,6 +32,7 @@ import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 interface NodeFactory<K, V> {
   MethodType FACTORY = MethodType.methodType(void.class);
   MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+  Map<String, NodeFactory<Object, Object>> FACTORIES = new ConcurrentHashMap<>();
 
   RetiredStrongKey RETIRED_STRONG_KEY = new RetiredStrongKey();
   RetiredWeakKey RETIRED_WEAK_KEY = new RetiredWeakKey();
@@ -87,7 +89,7 @@ interface NodeFactory<K, V> {
   }
 
   static String getClassName(Caffeine<?, ?> builder, boolean isAsync) {
-    var className = new StringBuilder(Node.class.getPackageName()).append('.');
+    var className = new StringBuilder();
     if (builder.isStrongKeys()) {
       className.append('P');
     } else {
@@ -131,11 +133,21 @@ interface NodeFactory<K, V> {
     return className.toString();
   }
 
+  @SuppressWarnings("unchecked")
   static <K, V> NodeFactory<K, V> loadFactory(String className) {
+    var factory = FACTORIES.get(className);
+    if (factory == null) {
+      factory = FACTORIES.computeIfAbsent(className, NodeFactory::newFactory);
+    }
+    return (NodeFactory<K, V>) factory;
+  }
+
+  static NodeFactory<Object, Object> newFactory(String className) {
     try {
-      Class<?> clazz = Class.forName(className);
-      MethodHandle handle = LOOKUP.findConstructor(clazz, FACTORY);
-      return (NodeFactory<K, V>) handle.invoke();
+      var clazz = LOOKUP.findClass(Node.class.getPackageName() + "." + className);
+      var constructor = LOOKUP.findConstructor(clazz, FACTORY);
+      return (NodeFactory<Object, Object>) constructor
+          .asType(constructor.type().changeReturnType(NodeFactory.class)).invokeExact();
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {

@@ -15,10 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -26,12 +26,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class LocalCacheFactory {
-  private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-  private static final MethodType FACTORY = MethodType.methodType(
+interface LocalCacheFactory {
+  MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+  MethodType FACTORY = MethodType.methodType(
       void.class, Caffeine.class, AsyncCacheLoader.class, boolean.class);
+  Map<String, LocalCacheFactory> FACTORIES = new ConcurrentHashMap<>();
 
-  private LocalCacheFactory() {}
+  <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
+      @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async);
 
   /** Returns a cache optimized for this configuration. */
   static <K, V> BoundedLocalCache<K, V> newBoundedLocalCache(Caffeine<K, V> builder,
@@ -41,7 +43,7 @@ final class LocalCacheFactory {
   }
 
   static String getClassName(Caffeine<?, ?> builder) {
-    var className = new StringBuilder(LocalCacheFactory.class.getPackageName()).append('.');
+    var className = new StringBuilder();
     if (builder.isStrongKeys()) {
       className.append('S');
     } else {
@@ -80,10 +82,38 @@ final class LocalCacheFactory {
 
   static <K, V> BoundedLocalCache<K, V> loadFactory(Caffeine<K, V> builder,
       @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async, String className) {
+    var factory = FACTORIES.get(className);
+    if (factory == null) {
+      factory = FACTORIES.computeIfAbsent(className, LocalCacheFactory::newFactory);
+    }
+    return factory.newInstance(builder, cacheLoader, async);
+  }
+
+  static LocalCacheFactory newFactory(String className) {
     try {
-      Class<?> clazz = Class.forName(className);
-      MethodHandle handle = LOOKUP.findConstructor(clazz, FACTORY);
-      return (BoundedLocalCache<K, V>) handle.invoke(builder, cacheLoader, async);
+      var clazz = LOOKUP.findClass(LocalCacheFactory.class.getPackageName() + "." + className);
+      try {
+        // Fast path
+        return (LocalCacheFactory) LOOKUP
+            .findStaticVarHandle(clazz, "FACTORY", LocalCacheFactory.class).get();
+      } catch (NoSuchFieldException e) {
+        // Slow path when native hints are missing the field, but may have the constructor.
+        var constructor = LOOKUP.findConstructor(clazz, FACTORY);
+        var methodHandle =
+            constructor.asType(constructor.type().changeReturnType(BoundedLocalCache.class));
+        return new LocalCacheFactory() {
+          @Override
+          public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
+              @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
+            try {
+              return (BoundedLocalCache<K, V>) methodHandle.invokeExact(builder, cacheLoader,
+                  async);
+            } catch (Throwable t) {
+              throw new IllegalStateException(className, t);
+            }
+          }
+        };
+      }
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {
