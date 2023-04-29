@@ -1,0 +1,20 @@
+[
+{
+  "name":"com.github.benmanes.caffeine.examples.graalnative.Application",
+  "methods":[{"name":"main","parameterTypes":["java.lang.String[]"] }]
+},
+{
+  "name":"java.lang.String",
+  "methods":[
+    {"name":"lastIndexOf","parameterTypes":["int"] }, 
+    {"name":"substring","parameterTypes":["int"] }
+  ]
+},
+{
+  "name":"java.lang.System",
+  "methods":[
+    {"name":"getProperty","parameterTypes":["java.lang.String"] }, 
+    {"name":"setProperty","parameterTypes":["java.lang.String","java.lang.String"] }
+  ]
+}
+]

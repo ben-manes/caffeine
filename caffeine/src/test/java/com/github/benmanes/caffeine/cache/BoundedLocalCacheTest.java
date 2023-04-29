@@ -52,6 +52,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
@@ -67,7 +68,9 @@ import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
 import static uk.org.lidalia.slf4jext.Level.ERROR;
 import static uk.org.lidalia.slf4jext.Level.WARN;
 
+import java.io.IOException;
 import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
@@ -90,6 +93,7 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
@@ -97,6 +101,7 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedPolicy.FixedExpireAfterWrite;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.PerformCleanupTask;
+import com.github.benmanes.caffeine.cache.LocalCacheFactory.MethodHandleBasedFactory;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
@@ -2510,26 +2515,120 @@ public final class BoundedLocalCacheTest {
   /* --------------- Miscellaneous --------------- */
 
   @Test
-  public void cacheFactory_invalid() {
-    assertThrows(NullPointerException.class, () -> {
-      LocalCacheFactory.loadFactory(/* builder */ null, /* loader */ null,
-          /* async */ false, /* className */ null);
-    });
+  public void cacheFactory_null() {
+    assertThrows(NullPointerException.class,
+        () -> LocalCacheFactory.loadFactory(null));
+  }
 
-    var expected = assertThrows(IllegalStateException.class, () -> {
-      LocalCacheFactory.loadFactory(/* builder */ null, /* loader */ null,
-          /* async */ false, /* className */ "");
-    });
+  @Test
+  public void cacheFactory_classNotFound() {
+    var expected = assertThrows(IllegalStateException.class, () ->
+        LocalCacheFactory.loadFactory(""));
     assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
   }
 
   @Test
-  public void nodeFactory_invalid() {
-    assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(/* className */ null));
+  public void cacheFactory_noSuchMethod() {
+    var expected = assertThrows(IllegalStateException.class, () ->
+        LocalCacheFactory.loadFactory("BoundedLocalCacheTest$BadLocalCacheFactory"));
+    assertThat(expected).hasCauseThat().isInstanceOf(NoSuchMethodException.class);
+  }
 
+  @Test
+  public void cacheFactory_brokenConstructor() {
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    var factory = LocalCacheFactory.loadFactory("BoundedLocalCacheTest$BadBoundedLocalCache");
+    assertThrows(IllegalStateException.class, () -> factory.newInstance(builder, null, false));
+  }
+
+  @Test(groups = "isolated")
+  public void cacheFactory_exception() throws Throwable {
+    try {
+      LocalCacheFactory factory = Mockito.mock();
+      LocalCacheFactory.FACTORIES.put("WS", factory);
+
+      when(factory.newInstance(any(), any(), anyBoolean())).thenThrow(IOException.class);
+      Caffeine<Object, Object> builder = Caffeine.newBuilder().weakKeys();
+      var expected = assertThrows(IllegalStateException.class, () ->
+          LocalCacheFactory.newBoundedLocalCache(builder, /* loader */ null, false));
+      assertThat(expected).hasCauseThat().isInstanceOf(IOException.class);
+    } finally {
+      LocalCacheFactory.FACTORIES.clear();
+    }
+  }
+
+  @Test(groups = "isolated")
+  public void cacheFactory_error() throws Throwable {
+    try {
+      LocalCacheFactory factory = Mockito.mock();
+      LocalCacheFactory.FACTORIES.put("WS", factory);
+
+      when(factory.newInstance(any(), any(), anyBoolean())).thenThrow(Error.class);
+      assertThrows(Error.class, () -> LocalCacheFactory.newBoundedLocalCache(
+          Caffeine.newBuilder().weakKeys(), /* loader */ null, false));
+    } finally {
+      LocalCacheFactory.FACTORIES.clear();
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void cacheFactory_loadFactory(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) throws Throwable {
+    var factory1 = LocalCacheFactory.loadFactory(cache.getClass().getSimpleName());
+    var other = factory1.newInstance(context.caffeine(), /* cacheLoader */ null, context.isAsync());
+    assertThat(other.getClass()).isEqualTo(cache.getClass());
+    assertThat(LocalCacheFactory.FACTORIES).containsEntry(
+        cache.getClass().getSimpleName(), factory1);
+
+    var factory2 = LocalCacheFactory.loadFactory(cache.getClass().getSimpleName());
+    assertThat(factory2).isSameInstanceAs(factory1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void cacheFactory_byMethodHandle(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) throws Throwable {
+    var methodHandleFactory = new MethodHandleBasedFactory(cache.getClass());
+    var staticFactory = LocalCacheFactory.loadFactory(cache.getClass().getSimpleName());
+    assertThat(methodHandleFactory).isNotSameInstanceAs(staticFactory);
+
+    var c1 = methodHandleFactory.newInstance(
+        context.caffeine(), /* cacheLoader */ null, context.isAsync());
+    var c2 = staticFactory.newInstance(
+        context.caffeine(), /* cacheLoader */ null, context.isAsync());
+    assertThat(c1.getClass()).isEqualTo(c2.getClass());
+  }
+
+  @Test
+  public void nodeFactory_null() {
+    assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(/* className */ null));
+  }
+
+  @Test
+  public void nodeFactory_badConstructor() {
+    assertThrows(IllegalStateException.class, () ->
+        NodeFactory.loadFactory("BoundedLocalCacheTest$BadNode"));
+  }
+
+  @Test
+  public void nodeFactory_classNotFound() {
     var expected = assertThrows(IllegalStateException.class, () ->
         NodeFactory.loadFactory(/* className */ ""));
     assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void nodeFactory_loadFactory(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) throws Throwable {
+    var factory1 = NodeFactory.loadFactory(cache.nodeFactory.getClass().getSimpleName());
+    assertThat(NodeFactory.FACTORIES.containsKey(cache.getClass().getSimpleName()));
+    assertThat(NodeFactory.FACTORIES).containsEntry(
+        cache.nodeFactory.getClass().getSimpleName(), factory1);
+
+    var factory2 = NodeFactory.loadFactory(cache.nodeFactory.getClass().getSimpleName());
+    assertThat(factory2).isSameInstanceAs(factory1);
   }
 
   @Test
@@ -2688,5 +2787,54 @@ public final class BoundedLocalCacheTest {
 
   static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {
     return (BoundedLocalCache<K, V>) cache.asMap();
+  }
+
+  static final class BadBoundedLocalCache<K, V> extends BoundedLocalCache<K, V> {
+    static final LocalCacheFactory FACTORY = BadBoundedLocalCache::new;
+
+    @SuppressWarnings("unchecked")
+    BadBoundedLocalCache(Caffeine<K, V> builder,
+        AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
+      super(builder, (AsyncCacheLoader<K, V>) cacheLoader, async);
+      throw new IllegalStateException();
+    }
+  }
+  static final class BadLocalCacheFactory implements LocalCacheFactory {
+    @Override public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
+        @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) throws Throwable {
+      throw new IllegalStateException();
+    }
+  }
+  static final class BadNode extends Node<Object, Object> {
+    public BadNode() {
+      throw new IllegalStateException();
+    }
+    @Override public Object getKey() {
+      return null;
+    }
+    @Override public Object getKeyReference() {
+      return null;
+    }
+    @Override public Object getValue() {
+      return null;
+    }
+    @Override public Object getValueReference() {
+      return null;
+    }
+    @Override public void setValue(Object value, ReferenceQueue<Object> referenceQueue) {}
+    @Override public boolean containsValue(Object value) {
+      return false;
+    }
+    @Override public boolean isAlive() {
+      return false;
+    }
+    @Override public boolean isRetired() {
+      return false;
+    }
+    @Override public boolean isDead() {
+      return false;
+    }
+    @Override public void retire() {}
+    @Override public void die() {}
   }
 }

@@ -18,8 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.ref.ReferenceQueue;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import com.github.benmanes.caffeine.cache.References.LookupKeyReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
@@ -30,9 +30,9 @@ import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 interface NodeFactory<K, V> {
-  MethodType FACTORY = MethodType.methodType(void.class);
   MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-  Map<String, NodeFactory<Object, Object>> FACTORIES = new ConcurrentHashMap<>();
+  MethodType FACTORY = MethodType.methodType(void.class);
+  ConcurrentMap<String, NodeFactory<Object, Object>> FACTORIES = new ConcurrentHashMap<>();
 
   RetiredStrongKey RETIRED_STRONG_KEY = new RetiredStrongKey();
   RetiredWeakKey RETIRED_WEAK_KEY = new RetiredWeakKey();

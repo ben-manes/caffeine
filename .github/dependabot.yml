@@ -20,3 +20,7 @@ updates:
     directory: examples/hibernate
     schedule:
       interval: daily
+  - package-ecosystem: gradle
+    directory: examples/graal-native
+    schedule:
+      interval: daily

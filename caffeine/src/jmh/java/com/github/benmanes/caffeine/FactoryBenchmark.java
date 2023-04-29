@@ -20,12 +20,19 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
 /**
+ * This benchmark can be run by optionally specifying the target jvm in the command.
+ * <p>
+ * <pre>{@code
+ *   JAVA_VERSION=20 ./gradlew jmh -PincludePattern=FactoryBenchmark --no-daemon
+ * }</pre>
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
@@ -69,11 +76,10 @@ public class FactoryBenchmark {
     MethodHandleFactory() {
       try {
         methodHandle = LOOKUP.findConstructor(Alpha.class, METHOD_TYPE);
-        lambda =
-            (AlphaConstructor) LambdaMetafactory
-                .metafactory(LOOKUP, "construct", MethodType.methodType(AlphaConstructor.class),
-                    methodHandle.type(), methodHandle, methodHandle.type())
-                .getTarget().invokeExact();
+        lambda = (AlphaConstructor) LambdaMetafactory
+            .metafactory(LOOKUP, "construct", MethodType.methodType(AlphaConstructor.class),
+                methodHandle.type(), methodHandle, methodHandle.type())
+            .getTarget().invokeExact();
       } catch (Throwable e) {
         throw new RuntimeException(e);
       }

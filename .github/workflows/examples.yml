@@ -6,6 +6,7 @@ env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   JAVA_VERSION: 20
+  SNAPSHOT: true
 
 jobs:
   examples:
@@ -17,6 +18,7 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
+            api.github.com:443
             api.adoptium.net:443
             caffeine.gradle-enterprise.cloud:443
             downloads.gradle.org:443
@@ -29,6 +31,7 @@ jobs:
             repo.maven.apache.org:443
             repo1.maven.org:443
             services.gradle.org:443
+            www.graalvm.org:443
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
@@ -48,7 +51,7 @@ jobs:
           with: |
             cache-read-only: false
             generate-job-summary: false
-            arguments: help --daemon --no-scan
+            arguments: help --no-scan
             gradle-home-cache-strict-match: true
           attempt_limit: 3
           attempt_delay: 2000
@@ -75,20 +78,20 @@ jobs:
             echo '```'
           } >> $GITHUB_STEP_SUMMARY
       - name: Chart Simulation
-        run: ./gradlew --daemon -q simulator:simulate --maximumSize=100,200,300
+        run: ./gradlew -q simulator:simulate --maximumSize=100,200,300
       - name: Memory Overhead
-        run: ./gradlew --daemon -q caffeine:memoryOverhead
+        run: ./gradlew -q caffeine:memoryOverhead
       - name: Stresser (read)
         run: >
-          timeout 1m ./gradlew --daemon -q caffeine:stress --workload=read
+          timeout 1m ./gradlew -q caffeine:stress --workload=read
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
       - name: Stresser (write)
         run: >
-          timeout 1m ./gradlew --daemon -q caffeine:stress --workload=write
+          timeout 1m ./gradlew -q caffeine:stress --workload=write
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
       - name: Stresser (refresh)
         run: >
-          timeout 1m ./gradlew --daemon -q caffeine:stress --workload=refresh
+          timeout 1m ./gradlew -q caffeine:stress --workload=refresh
           || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
       - name: Write-behind (rxjava)
         working-directory: examples/write-behind-rxjava
@@ -99,3 +102,19 @@ jobs:
       - name: Hibernate JCache
         working-directory: examples/hibernate
         run: ./gradlew build
+      - name: Prepare for Graal Native Image
+        uses: ./.github/actions/run-gradle
+        with:
+          java: GraalVM
+          token: ${{ secrets.GITHUB_TOKEN }}
+          arguments: -q caffeine:clean caffeine:jar
+      - name: Graal Native Image
+        uses: ./.github/actions/run-gradle
+        with:
+          java: GraalVM
+          token: ${{ secrets.GITHUB_TOKEN }}
+          arguments: >
+            --project-dir examples/graal-native
+            -Pagent run
+            metadataCopy --task run --dir src/main/resources/META-INF/native-image
+            nativeRun nativeTest
