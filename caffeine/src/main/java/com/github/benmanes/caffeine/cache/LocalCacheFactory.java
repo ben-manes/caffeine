@@ -106,7 +106,7 @@ interface LocalCacheFactory {
         return (LocalCacheFactory) LOOKUP
             .findStaticVarHandle(clazz, "FACTORY", LocalCacheFactory.class).get();
       } catch (NoSuchFieldException e) {
-        // Slow path when native hints are missing the field, but may have the constructor.
+        // Slow path when native hints are missing the field, but may have the constructor
         return new MethodHandleBasedFactory(clazz);
       }
     } catch (ClassNotFoundException | IllegalAccessException | NoSuchMethodException t) {

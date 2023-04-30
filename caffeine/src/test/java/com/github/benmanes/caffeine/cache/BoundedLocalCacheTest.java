@@ -93,7 +93,6 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
@@ -2563,12 +2562,21 @@ public final class BoundedLocalCacheTest {
       LocalCacheFactory factory = Mockito.mock();
       LocalCacheFactory.FACTORIES.put("WS", factory);
 
+      Caffeine<Object, Object> builder = Caffeine.newBuilder().weakKeys();
       when(factory.newInstance(any(), any(), anyBoolean())).thenThrow(Error.class);
-      assertThrows(Error.class, () -> LocalCacheFactory.newBoundedLocalCache(
-          Caffeine.newBuilder().weakKeys(), /* loader */ null, false));
+      assertThrows(Error.class, () ->
+          LocalCacheFactory.newBoundedLocalCache(builder, /* loader */ null, false));
     } finally {
       LocalCacheFactory.FACTORIES.clear();
     }
+  }
+
+  @Test
+  public void cacheFactory_noStaticFactory() throws Throwable {
+    var factory = LocalCacheFactory.loadFactory("BoundedLocalCacheTest$CustomBoundedLocalCache");
+    assertThat(factory).isInstanceOf(MethodHandleBasedFactory.class);
+    var cache = factory.newInstance(Caffeine.newBuilder(), /* loader */ null, false);
+    assertThat(cache).isInstanceOf(CustomBoundedLocalCache.class);
   }
 
   @Test(dataProvider = "caches")
@@ -2623,7 +2631,6 @@ public final class BoundedLocalCacheTest {
   public void nodeFactory_loadFactory(
       BoundedLocalCache<Int, Int> cache, CacheContext context) throws Throwable {
     var factory1 = NodeFactory.loadFactory(cache.nodeFactory.getClass().getSimpleName());
-    assertThat(NodeFactory.FACTORIES.containsKey(cache.getClass().getSimpleName()));
     assertThat(NodeFactory.FACTORIES).containsEntry(
         cache.nodeFactory.getClass().getSimpleName(), factory1);
 
@@ -2789,6 +2796,13 @@ public final class BoundedLocalCacheTest {
     return (BoundedLocalCache<K, V>) cache.asMap();
   }
 
+  static final class CustomBoundedLocalCache<K, V> extends BoundedLocalCache<K, V> {
+    @SuppressWarnings("unchecked")
+    CustomBoundedLocalCache(Caffeine<K, V> builder,
+        AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
+      super(builder, (AsyncCacheLoader<K, V>) cacheLoader, async);
+    }
+  }
   static final class BadBoundedLocalCache<K, V> extends BoundedLocalCache<K, V> {
     static final LocalCacheFactory FACTORY = BadBoundedLocalCache::new;
 
@@ -2801,7 +2815,7 @@ public final class BoundedLocalCacheTest {
   }
   static final class BadLocalCacheFactory implements LocalCacheFactory {
     @Override public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
-        @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) throws Throwable {
+        AsyncCacheLoader<? super K, V> cacheLoader, boolean async) throws Throwable {
       throw new IllegalStateException();
     }
   }

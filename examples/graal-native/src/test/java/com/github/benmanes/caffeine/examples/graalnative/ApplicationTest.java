@@ -22,10 +22,10 @@ import org.junit.jupiter.api.Test;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class ApplicationTest {
+public final class ApplicationTest {
 
   @Test
-  void hitRate() {
+  public void hitRate() {
     var app = new Application(500);
     app.run(1_000_000, 1_000);
 
