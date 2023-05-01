@@ -45,7 +45,7 @@ runs:
         website: jdk.java.net
         version: latest
     - name: Set up GraalVM
-      uses: graalvm/setup-graalvm@435648176569a02d52c0aaef2c055bf2cc7f0d28 # v1
+      uses: graalvm/setup-graalvm@babc303d7e5b8f3062a94b90b49c3444cf291633 # v1
       if: inputs.java == 'GraalVM'
       with:
         version: 'latest'
