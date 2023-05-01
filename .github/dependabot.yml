@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: daily
+  - package-ecosystem: github-actions
+    directory: /.github/actions/run-gradle
+    schedule:
+      interval: daily
   - package-ecosystem: gradle
     directory: /
     schedule:
