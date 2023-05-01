@@ -80,9 +80,10 @@ interface NodeFactory<K, V> {
   }
 
   /** Returns a factory optimized for the specified features. */
+  @SuppressWarnings("unchecked")
   static <K, V> NodeFactory<K, V> newFactory(Caffeine<K, V> builder, boolean isAsync) {
     if (builder.interner) {
-      return new Interned<>();
+      return (NodeFactory<K, V>) Interned.FACTORY;
     }
     var className = getClassName(builder, isAsync);
     return loadFactory(className);

@@ -140,13 +140,25 @@ public final class InternerTest extends TestCase {
   }
 
   @Test
+  public void factory() {
+    assertThat(Interned.FACTORY.newReferenceKey(new Object(), null))
+        .isInstanceOf(WeakKeyEqualsReference.class);
+    assertThat(Interned.FACTORY.newNode(null, null, null, 1, 1))
+        .isInstanceOf(Interned.class);
+
+    var builder = Caffeine.newBuilder();
+    builder.interner = true;
+
+    var factory = NodeFactory.newFactory(builder, /* async */ false);
+    assertThat(factory).isSameInstanceAs(Interned.FACTORY);
+  }
+
+  @Test
   public void interned() {
     var node = new Interned<Object, Boolean>(new WeakReference<>(null));
     assertThat(node.getValue()).isTrue();
-    assertThat(node.getValueReference()).isTrue();
-    assertThat(node.newNode(null, null, null, 1, 1)).isInstanceOf(Interned.class);
-    assertThat(node.newReferenceKey(new Object(), null)).isInstanceOf(WeakKeyEqualsReference.class);
     assertThat(node.isRetired()).isFalse();
+    assertThat(node.getValueReference()).isTrue();
 
     node.retire();
     assertThat(node.isRetired()).isTrue();
