@@ -55,7 +55,6 @@ dependencies {
   jmh(libs.cache2k)
   jmh(libs.ehcache3)
   jmh(libs.hazelcast)
-  jmh(libs.slf4j.nop)
   jmh(libs.jackrabbit)
   jmh(libs.flip.tables)
   jmh(libs.expiring.map)

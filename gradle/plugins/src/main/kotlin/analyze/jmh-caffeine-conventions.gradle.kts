@@ -13,8 +13,14 @@ plugins {
   id("io.morethan.jmhreport")
 }
 
-configurations.jmh.get()
-  .extendsFrom(configurations.testImplementation.get())
+configurations.jmh {
+  extendsFrom(configurations.testImplementation.get())
+  exclude(module = "slf4j-test")
+}
+
+dependencies {
+  jmh(libs.bundles.slf4j.nop)
+}
 
 jmh {
   jmhVersion.set(libs.versions.jmh.core)
