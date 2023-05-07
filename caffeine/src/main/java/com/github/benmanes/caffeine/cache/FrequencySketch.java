@@ -166,7 +166,7 @@ final class FrequencySketch<E> {
   }
 
   /** Applies a supplemental hash functions to defends against poor quality hash. */
-  int spread(int x) {
+  static int spread(int x) {
     x ^= x >>> 17;
     x *= 0xed5ad4bb;
     x ^= x >>> 11;
@@ -176,7 +176,7 @@ final class FrequencySketch<E> {
   }
 
   /** Applies another round of hashing for additional randomization. */
-  int rehash(int x) {
+  static int rehash(int x) {
     x *= 0x31848bab;
     x ^= x >>> 14;
     return x;

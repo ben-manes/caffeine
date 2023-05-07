@@ -59,157 +59,163 @@ public final class MpscGrowableArrayQueueTest {
 
   @Test
   public void constructor() {
-    var buffer = new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 8);
-    assertThat(buffer.capacity()).isEqualTo(8);
+    var queue = new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 8);
+    assertThat(queue.capacity()).isEqualTo(8);
   }
 
   /* --------------- Size --------------- */
 
   @Test(dataProvider = "empty")
-  public void size_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.size()).isEqualTo(0);
+  public void size_whenEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.size()).isEqualTo(0);
   }
 
   @Test(dataProvider = "populated")
-  public void size_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.size()).isEqualTo(POPULATED_SIZE);
+  public void size_whenPopulated(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.size()).isEqualTo(POPULATED_SIZE);
   }
 
   /* --------------- Offer --------------- */
 
   @Test(dataProvider = "empty")
-  public void offer_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.offer(1)).isTrue();
-    assertThat(buffer).hasSize(1);
+  public void offer_whenEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.offer(1)).isTrue();
+    assertThat(queue).hasSize(1);
   }
 
   @Test(dataProvider = "populated")
-  public void offer_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.offer(1)).isTrue();
-    assertThat(buffer).hasSize(POPULATED_SIZE + 1);
+  public void offer_whenPopulated(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.offer(1)).isTrue();
+    assertThat(queue).hasSize(POPULATED_SIZE + 1);
   }
 
   @Test(dataProvider = "full")
-  public void offer_whenFull(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.offer(1)).isFalse();
-    assertThat(buffer).hasSize(FULL_SIZE);
+  public void offer_whenFull(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.offer(1)).isFalse();
+    assertThat(queue).hasSize(FULL_SIZE);
   }
 
   @Test(dataProvider = "empty")
-  public void relaxedOffer_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.relaxedOffer(1)).isTrue();
-    assertThat(buffer).hasSize(1);
+  public void relaxedOffer_whenEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.relaxedOffer(1)).isTrue();
+    assertThat(queue).hasSize(1);
   }
 
   @Test(dataProvider = "populated")
-  public void relaxedOffer_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.relaxedOffer(1)).isTrue();
-    assertThat(buffer).hasSize(POPULATED_SIZE + 1);
+  public void relaxedOffer_whenPopulated(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.relaxedOffer(1)).isTrue();
+    assertThat(queue).hasSize(POPULATED_SIZE + 1);
   }
 
   @Test(dataProvider = "full")
-  public void relaxedOffer_whenFull(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.relaxedOffer(1)).isFalse();
-    assertThat(buffer).hasSize(FULL_SIZE);
+  public void relaxedOffer_whenFull(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.relaxedOffer(1)).isFalse();
+    assertThat(queue).hasSize(FULL_SIZE);
   }
 
   /* --------------- Poll --------------- */
 
   @Test(dataProvider = "empty")
-  public void poll_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.poll()).isNull();
+  public void poll_whenEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.poll()).isNull();
   }
 
   @Test(dataProvider = "populated")
-  public void poll_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.poll()).isNotNull();
-    assertThat(buffer).hasSize(POPULATED_SIZE - 1);
+  public void poll_whenPopulated(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.poll()).isNotNull();
+    assertThat(queue).hasSize(POPULATED_SIZE - 1);
   }
 
   @Test(dataProvider = "full")
-  public void poll_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    while (buffer.poll() != null) {}
-    assertThat(buffer).isEmpty();
+  public void poll_toEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    while (queue.poll() != null) {}
+    assertThat(queue).isEmpty();
   }
 
   @Test(dataProvider = "empty")
-  public void relaxedPoll_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.relaxedPoll()).isNull();
+  public void relaxedPoll_whenEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.relaxedPoll()).isNull();
   }
 
   @Test(dataProvider = "populated")
-  public void relaxedPoll_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.relaxedPoll()).isNotNull();
-    assertThat(buffer).hasSize(POPULATED_SIZE - 1);
+  public void relaxedPoll_whenPopulated(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.relaxedPoll()).isNotNull();
+    assertThat(queue).hasSize(POPULATED_SIZE - 1);
   }
 
   @Test(dataProvider = "full")
-  public void relaxedPoll_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    while (buffer.relaxedPoll() != null) {}
-    assertThat(buffer).isEmpty();
+  public void relaxedPoll_toEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    while (queue.relaxedPoll() != null) {}
+    assertThat(queue).isEmpty();
   }
 
   /* --------------- Peek --------------- */
 
   @Test(dataProvider = "empty")
-  public void peek_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.peek()).isNull();
+  public void peek_whenEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.peek()).isNull();
   }
 
   @Test(dataProvider = "populated")
-  public void peek_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.peek()).isNotNull();
-    assertThat(buffer).hasSize(POPULATED_SIZE);
+  public void peek_whenPopulated(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.peek()).isNotNull();
+    assertThat(queue).hasSize(POPULATED_SIZE);
   }
 
   @Test(dataProvider = "full")
-  public void peek_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+  public void peek_toEmpty(MpscGrowableArrayQueue<Integer> queue) {
     for (int i = 0; i < FULL_SIZE; i++) {
-      assertThat(buffer.peek()).isNotNull();
-      var item = buffer.poll();
+      assertThat(queue.peek()).isNotNull();
+      var item = queue.poll();
       assertThat(item).isNotNull();
     }
-    assertThat(buffer.peek()).isNull();
+    assertThat(queue.peek()).isNull();
   }
 
   @Test(dataProvider = "empty")
-  public void relaxedPeek_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.relaxedPeek()).isNull();
+  public void relaxedPeek_whenEmpty(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.relaxedPeek()).isNull();
   }
 
   @Test(dataProvider = "populated")
-  public void relaxedPeek_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.relaxedPeek()).isNotNull();
-    assertThat(buffer).hasSize(POPULATED_SIZE);
+  public void relaxedPeek_whenPopulated(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.relaxedPeek()).isNotNull();
+    assertThat(queue).hasSize(POPULATED_SIZE);
   }
 
   @Test(dataProvider = "full")
-  public void relaxedPeek_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
+  public void relaxedPeek_toEmpty(MpscGrowableArrayQueue<Integer> queue) {
     for (int i = 0; i < FULL_SIZE; i++) {
-      assertThat(buffer.relaxedPeek()).isNotNull();
-      var item = buffer.poll();
+      assertThat(queue.relaxedPeek()).isNotNull();
+      var item = queue.poll();
       assertThat(item).isNotNull();
     }
-    assertThat(buffer.relaxedPeek()).isNull();
+    assertThat(queue.relaxedPeek()).isNull();
   }
 
   /* --------------- Miscellaneous --------------- */
 
   @Test(dataProvider = "full")
-  public void iterator(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThrows(UnsupportedOperationException.class, buffer::iterator);
+  public void iterator(MpscGrowableArrayQueue<Integer> queue) {
+    assertThrows(UnsupportedOperationException.class, queue::iterator);
   }
 
   @Test(dataProvider = "populated")
-  public void inspection(MpscGrowableArrayQueue<Integer> buffer) {
-    assertThat(buffer.currentConsumerIndex()).isEqualTo(0);
-    assertThat(buffer.currentProducerIndex()).isEqualTo(POPULATED_SIZE);
+  public void inspection(MpscGrowableArrayQueue<Integer> queue) {
+    assertThat(queue.currentConsumerIndex()).isEqualTo(0);
+    assertThat(queue.currentProducerIndex()).isEqualTo(POPULATED_SIZE);
+  }
+
+  @Test(dataProvider = "full")
+  public void getNextBufferSize_invalid(MpscGrowableArrayQueue<Integer> queue) {
+    var buffer = new Integer[FULL_SIZE + 1];
+    assertThrows(IllegalStateException.class, () -> queue.getNextBufferSize(buffer));
   }
 
   /* --------------- Concurrency --------------- */
 
   @Test(dataProvider = "empty")
-  public void oneProducer_oneConsumer(MpscGrowableArrayQueue<Integer> buffer) {
+  public void oneProducer_oneConsumer(MpscGrowableArrayQueue<Integer> queue) {
     var started = new AtomicInteger();
     var finished = new AtomicInteger();
 
@@ -217,7 +223,7 @@ public final class MpscGrowableArrayQueueTest {
       started.incrementAndGet();
       await().untilAtomic(started, is(2));
       for (int i = 0; i < PRODUCE; i++) {
-        while (!buffer.offer(i)) {}
+        while (!queue.offer(i)) {}
       }
       finished.incrementAndGet();
     });
@@ -225,30 +231,30 @@ public final class MpscGrowableArrayQueueTest {
       started.incrementAndGet();
       await().untilAtomic(started, is(2));
       for (int i = 0; i < PRODUCE; i++) {
-        while (buffer.poll() == null) {}
+        while (queue.poll() == null) {}
       }
       finished.incrementAndGet();
     });
 
     await().untilAtomic(finished, is(2));
-    assertThat(buffer).isEmpty();
+    assertThat(queue).isEmpty();
   }
 
   @Test(dataProvider = "empty")
-  public void manyProducers_noConsumer(MpscGrowableArrayQueue<Integer> buffer) {
+  public void manyProducers_noConsumer(MpscGrowableArrayQueue<Integer> queue) {
     var count = new AtomicInteger();
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       for (int i = 0; i < PRODUCE; i++) {
-        if (buffer.offer(i)) {
+        if (queue.offer(i)) {
           count.incrementAndGet();
         }
       }
     });
-    assertThat(buffer).hasSize(count.get());
+    assertThat(queue).hasSize(count.get());
   }
 
   @Test(dataProvider = "empty")
-  public void manyProducers_oneConsumer(MpscGrowableArrayQueue<Integer> buffer) {
+  public void manyProducers_oneConsumer(MpscGrowableArrayQueue<Integer> queue) {
     var started = new AtomicInteger();
     var finished = new AtomicInteger();
 
@@ -256,7 +262,7 @@ public final class MpscGrowableArrayQueueTest {
       started.incrementAndGet();
       await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < (NUM_PRODUCERS * PRODUCE); i++) {
-        while (buffer.poll() == null) {}
+        while (queue.poll() == null) {}
       }
       finished.incrementAndGet();
     });
@@ -265,13 +271,13 @@ public final class MpscGrowableArrayQueueTest {
       started.incrementAndGet();
       await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < PRODUCE; i++) {
-        while (!buffer.offer(i)) {}
+        while (!queue.offer(i)) {}
       }
       finished.incrementAndGet();
     });
 
     await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
-    assertThat(buffer).isEmpty();
+    assertThat(queue).isEmpty();
   }
 
   /* --------------- Providers --------------- */
@@ -292,10 +298,10 @@ public final class MpscGrowableArrayQueueTest {
   }
 
   static MpscGrowableArrayQueue<Integer> makePopulated(int items) {
-    var buffer = new MpscGrowableArrayQueue<Integer>(4, FULL_SIZE);
+    var queue = new MpscGrowableArrayQueue<Integer>(4, FULL_SIZE);
     for (int i = 0; i < items; i++) {
-      buffer.add(i);
+      queue.add(i);
     }
-    return buffer;
+    return queue;
   }
 }

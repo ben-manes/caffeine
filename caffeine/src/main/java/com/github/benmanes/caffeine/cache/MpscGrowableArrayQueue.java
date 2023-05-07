@@ -92,16 +92,6 @@ abstract class MpscChunkedArrayQueue<E> extends MpscChunkedArrayQueueColdProduce
   public int capacity() {
     return (int) (maxQueueCapacity / 2);
   }
-
-  @Override
-  protected int getNextBufferSize(E[] buffer) {
-    return buffer.length;
-  }
-
-  @Override
-  protected long getCurrentBufferCapacity(long mask) {
-    return mask;
-  }
 }
 
 abstract class MpscChunkedArrayQueueColdProducerFields<E> extends BaseMpscLinkedArrayQueue<E> {
