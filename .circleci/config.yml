@@ -58,7 +58,7 @@ commands:
       - restore_cache:
           key: << parameters.cache_key >>-gradle-wrapper-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
       - restore_cache:
-          key: << parameters.cache_key >>-gradle-cache-{{ checksum "build.gradle" }}
+          key: << parameters.cache_key >>-gradle-cache-{{ checksum "build.gradle.kts" }}
   save_gradle_cache:
     parameters:
       cache_key:
@@ -71,7 +71,7 @@ commands:
       - save_cache:
           paths:
             - ~/.gradle/caches
-          key: << parameters.cache_key >>-gradle-cache-{{ checksum "build.gradle" }}
+          key: << parameters.cache_key >>-gradle-cache-{{ checksum "build.gradle.kts" }}
   run_tests:
     parameters:
       cache_key:
