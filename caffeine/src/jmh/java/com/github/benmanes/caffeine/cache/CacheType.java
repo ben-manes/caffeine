@@ -147,10 +147,10 @@ public enum CacheType {
   },
   Jackrabbit {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new GuavaCache<>(CacheLIRS.<K, V>newBuilder()
+      return new ConcurrentMapCache<>(CacheLIRS.<K, V>newBuilder()
           .segmentCount(CONCURRENCY_LEVEL)
           .maximumSize(maximumSize)
-          .build());
+          .build().asMap());
     }
   },
   LinkedHashMap_Lru {

@@ -35,13 +35,13 @@ import java.util.concurrent.TimeUnit;
 public interface Scheduler {
 
   /**
-   * Returns a future that will submit the task to the given executor after the given delay.
+   * Returns a future that will submit the task to the executor after the given delay.
    *
    * @param executor the executor to run the task
    * @param command the runnable task to schedule
    * @param delay how long to delay, in units of {@code unit}
    * @param unit a {@code TimeUnit} determining how to interpret the {@code delay} parameter
-   * @return a scheduled future representing pending submission of the task
+   * @return a scheduled future representing the pending submission of the task
    */
   Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit);
 

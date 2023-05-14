@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
 import static java.awt.Font.BOLD;
 import static java.awt.Font.PLAIN;
-import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static org.jfree.chart.plot.DefaultDrawingSupplier.DEFAULT_FILL_PAINT_SEQUENCE;
 import static org.jfree.chart.plot.DefaultDrawingSupplier.DEFAULT_OUTLINE_PAINT_SEQUENCE;
 import static org.jfree.chart.plot.DefaultDrawingSupplier.DEFAULT_OUTLINE_STROKE_SEQUENCE;
@@ -30,7 +30,6 @@ import java.awt.Font;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.List;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
@@ -49,13 +48,6 @@ import com.google.common.base.Strings;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
 
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Help;
-import picocli.CommandLine.ITypeConverter;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.TypeConversionException;
-
 /**
  * A utility that generates a line chart from the csv format produced by {@link CombinedCsvReport}.
  * <p>
@@ -63,21 +55,20 @@ import picocli.CommandLine.TypeConversionException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.ImmutableField")
-@Command(mixinStandardHelpOptions = true)
 public final class PlotCsv implements Runnable {
-  @Option(names = "--inputFile", required = true, description = "The csv file path")
-  private Path inputFile;
-  @Option(names = "--outputFile", required = true, description = "The chart file path")
-  private Path outputFile;
-  @Option(names = "--metric", required = true, defaultValue = "Hit Rate",
-      description = "The metric being compared (use _ for spaces)")
-  private String metric;
-  @Option(names = "--title", description = "The chart's title")
-  private String title;
-  @Option(names = "--theme", required = true, defaultValue = "light",
-      converter = ChartStyleConverter.class, description = "The chart's theme (light, dark)")
-  private ChartStyle style;
+  private final ChartStyle style;
+  private final Path outputFile;
+  private final Path inputFile;
+  private final String metric;
+  private final String title;
+
+  public PlotCsv(Path inputFile, Path outputFile, String metric, String title, ChartStyle style) {
+    this.outputFile = requireNonNull(outputFile);
+    this.inputFile = requireNonNull(inputFile);
+    this.metric = requireNonNull(metric);
+    this.title = requireNonNull(title);
+    this.style = requireNonNull(style);
+  }
 
   @Override
   public void run() {
@@ -90,7 +81,6 @@ public final class PlotCsv implements Runnable {
 
     try {
       ChartUtils.saveChartAsPNG(outputFile.toFile(), chart, 1280, 720);
-      System.out.printf(US, "Wrote chart to %s%n", outputFile);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -201,39 +191,8 @@ public final class PlotCsv implements Runnable {
     return new Color(rgb | a, /* alpha */  true);
   }
 
-  public static void main(String[] args) {
-    new CommandLine(PlotCsv.class)
-        .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
-        .setCommandName(PlotCsv.class.getSimpleName())
-        .setCaseInsensitiveEnumValuesAllowed(true)
-        .execute(args);
-  }
-
-  static final class ChartStyleConverter implements ITypeConverter<ChartStyle> {
-    @Override public ChartStyle convert(String value) {
-      switch (value.toLowerCase(US)) {
-        case "light": {
-          var grid = new Color(0xeee8d5);
-          var content = new Color(0x585858);
-          var background = new Color(0xfdf6e3);
-          return ChartStyle.forColors(background, content, grid);
-        }
-        case "dark": {
-          var grid = new Color(0x073642);
-          var content = new Color(0x93a1a1);
-          var background = new Color(0x002b36);
-          return ChartStyle.forColors(background, content, grid);
-        }
-        default:
-          throw new TypeConversionException(String.format(US,
-              "expected one of %s (case-insensitive) but was '%s'",
-              List.of("light", "dark"), value));
-      }
-    }
-  }
-
   @AutoValue
-  abstract static class ChartStyle {
+  public abstract static class ChartStyle {
     abstract RectangleInsets axisOffset();
 
     abstract Color title();
@@ -254,7 +213,7 @@ public final class PlotCsv implements Runnable {
     abstract float saturation();
     abstract float alpha();
 
-    static ChartStyle forColors(Color background, Color content, Color grid) {
+    public static ChartStyle forColors(Color background, Color content, Color grid) {
       return new AutoValue_PlotCsv_ChartStyle.Builder()
           .axisOffset(new RectangleInsets(20, 20, 20, 20))
           .extraLargeFont(new Font("Helvetica", BOLD, 18))
@@ -275,9 +234,23 @@ public final class PlotCsv implements Runnable {
           .build();
     }
 
+    public static ChartStyle light() {
+      var grid = new Color(0xeee8d5);
+      var content = new Color(0x585858);
+      var background = new Color(0xfdf6e3);
+      return ChartStyle.forColors(background, content, grid);
+    }
+
+    public static ChartStyle dark() {
+      var grid = new Color(0x073642);
+      var content = new Color(0x93a1a1);
+      var background = new Color(0x002b36);
+      return ChartStyle.forColors(background, content, grid);
+    }
+
     @AutoValue.Builder @CopyAnnotations
     @SuppressWarnings("NarrowingCompoundAssignment")
-    abstract static class Builder {
+    public abstract static class Builder {
       abstract Builder axisOffset(RectangleInsets axisOffset);
 
       abstract Builder title(Color title);

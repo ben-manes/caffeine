@@ -76,6 +76,24 @@ tasks.named<JavaExec>("run").configure {
   jvmArgs(javaExecJvmArgs())
 }
 
+tasks.register<Simulate>("simulate") {
+  group = "Application"
+  description = "Runs multiple simulations and generates an aggregate report"
+  dependsOn(tasks.processResources, tasks.compileJava)
+  classpath.set(sourceSets["main"].runtimeClasspath)
+  systemProperties.set(caffeineSystemProperties())
+  defaultJvmArgs.set(javaExecJvmArgs())
+  outputs.upToDateWhen { false }
+}
+
+tasks.register<Rewrite>("rewrite") {
+  group = "Application"
+  description = "Rewrite traces into the format used by other simulators"
+  dependsOn(tasks.processResources, tasks.compileJava)
+  classpath.set(sourceSets["main"].runtimeClasspath)
+  outputs.upToDateWhen { false }
+}
+
 eclipse.classpath.file.beforeMerged {
   if (this is EclipseClasspath) {
     entries.add(SourceFolder(
@@ -85,10 +103,10 @@ eclipse.classpath.file.beforeMerged {
 
 abstract class Simulate @Inject constructor(@Internal val external: ExecOperations,
                                             @Internal val layout: ProjectLayout) : DefaultTask() {
-  @get:Input @get:Optional @get:Option(option = "maximumSize", description = "The maximum sizes")
-  abstract val maximumSizes: Property<String>
   @get:Input @get:Optional @get:Option(option = "jvmArgs", description = "The jvm arguments")
   abstract val jvmOptions: Property<String>
+  @Input @Option(option = "maximumSize", description = "The maximum sizes")
+  var maximumSize = ""
   @Input @Option(option = "metric", description = "The metric to compare")
   var metric = "Hit Rate"
   @Input @Option(option = "theme", description = "The chart theme")
@@ -106,86 +124,21 @@ abstract class Simulate @Inject constructor(@Internal val external: ExecOperatio
 
   @TaskAction
   fun run() {
-    if (!maximumSizes.isPresent) {
-      fun yellow(param: String) = "\u001b[33m${param}\u001b[0m"
-      fun italic(param: String) = "\u001b[3m${param}\u001b[0m"
-      logger.error("\t${yellow("--maximumSize=")}${italic("<Long>[,<Long>...]")} is required")
-      return
-    }
-
-    val baseName = metric.lowercase().replace(" ", "_")
-    val reports = maximumSizes.get().split(",")
-      .map { it.replace("_", "").toLong() }
-      .sorted()
-      .associateWith { simulate(baseName, it) }
-    if (reports.size == 1) {
-      println("Did not generate a chart as only one data point")
-      println("Wrote combined report to " + reports.values.first())
-      return
-    }
-    val combinedReport = combineReports(baseName, reports)
-    generateChart(baseName, combinedReport)
-  }
-
-  /** Runs the simulation for the given maximumSize and returns the csv report */
-  private fun simulate(baseName: String, size: Long): File {
-    println(String.format("Running with maximumSize=%,d...", size))
-    val report = "$reportDir/${baseName}_$size.csv"
     external.javaexec {
-      mainClass.set("com.github.benmanes.caffeine.cache.simulator.Simulator")
+      mainClass.set("com.github.benmanes.caffeine.cache.simulator.Simulate")
       systemProperties(this@Simulate.systemProperties.get())
       classpath(this@Simulate.classpath)
       jvmArgs(defaultJvmArgs.get())
-      if (jvmOptions.isPresent) {
-        jvmArgs(jvmOptions.get().split(","))
-      }
-      systemProperties(
-        "caffeine.simulator.report.format" to "csv",
-        "caffeine.simulator.report.output" to report,
-        "caffeine.simulator.maximum-size" to size
-      )
-    }
-    return File(report)
-  }
 
-  /** Returns a combined report from the individual runs. */
-  private fun combineReports(baseName: String, reports: Map<Long, File>): File {
-    val combinedReport = "$reportDir/$baseName.csv"
-    external.javaexec {
-      mainClass.set("com.github.benmanes.caffeine.cache.simulator.report.csv.CombinedCsvReport")
-      classpath(this@Simulate.classpath)
-      reports.forEach { (maximumSize, report) ->
-        args("--inputFiles", "$maximumSize=$report")
+      if (maximumSize.isNotEmpty()) {
+        args("--maximumSize", maximumSize)
       }
-      args("--outputFile", combinedReport)
-      args("--metric", metric)
-    }
-    return File(combinedReport)
-  }
-
-  /** Renders a chart from the combined report. */
-  private fun generateChart(baseName: String, combinedReport: File) {
-    val chart = "$reportDir/$baseName.png"
-    external.javaexec {
-      mainClass.set("com.github.benmanes.caffeine.cache.simulator.report.csv.PlotCsv")
-      classpath(this@Simulate.classpath)
-      args("--inputFile", combinedReport)
-      args("--outputFile", chart)
+      args("--outputDir", reportDir)
       args("--metric", metric)
       args("--title", title)
       args("--theme", theme)
     }
   }
-}
-tasks.register<Simulate>("simulate") {
-  group = "Application"
-  description = "Runs multiple simulations and generates an aggregate report"
-  dependsOn(tasks.processResources, tasks.compileJava)
-
-  systemProperties.set(caffeineSystemProperties())
-  classpath.set(sourceSets["main"].runtimeClasspath)
-  defaultJvmArgs.set(javaExecJvmArgs())
-  outputs.upToDateWhen { false }
 }
 
 abstract class Rewrite @Inject constructor(@Internal val external: ExecOperations) : DefaultTask() {
@@ -223,11 +176,4 @@ abstract class Rewrite @Inject constructor(@Internal val external: ExecOperation
       }
     }
   }
-}
-tasks.register<Rewrite>("rewrite") {
-  group = "Application"
-  description = "Rewrite traces into the format used by other simulators"
-  dependsOn(tasks.processResources, tasks.compileJava)
-  classpath.set(sourceSets["main"].runtimeClasspath)
-  outputs.upToDateWhen { false }
 }

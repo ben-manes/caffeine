@@ -218,25 +218,32 @@ tasks.named<CheckForbiddenApis>("forbiddenApisJmh").configure {
   bundledSignatures.addAll(listOf("jdk-deprecated-18", "jdk-reflection"))
 }
 
-idea.module {
-  scopes["PROVIDED"]!!["plus"]!!.add(configurations["javaPoetCompileClasspath"])
+tasks.register<JavaExec>("memoryOverhead") {
+  group = "Benchmarks"
+  description = "Evaluates cache overhead"
+  mainClass.set("com.github.benmanes.caffeine.cache.MemoryBenchmark")
+  classpath(sourceSets["jmh"].runtimeClasspath + sourceSets["codeGen"].runtimeClasspath)
+  jvmArgs(
+    "--add-opens", "java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+    "--add-opens", "java.base/java.util.concurrent.locks=ALL-UNNAMED",
+    "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED",
+    "--add-opens", "java.base/java.lang.ref=ALL-UNNAMED",
+    "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+    "--add-opens", "java.base/java.util=ALL-UNNAMED",
+    "-javaagent:${configurations["javaAgent"].singleFile}")
 }
 
-eclipse.classpath.file.whenMerged {
-  if (this is EclipseClasspath) {
-    entries.filterIsInstance<SourceFolder>()
-      .filter { it.output == "bin/codeGen" }
-      .forEach { it.output = "bin/main" }
-  }
-}
-
-plugins.withType<EclipsePlugin>().configureEach {
-  project.eclipse.classpath.plusConfigurations.add(configurations["javaPoetCompileClasspath"])
+tasks.register<Stress>("stress") {
+  group = "Cache tests"
+  description = "Executes a stress test"
+  classpath.set(sourceSets["codeGen"].runtimeClasspath + sourceSets["test"].runtimeClasspath)
+  outputs.upToDateWhen { false }
+  dependsOn(tasks.compileTestJava)
 }
 
 for (scenario in Scenario.all()) {
   scenario.apply {
-    val task = tasks.register<Test>(scenario.testName()) {
+    val task = tasks.register<Test>(testName()) {
       group = "Parameterized Test"
       description = "Runs tests with the given features."
 
@@ -269,19 +276,20 @@ for (scenario in Scenario.all()) {
   }
 }
 
-tasks.register<JavaExec>("memoryOverhead") {
-  group = "Benchmarks"
-  description = "Evaluates cache overhead"
-  mainClass.set("com.github.benmanes.caffeine.cache.MemoryBenchmark")
-  classpath(sourceSets["jmh"].runtimeClasspath + sourceSets["codeGen"].runtimeClasspath)
-  jvmArgs(
-    "--add-opens", "java.base/java.util.concurrent.atomic=ALL-UNNAMED",
-    "--add-opens", "java.base/java.util.concurrent.locks=ALL-UNNAMED",
-    "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED",
-    "--add-opens", "java.base/java.lang.ref=ALL-UNNAMED",
-    "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-    "--add-opens", "java.base/java.util=ALL-UNNAMED",
-    "-javaagent:${configurations["javaAgent"].singleFile}")
+idea.module {
+  scopes["PROVIDED"]!!["plus"]!!.add(configurations["javaPoetCompileClasspath"])
+}
+
+eclipse.classpath.file.whenMerged {
+  if (this is EclipseClasspath) {
+    entries.filterIsInstance<SourceFolder>()
+      .filter { it.output == "bin/codeGen" }
+      .forEach { it.output = "bin/main" }
+  }
+}
+
+plugins.withType<EclipsePlugin>().configureEach {
+  project.eclipse.classpath.plusConfigurations.add(configurations["javaPoetCompileClasspath"])
 }
 
 abstract class Stress @Inject constructor(@Internal val external: ExecOperations) : DefaultTask() {
@@ -302,13 +310,6 @@ abstract class Stress @Inject constructor(@Internal val external: ExecOperations
       }
     }
   }
-}
-tasks.register<Stress>("stress") {
-  group = "Cache tests"
-  description = "Executes a stress test"
-  classpath.set(sourceSets["codeGen"].runtimeClasspath + sourceSets["test"].runtimeClasspath)
-  outputs.upToDateWhen { false }
-  dependsOn(tasks.compileTestJava)
 }
 
 data class Scenario(val implementation: Implementation,
@@ -334,6 +335,7 @@ data class Scenario(val implementation: Implementation,
       }.filter { it.isValid() }
     }
   }
+
   fun testName(): String = buildString {
     append(keys.name.lowercase() + "Keys")
     append("And").append(values).append("Values")

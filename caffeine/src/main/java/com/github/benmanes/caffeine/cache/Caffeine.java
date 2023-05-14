@@ -349,9 +349,6 @@ public final class Caffeine<K, V> {
    * may not offer real-time guarantees (including {@link ScheduledThreadPoolExecutor}). The
    * scheduling is best-effort and does not make any hard guarantees of when an expired entry will
    * be removed.
-   * <p>
-   * <b>Note for Java 9 and later:</b> consider using {@link Scheduler#systemScheduler()} to
-   * leverage the dedicated, system-wide scheduling thread.
    *
    * @param scheduler the scheduler that submits a task to the {@link #executor(Executor)} after a
    *        given delay

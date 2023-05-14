@@ -17,11 +17,11 @@ package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.text.NumberFormat;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.SortedMap;
 import java.util.stream.Stream;
 
 import com.google.common.collect.HashBasedTable;
@@ -31,40 +31,26 @@ import com.univocity.parsers.csv.CsvParserSettings;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
 
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Help;
-import picocli.CommandLine.Option;
-
 /**
- * A simple utility that combines multiple CSV reports that vary by the maximum cache size into a
- * single report for comparison of a single metric (such as the hit rate).
+ * A utility that combines multiple CSV reports that vary by the maximum cache size into a single
+ * report for comparison of a single metric (such as the hit rate).
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.ImmutableField")
-@Command(mixinStandardHelpOptions = true)
 public final class CombinedCsvReport implements Runnable {
-  @Option(names = "--inputFiles", required = true, split = ",",
-      description = "The maximumSize to the csv file path")
-  private Map<Long, Path> inputFiles;
-  @Option(names = "--metric", required = true, defaultValue = "Hit Rate",
-      description = "The metric to compare (use _ for spaces)")
-  private String metric;
-  @Option(names = "--outputFile", required = true, description = "The combined report")
-  private Path outputFile;
+  private final SortedMap<Long, Path> inputFiles;
+  private final Path outputFile;
+  private final String metric;
+
+  public CombinedCsvReport(SortedMap<Long, Path> inputFiles, String metric, Path outputFile) {
+    this.inputFiles = requireNonNull(inputFiles);
+    this.outputFile = requireNonNull(outputFile);
+    this.metric = metric.replace('_', ' ');
+  }
 
   @Override
   public void run() {
-    normalize();
     writeReport(tabulate());
-    System.out.printf(US, "Wrote combined report to %s%n", outputFile);
-  }
-
-  /** Normalizes the input parameters. */
-  private void normalize() {
-    metric = metric.replace('_', ' ');
-    inputFiles = new TreeMap<>(inputFiles);
   }
 
   /** Returns the combined results for the policy, maximum size, and the metric being compared. */
@@ -111,13 +97,5 @@ public final class CombinedCsvReport implements Runnable {
     settings.setHeaderWritingEnabled(true);
     settings.setHeaders(headers);
     return new CsvWriter(outputFile.toFile(), settings);
-  }
-
-  public static void main(String[] args) {
-    new CommandLine(CombinedCsvReport.class)
-        .setCommandName(CombinedCsvReport.class.getSimpleName())
-        .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
-        .setCaseInsensitiveEnumValuesAllowed(true)
-        .execute(args);
   }
 }

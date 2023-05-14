@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Locale.US;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,11 +72,9 @@ public final class Simulator {
       return;
     }
 
-    var stopwatch = Stopwatch.createStarted();
     try {
       broadcast(policies, trace);
       report(policies, trace.characteristics());
-      System.out.println("Executed in " + stopwatch);
     } catch (RuntimeException e) {
       if (!Thread.currentThread().isInterrupted()) {
         throw e;
@@ -138,6 +137,9 @@ public final class Simulator {
 
   public static void main(String[] args) {
     Logger.getLogger("").setLevel(Level.WARNING);
-    new Simulator(ConfigFactory.load()).run();
+    var simulator = new Simulator(ConfigFactory.load());
+    var stopwatch = Stopwatch.createStarted();
+    simulator.run();
+    System.out.printf(US, "Executed in %s%n", stopwatch);
   }
 }
