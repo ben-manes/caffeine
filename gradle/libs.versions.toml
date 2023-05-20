@@ -92,7 +92,7 @@ xerces = "2.12.2"
 xstream = "1.4.20"
 xz = "1.9"
 ycsb = "0.17.0"
-zstd = "1.5.5-2"
+zstd = "1.5.5-3"
 
 [libraries]
 asm-bom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }

@@ -226,7 +226,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
-  public void getAll_absent_throwsExecption(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void getAll_absent_throwsException(LoadingCache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () -> cache.getAll(context.absentKeys()));
     int misses = context.absentKeys().size();
     int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
@@ -236,7 +236,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.CHECKED_EXCEPTIONAL, Loader.BULK_CHECKED_EXCEPTIONAL })
-  public void getAll_absent_throwsCheckedExecption(
+  public void getAll_absent_throwsCheckedException(
       LoadingCache<Int, Int> cache, CacheContext context) {
     var e = assertThrows(CompletionException.class, () -> cache.getAll(context.absentKeys()));
     assertThat(e).hasCauseThat().isInstanceOf(ExecutionException.class);
@@ -249,7 +249,7 @@ public final class LoadingCacheTest {
   @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
-  public void getAll_absent_throwsExecption_iterable(
+  public void getAll_absent_throwsException_iterable(
       LoadingCache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         cache.getAll(() -> context.absentKeys().iterator()));

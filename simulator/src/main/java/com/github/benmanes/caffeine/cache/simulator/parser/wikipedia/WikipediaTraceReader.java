@@ -58,7 +58,7 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
 
   /**
    * Returns the request's path or {@code null} if this request should be ignored. The input is
-   * space deliminated with the following format,
+   * space delimited with the following format,
    * <ul>
    *  <li>A monotonically increasing counter (useful for sorting the trace in chronological order)
    *  <li>The timestamp of the request in Unix notation with millisecond precision

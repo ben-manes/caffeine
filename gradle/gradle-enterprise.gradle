@@ -21,7 +21,6 @@ gradleEnterprise {
   }
 }
 
-def gradleEnterpriseCachePassword = properties.'gradleEnterpriseCachePassword'
 buildCache {
   local.enabled = true
   remote(HttpBuildCache) {
@@ -30,7 +29,8 @@ buildCache {
     enabled = true
     credentials {
       username = 'ci'
-      password = gradleEnterpriseCachePassword ?: System.env.GRADLE_ENTERPRISE_CACHE_PASSWORD
+      password = settings.ext.find('gradleEnterpriseCachePassword')
+        ?: System.env.GRADLE_ENTERPRISE_CACHE_PASSWORD
     }
   }
 }

@@ -3,14 +3,14 @@ permissions: read-all
 on: [ push, pull_request ]
 
 jobs:
-  misspell:
+  spellcheck:
     name: Check spelling
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@128a63446a954579617e875aaab7d2978154e969 # v2.4.0
         with:
-          disable-sudo: true
+          disable-sudo: false
           egress-policy: block
           allowed-endpoints: >
             github.com:443
@@ -19,5 +19,7 @@ jobs:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - name: Install
         run: wget -O - -q https://raw.githubusercontent.com/client9/misspell/master/install-misspell.sh | sh -s -- -b .
-      - name: Misspell
+      - name: Spell Check with Misspell
         run: ./misspell -error .
+      - name: Spell Check with Typos
+        uses: crate-ci/typos@5c98b91f18b0ef500f1b10a1a73b6e85dc1166f2 # v1.14.10

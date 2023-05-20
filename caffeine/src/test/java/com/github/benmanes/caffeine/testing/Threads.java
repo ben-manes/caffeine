@@ -74,7 +74,7 @@ public final class Threads {
     } catch (ExecutionException e) {
       fail("Exception during test: " + e, e);
     } catch (TimeoutException e) {
-      handleTimout(failures, es, e);
+      handleTimeout(failures, es, e);
     } catch (InterruptedException e) {
       fail("", e);
     } finally {
@@ -82,7 +82,7 @@ public final class Threads {
     }
   }
 
-  public static void handleTimout(Queue<String> failures, ExecutorService es, TimeoutException e) {
+  public static void handleTimeout(Queue<String> failures, ExecutorService es, TimeoutException e) {
     for (var trace : Thread.getAllStackTraces().values()) {
       for (var element : trace) {
         logger.info("\tat {}", element);
