@@ -67,8 +67,8 @@ tasks.named<JavaCompile>("compileJava").configure {
   modularity.inferModulePath.set(true)
 }
 
-tasks.withType<Jar>().configureEach {
-  applyOsgi(this, mapOf(
+tasks.jar {
+  bundle.bnd(mapOf(
     "Automatic-Module-Name" to "com.github.benmanes.caffeine.jcache",
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine.jcache",
     "Import-Package" to listOf(

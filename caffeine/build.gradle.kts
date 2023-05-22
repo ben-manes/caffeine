@@ -167,10 +167,10 @@ val junitTest = tasks.register<Test>("junitTest") {
   systemProperty("caffeine.osgi.jar", relativePath(jar.get().archiveFile.get().asFile.path))
 }
 
-tasks.jar.configure {
+tasks.jar {
   from(sourceSets["main"].output + sourceSets["codeGen"].output)
   dependsOn(compileCodeGenJava)
-  applyOsgi(this, mapOf(
+  bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine",
     "Import-Package" to "",
     "Export-Package" to listOf(

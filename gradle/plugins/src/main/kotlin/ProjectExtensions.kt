@@ -11,31 +11,6 @@ fun Project.version(major: Int, minor: Int, patch: Int, releaseBuild: Boolean) {
   version = "$major.$minor.$patch" + if (releaseBuild) "" else "-SNAPSHOT"
 }
 
-/** Adds the osgi manifest attributes to the jar task. */
-fun Project.applyOsgi(task: Jar, instructions: Map<String, Any>) {
-  plugins.withId("java-library") {
-    val extension = the<JavaPluginExtension>()
-    if (task.extensions.findByType(BundleTaskExtension::class.java) == null) {
-      task.extensions.create(BundleTaskExtension.NAME, BundleTaskExtension::class.java, task)
-    }
-    val defaults = mapOf(
-      "Bundle-License" to "https://www.apache.org/licenses/LICENSE-2.0",
-      "Build-Jdk-Spec" to extension.toolchain.languageVersion.get(),
-      "Implementation-Title" to description,
-      "Bundle-Description" to description,
-      "Implementation-Version" to version,
-      "-noextraheaders" to true,
-      "-reproducible" to true,
-      "-snapshot" to "SNAPSHOT")
-    task.extensions.configure<BundleTaskExtension>(BundleTaskExtension.NAME) {
-      properties.set(provider {
-        mapOf("project.description" to project.description)
-      })
-      bnd(defaults + instructions)
-    }
-  }
-}
-
 fun Project.javaExecJvmArgs(): List<String> {
   val jvmArgs = mutableListOf("-XX:+UseParallelGC", "-Xmx4g")
   val arguments = findProperty("jvmArgs") as String?

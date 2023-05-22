@@ -59,8 +59,8 @@ tasks.withType<Test>().configureEach {
   useJUnitPlatform()
 }
 
-tasks.withType<Jar>().configureEach {
-  applyOsgi(this, mapOf(
+tasks.jar {
+  bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.benmanes.caffeine.simulator",
     "Automatic-Module-Name" to "com.github.benmanes.caffeine.simulator"))
 }

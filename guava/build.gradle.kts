@@ -19,12 +19,13 @@ tasks.named<JavaCompile>("compileJava").configure {
 }
 
 tasks.withType<Test>().configureEach {
+  useJUnitPlatform()
+
   project(":caffeine").plugins.withId("java-library") {
     val caffeineJar = project(":caffeine").tasks.jar
     val guavaJar = project(":guava").tasks.jar
     dependsOn(caffeineJar, guavaJar)
 
-    useJUnitPlatform()
     systemProperties(mapOf(
       "guava.osgi.version" to libs.versions.guava.get(),
       "caffeine.osgi.jar" to relativePath(caffeineJar.get().archiveFile.get().asFile.path),
@@ -33,8 +34,8 @@ tasks.withType<Test>().configureEach {
   }
 }
 
-tasks.withType<Jar>().configureEach {
-  applyOsgi(this, mapOf(
+tasks.jar {
+  bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine.guava",
     "Import-Package" to listOf(
       "com.google.common.cache",

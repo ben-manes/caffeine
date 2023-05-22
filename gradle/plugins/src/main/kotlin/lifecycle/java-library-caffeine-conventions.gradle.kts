@@ -49,11 +49,26 @@ tasks.withType<AbstractArchiveTask>().configureEach {
   dirMode = "775".toInt(8)
 }
 
-tasks.withType<Jar>().configureEach {
+val projectDescription = objects.property<String>().convention(provider { project.description })
+tasks.jar {
   inputs.property("version", project.version.toString())
   outputs.cacheIf { true }
   metaInf {
     from("$rootDir/LICENSE")
+  }
+  bundle {
+    properties.set(projectDescription.map {
+      mapOf("project.description" to it)
+    })
+    bnd(mapOf(
+      "Bundle-License" to "https://www.apache.org/licenses/LICENSE-2.0",
+      "Build-Jdk-Spec" to java.toolchain.languageVersion.get(),
+      "Implementation-Title" to project.description,
+      "Bundle-Description" to project.description,
+      "Implementation-Version" to version,
+      "-noextraheaders" to true,
+      "-reproducible" to true,
+      "-snapshot" to "SNAPSHOT"))
   }
 }
 
