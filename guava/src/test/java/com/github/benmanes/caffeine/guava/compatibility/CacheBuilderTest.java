@@ -23,6 +23,8 @@ import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalLis
 import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.queuingRemovalListener;
 import static com.github.benmanes.caffeine.guava.compatibility.TestingWeighers.constantWeigher;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -32,7 +34,6 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -421,7 +422,7 @@ public class CacheBuilderTest extends TestCase {
     CacheLoader<String, String> computingFunction = new CacheLoader<String, String>() {
       @Override public String load(String key) {
         if (shouldWait.get()) {
-          assertTrue(Uninterruptibles.awaitUninterruptibly(computingLatch, 300, TimeUnit.MINUTES));
+          assertTrue(Uninterruptibles.awaitUninterruptibly(computingLatch, 300, MINUTES));
         }
         return key;
       }
@@ -445,12 +446,12 @@ public class CacheBuilderTest extends TestCase {
     }).start();
 
     // wait for the computingEntry to be created
-    assertTrue(computationStarted.await(300, TimeUnit.MINUTES));
+    assertTrue(computationStarted.await(300, MINUTES));
     cache.invalidateAll();
     // let the computation proceed
     computingLatch.countDown();
     // don't check cache.size() until we know the get("b") call is complete
-    assertTrue(computationComplete.await(300, TimeUnit.MINUTES));
+    assertTrue(computationComplete.await(300, MINUTES));
 
     // At this point, the listener should be holding the seed value (a -> a), and the map should
     // contain the computed value (b -> b), since the clear() happened before the computation
@@ -521,7 +522,7 @@ public class CacheBuilderTest extends TestCase {
       Thread.yield();
     }
     cache.invalidateAll();
-    assertTrue(tasksFinished.await(300, TimeUnit.MINUTES));
+    assertTrue(tasksFinished.await(300, MINUTES));
 
     // Check all of the removal notifications we received: they should have had correctly-associated
     // keys and values. (An earlier bug saw removal notifications for in-progress computations,
@@ -573,7 +574,7 @@ public class CacheBuilderTest extends TestCase {
               computeNullCount.incrementAndGet();
               return null;
             } else if (behavior == 2) { // slight delay before returning
-              Uninterruptibles.sleepUninterruptibly(5, TimeUnit.MILLISECONDS);
+              Uninterruptibles.sleepUninterruptibly(5, MILLISECONDS);
               computeCount.incrementAndGet();
               return key;
             } else {
@@ -585,7 +586,7 @@ public class CacheBuilderTest extends TestCase {
     final LoadingCache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
         .executor(MoreExecutors.directExecutor())
-        .expireAfterWrite(100, TimeUnit.MILLISECONDS)
+        .expireAfterWrite(100, MILLISECONDS)
         .removalListener(removalListener)
         //.maximumSize(5000)
         ,
@@ -606,7 +607,7 @@ public class CacheBuilderTest extends TestCase {
     }
 
     threadPool.shutdown();
-    assertTrue(threadPool.awaitTermination(300, TimeUnit.SECONDS));
+    assertTrue(threadPool.awaitTermination(300, SECONDS));
 
     // Since we're not doing any more cache operations, and the cache only expires/evicts when doing
     // other operations, the cache and the removal queue won't change from this point on.
@@ -643,7 +644,7 @@ public class CacheBuilderTest extends TestCase {
 
     @Override public T load(T key) {
       if (shouldWait.get()) {
-        assertTrue(Uninterruptibles.awaitUninterruptibly(delayLatch, 300, TimeUnit.SECONDS));
+        assertTrue(Uninterruptibles.awaitUninterruptibly(delayLatch, 300, SECONDS));
       }
       return key;
     }

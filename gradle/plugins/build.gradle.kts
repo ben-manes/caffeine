@@ -27,7 +27,7 @@ dependencies {
   implementation(platform(libs.jackson.bom))
   implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 
-  libs.bundles.restrictions.get().forEach { library ->
+  libs.bundles.constraints.get().forEach { library ->
     constraints.add("implementation", library.module.toString())
       .version { require(library.version!!) }
   }

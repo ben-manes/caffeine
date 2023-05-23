@@ -31,7 +31,7 @@ gradle -Pagent run
 ./gradlew nativeRun
 ```
 
-### Try the binary yourself at,
+### Try the binary yourself at
 
 ```console
 ./build/native/nativeCompile/graal-native

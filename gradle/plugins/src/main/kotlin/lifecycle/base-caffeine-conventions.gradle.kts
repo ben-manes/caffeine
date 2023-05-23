@@ -11,7 +11,7 @@ dependencies {
     "javadocElements", "runtimeOnly", "sourcesElements")
   configurations.configureEach {
     if ((name !in ignored) && (this is DefaultConfiguration) && isCanBeDeclaredAgainst) {
-      libs.bundles.restrictions.get().forEach { library ->
+      libs.bundles.constraints.get().forEach { library ->
         constraints.add(name, library.module.toString()).version { require(library.version!!) }
       }
     }

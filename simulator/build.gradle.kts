@@ -156,22 +156,26 @@ abstract class Rewrite @Inject constructor(@Internal val external: ExecOperation
   @TaskAction
   fun run() {
     external.javaexec {
+      var help = true
       classpath(this@Rewrite.classpath)
       mainClass.set("com.github.benmanes.caffeine.cache.simulator.parser.Rewriter")
       if (inputFiles.isNotEmpty()) {
         args("--inputFiles", inputFiles.joinToString(","))
+        help = false
       }
       if (inputFormat.isPresent) {
         args("--inputFormat", inputFormat.get())
+        help = false
       }
       if (outputFile.isPresent) {
         args("--outputFile", outputFile.get())
+        help = false
       }
       if (outputFormat.isPresent) {
         args("--outputFormat", outputFormat.get())
+        help = false
       }
-      if (inputFiles.isEmpty() && !inputFormat.isPresent
-          && !outputFile.isPresent && !outputFormat.isPresent) {
+      if (help) {
         args("--help")
       }
     }

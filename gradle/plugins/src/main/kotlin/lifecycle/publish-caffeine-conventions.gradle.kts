@@ -70,6 +70,5 @@ signing {
 }
 
 tasks.withType<Sign>().configureEach {
-  notCompatibleWithConfigurationCache(
-    "The $name task is not compatible with the configuration cache")
+  incompatibleWithConfigurationCache()
 }

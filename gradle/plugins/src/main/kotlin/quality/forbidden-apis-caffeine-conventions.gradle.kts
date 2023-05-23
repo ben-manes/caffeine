@@ -10,6 +10,5 @@ forbiddenApis {
 
 tasks.withType<CheckForbiddenApis>().configureEach {
   enabled = System.getProperties().containsKey("forbiddenApis")
-  notCompatibleWithConfigurationCache(
-    "The $name task is not compatible with the configuration cache")
+  incompatibleWithConfigurationCache()
 }

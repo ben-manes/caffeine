@@ -1570,10 +1570,10 @@ public final class ExpirationTest {
   public void entrySet_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
-    assertThat(cache.asMap().entrySet().contains(Map.entry(context.absentKey(), future))).isTrue();
+    assertThat(cache.asMap().entrySet().contains(entry(context.absentKey(), future))).isTrue();
 
     context.ticker().advance(Duration.ofMinutes(5));
-    assertThat(cache.asMap().entrySet().contains(Map.entry(context.absentKey(), future))).isTrue();
+    assertThat(cache.asMap().entrySet().contains(entry(context.absentKey(), future))).isTrue();
     future.complete(null);
   }
 

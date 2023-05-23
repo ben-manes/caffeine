@@ -69,8 +69,7 @@ jmhReport {
 tasks.withType<JmhTask>().configureEach {
   group = "Benchmarks"
   description = "Executes a Java microbenchmark"
-  notCompatibleWithConfigurationCache(
-    "The $name task is not compatible with the configuration cache")
+  incompatibleWithConfigurationCache()
   outputs.upToDateWhen { false }
 
   doFirst {
@@ -88,13 +87,11 @@ tasks.withType<JmhBytecodeGeneratorTask>().configureEach {
 }
 
 tasks.named("jmhJar").configure {
-  notCompatibleWithConfigurationCache(
-    "The $name task is not compatible with the configuration cache")
+  incompatibleWithConfigurationCache()
 }
 
 tasks.named("jmhReport").configure {
-  notCompatibleWithConfigurationCache(
-    "The $name task is not compatible with the configuration cache")
+  incompatibleWithConfigurationCache()
 }
 
 idea.module {

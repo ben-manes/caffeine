@@ -39,9 +39,8 @@ tasks.named("coveralls").configure {
   group = "Coverage reports"
   description = "Uploads the aggregated coverage report to Coveralls"
   dependsOn(jacocoFullReport)
+  incompatibleWithConfigurationCache()
   onlyIf { System.getenv().contains("CI") }
-  notCompatibleWithConfigurationCache(
-    "The $name task is not compatible with the configuration cache")
 }
 
 subprojects {

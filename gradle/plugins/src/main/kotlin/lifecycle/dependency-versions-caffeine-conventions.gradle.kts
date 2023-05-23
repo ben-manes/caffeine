@@ -12,7 +12,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
         val stable = listOf("javax.json.bind", "org.jetbrains.kotlin", "org.osgi")
         if ((candidate.group in stable) && isNonStable(candidate.version)) {
           reject("Release candidate")
-        } else if (candidate.module == "commons-io" && candidate.version.startsWith("2003")) {
+        } else if ((candidate.module == "commons-io") && candidate.version.startsWith("2003")) {
           reject("Bad release")
         }
       }

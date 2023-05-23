@@ -30,60 +30,64 @@ LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
 
 Caffeine provides flexible construction to create a cache with a combination of the following
 optional features:
- * [automatic loading of entries][population] into the cache, optionally asynchronously
- * [size-based eviction][size] when a maximum is exceeded based on [frequency and recency][efficiency]
- * [time-based expiration][time] of entries, measured since last access or last write
- * [asynchronously refresh][refresh] when the first stale request for an entry occurs
- * keys automatically wrapped in [weak references][reference]
- * values automatically wrapped in [weak or soft references][reference]
- * [notification][listener] of evicted (or otherwise removed) entries
- * [writes propagated][compute] to an external resource
- * accumulation of cache access [statistics][statistics]
+
+* [automatic loading of entries][population] into the cache, optionally asynchronously
+* [size-based eviction][size] when a maximum is exceeded based on [frequency and recency][efficiency]
+* [time-based expiration][time] of entries, measured since last access or last write
+* [asynchronously refresh][refresh] when the first stale request for an entry occurs
+* keys automatically wrapped in [weak references][reference]
+* values automatically wrapped in [weak or soft references][reference]
+* [notification][listener] of evicted (or otherwise removed) entries
+* [writes propagated][compute] to an external resource
+* accumulation of cache access [statistics][statistics]
 
 In addition, Caffeine offers the following extensions:
- * [JSR-107 JCache][jsr107]
- * [Guava adapters][guava-adapter]
- * [Simulation][simulator]
+
+* [JSR-107 JCache][jsr107]
+* [Guava adapters][guava-adapter]
+* [Simulation][simulator]
 
 Use Caffeine in a community provided integration:
- * [Play Framework][play]: High velocity web framework
- * [Micronaut][micronaut]: A modern, full-stack framework
- * [Spring Cache][spring]: As of Spring 4.3 & Boot 1.4
- * [Quarkus][quarkus]: Supersonic Subatomic Java
- * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
- * [ScalaCache][scala-cache]: Simple caching in Scala
- * [Camel][camel]: Routing and mediation engine
- * [JHipster][jhipster]: Generate, develop, deploy
- * [Aedile][aedile]: Kotlin wrapper for Caffeine
+
+* [Play Framework][play]: High velocity web framework
+* [Micronaut][micronaut]: A modern, full-stack framework
+* [Spring Cache][spring]: As of Spring 4.3 & Boot 1.4
+* [Quarkus][quarkus]: Supersonic Subatomic Java
+* [Scaffeine][scaffeine]: Scala wrapper for Caffeine
+* [ScalaCache][scala-cache]: Simple caching in Scala
+* [Camel][camel]: Routing and mediation engine
+* [JHipster][jhipster]: Generate, develop, deploy
+* [Aedile][aedile]: Kotlin wrapper for Caffeine
 
 Powering infrastructure near you:
- * [Dropwizard][dropwizard]: Ops-friendly, high-performance, RESTful APIs
- * [Cassandra][cassandra]: Manage massive amounts of data, fast
- * [Coherence][coherence]: Mission critical in-memory data grid
- * [Accumulo][accumulo]: A sorted, distributed key/value store
- * [HBase][hbase]: A distributed, scalable, big data store
- * [Apache Solr][solr]: Blazingly fast enterprise search
- * [Infinispan][infinispan]: Distributed in-memory data grid
- * [Redisson][redisson]: Ultra-fast in-memory data grid
- * [OpenWhisk][open-whisk]: Serverless cloud platform
- * [Corfu][corfu]: A cluster consistency platform
- * [Grails][grails]: Groovy-based web framework
- * [Finagle][finagle]: Extensible RPC system
- * [Neo4j][neo4j]: Graphs for Everyone
- * [Druid][druid]: Real-time analytics
+
+* [Dropwizard][dropwizard]: Ops-friendly, high-performance, RESTful APIs
+* [Cassandra][cassandra]: Manage massive amounts of data, fast
+* [Coherence][coherence]: Mission critical in-memory data grid
+* [Accumulo][accumulo]: A sorted, distributed key/value store
+* [HBase][hbase]: A distributed, scalable, big data store
+* [Apache Solr][solr]: Blazingly fast enterprise search
+* [Infinispan][infinispan]: Distributed in-memory data grid
+* [Redisson][redisson]: Ultra-fast in-memory data grid
+* [OpenWhisk][open-whisk]: Serverless cloud platform
+* [Corfu][corfu]: A cluster consistency platform
+* [Grails][grails]: Groovy-based web framework
+* [Finagle][finagle]: Extensible RPC system
+* [Neo4j][neo4j]: Graphs for Everyone
+* [Druid][druid]: Real-time analytics
 
 ### In the News
 
- * An in-depth description of Caffeine's architecture.
-   * [Design of a Modern Cache: part #1][modern-cache-1], [part #2][modern-cache-2]
-     ([slides][modern-cache-slides]) at [HighScalability][HighScalability]
- * Caffeine is presented as part of research papers evaluating its novel eviction policy.
-   * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu]
-     by Gil Einziger, Roy Friedman, Ben Manes
-   * [Adaptive Software Cache Management][adaptive-tinylfu]
-     by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
-   * [Lightweight Robust Size Aware Cache Management][size-tinylfu]
-     by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
+* An in-depth description of Caffeine's architecture.
+  * [Design of a Modern Cache: part #1][modern-cache-1], [part #2][modern-cache-2]
+    ([slides][modern-cache-slides]) at [HighScalability][HighScalability]
+* Caffeine is presented as part of research papers evaluating its novel eviction policy.
+  * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu]
+    by Gil Einziger, Roy Friedman, Ben Manes
+  * [Adaptive Software Cache Management][adaptive-tinylfu]
+    by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
+  * [Lightweight Robust Size Aware Cache Management][size-tinylfu]
+    by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
 
 ### Download
 

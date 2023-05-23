@@ -19,10 +19,9 @@ modes.forEach { (mode, details) ->
     group = "Object Layout"
     description = details
     dependsOn(tasks.compileJava)
+    incompatibleWithConfigurationCache()
     mainClass.set("org.openjdk.jol.Main")
     classpath(objectLayout, sourceSets.main.map { it.runtimeClasspath })
-    notCompatibleWithConfigurationCache(
-      "The $name task is not compatible with the configuration cache")
 
     doFirst {
       var className = findProperty("className") as String?

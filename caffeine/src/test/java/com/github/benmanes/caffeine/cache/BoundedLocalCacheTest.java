@@ -324,7 +324,7 @@ public final class BoundedLocalCacheTest {
 
       if (!start.equals(end)) {
         verify(executor).execute(any());
-        Mockito.reset(executor);
+        reset(executor);
       }
     });
   }
@@ -2044,7 +2044,7 @@ public final class BoundedLocalCacheTest {
     int maximum = cache.evicts() ? (int) context.maximumSize() : 100;
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * maximum);
     for (int i = 0; i < maximum; i++) {
-      var key = CacheContext.intern(Int.valueOf(i));
+      var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
@@ -2077,7 +2077,7 @@ public final class BoundedLocalCacheTest {
   public void expirationDelay_probation(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
-      var key = CacheContext.intern(Int.valueOf(i));
+      var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
@@ -2108,7 +2108,7 @@ public final class BoundedLocalCacheTest {
   public void expirationDelay_protected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
-      var key = CacheContext.intern(Int.valueOf(i));
+      var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
@@ -2140,7 +2140,7 @@ public final class BoundedLocalCacheTest {
   public void expirationDelay_writeOrder(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterWrite().timeNanos() / (2 * context.maximumSize());
     for (int i = 0; i < (int) context.maximumSize(); i++) {
-      var key = CacheContext.intern(Int.valueOf(i));
+      var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
       assertThat(value).isNull();
 
@@ -2165,7 +2165,7 @@ public final class BoundedLocalCacheTest {
     int maximum = cache.evicts() ? (int) context.maximumSize() : 100;
     long stepSize = context.expiryTime().timeNanos() / (2 * maximum);
     for (int i = 0; i < maximum; i++) {
-      var key = CacheContext.intern(Int.valueOf(i));
+      var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
       assertThat(value).isNull();
 

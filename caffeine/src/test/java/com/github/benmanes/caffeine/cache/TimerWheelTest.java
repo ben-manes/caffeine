@@ -158,7 +158,7 @@ public final class TimerWheelTest {
       timerWheel.schedule(new Timer(clock + duration));
     }
     for (int i = 0; i < TimerWheel.BUCKETS.length; i++) {
-      timerWheel.advance(cache, clock - 3 * TimerWheel.SPANS[i]);
+      timerWheel.advance(cache, clock - 3 * SPANS[i]);
     }
 
     verifyNoInteractions(cache);

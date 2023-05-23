@@ -216,7 +216,7 @@ osgi-test-compile = ["pax-exam-junit4"]
 osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function",
   "osgi-promise", "pax-exam-container-native", "pax-exam-link-mvn", "pax-url-aether"]
 pmd = ["pmd", "pmd-ant", "pmd-java"]
-restrictions = ["bcel", "bouncycastle", "commons-text", "httpclient", "jcommander",
+constraints = ["bcel", "bouncycastle", "commons-text", "httpclient", "jcommander",
   "jsoup", "nekohtml", "protobuf", "snakeyaml", "xerces", "xstream" ]
 slf4j-jdk = ["slf4j-jdk-platform-logging", "slf4j-jdk14"]
 slf4j-nop = ["slf4j-jdk-platform-logging", "slf4j-nop"]

@@ -5,6 +5,7 @@ on: [ push, pull_request ]
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       actions: read
       contents: read
@@ -23,6 +24,7 @@ jobs:
             production.cloudflare.docker.com:443
             raw.githubusercontent.com:443
             registry-1.docker.io:443
+            *.blob.core.windows.net:443
       - name: Checkout code
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - name: Run Codacy Analysis
