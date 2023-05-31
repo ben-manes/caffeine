@@ -21,6 +21,8 @@ jobs:
             api.github.com:443
             auth.docker.io:443
             github.com:443
+            golang.org:443
+            objects.githubusercontent.com:443
             production.cloudflare.docker.com:443
             raw.githubusercontent.com:443
             registry-1.docker.io:443
@@ -28,7 +30,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - name: Run Codacy Analysis
-        uses: codacy/codacy-analysis-cli-action@5cc54a75f9ad88159bb54046196d920e40e367a5 # v4.3.0
+        uses: codacy/codacy-analysis-cli-action@master
         continue-on-error: true
         with:
           format: sarif
