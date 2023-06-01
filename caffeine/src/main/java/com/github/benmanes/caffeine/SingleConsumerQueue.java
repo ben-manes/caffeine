@@ -116,7 +116,12 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   static final int ARENA_MASK = ARENA_LENGTH - 1;
 
   /** The factory for creating an optimistic node. */
-  static final Function<?, ?> OPTIMISIC = Node<Object>::new;
+  static final Function<?, ?> OPTIMISIC = 
+  
+  
+  
+  
+  Node<Object>::new;
 
   /**
    * The number of times to spin (doing nothing except polling a memory location) before giving up
