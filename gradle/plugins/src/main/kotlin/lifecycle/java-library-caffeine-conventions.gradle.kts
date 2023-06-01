@@ -18,16 +18,16 @@ dependencies {
   annotationProcessor(platform(libs.kotlin.bom))
 }
 
-java.toolchain.languageVersion.set(JavaLanguageVersion.of(System.getenv("JAVA_VERSION") ?: "11"))
+java.toolchain.languageVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION") ?: "11")
 
 tasks.withType<JavaCompile>().configureEach {
   sourceCompatibility = java.toolchain.languageVersion.get().toString()
   targetCompatibility = java.toolchain.languageVersion.get().toString()
-  options.release.set(java.toolchain.languageVersion.get().asInt())
+  options.release = java.toolchain.languageVersion.get().asInt()
 
-  javaCompiler.set(javaToolchains.compilerFor {
-    languageVersion.set(java.toolchain.languageVersion)
-  })
+  javaCompiler = javaToolchains.compilerFor {
+    languageVersion = java.toolchain.languageVersion
+  }
 
   options.compilerArgs.add("-Xlint:all,-processing,-exports,-auxiliaryclass,"
     + "-requires-automatic,-requires-transitive-automatic")
@@ -37,9 +37,9 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<JavaExec>().configureEach {
   jvmArgs(DisableStrongEncapsulationJvmArgs)
-  javaLauncher.set(javaToolchains.launcherFor {
-    languageVersion.set(java.toolchain.languageVersion)
-  })
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = java.toolchain.languageVersion
+  }
 }
 
 tasks.withType<AbstractArchiveTask>().configureEach {
@@ -57,9 +57,9 @@ tasks.jar {
     from("$rootDir/LICENSE")
   }
   bundle {
-    properties.set(projectDescription.map {
+    properties = projectDescription.map {
       mapOf("project.description" to it)
-    })
+    }
     bnd(mapOf(
       "Bundle-License" to "https://www.apache.org/licenses/LICENSE-2.0",
       "Build-Jdk-Spec" to java.toolchain.languageVersion.get(),

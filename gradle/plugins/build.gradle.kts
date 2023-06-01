@@ -5,7 +5,7 @@ plugins {
   alias(libs.plugins.versions)
 }
 
-java.toolchain.languageVersion.set(JavaLanguageVersion.of(11))
+java.toolchain.languageVersion = JavaLanguageVersion.of(11)
 
 dependencies {
   implementation(libs.bnd)

@@ -19,7 +19,7 @@ tasks.withType<Checkstyle>().configureEach {
   enabled = System.getProperties().containsKey("checkstyle")
   group = "Checkstyle"
   reports {
-    xml.required.set(false)
-    html.required.set(true)
+    xml.required = false
+    html.required = true
   }
 }

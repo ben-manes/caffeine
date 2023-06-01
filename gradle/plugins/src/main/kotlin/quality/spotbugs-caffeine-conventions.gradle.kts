@@ -15,10 +15,10 @@ dependencies {
 }
 
 spotbugs {
-  effort.set(MAX)
-  reportLevel.set(LOW)
-  useJavaToolchains.set(true)
-  excludeFilter.set(rootProject.layout.projectDirectory.file("gradle/config/spotbugs/exclude.xml"))
+  effort = MAX
+  reportLevel = LOW
+  useJavaToolchains = true
+  excludeFilter = rootProject.layout.projectDirectory.file("gradle/config/spotbugs/exclude.xml")
 }
 
 tasks.withType<SpotBugsTask>().configureEach {
@@ -26,10 +26,10 @@ tasks.withType<SpotBugsTask>().configureEach {
   group = "SpotBugs"
   reports {
     create("html") {
-      required.set(true)
+      required = true
     }
     create("sarif") {
-      required.set(true)
+      required = true
     }
   }
 }

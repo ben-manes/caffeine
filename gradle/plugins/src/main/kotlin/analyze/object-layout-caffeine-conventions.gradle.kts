@@ -19,8 +19,8 @@ modes.forEach { (mode, details) ->
     group = "Object Layout"
     description = details
     dependsOn(tasks.compileJava)
+    mainClass = "org.openjdk.jol.Main"
     incompatibleWithConfigurationCache()
-    mainClass.set("org.openjdk.jol.Main")
     classpath(objectLayout, sourceSets.main.map { it.runtimeClasspath })
 
     doFirst {

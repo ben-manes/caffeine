@@ -15,7 +15,7 @@ dependencies {
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
-  modularity.inferModulePath.set(true)
+  modularity.inferModulePath = true
 }
 
 tasks.withType<Test>().configureEach {

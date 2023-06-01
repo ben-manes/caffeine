@@ -79,7 +79,7 @@ compileJavaPoetJava.configure {
 }
 
 val generateLocalCaches by tasks.registering(JavaExec::class) {
-  mainClass.set("com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator")
+  mainClass = "com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"
   outputs.dir(layout.buildDirectory.dir("generated-sources/local"))
     .withPropertyName("outputDir")
   inputs.files(sourceSets["javaPoet"].output)
@@ -92,7 +92,7 @@ val generateLocalCaches by tasks.registering(JavaExec::class) {
 }
 
 val generateNodes by tasks.registering(JavaExec::class) {
-  mainClass.set("com.github.benmanes.caffeine.cache.NodeFactoryGenerator")
+  mainClass = "com.github.benmanes.caffeine.cache.NodeFactoryGenerator"
   outputs.dir(layout.buildDirectory.dir("generated-sources/nodes"))
     .withPropertyName("outputDir")
   inputs.files(sourceSets["javaPoet"].output)
@@ -221,7 +221,7 @@ tasks.named<CheckForbiddenApis>("forbiddenApisJmh").configure {
 tasks.register<JavaExec>("memoryOverhead") {
   group = "Benchmarks"
   description = "Evaluates cache overhead"
-  mainClass.set("com.github.benmanes.caffeine.cache.MemoryBenchmark")
+  mainClass = "com.github.benmanes.caffeine.cache.MemoryBenchmark"
   classpath(sourceSets["jmh"].runtimeClasspath + sourceSets["codeGen"].runtimeClasspath)
   jvmArgs(
     "--add-opens", "java.base/java.util.concurrent.atomic=ALL-UNNAMED",
@@ -236,7 +236,7 @@ tasks.register<JavaExec>("memoryOverhead") {
 tasks.register<Stress>("stress") {
   group = "Cache tests"
   description = "Executes a stress test"
-  classpath.set(sourceSets["codeGen"].runtimeClasspath + sourceSets["test"].runtimeClasspath)
+  classpath = sourceSets["codeGen"].runtimeClasspath + sourceSets["test"].runtimeClasspath
   outputs.upToDateWhen { false }
   dependsOn(tasks.compileTestJava)
 }
@@ -301,7 +301,7 @@ abstract class Stress @Inject constructor(@Internal val external: ExecOperations
   @TaskAction
   fun run() {
     external.javaexec {
-      mainClass.set("com.github.benmanes.caffeine.cache.Stresser")
+      mainClass = "com.github.benmanes.caffeine.cache.Stresser"
       classpath(this@Stress.classpath)
       if (operation.isPresent) {
         args("--workload", operation.get())

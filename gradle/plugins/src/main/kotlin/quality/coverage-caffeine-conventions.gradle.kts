@@ -19,7 +19,7 @@ coveralls {
 val testReport = tasks.register<TestReport>("testReport") {
   group = "Build"
   description = "Generates an aggregate test report"
-  destinationDirectory.set(layout.buildDirectory.dir("reports/allTests"))
+  destinationDirectory = layout.buildDirectory.dir("reports/allTests")
 }
 
 val jacocoFullReport by tasks.registering(JacocoReport::class) {
@@ -30,8 +30,8 @@ val jacocoFullReport by tasks.registering(JacocoReport::class) {
     dependsOn(tasks.compileTestJava)
   }
   reports {
-    html.required.set(true) // human readable
-    xml.required.set(true)  // required by coveralls
+    html.required = true // human readable
+    xml.required = true  // required by coveralls
   }
 }
 
@@ -51,9 +51,9 @@ subprojects {
     dependsOn(tasks.jar)
 
     // ensure tasks don't overwrite the default report directories used by the 'test' task
-    reports.html.outputLocation.set(file(layout.buildDirectory.file("reports/${name}")))
-    reports.junitXml.outputLocation.set(file(layout.buildDirectory.file("reports/${name}/results")))
-    binaryResultsDirectory.set(layout.buildDirectory.dir("reports/${name}/results/binary/${name}"))
+    reports.html.outputLocation = file(layout.buildDirectory.file("reports/${name}"))
+    reports.junitXml.outputLocation = file(layout.buildDirectory.file("reports/${name}/results"))
+    binaryResultsDirectory = layout.buildDirectory.dir("reports/${name}/results/binary/${name}")
   }
 }
 

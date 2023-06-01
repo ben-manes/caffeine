@@ -16,8 +16,8 @@ tasks.withType<JacocoReport>().configureEach {
   description = "Generates a test coverage report for a project"
 
   reports {
-    xml.required.set(true)
-    html.required.set(true)
+    xml.required = true
+    html.required = true
   }
 }
 

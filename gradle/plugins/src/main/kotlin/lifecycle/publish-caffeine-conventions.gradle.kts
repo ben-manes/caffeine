@@ -13,7 +13,7 @@ val testJar by tasks.registering(Jar::class) {
   group = "Build"
   description = "Assembles a jar archive containing the test classes."
   from(sourceSets.test.map { it.output })
-  archiveClassifier.set("test")
+  archiveClassifier = "test"
 }
 
 val testArtifacts: Configuration by configurations.creating
@@ -26,31 +26,31 @@ publishing {
       artifact(testJar)
 
       pom {
-        name.set("Caffeine cache")
-        description.set(project.description)
-        url.set("https://github.com/ben-manes/caffeine")
-        inceptionYear.set("2014")
+        name = "Caffeine cache"
+        description = project.description
+        url = "https://github.com/ben-manes/caffeine"
+        inceptionYear= "2014"
 
         scm {
-          url.set("https://github.com/ben-manes/caffeine")
-          connection.set("scm:git:https://github.com/ben-manes/caffeine.git")
-          developerConnection.set("scm:git:ssh://git@github.com/ben-manes/caffeine.git")
+          url = "https://github.com/ben-manes/caffeine"
+          connection = "scm:git:https://github.com/ben-manes/caffeine.git"
+          developerConnection = "scm:git:ssh://git@github.com/ben-manes/caffeine.git"
         }
 
         licenses {
           license {
-            name.set("Apache License, Version 2.0")
-            url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-            distribution.set("repo")
+            name = "Apache License, Version 2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+            distribution = "repo"
           }
         }
 
         developers {
           developer {
-            id.set("ben-manes")
-            name.set("Ben Manes")
-            email.set("ben.manes@gmail.com")
-            roles.set(listOf("owner", "developer"))
+            id = "ben-manes"
+            name = "Ben Manes"
+            email = "ben.manes@gmail.com"
+            roles = listOf("owner", "developer")
           }
         }
       }

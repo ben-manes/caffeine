@@ -17,8 +17,8 @@ tasks.withType<Pmd>().configureEach {
   enabled = System.getProperties().containsKey("pmd")
   group = "PMD"
   reports {
-    xml.required.set(false)
-    html.required.set(true)
+    xml.required = false
+    html.required = true
   }
   isConsoleOutput = true
 }

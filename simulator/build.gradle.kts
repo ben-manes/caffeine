@@ -42,7 +42,7 @@ dependencies {
 }
 
 application {
-  mainClass.set("com.github.benmanes.caffeine.cache.simulator.Simulator")
+  mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulator"
 }
 
 forbiddenApis {
@@ -52,7 +52,7 @@ forbiddenApis {
 
 tasks.withType<JavaCompile>().configureEach {
   options.errorprone.nullaway.disable()
-  modularity.inferModulePath.set(true)
+  modularity.inferModulePath = true
 }
 
 tasks.withType<Test>().configureEach {
@@ -80,9 +80,9 @@ tasks.register<Simulate>("simulate") {
   group = "Application"
   description = "Runs multiple simulations and generates an aggregate report"
   dependsOn(tasks.processResources, tasks.compileJava)
-  classpath.set(sourceSets["main"].runtimeClasspath)
-  systemProperties.set(caffeineSystemProperties())
-  defaultJvmArgs.set(javaExecJvmArgs())
+  classpath = sourceSets["main"].runtimeClasspath
+  systemProperties = caffeineSystemProperties()
+  defaultJvmArgs = javaExecJvmArgs()
   outputs.upToDateWhen { false }
 }
 
@@ -90,7 +90,7 @@ tasks.register<Rewrite>("rewrite") {
   group = "Application"
   description = "Rewrite traces into the format used by other simulators"
   dependsOn(tasks.processResources, tasks.compileJava)
-  classpath.set(sourceSets["main"].runtimeClasspath)
+  classpath = sourceSets["main"].runtimeClasspath
   outputs.upToDateWhen { false }
 }
 
@@ -125,7 +125,7 @@ abstract class Simulate @Inject constructor(@Internal val external: ExecOperatio
   @TaskAction
   fun run() {
     external.javaexec {
-      mainClass.set("com.github.benmanes.caffeine.cache.simulator.Simulate")
+      mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulate"
       systemProperties(this@Simulate.systemProperties.get())
       classpath(this@Simulate.classpath)
       jvmArgs(defaultJvmArgs.get())
@@ -158,7 +158,7 @@ abstract class Rewrite @Inject constructor(@Internal val external: ExecOperation
     external.javaexec {
       var help = true
       classpath(this@Rewrite.classpath)
-      mainClass.set("com.github.benmanes.caffeine.cache.simulator.parser.Rewriter")
+      mainClass = "com.github.benmanes.caffeine.cache.simulator.parser.Rewriter"
       if (inputFiles.isNotEmpty()) {
         args("--inputFiles", inputFiles.joinToString(","))
         help = false

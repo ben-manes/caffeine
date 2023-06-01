@@ -23,19 +23,19 @@ dependencies {
 }
 
 jmh {
-  jmhVersion.set(libs.versions.jmh.core)
+  jmhVersion = libs.versions.jmh.core
 
   benchmarkMode.add("thrpt")
-  warmupIterations.set(3)
-  iterations.set(3)
-  timeUnit.set("s")
+  warmupIterations = 3
+  iterations = 3
+  timeUnit = "s"
 
-  failOnError.set(true)
-  forceGC.set(true)
-  fork.set(1)
+  failOnError = true
+  forceGC = true
+  fork = 1
 
-  resultsFile.set(layout.buildDirectory.file("reports/jmh/results.json"))
-  resultFormat.set("json")
+  resultsFile = layout.buildDirectory.file("reports/jmh/results.json")
+  resultFormat = "json"
 
   val jvmArguments = mutableListOf("-Xmx2G")
   if (System.getenv("GRAALVM") == "true") {
@@ -43,11 +43,11 @@ jmh {
       "-XX:+UnlockExperimentalVMOptions", "-Dgraal.ShowConfiguration=info",
       "-XX:+EnableJVMCI", "-XX:+UseJVMCICompiler", "-XX:+EagerJVMCI"))
   }
-  jvmArgs.set(jvmArguments)
+  jvmArgs = jvmArguments
 
   val includePattern: String? by project
   if (includePattern != null) {
-    includes.set(listOf(includePattern))
+    includes = listOf(includePattern)
   }
 
   // Benchmark parameters: Separated by '&' for parameter types, and ',' for multiple values
@@ -81,9 +81,9 @@ tasks.withType<JmhTask>().configureEach {
 }
 
 tasks.withType<JmhBytecodeGeneratorTask>().configureEach {
-  javaLauncher.set(javaToolchains.launcherFor {
-    languageVersion.set(java.toolchain.languageVersion)
-  })
+  javaLauncher= javaToolchains.launcherFor {
+    languageVersion = java.toolchain.languageVersion
+  }
 }
 
 tasks.named("jmhJar").configure {

@@ -17,10 +17,10 @@ tasks.test {
   useJUnitPlatform()
 }
 
-java.toolchain.languageVersion.set(JavaLanguageVersion.of(System.getenv("JAVA_VERSION") ?: "11"))
+java.toolchain.languageVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION") ?: "11")
 
 tasks.withType<JavaCompile>().configureEach {
-  javaCompiler.set(javaToolchains.compilerFor {
-    languageVersion.set(java.toolchain.languageVersion)
-  })
+  javaCompiler = javaToolchains.compilerFor {
+    languageVersion = java.toolchain.languageVersion
+  }
 }

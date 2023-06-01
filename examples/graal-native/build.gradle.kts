@@ -12,7 +12,7 @@ dependencies {
 }
 
 application {
-  mainClass.set("com.github.benmanes.caffeine.examples.graalnative.Application")
+  mainClass = "com.github.benmanes.caffeine.examples.graalnative.Application"
 }
 
 tasks.test {
@@ -23,7 +23,7 @@ graalvmNative {
   binaries.all {
     resources.autodetect()
   }
-  toolchainDetection.set(false)
+  toolchainDetection = false
 }
 
 fun caffeine(): Any {

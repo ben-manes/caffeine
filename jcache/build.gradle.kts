@@ -64,7 +64,7 @@ val unzipJCacheJavaDoc by tasks.registering(Copy::class) {
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
-  modularity.inferModulePath.set(true)
+  modularity.inferModulePath = true
 }
 
 tasks.jar {

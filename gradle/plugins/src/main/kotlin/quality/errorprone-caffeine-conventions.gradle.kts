@@ -24,10 +24,10 @@ tasks.withType<JavaCompile>().configureEach {
   dependsOn(downloadCaffeine)
 
   options.forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)
-  options.errorprone.isEnabled.set(false)
+  options.errorprone.isEnabled = false
   options.errorprone {
     if (System.getenv("JDK_EA") == "true") {
-      isEnabled.set(false)
+      isEnabled = false
     }
 
     disabledChecks.forEach { disable(it) }
@@ -40,9 +40,9 @@ tasks.withType<JavaCompile>().configureEach {
       }
       annotatedPackages.add("com.github.benmanes.caffeine")
       annotatedPackages.add("com.google.common")
-      checkOptionalEmptiness.set(true)
-      suggestSuppressions.set(true)
-      checkContracts.set(true)
+      checkOptionalEmptiness = true
+      suggestSuppressions = true
+      checkContracts = true
     }
   }
 }

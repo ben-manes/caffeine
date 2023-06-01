@@ -1,5 +1,3 @@
-import org.gradle.api.internal.artifacts.configurations.DefaultConfiguration
-
 plugins {
   idea
   `jvm-ecosystem`
@@ -10,7 +8,7 @@ dependencies {
   val ignored = listOf("api", "compileOnlyApi", "implementation",
     "javadocElements", "runtimeOnly", "sourcesElements")
   configurations.configureEach {
-    if ((name !in ignored) && (this is DefaultConfiguration) && isCanBeDeclaredAgainst) {
+    if ((name !in ignored) && isCanBeDeclared) {
       libs.bundles.constraints.get().forEach { library ->
         constraints.add(name, library.module.toString()).version { require(library.version!!) }
       }
