@@ -39,7 +39,6 @@ import javax.cache.event.CacheEntryListener;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
-import javax.inject.Inject;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -49,6 +48,8 @@ import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigSyntax;
+
+import jakarta.inject.Inject;
 
 /**
  * Static utility methods pertaining to externalized {@link CaffeineConfiguration} entries using the

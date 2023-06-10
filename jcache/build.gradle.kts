@@ -14,9 +14,9 @@ val jcacheTckSources: Configuration by configurations.creating
 dependencies {
   api(project(":caffeine"))
   api(libs.osgi.annotations)
+  api(libs.jakarta.inject)
   api(libs.jcache)
   api(libs.config)
-  api(libs.jsr330)
 
   testImplementation(libs.guava)
   testImplementation(libs.jcache.guice)
@@ -74,6 +74,7 @@ tasks.jar {
     "Import-Package" to listOf(
       "!org.checkerframework.*",
       "!com.google.errorprone.annotations.*",
+      "jakarta.inject.*;resolution:=\"optional\"",
       "*").joinToString(","),
     "Export-Package" to listOf(
       "com.github.benmanes.caffeine.jcache.spi",

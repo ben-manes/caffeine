@@ -40,9 +40,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+
+import jakarta.inject.Inject;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
