@@ -43,7 +43,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@83f0fe6c4988d98a455712a27f0255212bba9bd4 # v2.3.6
+        uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif
