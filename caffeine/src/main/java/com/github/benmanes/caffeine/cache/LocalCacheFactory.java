@@ -123,7 +123,7 @@ interface LocalCacheFactory {
           constructor.type().changeReturnType(BoundedLocalCache.class));
     }
     @Override public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
-        AsyncCacheLoader<? super K, V> cacheLoader, boolean async) throws Throwable {
+        @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) throws Throwable {
       return (BoundedLocalCache<K, V>) methodHandle.invokeExact(builder, cacheLoader, async);
     }
   }

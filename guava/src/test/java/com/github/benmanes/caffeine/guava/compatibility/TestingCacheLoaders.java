@@ -28,6 +28,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Utility {@link CacheLoader} implementations intended for use in testing.
@@ -149,6 +150,7 @@ public class TestingCacheLoaders {
     private final AtomicInteger countReload = new AtomicInteger();
 
     @Override
+    @CanIgnoreReturnValue
     public Integer load(Integer key) {
       countLoad.incrementAndGet();
       return key;
@@ -173,8 +175,8 @@ public class TestingCacheLoaders {
   public static final class IdentityLoader<T> extends CacheLoader<T, T> implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @Override
-    public T load(T key) {
+    @CanIgnoreReturnValue
+    @Override public T load(T key) {
       return key;
     }
   }

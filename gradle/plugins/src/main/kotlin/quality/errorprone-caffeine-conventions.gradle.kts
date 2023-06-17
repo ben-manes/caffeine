@@ -24,7 +24,6 @@ tasks.withType<JavaCompile>().configureEach {
   dependsOn(downloadCaffeine)
 
   options.forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)
-  options.errorprone.isEnabled = false
   options.errorprone {
     if (System.getenv("JDK_EA") == "true") {
       isEnabled = false
@@ -79,7 +78,6 @@ val disabledChecks = listOf(
 )
 val enabledChecks = listOf(
   "AssertFalse",
-  "BanClassLoader",
   "BuilderReturnThis",
   "CatchingUnchecked",
   "CanIgnoreReturnValueSuggester",

@@ -29,6 +29,7 @@ import com.google.common.collect.testing.SampleElements;
 import com.google.common.collect.testing.TestQueueGenerator;
 import com.google.common.collect.testing.features.CollectionFeature;
 import com.google.common.collect.testing.features.CollectionSize;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -104,13 +105,11 @@ public final class LinkedDequeTests extends TestCase {
 
     protected abstract Queue<LinkedValue> create(LinkedValue[] elements);
 
-    @Override
-    public LinkedValue[] createArray(int length) {
+    @Override public LinkedValue[] createArray(int length) {
       return new LinkedValue[length];
     }
-
-    @Override
-    public List<LinkedValue> order(List<LinkedValue> insertionOrder) {
+    @CanIgnoreReturnValue
+    @Override public List<LinkedValue> order(List<LinkedValue> insertionOrder) {
       return insertionOrder;
     }
   }

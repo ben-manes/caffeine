@@ -58,6 +58,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.testing.TestingExecutors;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * The cache test specification so that a {@link org.testng.annotations.DataProvider} can construct
@@ -548,6 +549,7 @@ public @interface CacheSpec {
     },
     /** A bulk loader that tries to modify the keys. */
     BULK_MODIFY_KEYS {
+      @CanIgnoreReturnValue
       @Override public Int load(Int key) {
         return key;
       }

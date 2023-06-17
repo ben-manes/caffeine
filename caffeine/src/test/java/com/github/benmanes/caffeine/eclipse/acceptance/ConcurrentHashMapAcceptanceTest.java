@@ -35,6 +35,7 @@ import org.junit.Test;
  *
  * Ported from Eclipse Collections 11.0.
  */
+@SuppressWarnings("CanIgnoreReturnValueSuggester")
 public abstract class ConcurrentHashMapAcceptanceTest {
   private ExecutorService executor;
 

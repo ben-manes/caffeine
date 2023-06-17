@@ -90,6 +90,7 @@ import com.github.benmanes.caffeine.cache.LinkedDeque.PeekingIterator;
 import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 /**
@@ -4396,6 +4397,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           K key, V value, long currentTime, long currentDuration) {
         return unit.toNanos(duration);
       }
+      @CanIgnoreReturnValue
       @Override public long expireAfterRead(
           K key, V value, long currentTime, long currentDuration) {
         return currentDuration;

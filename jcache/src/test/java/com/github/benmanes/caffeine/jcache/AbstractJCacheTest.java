@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.testing.FakeTicker;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * A testing harness for simplifying the unit tests.
@@ -118,6 +119,7 @@ public abstract class AbstractJCacheTest {
   /** The cache loader used by the test. */
   protected CacheLoader<Integer, Integer> getCacheLoader() {
     return new CacheLoader<Integer, Integer>() {
+      @CanIgnoreReturnValue
       @Override public Integer load(Integer key) {
         return key;
       }

@@ -126,7 +126,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   }
 
   private void onMiss(Node node) {
-    /**
+    /*
      * Initially, both the filter and reuse distance stacks are filled with newly arrived blocks
      * from the reuse distance stack to the filter stack
      */
@@ -150,7 +150,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   }
 
   private void adaptMainToFilter(Node node) {
-    /**
+    /*
      * Cache miss and history miss with adaptation:
      * Evict from main stack. Then, insert to filter stack
      */
@@ -170,7 +170,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   }
 
   private void adaptFilterToMain(Node node) {
-    /**
+    /*
      * Cache miss and history hit with adaptation:
      * Evict from filter stack. Then insert to main stack
      */
@@ -205,7 +205,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   }
 
   private void onFullMiss(Node node) {
-    /**
+    /*
      * Cache miss and history miss: Evict the oldest block in the filter stack. Then, insert the
      * missed block into the filter stack and generate a history block for the missed block. In
      * addition, insert the history block into the reuse distance stack. No eviction occurs in the
@@ -227,7 +227,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   }
 
   private void onFilterHit(Node node) {
-    /**
+    /*
      * Cache hit in the filter stack: Move the corresponding block to the MRU position of the filter
      * stack. The associated history block should be updated to maintain reuse distance order (i.e.,
      * move its history block in the reuse distance stack to the MRU position of the reuse distance
@@ -242,7 +242,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   }
 
   private void onMainHit(Node node) {
-    /**
+    /*
      * Cache hit in the reuse distance stack: Move the corresponding block to the MRU position of
      * the reuse distance stack. If the corresponding block is in the LRU position of the reuse
      * distance stack (i.e., the oldest resident block), the history blocks between the LRU position
@@ -276,7 +276,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   }
 
   private void onNonResidentHit(Node node) {
-    /**
+    /*
      * Cache miss but history hit: Remove all history blocks between the 2nd oldest and the oldest
      * resident blocks. Next, evict the oldest resident block from the reuse distance stack. Then,
      * move the history hit block to the MRU position in the reuse distance stack and change it to a

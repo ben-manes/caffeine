@@ -70,6 +70,7 @@ import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * The test cases for caches that support the refresh after write policy.
@@ -207,6 +208,7 @@ public final class RefreshAfterWriteTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
+      @CanIgnoreReturnValue
       @Override public Int reload(Int key, Int oldValue) {
         return oldValue;
       }

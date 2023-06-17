@@ -53,6 +53,7 @@ import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * An in-memory cache that has no capabilities for bounding the map. This implementation provides
@@ -109,6 +110,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  @CanIgnoreReturnValue
   public Object referenceKey(K key) {
     return key;
   }

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.guava;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.testing.AbstractPackageSanityTests;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Basic sanity tests for the entire package.
@@ -32,6 +33,7 @@ public final class PackageSanityTests extends AbstractPackageSanityTests {
     setDefault(Caffeine.class, Caffeine.newBuilder());
     setDefault(com.google.common.cache.CacheLoader.class,
         new com.google.common.cache.CacheLoader<Object, Object>() {
+          @CanIgnoreReturnValue
           @Override public Object load(Object key) {
             return key;
           }

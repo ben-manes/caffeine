@@ -135,6 +135,7 @@ public final class Simulate implements Runnable {
         .execute(args);
   }
 
+  @SuppressWarnings("ImmutableEnumChecker")
   private enum Theme {
     light(ChartStyle.light()),
     dark(ChartStyle.dark());

@@ -54,6 +54,7 @@ import com.google.common.collect.Sets;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import junit.framework.TestCase;
 
@@ -420,6 +421,7 @@ public class CacheBuilderTest extends TestCase {
     final AtomicBoolean shouldWait = new AtomicBoolean(false);
     final CountDownLatch computingLatch = new CountDownLatch(1);
     CacheLoader<String, String> computingFunction = new CacheLoader<String, String>() {
+      @CanIgnoreReturnValue
       @Override public String load(String key) {
         if (shouldWait.get()) {
           assertTrue(Uninterruptibles.awaitUninterruptibly(computingLatch, 300, MINUTES));
@@ -642,6 +644,7 @@ public class CacheBuilderTest extends TestCase {
       this.delayLatch = delayLatch;
     }
 
+    @CanIgnoreReturnValue
     @Override public T load(T key) {
       if (shouldWait.get()) {
         assertTrue(Uninterruptibles.awaitUninterruptibly(delayLatch, 300, SECONDS));

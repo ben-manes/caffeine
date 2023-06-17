@@ -41,6 +41,7 @@ import com.google.common.testing.SerializableTester;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import junit.framework.TestCase;
 
@@ -255,8 +256,8 @@ public final class CaffeinatedGuavaTest extends TestCase {
   enum IdentityLoader implements com.github.benmanes.caffeine.cache.CacheLoader<Object, Object> {
     INSTANCE;
 
-    @Override
-    public Object load(Object key) {
+    @CanIgnoreReturnValue
+    @Override public Object load(Object key) {
       return key;
     }
   }

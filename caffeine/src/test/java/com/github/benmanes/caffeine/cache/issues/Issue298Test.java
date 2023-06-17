@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Issue #298: Stale data when using Expiry
@@ -124,10 +125,12 @@ public final class Issue298Test {
             await().untilTrue(doCreate);
             return EXPIRE_NS;
           }
+          @CanIgnoreReturnValue
           @Override public long expireAfterUpdate(String key, String value,
               long currentTime, long currentDuration) {
             return currentDuration;
           }
+          @CanIgnoreReturnValue
           @Override public long expireAfterRead(String key, String value,
               long currentTime, long currentDuration) {
             startedRead.set(true);

@@ -43,8 +43,8 @@ import com.github.benmanes.caffeine.testing.Int;
 /**
  * Ported from Eclipse Collections 11.0.
  */
-@SuppressWarnings({"all", "deprecation", "EqualsBrokenForNull",
-  "EqualsUnsafeCast", "rawtypes", "unchecked", "UndefinedEquals"})
+@SuppressWarnings({"all", "CanIgnoreReturnValueSuggester", "deprecation",
+  "EqualsBrokenForNull", "EqualsUnsafeCast", "rawtypes", "unchecked", "UndefinedEquals"})
 public abstract class UnifiedMapTestCase extends MutableMapTestCase {
   protected static final Integer COLLISION_1 = 0;
   protected static final Integer COLLISION_2 = 17;

@@ -603,7 +603,7 @@ public class JSR166TestCase extends TestCase {
     }
 
     /** Returns list of junit-style test method names in given class. */
-    public static ArrayList<String> testMethodNames(Class<?> testClass) {
+    public static List<String> testMethodNames(Class<?> testClass) {
         Method[] methods = testClass.getDeclaredMethods();
         ArrayList<String> names = new ArrayList<>(methods.length);
         for (Method method : methods) {
