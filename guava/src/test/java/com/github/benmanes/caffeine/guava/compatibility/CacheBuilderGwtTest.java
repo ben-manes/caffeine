@@ -448,6 +448,7 @@ public class CacheBuilderGwtTest extends TestCase {
     assertFalse(cache.asMap().values().contains(20));
   }
 
+  @SuppressWarnings("CollectionAddAllToCollectionBlock")
   public void testAsMapKeySet() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)

@@ -462,7 +462,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return moreKeys.stream().collect(toImmutableMap(identity(), Int::negate));
+      return Maps.toMap(moreKeys, Int::negate);
     }).join();
 
     assertThat(result).containsExactlyKeys(context.absentKeys());
@@ -473,7 +473,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
-    var actual = context.absentKeys().stream().collect(toImmutableMap(Int::negate, identity()));
+    var actual = Maps.uniqueIndex(context.absentKeys(), Int::negate);
     var result = cache.getAll(context.absentKeys(), keys -> actual).join();
 
     assertThat(result).isEmpty();
@@ -554,7 +554,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return moreKeys.stream().collect(toImmutableMap(identity(), Int::negate));
+      return Maps.toMap(moreKeys, Int::negate);
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
@@ -730,8 +730,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return CompletableFuture.completedFuture(
-          moreKeys.stream().collect(toImmutableMap(identity(), Int::negate)));
+      return CompletableFuture.completedFuture(Maps.toMap(moreKeys, Int::negate));
     }).join();
 
     assertThat(result).containsExactlyKeys(context.absentKeys());
@@ -742,7 +741,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
-    var actual = context.absentKeys().stream().collect(toImmutableMap(Int::negate, identity()));
+    var actual = Maps.uniqueIndex(context.absentKeys(), Int::negate);
     var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
       return CompletableFuture.completedFuture(actual);
     }).join();
@@ -831,8 +830,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return CompletableFuture.completedFuture(
-          moreKeys.stream().collect(toImmutableMap(identity(), Int::negate)));
+      return CompletableFuture.completedFuture(Maps.toMap(moreKeys, Int::negate));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }

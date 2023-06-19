@@ -51,7 +51,10 @@ forbiddenApis {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-  options.errorprone.nullaway.disable()
+  options.errorprone {
+    disableWarningsInGeneratedCode = true
+    nullaway.disable()
+  }
   modularity.inferModulePath = true
 }
 

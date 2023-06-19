@@ -85,6 +85,7 @@ public class CollectionSubject extends com.google.common.truth.IterableSubject {
     check("iterator().hasNext()").that(actual.iterator().hasNext()).isFalse();
   }
 
+  @SuppressWarnings("CollectionToArray")
   private void checkCollection() {
     check("size()").that(actual).hasSize(0);
     check("isEmpty()").that(actual).isEmpty();

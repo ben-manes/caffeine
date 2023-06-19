@@ -123,6 +123,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   /* --------------- Cache --------------- */
 
   @Override
+  @SuppressWarnings("SuspiciousMethodCalls")
   public @Nullable V getIfPresent(Object key, boolean recordStats) {
     V value = data.get(key);
 
@@ -608,6 +609,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("SuspiciousMethodCalls")
     public boolean contains(Object o) {
       return cache.containsKey(o);
     }
@@ -731,6 +733,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("SuspiciousMethodCalls")
     public boolean contains(Object o) {
       return cache.containsValue(o);
     }
@@ -858,6 +861,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("SuspiciousMethodCalls")
     public boolean contains(Object o) {
       if (!(o instanceof Entry<?, ?>)) {
         return false;
@@ -891,6 +895,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("SuspiciousMethodCalls")
     public boolean remove(Object o) {
       if (!(o instanceof Entry<?, ?>)) {
         return false;
@@ -1076,7 +1081,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
       if ((refreshes == null) || refreshes.isEmpty()) {
-        return Collections.unmodifiableMap(Collections.emptyMap());
+        @SuppressWarnings("ImmutableMapOf")
+        Map<K, CompletableFuture<V>> emptyMap = Collections.unmodifiableMap(Collections.emptyMap());
+        return emptyMap;
       }
       @SuppressWarnings("unchecked")
       var castedRefreshes = (Map<K, CompletableFuture<V>>) (Object) refreshes;

@@ -294,8 +294,7 @@ public final class ReferenceTest {
     List<Map.Entry<Int, Int>> collected;
     var keys = context.firstMiddleLastKeys();
     if (context.isStrongValues()) {
-      retained = context.firstMiddleLastKeys().stream()
-          .collect(toImmutableMap(identity(), key -> context.original().get(key)));
+      retained = Maps.toMap(context.firstMiddleLastKeys(), key -> context.original().get(key));
       collected = getExpectedAfterGc(context,
           Maps.filterKeys(context.original(), not(keys::contains)));
     } else {
@@ -331,8 +330,7 @@ public final class ReferenceTest {
     List<Map.Entry<Int, Int>> collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(keys::contains)));
     if (context.isStrongValues()) {
-      retained = context.firstMiddleLastKeys().stream()
-          .collect(toImmutableMap(identity(), key -> context.original().get(key)));
+      retained = Maps.toMap(context.firstMiddleLastKeys(), key -> context.original().get(key));
     } else {
       retained = Map.of();
       for (var key : keys) {
@@ -585,8 +583,7 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void clear(Map<Int, Int> map, CacheContext context) {
-    var retained = context.firstMiddleLastKeys().stream()
-        .collect(toImmutableMap(identity(), key -> context.original().get(key)));
+    var retained = Maps.toMap(context.firstMiddleLastKeys(), key -> context.original().get(key));
     var collected = getExpectedAfterGc(context, Maps.difference(
         context.original(), retained).entriesOnlyOnLeft());
 

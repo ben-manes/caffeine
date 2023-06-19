@@ -160,7 +160,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
    */
   static <K, V> CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
     if (futures.isEmpty()) {
-      return CompletableFuture.completedFuture(Collections.unmodifiableMap(Collections.emptyMap()));
+      @SuppressWarnings("ImmutableMapOf")
+      Map<K, V> emptyMap = Collections.unmodifiableMap(Collections.emptyMap());
+      return CompletableFuture.completedFuture(emptyMap);
     }
     @SuppressWarnings("rawtypes")
     CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
@@ -708,7 +710,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       CompletableFuture<V> future = null;
       for (;;) {
         future = (future == null)
-            ? delegate.get(key)
+            ? delegate.get(castedKey)
             : delegate.getIfPresentQuietly(castedKey);
         if ((future == null) || future.isCompletedExceptionally()) {
           return false;

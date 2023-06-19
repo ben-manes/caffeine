@@ -394,6 +394,7 @@ public class EmptyCachesTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("MapEntry")
   private Map.Entry<Object, Object> entryOf(Object key, Object value) {
     return Maps.immutableEntry(key, value);
   }

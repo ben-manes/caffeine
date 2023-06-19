@@ -4,11 +4,13 @@ linter: jetbrains/qodana-jvm-community:2023.1
 profile:
   name: qodana.recommended
 exclude:
+  - name: AutoCloseableResource
   - name: CastCanBeRemovedNarrowingVariableType
   - name: CommentedOutCode
   - name: ConstantValue
   - name: DanglingJavadoc
   - name: DataFlowIssue
+  - name: Deprecation
   - name: EmptyStatementBody
   - name: EqualsWhichDoesntCheckParameterClass
   - name: GroovyEmptyStatementBody
@@ -19,6 +21,7 @@ exclude:
   - name: JavaAnnotator
   - name: JavadocLinkAsPlainText
   - name: JavaRequiresAutoModule
+  - name: MismatchedCollectionQueryUpdate
   - name: NonSynchronizedMethodOverridesSynchronizedMethod
   - name: NotNullFieldNotInitialized
   - name: NullableProblems
@@ -32,6 +35,7 @@ exclude:
   - name: SuspiciousSystemArraycopy
   - name: SynchronizationOnLocalVariableOrMethodParameter
   - name: SystemOutErr
+  - name: TrivialIf
   - name: UnnecessaryReturn
   - name: UnnecessarySemicolon
   - name: UnsatisfiedRange

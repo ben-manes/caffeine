@@ -187,10 +187,11 @@ import junit.framework.TestSuite;
  *
  * </ul>
  */
-@SuppressWarnings({"AnnotateFormatMethod", "EqualsIncompatibleType", "FunctionalInterfaceClash",
-  "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta", "NumericEquality", "rawtypes",
-  "ReferenceEquality", "RethrowReflectiveOperationExceptionAsLinkageError", "serial",
-  "SwitchDefault", "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals"})
+@SuppressWarnings({"AnnotateFormatMethod", "CollectionToArray", "EqualsIncompatibleType",
+    "FunctionalInterfaceClash", "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta",
+    "NumericEquality", "rawtypes", "ReferenceEquality",
+    "RethrowReflectiveOperationExceptionAsLinkageError", "serial", "SwitchDefault",
+    "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals"})
 public class JSR166TestCase extends TestCase {
 //    private static final boolean useSecurityManager =
 //        Boolean.getBoolean("jsr166.useSecurityManager");

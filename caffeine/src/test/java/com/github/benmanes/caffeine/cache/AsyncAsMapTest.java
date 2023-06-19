@@ -52,7 +52,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.eclipse.collections.impl.factory.Sets;
 import org.mockito.Mockito;
@@ -378,8 +377,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void putAll_replace(AsyncCache<Int, Int> cache, CacheContext context) {
-    var entries = context.original().keySet().stream()
-        .collect(toImmutableMap(identity(), Int::asFuture));
+    var entries = Maps.toMap(context.original().keySet(), Int::asFuture);
     cache.asMap().putAll(entries);
     assertThat(cache).containsExactlyEntriesIn(entries);
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -1892,15 +1890,15 @@ public final class AsyncAsMapTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void values_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
     var futures = cache.asMap().values().toArray(new CompletableFuture<?>[0]);
-    var values1 = Stream.of(futures).map(CompletableFuture::join).collect(toImmutableList());
+    var values1 = Arrays.stream(futures).map(CompletableFuture::join).collect(toImmutableList());
     assertThat(values1).containsExactlyElementsIn(context.original().values());
 
     var array = cache.asMap().values().toArray(new CompletableFuture<?>[0]);
-    var values2 = Stream.of(array).map(CompletableFuture::join).collect(toImmutableList());
+    var values2 = Arrays.stream(array).map(CompletableFuture::join).collect(toImmutableList());
     assertThat(values2).containsExactlyElementsIn(context.original().values());
 
     var func = cache.asMap().values().toArray(CompletableFuture<?>[]::new);
-    var values3 = Stream.of(func).map(CompletableFuture::join).collect(toImmutableList());
+    var values3 = Arrays.stream(func).map(CompletableFuture::join).collect(toImmutableList());
     assertThat(values3).containsExactlyElementsIn(context.original().values());
   }
 
@@ -2517,6 +2515,7 @@ public final class AsyncAsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("MapEntry")
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = Iterables.getFirst(cache.asMap().values(), context.absentValue().asFuture());
@@ -2526,6 +2525,7 @@ public final class AsyncAsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("MapEntry")
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     var key = Iterables.getFirst(context.original().keySet(), context.absentKey());
@@ -2535,6 +2535,7 @@ public final class AsyncAsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("MapEntry")
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullKeyValue(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().entrySet().remove(Maps.immutableEntry(null, null))).isFalse();

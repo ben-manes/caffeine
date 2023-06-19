@@ -73,6 +73,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.google.common.base.Functions;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -1026,11 +1027,10 @@ public final class LoadingCacheTest {
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_present(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.refreshAll(context.original().keySet()).join();
-    int count = context.original().keySet().size();
+    int count = context.original().size();
     assertThat(result).hasSize(count);
 
-    var expected = context.original().keySet().stream()
-        .collect(toImmutableMap(identity(), identity()));
+    var expected = Maps.toMap(context.original().keySet(), Functions.identity());
     assertThat(cache).containsExactlyEntriesIn(expected);
   }
 

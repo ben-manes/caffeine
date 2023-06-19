@@ -47,6 +47,7 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
+@SuppressWarnings("CollectionToArray")
 public class PopulatedCachesTest extends TestCase {
   // we use integers as keys; make sure the range covers some values that ARE cached by
   // Integer.valueOf(int), and some that are not cached. (127 is the highest cached value.)
@@ -355,6 +356,7 @@ public class PopulatedCachesTest extends TestCase {
     return entries;
   }
 
+  @SuppressWarnings("MapEntry")
   private Map.Entry<Object, Object> entryOf(Object key, Object value) {
     return Maps.immutableEntry(key, value);
   }
@@ -371,6 +373,7 @@ public class PopulatedCachesTest extends TestCase {
     assertCollectionSize(map.values(), size);
   }
 
+  @SuppressWarnings("CollectionSize")
   private void assertCollectionSize(Collection<?> collection, int size) {
     assertEquals(size, collection.size());
     if (size > 0) {

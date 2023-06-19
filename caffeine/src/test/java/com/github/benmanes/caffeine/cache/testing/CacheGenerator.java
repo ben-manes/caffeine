@@ -250,7 +250,7 @@ public final class CacheGenerator {
 
   /** Returns a cache of integers and their negation. */
   private static ImmutableList<Map.Entry<Int, Int>> makeInts() {
-    int size = Stream.of(CacheSpec.Population.values())
+    int size = Arrays.stream(CacheSpec.Population.values())
         .mapToInt(population -> Math.toIntExact(population.size()))
         .max().getAsInt();
     var builder = new ImmutableList.Builder<Map.Entry<Int, Int>>();

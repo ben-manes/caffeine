@@ -84,6 +84,7 @@ class CacheTesting {
     assertEquals(ImmutableMap.of().toString(), map.toString());
   }
 
+  @SuppressWarnings("CollectionToArray")
   static void checkEmpty(Collection<?> collection) {
     assertTrue(collection.isEmpty());
     assertEquals(0, collection.size());

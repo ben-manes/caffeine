@@ -78,7 +78,7 @@ protobuf = "3.23.3"
 slf4j = "2.0.7"
 slf4j-test = "2.9.0"
 snakeyaml = "2.0"
-sonarqube = "4.2.0.3129"
+sonarqube = "4.2.1.3168"
 spotbugs-contrib = "7.6.0"
 spotbugs-core = "4.7.3"
 spotbugs-plugin = "5.0.14"
@@ -125,6 +125,7 @@ errorprone-core = { module = "com.google.errorprone:error_prone_core", version.r
 errorprone-mockito = { module = "org.mockito:mockito-errorprone", version.ref = "mockito" }
 errorprone-plugin = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone-plugin" }
 errorprone-support = { module = "tech.picnic.error-prone-support:error-prone-contrib", version.ref = "errorprone-support" }
+errorprone-support-refaster = { module = "tech.picnic.error-prone-support:refaster-runner", version.ref = "errorprone-support" }
 expiring-map = { module = "net.jodah:expiringmap", version.ref = "expiring-map" }
 fast-filter = { module = "io.github.fastfilter:fastfilter", version.ref = "fast-filter" }
 fastutil = { module = "it.unimi.dsi:fastutil-core", version.ref = "fastutil" }
@@ -209,6 +210,9 @@ zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 
 [bundles]
 coherence = ["coherence-core", "json-bind"]
+constraints = ["bcel", "bouncycastle", "commons-text", "httpclient", "jcommander",
+  "jsoup", "nekohtml", "protobuf", "snakeyaml", "xerces", "xstream" ]
+errorprone-support = [ "errorprone-support", "errorprone-support-refaster" ]
 jmh = ["jmh-core", "jmh-plugin", "jmh-report"]
 junit = ["junit4", "junit5"]
 junit-engines = ["junit5-vintage", "junit5-testng"]
@@ -216,8 +220,6 @@ osgi-test-compile = ["pax-exam-junit4"]
 osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function",
   "osgi-promise", "pax-exam-container-native", "pax-exam-link-mvn", "pax-url-aether"]
 pmd = ["pmd", "pmd-ant", "pmd-java"]
-constraints = ["bcel", "bouncycastle", "commons-text", "httpclient", "jcommander",
-  "jsoup", "nekohtml", "protobuf", "snakeyaml", "xerces", "xstream" ]
 slf4j-jdk = ["slf4j-jdk-platform-logging", "slf4j-jdk14"]
 slf4j-nop = ["slf4j-jdk-platform-logging", "slf4j-nop"]
 slf4j-test = ["slf4j-jdk-platform-logging", "slf4j-test"]

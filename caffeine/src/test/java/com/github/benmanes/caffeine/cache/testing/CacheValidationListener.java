@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -88,7 +87,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
-    TestLoggerFactory.getAllTestLoggers().values().stream()
+    TestLoggerFactory.getAllTestLoggers().values()
         .forEach(logger -> logger.setEnabledLevels(TRACE_LEVELS));
     TestLoggerFactory.clear();
 
@@ -138,8 +137,8 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   private void validate(ITestResult testResult) {
     CacheContext context = Arrays.stream(testResult.getParameters())
         .filter(param -> param instanceof CacheContext)
-        .map(param -> (CacheContext) param)
-        .findFirst().orElse(null);
+        .findFirst().map(param -> (CacheContext) param)
+        .orElse(null);
     if (context != null) {
       awaitExecutor(context);
 
@@ -302,7 +301,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       } else if (param instanceof CacheContext) {
         params[i] = simpleNames.get(param.toString(), Object::toString);
       } else {
-        params[i] = Objects.toString(param);
+        params[i] = String.valueOf(param);
       }
     }
   }

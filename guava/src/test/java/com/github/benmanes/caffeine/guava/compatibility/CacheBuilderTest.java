@@ -28,6 +28,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -545,7 +546,7 @@ public class CacheBuilderTest extends TestCase {
     // Each of the values added to the map should either still be there, or have seen a removal
     // notification.
     assertEquals(expectedKeys, Sets.union(cache.asMap().keySet(), removalNotifications.keySet()));
-    assertTrue(Sets.intersection(cache.asMap().keySet(), removalNotifications.keySet()).isEmpty());
+    assertTrue(Collections.disjoint(cache.asMap().keySet(), removalNotifications.keySet()));
   }
 
   /**

@@ -75,6 +75,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.testing.SerializableTester;
@@ -1659,8 +1660,7 @@ public final class AsMapTest {
     assertThat(context.absent().equals(map)).isFalse();
 
     if (!map.isEmpty()) {
-      var other = map.entrySet().stream().collect(toImmutableMap(
-          Map.Entry::getKey, entry -> entry.getValue().negate()));
+      var other = ImmutableMap.copyOf(Maps.transformValues(map, Int::negate));
       assertThat(map.equals(other)).isFalse();
       assertThat(other.equals(map)).isFalse();
     }
@@ -2740,6 +2740,7 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("MapEntry")
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullKey(Map<Int, Int> map, CacheContext context) {
     var value = Iterables.getFirst(context.original().values(), context.absentValue());
@@ -2749,6 +2750,7 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("MapEntry")
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullValue(Map<Int, Int> map, CacheContext context) {
     var key = Iterables.getFirst(context.original().keySet(), context.absentKey());
@@ -2758,6 +2760,7 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("MapEntry")
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullKeyValue(Map<Int, Int> map, CacheContext context) {
     assertThat(map.entrySet().remove(Maps.immutableEntry(null, null))).isFalse();

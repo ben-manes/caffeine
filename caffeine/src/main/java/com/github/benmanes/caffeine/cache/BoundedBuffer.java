@@ -91,6 +91,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
       }
       do {
         int index = (int) (head & MASK);
+        @SuppressWarnings("unchecked")
         E e = (E) BUFFER.getAcquire(buffer, index);
         if (e == null) {
           // not published yet

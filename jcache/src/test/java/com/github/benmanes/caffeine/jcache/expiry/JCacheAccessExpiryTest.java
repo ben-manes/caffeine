@@ -15,15 +15,14 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.processor.EntryProcessorResult;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -31,6 +30,8 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
 /**
  * The test cases that ensure the <tt>expiry for access</tt> time is updated for the accessed
@@ -217,8 +218,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
   @Test
   public void invokeAll_present() {
     var result = jcache.invokeAll(keys, (entry, args) -> entry.getValue());
-    var unwrapped = result.entrySet().stream().collect(toImmutableMap(
-        Map.Entry::getKey, entry -> entry.getValue().get()));
+    var unwrapped = ImmutableMap.copyOf(Maps.transformValues(result, EntryProcessorResult::get));
     assertThat(unwrapped).isEqualTo(entries);
 
     for (Integer key : keys) {

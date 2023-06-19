@@ -459,8 +459,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_different(Cache<Int, Int> cache, CacheContext context) {
-    var actual = context.absentKeys().stream()
-        .collect(toImmutableMap(key -> intern(key.negate()), identity()));
+    var actual = Maps.uniqueIndex(context.absentKeys(), key -> intern(key.negate()));
     var result = cache.getAll(context.absentKeys(), keys -> actual);
 
     assertThat(result).isEmpty();

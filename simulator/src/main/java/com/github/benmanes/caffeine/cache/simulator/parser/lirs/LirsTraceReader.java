@@ -32,10 +32,11 @@ public final class LirsTraceReader extends TextTraceReader implements KeyOnlyTra
   }
 
   @Override
+  @SuppressWarnings("StringIsNotEmptyPredicate")
   public LongStream keys() {
     return lines()
-        .filter(line -> !line.isEmpty())
         .filter(line -> !line.equals("*"))
+        .filter(line -> !line.isEmpty())
         .mapToLong(Long::parseLong);
   }
 }

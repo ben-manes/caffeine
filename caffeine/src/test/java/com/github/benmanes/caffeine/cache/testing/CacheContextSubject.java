@@ -33,13 +33,13 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.function.Function.identity;
 
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
-import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
@@ -52,6 +52,7 @@ import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemo
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMultiset;
+import com.google.common.collect.Multimaps;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.StandardSubjectBuilder;
 import com.google.common.truth.Subject;
@@ -291,7 +292,7 @@ public final class CacheContextSubject extends Subject {
     private static Factory<ListenerSubject, CacheContext> factoryOf(
         RemovalListenerType... removalListenerTypes) {
       return (metadata, context) -> {
-        var subject = Stream.of(removalListenerTypes)
+        var subject = Arrays.stream(removalListenerTypes)
             .filter(listener -> listener.isConsumingListener(context))
             .collect(toImmutableMap(identity(), listener -> listener.instance(context)));
         return new ListenerSubject(metadata, context, subject);
@@ -374,11 +375,10 @@ public final class CacheContextSubject extends Subject {
       @CanIgnoreReturnValue
       public Exclusive contains(Entry<?, ?>... entries) {
         awaitUntil((type, listener) -> {
-          var notifications = Stream.of(entries)
+          var notifications = Arrays.stream(entries)
               .map(entry -> new RemovalNotification<>(entry.getKey(), entry.getValue(), cause))
               .collect(toImmutableListMultimap(RemovalNotification::getCause, identity()));
-          var actual = listener.removed().stream()
-              .collect(toImmutableListMultimap(RemovalNotification::getCause, identity()));
+          var actual = Multimaps.index(listener.removed(), RemovalNotification::getCause);
           check(type).that(actual).containsAtLeastEntriesIn(notifications);
         });
         return new Exclusive(entries.length);

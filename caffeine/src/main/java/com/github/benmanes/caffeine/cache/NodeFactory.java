@@ -143,6 +143,7 @@ interface NodeFactory<K, V> {
     return (NodeFactory<K, V>) factory;
   }
 
+  @SuppressWarnings("unchecked")
   static NodeFactory<Object, Object> newFactory(String className) {
     try {
       var clazz = LOOKUP.findClass(Node.class.getPackageName() + "." + className);

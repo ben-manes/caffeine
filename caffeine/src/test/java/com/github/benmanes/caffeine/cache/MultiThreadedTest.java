@@ -98,8 +98,8 @@ public final class MultiThreadedTest {
     Threads.runTest(cache, asyncOperations);
   }
 
-  @SuppressWarnings({"FutureReturnValueIgnored", "MethodReferenceUsage", "rawtypes",
-    "ReturnValueIgnored", "SelfEquals", "SizeGreaterThanOrEqualsZero"})
+  @SuppressWarnings({"CollectionToArray", "FutureReturnValueIgnored", "MethodReferenceUsage",
+    "rawtypes", "ReturnValueIgnored", "SelfEquals", "SizeGreaterThanOrEqualsZero"})
   List<BiConsumer<LoadingCache<Int, Int>, Int>> operations = List.of(
       // LoadingCache
       (cache, key) -> { cache.get(key); },

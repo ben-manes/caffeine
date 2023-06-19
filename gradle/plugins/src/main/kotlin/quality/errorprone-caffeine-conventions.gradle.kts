@@ -17,7 +17,7 @@ dependencies {
 
   errorprone(libs.nullaway.core)
   errorprone(libs.errorprone.mockito)
-  errorprone(libs.errorprone.support)
+  errorprone(libs.bundles.errorprone.support)
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -29,6 +29,15 @@ tasks.withType<JavaCompile>().configureEach {
       isEnabled = false
     }
 
+    errorproneArgs.add(buildString {
+      append("-XepOpt:Refaster:NamePattern=^")
+      disabledRules.forEach { rule ->
+        append("(?!")
+        append(rule)
+        append(".*)")
+      }
+      append(".*")
+    })
     disabledChecks.forEach { disable(it) }
     enabledChecks.forEach { enable(it) }
     errorChecks.forEach { error(it) }
@@ -121,4 +130,17 @@ val enabledChecks = listOf(
   "UnusedTypeParameter",
   "UsingJsr305CheckReturnValue",
   "YodaCondition",
+)
+val disabledRules = listOf(
+  "ImmutableListRules\\\$ImmutableListBuilder",
+  "ImmutableListRules\\\$ImmutableListOf\\d*",
+  "ImmutableMapRules\\\$ImmutableMapBuilder",
+  "ImmutableMapRules\\\$ImmutableMapOf\\d*",
+  "ImmutableSetMultimapRules\\\$ImmutableSetMultimapBuilder",
+  "ImmutableSetRules\\\$ImmutableSetOf\\d*",
+  "JUnitToAssertJRules",
+  "MapRules",
+  "NullRules\\\$RequireNonNullElse",
+  "PreconditionsRules",
+  "TestNGToAssertJRules"
 )

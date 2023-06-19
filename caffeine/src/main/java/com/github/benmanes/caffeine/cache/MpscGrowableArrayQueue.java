@@ -230,7 +230,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   @Override
   @SuppressWarnings("MissingDefault")
   public boolean offer(final E e) {
-    if (null == e) {
+    if (e == null) {
       throw new NullPointerException();
     }
 
@@ -398,7 +398,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   private E newBufferPeek(E[] nextBuffer, final long index) {
     final long offsetInNew = newBufferAndOffset(nextBuffer, index);
     final E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
-    if (null == n) {
+    if (n == null) {
       throw new IllegalStateException("new buffer must have at least one element");
     }
     return n;
@@ -603,6 +603,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * @param offset computed
    * @return the element at the offset
    */
+  @SuppressWarnings("unchecked")
   static <E> E lvElement(E[] buffer, long offset) {
     return (E) REF_ARRAY.getVolatile(buffer, (int) offset);
   }

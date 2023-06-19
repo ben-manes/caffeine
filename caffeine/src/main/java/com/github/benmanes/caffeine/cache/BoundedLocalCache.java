@@ -2155,6 +2155,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
+  @SuppressWarnings("SuspiciousMethodCalls")
   public boolean containsValue(Object value) {
     requireNonNull(value);
 
@@ -3000,9 +3001,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * The cache's {@link #size()} method may include entries that have expired or have been reference
    * collected, but have not yet been removed from the backing map. An iteration over the map may
    * trigger the removal of these dead entries when skipped over during traversal. To ensure
-   * consistency and symmetry, usages should call {@link #cleanUp()} before {@link #equals(Object)}.
-   * This is not done implicitly by {@link #size()} as many usages assume it to be instantaneous and
-   * lock-free.
+   * consistency and symmetry, usages should call {@link #cleanUp()} before this method while no
+   * other concurrent operations are being performed on this cache. This is not done implicitly by
+   * {@link #size()} as many usages assume it to be instantaneous and lock-free.
    */
   @Override
   public boolean equals(Object o) {
@@ -3267,6 +3268,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
+    @SuppressWarnings("SuspiciousMethodCalls")
     public boolean contains(Object o) {
       return cache.containsKey(o);
     }
@@ -3438,6 +3440,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
+    @SuppressWarnings("SuspiciousMethodCalls")
     public boolean contains(Object o) {
       return cache.containsValue(o);
     }
@@ -3652,6 +3655,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
+    @SuppressWarnings("SuspiciousMethodCalls")
     public boolean remove(Object o) {
       if (!(o instanceof Entry<?, ?>)) {
         return false;
@@ -3999,7 +4003,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
       if ((refreshes == null) || refreshes.isEmpty()) {
-        return Collections.unmodifiableMap(Collections.emptyMap());
+        @SuppressWarnings("ImmutableMapOf")
+        Map<K, CompletableFuture<V>> emptyMap = Collections.unmodifiableMap(Collections.emptyMap());
+        return emptyMap;
       } else if (cache.collectKeys()) {
         var inFlight = new IdentityHashMap<K, CompletableFuture<V>>(refreshes.size());
         for (var entry : refreshes.entrySet()) {

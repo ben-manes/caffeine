@@ -90,8 +90,8 @@ import org.junit.Test;
 /**
  * Ported from Eclipse Collections 11.0.
  */
-@SuppressWarnings({"all", "deprecation", "IdentityConversion",
-  "IsInstanceIncompatibleType", "PreferredInterfaceType", "unchecked", "YodaCondition"})
+@SuppressWarnings({"all", "deprecation", "IdentityConversion", "IsInstanceIncompatibleType",
+    "NaturalOrder", "PreferredInterfaceType", "ReverseOrder", "unchecked", "YodaCondition"})
 public abstract class MapIterableTestCase {
   protected abstract <K, V> MapIterable<K, V> newMap();
 
@@ -532,13 +532,13 @@ public abstract class MapIterableTestCase {
   public void detectOptional() {
     MapIterable<String, String> map = newMapWithKeysValues("1", "One", "2", "Two", "3", "Three");
     Pair<String, String> one =
-        map.detectOptional((argument1, argument2) -> "1".equals(argument1)).get();
+        map.detectOptional((argument1, argument2) -> "1".equals(argument1)).orElseThrow();
     Assert.assertNotNull(one);
     Assert.assertEquals("1", one.getOne());
     Assert.assertEquals("One", one.getTwo());
 
     Pair<String, String> two =
-        map.detectOptional((argument1, argument2) -> "Two".equals(argument2)).get();
+        map.detectOptional((argument1, argument2) -> "Two".equals(argument2)).orElseThrow();
     Assert.assertNotNull(two);
     Assert.assertEquals("2", two.getOne());
     Assert.assertEquals("Two", two.getTwo());
@@ -908,7 +908,7 @@ public abstract class MapIterableTestCase {
   public void detectOptional_value() {
     MapIterable<String, String> map = newMapWithKeysValues("1", "One", "2", "Two", "3", "Three");
 
-    String resultFound = map.detectOptional("One"::equals).get();
+    String resultFound = map.detectOptional("One"::equals).orElseThrow();
     Assert.assertEquals("One", resultFound);
 
     Assert.assertFalse(map.detectOptional("Four"::equals).isPresent());
@@ -929,7 +929,7 @@ public abstract class MapIterableTestCase {
   public void detectWithOptional() {
     MapIterable<String, String> map = newMapWithKeysValues("1", "One", "2", "Two", "3", "Three");
 
-    String resultFound = map.detectWithOptional(Object::equals, "One").get();
+    String resultFound = map.detectWithOptional(Object::equals, "One").orElseThrow();
     Assert.assertEquals("One", resultFound);
 
     Assert.assertFalse(map.detectWithOptional(Object::equals, "Four").isPresent());
