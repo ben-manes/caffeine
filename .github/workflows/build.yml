@@ -311,7 +311,7 @@ jobs:
             guava.dev:443
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up JDK ${{ env.PUBLISH_JDK }}
-        uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
+        uses: Wandalen/wretry.action@1d64c582b2d2b6e03f2906963942ff88024ebf1c # v1.1.0
         with:
           action: actions/setup-java@5ffc13f4174014e2d4d4572b3d74c3fa61aeb2c2 # v3.11.0
           with: |
@@ -320,7 +320,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Setup Gradle
-        uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
+        uses: Wandalen/wretry.action@1d64c582b2d2b6e03f2906963942ff88024ebf1c # v1.1.0
         timeout-minutes: 5
         with:
           action: gradle/gradle-build-action@749f47bda3e44aa060e82d7b3ef7e40d953bd629 # v2.4.2
