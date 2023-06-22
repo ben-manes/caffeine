@@ -87,6 +87,7 @@ val disabledChecks = listOf(
 )
 val enabledChecks = listOf(
   "AssertFalse",
+  "BanClassLoader",
   "BuilderReturnThis",
   "CatchingUnchecked",
   "CanIgnoreReturnValueSuggester",

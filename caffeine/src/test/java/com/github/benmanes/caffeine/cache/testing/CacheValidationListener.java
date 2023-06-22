@@ -225,7 +225,8 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   private static void checkLogger(ITestResult testResult) {
     var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
     var checkMaxLogLevel = Optional.ofNullable(testMethod.getAnnotation(CheckMaxLogLevel.class))
-        .orElse(testResult.getTestClass().getRealClass().getAnnotation(CheckMaxLogLevel.class));
+        .orElseGet(() -> testResult.getTestClass()
+            .getRealClass().getAnnotation(CheckMaxLogLevel.class));
     if (checkMaxLogLevel != null) {
       var events = TestLoggerFactory.getLoggingEvents().stream()
           .filter(event -> event.getLevel().ordinal() > checkMaxLogLevel.value().ordinal())
