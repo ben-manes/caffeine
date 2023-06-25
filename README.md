@@ -65,6 +65,7 @@ Powering infrastructure near you:
 * [Cassandra][cassandra]: Manage massive amounts of data, fast
 * [Coherence][coherence]: Mission critical in-memory data grid
 * [Accumulo][accumulo]: A sorted, distributed key/value store
+* [Kafka][kafka]: A distributed event streaming platform
 * [HBase][hbase]: A distributed, scalable, big data store
 * [Apache Solr][solr]: Blazingly fast enterprise search
 * [Infinispan][infinispan]: Distributed in-memory data grid
@@ -138,6 +139,7 @@ Snapshots of the development version are available in
 [spring]: https://docs.spring.io/spring/docs/current/spring-framework-reference/integration.html#cache-store-configuration-caffeine
 [scala-cache]: https://github.com/cb372/scalacache
 [scaffeine]: https://github.com/blemale/scaffeine
+[kafka]: https://kafka.apache.org
 [hbase]: https://hbase.apache.org
 [cassandra]: http://cassandra.apache.org
 [solr]: https://solr.apache.org/

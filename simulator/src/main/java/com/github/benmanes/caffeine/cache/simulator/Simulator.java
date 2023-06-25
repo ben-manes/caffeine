@@ -137,7 +137,7 @@ public final class Simulator {
   }
 
   /** Throws the underlying cause for the simulation failure. */
-  private void throwError(ImmutableList<PolicyActor> policies, RuntimeException e) {
+  private void throwError(Iterable<PolicyActor> policies, RuntimeException e) {
     if (!Thread.currentThread().isInterrupted()) {
       throw e;
     }

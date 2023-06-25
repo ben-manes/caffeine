@@ -144,19 +144,18 @@ public final class QdlpPolicy implements KeyOnlyPolicy {
     int freq = candidate.frequency;
     candidate.frequency = 0;
     candidate.remove();
+    sizeFifo--;
 
     if (freq >= moveToMainThreshold) {
       evictFromMain();
       candidate.appendToTail(headMain);
       candidate.type = QueueType.MAIN;
       sizeMain++;
-      sizeFifo--;
     } else {
       candidate.appendToTail(headGhost);
       candidate.type = QueueType.GHOST;
       candidate.frequency = 0;
       sizeGhost++;
-      sizeFifo--;
 
       if (sizeGhost > maxGhost) {
         var ghost = headGhost.next;
