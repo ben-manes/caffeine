@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -33,6 +34,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -76,9 +78,7 @@ public final class Simulator {
       broadcast(policies, trace);
       report(policies, trace.characteristics());
     } catch (RuntimeException e) {
-      if (!Thread.currentThread().isInterrupted()) {
-        throw e;
-      }
+      throwError(policies, e);
     }
   }
 
@@ -102,10 +102,11 @@ public final class Simulator {
       var remainder = List.copyOf(batch);
       for (var policy : policies) {
         policy.send(remainder);
+        policy.finish();
       }
 
       var futures = policies.stream()
-          .map(PolicyActor::finish)
+          .map(PolicyActor::future)
           .toArray(CompletableFuture<?>[]::new);
       CompletableFuture.allOf(futures).join();
     }
@@ -133,6 +134,25 @@ public final class Simulator {
     return registry.policies().stream()
         .map(policy -> new PolicyActor(Thread.currentThread(), policy, settings))
         .collect(toImmutableList());
+  }
+
+  /** Throws the underlying cause for the simulation failure. */
+  private void throwError(ImmutableList<PolicyActor> policies, RuntimeException e) {
+    if (!Thread.currentThread().isInterrupted()) {
+      throw e;
+    }
+    for (var policy : policies) {
+      if (policy.future().isCompletedExceptionally()) {
+        try {
+          policy.future().join();
+        } catch (CompletionException error) {
+          Throwables.throwIfUnchecked(error.getCause());
+          error.addSuppressed(e);
+          throw error;
+        }
+      }
+    }
+    throw e;
   }
 
   public static void main(String[] args) {

@@ -72,6 +72,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.S4Wind
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCacheWithGhostCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.WindowTinyCachePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.QdlpPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.google.auto.value.AutoValue;
@@ -171,6 +172,7 @@ public final class Registry {
   }
 
   private void registerTwoQueue() {
+    register(QdlpPolicy.class, QdlpPolicy::new);
     register(TuQueuePolicy.class, TuQueuePolicy::new);
     register(TwoQueuePolicy.class, TwoQueuePolicy::new);
   }
