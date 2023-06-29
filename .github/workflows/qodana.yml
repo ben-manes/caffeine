@@ -40,6 +40,7 @@ jobs:
             lightbend.github.io:443
             objects.githubusercontent.com:443
             packages.jetbrains.team:443
+            pkg-cdn.jetbrains.team:443
             plugins.gradle.org:443
             plugins.jetbrains.com:443
             plugins-artifacts.gradle.org:443
