@@ -20,12 +20,14 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
+import com.google.errorprone.annotations.Immutable;
 
 /**
  * An immutable entry that includes a snapshot of the policy metadata at its time of creation.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Immutable(containerOf = {"K", "V"})
 class SnapshotEntry<K, V> implements CacheEntry<K, V> {
   private final long snapshot;
   private final V value;

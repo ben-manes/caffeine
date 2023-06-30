@@ -75,14 +75,14 @@ public final class Simulator {
     }
 
     try {
-      broadcast(policies, trace);
-      report(policies, trace.characteristics());
+      broadcast(trace, policies);
+      report(trace, policies);
     } catch (RuntimeException e) {
-      throwError(policies, e);
+      throwError(e, policies);
     }
   }
 
-  private void broadcast(List<PolicyActor> policies, TraceReader trace) {
+  private void broadcast(TraceReader trace, List<PolicyActor> policies) {
     long skip = settings.trace().skip();
     long limit = settings.trace().limit();
     int batchSize = settings.actor().batchSize();
@@ -112,8 +112,8 @@ public final class Simulator {
     }
   }
 
-  private void report(List<PolicyActor> policies, Set<Characteristic> characteristics) {
-    var reporter = settings.report().format().create(settings.config(), characteristics);
+  private void report(TraceReader trace, List<PolicyActor> policies) {
+    var reporter = settings.report().format().create(settings.config(), trace.characteristics());
     var results = policies.stream().map(PolicyActor::stats).collect(toImmutableList());
     reporter.print(results);
   }
@@ -137,22 +137,22 @@ public final class Simulator {
   }
 
   /** Throws the underlying cause for the simulation failure. */
-  private void throwError(Iterable<PolicyActor> policies, RuntimeException e) {
+  private void throwError(RuntimeException error, Iterable<PolicyActor> policies) {
     if (!Thread.currentThread().isInterrupted()) {
-      throw e;
+      throw error;
     }
     for (var policy : policies) {
       if (policy.future().isCompletedExceptionally()) {
         try {
           policy.future().join();
-        } catch (CompletionException error) {
-          Throwables.throwIfUnchecked(error.getCause());
-          error.addSuppressed(e);
-          throw error;
+        } catch (CompletionException e) {
+          Throwables.throwIfUnchecked(e.getCause());
+          e.addSuppressed(error);
+          throw e;
         }
       }
     }
-    throw e;
+    throw error;
   }
 
   public static void main(String[] args) {

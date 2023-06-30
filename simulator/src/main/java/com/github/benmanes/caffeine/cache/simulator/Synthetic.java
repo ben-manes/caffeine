@@ -16,11 +16,11 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.UniformSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.TraceSettings;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
@@ -48,26 +48,26 @@ public final class Synthetic {
     int events = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter":
-        return () -> counter(settings.synthetic().counter().start(), events);
+        return counter(settings.synthetic().counter().start(), events);
       case "repeating":
-        return () -> repeating(settings.synthetic().repeating().items(), events);
+        return repeating(settings.synthetic().repeating().items(), events);
       case "uniform":
-        UniformSettings uniform = settings.synthetic().uniform();
-        return () -> uniform(uniform.lowerBound(), uniform.upperBound(), events);
+        var uniform = settings.synthetic().uniform();
+        return uniform(uniform.lowerBound(), uniform.upperBound(), events);
       case "exponential":
-        return () -> exponential(settings.synthetic().exponential().mean(), events);
+        return exponential(settings.synthetic().exponential().mean(), events);
       case "hotspot":
         HotspotSettings hotspot = settings.synthetic().hotspot();
-        return () -> Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
+        return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
             hotspot.hotOpnFraction(), hotspot.hotsetFraction(), events);
       case "zipfian":
-        return () -> zipfian(settings.synthetic().zipfian().items(),
+        return zipfian(settings.synthetic().zipfian().items(),
             settings.synthetic().zipfian().constant(), events);
       case "scrambled-zipfian":
-        return () -> scrambledZipfian(settings.synthetic().zipfian().items(),
+        return scrambledZipfian(settings.synthetic().zipfian().items(),
             settings.synthetic().zipfian().constant(), events);
       case "skewed-zipfian-latest":
-        return () -> skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
+        return skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
       default:
         throw new IllegalStateException("Unknown distribution: "
             + settings.synthetic().distribution());
@@ -80,7 +80,7 @@ public final class Synthetic {
    * @param start the number that the counter starts from
    * @param events the number of events in the distribution
    */
-  public static LongStream counter(int start, int events) {
+  public static KeyOnlyTraceReader counter(int start, int events) {
     return generate(new CounterGenerator(start), events);
   }
 
@@ -90,7 +90,7 @@ public final class Synthetic {
    * @param items the number of items in the distribution
    * @param events the number of events in the distribution
    */
-  public static LongStream repeating(int items, int events) {
+  public static KeyOnlyTraceReader repeating(int items, int events) {
     return generate(new SequentialGenerator(0, items), events);
   }
 
@@ -103,7 +103,7 @@ public final class Synthetic {
    * @param events the number of events in the distribution
    * @return a stream of cache events
    */
-  public static LongStream uniform(int lowerBound, int upperBound, int events) {
+  public static KeyOnlyTraceReader uniform(int lowerBound, int upperBound, int events) {
     return generate(new UniformLongGenerator(lowerBound, upperBound), events);
   }
 
@@ -114,7 +114,7 @@ public final class Synthetic {
    * @param mean mean arrival rate of gamma (a half life of 1/gamma)
    * @param events the number of events in the distribution
    */
-  public static LongStream exponential(double mean, int events) {
+  public static KeyOnlyTraceReader exponential(double mean, int events) {
     return generate(new ExponentialGenerator(mean), events);
   }
 
@@ -131,7 +131,7 @@ public final class Synthetic {
    * @param hotOpnFraction percentage of operations accessing the hot set
    * @param events the number of events in the distribution
    */
-  public static LongStream hotspot(int lowerBound, int upperBound,
+  public static KeyOnlyTraceReader hotspot(int lowerBound, int upperBound,
       double hotsetFraction, double hotOpnFraction, int events) {
     return generate(new HotspotIntegerGenerator(lowerBound,
         upperBound, hotsetFraction, hotOpnFraction), events);
@@ -147,7 +147,7 @@ public final class Synthetic {
    * @param constant the skew factor for the distribution
    * @param events the number of events in the distribution
    */
-  public static LongStream scrambledZipfian(int items, double constant, int events) {
+  public static KeyOnlyTraceReader scrambledZipfian(int items, double constant, int events) {
     return generate(new ScrambledZipfianGenerator(0, items - 1, constant), events);
   }
 
@@ -158,7 +158,7 @@ public final class Synthetic {
    * @param items the number of items in the distribution
    * @param events the number of events in the distribution
    */
-  public static LongStream skewedZipfianLatest(int items, int events) {
+  public static KeyOnlyTraceReader skewedZipfianLatest(int items, int events) {
     return generate(new SkewedLatestGenerator(new CounterGenerator(items)), events);
   }
 
@@ -170,12 +170,13 @@ public final class Synthetic {
    * @param constant the skew factor for the distribution
    * @param events the number of events in the distribution
    */
-  public static LongStream zipfian(int items, double constant, int events) {
+  public static KeyOnlyTraceReader zipfian(int items, double constant, int events) {
     return generate(new ZipfianGenerator(items, constant), events);
   }
 
   /** Returns a sequence of items constructed by the generator. */
-  private static LongStream generate(NumberGenerator generator, long count) {
-    return LongStream.range(0, count).map(ignored -> generator.nextValue().longValue());
+  private static KeyOnlyTraceReader generate(NumberGenerator generator, long count) {
+    requireNonNull(generator);
+    return () -> LongStream.range(0, count).map(ignored -> generator.nextValue().longValue());
   }
 }

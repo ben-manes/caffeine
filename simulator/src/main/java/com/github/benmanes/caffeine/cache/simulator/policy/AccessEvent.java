@@ -20,12 +20,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Immutable;
 
 /**
  * The key and metadata for accessing a cache.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Immutable
 public class AccessEvent {
   private final long key;
 

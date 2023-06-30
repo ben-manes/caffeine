@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.MustBeClosed;
 
 /**
  * A reader to an access trace.
@@ -42,6 +43,7 @@ public interface TraceReader {
    *
    * @return a lazy stream of cache events
    */
+  @MustBeClosed
   Stream<AccessEvent> events();
 
   /** A trace reader that that does not contain external event metadata. */
