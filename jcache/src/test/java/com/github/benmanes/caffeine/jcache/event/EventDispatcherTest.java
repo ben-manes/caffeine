@@ -72,7 +72,6 @@ public final class EventDispatcherTest {
   @BeforeMethod
   public void beforeMethod() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    EventDispatcher.pending.remove();
   }
 
   @AfterTest
@@ -136,7 +135,7 @@ public final class EventDispatcherTest {
 
     dispatcher.publishCreated(cache, 1, 2);
     verify(createdListener, times(4)).onCreated(any());
-    assertThat(EventDispatcher.pending.get()).hasSize(2);
+    assertThat(dispatcher.pending.get()).hasSize(2);
     assertThat(dispatcher.dispatchQueues.values().stream()
         .flatMap(queue -> queue.entrySet().stream())).isEmpty();
   }
@@ -148,7 +147,7 @@ public final class EventDispatcherTest {
 
     dispatcher.publishUpdated(cache, 1, 2, 3);
     verify(updatedListener, times(4)).onUpdated(any());
-    assertThat(EventDispatcher.pending.get()).hasSize(2);
+    assertThat(dispatcher.pending.get()).hasSize(2);
     assertThat(dispatcher.dispatchQueues.values().stream()
         .flatMap(queue -> queue.entrySet().stream())).isEmpty();
   }
@@ -160,7 +159,7 @@ public final class EventDispatcherTest {
 
     dispatcher.publishRemoved(cache, 1, 2);
     verify(removedListener, times(4)).onRemoved(any());
-    assertThat(EventDispatcher.pending.get()).hasSize(2);
+    assertThat(dispatcher.pending.get()).hasSize(2);
     assertThat(dispatcher.dispatchQueues.values().stream()
         .flatMap(queue -> queue.entrySet().stream())).isEmpty();
   }
@@ -172,7 +171,7 @@ public final class EventDispatcherTest {
 
     dispatcher.publishExpired(cache, 1, 2);
     verify(expiredListener, times(4)).onExpired(any());
-    assertThat(EventDispatcher.pending.get()).hasSize(2);
+    assertThat(dispatcher.pending.get()).hasSize(2);
     assertThat(dispatcher.dispatchQueues.values().stream()
         .flatMap(queue -> queue.entrySet().stream())).isEmpty();
   }
@@ -305,30 +304,30 @@ public final class EventDispatcherTest {
 
   @Test
   public void awaitSynchronous() {
-    EventDispatcher.pending.get().add(CompletableFuture.completedFuture(null));
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    dispatcher.pending.get().add(CompletableFuture.completedFuture(null));
     dispatcher.awaitSynchronous();
-    assertThat(EventDispatcher.pending.get()).isEmpty();
+    assertThat(dispatcher.pending.get()).isEmpty();
   }
 
   @Test
   public void awaitSynchronous_failure() {
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var future = new CompletableFuture<Void>();
     future.completeExceptionally(new RuntimeException());
-    EventDispatcher.pending.get().add(future);
+    dispatcher.pending.get().add(future);
 
-    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     dispatcher.awaitSynchronous();
-    assertThat(EventDispatcher.pending.get()).isEmpty();
+    assertThat(dispatcher.pending.get()).isEmpty();
   }
 
   @Test
   public void ignoreSynchronous() {
-    EventDispatcher.pending.get().add(CompletableFuture.completedFuture(null));
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    dispatcher.pending.get().add(CompletableFuture.completedFuture(null));
 
     dispatcher.ignoreSynchronous();
-    assertThat(EventDispatcher.pending.get()).isEmpty();
+    assertThat(dispatcher.pending.get()).isEmpty();
   }
 
   /**
