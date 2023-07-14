@@ -28,8 +28,8 @@ import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static uk.org.lidalia.slf4jext.Level.ERROR;
-import static uk.org.lidalia.slf4jext.Level.WARN;
+import static org.slf4j.event.Level.ERROR;
+import static org.slf4j.event.Level.WARN;
 
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;

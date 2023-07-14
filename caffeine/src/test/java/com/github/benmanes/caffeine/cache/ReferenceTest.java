@@ -36,7 +36,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.org.lidalia.slf4jext.Level.WARN;
+import static org.slf4j.event.Level.WARN;
 
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;

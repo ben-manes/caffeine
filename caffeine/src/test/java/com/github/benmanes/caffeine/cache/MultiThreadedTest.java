@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.function.Function.identity;
-import static uk.org.lidalia.slf4jext.Level.WARN;
+import static org.slf4j.event.Level.WARN;
 
 import java.util.List;
 import java.util.Map;

@@ -31,7 +31,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static uk.org.lidalia.slf4jext.Level.WARN;
+import static org.slf4j.event.Level.WARN;
 
 import java.util.ArrayList;
 import java.util.Collections;

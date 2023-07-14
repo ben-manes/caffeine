@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.google.common.collect.ImmutableList;
 
 /**
  * An actor that proxies to the page replacement policy.
@@ -29,6 +30,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class PolicyActor {
+  private final CompletableFuture<Void> completed;
   private final Semaphore semaphore;
   private final Policy policy;
   private final Thread parent;
@@ -45,12 +47,13 @@ public final class PolicyActor {
   public PolicyActor(Thread parent, Policy policy, BasicSettings settings) {
     this.semaphore = new Semaphore(settings.actor().mailboxSize());
     this.future = CompletableFuture.completedFuture(null);
+    this.completed = new CompletableFuture<>();
     this.policy = requireNonNull(policy);
     this.parent = requireNonNull(parent);
   }
 
   /** Sends the access events for async processing and blocks until accepted into the mailbox. */
-  public void send(List<AccessEvent> events) {
+  public void send(ImmutableList<AccessEvent> events) {
     submit(new Execute(events));
   }
 
@@ -60,8 +63,8 @@ public final class PolicyActor {
   }
 
   /** Return the future that signals the policy's completion. */
-  public CompletableFuture<Void> future() {
-    return future;
+  public CompletableFuture<Void> completed() {
+    return completed;
   }
 
   /** Submits the command to the mailbox and blocks until accepted. */
@@ -108,6 +111,7 @@ public final class PolicyActor {
   private final class Finish extends Command {
     @Override public void execute() {
       policy.finished();
+      completed.complete(null);
     }
   }
 
@@ -118,6 +122,7 @@ public final class PolicyActor {
       try {
         execute();
       } catch (Throwable t) {
+        completed.completeExceptionally(t);
         parent.interrupt();
         throw t;
       } finally {

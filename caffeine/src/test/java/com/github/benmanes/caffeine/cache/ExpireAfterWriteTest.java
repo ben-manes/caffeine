@@ -29,7 +29,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
-import static uk.org.lidalia.slf4jext.Level.WARN;
+import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;

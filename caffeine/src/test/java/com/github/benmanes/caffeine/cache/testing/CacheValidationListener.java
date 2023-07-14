@@ -23,7 +23,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.testng.ITestResult.FAILURE;
-import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.TRACE_LEVELS;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.StringUtils;
 import org.joor.Reflect;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 import org.testng.Assert;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
@@ -60,6 +60,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.google.common.collect.ImmutableList;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -67,10 +68,12 @@ import com.github.valfirst.slf4jtest.TestLoggerFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheValidationListener implements ISuiteListener, IInvokedMethodListener {
+  private static final ImmutableList<Level> TRACE_LEVELS = ImmutableList.copyOf(Level.values());
+  private static final Object[] EMPTY_PARAMS = {};
+
   private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
   private static final AtomicBoolean detailedParams = new AtomicBoolean(false);
   private static final ITestContext testngContext = Mockito.mock();
-  private static final Object[] EMPTY_PARAMS = {};
 
   private final List<Collection<?>> resultQueues = new CopyOnWriteArrayList<>();
   private final AtomicBoolean beforeCleanup = new AtomicBoolean();
@@ -229,7 +232,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
             .getRealClass().getAnnotation(CheckMaxLogLevel.class));
     if (checkMaxLogLevel != null) {
       var events = TestLoggerFactory.getLoggingEvents().stream()
-          .filter(event -> event.getLevel().ordinal() > checkMaxLogLevel.value().ordinal())
+          .filter(event -> event.getLevel().toInt() > checkMaxLogLevel.value().toInt())
           .collect(toImmutableList());
       assertWithMessage("maxLevel=%s", checkMaxLogLevel.value()).that(events).isEmpty();
     }

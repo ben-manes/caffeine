@@ -91,7 +91,7 @@ public final class Simulator {
       events.forEach(event -> {
         batch.add(event);
         if (batch.size() == batchSize) {
-          var accessEvents = List.copyOf(batch);
+          var accessEvents = ImmutableList.copyOf(batch);
           for (var policy : policies) {
             policy.send(accessEvents);
           }
@@ -99,14 +99,14 @@ public final class Simulator {
         }
       });
 
-      var remainder = List.copyOf(batch);
+      var remainder = ImmutableList.copyOf(batch);
       for (var policy : policies) {
         policy.send(remainder);
         policy.finish();
       }
 
       var futures = policies.stream()
-          .map(PolicyActor::future)
+          .map(PolicyActor::completed)
           .toArray(CompletableFuture<?>[]::new);
       CompletableFuture.allOf(futures).join();
     }
@@ -142,9 +142,9 @@ public final class Simulator {
       throw error;
     }
     for (var policy : policies) {
-      if (policy.future().isCompletedExceptionally()) {
+      if (policy.completed().isCompletedExceptionally()) {
         try {
-          policy.future().join();
+          policy.completed().join();
         } catch (CompletionException e) {
           Throwables.throwIfUnchecked(e.getCause());
           e.addSuppressed(error);

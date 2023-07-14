@@ -64,9 +64,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.org.lidalia.slf4jext.ConventionalLevelHierarchy.WARN_LEVELS;
-import static uk.org.lidalia.slf4jext.Level.ERROR;
-import static uk.org.lidalia.slf4jext.Level.WARN;
+import static org.slf4j.event.Level.ERROR;
+import static org.slf4j.event.Level.WARN;
 
 import java.io.IOException;
 import java.lang.ref.Reference;
@@ -95,6 +94,7 @@ import java.util.stream.IntStream;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
+import org.slf4j.event.Level;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -1892,7 +1892,7 @@ public final class BoundedLocalCacheTest {
     try {
       ConcurrentTestHarness.execute(() -> {
         var logger = TestLoggerFactory.getTestLogger(BoundedLocalCache.class);
-        logger.setEnabledLevels(WARN_LEVELS);
+        logger.setEnabledLevels(Level.WARN, Level.ERROR);
         thread.set(Thread.currentThread());
         testLogger.set(logger);
 

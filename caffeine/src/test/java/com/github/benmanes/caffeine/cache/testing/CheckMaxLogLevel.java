@@ -22,7 +22,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import uk.org.lidalia.slf4jext.Level;
+import org.slf4j.event.Level;
 
 /**
  * A test class or method with this annotation has indicated that logging should not exceed the

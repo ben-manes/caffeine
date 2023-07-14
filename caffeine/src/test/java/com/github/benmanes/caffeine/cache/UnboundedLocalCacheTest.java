@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.truth.Truth8.assertThat;
-import static uk.org.lidalia.slf4jext.Level.TRACE;
+import static org.slf4j.event.Level.TRACE;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
