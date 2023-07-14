@@ -16,7 +16,4 @@ dependencyResolutionManagement {
 apply(from = "$rootDir/gradle/gradle-enterprise.gradle")
 
 rootProject.name = "caffeine"
-include("caffeine")
-include("guava")
-include("jcache")
-include("simulator")
+include("caffeine", "guava", "jcache", "simulator")

@@ -34,7 +34,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
  * SOLR-10141: Removal listener notified with stale value
  * <p>
  * When an entry is chosen for eviction and concurrently updated, the value notified should be the
- * updated one if the <tt>put</tt> was successful.
+ * updated one if the <code>put</code> was successful.
  *
  * @author yseeley@gmail.com (Yonik Seeley)
  * @author ben.manes@gmail.com (Ben Manes)

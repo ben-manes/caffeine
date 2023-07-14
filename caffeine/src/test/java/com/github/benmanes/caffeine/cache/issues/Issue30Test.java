@@ -46,7 +46,7 @@ import com.github.benmanes.caffeine.testing.FutureSubject;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
- * Issue #30: Unexpected cache misses with <tt>expireAfterWrite</tt> using multiple keys.
+ * Issue #30: Unexpected cache misses with <code>expireAfterWrite</code> using multiple keys.
  * <p>
  * Prior to eviction, the cache must revalidate that the entry has expired. If the entry was updated
  * but the maintenance thread reads a stale value, then the entry may be prematurely expired. The

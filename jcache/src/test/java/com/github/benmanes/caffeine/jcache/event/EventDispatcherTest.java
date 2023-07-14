@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -319,6 +320,30 @@ public final class EventDispatcherTest {
 
     dispatcher.awaitSynchronous();
     assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
+  public void awaitSynchronous_nested() {
+    var primary = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var secondary = new EventDispatcher<Integer, Integer>(Runnable::run);
+
+    var pendingFutures = new ArrayList<>();
+    CacheEntryCreatedListener<Integer, Integer> listener = events ->
+        pendingFutures.addAll(secondary.pending.get());
+
+    var configuration = new MutableCacheEntryListenerConfiguration<>(
+        () -> listener, null, /* isOldValueRequired */ false, /* isSynchronous */ true);
+    primary.register(configuration);
+    int key = 1;
+
+    var dispatchQueue = primary.dispatchQueues.values().iterator().next();
+    var queue = new CompletableFuture<Void>();
+    dispatchQueue.put(key, queue);
+
+    primary.publishCreated(cache, key, -key);
+    queue.complete(null);
+
+    assertThat(pendingFutures).isEmpty();
   }
 
   @Test

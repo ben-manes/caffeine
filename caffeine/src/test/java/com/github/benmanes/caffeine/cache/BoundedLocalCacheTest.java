@@ -94,7 +94,6 @@ import java.util.stream.IntStream;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
-import org.slf4j.event.Level;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -1892,7 +1891,7 @@ public final class BoundedLocalCacheTest {
     try {
       ConcurrentTestHarness.execute(() -> {
         var logger = TestLoggerFactory.getTestLogger(BoundedLocalCache.class);
-        logger.setEnabledLevels(Level.WARN, Level.ERROR);
+        logger.setEnabledLevels(WARN, ERROR);
         thread.set(Thread.currentThread());
         testLogger.set(logger);
 

@@ -64,13 +64,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public final class EventDispatcher<K, V> {
   static final Logger logger = System.getLogger(EventDispatcher.class.getName());
-  final ThreadLocal<List<CompletableFuture<Void>>> pending =
-      ThreadLocal.withInitial(ArrayList::new);
 
   final ConcurrentMap<Registration<K, V>, ConcurrentMap<K, CompletableFuture<Void>>> dispatchQueues;
+  final ThreadLocal<List<CompletableFuture<Void>>> pending;
   final Executor executor;
 
   public EventDispatcher(Executor executor) {
+    this.pending = ThreadLocal.withInitial(ArrayList::new);
     this.dispatchQueues = new ConcurrentHashMap<>();
     this.executor = requireNonNull(executor);
   }
