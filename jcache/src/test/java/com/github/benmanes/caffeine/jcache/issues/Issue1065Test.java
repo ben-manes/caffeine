@@ -50,7 +50,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * <p>
  * The JCache listener is documented as deadlock prone if it mutates any cache, such as by causing a
  * cycle. If the listener is marked as <code>synchronous</code> then the caller must wait for the
- * events that it emitted complete, where the listener is required to operate on events in order
+ * events that it emitted to complete, where the listener is required to operate on events in order
  * that they occurred for a given key. A user assumption is that no deadlock should occur when a
  * primary cache uses a listener to write into a secondary cache because no cycle was created.
  * <p>

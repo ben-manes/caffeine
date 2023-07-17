@@ -1,6 +1,6 @@
 [default.extend-words]
+Pagent = "Pagent"
 testng = "testng"
-deques = "deques"
 
 [files]
 extend-exclude = [

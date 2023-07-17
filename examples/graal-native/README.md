@@ -16,7 +16,7 @@ gu install native-image
 ### Run on the JVM with an agent to capture class metadata
 
 ```console
-gradle -Pagent run
+gradle run -Pagent
 ```
 
 ### Copy the metadata as the source configuration
