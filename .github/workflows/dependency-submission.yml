@@ -58,7 +58,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Submit Dependency Graph
-        uses: mikepenz/gradle-dependency-submission@aa82af7186ba17eb630a7d47c840ba8a3185ac91 # v0.8.6
+        uses: mikepenz/gradle-dependency-submission@91b021ee7e1ec04cb057c055cc80c5124e70242c # v0.9.0
         with:
           gradle-build-module: |-
             :simulator
