@@ -46,8 +46,12 @@ tasks.withType<JavaExec>().configureEach {
 tasks.withType<AbstractArchiveTask>().configureEach {
   isPreserveFileTimestamps = false
   isReproducibleFileOrder = true
-  fileMode = "664".toInt(8)
-  dirMode = "775".toInt(8)
+  filePermissions {
+    unix("rw-r--r--")
+  }
+  dirPermissions {
+    unix("rwxr-xr-x")
+  }
 }
 
 val projectDescription = objects.property<String>().convention(provider { project.description })
