@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.stream.IntStream;
 
 import org.github.jamm.MemoryMeter;
-import org.github.jamm.MemoryMeter.Guess;
 
 import com.google.common.base.Functions;
 import com.google.common.cache.CacheBuilder;
@@ -55,9 +54,7 @@ public final class MemoryBenchmark {
   static final ImmutableMap<Integer, Integer> workingSet = IntStream.range(0, FUZZY_SIZE)
       .boxed().collect(toImmutableMap(identity(), i -> -i));
 
-  final MemoryMeter meter = new MemoryMeter()
-      .withGuessing(Guess.FALLBACK_BEST)
-      .ignoreKnownSingletons();
+  final MemoryMeter meter = MemoryMeter.builder().build();
 
   public void run() {
     if (!MemoryMeter.hasInstrumentation()) {
