@@ -39,9 +39,9 @@ jmh {
 
   val jvmArguments = mutableListOf("-Xmx2G")
   if (System.getenv("GRAALVM") == "true") {
-    jvmArguments.addAll(listOf(
+    jvmArguments += listOf(
       "-XX:+UnlockExperimentalVMOptions", "-Dgraal.ShowConfiguration=info",
-      "-XX:+EnableJVMCI", "-XX:+UseJVMCICompiler", "-XX:+EagerJVMCI"))
+      "-XX:+EnableJVMCI", "-XX:+UseJVMCICompiler", "-XX:+EagerJVMCI")
   }
   jvmArgs = jvmArguments
 

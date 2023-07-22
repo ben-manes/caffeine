@@ -24,7 +24,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
     val reporter = PlainTextReporter(project, revision, gradleReleaseChannel)
     exceeded.dependencies.removeAll { dependency ->
       if (dependency.group?.startsWith("org.ops4j") == true) {
-        current.dependencies.add(dependency)
+        current.dependencies += dependency
         true
       } else {
         false

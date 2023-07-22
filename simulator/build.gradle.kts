@@ -99,8 +99,8 @@ tasks.register<Rewrite>("rewrite") {
 
 eclipse.classpath.file.beforeMerged {
   if (this is EclipseClasspath) {
-    entries.add(SourceFolder(
-      relativePath("$buildDir/generated/sources/annotationProcessor/java/main"), "bin/main"))
+    val absolutePath = layout.buildDirectory.dir("generated/sources/annotationProcessor/java/main")
+    entries.add(SourceFolder(relativePath(absolutePath), "bin/main"))
   }
 }
 

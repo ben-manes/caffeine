@@ -27,9 +27,9 @@ fun excludeInfoFiles() {
       if (this is Classpath) {
         entries.filterIsInstance<SourceFolder>().forEach { sourceFolder ->
           val excludes = sourceFolder.excludes.toMutableList()
-          excludes.add("module-info.java")
+          excludes += "module-info.java"
           if (sourceFolder.path != "src/main/java") {
-            excludes.add("**/package-info.java")
+            excludes += "**/package-info.java"
           }
           sourceFolder.excludes = excludes
         }
