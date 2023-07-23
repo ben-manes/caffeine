@@ -4,6 +4,7 @@ Graal native image uses ahead-of-time compilation to build an optimized executab
 
 ```console
 sdk install java 22.3.2.r17-grl
+sdk use java 22.3.2.r17-grl
 export JAVA_HOME=${SDKMAN_DIR}/candidates/java/current
 ```
 

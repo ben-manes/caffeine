@@ -20,8 +20,15 @@ tasks.test {
 }
 
 graalvmNative {
-  binaries.all {
-    resources.autodetect()
+  binaries {
+    all {
+      resources.autodetect()
+    }
+    named("test") {
+      buildArgs.add("--initialize-at-build-time=org.junit.jupiter.engine.config.InstantiatingConfigurationParameterConverter")
+      buildArgs.add("--initialize-at-build-time=org.junit.platform.launcher.core.LauncherConfig")
+      buildArgs.add("-H:+ReportExceptionStackTraces")
+    }
   }
   toolchainDetection = false
 }

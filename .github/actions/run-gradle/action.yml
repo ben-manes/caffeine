@@ -45,10 +45,10 @@ runs:
         website: jdk.java.net
         version: latest
     - name: Set up GraalVM
-      uses: graalvm/setup-graalvm@b11d36630f94ed5864e0a680a979b5afde449e9d # v1
+      uses: graalvm/setup-graalvm@8ae40e7db98195001fcd3e4d5fbecae827196940 # v1
       if: inputs.java == 'GraalVM'
       with:
-        version: 'latest'
+        distribution: 'graalvm'
         components: 'native-image'
         github-token: ${{ inputs.token }}
         java-version: ${{ env.JAVA_VERSION }}

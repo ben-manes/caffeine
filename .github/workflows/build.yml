@@ -15,8 +15,10 @@ env:
     cloudflare.com:443
     docker.io:443
     download.java.net:443
+    download.oracle.com:443
     downloads.gradle.org:443
     downloads.gradle-dn.com:443
+    gds.oracle.com:443
     ghcr.io:443
     github.com:443
     jdk.java.net:443

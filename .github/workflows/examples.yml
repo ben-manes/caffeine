@@ -21,8 +21,10 @@ jobs:
             api.github.com:443
             api.adoptium.net:443
             caffeine.gradle-enterprise.cloud:443
+            download.oracle.com:443
             downloads.gradle.org:443
             downloads.gradle-dn.com:443
+            gds.oracle.com:443
             github.com:443
             jcenter.bintray.com:443
             objects.githubusercontent.com:443
