@@ -174,7 +174,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   @Override
-  public Factory<CacheLoader<K, V>> getCacheLoaderFactory() {
+  public @Nullable Factory<CacheLoader<K, V>> getCacheLoaderFactory() {
     return delegate.getCacheLoaderFactory();
   }
 
@@ -189,15 +189,16 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   @Override
-  public Factory<CacheWriter<? super K, ? super V>> getCacheWriterFactory() {
+  public @Nullable Factory<CacheWriter<? super K, ? super V>> getCacheWriterFactory() {
     return delegate.getCacheWriterFactory();
   }
 
   /** Returns a writer created by the configured factory or null if not set. */
   public @Nullable CacheWriter<K , V> getCacheWriter() {
-    if (hasCacheWriter()) {
+    var factory = delegate.getCacheWriterFactory();
+    if (factory != null) {
       @SuppressWarnings("unchecked")
-      CacheWriter<K , V> writer = (CacheWriter<K, V>) getCacheWriterFactory().create();
+      CacheWriter<K , V> writer = (CacheWriter<K, V>) factory.create();
       return writer;
     }
     return null;

@@ -212,7 +212,12 @@ final class CacheFactory {
 
     /** Creates a cache that reads through on a cache miss. */
     private CacheProxy<K, V> newLoadingCacheProxy() {
-      CacheLoader<K, V> cacheLoader = config.getCacheLoaderFactory().create();
+      var factory = config.getCacheLoaderFactory();
+      if (factory == null) {
+        throw new IllegalStateException();
+      }
+
+      CacheLoader<K, V> cacheLoader = factory.create();
       JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
           cacheLoader, dispatcher, expiryPolicy, ticker, statistics);
       CacheProxy<K, V> cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
