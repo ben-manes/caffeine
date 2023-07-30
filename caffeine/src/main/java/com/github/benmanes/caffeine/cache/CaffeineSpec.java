@@ -32,7 +32,7 @@ import com.github.benmanes.caffeine.cache.Caffeine.Strength;
 /**
  * A specification of a {@link Caffeine} builder configuration.
  * <p>
- * {@code CaffeineSpec} supports parsing configuration off of a string, which makes it especially
+ * {@code CaffeineSpec} supports parsing configuration from a string, which makes it especially
  * useful for command-line configuration of a {@code Caffeine} builder.
  * <p>
  * The string syntax is a series of comma-separated keys or key-value pairs, each corresponding to a
@@ -52,7 +52,7 @@ import com.github.benmanes.caffeine.cache.Caffeine.Strength;
  * <p>
  * Durations are represented as either an ISO-8601 string using {@link Duration#parse(CharSequence)}
  * or by an integer followed by one of "d", "h", "m", or "s", representing days, hours, minutes, or
- * seconds respectively. There is currently no short syntax to request durations in milliseconds,
+ * seconds, respectively. There is currently no short syntax to request durations in milliseconds,
  * microseconds, or nanoseconds.
  * <p>
  * Whitespace before and after commas and equal signs is ignored. Keys may not be repeated; it is
@@ -355,11 +355,12 @@ public final class CaffeineSpec {
   }
 
   /**
-   * Returns a string that can be used to parse an equivalent {@code CaffeineSpec}. The order and
-   * form of this representation is not guaranteed, except that parsing its output will produce a
-   * {@code CaffeineSpec} equal to this instance.
+   * Returns a string representation that can be used to parse an equivalent {@code CaffeineSpec}.
+   * The order and form of this representation is not guaranteed, except that parsing its output
+   * will produce a {@code CaffeineSpec} equal to this instance.
    *
-   * @return a string representation of this specification
+   * @return a string representation of this specification that can be parsed into a
+   *         {@code CaffeineSpec}
    */
   public String toParsableString() {
     return specification;

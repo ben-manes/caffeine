@@ -116,25 +116,25 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * Concurrency:
    * ------------
    * The page replacement algorithms are kept eventually consistent with the map. An update to the
-   * map and recording of reads may not be immediately reflected on the policy's data structures.
-   * These structures are guarded by a lock and operations are applied in batches to avoid lock
-   * contention. The penalty of applying the batches is spread across threads so that the amortized
+   * map and recording of reads may not be immediately reflected in the policy's data structures.
+   * These structures are guarded by a lock, and operations are applied in batches to avoid lock
+   * contention. The penalty of applying the batches is spread across threads, so that the amortized
    * cost is slightly higher than performing just the ConcurrentHashMap operation [1].
    *
-   * A memento of the reads and writes that were performed on the map are recorded in buffers. These
+   * A memento of the reads and writes that were performed on the map is recorded in buffers. These
    * buffers are drained at the first opportunity after a write or when a read buffer is full. The
    * reads are offered to a buffer that will reject additions if contended on or if it is full. Due
-   * to the concurrent nature of the read and write operations a strict policy ordering is not
-   * possible, but may be observably strict when single threaded. The buffers are drained
+   * to the concurrent nature of the read and write operations, a strict policy ordering is not
+   * possible, but it may be observably strict when single-threaded. The buffers are drained
    * asynchronously to minimize the request latency and uses a state machine to determine when to
    * schedule this work on an executor.
    *
    * Due to a lack of a strict ordering guarantee, a task can be executed out-of-order, such as a
    * removal followed by its addition. The state of the entry is encoded using the key field to
-   * avoid additional memory. An entry is "alive" if it is in both the hash table and the page
+   * avoid additional memory usage. An entry is "alive" if it is in both the hash table and the page
    * replacement policy. It is "retired" if it is not in the hash table and is pending removal from
-   * the page replacement policy. Finally, an entry transitions to the "dead" state when it is not
-   * in the hash table nor the page replacement policy. Both the retired and dead states are
+   * the page replacement policy. Finally, an entry transitions to the "dead" state when it is
+   * neither in the hash table nor the page replacement policy. Both the retired and dead states are
    * represented by a sentinel key that should not be used for map operations.
    *
    * Eviction:
@@ -144,46 +144,47 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * there as long as it has high temporal locality (recency). Eventually an entry will slip from
    * the window into the main space. If the main space is already full, then a historic frequency
    * filter determines whether to evict the newly admitted entry or the victim entry chosen by the
-   * eviction policy. This process ensures that the entries in the window were very recently used
-   * and entries in the main space are accessed very frequently and are at least moderately recent.
-   * The windowing allows the policy to have a high hit rate when entries exhibit a bursty access
-   * pattern while the filter ensures that popular items are retained. The admission window uses
+   * eviction policy. This process ensures that the entries in the window were very recently used,
+   * while entries in the main space are accessed very frequently and remain moderately recent. The
+   * windowing allows the policy to have a high hit rate when entries exhibit a bursty access
+   * pattern, while the filter ensures that popular items are retained. The admission window uses
    * LRU and the main space uses Segmented LRU.
    *
-   * The optimal size of the window vs main spaces is workload dependent [3]. A large admission
-   * window is favored by recency-biased workloads while a small one favors frequency-biased
-   * workloads. When the window is too small then recent arrivals are prematurely evicted, but when
-   * too large then they pollute the cache and force the eviction of more popular entries. The
-   * configuration is dynamically determined using hill climbing to walk the hit rate curve. This is
-   * done by sampling the hit rate and adjusting the window size in the direction that is improving
-   * (making positive or negative steps). At each interval the step size is decreased until the
-   * climber converges at the optimal setting. The process is restarted when the hit rate changes
-   * over a threshold, indicating that the workload altered and a new setting may be required.
+   * The optimal size of the window vs. main spaces is workload dependent [3]. A large admission
+   * window is favored by recency-biased workloads, while a small one favors frequency-biased
+   * workloads. When the window is too small, then recent arrivals are prematurely evicted, but when
+   * it is too large, then they pollute the cache and force the eviction of more popular entries.
+   * The optimal configuration is dynamically determined by using hill climbing to walk the hit rate
+   * curve. This is achieved by sampling the hit rate and adjusting the window size in the direction
+   * that is improving (making positive or negative steps). At each interval, the step size is
+   * decreased until the hit rate climber converges at the optimal setting. The process is restarted
+   * when the hit rate changes over a threshold, indicating that the workload altered, and a new
+   * setting may be required.
    *
    * The historic usage is retained in a compact popularity sketch, which uses hashing to
    * probabilistically estimate an item's frequency. This exposes a flaw where an adversary could
    * use hash flooding [4] to artificially raise the frequency of the main space's victim and cause
-   * all candidates to be rejected. In the worst case, by exploiting hash collisions an attacker
+   * all candidates to be rejected. In the worst case, by exploiting hash collisions, an attacker
    * could cause the cache to never hit and hold only worthless items, resulting in a
-   * denial-of-service attack against the underlying resource. This is protected against by
-   * introducing jitter so that candidates which are at least moderately popular have a small,
-   * random chance of being admitted. This causes the victim to be evicted, but in a way that
-   * marginally impacts the hit rate.
+   * denial-of-service attack against the underlying resource. This is mitigated by introducing
+   * jitter, allowing candidates that are at least moderately popular to have a small, random chance
+   * of being admitted. This causes the victim to be evicted, but in a way that marginally impacts
+   * the hit rate.
    *
    * Expiration:
    * -----------
    * Expiration is implemented in O(1) time complexity. The time-to-idle policy uses an access-order
    * queue, the time-to-live policy uses a write-order queue, and variable expiration uses a
    * hierarchical timer wheel [5]. The queuing policies allow for peeking at the oldest entry to
-   * see if it has expired and, if it has not, then the younger entries must not have too. If a
-   * maximum size is set then expiration will share the queues so that the per-entry footprint is
-   * minimized. The timer wheel based policy uses hashing and cascading in a manner that amortizes
-   * the penalty of sorting to achieve a similar algorithmic cost.
+   * determine if it has expired. If it has not, then the younger entries must not have expired
+   * either. If a maximum size is set, then expiration will share the queues, minimizing the
+   * per-entry footprint is minimized. The timer wheel based policy uses hashing and cascading in a
+   * manner that amortizes the penalty of sorting to achieve a similar algorithmic cost.
    *
    * The expiration updates are applied in a best effort fashion. The reordering of variable or
-   * access-order expiration may be discarded by the read buffer if full or contended on. Similarly,
-   * the reordering of write expiration may be ignored for an entry if the last update was within a
-   * short time window in order to avoid overwhelming the write buffer.
+   * access-order expiration may be discarded by the read buffer if it is full or contended.
+   * Similarly, the reordering of write expiration may be ignored for an entry if the last update
+   * was within a short time window. This is done to avoid overwhelming the write buffer.
    *
    * [1] BP-Wrapper: A Framework Making Any Replacement Algorithms (Almost) Lock Contention Free
    * http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-09-1.pdf
@@ -306,8 +307,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** Returns the formatted broken equality error message. */
   String brokenEqualityMessage(Object key, Node<?, ?> node) {
-    return String.format(US, "An invalid state was detected that occurs if the key's equals or "
-        + "hashCode was modified while it resided in the cache. This violation of the Map  "
+    return String.format(US, "An invalid state was detected, occurring when the key's equals or "
+        + "hashCode was modified while residing in the cache. This violation of the Map "
         + "contract can lead to non-deterministic behavior (key: %s, key type: %s, "
         + "node type: %s, cache type: %s).", key, key.getClass().getName(),
         node.getClass().getSimpleName(), getClass().getSimpleName());

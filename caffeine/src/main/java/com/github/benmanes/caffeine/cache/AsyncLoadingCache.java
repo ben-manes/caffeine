@@ -20,9 +20,9 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache
- * asynchronously, and are stored in the cache until either evicted or manually invalidated.
+ * asynchronously and are stored in the cache until either evicted or manually invalidated.
  * <p>
- * Implementations of this interface are expected to be thread-safe, and can be safely accessed
+ * Implementations of this interface are expected to be thread-safe and can be safely accessed
  * by multiple concurrent threads.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -32,7 +32,7 @@ import java.util.concurrent.CompletableFuture;
 public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
 
   /**
-   * Returns the future associated with {@code key} in this cache, obtaining that value from
+   * Returns the future associated with the {@code key} in this cache, obtaining that value from
    * {@link AsyncCacheLoader#asyncLoad} if necessary. If the asynchronous computation fails, the
    * entry will be automatically removed from this cache.
    * <p>
@@ -40,7 +40,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
    * is performed atomically, so the function is applied at most once per key.
    *
-   * @param key key with which the specified value is to be associated
+   * @param key the key with which the specified value is to be associated
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key is null or if the future returned by the
    *         {@link AsyncCacheLoader} is null
@@ -52,11 +52,11 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
    * those values if necessary. The returned map contains entries that were already cached, combined
-   * with newly loaded entries; it will never contain null keys or values. If the any of the
+   * with newly loaded entries; it will never contain null keys or values. If any of the
    * asynchronous computations fail, those entries will be automatically removed from this cache.
    * <p>
    * Caches loaded by a {@link AsyncCacheLoader} supporting bulk loading will issue a single request
-   * to {@link AsyncCacheLoader#asyncLoadAll} for all keys which are not already present in the
+   * to {@link AsyncCacheLoader#asyncLoadAll} for all keys that are not already present in the
    * cache. If another call to {@link #get} tries to load the value for a key in {@code keys}, that
    * thread retrieves a future that is completed by this bulk computation. Caches that do not use a
    * {@link AsyncCacheLoader} with an optimized bulk load implementation will sequentially load each

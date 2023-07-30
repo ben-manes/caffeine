@@ -27,12 +27,12 @@ public interface Expiry<K, V> {
 
   /**
    * Specifies that the entry should be automatically removed from the cache once the duration has
-   * elapsed after the entry's creation. To indicate no expiration an entry may be given an
+   * elapsed after the entry's creation. To indicate no expiration, an entry may be given an
    * excessively long period, such as {@link Long#MAX_VALUE}.
    * <p>
    * <b>Note:</b> The {@code currentTime} is supplied by the configured {@link Ticker} and by
    * default does not relate to system or wall-clock time. When calculating the duration based on a
-   * time stamp, the current time should be obtained independently.
+   * timestamp, the current time should be obtained independently.
    *
    * @param key the key represented by this entry
    * @param value the value represented by this entry
@@ -43,13 +43,13 @@ public interface Expiry<K, V> {
 
   /**
    * Specifies that the entry should be automatically removed from the cache once the duration has
-   * elapsed after the replacement of its value. To indicate no expiration an entry may be given an
+   * elapsed after the replacement of its value. To indicate no expiration, an entry may be given an
    * excessively long period, such as {@link Long#MAX_VALUE}. The {@code currentDuration} may be
    * returned to not modify the expiration time.
    * <p>
    * <b>Note:</b> The {@code currentTime} is supplied by the configured {@link Ticker} and by
    * default does not relate to system or wall-clock time. When calculating the duration based on a
-   * time stamp, the current time should be obtained independently.
+   * timestamp, the current time should be obtained independently.
    *
    * @param key the key represented by this entry
    * @param value the value represented by this entry
@@ -61,13 +61,13 @@ public interface Expiry<K, V> {
 
   /**
    * Specifies that the entry should be automatically removed from the cache once the duration has
-   * elapsed after its last read. To indicate no expiration an entry may be given an excessively
+   * elapsed after its last read. To indicate no expiration, an entry may be given an excessively
    * long period, such as {@link Long#MAX_VALUE}. The {@code currentDuration} may be returned to not
    * modify the expiration time.
    * <p>
    * <b>Note:</b> The {@code currentTime} is supplied by the configured {@link Ticker} and by
    * default does not relate to system or wall-clock time. When calculating the duration based on a
-   * time stamp, the current time should be obtained independently.
+   * timestamp, the current time should be obtained independently.
    *
    * @param key the key represented by this entry
    * @param value the value represented by this entry

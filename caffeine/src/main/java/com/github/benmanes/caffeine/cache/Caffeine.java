@@ -85,7 +85,7 @@ import com.google.errorprone.annotations.FormatMethod;
  * are reflected in that iterator. These iterators never throw
  * {@link ConcurrentModificationException}.
  * <p>
- * <b>Note:</b> by default, the returned cache uses equality comparisons (the
+ * <b>Note:</b> By default, the returned cache uses equality comparisons (the
  * {@link Object#equals equals} method) to determine equality for keys or values. However, if
  * {@link #weakKeys} was specified, the cache uses identity ({@code ==}) comparisons instead for
  * keys. Likewise, if {@link #weakValues} or {@link #softValues} was specified, the cache uses
@@ -98,11 +98,11 @@ import com.google.errorprone.annotations.FormatMethod;
  * {@linkplain #weakValues weakValues}, or {@linkplain #softValues softValues} are requested.
  * <p>
  * If {@linkplain #maximumSize(long) maximumSize} or {@linkplain #maximumWeight(long) maximumWeight}
- * is requested entries may be evicted on each cache modification.
+ * is requested, entries may be evicted on each cache modification.
  * <p>
  * If {@linkplain #expireAfter(Expiry) expireAfter},
  * {@linkplain #expireAfterWrite expireAfterWrite}, or
- * {@linkplain #expireAfterAccess expireAfterAccess} is requested then entries may be evicted on
+ * {@linkplain #expireAfterAccess expireAfterAccess} is requested, then entries may be evicted on
  * each cache modification, on occasional cache accesses, or on calls to {@link Cache#cleanUp}. A
  * {@linkplain #scheduler(Scheduler)} may be specified to provide prompt removal of expired entries
  * rather than waiting until activity triggers the periodic maintenance. Expired entries may be
@@ -115,10 +115,10 @@ import com.google.errorprone.annotations.FormatMethod;
  * {@link Cache#cleanUp}; such entries may be counted in {@link Cache#estimatedSize()}, but will
  * never be visible to read or write operations.
  * <p>
- * Certain cache configurations will result in the accrual of periodic maintenance tasks which
+ * Certain cache configurations will result in the accrual of periodic maintenance tasks that
  * will be performed during write operations, or during occasional read operations in the absence of
  * writes. The {@link Cache#cleanUp} method of the returned cache will also perform maintenance, but
- * calling it should not be necessary with a high throughput cache. Only caches built with
+ * calling it should not be necessary with a high-throughput cache. Only caches built with
  * {@linkplain #maximumSize maximumSize}, {@linkplain #maximumWeight maximumWeight},
  * {@linkplain #expireAfter(Expiry) expireAfter}, {@linkplain #expireAfterWrite expireAfterWrite},
  * {@linkplain #expireAfterAccess expireAfterAccess}, {@linkplain #weakKeys weakKeys},
@@ -127,7 +127,7 @@ import com.google.errorprone.annotations.FormatMethod;
  * <p>
  * The caches produced by {@code Caffeine} are serializable, and the deserialized caches retain all
  * the configuration properties of the original cache. Note that the serialized form does <i>not</i>
- * include cache contents, but only configuration.
+ * include cache contents but only configuration.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the most general key type this builder will be able to create caches for. This is
@@ -494,12 +494,12 @@ public final class Caffeine<K, V> {
     return isWeighted() ? maximumWeight : maximumSize;
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked"})
+  @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
     Weigher<K1, V1> delegate = (weigher == null) || (weigher == Weigher.singletonWeigher())
         ? Weigher.singletonWeigher()
         : Weigher.boundedWeigher((Weigher<K1, V1>) weigher);
-    return isAsync ? (Weigher<K1, V1>) new AsyncWeigher(delegate) : delegate;
+    return isAsync ? (Weigher<K1, V1>) new AsyncWeigher<>(delegate) : delegate;
   }
 
   /**
@@ -910,12 +910,12 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked"})
+  @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> @Nullable RemovalListener<K1, V1> getEvictionListener(
       boolean async) {
     var castedListener = (RemovalListener<K1, V1>) evictionListener;
     return async && (castedListener != null)
-        ? new AsyncEvictionListener(castedListener)
+        ? (RemovalListener<K1, V1>) new AsyncEvictionListener<>(castedListener)
         : castedListener;
   }
 
@@ -962,11 +962,11 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked"})
+  @SuppressWarnings("unchecked")
   @Nullable <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
     RemovalListener<K1, V1> castedListener = (RemovalListener<K1, V1>) removalListener;
     return async && (castedListener != null)
-        ? new AsyncRemovalListener(castedListener, getExecutor())
+        ? (RemovalListener<K1, V1>) new AsyncRemovalListener<>(castedListener, getExecutor())
         : castedListener;
   }
 

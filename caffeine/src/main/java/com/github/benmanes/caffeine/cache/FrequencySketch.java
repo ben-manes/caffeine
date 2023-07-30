@@ -33,20 +33,21 @@ final class FrequencySketch<E> {
    * history for the TinyLfu admission policy [2]. The time and space efficiency of the sketch
    * allows it to cheaply estimate the frequency of an entry in a stream of cache access events.
    *
-   * The counter matrix is represented as a single dimensional array holding 16 counters per slot. A
+   * The counter matrix is represented as a single-dimensional array holding 16 counters per slot. A
    * fixed depth of four balances the accuracy and cost, resulting in a width of four times the
-   * length of the array. To retain an accurate estimation the array's length equals the maximum
+   * length of the array. To retain an accurate estimation, the array's length equals the maximum
    * number of entries in the cache, increased to the closest power-of-two to exploit more efficient
-   * bit masking. This configuration results in a confidence of 93.75% and error bound of e / width.
+   * bit masking. This configuration results in a confidence of 93.75% and an error bound of
+   * e / width.
    *
-   * To improve hardware efficiency an item's counters are constrained to a 64 byte block, which is
+   * To improve hardware efficiency, an item's counters are constrained to a 64-byte block, which is
    * the size of an L1 cache line. This differs from the theoretical ideal where counters are
-   * uniformly distributed in order to minimize collisions. In that configuration the memory
-   * accesses are not predictable and lack spatial locality, which may cause the pipeline to need to
-   * wait for four memory loads. Instead the items are uniformly distributed to blocks and each
-   * counter is selected uniformly from a distinct 16 byte segment. While the runtime memory layout
-   * may result in the blocks not being cache aligned, the L2 spatial prefetcher tries to load
-   * aligned pairs of cache lines so the typical cost is only one memory access.
+   * uniformly distributed to minimize collisions. In that configuration, the memory accesses are
+   * not predictable and lack spatial locality, which may cause the pipeline to need to wait for
+   * four memory loads. Instead, the items are uniformly distributed to blocks, and each counter is
+   * uniformly selected from a distinct 16-byte segment. While the runtime memory layout may result
+   * in the blocks not being cache-aligned, the L2 spatial prefetcher tries to load aligned pairs of
+   * cache lines, so the typical cost is only one memory access.
    *
    * The frequency of all entries is aged periodically using a sampling window based on the maximum
    * number of entries in the cache. This is referred to as the reset operation by TinyLfu and keeps
@@ -58,6 +59,8 @@ final class FrequencySketch<E> {
    * http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
    * [2] TinyLFU: A Highly Efficient Cache Admission Policy
    * https://dl.acm.org/citation.cfm?id=3149371
+   * [3] Hash Function Prospector: Three round functions
+   * https://github.com/skeeto/hash-prospector#three-round-functions
    */
 
   static final long RESET_MASK = 0x7777777777777777L;

@@ -27,7 +27,7 @@ import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
 /**
  * Provides similar behavior to {@link String#intern} for any immutable type.
  * <p>
- * Note that {@code String.intern()} has some well-known performance limitations, and should
+ * Note that {@code String.intern()} has some well-known performance limitations and should
  * generally be avoided. Prefer {@link Interner#newWeakInterner} or another {@code Interner}
  * implementation even for {@code String} interning.
  *
@@ -38,14 +38,14 @@ import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
 public interface Interner<E> {
 
   /**
-   * Chooses and returns the representative instance for any of a collection of instances that are
+   * Chooses and returns the representative instance for any collection of instances that are
    * equal to each other. If two {@linkplain Object#equals equal} inputs are given to this method,
    * both calls will return the same instance. That is, {@code intern(a).equals(a)} always holds,
    * and {@code intern(a) == intern(b)} if and only if {@code a.equals(b)}. Note that {@code
    * intern(a)} is permitted to return one instance now and a different instance later if the
    * original interned instance was garbage-collected.
    * <p>
-   * <b>Warning:</b> do not use with mutable objects.
+   * <b>Warning:</b> Do not use with mutable objects.
    *
    * @param sample the element to add if absent
    * @return the representative instance, possibly the {@code sample} if absent
@@ -54,7 +54,7 @@ public interface Interner<E> {
   E intern(E sample);
 
   /**
-   * Returns a new thread-safe interner which retains a strong reference to each instance it has
+   * Returns a new thread-safe interner that retains a strong reference to each instance it has
    * interned, thus preventing these instances from being garbage-collected.
    *
    * @param <E> the type of elements
@@ -65,7 +65,7 @@ public interface Interner<E> {
   }
 
   /**
-   * Returns a new thread-safe interner which retains a weak reference to each instance it has
+   * Returns a new thread-safe interner that retains a weak reference to each instance it has
    * interned, and so does not prevent these instances from being garbage-collected.
    *
    * @param <E> the type of elements

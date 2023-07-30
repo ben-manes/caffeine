@@ -30,7 +30,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * {@link #get(Object, Function)} or {@link #put(Object, CompletableFuture)}, and are stored in the
  * cache until either evicted or manually invalidated.
  * <p>
- * Implementations of this interface are expected to be thread-safe, and can be safely accessed by
+ * Implementations of this interface are expected to be thread-safe and can be safely accessed by
  * multiple concurrent threads.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -40,10 +40,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface AsyncCache<K, V> {
 
   /**
-   * Returns the future associated with {@code key} in this cache, or {@code null} if there is no
-   * cached future for {@code key}.
+   * Returns the future associated with the {@code key} in this cache, or {@code null} if there is
+   * no cached future for the {@code key}.
    *
-   * @param key key whose associated value is to be returned
+   * @param key the key whose associated value is to be returned
    * @return the future value to which the specified key is mapped, or {@code null} if this cache
    *         does not contain a mapping for the key
    * @throws NullPointerException if the specified key is null
@@ -52,9 +52,9 @@ public interface AsyncCache<K, V> {
   CompletableFuture<V> getIfPresent(K key);
 
   /**
-   * Returns the future associated with {@code key} in this cache, obtaining that value from
+   * Returns the future associated with the {@code key} in this cache, obtaining that value from
    * {@code mappingFunction} if necessary. This method provides a simple substitute for the
-   * conventional "if cached, return; otherwise create, cache and return" pattern.
+   * conventional "if cached, return; otherwise create, cache, and return" pattern.
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
@@ -64,7 +64,7 @@ public interface AsyncCache<K, V> {
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
    *
-   * @param key key with which the specified value is to be associated
+   * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key or mappingFunction is null
@@ -72,9 +72,9 @@ public interface AsyncCache<K, V> {
   CompletableFuture<V> get(K key, Function<? super K, ? extends V> mappingFunction);
 
   /**
-   * Returns the future associated with {@code key} in this cache, obtaining that value from
+   * Returns the future associated with the {@code key} in this cache, obtaining that value from
    * {@code mappingFunction} if necessary. This method provides a simple substitute for the
-   * conventional "if cached, return; otherwise create, cache and return" pattern. The instance
+   * conventional "if cached, return; otherwise create, cache, and return" pattern. The instance
    * returned from the {@code mappingFunction} will be stored directly into the cache.
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
@@ -85,7 +85,7 @@ public interface AsyncCache<K, V> {
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
    *
-   * @param key key with which the specified value is to be associated
+   * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value, optionally using the
    *        given executor
    * @return the current (existing or computed) future value associated with the specified key
@@ -98,10 +98,11 @@ public interface AsyncCache<K, V> {
       ? extends CompletableFuture<? extends V>> mappingFunction);
 
   /**
-   * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
-   * those values if necessary. The returned map contains entries that were already cached, combined
-   * with newly loaded entries; it will never contain null keys or values. If the any of the
-   * asynchronous computations fail, those entries will be automatically removed from this cache.
+   * Returns the future of a map of the values associated with the {@code keys}, creating or
+   * retrieving those values if necessary. The returned map contains entries that were already
+   * cached, combined with newly loaded entries; it will never contain null keys or values. If the
+   * any of the asynchronous computations fail, those entries will be automatically removed from
+   * this cache.
    * <p>
    * A single request to the {@code mappingFunction} is performed for all keys which are not already
    * present in the cache. If another call to {@link #get} tries to load the value for a key in
@@ -125,11 +126,12 @@ public interface AsyncCache<K, V> {
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction);
 
   /**
-   * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
-   * those values if necessary. The returned map contains entries that were already cached, combined
-   * with newly loaded entries; it will never contain null keys or values. If the any of the
-   * asynchronous computations fail, those entries will be automatically removed from this cache.
-   * The instances returned from the {@code mappingFunction} will be stored directly into the cache.
+   * Returns the future of a map of the values associated with the {@code keys}, creating or
+   * retrieving those values if necessary. The returned map contains entries that were already
+   * cached, combined with newly loaded entries; it will never contain null keys or values. If the
+   * any of the asynchronous computations fail, those entries will be automatically removed from
+   * this cache. The instances returned from the {@code mappingFunction} will be stored directly
+   * into the cache.
    * <p>
    * A single request to the {@code mappingFunction} is performed for all keys which are not already
    * present in the cache. If another call to {@link #get} tries to load the value for a key in
@@ -160,10 +162,10 @@ public interface AsyncCache<K, V> {
    * asynchronous computation fails, the entry will be automatically removed.
    * <p>
    * Prefer {@link #get(Object, Function)} when using the conventional "if cached, return; otherwise
-   * create, cache and return" pattern.
+   * create, cache, and return" pattern.
    *
-   * @param key key with which the specified value is to be associated
-   * @param valueFuture value to be associated with the specified key
+   * @param key the key with which the specified value is to be associated
+   * @param valueFuture the value to be associated with the specified key
    * @throws NullPointerException if the specified key or value is null
    */
   void put(K key, CompletableFuture<? extends V> valueFuture);

@@ -31,7 +31,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
  * {@link #get(Object, Function)} or {@link #put(Object, Object)}, and are stored in the cache until
  * either evicted or manually invalidated.
  * <p>
- * Implementations of this interface are expected to be thread-safe, and can be safely accessed by
+ * Implementations of this interface are expected to be thread-safe and can be safely accessed by
  * multiple concurrent threads.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -185,7 +185,7 @@ public interface Cache<K, V> {
 
   /**
    * Returns a current snapshot of this cache's cumulative statistics. All statistics are
-   * initialized to zero, and are monotonically increasing over the lifetime of the cache.
+   * initialized to zero and are monotonically increasing over the lifetime of the cache.
    * <p>
    * Due to the performance penalty of maintaining statistics, some implementations may not record
    * the usage history immediately or at all.

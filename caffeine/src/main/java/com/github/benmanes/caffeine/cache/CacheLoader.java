@@ -64,10 +64,10 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    * Computes or retrieves the values corresponding to {@code keys}. This method is called by
    * {@link LoadingCache#getAll}.
    * <p>
-   * If the returned map doesn't contain all requested {@code keys} then the entries it does contain
-   * will be cached and {@code getAll} will return the partial results. If the returned map contains
-   * extra keys not present in {@code keys} then all returned entries will be cached, but only the
-   * entries for {@code keys} will be returned from {@code getAll}.
+   * If the returned map doesn't contain all requested {@code keys}, then the entries it does
+   * contain will be cached, and {@code getAll} will return the partial results. If the returned map
+   * contains extra keys not present in {@code keys} then all returned entries will be cached, but
+   * only the entries for {@code keys}, will be returned from {@code getAll}.
    * <p>
    * This method should be overridden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link LoadingCache#getAll} will defer to individual calls to
@@ -113,10 +113,10 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    * Asynchronously computes or retrieves the values corresponding to {@code keys}. This method is
    * called by {@link AsyncLoadingCache#getAll}.
    * <p>
-   * If the returned map doesn't contain all requested {@code keys} then the entries it does contain
-   * will be cached and {@code getAll} will return the partial results. If the returned map contains
-   * extra keys not present in {@code keys} then all returned entries will be cached, but only the
-   * entries for {@code keys} will be returned from {@code getAll}.
+   * If the returned map doesn't contain all requested {@code keys}, then the entries it does
+   * contain will be cached, and {@code getAll} will return the partial results. If the returned map
+   * contains extra keys not present in {@code keys} then all returned entries will be cached, but
+   * only the entries for {@code keys}, will be returned from {@code getAll}.
    * <p>
    * This method should be overridden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link AsyncLoadingCache#getAll} will defer to individual calls
@@ -147,7 +147,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
 
   /**
    * Computes or retrieves a replacement value corresponding to an already-cached {@code key}. If
-   * the replacement value is not found then the mapping will be removed if {@code null} is
+   * the replacement value is not found, then the mapping will be removed if {@code null} is
    * returned. This method is called when an existing cache entry is refreshed by
    * {@link Caffeine#refreshAfterWrite}, or through a call to {@link LoadingCache#refresh}.
    * <p>
