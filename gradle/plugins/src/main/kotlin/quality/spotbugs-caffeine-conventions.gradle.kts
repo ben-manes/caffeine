@@ -9,9 +9,7 @@ plugins {
 dependencies {
   spotbugs(libs.spotbugs.core)
   spotbugsPlugins(libs.findsecbugs)
-  spotbugsPlugins(libs.spotbugs.contrib) {
-    isTransitive = false
-  }
+  spotbugsPlugins(libs.spotbugs.contrib)
 }
 
 spotbugs {
