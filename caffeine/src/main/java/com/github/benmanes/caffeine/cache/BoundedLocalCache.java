@@ -3974,6 +3974,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
+  @SuppressWarnings("NullableOptional")
   static final class BoundedPolicy<K, V> implements Policy<K, V> {
     final BoundedLocalCache<K, V> cache;
     final Function<V, V> transformer;

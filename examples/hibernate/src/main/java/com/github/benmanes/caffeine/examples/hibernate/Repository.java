@@ -32,49 +32,39 @@ public final class Repository {
   }
 
   public Project getProject(long id) {
-    try (var session = sessionFactory.openSession()) {
-      return session.get(Project.class, id);
-    }
+    return sessionFactory.fromSession(session -> session.get(Project.class, id));
   }
 
   public User getUser(long id) {
-    try (var session = sessionFactory.openSession()) {
-      return session.get(User.class, id);
-    }
+    return sessionFactory.fromSession(session -> session.get(User.class, id));
   }
 
   public Project findProject(long id) {
-    try (var session = sessionFactory.openSession()) {
-      var query = session.createQuery("FROM Project WHERE id = :id", Project.class);
-      query.setParameter("id", id);
-      return query.uniqueResult();
-    }
+    return sessionFactory.fromSession(session ->
+        session.createQuery("FROM Project WHERE id = :id", Project.class)
+          .setParameter("id", id)
+          .uniqueResult());
   }
 
   public List<Project> findProjects() {
-    try (var session = sessionFactory.openSession()) {
-      return session.createQuery("FROM Project", Project.class).list();
-    }
+    return sessionFactory.fromSession(session ->
+        session.createQuery("FROM Project", Project.class).list());
   }
 
   public void updateProject(long id, String name) {
-    try (var session = sessionFactory.openSession()) {
-      var txn = session.beginTransaction();
+    sessionFactory.inTransaction(session -> {
       var project = session.get(Project.class, id);
       project.setName(name);
       session.merge(project);
-      txn.commit();
-    }
+    });
   }
 
   public void persist(User user, Project project, Skill skill) {
-    try (var session = sessionFactory.openSession()) {
-      var txn = session.beginTransaction();
+    sessionFactory.inTransaction(session -> {
       session.persist(project);
       session.persist(skill);
       session.persist(user);
-      txn.commit();
-    }
+    });
   }
 
   public void evictProject(long projectId) {
