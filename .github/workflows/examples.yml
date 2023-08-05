@@ -101,8 +101,11 @@ jobs:
       - name: Coalescing Bulkloader
         working-directory: examples/coalescing-bulkloader
         run: ./mvnw test
-      - name: Hibernate JCache
+      - name: Hibernate (jcache)
         working-directory: examples/hibernate
+        run: ./gradlew build
+      - name: Resilience (failsafe)
+        working-directory: examples/resilience-failsafe
         run: ./gradlew build
       - name: Prepare for Graal Native Image
         uses: ./.github/actions/run-gradle

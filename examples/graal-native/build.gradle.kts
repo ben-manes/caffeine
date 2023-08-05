@@ -15,8 +15,10 @@ application {
   mainClass = "com.github.benmanes.caffeine.examples.graalnative.Application"
 }
 
-tasks.test {
-  useJUnitPlatform()
+testing.suites {
+  val test by getting(JvmTestSuite::class) {
+    useJUnitJupiter()
+  }
 }
 
 graalvmNative {

@@ -1,0 +1,15 @@
+[versions]
+caffeine = "3.1.7"
+failsafe = "3.3.2"
+junit = "5.10.0"
+truth = "1.1.5"
+versions = "0.47.0"
+
+[libraries]
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+failsafe = { module = "dev.failsafe:failsafe", version.ref = "failsafe" }
+junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+truth = { module = "com.google.truth:truth", version.ref = "truth" }
+
+[plugins]
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

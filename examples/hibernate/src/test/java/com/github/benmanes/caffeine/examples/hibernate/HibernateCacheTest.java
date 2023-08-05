@@ -17,9 +17,6 @@ package com.github.benmanes.caffeine.examples.hibernate;
 
 import static com.github.benmanes.caffeine.examples.hibernate.HibernateSubject.assertThat;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
@@ -36,7 +33,6 @@ public final class HibernateCacheTest {
 
   @BeforeEach
   public void beforeEach() {
-    Logger.getLogger("").setLevel(Level.WARNING);
     sessionFactory = new Configuration().addAnnotatedClass(User.class)
         .addAnnotatedClass(Skill.class).addAnnotatedClass(Project.class)
         .buildSessionFactory(new StandardServiceRegistryBuilder().build());
