@@ -3,6 +3,7 @@ caffeine = "3.1.7"
 h2 = "2.2.220"
 hibernate = "6.3.0.CR1"
 junit = "5.10.0"
+log4j2 = "2.20.0"
 slf4j = "2.0.7"
 truth = "1.1.5"
 versions = "0.47.0"
@@ -14,11 +15,13 @@ hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "h
 hibernate-jcache = { module = "org.hibernate.orm:hibernate-jcache", version.ref = "hibernate" }
 hibernate-hikaricp = { module = "org.hibernate.orm:hibernate-hikaricp", version.ref = "hibernate" }
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-slf4j = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
+log4j2-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j2" }
+log4j2-slf4j = { module = "org.apache.logging.log4j:log4j-slf4j-impl", version.ref = "log4j2" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
 
 [bundles]
 hibernate = ["hibernate-core", "hibernate-jcache", "hibernate-hikaricp"]
+log4j2 = ["log4j2-core", "log4j2-slf4j"]
 
 [plugins]
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

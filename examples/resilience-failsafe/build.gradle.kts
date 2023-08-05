@@ -4,10 +4,8 @@ plugins {
 }
 
 dependencies {
-  implementation(libs.bundles.hibernate)
-  implementation(libs.bundles.log4j2)
   implementation(libs.caffeine)
-  runtimeOnly(libs.h2)
+  implementation(libs.failsafe)
 
   testImplementation(libs.junit)
   testImplementation(libs.truth)

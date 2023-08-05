@@ -15,13 +15,10 @@
  */
 package com.github.benmanes.caffeine.examples.hibernate;
 
-import static jakarta.persistence.AccessType.FIELD;
 import static org.hibernate.annotations.CacheConcurrencyStrategy.READ_WRITE;
 
 import org.hibernate.annotations.Cache;
 
-import jakarta.persistence.Access;
-import jakarta.persistence.Cacheable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -30,8 +27,6 @@ import jakarta.persistence.Id;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Entity
-@Cacheable
-@Access(FIELD)
 @Cache(usage = READ_WRITE)
 public class Skill {
   @Id

@@ -1,4 +1,4 @@
-The [Hibernate ORM] can be configured to use a [second-level cache] to reduce the number of accesses
+[Hibernate] can be configured to use a [second-level cache] to reduce the number of accesses
 to the database by caching data in memory to be shared between sessions.
 
 In [hibernate.conf](src/main/resources/hibernate.properties) specify the JCache provider and enable
@@ -29,6 +29,14 @@ caffeine.jcache {
 }
 ```
 
+Enable caching on the entity.
+
+```java
+@Entity
+@Cache(usage = READ_WRITE)
+public class User { ... }
+```
+
 Hibernate will then manage the cache to transparently avoid database calls.
 
 ```java
@@ -41,5 +49,5 @@ sessionFactory.fromSession(session -> session.get(User.class, id));
 assertThat(sessionFactory.getStatistics().getSecondLevelCacheHitCount()).isEqualTo(1);
 ```
 
-[Hibernate ORM]: https://hibernate.org/orm/
+[Hibernate]: https://hibernate.org/orm/
 [second-level cache]: https://docs.jboss.org/hibernate/orm/6.3/introduction/html_single/Hibernate_Introduction.html#second-level-cache-configuration

@@ -27,6 +27,7 @@ dependencies {
   testImplementation(platform(libs.kotlin.bom))
   testImplementation(platform(libs.junit5.bom))
 
+  testRuntimeOnly(libs.junit5.launcher)
   testRuntimeOnly(libs.bundles.junit.engines)
   testRuntimeOnly(libs.bundles.osgi.test.runtime)
 }
