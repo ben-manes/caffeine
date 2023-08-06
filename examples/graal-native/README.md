@@ -1,4 +1,4 @@
-Graal native image uses ahead-of-time compilation to build an optimized executable.
+[Graal native image][] uses ahead-of-time compilation to build an optimized executable.
 
 ### Install GraalVM using sdkman.io
 
@@ -43,3 +43,5 @@ gradle run -Pagent
 ```console
 ./gradlew nativeTest
 ```
+
+[Graal native image]: https://www.graalvm.org/22.0/reference-manual/native-image

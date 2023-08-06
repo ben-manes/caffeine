@@ -18,24 +18,27 @@ package com.github.benmanes.caffeine.examples.writebehind.rxjava;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 
-import java.util.AbstractMap.SimpleImmutableEntry;
+import java.io.Closeable;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 
-import io.reactivex.subjects.PublishSubject;
-
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.subjects.PublishSubject;
+import io.reactivex.rxjava3.subjects.Subject;
+
 /**
- * This class allows a cache to have "write-behind" semantics. The passed in writeAction will only
- * be called every 'bufferTime' time with a Map containing the keys and the values that have been
- * updated in the cache each time.
+ * This class allows a cache to have write-behind semantics. The passed in {@code writeAction}
+ * will only be called every {@code bufferTime} time with a {@linkplain} Map} containing the keys
+ * and the values that have been updated in the cache each time.
  * <p>
- * If a key is updated multiple times during that period then the 'binaryOperator' has to decide
- * which value should be taken.
+ * If a key is updated multiple times during that period then the {@code binaryOperator} has to
+ * decide which value should be taken.
  * <p>
  * An example usage of this class is keeping track of users and their activity on a web site. You
  * don't want to update the database each time any of your users does something. It is better to
@@ -45,19 +48,24 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @param <V> the type of the value in the cache
  * @author wim.deblauwe@gmail.com (Wim Deblauwe)
  */
-public final class WriteBehindCacheWriter<K, V> {
-  private final PublishSubject<Entry<K, V>> subject;
+public final class WriteBehindCacheWriter<K, V> implements BiConsumer<K, V>, Closeable {
+  final Subject<Entry<K, V>> subject;
+  final Disposable subscription;
 
   private WriteBehindCacheWriter(Builder<K, V> builder) {
-    subject = PublishSubject.create();
-    subject.buffer(builder.bufferTimeNanos, TimeUnit.NANOSECONDS)
+    subject = PublishSubject.<Entry<K, V>>create().toSerialized();
+    subscription = subject.buffer(builder.bufferTimeNanos, TimeUnit.NANOSECONDS)
         .map(entries -> entries.stream().collect(
             toMap(Entry::getKey, Entry::getValue, builder.coalescer)))
         .subscribe(builder.writeAction::accept);
   }
 
-  public void write(K key, V value) {
-    subject.onNext(new SimpleImmutableEntry<>(key, value));
+  @Override public void accept(K key, V value) {
+    subject.onNext(Map.entry(key, value));
+  }
+
+  @Override public void close() {
+    subscription.dispose();
   }
 
   public static final class Builder<K, V> {
@@ -67,7 +75,7 @@ public final class WriteBehindCacheWriter<K, V> {
 
     /**
      * The duration that the calls to the cache should be buffered before calling the
-     * <code>writeAction</code>.
+     * {@code writeAction}.
      */
     @CanIgnoreReturnValue
     public Builder<K, V> bufferTime(long duration, TimeUnit unit) {
@@ -89,8 +97,11 @@ public final class WriteBehindCacheWriter<K, V> {
       return this;
     }
 
-    /** Returns a {@link CacheWriter} that batches writes to the system of record. */
+    /** Returns a writer that batches changes to the system of record. */
     public WriteBehindCacheWriter<K, V> build() {
+      requireNonNull(coalescer);
+      requireNonNull(writeAction);
+      requireNonNull(bufferTimeNanos);
       return new WriteBehindCacheWriter<>(this);
     }
   }

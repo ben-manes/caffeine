@@ -1,0 +1,15 @@
+[versions]
+awaitility = "4.2.0"
+caffeine = "3.1.7"
+junit = "5.10.0"
+rxjava = "3.1.6"
+versions = "0.47.0"
+
+[libraries]
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+rxjava = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxjava" }
+
+[plugins]
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

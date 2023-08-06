@@ -16,7 +16,7 @@ updates:
     directory: examples/coalescing-bulkloader
     schedule:
       interval: daily
-  - package-ecosystem: maven
+  - package-ecosystem: gradle
     directory: examples/write-behind-rxjava
     schedule:
       interval: daily

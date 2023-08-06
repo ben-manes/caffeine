@@ -1,4 +1,4 @@
-[Hibernate] can be configured to use a [second-level cache] to reduce the number of accesses
+[Hibernate][] can be configured to use a [second-level cache] to reduce the number of accesses
 to the database by caching data in memory to be shared between sessions.
 
 In [hibernate.conf](src/main/resources/hibernate.properties) specify the JCache provider and enable
