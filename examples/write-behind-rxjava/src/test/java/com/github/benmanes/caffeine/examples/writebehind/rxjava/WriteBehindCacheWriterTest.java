@@ -19,8 +19,8 @@ import static java.time.temporal.ChronoUnit.DAYS;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 
+import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,23 +43,22 @@ public final class WriteBehindCacheWriterTest {
     var writerCalled = new AtomicBoolean();
 
     // Given this cache...
-    try (var writer = new WriteBehindCacheWriter.Builder<Integer, ZonedDateTime>()
-        .bufferTime(1, TimeUnit.SECONDS)
-        .writeAction(entries -> writerCalled.set(true))
+    var writer = new WriteBehindCacheWriter.Builder<Integer, ZonedDateTime>()
         .coalesce(BinaryOperator.maxBy(ZonedDateTime::compareTo))
-        .build()) {
-      Cache<Integer, ZonedDateTime> cache = Caffeine.newBuilder().build();
+        .writeAction(entries -> writerCalled.set(true))
+        .bufferTime(Duration.ofSeconds(1))
+        .build();
+    Cache<Integer, ZonedDateTime> cache = Caffeine.newBuilder().build();
 
-      // When this cache update happens...
-      cache.asMap().computeIfAbsent(1, key -> {
-        var value = ZonedDateTime.now();
-        writer.accept(key, value);
-        return value;
-      });
+    // When this cache update happens...
+    cache.asMap().computeIfAbsent(1, key -> {
+      var value = ZonedDateTime.now();
+      writer.accept(key, value);
+      return value;
+    });
 
-      // Then the write behind action is called
-      await().untilTrue(writerCalled);
-    }
+    // Then the write behind action is called
+    await().untilTrue(writerCalled);
   }
 
   @Test
@@ -67,25 +66,24 @@ public final class WriteBehindCacheWriterTest {
     var numberOfEntries = new AtomicInteger();
 
     // Given this cache...
-    try (var writer = new WriteBehindCacheWriter.Builder<Integer, ZonedDateTime>()
-        .bufferTime(1, TimeUnit.SECONDS)
-        .coalesce(BinaryOperator.maxBy(ZonedDateTime::compareTo))
+    var writer = new WriteBehindCacheWriter.Builder<Integer, ZonedDateTime>()
         .writeAction(entries -> numberOfEntries.addAndGet(entries.size()))
-        .build()) {
-      Cache<Integer, ZonedDateTime> cache = Caffeine.newBuilder().build();
+        .coalesce(BinaryOperator.maxBy(ZonedDateTime::compareTo))
+        .bufferTime(Duration.ofSeconds(1))
+        .build();
+    Cache<Integer, ZonedDateTime> cache = Caffeine.newBuilder().build();
 
-      // When these cache updates happen...
-      for (int i = 1; i <= 3; i++) {
-        cache.asMap().computeIfAbsent(i, key -> {
-          var value = ZonedDateTime.now();
-          writer.accept(key, value);
-          return value;
-        });
-      }
-
-      // Then the write behind action gets 3 entries to write
-      await().untilAtomic(numberOfEntries, is(3));
+    // When these cache updates happen...
+    for (int i = 1; i <= 3; i++) {
+      cache.asMap().computeIfAbsent(i, key -> {
+        var value = ZonedDateTime.now();
+        writer.accept(key, value);
+        return value;
+      });
     }
+
+    // Then the write behind action gets 3 entries to write
+    await().untilAtomic(numberOfEntries, is(3));
   }
 
   @Test
@@ -94,9 +92,9 @@ public final class WriteBehindCacheWriterTest {
     var numberOfEntries = new AtomicInteger();
 
     // Given this cache...
-    try (var writer = new WriteBehindCacheWriter.Builder<Long, ZonedDateTime>()
-        .bufferTime(1, TimeUnit.SECONDS)
+    var writer = new WriteBehindCacheWriter.Builder<Long, ZonedDateTime>()
         .coalesce(BinaryOperator.maxBy(ZonedDateTime::compareTo))
+        .bufferTime(Duration.ofSeconds(1))
         .writeAction(entries -> {
           // We might get here before the cache has been written to,
           // so just wait for the next time we are called
@@ -107,24 +105,23 @@ public final class WriteBehindCacheWriterTest {
           var zonedDateTime = entries.values().iterator().next();
           timeInWriteBehind.set(zonedDateTime);
           numberOfEntries.set(entries.size());
-        }).build()) {
-      Cache<Long, ZonedDateTime> cache = Caffeine.newBuilder().build();
+        }).build();
+    Cache<Long, ZonedDateTime> cache = Caffeine.newBuilder().build();
 
-      // When these cache updates happen...
-      var latest = ZonedDateTime.now().truncatedTo(DAYS);
-      for (int i = 0; i < 4; i++) {
-        latest = latest.plusNanos(200);
+    // When these cache updates happen...
+    var latest = ZonedDateTime.now().truncatedTo(DAYS);
+    for (int i = 0; i < 4; i++) {
+      latest = latest.plusNanos(200);
 
-        var value = latest;
-        cache.asMap().compute(1L, (key, oldValue) -> {
-          writer.accept(key, value);
-          return value;
-        });
-      }
-
-      // Then the write behind action gets 1 entry to write with the most recent time
-      await().untilAtomic(numberOfEntries, is(1));
-      await().untilAtomic(timeInWriteBehind, is(latest));
+      var value = latest;
+      cache.asMap().compute(1L, (key, oldValue) -> {
+        writer.accept(key, value);
+        return value;
+      });
     }
+
+    // Then the write behind action gets 1 entry to write with the most recent time
+    await().untilAtomic(numberOfEntries, is(1));
+    await().untilAtomic(timeInWriteBehind, is(latest));
   }
 }

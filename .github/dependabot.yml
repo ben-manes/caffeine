@@ -12,8 +12,8 @@ updates:
     directory: /
     schedule:
       interval: daily
-  - package-ecosystem: maven
-    directory: examples/coalescing-bulkloader
+  - package-ecosystem: gradle
+    directory: examples/coalescing-bulkloader-reactor
     schedule:
       interval: daily
   - package-ecosystem: gradle

@@ -9,11 +9,11 @@ operation.
 
 ```java
 var subject = PublishSubject.<Entry<K, V>>create().toSerialized();
-subject.buffer(10, TimeUnit.SECONDS)
+subject.buffer(1, TimeUnit.SECONDS)
     .map(entries -> entries.stream().collect(
-        toMap(Entry::getKey, Entry::getValue, (v1, v2) -> /* latest */ v2)))
+        toMap(Entry::getKey, Entry::getValue, (v1, v2) -> v2)))
     .subscribeOn(Schedulers.io())
-    .subscribe(entries -> System.out.println(entries));
+    .subscribe(System.out::println);
 
 Cache<K, V> cache = Caffeine.newBuilder().build();
 cache.asMap().compute(key, (k, v) -> {

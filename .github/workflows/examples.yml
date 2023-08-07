@@ -98,9 +98,9 @@ jobs:
       - name: Write-behind (rxjava)
         working-directory: examples/write-behind-rxjava
         run: ./gradlew build
-      - name: Coalescing Bulkloader
-        working-directory: examples/coalescing-bulkloader
-        run: ./mvnw test
+      - name: Coalescing Bulkloader (reactor)
+        working-directory: examples/coalescing-bulkloader-reactor
+        run: ./gradlew build
       - name: Hibernate (jcache)
         working-directory: examples/hibernate
         run: ./gradlew build
