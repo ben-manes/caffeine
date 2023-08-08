@@ -148,8 +148,7 @@ interface NodeFactory<K, V> {
     try {
       var clazz = LOOKUP.findClass(Node.class.getPackageName() + "." + className);
       var constructor = LOOKUP.findConstructor(clazz, FACTORY);
-      return (NodeFactory<Object, Object>) constructor
-          .asType(constructor.type().changeReturnType(NodeFactory.class)).invokeExact();
+      return (NodeFactory<Object, Object>) constructor.invoke();
     } catch (RuntimeException | Error e) {
       throw e;
     } catch (Throwable t) {

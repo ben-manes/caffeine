@@ -32,6 +32,7 @@ interface LocalCacheFactory {
   MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
   MethodType FACTORY = MethodType.methodType(
       void.class, Caffeine.class, AsyncCacheLoader.class, boolean.class);
+  MethodType FACTORY_CALL = FACTORY.changeReturnType(BoundedLocalCache.class);
   ConcurrentMap<String, LocalCacheFactory> FACTORIES = new ConcurrentHashMap<>();
 
   /** Returns a cache optimized for this configuration. */
@@ -118,10 +119,9 @@ interface LocalCacheFactory {
     final MethodHandle methodHandle;
 
     MethodHandleBasedFactory(Class<?> clazz) throws NoSuchMethodException, IllegalAccessException {
-      var constructor = LOOKUP.findConstructor(clazz, FACTORY);
-      this.methodHandle = constructor.asType(
-          constructor.type().changeReturnType(BoundedLocalCache.class));
+      this.methodHandle = LOOKUP.findConstructor(clazz, FACTORY).asType(FACTORY_CALL);
     }
+    
     @SuppressWarnings("unchecked")
     @Override public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
         @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) throws Throwable {
