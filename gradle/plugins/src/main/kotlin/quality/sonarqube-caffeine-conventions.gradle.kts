@@ -6,7 +6,7 @@ plugins {
 sonarqube {
   properties {
     property("sonar.organization", "caffeine")
-    property("sonar.login", System.getenv("SONAR_TOKEN"))
+    property("sonar.token", System.getenv("SONAR_TOKEN"))
     property("sonar.host.url", "https://sonarcloud.io")
     property("sonar.cpd.exclusions", "**/simulator/**")
     property("sonar.coverage.exclusions", "**/simulator/**")
