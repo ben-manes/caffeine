@@ -5,8 +5,8 @@ import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
-  id("net.ltgt.nullaway")
   id("net.ltgt.errorprone")
+  id("net.ltgt.nullaway")
 }
 
 dependencies {
@@ -18,41 +18,6 @@ dependencies {
   errorprone(libs.nullaway.core)
   errorprone(libs.errorprone.mockito)
   errorprone(libs.bundles.errorprone.support)
-}
-
-tasks.withType<JavaCompile>().configureEach {
-  dependsOn(downloadCaffeine)
-
-  options.forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)
-  options.errorprone {
-    if (System.getenv("JDK_EA") == "true") {
-      isEnabled = false
-    }
-
-    errorproneArgs.add(buildString {
-      append("-XepOpt:Refaster:NamePattern=^")
-      disabledRules.forEach { rule ->
-        append("(?!")
-        append(rule)
-        append(".*)")
-      }
-      append(".*")
-    })
-    disabledChecks.forEach { disable(it) }
-    enabledChecks.forEach { enable(it) }
-    errorChecks.forEach { error(it) }
-
-    nullaway {
-      if (name.contains("Test") || name.contains("Jmh")) {
-        disable()
-      }
-      annotatedPackages.add("com.github.benmanes.caffeine")
-      annotatedPackages.add("com.google.common")
-      checkOptionalEmptiness = true
-      suggestSuppressions = true
-      checkContracts = true
-    }
-  }
 }
 
 // Gradle rewrites ErrorProne's dependency on Caffeine to a project dependency, which then fails.
@@ -75,17 +40,52 @@ val downloadCaffeine by tasks.registering {
   }
 }
 
-val errorChecks = listOf(
+tasks.withType<JavaCompile>().configureEach {
+  dependsOn(downloadCaffeine)
+
+  options.forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)
+  options.errorprone {
+    if (System.getenv("JDK_EA") == "true") {
+      isEnabled = false
+    }
+
+    errorproneArgs.add(buildString {
+      append("-XepOpt:Refaster:NamePattern=^")
+      disabledRules().forEach { rule ->
+        append("(?!")
+        append(rule)
+        append(".*)")
+      }
+      append(".*")
+    })
+    disabledChecks().forEach { disable(it) }
+    enabledChecks().forEach { enable(it) }
+    errorChecks().forEach { error(it) }
+
+    nullaway {
+      if (name.contains("Test") || name.contains("Jmh")) {
+        disable()
+      }
+      annotatedPackages.add("com.github.benmanes.caffeine")
+      annotatedPackages.add("com.google.common")
+      checkOptionalEmptiness = true
+      suggestSuppressions = true
+      checkContracts = true
+    }
+  }
+}
+
+fun errorChecks() = listOf(
   "NullAway",
 )
-val disabledChecks = listOf(
+fun disabledChecks() = listOf(
   "AvoidObjectArrays",
   "IsInstanceLambdaUsage",
   "LexicographicalAnnotationListing",
   "MissingSummary",
   "StaticImport",
 )
-val enabledChecks = listOf(
+fun enabledChecks() = listOf(
   "AssertFalse",
   "BanClassLoader",
   "BuilderReturnThis",
@@ -134,7 +134,7 @@ val enabledChecks = listOf(
   "UsingJsr305CheckReturnValue",
   "YodaCondition",
 )
-val disabledRules = listOf(
+fun disabledRules() = listOf(
   "ImmutableListRules\\\$ImmutableListBuilder",
   "ImmutableListRules\\\$ImmutableListOf\\d*",
   "ImmutableMapRules\\\$ImmutableMapBuilder",
