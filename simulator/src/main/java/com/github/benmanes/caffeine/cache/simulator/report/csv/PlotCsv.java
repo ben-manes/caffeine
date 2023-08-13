@@ -249,7 +249,6 @@ public final class PlotCsv implements Runnable {
     }
 
     @AutoValue.Builder @CopyAnnotations
-    @SuppressWarnings("NarrowingCompoundAssignment")
     public abstract static class Builder {
       abstract Builder axisOffset(RectangleInsets axisOffset);
 

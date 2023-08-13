@@ -310,7 +310,6 @@ public class PolicyStats {
     }
 
     @AutoValue.Builder @CopyAnnotations
-    @SuppressWarnings("NarrowingCompoundAssignment")
     public abstract static class Builder {
       public abstract Builder name(String name);
       public abstract Builder value(Object value);

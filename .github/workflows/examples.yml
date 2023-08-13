@@ -52,8 +52,9 @@ jobs:
           action: gradle/gradle-build-action@749f47bda3e44aa060e82d7b3ef7e40d953bd629 # v2.4.2
           with: |
             cache-read-only: false
-            generate-job-summary: false
             arguments: help --no-scan
+            generate-job-summary: false
+            gradle-home-cache-cleanup: true
             gradle-home-cache-strict-match: true
           attempt_limit: 3
           attempt_delay: 2000

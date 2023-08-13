@@ -73,6 +73,7 @@ runs:
       with:
         cache-read-only: false
         generate-job-summary: false
+        gradle-home-cache-cleanup: true
         gradle-home-cache-strict-match: true
         arguments: |
           -Porg.gradle.java.installations.auto-download=false
@@ -86,8 +87,4 @@ runs:
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
       shell: bash
-      run: |
-        stopMarker=$(uuidgen)
-        echo "::stop-commands::$stopMarker"
-        trap "echo '::$stopMarker::'" EXIT
-        ./gradlew -Porg.gradle.java.installations.auto-download=false ${{ inputs.arguments }}
+      run: ./gradlew -Porg.gradle.java.installations.auto-download=false ${{ inputs.arguments }}
