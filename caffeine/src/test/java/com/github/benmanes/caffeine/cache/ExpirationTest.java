@@ -26,6 +26,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.util.Map.entry;
@@ -47,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
@@ -71,7 +73,9 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.Futures;
@@ -106,6 +110,27 @@ public final class ExpirationTest {
           .contains(context.absentKey(), context.absentValue())
           .exclusively();
     }
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.IMMEDIATELY},
+      expireAfterWrite = {Expire.DISABLED, Expire.IMMEDIATELY},
+      expiryTime = Expire.IMMEDIATELY, population = Population.EMPTY,
+      evictionListener = Listener.REJECTING, weigher = CacheWeigher.DISABLED)
+  public void expire_evictionListener_failure(Cache<Int, Int> cache, CacheContext context) {
+    cache.put(context.absentKey(), context.absentValue());
+    runVariableExpiration(context);
+    assertThat(cache).isEmpty();
+
+    assertThat(context).evictionNotifications().hasSize(1);
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents().stream()
+        .filter(e -> e.getFormattedMessage().equals("Exception thrown by eviction listener"))
+        .collect(toImmutableList()));
+    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(RejectedExecutionException.class);
+    assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
   @Test(dataProvider = "caches")

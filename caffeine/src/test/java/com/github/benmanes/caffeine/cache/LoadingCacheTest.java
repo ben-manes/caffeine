@@ -943,6 +943,8 @@ public final class LoadingCacheTest {
     cache.refresh(context.absentKey());
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
     assertThat(event.getThrowable().orElseThrow()).hasCauseThat().isSameInstanceAs(expected);
+    assertThat(event.getFormattedMessage()).isAnyOf(
+        "Exception thrown during asynchronous load", "Exception thrown during refresh");
     assertThat(event.getLevel()).isEqualTo(WARN);
   }
 

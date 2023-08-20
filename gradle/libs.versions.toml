@@ -19,7 +19,7 @@ commons-text = "1.10.0"
 concurrentlinkedhashmap = "1.4.2"
 config = "1.4.2"
 coveralls = "2.12.2"
-dependency-check = "8.3.1"
+dependency-check = "8.4.0"
 eclipse-collections = "12.0.0.M2"
 ehcache3 = "3.10.8"
 errorprone-core = "2.21.1"
@@ -190,6 +190,7 @@ pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
 protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 slf4j-jdk-platform-logging = { module = "org.slf4j:slf4j-jdk-platform-logging", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
+slf4j-jul-bridge = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 slf4j-test = { module = "com.github.valfirst:slf4j-test", version.ref = "slf4j-test" }
 snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
@@ -223,7 +224,7 @@ osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function",
 pmd = ["pmd", "pmd-ant", "pmd-java"]
 slf4j-jdk = ["slf4j-jdk-platform-logging", "slf4j-jdk14"]
 slf4j-nop = ["slf4j-jdk-platform-logging", "slf4j-nop"]
-slf4j-test = ["slf4j-jdk-platform-logging", "slf4j-test"]
+slf4j-test = ["slf4j-jdk-platform-logging", "slf4j-jul-bridge", "slf4j-test"]
 truth = ["truth", "truth-java8"]
 
 [plugins]

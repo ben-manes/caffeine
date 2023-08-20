@@ -20,6 +20,9 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executo
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.testing.TestingExecutors.sameThreadScheduledExecutor;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.slf4j.event.Level.WARN;
 
 import java.util.Iterator;
 import java.util.Set;
@@ -34,12 +38,17 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.google.common.collect.Iterables;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.Futures;
 
@@ -49,6 +58,11 @@ import com.google.common.util.concurrent.Futures;
 public final class SchedulerTest {
   private final NullPointerTester npeTester = new NullPointerTester();
 
+  @BeforeMethod @AfterMethod
+  public void reset() {
+    TestLoggerFactory.clear();
+  }
+
   @Test(dataProvider = "schedulers")
   public void scheduler_null(Scheduler scheduler) {
     npeTester.testAllPublicInstanceMethods(scheduler);
@@ -56,14 +70,22 @@ public final class SchedulerTest {
 
   @Test(dataProvider = "runnableSchedulers")
   public void scheduler_exception(Scheduler scheduler) {
-    var executed = new AtomicBoolean();
+    var thread = new AtomicReference<Thread>();
     Executor executor = task -> {
-      executed.set(true);
+      thread.set(Thread.currentThread());
       throw new IllegalStateException();
     };
     var future = scheduler.schedule(executor, () -> {}, 1L, TimeUnit.NANOSECONDS);
     assertThat(future).isNotNull();
-    await().untilTrue(executed);
+    await().untilAtomic(thread, is(not(nullValue())));
+
+    if (thread.get() == Thread.currentThread()) {
+      var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+      assertThat(event.getFormattedMessage())
+          .isEqualTo("Exception thrown when submitting scheduled task");
+      assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
+      assertThat(event.getLevel()).isEqualTo(WARN);
+    }
   }
 
   @Test(dataProvider = "runnableSchedulers")
@@ -127,9 +149,15 @@ public final class SchedulerTest {
 
   @Test
   public void guardedScheduler_exception() {
-    var future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new RuntimeException(); })
+    var future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new IllegalStateException(); })
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getFormattedMessage())
+        .isEqualTo("Exception thrown by scheduler; discarded task");
+    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
+    assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
   /* --------------- ScheduledExecutorService --------------- */

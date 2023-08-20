@@ -391,6 +391,7 @@ public final class RefreshAfterWriteTest {
     assertThat(value).isEqualTo(context.absentValue());
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
     assertThat(event.getThrowable().orElseThrow()).hasCauseThat().isSameInstanceAs(expected);
+    assertThat(event.getFormattedMessage()).isEqualTo("Exception thrown during refresh");
     assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
@@ -420,6 +421,8 @@ public final class RefreshAfterWriteTest {
     assertThat(value).isNotNull();
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
     assertThat(event.getThrowable().orElseThrow()).isInstanceOf(NullPointerException.class);
+    assertThat(event.getFormattedMessage()).isEqualTo(
+        "Exception thrown when submitting refresh task");
     assertThat(event.getLevel()).isEqualTo(WARN);
 
     assertThat(refreshed.get()).isTrue();

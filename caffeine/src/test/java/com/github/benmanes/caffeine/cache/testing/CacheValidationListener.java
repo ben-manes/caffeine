@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.StringUtils;
 import org.joor.Reflect;
 import org.mockito.Mockito;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.slf4j.event.Level;
 import org.testng.Assert;
 import org.testng.IInvokedMethod;
@@ -86,6 +87,8 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         resultQueues.add(invokedMethods.get());
       }
     }
+    SLF4JBridgeHandler.removeHandlersForRootLogger();
+    SLF4JBridgeHandler.install();
   }
 
   @Override

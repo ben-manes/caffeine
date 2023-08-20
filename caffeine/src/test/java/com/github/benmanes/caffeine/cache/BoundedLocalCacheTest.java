@@ -85,6 +85,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -258,6 +259,8 @@ public final class BoundedLocalCacheTest {
 
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
     assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
+    assertThat(event.getFormattedMessage()).isEqualTo(
+        "Exception thrown when performing the maintenance task");
     assertThat(event.getLevel()).isEqualTo(ERROR);
   }
 
@@ -272,6 +275,8 @@ public final class BoundedLocalCacheTest {
 
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
     assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
+    assertThat(event.getFormattedMessage()).isEqualTo(
+        "Exception thrown when performing the maintenance task");
     assertThat(event.getLevel()).isEqualTo(ERROR);
   }
 
@@ -554,6 +559,8 @@ public final class BoundedLocalCacheTest {
     cache.afterWrite(pendingTask);
     var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
     assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
+    assertThat(event.getFormattedMessage()).isEqualTo(
+        "Exception thrown when performing the maintenance task");
     assertThat(event.getLevel()).isEqualTo(ERROR);
   }
 
@@ -1916,6 +1923,12 @@ public final class BoundedLocalCacheTest {
       await().until(() -> !testLogger.get().getAllLoggingEvents().isEmpty());
 
       assertThat(cache.evictionLock.hasQueuedThreads()).isTrue();
+
+      var event = Iterables.getOnlyElement(TestLoggerFactory.getAllLoggingEvents().stream()
+          .filter(e -> e.getLevel() == WARN)
+          .collect(toImmutableList()));
+      assertThat(event.getFormattedMessage()).contains("excessive wait times");
+      assertThat(event.getThrowable().orElseThrow()).isInstanceOf(TimeoutException.class);
     } finally {
       done.set(true);
       cache.evictionLock.unlock();

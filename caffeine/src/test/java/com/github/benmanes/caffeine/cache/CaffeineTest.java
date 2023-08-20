@@ -16,9 +16,11 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -28,7 +30,9 @@ import java.util.function.Supplier;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -42,6 +46,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.google.common.collect.Iterables;
 import com.google.common.testing.FakeTicker;
 import com.google.common.testing.NullPointerTester;
 
@@ -58,6 +64,11 @@ public final class CaffeineTest {
   @BeforeClass
   public void beforeClass() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+  }
+
+  @BeforeMethod @AfterMethod
+  public void reset() {
+    TestLoggerFactory.clear();
   }
 
   @Test
@@ -102,6 +113,12 @@ public final class CaffeineTest {
   public void fromSpec_lenientParsing() {
     var cache = Caffeine.from(CaffeineSpec.parse("maximumSize=100")).weigher((k, v) -> 0).build();
     assertThat(cache).isNotNull();
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getFormattedMessage())
+        .isEqualTo("ignoring weigher specified without maximumWeight");
+    assertThat(event.getThrowable()).isEmpty();
+    assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
   @Test
@@ -847,7 +864,7 @@ public final class CaffeineTest {
     assertThat(builder.build()).isNotNull();
   }
 
-  /* --------------- removalListener --------------- */
+  /* --------------- evictionListener --------------- */
 
   @Test
   public void evictionListener_null() {

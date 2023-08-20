@@ -26,15 +26,13 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.WARN;
 
@@ -44,6 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -74,6 +73,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
 import com.google.common.testing.EqualsTester;
@@ -109,16 +109,22 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      requiresWeakOrSoft = true, evictionListener = Listener.MOCKITO)
-  public void collect_evictionListenerFails(CacheContext context) {
+      requiresWeakOrSoft = true, evictionListener = Listener.REJECTING)
+  public void collect_evictionListener_failure(CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
 
-    doThrow(RuntimeException.class)
-        .when(context.evictionListener()).onRemoval(any(), any(), any());
     assertThat(context.cache()).whenCleanedUp().isEmpty();
-    verify(context.evictionListener(), times((int) context.initialSize()))
-        .onRemoval(any(), any(), any());
+    assertThat(context).evictionNotifications().hasSize(context.initialSize());
+
+    var events = TestLoggerFactory.getLoggingEvents().stream()
+        .filter(e -> e.getFormattedMessage().equals("Exception thrown by eviction listener"))
+        .collect(toImmutableList());
+    assertThat(events).hasSize((int) context.initialSize());
+    for (var event : events) {
+      assertThat(event.getThrowable().orElseThrow()).isInstanceOf(RejectedExecutionException.class);
+      assertThat(event.getLevel()).isEqualTo(WARN);
+    }
   }
 
   /* --------------- Cache --------------- */

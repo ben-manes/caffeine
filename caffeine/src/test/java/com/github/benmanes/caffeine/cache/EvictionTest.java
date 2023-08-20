@@ -33,9 +33,6 @@ import static com.google.common.truth.Truth8.assertThat;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.WARN;
 
@@ -46,6 +43,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.annotations.Listeners;
@@ -68,6 +66,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
@@ -271,14 +270,19 @@ public final class EvictionTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
-      weigher = CacheWeigher.DISABLED, evictionListener = Listener.MOCKITO,
-      removalListener = Listener.REJECTING)
-  public void evict_evictionListenerFails(Cache<Int, Int> cache, CacheContext context) {
-    doThrow(RuntimeException.class)
-        .when(context.evictionListener()).onRemoval(any(), any(), any());
+      weigher = CacheWeigher.DISABLED, evictionListener = Listener.REJECTING)
+  public void evict_evictionListener_failure(Cache<Int, Int> cache, CacheContext context) {
     cache.policy().eviction().ifPresent(policy -> policy.setMaximum(0));
-    verify(context.evictionListener(), times((int) context.initialSize()))
-        .onRemoval(any(), any(), any());
+    assertThat(context).evictionNotifications().hasSize(context.original().size());
+
+    var events = TestLoggerFactory.getLoggingEvents().stream()
+        .filter(e -> e.getFormattedMessage().equals("Exception thrown by eviction listener"))
+        .collect(toImmutableList());
+    assertThat(events).hasSize(context.original().size());
+    for (var event : events) {
+      assertThat(event.getThrowable().orElseThrow()).isInstanceOf(RejectedExecutionException.class);
+      assertThat(event.getLevel()).isEqualTo(WARN);
+    }
   }
 
   /* --------------- Weighted --------------- */

@@ -19,6 +19,8 @@ import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIR
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +37,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("serial")
 final class Async {
   static final long ASYNC_EXPIRY = (Long.MAX_VALUE >> 1) + (Long.MAX_VALUE >> 2); // 220 years
+  static final Logger logger = System.getLogger(Async.class.getName());
 
   private Async() {}
 
@@ -83,7 +86,11 @@ final class Async {
       if (future != null) {
         future.thenAcceptAsync(value -> {
           if (value != null) {
-            delegate.onRemoval(key, value, cause);
+            try {
+              delegate.onRemoval(key, value, cause);
+            } catch (Throwable t) {
+              logger.log(Level.WARNING, "Exception thrown by removal listener", t);
+            }
           }
         }, executor);
       }

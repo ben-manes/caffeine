@@ -62,6 +62,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -97,6 +98,12 @@ public final class AsyncLoadingCacheTest {
   public void get_absent_failure(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey())).hasCompletedExceptionally();
     assertThat(cache).doesNotContainKey(context.absentKey());
+
+    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    assertThat(event.getFormattedMessage()).isEqualTo("Exception thrown during asynchronous load");
+    assertThat(event.getThrowable().orElseThrow())
+        .hasCauseThat().isInstanceOf(IllegalStateException.class);
+    assertThat(event.getLevel()).isEqualTo(WARN);
   }
 
   @Test(dataProvider = "caches")
@@ -223,6 +230,14 @@ public final class AsyncLoadingCacheTest {
     int misses = context.absentKeys().size();
     int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
     assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
+
+    for (var event : TestLoggerFactory.getLoggingEvents()) {
+      assertThat(event.getFormattedMessage()).isAnyOf(
+          "Exception thrown during asynchronous load", "Exception thrown during asynchronous load");
+      assertThat(event.getThrowable().orElseThrow())
+          .hasCauseThat().isInstanceOf(IllegalStateException.class);
+      assertThat(event.getLevel()).isEqualTo(WARN);
+    }
   }
 
   @Test(dataProvider = "caches")

@@ -22,17 +22,26 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.slf4j.event.Level.WARN;
 
 import org.mockito.Mockito;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class StatsCounterTest {
+
+  @BeforeMethod @AfterMethod
+  public void reset() {
+    TestLoggerFactory.clear();
+  }
 
   @Test
   public void disabled() {
@@ -90,6 +99,7 @@ public final class StatsCounterTest {
     counter.recordLoadFailure(1);
     var expected = CacheStats.of(1, 1, 1, 1, 2, 1, 10);
     assertThat(counter.snapshot()).isEqualTo(expected);
+    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
     assertThat(counter.toString()).isEqualTo(expected.toString());
     assertThat(counter.snapshot().toString()).isEqualTo(expected.toString());
   }
@@ -113,16 +123,24 @@ public final class StatsCounterTest {
     var guarded = StatsCounter.guardedStatsCounter(statsCounter);
     guarded.recordHits(1);
     guarded.recordMisses(1);
-    guarded.recordEviction(10, RemovalCause.SIZE);
     guarded.recordLoadSuccess(1);
     guarded.recordLoadFailure(1);
+    guarded.recordEviction(10, RemovalCause.SIZE);
     assertThat(guarded.snapshot()).isEqualTo(CacheStats.empty());
 
     verify(statsCounter).recordHits(1);
     verify(statsCounter).recordMisses(1);
-    verify(statsCounter).recordEviction(10, RemovalCause.SIZE);
     verify(statsCounter).recordLoadSuccess(1);
     verify(statsCounter).recordLoadFailure(1);
+    verify(statsCounter).recordEviction(10, RemovalCause.SIZE);
+
+    var events = TestLoggerFactory.getLoggingEvents();
+    assertThat(events).hasSize(6);
+    for (var event : events) {
+      assertThat(event.getLevel()).isEqualTo(WARN);
+      assertThat(event.getFormattedMessage()).isEqualTo("Exception thrown by stats counter");
+      assertThat(event.getThrowable().orElseThrow()).isInstanceOf(NullPointerException.class);
+    }
   }
 
   @Test
