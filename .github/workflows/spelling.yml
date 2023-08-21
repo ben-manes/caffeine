@@ -22,4 +22,4 @@ jobs:
       - name: Spell Check with Misspell
         run: ./misspell -error .
       - name: Spell Check with Typos
-        uses: crate-ci/typos@0863e64406a6d8f990ba7a1dd8f5a4683dd61194 # v1.16.5
+        uses: crate-ci/typos@f8d11b3a696122fde2fee567dc70c0864683b481 # v1.16.6
