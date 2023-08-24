@@ -2,7 +2,7 @@
 awaitility = "4.2.0"
 caffeine = "3.1.8"
 junit = "5.10.0"
-rxjava = "3.1.6"
+rxjava = "3.1.7"
 versions = "0.47.0"
 
 [libraries]
