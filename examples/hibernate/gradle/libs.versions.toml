@@ -1,6 +1,6 @@
 [versions]
 caffeine = "3.1.8"
-h2 = "2.2.220"
+h2 = "2.2.222"
 hibernate = "6.3.0.Final"
 junit = "5.10.0"
 log4j2 = "2.20.0"
