@@ -178,8 +178,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * hierarchical timer wheel [5]. The queuing policies allow for peeking at the oldest entry to
    * determine if it has expired. If it has not, then the younger entries must not have expired
    * either. If a maximum size is set, then expiration will share the queues, minimizing the
-   * per-entry footprint is minimized. The timer wheel based policy uses hashing and cascading in a
-   * manner that amortizes the penalty of sorting to achieve a similar algorithmic cost.
+   * per-entry footprint. The timer wheel based policy uses hashing and cascading in a manner that
+   * amortizes the penalty of sorting to achieve a similar algorithmic cost.
    *
    * The expiration updates are applied in a best effort fashion. The reordering of variable or
    * access-order expiration may be discarded by the read buffer if it is full or contended.

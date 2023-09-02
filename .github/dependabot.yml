@@ -13,6 +13,10 @@ updates:
     schedule:
       interval: daily
   - package-ecosystem: gradle
+    directory: gradle/plugins
+    schedule:
+      interval: daily
+  - package-ecosystem: gradle
     directory: examples/coalescing-bulkloader-reactor
     schedule:
       interval: daily
