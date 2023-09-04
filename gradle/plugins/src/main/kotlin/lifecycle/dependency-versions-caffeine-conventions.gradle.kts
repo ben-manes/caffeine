@@ -1,5 +1,4 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
 
 plugins {
   id("com.github.ben-manes.versions")
@@ -19,18 +18,6 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
     }
     force(libs.guice)
     force(libs.bundles.coherence.get())
-  }
-  outputFormatter {
-    val reporter = PlainTextReporter(project, revision, gradleReleaseChannel)
-    exceeded.dependencies.removeAll { dependency ->
-      if (dependency.group?.startsWith("org.ops4j") == true) {
-        current.dependencies += dependency
-        true
-      } else {
-        false
-      }
-    }
-    reporter.write(System.out, this)
   }
 }
 

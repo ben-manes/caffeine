@@ -38,10 +38,8 @@ tasks.jar {
   bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine.guava",
     "Import-Package" to listOf(
-      "com.google.common.cache",
-      "com.google.common.util.concurrent",
-      "com.github.benmanes.caffeine.cache",
-      "com.github.benmanes.caffeine.cache.stats").joinToString(","),
+      "com.github.benmanes.caffeine.*",
+      "com.google.common.*;version=23.2").joinToString(","),
     "Export-Package" to "com.github.benmanes.caffeine.guava",
     "Automatic-Module-Name" to "com.github.benmanes.caffeine.guava"))
 }
