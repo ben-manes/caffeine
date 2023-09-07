@@ -3,7 +3,7 @@ caffeine = "3.1.8"
 graal = "0.9.25"
 junit = "5.10.0"
 truth = "1.1.5"
-versions = "0.47.0"
+versions = "0.48.0"
 
 [libraries]
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
