@@ -29,7 +29,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
       - name: Run DevSkim scanner
-        uses: microsoft/DevSkim-Action@74ddf98618ab84f5417542accf0a24a5f39fb7a9 # v1.0.10
+        uses: microsoft/DevSkim-Action@b41921d947434b27f90b8949f8bfbe056e706bf6 # v1.0.11
       - name: Upload DevSkim scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
         with:
