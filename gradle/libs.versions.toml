@@ -32,7 +32,7 @@ felix-framework = "7.0.5"
 felix-scr = "2.2.6"
 findsecbugs = "1.12.0"
 flip-tables = "1.1.0"
-forbiddenApis = "3.5.1"
+forbidden-apis = "3.5.1"
 google-java-format = "1.17.0"
 guava = "32.1.2-jre"
 guice = "6.0.0"
@@ -50,6 +50,7 @@ jcache = "1.1.1"
 jcommander = "1.82"
 jctools = "4.0.1"
 jfreechart = "1.5.4"
+jgit = "6.7.0.202309050840-r"
 jmh-core = "1.37"
 jmh-plugin = "0.7.1"
 jmh-report = "0.9.0"
@@ -133,7 +134,7 @@ felix-framework = { module = "org.apache.felix:org.apache.felix.framework", vers
 felix-scr = { module = "org.apache.felix:org.apache.felix.scr", version.ref = "felix-scr" }
 findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 flip-tables = { module = "com.jakewharton.fliptables:fliptables", version.ref = "flip-tables" }
-forbiddenApis = { module = "de.thetaphi:forbiddenapis", version.ref = "forbiddenApis" }
+forbidden-apis = { module = "de.thetaphi:forbiddenapis", version.ref = "forbidden-apis" }
 google-java-format = { module = "com.google.googlejavaformat:google-java-format", version.ref = "google-java-format" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 guava-testlib = { module = "com.google.guava:guava-testlib", version.ref = "guava" }
@@ -156,6 +157,7 @@ jcache-tck = { module = "javax.cache:cache-tests", version.ref = "jcache" }
 jcommander = { module = "com.beust:jcommander", version.ref = "jcommander" }
 jctools = { module = "org.jctools:jctools-core", version.ref = "jctools" }
 jfreechart = { module = "org.jfree:jfreechart", version.ref = "jfreechart" }
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh-core" }
 jmh-plugin = { module = "me.champeau.jmh:jmh-gradle-plugin", version.ref = "jmh-plugin" }
 jmh-report = { module = "gradle.plugin.io.morethan.jmhreport:gradle-jmh-report", version.ref = "jmh-report" }
@@ -213,7 +215,7 @@ zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 [bundles]
 coherence = ["coherence-core", "json-bind"]
 constraints = ["bcel", "bouncycastle", "commons-text", "httpclient", "jcommander",
-  "jsoup", "nekohtml", "protobuf", "snakeyaml", "xerces", "xstream" ]
+  "jgit", "jsoup", "nekohtml", "protobuf", "snakeyaml", "xerces", "xstream" ]
 errorprone-support = [ "errorprone-support", "errorprone-support-refaster" ]
 jmh = ["jmh-core", "jmh-plugin", "jmh-report"]
 junit = ["junit4", "junit5"]
