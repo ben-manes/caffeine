@@ -17,7 +17,7 @@ path may be overridden by setting the `hibernate.javax.cache.uri` in the previou
 ```hocon
 caffeine.jcache {
   default {
-    policy.maximum.size = 500
+    monitoring.statistics = true
   }
 
   # Hibernate framework caches

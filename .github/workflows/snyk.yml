@@ -39,13 +39,13 @@ jobs:
             services.gradle.org:443
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
       - name: Run Snyk test
-        uses: snyk/actions/gradle@master
+        uses: snyk/actions/gradle-jdk11@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: --sarif-file-output=snyk.sarif -- --no-configuration-cache
+          args: --sarif-file-output=snyk.sarif --all-sub-projects -- --no-configuration-cache
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@20b4d2e596410855db8f9ca21e96fbe18e12930b # v2.0.0
@@ -57,9 +57,10 @@ jobs:
         with:
           sarif_file: snyk.sarif
       - name: Run Snyk monitor
-        uses: snyk/actions/gradle@master
+        uses: snyk/actions/gradle-jdk11@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: monitor
+          args: --all-sub-projects -- --no-configuration-cache

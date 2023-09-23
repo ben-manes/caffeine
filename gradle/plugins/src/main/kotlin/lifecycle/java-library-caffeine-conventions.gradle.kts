@@ -54,7 +54,6 @@ tasks.withType<AbstractArchiveTask>().configureEach {
   }
 }
 
-val projectDescription = objects.property<String>().convention(provider { project.description })
 tasks.jar {
   inputs.property("version", project.version.toString())
   outputs.cacheIf { true }
@@ -62,9 +61,7 @@ tasks.jar {
     from("$rootDir/LICENSE")
   }
   bundle {
-    properties = projectDescription.map {
-      mapOf("project.description" to it)
-    }
+    properties.empty()
     bnd(mapOf(
       "Bundle-License" to "https://www.apache.org/licenses/LICENSE-2.0",
       "Build-Jdk-Spec" to java.toolchain.languageVersion.get(),

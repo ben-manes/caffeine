@@ -125,6 +125,7 @@ fun enabledChecks() = listOf(
   "SwitchDefault",
   "TimeUnitMismatch",
   "TransientMisuse",
+  "TruthContainsExactlyElementsInUsage",
   "UnnecessarilyVisible",
   "UnnecessaryAnonymousClass",
   "UnnecessaryOptionalGet",
