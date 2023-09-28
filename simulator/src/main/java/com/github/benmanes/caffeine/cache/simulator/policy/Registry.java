@@ -75,6 +75,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.Wind
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.QdlpPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.PipelinePolicy;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
@@ -118,6 +119,7 @@ public final class Registry {
     registerTwoQueue();
     registerAdaptive();
     registerGreedyDual();
+    registerESP();
   }
 
   /** Registers the policy based on the annotated name. */
@@ -176,7 +178,11 @@ public final class Registry {
     register(TuQueuePolicy.class, TuQueuePolicy::new);
     register(TwoQueuePolicy.class, TwoQueuePolicy::new);
   }
+  private void registerESP(){
+    register(PipelinePolicy.class, PipelinePolicy::new);
 
+
+  }
   private void registerSketch() {
     registerMany(WindowTinyLfuPolicy.class, WindowTinyLfuPolicy::policies);
     registerMany(S4WindowTinyLfuPolicy.class, S4WindowTinyLfuPolicy::policies);
@@ -231,6 +237,7 @@ public final class Registry {
     registerMany(HazelcastPolicy.class, HazelcastPolicy::policies);
     registerMany(ExpiringMapPolicy.class, ExpiringMapPolicy::policies);
   }
+
 
   @AutoValue
   abstract static class Factory {
