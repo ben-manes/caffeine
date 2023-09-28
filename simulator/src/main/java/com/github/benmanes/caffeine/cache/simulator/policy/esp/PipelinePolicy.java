@@ -1,10 +1,23 @@
-//add to configue
+/*
+ * Copyright 2015 Ben Manes. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.benmanes.caffeine.cache.simulator.policy.esp;
-
-
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
@@ -12,32 +25,44 @@ import com.typesafe.config.Config;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-//import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
+/**
+ * The 2Q algorithm. This algorithm uses a queue for items that are seen once (IN), a queue for
+ * items seen multiple times (MAIN), and a non-resident queue for evicted items that are being
+ * monitored (OUT). The maximum size of the IN and OUT queues must be tuned with the authors
+ * recommending 20% and 50% of the maximum size, respectively.
+ * <p>
+ * This implementation is based on the pseudocode provided by the authors in their paper
+ * <a href="http://www.vldb.org/conf/1994/P439.PDF">2Q: A Low Overhead High Performance Buffer
+ * Management Replacement Algorithm</a>. For consistency with other policies, this version places
+ * the next item to be removed at the head and most recently added at the tail of the queue.
+ *
+ * @author ben.manes@gmail.com (Ben Manes)
+ */
+@PolicySpec(name = "esp.PipelinePolicy")
 public final class PipelinePolicy implements KeyOnlyPolicy {
+  static final Node UNLINKED = new Node();
 
-  static final PipelinePolicy.Node UNLINKED = new PipelinePolicy.Node();
-
-  final Long2ObjectMap<PipelinePolicy.Node> data;
+  final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final int maximumSize;
 
   int sizeIn;
   final int maxIn;
-  final PipelinePolicy.Node headIn;
+  final Node headIn;
 
   int sizeOut;
   final int maxOut;
-  final PipelinePolicy.Node headOut;
+  final Node headOut;
 
   int sizeMain;
-  final PipelinePolicy.Node headMain;
+  final Node headMain;
 
   public PipelinePolicy(Config config) {
-    PipelinePolicy.PipelinePolicySettings settings = new PipelinePolicy.PipelinePolicySettings(config);
+    PipelinePolicySettings settings = new PipelinePolicySettings(config);
 
-    this.headIn = new PipelinePolicy.Node();
-    this.headOut = new PipelinePolicy.Node();
-    this.headMain = new PipelinePolicy.Node();
+    this.headIn = new Node();
+    this.headOut = new Node();
+    this.headMain = new Node();
     this.data = new Long2ObjectOpenHashMap<>();
     this.policyStats = new PolicyStats(name());
     this.maximumSize = Math.toIntExact(settings.maximumSize());
@@ -62,7 +87,7 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
     //   end if
 
     policyStats.recordOperation();
-    PipelinePolicy.Node node = data.get(key);
+    Node node = data.get(key);
     if (node != null) {
       switch (node.type) {
         case MAIN:
@@ -76,7 +101,7 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
           reclaimfor(node);
 
           node.appendToTail(headMain);
-          node.type = PipelinePolicy.QueueType.MAIN;
+          node.type = QueueType.MAIN;
           sizeMain++;
 
           policyStats.recordMiss();
@@ -87,8 +112,8 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
           return;
       }
     } else {
-      node = new PipelinePolicy.Node(key);
-      node.type = PipelinePolicy.QueueType.IN;
+      node = new Node(key);
+      node.type = QueueType.IN;
 
       reclaimfor(node);
       node.appendToTail(headIn);
@@ -98,7 +123,7 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
     }
   }
 
-  private void reclaimfor(PipelinePolicy.Node node) {
+  private void reclaimfor(Node node) {
     // if there are free page slots then
     //   put X into a free page slot
     // else if (size(Alin) > Kin)
@@ -118,17 +143,17 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
       data.put(node.key, node);
     } else if (sizeIn > maxIn) {
       // IN is full, move to OUT
-      PipelinePolicy.Node n = headIn.next;
+      Node n = headIn.next;
       n.remove();
       sizeIn--;
       n.appendToTail(headOut);
-      n.type = PipelinePolicy.QueueType.OUT;
+      n.type = QueueType.OUT;
       sizeOut++;
 
       if (sizeOut > maxOut) {
         // OUT is full, drop oldest
         policyStats.recordEviction();
-        PipelinePolicy.Node victim = headOut.next;
+        Node victim = headOut.next;
         data.remove(victim.key);
         victim.remove();
         sizeOut--;
@@ -137,7 +162,7 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
     } else {
       // OUT has room, evict from MAIN
       policyStats.recordEviction();
-      PipelinePolicy.Node victim = headMain.next;
+      Node victim = headMain.next;
       data.remove(victim.key);
       victim.remove();
       sizeMain--;
@@ -159,9 +184,9 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    PipelinePolicy.Node prev;
-    PipelinePolicy.Node next;
-    PipelinePolicy.QueueType type;
+    Node prev;
+    Node next;
+    QueueType type;
 
     Node() {
       this.key = Long.MIN_VALUE;
@@ -175,21 +200,17 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
       this.next = UNLINKED;
     }
 
-    /**
-     * Appends the node to the tail of the list.
-     */
-    public void appendToTail(PipelinePolicy.Node head) {
-      PipelinePolicy.Node tail = head.prev;
+    /** Appends the node to the tail of the list. */
+    public void appendToTail(Node head) {
+      Node tail = head.prev;
       head.prev = this;
       tail.next = this;
       next = head;
       prev = tail;
     }
 
-    /**
-     * Moves the node to the tail.
-     */
-    public void moveToTail(PipelinePolicy.Node head) {
+    /** Moves the node to the tail. */
+    public void moveToTail(Node head) {
       // unlink
       prev.next = next;
       next.prev = prev;
@@ -201,9 +222,7 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
       prev.next = this;
     }
 
-    /**
-     * Removes the node from the list.
-     */
+    /** Removes the node from the list. */
     public void remove() {
       prev.next = next;
       next.prev = prev;
@@ -226,14 +245,11 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
     }
 
     public double percentIn() {
-      return config().getDouble("pipeline.percent-in");
+      return config().getDouble("esp.percent-in");
     }
 
     public double percentOut() {
-      return config().getDouble("pipeline.percent-out");
+      return config().getDouble("esp.percent-out");
     }
   }
 }
-
-
-
