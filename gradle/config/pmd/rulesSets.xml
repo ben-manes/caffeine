@@ -22,12 +22,12 @@
     <properties>
       <property name="allowedTypes" value="
         java.util.Properties
-        |java.util.concurrent.ConcurrentHashMap
-        |com.google.common.collect.ImmutableMap
-        |com.google.common.collect.ImmutableSet
-        |com.google.common.collect.ImmutableList
-        |com.github.benmanes.caffeine.cache.BoundedLocalCache
-        |com.github.benmanes.caffeine.cache.UnboundedLocalCache
+        ,java.util.concurrent.ConcurrentHashMap
+        ,com.google.common.collect.ImmutableMap
+        ,com.google.common.collect.ImmutableSet
+        ,com.google.common.collect.ImmutableList
+        ,com.github.benmanes.caffeine.cache.BoundedLocalCache
+        ,com.github.benmanes.caffeine.cache.UnboundedLocalCache
       "/>
     </properties>
   </rule>
