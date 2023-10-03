@@ -52,7 +52,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09 # v2.5.1
+        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423 # v2.6.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -144,7 +144,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09 # v2.5.1
+        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423 # v2.6.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -187,7 +187,7 @@ jobs:
     if: github.event_name == 'push'
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09 # v2.5.1
+        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423 # v2.6.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -253,7 +253,7 @@ jobs:
       checks: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09 # v2.5.1
+        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423 # v2.6.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -303,7 +303,7 @@ jobs:
       && endsWith(github.ref, github.event.repository.default_branch)
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@8ca2b8b2ece13480cda6dacd3511b49857a23c09 # v2.5.1
+        uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423 # v2.6.0
         with:
           disable-sudo: true
           egress-policy: block
