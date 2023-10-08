@@ -62,8 +62,7 @@ junit4 = "4.13.2"
 junit5 = "5.10.0"
 kotlin = "1.9.10"
 lincheck = "2.18.1"
-mockito = "5.5.0"
-nekohtml = "1.9.22"
+mockito = "5.6.0"
 nexus-publish = "2.0.0-rc-1"
 nullaway-core = "0.10.14"
 nullaway-plugin = "1.6.0"
@@ -79,18 +78,16 @@ protobuf = "3.24.4"
 slf4j = "2.0.9"
 slf4j-test = "3.0.1"
 snakeyaml = "2.2"
-sonarqube = "4.3.1.3277"
+sonarqube = "4.4.1.3373"
 spotbugs-contrib = "7.6.0"
 spotbugs-core = "4.7.3"
-spotbugs-plugin = "6.0.0-beta.3"
+spotbugs-plugin = "6.0.0-beta.4"
 stream = "2.9.8"
 tcache = "2.0.1"
 testng = "7.8.0"
 truth = "1.1.5"
 univocity-parsers = "2.9.1"
-versions = "0.48.0"
-xerces = "2.12.2"
-xstream = "1.4.20"
+versions = "0.49.0"
 xz = "1.9"
 ycsb = "0.17.0"
 zstd = "1.5.5-6"
@@ -173,7 +170,6 @@ junit5-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.re
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 lincheck = { module = "org.jetbrains.kotlinx:lincheck-jvm", version.ref = "lincheck" }
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
-nekohtml = { module = "net.sourceforge.nekohtml:nekohtml", version.ref = "nekohtml" }
 nexus-publish = { module = "io.github.gradle-nexus:publish-plugin", version.ref = "nexus-publish" }
 nullaway-core = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway-core" }
 nullaway-plugin = { module = "net.ltgt.gradle:gradle-nullaway-plugin", version.ref = "nullaway-plugin" }
@@ -206,16 +202,14 @@ testng = { module = "org.testng:testng", version.ref = "testng" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
 truth-java8 = { module = "com.google.truth.extensions:truth-java8-extension", version.ref = "truth" }
 univocity-parsers = { module = "com.univocity:univocity-parsers", version.ref = "univocity-parsers" }
-xerces = { module = "xerces:xercesImpl", version.ref = "xerces" }
-xstream = { module = "com.thoughtworks.xstream:xstream", version.ref = "xstream" }
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
 ycsb = { module = "site.ycsb:core", version.ref = "ycsb" }
 zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 
 [bundles]
 coherence = ["coherence-core", "json-bind"]
-constraints = ["bcel", "bouncycastle", "commons-text", "httpclient", "jcommander",
-  "jgit", "jsoup", "nekohtml", "protobuf", "snakeyaml", "xerces", "xstream" ]
+constraints = ["bcel", "bouncycastle", "commons-text", "httpclient",
+  "jcommander", "jgit", "jsoup", "protobuf", "snakeyaml" ]
 errorprone-support = [ "errorprone-support", "errorprone-support-refaster" ]
 jmh = ["jmh-core", "jmh-plugin", "jmh-report"]
 junit = ["junit4", "junit5"]
