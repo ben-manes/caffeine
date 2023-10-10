@@ -60,7 +60,7 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           arguments: build -x test
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@32c3156f63f31a54dece4ce3e32dbb767c38bb61 # v2023.2.6
+        uses: JetBrains/qodana-action@95ecb19ba27e308153723e54a790e4ad908b13a0 # v2023.2.8
         with:
           upload-result: true
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
