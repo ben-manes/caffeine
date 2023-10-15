@@ -16,6 +16,7 @@ spotbugs {
   effort = MAX
   reportLevel = LOW
   useJavaToolchains = true
+  toolVersion = libs.versions.spotbugs.core
   excludeFilter = rootProject.layout.projectDirectory.file("gradle/config/spotbugs/exclude.xml")
 }
 
@@ -24,9 +25,6 @@ tasks.withType<SpotBugsTask>().configureEach {
   group = "SpotBugs"
   reports {
     create("html") {
-      required = true
-    }
-    create("sarif") {
       required = true
     }
   }

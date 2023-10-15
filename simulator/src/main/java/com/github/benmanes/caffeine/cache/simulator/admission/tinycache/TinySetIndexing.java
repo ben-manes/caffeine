@@ -34,8 +34,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  */
 final class TinySetIndexing {
   // for performance - for functions that need to know both the start and the end of the chain.
-  public int chainStart;
-  public int chainEnd;
+  private int chainStart;
+  private int chainEnd;
 
   public int getChainStart(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
@@ -66,13 +66,13 @@ final class TinySetIndexing {
       currentOffset++;
       tempisLastIndex >>>= 1;
     }
-    chainStart = currentOffset;
+    setChainStart(currentOffset);
 
     while ((tempisLastIndex & 1L) == 0) {
       currentOffset++;
       tempisLastIndex >>>= 1;
     }
-    chainEnd = currentOffset;
+    setChainEnd(currentOffset);
     return currentOffset;
   }
 
@@ -135,5 +135,21 @@ final class TinySetIndexing {
         : chainIndex[fpaux.set] & ~(1L << fpaux.chainId);
     // update isLastIndex.
     isLastIndex[fpaux.set] = shrinkOffset(isLastIndex[fpaux.set], chainStart);
+  }
+
+  public int getChainStart() {
+    return chainStart;
+  }
+
+  public void setChainStart(int chainStart) {
+    this.chainStart = chainStart;
+  }
+
+  public int getChainEnd() {
+    return chainEnd;
+  }
+
+  public void setChainEnd(int chainEnd) {
+    this.chainEnd = chainEnd;
   }
 }

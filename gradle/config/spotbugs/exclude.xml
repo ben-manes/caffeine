@@ -13,6 +13,7 @@
       CFS_CONFUSING_FUNCTION_SEMANTICS,
       CLI_CONSTANT_LIST_INDEX,
       CNC_COLLECTION_NAMING_CONFUSION,
+      CT_CONSTRUCTOR_THROW,
       DMI_RANDOM_USED_ONLY_ONCE,
       EI_EXPOSE_REP, EI_EXPOSE_REP2,
       ENMI_EQUALS_ON_ENUM,
@@ -39,6 +40,8 @@
       OI_OPTIONAL_ISSUES_CHECKING_REFERENCE,
       OPM_OVERLY_PERMISSIVE_METHOD,
       PCOA_PARTIALLY_CONSTRUCTED_OBJECT_ACCESS,
+      PI_DO_NOT_REUSE_PUBLIC_IDENTIFIERS_CLASS_NAMES,
+      PI_DO_NOT_REUSE_PUBLIC_IDENTIFIERS_FIELD_NAMES,
       PIS_POSSIBLE_INCOMPLETE_SERIALIZATION,
       PL_PARALLEL_LISTS,
       PMB_INSTANCE_BASED_THREAD_LOCAL,
@@ -54,6 +57,8 @@
       THROWS_METHOD_THROWS_RUNTIMEEXCEPTION,
       THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION,
       URV_UNRELATED_RETURN_VALUES,
+      UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD,
+      UWF_UNWRITTEN_FIELD,
       USBR_UNNECESSARY_STORE_BEFORE_RETURN,
       UTWR_USE_TRY_WITH_RESOURCES,
       UVA_USE_VAR_ARGS,
@@ -216,8 +221,25 @@
   </Match>
   <Match>
     <Or>
+      <Class name="~.*FD.*"/>
+      <Class name="~.*FS.*"/>
+      <Class name="~.*FW.*"/>
+      <Class name="~.*PD.*"/>
+      <Class name="~.*PS.*"/>
+      <Class name="~.*PW.*"/>
+    </Or>
+    <Bug pattern="NP_UNWRITTEN_FIELD"/>
+  </Match>
+  <Match>
+    <Or>
       <Class name="~.*Mpsc.*"/>
       <Class name="~.*Header.*"/>
+      <Class name="~.*FD.*"/>
+      <Class name="~.*FS.*"/>
+      <Class name="~.*FW.*"/>
+      <Class name="~.*PD.*"/>
+      <Class name="~.*PS.*"/>
+      <Class name="~.*PW.*"/>
     </Or>
     <Bug pattern="UUF_UNUSED_FIELD"/>
   </Match>
@@ -229,12 +251,22 @@
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"/>
     <Method name="reformat"/>
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"/>
+    <Method name="reformat"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.NodeFactoryGenerator"/>
     <Method name="main"/>
     <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.NodeFactoryGenerator"/>
+    <Method name="reformat"/>
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.NodeFactoryGenerator"/>
