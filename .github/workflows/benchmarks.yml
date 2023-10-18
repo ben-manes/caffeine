@@ -40,7 +40,7 @@ jobs:
             raw.githubusercontent.com:443
             services.gradle.org:443
             www.graalvm.org:443
-      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Compute JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
