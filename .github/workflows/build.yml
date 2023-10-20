@@ -38,7 +38,7 @@ env:
     schemastore.org:443
     www.graalvm.org:443
   PUBLISH_JDK: 11
-  EA_JDK: 21
+  EA_JDK: 22
 
 jobs:
   compile:
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 20, 21, GraalVM ]
+        java: [ 11, 21, 22, GraalVM ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

@@ -17,6 +17,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
       }
     }
     force(libs.guice)
+    force(libs.lincheck)
     force(libs.bundles.coherence.get())
   }
 }

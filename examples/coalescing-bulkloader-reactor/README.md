@@ -1,15 +1,15 @@
-[Reactor][reactor] data streams facilitate the consolidation of independent asynchronous loads into
-batches at the cost of a small buffering delay. The [bufferTimeout][] operator accumulates requests
-until reaching a maximum size or time limit. Since each request consists of a key and its pending
-result, when the subscriber is notified it performs the batch load and completes the key's future
-with its corresponding value.
-
 It some scenarios it may be desirable to only aggregate cache refreshes rather than imposing delays
 on callers awaiting explicit loads. An automated reload initiated by `refreshAfterWrite` will occur
 on the first stale request for an entry. While the key is being refreshed the previous value
 continues to be returned, in contrast to eviction which forces retrievals to wait until the value
 is loaded anew. In such cases, batching these optimistic reloads can minimize the impact on the
 source system without adversely affecting the responsiveness of the explicit requests.
+
+[Reactor][reactor] data streams facilitate the consolidation of independent asynchronous loads into
+batches at the cost of a small buffering delay. The [bufferTimeout][] operator accumulates requests
+until reaching a maximum size or time limit. Since each request consists of a key and its pending
+result, when the subscriber is notified it performs the batch load and completes the key's future
+with its corresponding value.
 
 ### Refresh coalescing
 A [Sink][sink] collects requests, buffering them up to the configured threshold, and subsequently

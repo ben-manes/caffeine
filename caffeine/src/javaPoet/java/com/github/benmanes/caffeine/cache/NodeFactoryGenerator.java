@@ -104,6 +104,7 @@ public final class NodeFactoryGenerator {
     for (TypeSpec node : nodeTypes) {
       JavaFile.builder(getClass().getPackage().getName(), node)
           .addFileComment(header, Year.now(timeZone))
+          .skipJavaLangImports(true)
           .indent("  ")
           .build()
           .writeTo(directory);

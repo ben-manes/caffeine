@@ -563,18 +563,18 @@ public class ConcurrentHashMap8Test extends JSR166TestCase {
 //        mustEqual(y, x);
 //    }
 
-    static final int SIZE = 10000;
-    static ConcurrentMap<Long, Long> longMap;
-
-    static ConcurrentMap<Long, Long> longMap() {
-        if (longMap == null) {
-            longMap = bounded();
-            for (int i = 0; i < SIZE; ++i) {
-              longMap.put(Long.valueOf(i), Long.valueOf(2 *i));
-            }
-        }
-        return longMap;
-    }
+//    static final int SIZE = 10000;
+//    static ConcurrentMap<Long, Long> longMap;
+//
+//    static ConcurrentMap<Long, Long> longMap() {
+//        if (longMap == null) {
+//            longMap = bounded();
+//            for (int i = 0; i < SIZE; ++i) {
+//              longMap.put(Long.valueOf(i), Long.valueOf(2 *i));
+//            }
+//        }
+//        return longMap;
+//    }
 
     // explicit function class to avoid type inference problems
     static class AddKeys implements BiFunction<Map.Entry<Long,Long>, Map.Entry<Long,Long>, Map.Entry<Long,Long>> {

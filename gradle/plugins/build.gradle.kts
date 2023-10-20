@@ -36,8 +36,15 @@ dependencies {
 }
 
 tasks.withType<DependencyUpdatesTask> {
-  val ignoredGroups = listOf("org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
-  rejectVersionIf {
-    (candidate.group in ignoredGroups) && (candidate.version != currentVersion)
+  resolutionStrategy {
+    componentSelection {
+      val ignoredGroups = listOf("org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
+      all {
+        if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
+          reject("kotlin dsl")
+        }
+      }
+    }
+    force(libs.bnd)
   }
 }

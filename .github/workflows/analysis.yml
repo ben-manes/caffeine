@@ -24,7 +24,7 @@ jobs:
   forbiddenApis:
     runs-on: ubuntu-latest
     env:
-      JAVA_VERSION: 20
+      JAVA_VERSION: 21
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423 # v2.6.0
@@ -42,7 +42,7 @@ jobs:
   pmd:
     runs-on: ubuntu-latest
     env:
-      JAVA_VERSION: 20
+      JAVA_VERSION: 21
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423 # v2.6.0
@@ -60,7 +60,7 @@ jobs:
   spotbugs:
     runs-on: ubuntu-latest
     env:
-      JAVA_VERSION: 20
+      JAVA_VERSION: 21
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@1b05615854632b887b69ae1be8cbefe72d3ae423 # v2.6.0

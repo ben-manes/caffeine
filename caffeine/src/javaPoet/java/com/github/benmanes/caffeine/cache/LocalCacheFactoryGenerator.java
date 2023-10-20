@@ -101,6 +101,7 @@ public final class LocalCacheFactoryGenerator {
     for (TypeSpec typeSpec : factoryTypes) {
       JavaFile.builder(getClass().getPackageName(), typeSpec)
           .addFileComment(header, Year.now(timeZone))
+          .skipJavaLangImports(true)
           .indent("  ")
           .build()
           .writeTo(directory);

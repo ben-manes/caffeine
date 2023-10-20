@@ -8,7 +8,7 @@ inputs:
     required: true
     description: The JDK version
   early-access:
-    default: '21'
+    default: '22'
     required: false
     description: The early access release
   graal:

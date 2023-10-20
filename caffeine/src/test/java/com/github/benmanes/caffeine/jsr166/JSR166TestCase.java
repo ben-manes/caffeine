@@ -189,7 +189,7 @@ import junit.framework.TestSuite;
  */
 @SuppressWarnings({"AnnotateFormatMethod", "CollectionToArray", "EqualsIncompatibleType",
     "FunctionalInterfaceClash", "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta",
-    "NumericEquality", "rawtypes", "ReferenceEquality",
+    "NonFinalStaticField", "NumericEquality", "rawtypes", "ReferenceEquality",
     "RethrowReflectiveOperationExceptionAsLinkageError", "serial", "SwitchDefault",
     "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals"})
 public class JSR166TestCase extends TestCase {

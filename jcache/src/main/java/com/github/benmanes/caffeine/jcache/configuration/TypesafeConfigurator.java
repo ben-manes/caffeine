@@ -61,7 +61,9 @@ import jakarta.inject.Inject;
 public final class TypesafeConfigurator {
   static final Logger logger = System.getLogger(TypesafeConfigurator.class.getName());
 
+  @SuppressWarnings("NonFinalStaticField")
   static ConfigSource configSource = TypesafeConfigurator::resolveConfig;
+  @SuppressWarnings("NonFinalStaticField")
   static FactoryCreator factoryCreator = FactoryBuilder::factoryOf;
 
   private TypesafeConfigurator() {}
