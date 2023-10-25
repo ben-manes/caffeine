@@ -1,6 +1,9 @@
 name: build
+on:
+  pull_request: {}
+  push:
+    branches: [master, v2.dev, v3.dev]
 permissions: read-all
-on: [ push, pull_request ]
 
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
@@ -60,13 +63,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Prepare GraalVM
-        if: matrix.java == 'GraalVM'
+        if: env.JAVA_VERSION == 'GraalVM'
         shell: bash
         run: echo "GRADLE_ARGS=--no-build-cache" >> $GITHUB_ENV
       - name: Compile
         uses: ./.github/actions/run-gradle
         with:
-          java: ${{ matrix.java }}
+          java: ${{ env.JAVA_VERSION }}
           early-access: ${{ env.EA_JDK }}
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: check -x test ${{ env.GRADLE_ARGS }}
@@ -91,55 +94,78 @@ jobs:
           - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineSlowTest
           - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineSlowTest
           - caffeine:strongKeysAndStrongValuesStatsSyncCaffeineTest
-          - caffeine:weakKeysAndStrongValuesStatsSyncGuavaSlowTest
           - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest
-          - caffeine:strongKeysAndWeakValuesStatsSyncGuavaSlowTest
-          - caffeine:strongKeysAndSoftValuesStatsSyncGuavaSlowTest
           - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest
           - caffeine:weakKeysAndStrongValuesAsyncCaffeineSlowTest
           - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineTest
           - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineTest
-          - caffeine:weakKeysAndWeakValuesStatsSyncGuavaSlowTest
           - caffeine:weakKeysAndStrongValuesSyncCaffeineSlowTest
-          - caffeine:weakKeysAndSoftValuesStatsSyncGuavaSlowTest
           - caffeine:strongKeysAndWeakValuesSyncCaffeineSlowTest
-          - caffeine:strongKeysAndStrongValuesStatsSyncGuavaTest
           - caffeine:strongKeysAndSoftValuesSyncCaffeineSlowTest
           - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest
           - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest
           - caffeine:strongKeysAndStrongValuesAsyncCaffeineTest
           - caffeine:weakKeysAndWeakValuesSyncCaffeineSlowTest
-          - caffeine:weakKeysAndStrongValuesStatsSyncGuavaTest
           - caffeine:weakKeysAndSoftValuesSyncCaffeineSlowTest
-          - caffeine:strongKeysAndWeakValuesStatsSyncGuavaTest
           - caffeine:strongKeysAndStrongValuesSyncCaffeineTest
-          - caffeine:strongKeysAndSoftValuesStatsSyncGuavaTest
-          - caffeine:weakKeysAndStrongValuesSyncGuavaSlowTest
           - caffeine:weakKeysAndStrongValuesAsyncCaffeineTest
-          - caffeine:strongKeysAndWeakValuesSyncGuavaSlowTest
-          - caffeine:strongKeysAndSoftValuesSyncGuavaSlowTest
-          - caffeine:weakKeysAndWeakValuesStatsSyncGuavaTest
           - caffeine:weakKeysAndStrongValuesSyncCaffeineTest
-          - caffeine:weakKeysAndSoftValuesStatsSyncGuavaTest
           - caffeine:strongKeysAndWeakValuesSyncCaffeineTest
           - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
-          - caffeine:weakKeysAndWeakValuesSyncGuavaSlowTest
-          - caffeine:weakKeysAndSoftValuesSyncGuavaSlowTest
-          - caffeine:strongKeysAndStrongValuesSyncGuavaTest
           - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
           - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
-          - caffeine:weakKeysAndStrongValuesSyncGuavaTest
-          - caffeine:strongKeysAndWeakValuesSyncGuavaTest
-          - caffeine:strongKeysAndSoftValuesSyncGuavaTest
-          - caffeine:weakKeysAndWeakValuesSyncGuavaTest
-          - caffeine:weakKeysAndSoftValuesSyncGuavaTest
           - caffeine:lincheckTest
           - caffeine:isolatedTest
           - caffeine:junitTest
           - simulator:check
           - jcache:check
           - guava:check
-        java: [ 11 ]
+        java: [ 11, 21 ]
+        include:
+          - suite: caffeine:weakKeysAndStrongValuesStatsSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:strongKeysAndWeakValuesStatsSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:strongKeysAndSoftValuesStatsSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:weakKeysAndWeakValuesStatsSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:weakKeysAndSoftValuesStatsSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:strongKeysAndStrongValuesStatsSyncGuavaTest
+            java: 11
+          - suite: caffeine:weakKeysAndStrongValuesStatsSyncGuavaTest
+            java: 11
+          - suite: caffeine:strongKeysAndWeakValuesStatsSyncGuavaTest
+            java: 11
+          - suite: caffeine:strongKeysAndSoftValuesStatsSyncGuavaTest
+            java: 11
+          - suite: caffeine:weakKeysAndStrongValuesSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:strongKeysAndWeakValuesSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:strongKeysAndSoftValuesSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:weakKeysAndWeakValuesStatsSyncGuavaTest
+            java: 11
+          - suite: caffeine:weakKeysAndSoftValuesStatsSyncGuavaTest
+            java: 11
+          - suite: caffeine:weakKeysAndWeakValuesSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:weakKeysAndSoftValuesSyncGuavaSlowTest
+            java: 11
+          - suite: caffeine:strongKeysAndStrongValuesSyncGuavaTest
+            java: 11
+          - suite: caffeine:weakKeysAndStrongValuesSyncGuavaTest
+            java: 11
+          - suite: caffeine:strongKeysAndWeakValuesSyncGuavaTest
+            java: 11
+          - suite: caffeine:strongKeysAndSoftValuesSyncGuavaTest
+            java: 11
+          - suite: caffeine:weakKeysAndWeakValuesSyncGuavaTest
+            java: 11
+          - suite: caffeine:weakKeysAndSoftValuesSyncGuavaTest
+            java: 11
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -151,10 +177,10 @@ jobs:
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - name: Run tests (${{ matrix.suite }})
+      - name: Run tests (${{ env.JAVA_VERSION }})
         uses: ./.github/actions/run-gradle
         with:
-          java: ${{ matrix.java }}
+          java: ${{ env.JAVA_VERSION }}
           arguments: ${{ matrix.suite }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Format Test Artifact Name

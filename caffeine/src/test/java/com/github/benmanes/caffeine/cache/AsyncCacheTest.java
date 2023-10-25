@@ -880,9 +880,10 @@ public final class AsyncCacheTest {
     var bulk = new CompletableFuture<Map<Int, Int>>();
     var result = cache.getAll(context.absentKeys(), (keysToLoad, executor) -> bulk);
     var future = cache.asMap().get(key);
-    future.complete(value);
 
-    bulk.complete(context.absent());
+    future.complete(value);
+    bulk.complete(context.absent()); // obtrudes the future's value
+
     assertThat(future).succeedsWith(context.absent().get(key));
     assertThat(result.join()).containsExactlyEntriesIn(context.absent());
     assertThat(cache.synchronous().asMap()).containsAtLeastEntriesIn(context.absent());

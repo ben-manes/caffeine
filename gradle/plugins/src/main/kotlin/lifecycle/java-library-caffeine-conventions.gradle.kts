@@ -18,13 +18,13 @@ dependencies {
   annotationProcessor(platform(libs.kotlin.bom))
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(
-  System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
+val javaVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
+java.toolchain.languageVersion = javaVersion
 
 tasks.withType<JavaCompile>().configureEach {
-  sourceCompatibility = java.toolchain.languageVersion.get().toString()
-  targetCompatibility = java.toolchain.languageVersion.get().toString()
-  options.release = java.toolchain.languageVersion.get().asInt()
+  sourceCompatibility = javaVersion.toString()
+  targetCompatibility = javaVersion.toString()
+  options.release = javaVersion.asInt()
 
   javaCompiler = javaToolchains.compilerFor {
     languageVersion = java.toolchain.languageVersion
@@ -33,6 +33,9 @@ tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs.add("-Xlint:all,-processing,-exports,-auxiliaryclass,"
     + "-requires-automatic,-requires-transitive-automatic")
   options.compilerArgs.addAll(listOf("-Xmaxerrs", "500", "-Xmaxwarns", "500"))
+  if (javaVersion.canCompileOrRun(21)) {
+    options.compilerArgs.add("-proc:full")
+  }
   options.encoding = "UTF-8"
 }
 
@@ -64,10 +67,10 @@ tasks.jar {
     properties.empty()
     bnd(mapOf(
       "Bundle-License" to "https://www.apache.org/licenses/LICENSE-2.0",
-      "Build-Jdk-Spec" to java.toolchain.languageVersion.get(),
       "Implementation-Title" to project.description,
       "Bundle-Description" to project.description,
       "Implementation-Version" to version,
+      "Build-Jdk-Spec" to javaVersion,
       "-noextraheaders" to true,
       "-reproducible" to true,
       "-snapshot" to "SNAPSHOT"))
@@ -80,12 +83,12 @@ tasks.withType<Javadoc>().configureEach {
       "https://checkerframework.org/api/",
       "https://errorprone.info/api/latest/",
       "https://lightbend.github.io/config/latest/api/",
-      "https://guava.dev/releases/${libs.versions.guava.get()}/api/docs/",
-      "https://docs.oracle.com/en/java/javase/${java.toolchain.languageVersion.get()}/docs/api/")
+      "https://docs.oracle.com/en/java/javase/$javaVersion/docs/api/",
+      "https://guava.dev/releases/${libs.versions.guava.get()}/api/docs/")
 
     if (project != project(":caffeine")) {
       val caffeineJavadoc = project(":caffeine").tasks.named<Javadoc>("javadoc")
-      linksOffline("https://static.javadoc.io/${group}/caffeine/${version}/",
+      linksOffline("https://static.javadoc.io/$group/caffeine/$version/",
         relativePath(caffeineJavadoc.get().destinationDir!!.path))
       dependsOn(caffeineJavadoc)
     }

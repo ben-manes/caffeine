@@ -51,9 +51,9 @@ subprojects {
     dependsOn(tasks.jar)
 
     // ensure tasks don't overwrite the default report directories used by the 'test' task
-    reports.html.outputLocation = file(layout.buildDirectory.file("reports/${name}"))
-    reports.junitXml.outputLocation = file(layout.buildDirectory.file("reports/${name}/results"))
-    binaryResultsDirectory = layout.buildDirectory.dir("reports/${name}/results/binary/${name}")
+    reports.html.outputLocation = file(layout.buildDirectory.file("reports/$name"))
+    reports.junitXml.outputLocation = file(layout.buildDirectory.file("reports/$name/results"))
+    binaryResultsDirectory = layout.buildDirectory.dir("reports/$name/results/binary/$name")
   }
 }
 

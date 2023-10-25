@@ -26,7 +26,6 @@ import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -119,7 +118,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     int initialCapacity = calculateHashMapCapacity(keys);
     var futures = new LinkedHashMap<K, CompletableFuture<V>>(initialCapacity);
-    var proxies = new HashMap<K, CompletableFuture<V>>(initialCapacity);
+    var proxies = new LinkedHashMap<K, CompletableFuture<V>>(initialCapacity);
     for (K key : keys) {
       if (futures.containsKey(key)) {
         continue;
