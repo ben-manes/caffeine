@@ -100,9 +100,6 @@ idea.module {
 
 eclipse.classpath.file.whenMerged {
   if (this is Classpath) {
-    entries.filterIsInstance<AbstractClasspathEntry>()
-      .filter { it.path == "src/jmh/java" }
-      .forEach { it.entryAttributes["test"] = "true" }
     entries.removeIf { (it is Library) && (it.moduleVersion?.name == "slf4j-nop") }
   }
 }
