@@ -1,14 +1,33 @@
-import org.gradle.plugins.ide.eclipse.model.SourceFolder
+import org.gradle.plugins.ide.eclipse.GenerateEclipseJdt
 import org.gradle.plugins.ide.eclipse.model.Classpath
+import org.gradle.plugins.ide.eclipse.model.SourceFolder
 
 plugins {
   eclipse
+  id("com.diffplug.eclipse.resourcefilters")
 }
 
-excludeInfoFiles()
-setProjectEncoding()
-ignoreDerivedResources()
+eclipseResourceFilters {
+  val directories = listOf("test-output", "build/classes",
+    "build/reports", "build/jacoco", "build/tmp")
+  for (dir in directories) {
+    exclude().folders().name(dir)
+  }
+}
 
+eclipse.classpath.file.whenMerged {
+  if (this is Classpath) {
+    excludeInfoFiles(this)
+  }
+}
+
+tasks.withType<GenerateEclipseJdt>().configureEach {
+  doLast {
+    setProjectEncoding()
+  }
+}
+
+/** Specifies the content encoding for the Eclipse project. */
 fun setProjectEncoding() {
   val prefs = file(".settings/org.eclipse.core.resources.prefs")
   if (!prefs.exists()) {
@@ -21,48 +40,13 @@ fun setProjectEncoding() {
 }
 
 /** Exclude module-info and package-info when compiling through Eclipse. */
-fun excludeInfoFiles() {
-  eclipse {
-    classpath.file.whenMerged {
-      if (this is Classpath) {
-        entries.filterIsInstance<SourceFolder>().forEach { sourceFolder ->
-          val excludes = sourceFolder.excludes.toMutableList()
-          excludes += "module-info.java"
-          if (sourceFolder.path != "src/main/java") {
-            excludes += "**/package-info.java"
-          }
-          sourceFolder.excludes = excludes
-        }
-      }
+fun excludeInfoFiles(classpath: Classpath) {
+  classpath.entries.filterIsInstance<SourceFolder>().forEach { sourceFolder ->
+    val excludes = sourceFolder.excludes.toMutableList()
+    excludes += "module-info.java"
+    if (sourceFolder.path != "src/main/java") {
+      excludes += "**/package-info.java"
     }
-  }
-}
-
-fun ignoreDerivedResources() {
-  eclipse {
-    project.file.withXml {
-      val directories = listOf("test-output", "build/classes",
-        "build/reports", "build/jacoco", "build/tmp")
-      val projectDescription = asNode()
-
-      if (directories.any { file(it).exists() }) {
-        val filter = projectDescription
-          .appendNode("filteredResources")
-          .appendNode("filter")
-        filter.appendNode("id", System.currentTimeMillis().toString())
-        filter.appendNode("type", "26")
-        filter.appendNode("name")
-        val matcher = filter.appendNode("matcher")
-        matcher.appendNode("id", "org.eclipse.ui.ide.orFilterMatcher")
-        val arguments = matcher.appendNode("arguments")
-        directories.forEach {
-          if (file(it).exists()) {
-            val dirMatcher = arguments.appendNode("matcher")
-            dirMatcher.appendNode("id", "org.eclipse.ui.ide.multiFilter")
-            dirMatcher.appendNode("arguments", "1.0-projectRelativePath-matches-false-false-$it")
-          }
-        }
-      }
-    }
+    sourceFolder.excludes = excludes
   }
 }

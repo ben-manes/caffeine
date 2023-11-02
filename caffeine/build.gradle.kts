@@ -3,8 +3,6 @@ import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import kotlin.math.max
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
-import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
-import org.gradle.plugins.ide.eclipse.model.SourceFolder
 
 plugins {
   id("java-library-caffeine-conventions")
@@ -46,6 +44,7 @@ dependencies {
       classifier = "tests"
     }
   }
+  testImplementation(sourceSets["codeGen"].output)
   testImplementation(libs.eclipse.collections.testutils)
 
   javaAgent(libs.jamm)
@@ -60,7 +59,6 @@ dependencies {
   jmh(libs.expiring.map)
   jmh(libs.bundles.coherence)
   jmh(libs.concurrentlinkedhashmap)
-  jmh(sourceSets["codeGen"].output)
 
   javaPoetImplementation(libs.guava)
   javaPoetImplementation(libs.javapoet)
@@ -276,20 +274,12 @@ for (scenario in Scenario.all()) {
   }
 }
 
+eclipse {
+  classpath.plusConfigurations.add(configurations["javaPoetCompileClasspath"])
+}
+
 idea.module {
   scopes["PROVIDED"]!!["plus"]!!.add(configurations["javaPoetCompileClasspath"])
-}
-
-eclipse.classpath.file.whenMerged {
-  if (this is EclipseClasspath) {
-    entries.filterIsInstance<SourceFolder>()
-      .filter { it.output == "bin/codeGen" }
-      .forEach { it.output = "bin/main" }
-  }
-}
-
-plugins.withType<EclipsePlugin>().configureEach {
-  project.eclipse.classpath.plusConfigurations.add(configurations["javaPoetCompileClasspath"])
 }
 
 abstract class Stress @Inject constructor(@Internal val external: ExecOperations) : DefaultTask() {

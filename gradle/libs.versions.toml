@@ -34,11 +34,13 @@ findsecbugs = "1.12.0"
 flip-tables = "1.1.0"
 forbidden-apis = "3.6"
 google-java-format = "1.18.1"
+goomph = "3.43.0"
 guava = "32.1.3-jre"
 guice = "6.0.0"
 hamcrest = "2.2"
 hazelcast = "5.3.5"
 httpclient = "4.5.14"
+idea = "1.1.7"
 jackrabbit = "1.58.0"
 jackson = "2.15.3"
 jacoco = "0.8.11"
@@ -62,7 +64,7 @@ junit4 = "4.13.2"
 junit5 = "5.10.0"
 kotlin = "1.9.20"
 lincheck = "2.18.1"
-mockito = "5.6.0"
+mockito = "5.7.0"
 nexus-publish = "2.0.0-rc-1"
 nullaway-core = "0.10.16"
 nullaway-plugin = "1.6.0"
@@ -134,12 +136,14 @@ findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version
 flip-tables = { module = "com.jakewharton.fliptables:fliptables", version.ref = "flip-tables" }
 forbidden-apis = { module = "de.thetaphi:forbiddenapis", version.ref = "forbidden-apis" }
 google-java-format = { module = "com.google.googlejavaformat:google-java-format", version.ref = "google-java-format" }
+goomph = { module = "com.diffplug.gradle:goomph", version.ref = "goomph" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 guava-testlib = { module = "com.google.guava:guava-testlib", version.ref = "guava" }
 guice = { module = "com.google.inject:guice", version.ref = "guice" }
 hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
 hazelcast = { module = "com.hazelcast:hazelcast", version.ref = "hazelcast" }
 httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpclient" }
+idea = { module = "gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext", version.ref = "idea" }
 jackrabbit = { module = "org.apache.jackrabbit:oak-core", version.ref = "jackrabbit" }
 jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
 jacoco = { module = "org.jacoco:jacoco", version.ref = "jacoco" }

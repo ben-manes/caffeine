@@ -9,7 +9,9 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(11)
 
 dependencies {
   implementation(libs.bnd)
+  implementation(libs.idea)
   implementation(libs.guava)
+  implementation(libs.goomph)
   implementation(libs.sonarqube)
   implementation(libs.bundles.jmh)
   implementation(libs.bundles.pmd)
@@ -20,14 +22,15 @@ dependencies {
   implementation(libs.dependency.check)
   implementation(libs.errorprone.plugin)
   implementation(libs.dependency.versions)
+  implementation(libs.coveralls) {
+    exclude(group = "net.sourceforge.nekohtml", module = "nekohtml")
+  }
+
   implementation(platform(libs.asm.bom))
   implementation(platform(libs.junit5.bom))
   implementation(platform(libs.kotlin.bom))
   implementation(platform(libs.jackson.bom))
   implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
-  implementation(libs.coveralls) {
-    exclude(group = "net.sourceforge.nekohtml", module = "nekohtml")
-  }
 
   libs.bundles.constraints.get().forEach { library ->
     constraints.add("implementation", library.module.toString())

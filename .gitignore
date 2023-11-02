@@ -1,5 +1,7 @@
 bin
+out
 build
+target
 build-cache
 test-output
 jitwatch.out
@@ -11,8 +13,6 @@ jitwatch.out
 .vscode
 .idea
 *.iml
-target
-**/hs_err_pid*.log
-**/replay_pid*.log
-**/caffeine.log
+hs_err_pid*.log
+replay_pid*.log
 simulator/src/main/resources/application.conf
