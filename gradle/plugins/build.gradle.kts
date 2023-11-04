@@ -11,7 +11,6 @@ dependencies {
   implementation(libs.bnd)
   implementation(libs.idea)
   implementation(libs.guava)
-  implementation(libs.goomph)
   implementation(libs.sonarqube)
   implementation(libs.bundles.jmh)
   implementation(libs.bundles.pmd)
@@ -51,3 +50,16 @@ tasks.withType<DependencyUpdatesTask> {
     force(libs.bnd)
   }
 }
+
+fun setProjectEncoding() {
+  val prefs = file(".settings/org.eclipse.core.resources.prefs")
+  if (!prefs.exists()) {
+    prefs.parentFile.mkdirs()
+    prefs.writeText("eclipse.preferences.version=1\n")
+  }
+  if ("encoding/<project>" !in prefs.readText()) {
+    prefs.appendText("encoding/<project>=UTF-8\n")
+  }
+}
+
+setProjectEncoding()

@@ -1,6 +1,5 @@
 plugins {
   `java-library`
-  id("com.diffplug.eclipse.apt")
 }
 
 java {
