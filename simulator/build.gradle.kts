@@ -14,7 +14,6 @@ dependencies {
   implementation(project(":caffeine"))
 
   implementation(libs.xz)
-  implementation(libs.ohc)
   implementation(libs.ycsb) {
     isTransitive = false
   }

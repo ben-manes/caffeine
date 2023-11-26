@@ -58,7 +58,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache3Polic
 import com.github.benmanes.caffeine.cache.simulator.policy.product.ExpiringMapPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.HazelcastPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.product.OhcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
@@ -223,7 +222,6 @@ public final class Registry {
   private void registerProduct() {
     register(GuavaPolicy.class, GuavaPolicy::new);
     register(Cache2kPolicy.class, Cache2kPolicy::new);
-    registerMany(OhcPolicy.class, OhcPolicy::policies);
     register(CaffeinePolicy.class, CaffeinePolicy::new);
     register(Ehcache3Policy.class, Ehcache3Policy::new);
     registerMany(TCachePolicy.class, TCachePolicy::policies);
