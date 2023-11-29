@@ -15,11 +15,15 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
+
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.URI;
@@ -170,6 +174,14 @@ public final class TypesafeConfigurator {
       return ConfigFactory.defaultOverrides(classloader)
           .withFallback(ConfigFactory.parseResources(uri.getSchemeSpecificPart(), options))
           .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
+    } else if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("jar")) {
+        try (Reader reader = new InputStreamReader(uri.toURL().openStream())) {
+          return ConfigFactory.defaultOverrides(classloader)
+              .withFallback(ConfigFactory.parseReader(reader, options))
+              .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
+        } catch (IOException e) {
+          throw new ConfigException.BadPath(uri.toString(), e.getMessage());
+        }
     }
     return ConfigFactory.load(classloader);
   }
