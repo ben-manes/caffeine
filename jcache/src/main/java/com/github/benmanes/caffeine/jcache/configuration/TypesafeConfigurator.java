@@ -170,10 +170,6 @@ public final class TypesafeConfigurator {
       return ConfigFactory.defaultOverrides(classloader)
           .withFallback(ConfigFactory.parseFile(new File(uri), options))
           .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
-    } else if (isResource(uri)) {
-      return ConfigFactory.defaultOverrides(classloader)
-          .withFallback(ConfigFactory.parseResources(uri.getSchemeSpecificPart(), options))
-          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
     } else if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("jar")) {
         try (Reader reader = new InputStreamReader(uri.toURL().openStream())) {
           return ConfigFactory.defaultOverrides(classloader)
@@ -182,6 +178,10 @@ public final class TypesafeConfigurator {
         } catch (IOException e) {
           throw new ConfigException.BadPath(uri.toString(), e.getMessage());
         }
+    } else if (isResource(uri)) {
+      return ConfigFactory.defaultOverrides(classloader)
+          .withFallback(ConfigFactory.parseResources(uri.getSchemeSpecificPart(), options))
+          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
     }
     return ConfigFactory.load(classloader);
   }
