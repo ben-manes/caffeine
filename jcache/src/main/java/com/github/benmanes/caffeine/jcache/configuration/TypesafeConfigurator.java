@@ -174,7 +174,7 @@ public final class TypesafeConfigurator {
               .withFallback(ConfigFactory.parseURL(uri.toURL(), options))
               .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
         } catch (MalformedURLException e) {
-          throw new ConfigException.BadPath(uri.toString(), e.getMessage());
+          throw new ConfigException.BadPath(uri.toString(), "Failed to load cache configuration", e);
         }
     } else if (isResource(uri)) {
       return ConfigFactory.defaultOverrides(classloader)
