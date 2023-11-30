@@ -21,11 +21,9 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Objects;
@@ -171,11 +169,11 @@ public final class TypesafeConfigurator {
           .withFallback(ConfigFactory.parseFile(new File(uri), options))
           .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
     } else if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("jar")) {
-        try (Reader reader = new InputStreamReader(uri.toURL().openStream())) {
+        try {
           return ConfigFactory.defaultOverrides(classloader)
-              .withFallback(ConfigFactory.parseReader(reader, options))
+              .withFallback(ConfigFactory.parseURL(uri.toURL(), options))
               .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
-        } catch (IOException e) {
+        } catch (MalformedURLException e) {
           throw new ConfigException.BadPath(uri.toString(), e.getMessage());
         }
     } else if (isResource(uri)) {
