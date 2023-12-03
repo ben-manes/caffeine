@@ -162,7 +162,9 @@ public final class TypesafeConfigurator {
   private static Config resolveConfig(URI uri, ClassLoader classloader) {
     requireNonNull(uri);
     requireNonNull(classloader);
-    var options = ConfigParseOptions.defaults().setAllowMissing(false);
+    var options = ConfigParseOptions.defaults()
+        .setClassLoader(classloader)
+        .setAllowMissing(false);
     if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("file")) {
       return ConfigFactory.defaultOverrides(classloader)
           .withFallback(ConfigFactory.parseFile(new File(uri), options))

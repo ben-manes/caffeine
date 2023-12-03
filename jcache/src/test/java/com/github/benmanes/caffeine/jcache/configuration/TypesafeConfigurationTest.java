@@ -145,6 +145,8 @@ public final class TypesafeConfigurationTest {
         configSource().get(URI.create("absent.conf"), classloader));
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("classpath:absent.conf"), classloader));
+    assertThrows(ConfigException.IO.class, () ->
+        configSource().get(URI.create("classpath:custom.properties"), new ClassLoader(null) {}));
   }
 
   @Test
