@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +33,7 @@ import javax.cache.Caching;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 
+import org.testng.SkipException;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -89,6 +91,39 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
+  public void configSource_jar_present() {
+    var inferred = configSource().get(URI.create("extra.properties"), classloader);
+    assertThat(inferred.getInt("caffeine.jcache.jar.policy.maximum.size")).isEqualTo(500);
+    assertThat(inferred.hasPath("caffeine.jcache.default.key-type")).isTrue();
+    assertThat(inferred.hasPath("caffeine.jcache.test-cache")).isFalse();
+
+    var explicit = configSource().get(getJarResource("extra.properties"), classloader);
+    assertThat(explicit.getInt("caffeine.jcache.jar.policy.maximum.size")).isEqualTo(500);
+    assertThat(explicit.hasPath("caffeine.jcache.default.key-type")).isTrue();
+    assertThat(explicit.hasPath("caffeine.jcache.test-cache")).isFalse();
+  }
+
+  @Test
+  public void configSource_jar_absent() {
+    assertThrows(ConfigException.IO.class, () ->
+        configSource().get(URI.create("extra-absent.conf"), classloader));
+
+    var explicit = getJarResource("extra.properties").toString()
+        .replace("extra.properties", "extra-absent.conf");
+    assertThrows(ConfigException.IO.class, () ->
+        configSource().get(URI.create(explicit), classloader));
+  }
+
+  @Test
+  public void configSource_jar_invalid() {
+    assertThrows(ConfigException.Parse.class, () ->
+        configSource().get(URI.create("extra-invalid.conf"), classloader));
+
+    var explicit = getJarResource("extra-invalid.conf");
+    assertThrows(ConfigException.Parse.class, () -> configSource().get(explicit, classloader));
+  }
+
+  @Test
   public void configSource_classpath_present() {
     var inferred = configSource().get(URI.create("custom.properties"), classloader);
     assertThat(inferred.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
@@ -113,6 +148,8 @@ public final class TypesafeConfigurationTest {
   public void configSource_classpath_invalid() {
     assertThrows(ConfigException.Parse.class, () ->
         configSource().get(URI.create("invalid.conf"), classloader));
+    assertThrows(ConfigException.Parse.class, () ->
+        configSource().get(URI.create("classpath:invalid.conf"), classloader));
   }
 
   @Test
@@ -203,6 +240,21 @@ public final class TypesafeConfigurationTest {
     CaffeineConfiguration<Integer, Integer> config =
         cache.getConfiguration(CaffeineConfiguration.class);
     checkTestCache(config);
+  }
+
+  private URI getJarResource(String resourceName) {
+    var url = classloader.getResource(resourceName);
+    assertThat(url).isNotNull();
+
+    try {
+      var uri = url.toURI();
+      if (!Objects.equals(uri.getScheme(), "jar")) {
+        throw new SkipException("This test must be run through the build system");
+      }
+      return uri;
+    } catch (URISyntaxException e) {
+      throw new AssertionError(e);
+    }
   }
 
   static void checkTestCache(CaffeineConfiguration<?, ?> config) {

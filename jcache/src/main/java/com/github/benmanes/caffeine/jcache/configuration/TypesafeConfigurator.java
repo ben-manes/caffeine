@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
-
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -169,13 +168,13 @@ public final class TypesafeConfigurator {
           .withFallback(ConfigFactory.parseFile(new File(uri), options))
           .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
     } else if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("jar")) {
-        try {
-          return ConfigFactory.defaultOverrides(classloader)
-              .withFallback(ConfigFactory.parseURL(uri.toURL(), options))
-              .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
-        } catch (MalformedURLException e) {
-          throw new ConfigException.BadPath(uri.toString(), "Failed to load cache configuration", e);
-        }
+      try {
+        return ConfigFactory.defaultOverrides(classloader)
+            .withFallback(ConfigFactory.parseURL(uri.toURL(), options))
+            .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
+      } catch (MalformedURLException e) {
+        throw new ConfigException.BadPath(uri.toString(), "Failed to load cache configuration", e);
+      }
     } else if (isResource(uri)) {
       return ConfigFactory.defaultOverrides(classloader)
           .withFallback(ConfigFactory.parseResources(uri.getSchemeSpecificPart(), options))

@@ -7,9 +7,20 @@ plugins {
   id("java-library-caffeine-conventions")
 }
 
+sourceSets {
+  create("testResources") {
+    resources.srcDir("src/test/resources-extra")
+  }
+}
+
 val jcacheJavadoc: Configuration by configurations.creating
 val jcacheTckTests: Configuration by configurations.creating
 val jcacheTckSources: Configuration by configurations.creating
+
+val testResourcesJar by tasks.registering(Jar::class) {
+  from(sourceSets["testResources"].output)
+  archiveClassifier.set("test-resources")
+}
 
 dependencies {
   api(project(":caffeine"))
@@ -22,6 +33,7 @@ dependencies {
   testImplementation(libs.jcache.guice)
   testImplementation(libs.guava.testlib)
   testImplementation(libs.bundles.slf4j.nop)
+  testImplementation(files(testResourcesJar))
   testImplementation(libs.jcache.tck)
   testImplementation(libs.jcache.tck) {
     artifact {

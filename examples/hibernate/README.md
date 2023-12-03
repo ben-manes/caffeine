@@ -1,8 +1,8 @@
 [Hibernate][] can be configured to use a [second-level cache] to reduce the number of accesses
 to the database by caching data in memory to be shared between sessions.
 
-In [hibernate.conf](src/main/resources/hibernate.properties) specify the JCache provider and enable
-the second-level cache.
+In [hibernate.properties](src/main/resources/hibernate.properties) specify the JCache provider and
+enable the second-level cache.
 
 ```ini
 hibernate.cache.use_second_level_cache=true
