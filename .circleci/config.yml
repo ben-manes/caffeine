@@ -164,3 +164,4 @@ workflows:
                 - caffeine:lincheckTest
                 - caffeine:isolatedTest
                 - caffeine:junitTest
+                - simulator:run

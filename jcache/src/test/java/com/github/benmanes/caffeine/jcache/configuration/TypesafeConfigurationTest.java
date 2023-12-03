@@ -119,6 +119,9 @@ public final class TypesafeConfigurationTest {
     assertThrows(ConfigException.Parse.class, () ->
         configSource().get(URI.create("extra-invalid.conf"), classloader));
 
+    assertThrows(ConfigException.BadPath.class, () ->
+        configSource().get(URI.create("jar:invalid"), classloader));
+
     var explicit = getJarResource("extra-invalid.conf");
     assertThrows(ConfigException.Parse.class, () -> configSource().get(explicit, classloader));
   }
