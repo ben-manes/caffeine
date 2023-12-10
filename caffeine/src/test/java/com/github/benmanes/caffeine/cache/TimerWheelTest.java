@@ -140,7 +140,6 @@ public final class TimerWheelTest {
   public void advance_overflow() {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
 
-    var timerWheel = new TimerWheel<Long, Long>();
     timerWheel.nanos = -TimeUnit.DAYS.toNanos(365) / 2;
     timerWheel.schedule(new Timer(timerWheel.nanos + SPANS[0]));
 
@@ -150,7 +149,6 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void advance_backwards(long clock) {
-    var timerWheel = new TimerWheel<Long, Long>();
     timerWheel.nanos = clock;
 
     for (int i = 0; i < 1_000; i++) {
@@ -162,6 +160,31 @@ public final class TimerWheelTest {
     }
 
     verifyNoInteractions(cache);
+  }
+
+  @Test(dataProvider = "clock")
+  public void advance_reschedule(long clock) {
+    when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
+    timerWheel.nanos = clock;
+
+    var t15 = new Timer(clock + TimeUnit.SECONDS.toNanos(15));
+    var t80 = new Timer(clock + TimeUnit.SECONDS.toNanos(80));
+    timerWheel.schedule(t15);
+    timerWheel.schedule(t80);
+
+    // discard T15, T80 in wheel[1]
+    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(45));
+    assertThat(captor.getAllValues()).containsExactly(t15);
+    assertThat(timerWheel).hasSize(1);
+
+    // verify not discarded, T80 in wheel[0]
+    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(70));
+    assertThat(timerWheel).hasSize(1);
+
+    // verify discarded T80
+    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(90));
+    assertThat(captor.getAllValues()).containsExactly(t15, t80);
+    assertThat(timerWheel).isEmpty();
   }
 
   @Test

@@ -5,6 +5,7 @@ plugins {
 
 val objectLayout: Configuration by configurations.creating
 dependencies {
+  objectLayout(project)
   objectLayout(libs.java.`object`.layout)
 }
 
@@ -18,17 +19,17 @@ modes.forEach { (mode, details) ->
   tasks.register<JavaExec>(mode) {
     group = "Object Layout"
     description = details
+    classpath(objectLayout)
     dependsOn(tasks.compileJava)
     mainClass = "org.openjdk.jol.Main"
     incompatibleWithConfigurationCache()
-    classpath(objectLayout, sourceSets.main.map { it.runtimeClasspath })
 
     doFirst {
       var className = findProperty("className") as String?
       if (className == null) {
         throw GradleException(
           "Usage: $name -PclassName=com.github.benmanes.caffeine.cache.[CLASS_NAME]")
-      } else if (!className.startsWith("com")) {
+      } else if (!className.startsWith("com") && !className.startsWith("java")) {
         className = "com.github.benmanes.caffeine.cache.$className"
       }
       args(name, className)
