@@ -66,7 +66,7 @@ runs:
         distribution: temurin
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/gradle-build-action@87a9a15658c426a54dd469d4fc7dc1a73ca9d4a6 # v2.10.0
+      uses: gradle/gradle-build-action@8cbcb9948b5892387aed077daf6f90e1f0ba5b27 # v2.11.0
       continue-on-error: true
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
