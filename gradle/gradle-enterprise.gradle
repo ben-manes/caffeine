@@ -25,12 +25,14 @@ buildCache {
   local.enabled = true
   remote(HttpBuildCache) {
     url = 'https://caffeine.gradle-enterprise.cloud/cache/'
-    push = System.env.CI
     enabled = true
+    def cachePassword = settings.ext.find('gradleEnterpriseCachePassword')
+        ?: System.env.GRADLE_ENTERPRISE_CACHE_PASSWORD
+    // Check cache password presence to avoid build cache errors on PR builds when not present
+    push = System.env.CI && cachePassword
     credentials {
       username = 'ci'
-      password = settings.ext.find('gradleEnterpriseCachePassword')
-        ?: System.env.GRADLE_ENTERPRISE_CACHE_PASSWORD
+      password = cachePassword
     }
   }
 }
