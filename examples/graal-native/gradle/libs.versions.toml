@@ -2,7 +2,7 @@
 caffeine = "3.1.8"
 graal = "0.9.28"
 junit = "5.10.1"
-truth = "1.1.5"
+truth = "1.2.0"
 versions = "0.50.0"
 
 [libraries]
