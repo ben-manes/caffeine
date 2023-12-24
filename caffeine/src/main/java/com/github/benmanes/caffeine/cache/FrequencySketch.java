@@ -168,7 +168,7 @@ final class FrequencySketch<E> {
     }
   }
 
-  /** Applies a supplemental hash functions to defends against poor quality hash. */
+  /** Applies a supplemental hash function to defend against a poor quality hash. */
   static int spread(int x) {
     x ^= x >>> 17;
     x *= 0xed5ad4bb;
