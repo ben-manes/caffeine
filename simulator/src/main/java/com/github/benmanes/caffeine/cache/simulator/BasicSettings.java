@@ -23,13 +23,20 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.report.ReportFormat;
 import com.google.common.base.CaseFormat;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 
 /**
  * The simulator's configuration. A policy can extend this class as a convenient way to extract
@@ -38,6 +45,8 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class BasicSettings {
+  private static final Pattern NUMERIC_SEPARATOR = Pattern.compile("[_,]");
+
   private final Config config;
 
   public BasicSettings(Config config) {
@@ -53,7 +62,7 @@ public class BasicSettings {
   }
 
   public int randomSeed() {
-    return config().getInt("random-seed");
+    return getFormattedInt("random-seed");
   }
 
   public Set<String> policies() {
@@ -78,7 +87,7 @@ public class BasicSettings {
   }
 
   public long maximumSize() {
-    return config().getLong("maximum-size");
+    return getFormattedLong("maximum-size");
   }
 
   public TraceSettings trace() {
@@ -88,6 +97,30 @@ public class BasicSettings {
   /** Returns the config resolved at the simulator's path. */
   public Config config() {
     return config;
+  }
+
+  /** Gets the quoted integer at the given path, ignoring comma and underscore separators */
+  protected int getFormattedInt(String path) {
+    return parseFormattedNumber(path, config()::getInt, Ints::tryParse);
+  }
+
+  /** Gets the quoted long at the given path, ignoring comma and underscore separators */
+  protected long getFormattedLong(String path) {
+    return parseFormattedNumber(path, config()::getLong, Longs::tryParse);
+  }
+
+  private <T extends Number> T parseFormattedNumber(String path,
+      Function<String, T> getter, Function<String, @Nullable T> tryParse) {
+    try {
+      return getter.apply(path);
+    } catch (ConfigException.Parse | ConfigException.WrongType e) {
+      var matcher = NUMERIC_SEPARATOR.matcher(config().getString(path));
+      var value = tryParse.apply(matcher.replaceAll(""));
+      if (value == null) {
+        throw e;
+      }
+      return value;
+    }
   }
 
   public final class ActorSettings {
@@ -183,10 +216,10 @@ public class BasicSettings {
 
   public final class TraceSettings {
     public long skip() {
-      return config().getLong("trace.skip");
+      return getFormattedLong("trace.skip");
     }
     public long limit() {
-      return config().getIsNull("trace.limit") ? Long.MAX_VALUE : config().getLong("trace.limit");
+      return config().getIsNull("trace.limit") ? Long.MAX_VALUE : getFormattedLong("trace.limit");
     }
     public boolean isFiles() {
       return config().getString("trace.source").equals("files");

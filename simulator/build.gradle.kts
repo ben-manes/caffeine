@@ -38,6 +38,7 @@ dependencies {
   implementation(libs.bundles.coherence)
   implementation(libs.bundles.slf4j.jdk)
   implementation(libs.univocity.parsers)
+  implementation(libs.zero.allocation.hashing)
 }
 
 application {
@@ -105,8 +106,6 @@ eclipse.classpath.file.beforeMerged {
 
 abstract class Simulate @Inject constructor(@Internal val external: ExecOperations,
                                             @Internal val layout: ProjectLayout) : DefaultTask() {
-  @get:Input @get:Optional @get:Option(option = "jvmArgs", description = "The jvm arguments")
-  abstract val jvmOptions: Property<String>
   @Input @Option(option = "maximumSize", description = "The maximum sizes")
   var maximumSize = ""
   @Input @Option(option = "metric", description = "The metric to compare")

@@ -69,6 +69,7 @@ public class PolicyStats {
 
     addMetric(Metric.of("Policy", (Supplier<String>) this::name, OBJECT, true));
     addMetric(Metric.of("Hit Rate", (DoubleSupplier) this::hitRate, PERCENT, true));
+    addMetric(Metric.of("Miss Rate", (DoubleSupplier) this::missRate, PERCENT, true));
     addMetric(Metric.of("Hits", (LongSupplier) this::hitCount, NUMBER, true));
     addMetric(Metric.of("Misses", (LongSupplier) this::missCount, NUMBER, true));
     addMetric(Metric.of("Requests", (LongSupplier) this::requestCount, NUMBER, true));
@@ -85,6 +86,12 @@ public class PolicyStats {
         .value((DoubleSupplier) this::weightedHitRate)
         .addCharacteristic(WEIGHTED)
         .name("Weighted Hit Rate")
+        .type(PERCENT)
+        .build());
+    addMetric(Metric.builder()
+        .value((DoubleSupplier) this::weightedMissRate)
+        .addCharacteristic(WEIGHTED)
+        .name("Weighted Miss Rate")
         .type(PERCENT)
         .build());
     addPercentMetric("Adaption", this::percentAdaption);

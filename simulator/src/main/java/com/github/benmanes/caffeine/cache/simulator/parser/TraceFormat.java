@@ -35,6 +35,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReade
 import com.github.benmanes.caffeine.cache.simulator.parser.glcache.GLCacheTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kaggle.OutbrainTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.libcachesim.csv.LibCacheSimCsvTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.libcachesim.twitter.LibCacheSimTwitterTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lrb.LrbTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
@@ -74,6 +76,8 @@ public enum TraceFormat {
   CORDA(CordaTraceReader::new),
   GL_CACHE(GLCacheTraceReader::new),
   GRADLE(GradleTraceReader::new),
+  LCS_TRACE(LibCacheSimCsvTraceReader::new),
+  LCS_TWITTER(LibCacheSimTwitterTraceReader::new),
   LIRS(LirsTraceReader::new),
   LRB(LrbTraceReader::new),
   OUTBRAIN(OutbrainTraceReader::new),

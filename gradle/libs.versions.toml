@@ -91,6 +91,7 @@ univocity-parsers = "2.9.1"
 versions = "0.50.0"
 xz = "1.9"
 ycsb = "0.17.0"
+zero-allocation-hashing = "0.16"
 zstd = "1.5.5-11"
 
 [libraries]
@@ -206,6 +207,7 @@ truth-java8 = { module = "com.google.truth.extensions:truth-java8-extension", ve
 univocity-parsers = { module = "com.univocity:univocity-parsers", version.ref = "univocity-parsers" }
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
 ycsb = { module = "site.ycsb:core", version.ref = "ycsb" }
+zero-allocation-hashing = { module = "net.openhft:zero-allocation-hashing", version.ref = "zero-allocation-hashing" }
 zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 
 [bundles]
