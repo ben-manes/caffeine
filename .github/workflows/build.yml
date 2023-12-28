@@ -9,10 +9,10 @@ env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >
+    *.actions.githubusercontent.com:443
     api.adoptium.net:443
     api.github.com:443
     api.snapcraft.io:443
-    artifactcache.actions.githubusercontent.com:443
     caffeine.gradle-enterprise.cloud:443
     cdn.azul.com:443
     cloudflare.com:443
@@ -28,7 +28,6 @@ env:
     jcenter.bintray.com:443
     objects.githubusercontent.com:443
     oss.sonatype.org:443
-    pipelines.actions.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443
     raw.githubusercontent.com:443
@@ -210,7 +209,7 @@ jobs:
     name: Coverage
     runs-on: ubuntu-latest
     needs: tests
-    if: github.event_name == 'push'
+    if: (github.event_name == 'push') && (github.event.repository.fork == false)
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
@@ -311,7 +310,8 @@ jobs:
       - name: Upload badge to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
         if: >
-          steps.test-badge.outcome == 'success'
+          github.event.repository.fork == false
+          && steps.test-badge.outcome == 'success'
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
           gist_url: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
@@ -326,6 +326,7 @@ jobs:
     needs: tests
     if: >
       github.event_name == 'push'
+      && github.event.repository.fork == false
       && endsWith(github.ref, github.event.repository.default_branch)
     steps:
       - name: Harden Runner

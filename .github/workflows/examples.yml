@@ -6,7 +6,6 @@ env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   JAVA_VERSION: 21
-  SNAPSHOT: true
 
 jobs:
   examples:
@@ -110,12 +109,16 @@ jobs:
         run: ./gradlew build
       - name: Prepare for Graal Native Image
         uses: ./.github/actions/run-gradle
+        env:
+          SNAPSHOT: true
         with:
           java: GraalVM
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: -q caffeine:clean caffeine:jar
       - name: Graal Native Image
         uses: ./.github/actions/run-gradle
+        env:
+          SNAPSHOT: true
         with:
           java: GraalVM
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -10,6 +10,7 @@ jobs:
       actions: read
       contents: read
       security-events: write
+    if: github.event.repository.fork == false
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1

@@ -211,7 +211,7 @@ zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 [bundles]
 coherence = ["coherence-core", "json-bind"]
 constraints = ["bcel", "bouncycastle", "commons-text", "httpclient",
-  "jcommander", "jgit", "jsoup", "okhttp", "protobuf", "snakeyaml" ]
+  "guava", "jcommander", "jgit", "jsoup", "okhttp", "protobuf", "snakeyaml" ]
 errorprone-support = [ "errorprone-support", "errorprone-support-refaster" ]
 jmh = ["jmh-core", "jmh-plugin", "jmh-report"]
 junit = ["junit4", "junit5"]

@@ -18,7 +18,7 @@ jobs:
             raw.githubusercontent.com:443
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Install
-        run: wget -O - -q https://raw.githubusercontent.com/client9/misspell/master/install-misspell.sh | sh -s -- -b .
+        run: curl -sfL https://raw.githubusercontent.com/golangci/misspell/master/install-misspell.sh | sh -s -- -b .
       - name: Spell Check with Misspell
         run: ./misspell -error .
       - name: Spell Check with Typos

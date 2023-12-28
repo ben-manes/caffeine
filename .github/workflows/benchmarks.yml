@@ -54,6 +54,7 @@ jobs:
         uses: exuanbo/actions-deploy-gist@47697fceaeea2006a90594ee24eb9cd0a1121ef8 # v1.1.4
         if: >
           github.event_name == 'push'
+          && github.event.repository.fork == false
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
           token: ${{ secrets.GIST_TOKEN }}
@@ -74,6 +75,7 @@ jobs:
         uses: exuanbo/actions-deploy-gist@47697fceaeea2006a90594ee24eb9cd0a1121ef8 # v1.1.4
         if: >
           github.event_name == 'push'
+          && github.event.repository.fork == false
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
           token: ${{ secrets.GIST_TOKEN }}

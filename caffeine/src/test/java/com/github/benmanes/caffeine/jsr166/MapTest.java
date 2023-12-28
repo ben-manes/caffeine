@@ -120,7 +120,7 @@ public class MapTest extends JSR166TestCase {
             final int i;
             Key(int i) { this.i = i; }
             @Override
-            public int hashCode() { return poorHash ? 0 : super.hashCode(); }
+            public int hashCode() { return poorHash ? 0 : System.identityHashCode(this); }
             @Override
             public int compareTo(Key x) {
                 return Integer.compare(this.i, x.i);
