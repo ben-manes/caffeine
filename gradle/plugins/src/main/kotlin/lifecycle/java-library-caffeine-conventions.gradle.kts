@@ -88,10 +88,9 @@ tasks.withType<Javadoc>().configureEach {
       "https://guava.dev/releases/${libs.versions.guava.get()}/api/docs/")
 
     if (project != project(":caffeine")) {
-      val caffeineJavadoc = project(":caffeine").tasks.named<Javadoc>("javadoc")
       linksOffline("https://static.javadoc.io/$group/caffeine/$version/",
-        relativePath(caffeineJavadoc.get().destinationDir!!.path))
-      dependsOn(caffeineJavadoc)
+        relativePath(project(":caffeine").layout.buildDirectory.dir("docs/javadoc")))
+      dependsOn(":caffeine:javadoc")
     }
   }
 }

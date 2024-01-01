@@ -35,7 +35,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
 import com.typesafe.config.Config;
 
 /**
@@ -78,7 +77,7 @@ public abstract class TextReporter implements Reporter {
         .filter(header -> header.toLowerCase(US).equals(settings.report().sortBy().toLowerCase(US)))
         .findAny().orElseThrow(() -> new IllegalArgumentException(
             "Unknown sort order: " + settings.report().sortBy()));
-    return ImmutableSortedSet.copyOf(comparator(sortBy), results).asList();
+    return ImmutableList.sortedCopyOf(comparator(sortBy), results);
   }
 
   /** Returns the column headers in declaration order. */

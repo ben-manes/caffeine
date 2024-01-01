@@ -77,7 +77,7 @@ public final class SievePolicy implements Policy {
     node.weight = event.weight();
     node.visited = true;
 
-    while (size >= maximumSize) {
+    while (size > maximumSize) {
       evict();
     }
   }

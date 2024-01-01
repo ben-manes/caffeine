@@ -25,7 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 
 /**
- * A reader for the <b>data/trace.csv</b> file provided by the authors of
+ * A reader for the <b>data/cloudPhysicsIO.csv</b> file provided by the authors of
  * <a href="https://github.com/cacheMon/libCacheSim">libCacheSim</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)

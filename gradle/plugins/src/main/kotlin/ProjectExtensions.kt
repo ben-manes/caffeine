@@ -9,8 +9,8 @@ fun Project.version(major: Int, minor: Int, patch: Int, releaseBuild: Boolean) {
 }
 
 fun Project.javaExecJvmArgs(): List<String> {
-  val jvmArgs = mutableListOf("-XX:+UseParallelGC", "-Xmx4g")
   val arguments = findProperty("jvmArgs") as String?
+  val jvmArgs = mutableListOf("-Xmx4g")
   if (arguments != null) {
     jvmArgs.addAll(arguments.split(","))
   }

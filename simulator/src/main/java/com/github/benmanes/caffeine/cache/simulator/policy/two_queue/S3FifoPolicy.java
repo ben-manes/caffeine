@@ -41,7 +41,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * main region. The small and main regions uses an n-bit clock eviction policy.
  * <p>
  * This implementation is based on the code provided by the authors in their
- * <a href="https://github.com/cacheMon/libCacheSim">repository</a> and the pseudo code  in their
+ * <a href="https://github.com/cacheMon/libCacheSim">repository</a> and the pseudo code in their
  * paper <a href="https://dl.acm.org/doi/10.1145/3600006.3613147">FIFO queues are all you need for
  * cache eviction</a>. It does not use any of the paper's proposed adaptations for space saving or
  * concurrency because that may impact the hit rate. An implementor is encouraged to use a more
@@ -111,7 +111,7 @@ public final class S3FifoPolicy implements Policy {
     node.weight = event.weight();
 
     policyStats.recordWeightedHit(event.weight());
-    while ((sizeSmall + sizeMain) >= maximumSize) {
+    while ((sizeSmall + sizeMain) > maximumSize) {
       evict();
     }
   }
@@ -147,10 +147,12 @@ public final class S3FifoPolicy implements Policy {
     return node;
   }
 
-  @CanIgnoreReturnValue
-  private Node insertGhost(long key, int weight) {
+  private void insertGhost(long key, int weight) {
     // Bound the number of non-resident entries. While not included in the paper's pseudo code, the
     // author's reference implementation adds a similar constraint to avoid uncontrolled growth.
+    if (weight > maxGhost) {
+      return;
+    }
     while ((sizeGhost + weight) > maxGhost) {
       evictFromGhost();
     }
@@ -159,11 +161,10 @@ public final class S3FifoPolicy implements Policy {
     node.appendAtHead(sentinelGhost);
     dataGhost.put(key, node);
     sizeGhost += node.weight;
-    return node;
   }
 
   private void evict() {
-    if (sizeSmall >= maxSmall) {
+    if ((sizeSmall >= maxSmall) || dataMain.isEmpty()) {
       evictFromSmall();
     } else {
       evictFromMain();

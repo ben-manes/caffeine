@@ -80,21 +80,15 @@ tasks.named<JavaExec>("run").configure {
 }
 
 tasks.register<Simulate>("simulate") {
-  group = "Application"
   description = "Runs multiple simulations and generates an aggregate report"
-  dependsOn(tasks.processResources, tasks.compileJava)
-  classpath = sourceSets["main"].runtimeClasspath
-  systemProperties = caffeineSystemProperties()
-  defaultJvmArgs = javaExecJvmArgs()
-  outputs.upToDateWhen { false }
+  mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulate"
+  configureSimulatorTask()
 }
 
 tasks.register<Rewrite>("rewrite") {
-  group = "Application"
   description = "Rewrite traces into the format used by other simulators"
-  dependsOn(tasks.processResources, tasks.compileJava)
-  classpath = sourceSets["main"].runtimeClasspath
-  outputs.upToDateWhen { false }
+  mainClass = "com.github.benmanes.caffeine.cache.simulator.parser.Rewriter"
+  configureSimulatorTask()
 }
 
 eclipse.classpath.file.beforeMerged {
@@ -104,81 +98,65 @@ eclipse.classpath.file.beforeMerged {
   }
 }
 
-abstract class Simulate @Inject constructor(@Internal val external: ExecOperations,
-                                            @Internal val layout: ProjectLayout) : DefaultTask() {
+fun JavaExec.configureSimulatorTask() {
+  group = "Application"
+  dependsOn(tasks.processResources, tasks.compileJava)
+  classpath(sourceSets["main"].runtimeClasspath)
+  systemProperties(caffeineSystemProperties())
+  outputs.upToDateWhen { false }
+  jvmArgs(javaExecJvmArgs())
+}
+
+abstract class Simulate @Inject constructor(
+                        @Internal val projectLayout: ProjectLayout) : JavaExec() {
   @Input @Option(option = "maximumSize", description = "The maximum sizes")
-  var maximumSize = ""
+  var maximumSize: List<String> = emptyList()
   @Input @Option(option = "metric", description = "The metric to compare")
   var metric = "Hit Rate"
   @Input @Option(option = "theme", description = "The chart theme")
   var theme = "light"
   @Input @Option(option = "title", description = "The chart title")
   var title = ""
-  @get:Input
-  abstract val systemProperties: MapProperty<String, Any>
-  @get:Input
-  abstract val defaultJvmArgs: ListProperty<String>
-  @get:InputFiles @get:Classpath
-  abstract val classpath: Property<FileCollection>
-  @get:OutputDirectory
-  val reportDir = File(layout.buildDirectory.get().asFile, "/reports/$name")
+  @OutputDirectory
+  val reportDir = File(projectLayout.buildDirectory.get().asFile, "/reports/$name")
 
   @TaskAction
-  fun run() {
-    external.javaexec {
-      mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulate"
-      systemProperties(this@Simulate.systemProperties.get())
-      classpath(this@Simulate.classpath)
-      jvmArgs(defaultJvmArgs.get())
-
-      if (maximumSize.isNotEmpty()) {
-        args("--maximumSize", maximumSize)
-      }
-      args("--outputDir", reportDir)
-      args("--metric", metric)
-      args("--title", title)
-      args("--theme", theme)
+  override fun exec() {
+    if (maximumSize.isNotEmpty()) {
+      args("--maximumSize", maximumSize.joinToString(","))
     }
+    args("--outputDir", reportDir)
+    args("--metric", metric)
+    args("--title", title)
+    args("--theme", theme)
+    super.exec()
   }
 }
 
-abstract class Rewrite @Inject constructor(@Internal val external: ExecOperations) : DefaultTask() {
-  @Input @Optional @Option(option = "inputFiles", description = "The trace input files")
+abstract class Rewrite : JavaExec() {
+  @Input @Option(option = "inputFiles", description = "The trace input files")
   var inputFiles: List<String> = emptyList()
-  @get:Input @get:Optional @get:Option(option = "inputFormat", description = "The input format")
-  abstract val inputFormat: Property<String>
-  @get:Input @get:Optional @get:Option(option = "outputFile", description = "The output file")
-  abstract val outputFile: Property<String>
-  @get:Input @get:Optional @get:Option(option = "outputFormat", description = "The output format")
-  abstract val outputFormat: Property<String>
-  @get:InputFiles @get:Classpath
-  abstract val classpath: Property<FileCollection>
+  @Input @Option(option = "inputFormat", description = "The input format")
+  var inputFormat: String = ""
+  @Input @Option(option = "outputFile", description = "The output file")
+  var outputFile: String = ""
+  @Input @Option(option = "outputFormat", description = "The output format")
+  var outputFormat: String = ""
 
   @TaskAction
-  fun run() {
-    external.javaexec {
-      var help = true
-      classpath(this@Rewrite.classpath)
-      mainClass = "com.github.benmanes.caffeine.cache.simulator.parser.Rewriter"
-      if (inputFiles.isNotEmpty()) {
-        args("--inputFiles", inputFiles.joinToString(","))
-        help = false
-      }
-      if (inputFormat.isPresent) {
-        args("--inputFormat", inputFormat.get())
-        help = false
-      }
-      if (outputFile.isPresent) {
-        args("--outputFile", outputFile.get())
-        help = false
-      }
-      if (outputFormat.isPresent) {
-        args("--outputFormat", outputFormat.get())
-        help = false
-      }
-      if (help) {
-        args("--help")
-      }
+  override fun exec() {
+    if (inputFiles.isNotEmpty()) {
+      args("--inputFiles", inputFiles.joinToString(","))
     }
+    if (outputFormat.isNotEmpty()) {
+      args("--outputFormat", outputFormat)
+    }
+    if (inputFormat.isNotEmpty()) {
+      args("--inputFormat", inputFormat)
+    }
+    if (outputFile.isNotEmpty()) {
+      args("--outputFile", outputFile)
+    }
+    super.exec()
   }
 }
