@@ -53,15 +53,15 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 @PolicySpec(name = "two-queue.TuQueue")
 public class TuQueuePolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
-  private final PolicyStats policyStats;
-  private final int maximumSize;
+  public PolicyStats policyStats;
+  public final int maximumSize;
 
   private int sizeHot;
-  private final int maxHot;
+  public int maxHot;
   private final Node headHot;
 
   private int sizeWarm;
-  private final int maxWarm;
+  public int maxWarm;
   private final Node headWarm;
 
   private int sizeCold;
@@ -169,14 +169,14 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     COLD,
   }
 
-  static final class Node {
+  public static final class Node {
     final long key;
 
     Node prev;
     Node next;
     QueueType type;
 
-    Node() {
+    public Node() {
       this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
@@ -225,7 +225,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final class TuQueueSettings extends BasicSettings {
+  public static class TuQueueSettings extends BasicSettings {
 
     public TuQueueSettings(Config config) {
       super(config);

@@ -264,12 +264,12 @@ public class SampledPolicy implements KeyOnlyPolicy {
     abstract Node select(List<Node> sample, Random random, long tick);
   }
 
-  static final class Node {
+  public static final class Node {
     final long key;
     final long insertionTime;
 
     long accessTime;
-    int frequency;
+    public int frequency;
     int index;
 
     public Node(long key, int index, long tick) {

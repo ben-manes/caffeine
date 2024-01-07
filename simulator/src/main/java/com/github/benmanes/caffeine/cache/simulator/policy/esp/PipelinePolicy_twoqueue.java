@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
+package com.github.benmanes.caffeine.cache.simulator.policy.esp;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
@@ -24,6 +24,7 @@ import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+//import com.github.benmanes.caffeine.cache.simulator.policy.esp.SuperNode;
 
 /**
  * The 2Q algorithm. This algorithm uses a queue for items that are seen once (IN), a queue for
@@ -38,27 +39,27 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@PolicySpec(name = "two-queue.TwoQueue")
-public class TwoQueuePolicy implements KeyOnlyPolicy {
+@PolicySpec(name = "esp.PipelinePolicy_twoqueue")
+public final class PipelinePolicy_twoqueue implements KeyOnlyPolicy {
   static final Node UNLINKED = new Node();
 
   final Long2ObjectMap<Node> data;
-  public PolicyStats policyStats;
-  public final int maximumSize;
+  final PolicyStats policyStats;
+  final int maximumSize;
 
   int sizeIn;
-  public int maxIn;
-  public final Node headIn;
+  final int maxIn;
+  final Node headIn;
 
   int sizeOut;
-  public int maxOut;
+  final int maxOut;
   final Node headOut;
 
   int sizeMain;
   final Node headMain;
 
-  public TwoQueuePolicy(Config config) {
-    TwoQueueSettings settings = new TwoQueueSettings(config);
+  public PipelinePolicy_twoqueue(Config config) {
+    PipelinePolicySettings settings = new PipelinePolicySettings(config);
 
     this.headIn = new Node();
     this.headOut = new Node();
@@ -181,20 +182,20 @@ public class TwoQueuePolicy implements KeyOnlyPolicy {
     OUT,
   }
 
-  public static final class Node {
+  static final class Node {
     final long key;
 
     Node prev;
     Node next;
     QueueType type;
 
-    public Node() {
+    Node() {
       this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
-    public Node(long key) {
+    Node(long key) {
       this.key = key;
       this.prev = UNLINKED;
       this.next = UNLINKED;
@@ -232,24 +233,24 @@ public class TwoQueuePolicy implements KeyOnlyPolicy {
     @Override
     public String toString() {
       return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", type)
-          .toString();
+        .add("key", key)
+        .add("type", type)
+        .toString();
     }
   }
 
-  static final class TwoQueueSettings extends BasicSettings {
+  static final class PipelinePolicySettings extends BasicSettings {
 
-    public TwoQueueSettings(Config config) {
+    public PipelinePolicySettings(Config config) {
       super(config);
     }
 
     public double percentIn() {
-      return config().getDouble("two-queue.percent-in");
+      return config().getDouble("esp.percent-in");
     }
 
     public double percentOut() {
-      return config().getDouble("two-queue.percent-out");
+      return config().getDouble("esp.percent-out");
     }
   }
 }
