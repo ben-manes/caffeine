@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
+import java.util.Random;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.ClimberResetCountMin4;
@@ -36,34 +38,48 @@ import com.typesafe.config.Config;
 public final class TinyLfu implements KeyOnlyAdmittor {
   private final PolicyStats policyStats;
   private final Frequency sketch;
+  private final Random random;
+
+  private final double probability;
+  private final int threshold;
 
   public TinyLfu(Config config, PolicyStats policyStats) {
+    var settings = new BasicSettings(config);
+    this.random = new Random(settings.randomSeed());
+    this.sketch = makeSketch(settings);
     this.policyStats = policyStats;
-    this.sketch = makeSketch(config);
+    if (settings.tinyLfu().jitter().enabled()) {
+      this.threshold = settings.tinyLfu().jitter().threshold();
+      this.probability = settings.tinyLfu().jitter().probability();
+    } else {
+      this.threshold = Integer.MAX_VALUE;
+      this.probability = 1.0;
+    }
   }
 
-  private Frequency makeSketch(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+  private Frequency makeSketch(BasicSettings settings) {
     String type = settings.tinyLfu().sketch();
     if (type.equalsIgnoreCase("count-min-4")) {
       String reset = settings.tinyLfu().countMin4().reset();
       if (reset.equalsIgnoreCase("periodic")) {
-        return new PeriodicResetCountMin4(config);
+        return new PeriodicResetCountMin4(settings.config());
       } else if (reset.equalsIgnoreCase("incremental")) {
-        return new IncrementalResetCountMin4(config);
+        return new IncrementalResetCountMin4(settings.config());
       } else if (reset.equalsIgnoreCase("climber")) {
-        return new ClimberResetCountMin4(config);
+        return new ClimberResetCountMin4(settings.config());
       } else if (reset.equalsIgnoreCase("indicator")) {
-        return new IndicatorResetCountMin4(config);
+        return new IndicatorResetCountMin4(settings.config());
+      } else {
+        throw new IllegalStateException("Unknown reset type: " + reset);
       }
     } else if (type.equalsIgnoreCase("count-min-64")) {
-      return new CountMin64TinyLfu(config);
+      return new CountMin64TinyLfu(settings.config());
     } else if (type.equalsIgnoreCase("random-table")) {
-      return new RandomRemovalFrequencyTable(config);
+      return new RandomRemovalFrequencyTable(settings.config());
     } else if (type.equalsIgnoreCase("tiny-table")) {
-      return new TinyCacheAdapter(config);
+      return new TinyCacheAdapter(settings.config());
     } else if (type.equalsIgnoreCase("perfect-table")) {
-      return new PerfectFrequency(config);
+      return new PerfectFrequency(settings.config());
     }
     throw new IllegalStateException("Unknown sketch type: " + type);
   }
@@ -81,9 +97,10 @@ public final class TinyLfu implements KeyOnlyAdmittor {
   public boolean admit(long candidateKey, long victimKey) {
     sketch.reportMiss();
 
-    long candidateFreq = sketch.frequency(candidateKey);
-    long victimFreq = sketch.frequency(victimKey);
-    if (candidateFreq > victimFreq) {
+    int victimFreq = sketch.frequency(victimKey);
+    int candidateFreq = sketch.frequency(candidateKey);
+    if ((candidateFreq > victimFreq)
+        || ((candidateFreq >= threshold) && (random.nextFloat() < probability))) {
       policyStats.recordAdmission();
       return true;
     }

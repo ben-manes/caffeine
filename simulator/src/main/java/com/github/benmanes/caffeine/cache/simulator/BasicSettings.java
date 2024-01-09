@@ -168,6 +168,9 @@ public class BasicSettings {
     public boolean conservative() {
       return config().getBoolean("tiny-lfu.count-min.conservative");
     }
+    public JitterSettings jitter() {
+      return new JitterSettings();
+    }
     public CountMin4Settings countMin4() {
       return new CountMin4Settings();
     }
@@ -175,6 +178,17 @@ public class BasicSettings {
       return new CountMin64Settings();
     }
 
+    public final class JitterSettings {
+      public boolean enabled() {
+        return config().getBoolean("tiny-lfu.jitter.enabled");
+      }
+      public int threshold() {
+        return config().getInt("tiny-lfu.jitter.threshold");
+      }
+      public double probability() {
+        return config().getDouble("tiny-lfu.jitter.probability");
+      }
+    }
     public final class CountMin4Settings {
       public String reset() {
         return config().getString("tiny-lfu.count-min-4.reset");
