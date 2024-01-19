@@ -47,7 +47,7 @@ jobs:
           results_file: results.sarif
           repo_token: ${{ secrets.SCORECARD_READ_TOKEN }}
       - name: Upload artifact
-        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         with:
           name: SARIF file
           path: results.sarif
