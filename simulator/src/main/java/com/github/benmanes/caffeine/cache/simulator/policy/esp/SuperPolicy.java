@@ -4,11 +4,14 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValueFactory;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Locale.US;
 
 public class SuperPolicy {
 
@@ -17,9 +20,12 @@ public class SuperPolicy {
   TuQueuePolicy tuQueuePolicy;
   TwoQueueSettings customTwoQueueSettings;
   TuQueueSettings customTuQueueSettings;
-
+  SampledPolicy LRUPolicy;
+  SegmentedLruPolicy SegmentedLRUPolicy;
+  LRUSettings customLRUSettings;
+  SegmentedLRUSettings customSegmentedLRUSettings;
   public SuperPolicy(Config config) {
-    PolicyStats customPolicyStats = new PolicyStats("SuperPolicy");
+    PolicyStats customPolicyStats = new PolicyStats("PipeLine");
     // -------------Two Queue Instance -------------
     customTwoQueueSettings = new TwoQueueSettings(config);
     twoQueuePolicy = new TwoQueuePolicy(customTwoQueueSettings.config());
@@ -74,4 +80,15 @@ public class SuperPolicy {
       return percentWarm;
     }
   }
+  public static class LRUSettings extends  BasicSettings{
+    public  LRUSettings(Config config){ super(config);}
+    public int sampleSize() {
+      return config().getInt("sampled.size");
+    }
+    public SampledPolicy.Sample sampleStrategy() {
+      return SampledPolicy.Sample.valueOf(config().getString("sampled.strategy").toUpperCase(US));
+    }
+
+  }
 }
+
