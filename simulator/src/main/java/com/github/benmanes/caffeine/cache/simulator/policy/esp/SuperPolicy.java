@@ -83,10 +83,10 @@ public class SuperPolicy {
   public static class LRUSettings extends  BasicSettings{
     public  LRUSettings(Config config){ super(config);}
     public int sampleSize() {
-      return config().getInt("sampled.size");
+      return config().getInt("esp.sampled.size");
     }
     public SampledPolicy.Sample sampleStrategy() {
-      return SampledPolicy.Sample.valueOf(config().getString("sampled.strategy").toUpperCase(US));
+      return SampledPolicy.Sample.valueOf(config().getString("esp.sampled.strategy").toUpperCase(US));
     }
 
   }
