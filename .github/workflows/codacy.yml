@@ -43,9 +43,12 @@ jobs:
         uses: andstor/file-existence-action@20b4d2e596410855db8f9ca21e96fbe18e12930b # v2.0.0
         with:
           files: results.sarif
+      - name: Remove duplicate runs
+        if: steps.check_files.outputs.files_exists == 'true'
+        run: jq '.runs |= unique_by({tool, invocations})' results.sarif > codacy.sarif
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
         if: steps.check_files.outputs.files_exists == 'true'
         continue-on-error: true
         with:
-          sarif_file: results.sarif
+          sarif_file: codacy.sarif
