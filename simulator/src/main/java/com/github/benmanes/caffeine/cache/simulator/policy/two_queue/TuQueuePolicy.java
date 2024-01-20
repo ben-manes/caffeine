@@ -223,9 +223,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
           .add("type", type)
           .toString();
     }
-  }
-
-  public static class TuQueueSettings extends BasicSettings {
+  }public static class TuQueueSettings extends BasicSettings {
 
     public TuQueueSettings(Config config) {
       super(config);
@@ -243,4 +241,6 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
       return percentWarm;
     }
   }
+
+
 }

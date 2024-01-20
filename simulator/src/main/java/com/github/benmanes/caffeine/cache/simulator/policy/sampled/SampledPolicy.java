@@ -123,12 +123,14 @@ public class SampledPolicy implements KeyOnlyPolicy {
 
       if (admittor.admit(candidate.key, victim.key)) {
         removeFromTable(victim);
+
         data.remove(victim.key);
       } else {
         removeFromTable(candidate);
         data.remove(candidate.key);
       }
     }
+
   }
 
   /** Removes the node from the table and adds the index to the free list. */
@@ -264,13 +266,14 @@ public class SampledPolicy implements KeyOnlyPolicy {
     abstract Node select(List<Node> sample, Random random, long tick);
   }
 
-  public static final class Node {
+  public static final class Node  {
     final long key;
     final long insertionTime;
 
     long accessTime;
     public int frequency;
     int index;
+
 
     public Node(long key, int index, long tick) {
       this.insertionTime = tick;
