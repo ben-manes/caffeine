@@ -28,7 +28,6 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static java.util.Map.entry;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;

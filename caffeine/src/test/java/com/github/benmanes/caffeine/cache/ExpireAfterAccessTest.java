@@ -58,6 +58,7 @@ import com.github.benmanes.caffeine.cache.testing.ExpireAfterAccess;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.truth.Truth8;
 
 /**
  * The test cases for caches that support the expire-after-read (time-to-idle) policy.
@@ -358,18 +359,18 @@ public final class ExpireAfterAccessTest {
       expireAfterAccess = Expire.ONE_MINUTE)
   public void ageOf_duration(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    assertThat(expireAfterAccess.ageOf(context.firstKey())).hasValue(Duration.ZERO);
+    Truth8.assertThat(expireAfterAccess.ageOf(context.firstKey())).hasValue(Duration.ZERO);
     context.ticker().advance(Duration.ofSeconds(30));
-    assertThat(expireAfterAccess.ageOf(context.firstKey())).hasValue(Duration.ofSeconds(30));
+    Truth8.assertThat(expireAfterAccess.ageOf(context.firstKey())).hasValue(Duration.ofSeconds(30));
     context.ticker().advance(Duration.ofSeconds(45));
-    assertThat(expireAfterAccess.ageOf(context.firstKey())).isEmpty();
+    Truth8.assertThat(expireAfterAccess.ageOf(context.firstKey())).isEmpty();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void ageOf_absent(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    assertThat(expireAfterAccess.ageOf(context.absentKey())).isEmpty();
+    Truth8.assertThat(expireAfterAccess.ageOf(context.absentKey())).isEmpty();
     assertThat(expireAfterAccess.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 

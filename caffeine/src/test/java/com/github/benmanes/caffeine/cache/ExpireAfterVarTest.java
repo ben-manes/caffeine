@@ -76,6 +76,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
+import com.google.common.truth.Truth8;
 
 /**
  * The test cases for caches that support the variable expiration policy.
@@ -584,7 +585,7 @@ public final class ExpireAfterVarTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.DISABLED)
   public void expireVariably_notEnabled(Cache<Int, Int> cache) {
-    assertThat(cache.policy().expireVariably()).isEmpty();
+    Truth8.assertThat(cache.policy().expireVariably()).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -607,14 +608,17 @@ public final class ExpireAfterVarTest {
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void getExpiresAfter_duration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    assertThat(expireAfterVar.getExpiresAfter(context.absentKey())).isEmpty();
-    assertThat(expireAfterVar.getExpiresAfter(context.firstKey())).hasValue(Duration.ofMinutes(1));
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(context.absentKey())).isEmpty();
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(
+        context.firstKey())).hasValue(Duration.ofMinutes(1));
 
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenReturn(TimeUnit.HOURS.toNanos(1));
     cache.put(context.firstKey(), context.absentValue());
-    assertThat(expireAfterVar.getExpiresAfter(context.firstKey())).hasValue(Duration.ofHours(1));
-    assertThat(expireAfterVar.getExpiresAfter(context.lastKey())).hasValue(Duration.ofMinutes(1));
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(
+        context.firstKey())).hasValue(Duration.ofHours(1));
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(
+        context.lastKey())).hasValue(Duration.ofMinutes(1));
   }
 
   @SuppressWarnings("unchecked")
@@ -679,10 +683,11 @@ public final class ExpireAfterVarTest {
   public void setExpiresAfter_duration(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     expireAfterVar.setExpiresAfter(context.firstKey(), Duration.ofMinutes(2));
-    assertThat(expireAfterVar.getExpiresAfter(context.firstKey())).hasValue(Duration.ofMinutes(2));
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(context.firstKey()))
+        .hasValue(Duration.ofMinutes(2));
 
     expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(4));
-    assertThat(expireAfterVar.getExpiresAfter(context.absentKey())).isEmpty();
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(context.absentKey())).isEmpty();
 
     context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
@@ -790,7 +795,7 @@ public final class ExpireAfterVarTest {
     assertThat(result).isNull();
 
     assertThat(cache).containsEntry(key, value);
-    assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
 
     context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
@@ -808,7 +813,7 @@ public final class ExpireAfterVarTest {
     assertThat(result).isEqualTo(context.original().get(key));
 
     assertThat(cache).containsEntry(key, context.original().get(key));
-    assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(1));
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(1));
 
     context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
@@ -891,7 +896,7 @@ public final class ExpireAfterVarTest {
     assertThat(oldValue).isNull();
 
     assertThat(cache).containsEntry(key, value);
-    assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
 
     context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
@@ -909,7 +914,7 @@ public final class ExpireAfterVarTest {
     assertThat(oldValue).isEqualTo(context.original().get(key));
 
     assertThat(cache).containsEntry(key, value);
-    assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(2));
 
     context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
@@ -1054,7 +1059,7 @@ public final class ExpireAfterVarTest {
     Int result = expireAfterVar.compute(context.absentKey(),
         (key, value) -> context.absentValue(), duration);
     verifyNoInteractions(context.expiry());
-    assertThat(expireAfterVar.getExpiresAfter(context.absentKey())).hasValue(duration);
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(context.absentKey())).hasValue(duration);
 
     assertThat(result).isEqualTo(context.absentValue());
     assertThat(cache).hasSize(1 + context.initialSize());
@@ -1127,7 +1132,7 @@ public final class ExpireAfterVarTest {
 
       replaced.put(key, value);
       assertThat(result).isSameInstanceAs(value);
-      assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
+      Truth8.assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
@@ -1151,7 +1156,7 @@ public final class ExpireAfterVarTest {
       Int result = expireAfterVar.compute(key, (k, v) -> value, duration);
 
       assertThat(result).isSameInstanceAs(value);
-      assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
+      Truth8.assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
     }
     verifyNoInteractions(context.expiry());
     int count = context.firstMiddleLastKeys().size();
@@ -1179,7 +1184,7 @@ public final class ExpireAfterVarTest {
 
       replaced.put(key, value);
       assertThat(result).isEqualTo(key);
-      assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
+      Truth8.assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(duration);
     }
     verifyNoInteractions(context.expiry());
     int count = context.firstMiddleLastKeys().size();
@@ -1323,7 +1328,7 @@ public final class ExpireAfterVarTest {
       expireAfterVar.compute(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
     });
-    assertThat(expireAfterVar.getExpiresAfter(context.firstKey())).isEmpty();
+    Truth8.assertThat(expireAfterVar.getExpiresAfter(context.firstKey())).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -1336,7 +1341,7 @@ public final class ExpireAfterVarTest {
       expireAfterVar.compute(context.firstKey(),
           (key, value) -> { throw new IllegalStateException(); }, Duration.ofDays(1));
     });
-    assertThat(variable).isEqualTo(expireAfterVar.getExpiresAfter(context.firstKey()));
+    Truth8.assertThat(variable).isEqualTo(expireAfterVar.getExpiresAfter(context.firstKey()));
   }
 
   @Test(dataProvider = "caches")

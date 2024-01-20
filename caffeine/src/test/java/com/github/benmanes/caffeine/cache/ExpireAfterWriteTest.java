@@ -58,6 +58,7 @@ import com.github.benmanes.caffeine.cache.testing.ExpireAfterWrite;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.truth.Truth8;
 
 /**
  * The test cases for caches that support the expire-after-write (time-to-live) policy.
@@ -324,14 +325,14 @@ public final class ExpireAfterWriteTest {
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(expireAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(30);
     context.ticker().advance(Duration.ofSeconds(45));
-    assertThat(expireAfterWrite.ageOf(context.firstKey())).isEmpty();
+    Truth8.assertThat(expireAfterWrite.ageOf(context.firstKey())).isEmpty();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void ageOf_absent(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    assertThat(expireAfterWrite.ageOf(context.absentKey())).isEmpty();
+    Truth8.assertThat(expireAfterWrite.ageOf(context.absentKey())).isEmpty();
     assertThat(expireAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 

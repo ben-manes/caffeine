@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import static com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator.configSource;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import java.net.URI;
@@ -39,6 +38,7 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
 import com.google.common.collect.Iterables;
+import com.google.common.truth.Truth8;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -185,7 +185,7 @@ public final class TypesafeConfigurationTest {
     assertThat(defaults.getKeyType()).isEqualTo(Object.class);
     assertThat(defaults.getValueType()).isEqualTo(Object.class);
     assertThat(defaults.getExecutorFactory().create()).isEqualTo(ForkJoinPool.commonPool());
-    assertThat(defaults.getMaximumSize()).hasValue(500);
+    Truth8.assertThat(defaults.getMaximumSize()).hasValue(500);
   }
 
   @Test
@@ -305,17 +305,17 @@ public final class TypesafeConfigurationTest {
   }
 
   static void checkEagerExpiration(CaffeineConfiguration<?, ?> config) {
-    assertThat(config.getExpireAfterWrite()).hasValue(TimeUnit.MINUTES.toNanos(1));
-    assertThat(config.getExpireAfterAccess()).hasValue(TimeUnit.MINUTES.toNanos(5));
+    Truth8.assertThat(config.getExpireAfterWrite()).hasValue(TimeUnit.MINUTES.toNanos(1));
+    Truth8.assertThat(config.getExpireAfterAccess()).hasValue(TimeUnit.MINUTES.toNanos(5));
   }
 
   static void checkRefresh(CaffeineConfiguration<?, ?> config) {
-    assertThat(config.getRefreshAfterWrite()).hasValue(TimeUnit.SECONDS.toNanos(30));
+    Truth8.assertThat(config.getRefreshAfterWrite()).hasValue(TimeUnit.SECONDS.toNanos(30));
   }
 
   static void checkSize(CaffeineConfiguration<?, ?> config) {
-    assertThat(config.getMaximumSize()).isEmpty();
-    assertThat(config.getMaximumWeight()).hasValue(1_000L);
+    Truth8.assertThat(config.getMaximumSize()).isEmpty();
+    Truth8.assertThat(config.getMaximumWeight()).hasValue(1_000L);
     assertThat(config.getWeigherFactory().orElseThrow().create()).isInstanceOf(TestWeigher.class);
   }
 }
