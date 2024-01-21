@@ -45,7 +45,7 @@ jobs:
           files: results.sarif
       - name: Remove duplicate runs
         if: steps.check_files.outputs.files_exists == 'true'
-        run: jq '.runs |= unique_by({tool, invocations})' results.sarif > codacy.sarif
+        run: jq -c '.runs |= unique_by({tool, invocations, results})' < results.sarif > codacy.sarif
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
         if: steps.check_files.outputs.files_exists == 'true'
