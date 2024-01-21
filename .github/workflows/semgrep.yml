@@ -22,7 +22,7 @@ jobs:
           disable-sudo: true
           egress-policy: audit
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - run: semgrep scan --sarif --output=semgrep.sarif
+      - run: semgrep scan --sarif --output=results.sarif
         env:
           SEMGREP_RULES: >-
             p/java
@@ -33,7 +33,10 @@ jobs:
         id: check_files
         uses: andstor/file-existence-action@20b4d2e596410855db8f9ca21e96fbe18e12930b # v2.0.0
         with:
-          files: semgrep.sarif
+          files: results.sarif
+      - name: Remove duplicate rules
+        if: steps.check_files.outputs.files_exists == 'true'
+        run: jq -c '.runs[0].tool.driver.rules |= unique_by(.id)' < results.sarif > semgrep.sarif
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
         uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
         if: steps.check_files.outputs.files_exists == 'true'
