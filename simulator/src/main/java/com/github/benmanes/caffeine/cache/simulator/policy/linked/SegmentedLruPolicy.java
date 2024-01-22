@@ -55,12 +55,12 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   static final Node UNLINKED = new Node();
 
   final Long2ObjectMap<Node> data;
-  final PolicyStats policyStats;
+  public PolicyStats policyStats;
   final Node headProtected;
   final Node headProbation;
   final Admittor admittor;
-  final int maxProtected;
-  final int maximumSize;
+  public int maxProtected;
+  public final int maximumSize;
 
   int sizeProtected;
 

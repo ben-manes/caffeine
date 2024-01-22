@@ -1,6 +1,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.esp;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
@@ -17,13 +18,17 @@ public class SuperPolicy {
 
   // POLICIES
   TwoQueuePolicy twoQueuePolicy;
-  TuQueuePolicy tuQueuePolicy;
   TwoQueueSettings customTwoQueueSettings;
+
+  TuQueuePolicy tuQueuePolicy;
   TuQueueSettings customTuQueueSettings;
-  SampledPolicy LRUPolicy;
-  SegmentedLruPolicy SegmentedLRUPolicy;
-  LRUSettings customLRUSettings;
-  SegmentedLRUSettings customSegmentedLRUSettings;
+
+  SampledPolicy sampledPolicy;
+  SampledSettings customSampledSettings;
+
+  SegmentedLruPolicy segmentedLRUPolicy;
+  SegmentedLruSettings customSegmentedLRUSettings;
+
   public SuperPolicy(Config config) {
     PolicyStats customPolicyStats = new PolicyStats("PipeLine");
     // -------------Two Queue Instance -------------
@@ -36,12 +41,26 @@ public class SuperPolicy {
 
     //-----------------Tu Queue Instance -------------
     customTuQueueSettings = new TuQueueSettings(config);
-    TuQueuePolicy tuQueuePolicy = new TuQueuePolicy(customTuQueueSettings.config());
+    tuQueuePolicy = new TuQueuePolicy(customTuQueueSettings.config());
     tuQueuePolicy.policyStats = customPolicyStats;
     tuQueuePolicy.maxHot = (int) (tuQueuePolicy.maximumSize * customTuQueueSettings.percentHot());
     tuQueuePolicy.maxWarm = (int) (tuQueuePolicy.maximumSize * customTuQueueSettings.percentWarm());
     //----------------------------------------------
 
+    // -------------SampledPolicy Instance -------------
+    customSampledSettings = new SampledSettings(config);
+    sampledPolicy = new SampledPolicy(Admission.ALWAYS, SampledPolicy.EvictionPolicy.LRU,customSampledSettings.config());
+    sampledPolicy.policyStats = customPolicyStats;
+    sampledPolicy.sampleSize = customSampledSettings.sampleSize();
+    sampledPolicy.sampleStrategy = customSampledSettings.sampleStrategy();
+    //----------------------------------------------
+
+    //-----------------Segmented LRU Instance -------------
+    customSegmentedLRUSettings = new SegmentedLruSettings(config);
+    segmentedLRUPolicy = new SegmentedLruPolicy(Admission.ALWAYS,customSegmentedLRUSettings.config());
+    segmentedLRUPolicy.policyStats = customPolicyStats;
+    segmentedLRUPolicy.maxProtected = (int) (segmentedLRUPolicy.maximumSize * customSegmentedLRUSettings.percentProtected());
+    //----------------------------------------------
 
   }
 
@@ -62,7 +81,7 @@ public class SuperPolicy {
     }
   }
 
-  public static class TuQueueSettings extends BasicSettings {
+  static class TuQueueSettings extends BasicSettings {
 
     public TuQueueSettings(Config config) {
       super(config);
@@ -80,15 +99,31 @@ public class SuperPolicy {
       return percentWarm;
     }
   }
-  public static class LRUSettings extends  BasicSettings{
-    public  LRUSettings(Config config){ super(config);}
+
+  static class SampledSettings extends BasicSettings {
+    public SampledSettings(Config config) {
+      super(config);
+    }
+
     public int sampleSize() {
       return config().getInt("esp.sampled.size");
     }
+
     public SampledPolicy.Sample sampleStrategy() {
       return SampledPolicy.Sample.valueOf(config().getString("esp.sampled.strategy").toUpperCase(US));
     }
 
   }
-}
 
+
+  static class SegmentedLruSettings extends BasicSettings {
+
+    public SegmentedLruSettings(Config config) {
+      super(config);
+    }
+
+    public double percentProtected() {
+      return config().getDouble("esp.segmented-lru.percent-protected");
+    }
+  }
+}

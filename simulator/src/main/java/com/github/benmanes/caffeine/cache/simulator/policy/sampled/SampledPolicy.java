@@ -54,12 +54,12 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 public class SampledPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
-  final PolicyStats policyStats;
+  public PolicyStats policyStats;
   final EvictionPolicy policy;
-  final Sample sampleStrategy;
+  public Sample sampleStrategy;
   final Admittor admittor;
   final int maximumSize;
-  final int sampleSize;
+  public int sampleSize;
   final Random random;
   final Node[] table;
 
@@ -122,6 +122,7 @@ public class SampledPolicy implements KeyOnlyPolicy {
       policyStats.recordEviction();
 
       if (admittor.admit(candidate.key, victim.key)) {
+        //move to buffer
         removeFromTable(victim);
 
         data.remove(victim.key);
