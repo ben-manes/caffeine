@@ -30,7 +30,8 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     // Access and use the TwoQueuePolicy instance from SuperPolicy
-    superPolicy.twoQueuePolicy.record(key);
+    superPolicy.sampledPolicy.record(key);
+
     //add print for logging purposes
 
 
