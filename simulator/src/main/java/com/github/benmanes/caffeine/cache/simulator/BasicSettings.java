@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 package com.github.benmanes.caffeine.cache.simulator;
-
+//gfgf//
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
