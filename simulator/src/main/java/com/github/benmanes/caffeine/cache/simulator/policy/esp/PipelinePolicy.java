@@ -4,6 +4,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.esp;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
 import com.typesafe.config.Config;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.SuperPolicy;
 
@@ -19,18 +20,22 @@ import com.github.benmanes.caffeine.cache.simulator.policy.esp.SuperPolicy;
  */
 @PolicySpec(name = "esp.PipelinePolicy")
 public final class PipelinePolicy implements KeyOnlyPolicy {
+  BaseNode buffer;
   private final SuperPolicy superPolicy;
 //  private final PolicyStats pipelinePolicyStats;
   public PipelinePolicy(Config config) {
     // Create an instance of SuperPolicy with the provided config
     superPolicy = new SuperPolicy(config);
-//    pipelinePolicyStats = new PolicyStats(name());
+
   }
 
   @Override
   public void record(long key) {
     // Access and use the TwoQueuePolicy instance from SuperPolicy
-    superPolicy.sampledPolicy.record(key);
+    SampledPolicy.Node x = new SampledPolicy.Node(key,1,1);
+    buffer =x;
+    superPolicy.sampledPolicy.buffer = buffer;
+    System.out.println(buffer.shaf);
 
     //add print for logging purposes
 

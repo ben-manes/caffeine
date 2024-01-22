@@ -47,7 +47,7 @@ public class SuperPolicy {
     tuQueuePolicy.maxWarm = (int) (tuQueuePolicy.maximumSize * customTuQueueSettings.percentWarm());
     //----------------------------------------------
 
-    // -------------SampledPolicy Instance -------------
+    // -------------SampledLRUPolicy Instance -------------
     customSampledSettings = new SampledSettings(config);
     sampledPolicy = new SampledPolicy(Admission.ALWAYS, SampledPolicy.EvictionPolicy.LRU,customSampledSettings.config());
     sampledPolicy.policyStats = customPolicyStats;

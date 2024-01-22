@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.BaseNode;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -64,7 +65,7 @@ public class SampledPolicy implements KeyOnlyPolicy {
   final Node[] table;
 
   long tick;
-
+  public BaseNode buffer;
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
     this.admittor = admission.from(config, policyStats);
@@ -122,11 +123,16 @@ public class SampledPolicy implements KeyOnlyPolicy {
       policyStats.recordEviction();
 
       if (admittor.admit(candidate.key, victim.key)) {
-        //move to buffer
-        removeFromTable(victim);
 
+        //move to buffer
+        //BaseNode buffer = new BaseNode(victim.key , data.size(), tick);
+
+        removeFromTable(victim);
         data.remove(victim.key);
       } else {
+        //move to buffer
+        //BaseNode buffer = new Node(candidate.key, data.size(), tick);
+
         removeFromTable(candidate);
         data.remove(candidate.key);
       }
@@ -267,7 +273,7 @@ public class SampledPolicy implements KeyOnlyPolicy {
     abstract Node select(List<Node> sample, Random random, long tick);
   }
 
-  public static final class Node  {
+   public static class Node extends BaseNode {
     final long key;
     final long insertionTime;
 

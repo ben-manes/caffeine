@@ -26,6 +26,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.BaseNode;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
 
@@ -155,7 +156,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     PROBATION,
   }
 
-  static final class Node {
+  static final class Node extends BaseNode {
     final long key;
 
     Node prev;
