@@ -3,7 +3,7 @@ awaitility = "4.2.0"
 caffeine = "3.1.8"
 junit = "5.10.1"
 rxjava = "3.1.8"
-versions = "0.50.0"
+versions = "0.51.0"
 
 [libraries]
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
