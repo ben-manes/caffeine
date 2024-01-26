@@ -1,0 +1,27 @@
+name: Retrieve and submit dependency graph
+permissions: read-all
+on:
+  workflow_run:
+    workflows: ['Generate and save dependency graph']
+    types: [completed]
+
+env:
+  GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  JAVA_VERSION: 21
+
+jobs:
+  submit-dependency-graph:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
+        with:
+          disable-sudo: true
+          egress-policy: block
+      - name: Retrieve and submit dependency graph
+        uses: gradle/actions/dependency-submission@v3-beta
+        with:
+          dependency-graph-action: retrieve-and-submit

@@ -1,5 +1,16 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 
+buildscript {
+  dependencies {
+    classpath(platform(libs.okio.bom))
+    classpath(platform(libs.okhttp.bom))
+    libs.bundles.constraints.get().forEach { library ->
+      constraints.add("classpath", library.module.toString())
+        .version { require(library.version!!) }
+    }
+  }
+}
+
 plugins {
   `kotlin-dsl`
   alias(libs.plugins.versions)
@@ -26,8 +37,10 @@ dependencies {
   }
 
   implementation(platform(libs.asm.bom))
+  implementation(platform(libs.okio.bom))
   implementation(platform(libs.junit5.bom))
   implementation(platform(libs.kotlin.bom))
+  implementation(platform(libs.okhttp.bom))
   implementation(platform(libs.jackson.bom))
   implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 

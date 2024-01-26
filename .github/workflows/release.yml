@@ -24,7 +24,7 @@ jobs:
         uses: Wandalen/wretry.action@a163f62ae554a8f3cbe27b23db15b60c0ae2e93c # v1.3.0
         timeout-minutes: 5
         with:
-          action: actions/setup-java@5ffc13f4174014e2d4d4572b3d74c3fa61aeb2c2 # v3.11.0
+          action: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93 # v4.0.0
           with: |
             distribution: temurin
             java-version: ${{ env.JAVA_VERSION }}
@@ -34,11 +34,10 @@ jobs:
         uses: Wandalen/wretry.action@a163f62ae554a8f3cbe27b23db15b60c0ae2e93c # v1.3.0
         timeout-minutes: 5
         with:
-          action: gradle/gradle-build-action@749f47bda3e44aa060e82d7b3ef7e40d953bd629 # v2.4.2
+          action: gradle/actions/setup-gradle@b6816cf21e7970b88479bb3c57d9cbe5cdd4b949 # v3.0.0-rc.1
           with: |
+            add-job-summary: never
             cache-read-only: false
-            arguments: help --no-scan
-            generate-job-summary: false
             gradle-home-cache-cleanup: true
           attempt_limit: 3
           attempt_delay: 2000
