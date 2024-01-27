@@ -1,6 +1,6 @@
-name: Dependency Submission
+name: Generate and save dependency graph
 permissions: read-all
-on: [ push ]
+on: [ pull_request ]
 
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
@@ -11,7 +11,7 @@ jobs:
   dependency-submission:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
@@ -48,3 +48,4 @@ jobs:
         uses: gradle/actions/dependency-submission@b6816cf21e7970b88479bb3c57d9cbe5cdd4b949 # v3.0.0-rc.1
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          dependency-graph-action: generate-and-save

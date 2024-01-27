@@ -14,13 +14,9 @@ jobs:
       contents: read
       security-events: write
     container:
+      # Incompatible with Harden Runner
       image: returntocorp/semgrep
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
-        with:
-          disable-sudo: true
-          egress-policy: audit
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - run: semgrep scan --sarif --output=results.sarif
         env:

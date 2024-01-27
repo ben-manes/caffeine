@@ -1,6 +1,9 @@
-name: Dependency Submission
+name: Retrieve and submit dependency graph
 permissions: read-all
-on: [ push ]
+on:
+  workflow_run:
+    workflows: ['Generate and save dependency graph']
+    types: [completed]
 
 env:
   GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
@@ -8,7 +11,7 @@ env:
   JAVA_VERSION: 21
 
 jobs:
-  dependency-submission:
+  submit-dependency-graph:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -32,19 +35,7 @@ jobs:
             repo.maven.apache.org:443
             repo1.maven.org:443
             services.gradle.org:443
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@a163f62ae554a8f3cbe27b23db15b60c0ae2e93c # v1.3.0
-        timeout-minutes: 5
-        with:
-          action: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93 # v4.0.0
-          with: |
-            cache: gradle
-            distribution: temurin
-            java-version: ${{ env.JAVA_VERSION }}
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Submit Dependency Graph
+      - name: Retrieve and submit dependency graph
         uses: gradle/actions/dependency-submission@b6816cf21e7970b88479bb3c57d9cbe5cdd4b949 # v3.0.0-rc.1
         with:
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          dependency-graph-action: retrieve-and-submit

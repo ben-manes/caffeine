@@ -1,12 +1,13 @@
 name: Dependency Review
+permissions: read-all
 on: [pull_request]
-
-permissions:
-  contents: read
 
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
@@ -20,3 +21,8 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Dependency Review
         uses: actions/dependency-review-action@4901385134134e04cec5fbe5ddfe3b2c5bd5d976 # v4.0.0
+        with:
+          license-check: false
+          comment-summary-in-pr: on-failure
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 600
