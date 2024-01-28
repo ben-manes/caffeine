@@ -292,6 +292,7 @@ public class PolicyStats {
     return ToStringBuilder.reflectionToString(this, MULTI_LINE_STYLE);
   }
 
+
   @AutoValue
   public abstract static class Metric {
     public enum MetricType { NUMBER, PERCENT, OBJECT }

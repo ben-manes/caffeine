@@ -10,7 +10,8 @@ import com.tangosol.util.Base;
 import com.typesafe.config.Config;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.SuperPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
-
+import java.util.*;
+import static java.util.Locale.US;
 
 
 /**
@@ -25,8 +26,10 @@ import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
 public final class PipelinePolicy implements KeyOnlyPolicy {
 
   private final SuperPolicy superPolicy;
+  public PolicyStats pipeLineStats;
+  final int maximumSize;
+  private HashMap<Long, Integer> lookUptable;
 
-//  private final PolicyStats pipelinePolicyStats;
 static class PipelineSettings extends BasicSettings {
   public PipelineSettings(Config config) {
     super(config);
@@ -41,6 +44,11 @@ static class PipelineSettings extends BasicSettings {
     //this.sharedBuffer = new SharedBuffer();
     System.out.println("Creating SuperPolicy");
     superPolicy = new SuperPolicy(config);
+    this.pipeLineStats = new PolicyStats("PipeLine");
+    PipelineSettings settings = new PipelineSettings(config);
+    this.maximumSize = Math.toIntExact(settings.maximumSize());
+    lookUptable = new HashMap<>();
+
 
 
 
@@ -50,24 +58,47 @@ static class PipelineSettings extends BasicSettings {
   public void record(long key) {
   // Record the key in the TwoQueuePolicy instance
     //System.out.println("The key read from the buffer is: "+SharedBuffer.getInstance()+"moving to smapled recored()");
+    //System.out.println("The maximum size is: "+superPolicy.twoQueuePolicy.maximumSize);
 
-    superPolicy.sampledPolicy.record(key);
+    //create lookup table to store the keys
+    if(lookUptable.containsKey(key)) {
+      pipeLineStats.recordOperation();
+      pipeLineStats.recordHit();
+      //UPDATE RELEVANT FIELDS AND PROPAGATE
+      //we first need to evict the entry by calling the containing block using the lookup table
+      //then using the shared buffer we can re-insert it into the pipeline
+    } else {
+      pipeLineStats.recordOperation();
+      pipeLineStats.recordMiss();
+      lookUptable.put(key, 1);
+      superPolicy.sampledPolicy.record(key);
+      if(SharedBuffer.getFlag() ==1){
+        superPolicy.segmentedLRUPolicy.record(SharedBuffer.getBufferKey());
+        lookUptable.remove(SharedBuffer.getBufferKey());
+      }
+    }
+//    pipeLineStats.recordOperation();
+//    pipeLineStats.recordHit();
+    //superPolicy.sampledPolicy.record(key);
     //print the key and moving to segmentedLRUPolicy
-    BaseNode node = SharedBuffer.getData();
+    //BaseNode node = SharedBuffer.getData();
     //System.out.println("The key read from the buffer is: "+node+"moving to segmented");
-    superPolicy.segmentedLRUPolicy.record(key);
+    //superPolicy.segmentedLRUPolicy.record(key);
+
   }
 
   @Override
   public PolicyStats stats() {
     // You can also access and use the statistics from the TwoQueuePolicy instance
-    return superPolicy.twoQueuePolicy.stats();
+    //return superPolicy.twoQueuePolicy.stats();
+    return pipeLineStats;
+
   }
   @Override
   public void finished() {
     // Ensure that all resources are properly cleaned up
     superPolicy.twoQueuePolicy.finished();
   }
-
-
 }
+
+

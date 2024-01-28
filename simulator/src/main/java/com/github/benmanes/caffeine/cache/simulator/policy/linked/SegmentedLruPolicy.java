@@ -149,8 +149,14 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
       boolean admit = admittor.admit(candidate.key, victim.key);
       if (admit) {
+        //evict from lookup table
+        SharedBuffer.insertData(victim);
+
         evictEntry(victim);
       } else {
+        //evict from lookup table
+        SharedBuffer.insertData(candidate);
+
         evictEntry(candidate);
       }
     }

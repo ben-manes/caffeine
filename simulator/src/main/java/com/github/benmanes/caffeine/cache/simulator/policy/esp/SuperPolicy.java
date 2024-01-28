@@ -15,7 +15,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
 
 public class SuperPolicy {
-// Shared Memory buffer
 
 
 
@@ -37,11 +36,12 @@ public class SuperPolicy {
   public SuperPolicy(Config config) {
 
 
-    PolicyStats customPolicyStats = new PolicyStats("PipeLine");
+
+    PolicyStats IntraStats = new PolicyStats("Intra-Pipeline (IGNORE)");
     // -------------Two Queue Instance -------------
     customTwoQueueSettings = new TwoQueueSettings(config);
     twoQueuePolicy = new TwoQueuePolicy(customTwoQueueSettings.config());
-    twoQueuePolicy.policyStats = customPolicyStats;
+    twoQueuePolicy.policyStats = IntraStats;
     twoQueuePolicy.maxIn = (int) (twoQueuePolicy.maximumSize * customTwoQueueSettings.percentIn());
     twoQueuePolicy.maxOut = (int) (twoQueuePolicy.maximumSize * customTwoQueueSettings.percentOut());
     //----------------------------------------------
@@ -49,7 +49,7 @@ public class SuperPolicy {
     //-----------------Tu Queue Instance -------------
     customTuQueueSettings = new TuQueueSettings(config);
     tuQueuePolicy = new TuQueuePolicy(customTuQueueSettings.config());
-    tuQueuePolicy.policyStats = customPolicyStats;
+    tuQueuePolicy.policyStats = IntraStats;
     tuQueuePolicy.maxHot = (int) (tuQueuePolicy.maximumSize * customTuQueueSettings.percentHot());
     tuQueuePolicy.maxWarm = (int) (tuQueuePolicy.maximumSize * customTuQueueSettings.percentWarm());
     //----------------------------------------------
@@ -58,7 +58,7 @@ public class SuperPolicy {
     System.out.println("Creating LRUPolicy");
     customSampledSettings = new SampledSettings(config);
     sampledPolicy = new SampledPolicy(Admission.ALWAYS, SampledPolicy.EvictionPolicy.LRU,customSampledSettings.config());
-    sampledPolicy.policyStats = customPolicyStats;
+    sampledPolicy.policyStats = IntraStats;
     sampledPolicy.sampleSize = customSampledSettings.sampleSize();
     sampledPolicy.sampleStrategy = customSampledSettings.sampleStrategy();
     //----------------------------------------------
@@ -67,7 +67,7 @@ public class SuperPolicy {
     System.out.println("Creating SegmentedLRUPolicy");
     customSegmentedLRUSettings = new SegmentedLruSettings(config);
     segmentedLRUPolicy = new SegmentedLruPolicy(Admission.ALWAYS,customSegmentedLRUSettings.config());
-    segmentedLRUPolicy.policyStats = customPolicyStats;
+    segmentedLRUPolicy.policyStats = IntraStats;
     segmentedLRUPolicy.maxProtected = (int) (segmentedLRUPolicy.maximumSize * customSegmentedLRUSettings.percentProtected());
     //----------------------------------------------
 
