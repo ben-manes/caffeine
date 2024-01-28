@@ -27,6 +27,8 @@ import java.util.Random;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.BaseNode;
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
+
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -63,9 +65,11 @@ public class SampledPolicy implements KeyOnlyPolicy {
   public int sampleSize;
   final Random random;
   final Node[] table;
+  //SharedBuffer sharedBuffer;
+
 
   long tick;
-  public BaseNode buffer;
+
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
     this.admittor = admission.from(config, policyStats);
@@ -78,6 +82,8 @@ public class SampledPolicy implements KeyOnlyPolicy {
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];
     this.policy = policy;
+    //this.sharedBuffer = SharedBuffer.getInstance();
+
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -115,7 +121,9 @@ public class SampledPolicy implements KeyOnlyPolicy {
 
   /** Evicts if the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
+
     if (data.size() > maximumSize) {
+      SharedBuffer.setFlag(1);
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
           : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
@@ -124,14 +132,17 @@ public class SampledPolicy implements KeyOnlyPolicy {
 
       if (admittor.admit(candidate.key, victim.key)) {
 
-        //move to buffer
-        //BaseNode buffer = new BaseNode(victim.key , data.size(), tick);
+        //move VICTIM to buffer
+        SharedBuffer.insertData(victim);
+        System.out.println("The victim key is: "+victim.key);
 
         removeFromTable(victim);
         data.remove(victim.key);
       } else {
-        //move to buffer
-        //BaseNode buffer = new Node(candidate.key, data.size(), tick);
+        //move candidate to buffer
+        SharedBuffer.insertData(candidate);
+        System.out.println("The candidate key is: "+victim.key);
+
 
         removeFromTable(candidate);
         data.remove(candidate.key);
@@ -287,6 +298,8 @@ public class SampledPolicy implements KeyOnlyPolicy {
       this.accessTime = tick;
       this.index = index;
       this.key = key;
+
+      super.key=this.key;
     }
 
     @Override

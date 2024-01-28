@@ -15,6 +15,9 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
 
 public class SuperPolicy {
+// Shared Memory buffer
+
+
 
   // POLICIES
   TwoQueuePolicy twoQueuePolicy;
@@ -29,7 +32,11 @@ public class SuperPolicy {
   SegmentedLruPolicy segmentedLRUPolicy;
   SegmentedLruSettings customSegmentedLRUSettings;
 
+
+
   public SuperPolicy(Config config) {
+
+
     PolicyStats customPolicyStats = new PolicyStats("PipeLine");
     // -------------Two Queue Instance -------------
     customTwoQueueSettings = new TwoQueueSettings(config);
@@ -48,6 +55,7 @@ public class SuperPolicy {
     //----------------------------------------------
 
     // -------------SampledLRUPolicy Instance -------------
+    System.out.println("Creating LRUPolicy");
     customSampledSettings = new SampledSettings(config);
     sampledPolicy = new SampledPolicy(Admission.ALWAYS, SampledPolicy.EvictionPolicy.LRU,customSampledSettings.config());
     sampledPolicy.policyStats = customPolicyStats;
@@ -56,11 +64,14 @@ public class SuperPolicy {
     //----------------------------------------------
 
     //-----------------Segmented LRU Instance -------------
+    System.out.println("Creating SegmentedLRUPolicy");
     customSegmentedLRUSettings = new SegmentedLruSettings(config);
     segmentedLRUPolicy = new SegmentedLruPolicy(Admission.ALWAYS,customSegmentedLRUSettings.config());
     segmentedLRUPolicy.policyStats = customPolicyStats;
     segmentedLRUPolicy.maxProtected = (int) (segmentedLRUPolicy.maximumSize * customSegmentedLRUSettings.percentProtected());
     //----------------------------------------------
+
+
 
   }
 
@@ -125,5 +136,8 @@ public class SuperPolicy {
     public double percentProtected() {
       return config().getDouble("esp.segmented-lru.percent-protected");
     }
+
+
   }
+
 }

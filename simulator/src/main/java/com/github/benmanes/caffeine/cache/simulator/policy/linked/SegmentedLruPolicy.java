@@ -29,6 +29,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.BaseNode;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
+
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -64,6 +66,8 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   public final int maximumSize;
 
   int sizeProtected;
+  //SharedBuffer sharedBuffer = SharedBuffer.getInstance();
+
 
   public SegmentedLruPolicy(Admission admission, Config config) {
     this.policyStats = new PolicyStats(admission.format(name()));
@@ -75,6 +79,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.maxProtected = (int) (maximumSize * settings.percentProtected());
+
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -87,8 +92,18 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    Node node;
     policyStats.recordOperation();
-    Node node = data.get(key);
+    //if previous block pipeline evicted
+    if(SharedBuffer.getFlag()==1){
+      Node testNode= new Node(SharedBuffer.getData());
+      System.out.println("The key read from the segmented buffer is: "+SharedBuffer.getBufferKey());
+       node = new Node(SharedBuffer.getData());
+      data.get(node.key);
+    } else {
+       node = data.get(key);
+    }
+
     admittor.record(key);
     if (node == null) {
       onMiss(key);
@@ -144,6 +159,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   private void evictEntry(Node node) {
     data.remove(node.key);
     node.remove();
+
   }
 
   @Override
@@ -175,6 +191,22 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
       this.next = UNLINKED;
     }
 
+//    public Node(BaseNode data) {
+//      super();
+//    }
+    Node(BaseNode basenode){
+      this.key = basenode.key;
+      this.prev=UNLINKED;
+      this.next=UNLINKED;
+      this.recency=basenode.recency;
+    }
+
+//    public Node(SharedBuffer sharedBuffer) {
+//      this.key = SharedBuffer.getData().key;
+//      this.prev = UNLINKED;
+//      this.next = UNLINKED;
+//      //this.recency = SharedBuffer.getData().recency;
+//    }
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
       Node tail = head.prev;
