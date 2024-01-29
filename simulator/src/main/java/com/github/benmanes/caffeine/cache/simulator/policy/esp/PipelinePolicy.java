@@ -28,7 +28,7 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
   private final SuperPolicy superPolicy;
   public PolicyStats pipeLineStats;
   final int maximumSize;
-  private LinkedHashMap<Long, String> lookUptable;
+  private final HashMap<Long, Integer> lookUptable;
   long record_counter = 0;
   long evict_counter = 0;
   int maxEntries;
@@ -52,18 +52,7 @@ static class PipelineSettings extends BasicSettings {
     this.maximumSize = Math.toIntExact(settings.maximumSize());
 //    lookUptable = new HashMap<>();
     this.maxEntries = 512;
-      this.lookUptable=new LinkedHashMap<Long, String>(maxEntries, 0.75f, true) {
-//      @Override
-//      protected boolean removeEldestEntry(Map.Entry<Long, Integer> eldest) {
-//        if(size() > maxEntries){
-//          record_counter++;
-//          System.out.println("internal evict:" + record_counter +"table size "+lookUptable.size());
-//        }
-//
-//        return size() > maxEntries;
-//        //print im here
-//      }
-    };
+      this.lookUptable=new HashMap<Long, Integer>();//load factor affects the results can also be used with linked HashMap;
 
 }
   @Override
@@ -72,7 +61,7 @@ static class PipelineSettings extends BasicSettings {
 //    System.out.println(key);
 //    System.out.println(lookUptable.get(key));
     if(lookUptable.get(key) != null) {
-      System.out.println("The key is already in the lookup table");
+//      System.out.println("The key is already in the lookup table");
       pipeLineStats.recordOperation();
       pipeLineStats.recordHit();
       //UPDATE RELEVANT FIELDS AND PROPAGATE
@@ -80,7 +69,7 @@ static class PipelineSettings extends BasicSettings {
       //then using the shared buffer we can re-insert it into the pipeline
     } else {
 
-      lookUptable.put(key, "valid");
+      lookUptable.put(key, 1);
       pipeLineStats.recordAdmission();
       pipeLineStats.recordOperation();
       pipeLineStats.recordMiss();
@@ -92,21 +81,12 @@ static class PipelineSettings extends BasicSettings {
         superPolicy.segmentedLRUPolicy.record(SharedBuffer.getBufferKey());
       }
       if(SharedBuffer.getFlag2() ==1) {
-//        System.out.println("lookup table size "+lookUptable.size());
-        evict_counter++;
-        System.out.println("external evict:" + evict_counter + "table size"+lookUptable.size());
-        lookUptable.replace(SharedBuffer.getBufferKey(),null);
+        System.out.println( "table size before eviction "+lookUptable.size());
+        lookUptable.remove(SharedBuffer.getBufferKey(),1);
+        System.out.println( "table size after eviction "+lookUptable.size());
         pipeLineStats.recordEviction();
       }
     }
-//    pipeLineStats.recordOperation();
-//    pipeLineStats.recordHit();
-    //superPolicy.sampledPolicy.record(key);
-    //print the key and moving to segmentedLRUPolicy
-    //BaseNode node = SharedBuffer.getData();
-    //System.out.println("The key read from the buffer is: "+node+"moving to segmented");
-    //superPolicy.segmentedLRUPolicy.record(key);
-
   }
 
   @Override

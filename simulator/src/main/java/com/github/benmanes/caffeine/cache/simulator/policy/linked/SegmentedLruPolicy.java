@@ -95,15 +95,14 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     Node node;
     policyStats.recordOperation();
     //if previous block pipeline evicted
-    if(SharedBuffer.getFlag()==1){
       onMiss(SharedBuffer.getBufferKey());
 //      Node testNode= new Node(SharedBuffer.getData());
 //      System.out.println("The key read from the segmented buffer is: "+SharedBuffer.getBufferKey());
        node = new Node(SharedBuffer.getData());
 //      data.get(node.key);
-    } else {
+
        node = data.get(key);
-    }
+
 
     admittor.record(key);
 //    System.out.println("im here in onMiss");
@@ -157,7 +156,6 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
       if (admit) {
         //evict from lookup table
         SharedBuffer.insertData(victim);
-
         evictEntry(victim);
       } else {
         //evict from lookup table
@@ -184,7 +182,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     PROBATION,
   }
 
-  static final class Node extends BaseNode {
+  public static  class Node extends BaseNode {
     final long key;
 
     Node prev;
@@ -195,12 +193,17 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
       this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
+
+      super.key=this.key;
     }
 
     Node(long key) {
       this.key = key;
       this.prev = UNLINKED;
       this.next = UNLINKED;
+
+      super.key=this.key;
+
     }
 
 //    public Node(BaseNode data) {
@@ -211,6 +214,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
       this.prev=UNLINKED;
       this.next=UNLINKED;
       this.recency=basenode.recency;
+      super.key=this.key;
     }
 
 //    public Node(SharedBuffer sharedBuffer) {
