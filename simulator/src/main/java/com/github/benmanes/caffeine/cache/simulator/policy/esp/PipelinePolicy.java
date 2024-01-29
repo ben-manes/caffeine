@@ -28,7 +28,10 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
   private final SuperPolicy superPolicy;
   public PolicyStats pipeLineStats;
   final int maximumSize;
-  private HashMap<Long, Integer> lookUptable;
+  private LinkedHashMap<Long, String> lookUptable;
+  long record_counter = 0;
+  long evict_counter = 0;
+  int maxEntries;
 
 static class PipelineSettings extends BasicSettings {
   public PipelineSettings(Config config) {
@@ -47,34 +50,53 @@ static class PipelineSettings extends BasicSettings {
     this.pipeLineStats = new PolicyStats("PipeLine");
     PipelineSettings settings = new PipelineSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
-    lookUptable = new HashMap<>();
+//    lookUptable = new HashMap<>();
+    this.maxEntries = 512;
+      this.lookUptable=new LinkedHashMap<Long, String>(maxEntries, 0.75f, true) {
+//      @Override
+//      protected boolean removeEldestEntry(Map.Entry<Long, Integer> eldest) {
+//        if(size() > maxEntries){
+//          record_counter++;
+//          System.out.println("internal evict:" + record_counter +"table size "+lookUptable.size());
+//        }
+//
+//        return size() > maxEntries;
+//        //print im here
+//      }
+    };
 
-
-
-
-  }
-
+}
   @Override
   public void record(long key) {
-  // Record the key in the TwoQueuePolicy instance
-    //System.out.println("The key read from the buffer is: "+SharedBuffer.getInstance()+"moving to smapled recored()");
-    //System.out.println("The maximum size is: "+superPolicy.twoQueuePolicy.maximumSize);
 
-    //create lookup table to store the keys
-    if(lookUptable.containsKey(key)) {
+//    System.out.println(key);
+//    System.out.println(lookUptable.get(key));
+    if(lookUptable.get(key) != null) {
+      System.out.println("The key is already in the lookup table");
       pipeLineStats.recordOperation();
       pipeLineStats.recordHit();
       //UPDATE RELEVANT FIELDS AND PROPAGATE
       //we first need to evict the entry by calling the containing block using the lookup table
       //then using the shared buffer we can re-insert it into the pipeline
     } else {
+
+      lookUptable.put(key, "valid");
+      pipeLineStats.recordAdmission();
       pipeLineStats.recordOperation();
       pipeLineStats.recordMiss();
-      lookUptable.put(key, 1);
+//      System.out.println(superPolicy.sampledPolicy.maximumSize);
       superPolicy.sampledPolicy.record(key);
       if(SharedBuffer.getFlag() ==1){
+//        System.out.println(superPolicy.segmentedLRUPolicy.maximumSize);
+
         superPolicy.segmentedLRUPolicy.record(SharedBuffer.getBufferKey());
-        lookUptable.remove(SharedBuffer.getBufferKey());
+      }
+      if(SharedBuffer.getFlag2() ==1) {
+//        System.out.println("lookup table size "+lookUptable.size());
+        evict_counter++;
+        System.out.println("external evict:" + evict_counter + "table size"+lookUptable.size());
+        lookUptable.replace(SharedBuffer.getBufferKey(),null);
+        pipeLineStats.recordEviction();
       }
     }
 //    pipeLineStats.recordOperation();
@@ -97,6 +119,7 @@ static class PipelineSettings extends BasicSettings {
   @Override
   public void finished() {
     // Ensure that all resources are properly cleaned up
+//    System.out.println(data.size());
     superPolicy.twoQueuePolicy.finished();
   }
 }

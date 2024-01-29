@@ -61,7 +61,7 @@ public class SampledPolicy implements KeyOnlyPolicy {
   final EvictionPolicy policy;
   public Sample sampleStrategy;
   final Admittor admittor;
-  final int maximumSize;
+  public int maximumSize;
   public int sampleSize;
   final Random random;
   final Node[] table;
@@ -75,7 +75,8 @@ public class SampledPolicy implements KeyOnlyPolicy {
     this.admittor = admission.from(config, policyStats);
 
     SampledSettings settings = new SampledSettings(config);
-    this.maximumSize = Math.toIntExact(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.PPmaximumSize());
+//    this.maximumSize = this.maximumSize/2;
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
     this.data = new Long2ObjectOpenHashMap<>();
@@ -134,7 +135,7 @@ public class SampledPolicy implements KeyOnlyPolicy {
 
         //move VICTIM to buffer
         SharedBuffer.insertData(victim);
-        System.out.println("The victim key is: "+victim.key);
+//        System.out.println("The victim key is: "+victim.key);
 
         removeFromTable(victim);
         data.remove(victim.key);

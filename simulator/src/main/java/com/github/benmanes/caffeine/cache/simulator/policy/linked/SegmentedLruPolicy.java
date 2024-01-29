@@ -63,7 +63,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   final Node headProbation;
   final Admittor admittor;
   public int maxProtected;
-  public final int maximumSize;
+  public int maximumSize;
 
   int sizeProtected;
   //SharedBuffer sharedBuffer = SharedBuffer.getInstance();
@@ -77,7 +77,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = Math.toIntExact(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.PPmaximumSize());
     this.maxProtected = (int) (maximumSize * settings.percentProtected());
 
   }
@@ -96,20 +96,23 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
     //if previous block pipeline evicted
     if(SharedBuffer.getFlag()==1){
-      Node testNode= new Node(SharedBuffer.getData());
-      System.out.println("The key read from the segmented buffer is: "+SharedBuffer.getBufferKey());
+      onMiss(SharedBuffer.getBufferKey());
+//      Node testNode= new Node(SharedBuffer.getData());
+//      System.out.println("The key read from the segmented buffer is: "+SharedBuffer.getBufferKey());
        node = new Node(SharedBuffer.getData());
-      data.get(node.key);
+//      data.get(node.key);
     } else {
        node = data.get(key);
     }
 
     admittor.record(key);
-    if (node == null) {
-      onMiss(key);
-    } else {
-      onHit(node);
-    }
+//    System.out.println("im here in onMiss");
+
+//    if (node == null) {
+//      onMiss(key);
+//    } else {
+//      onHit(node);
+//    }
   }
 
   private void onHit(Node node) {
@@ -132,6 +135,8 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   }
 
   private void onMiss(long key) {
+    //print im here in onMiss
+
     Node node = new Node(key);
     data.put(key, node);
     policyStats.recordMiss();
@@ -142,6 +147,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
+      SharedBuffer.setFlag2(1);
       Node victim = (maxProtected == 0)
           ? headProtected.next // degrade to LRU
           : headProbation.next;

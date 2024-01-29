@@ -7,6 +7,7 @@ public class SharedBuffer {
   //static long key1 = buffer.key;
 
   private int flag =0;
+  private int flag2 =0;
   // Private constructor to prevent external instantiation
   private SharedBuffer() {
     // Initialize the buffer here
@@ -45,4 +46,12 @@ public class SharedBuffer {
   public static synchronized int getFlag(){
     return instance.flag;
   }
+  public static synchronized void setFlag2(int flag) {
+    instance.flag2 = flag;
+  }
+  public static synchronized int getFlag2(){
+    return instance.flag2;
+  }
+
+
 }

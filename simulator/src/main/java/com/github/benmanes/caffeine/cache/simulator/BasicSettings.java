@@ -80,7 +80,9 @@ public class BasicSettings {
   public long maximumSize() {
     return config().getLong("maximum-size");
   }
-
+  public long PPmaximumSize() {
+    return config().getLong("esp.maximum-size");
+  }
   public TraceSettings trace() {
     return new TraceSettings();
   }
