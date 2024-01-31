@@ -55,24 +55,18 @@ public class SuperPolicy {
     //----------------------------------------------
 
     // -------------SampledLRUPolicy Instance -------------
-    System.out.println("Creating LRUPolicy");
     customSampledSettings = new SampledSettings(config);
     sampledPolicy = new SampledPolicy(Admission.ALWAYS, SampledPolicy.EvictionPolicy.LRU,customSampledSettings.config());
     sampledPolicy.policyStats = IntraStats;
     sampledPolicy.sampleSize = customSampledSettings.sampleSize();
-//    sampledPolicy.maximumSize = 256;
     sampledPolicy.sampleStrategy = customSampledSettings.sampleStrategy();
-
     //----------------------------------------------
 
     //-----------------Segmented LRU Instance -------------
-    System.out.println("Creating SegmentedLRUPolicy");
     customSegmentedLRUSettings = new SegmentedLruSettings(config);
     segmentedLRUPolicy = new SegmentedLruPolicy(Admission.ALWAYS,customSegmentedLRUSettings.config());
     segmentedLRUPolicy.policyStats = IntraStats;
-//    segmentedLRUPolicy.maximumSize = 256;
     segmentedLRUPolicy.maxProtected = (int) (segmentedLRUPolicy.maximumSize * customSegmentedLRUSettings.percentProtected());
-
     //----------------------------------------------
 
 

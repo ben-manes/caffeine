@@ -10,6 +10,8 @@ import com.tangosol.util.Base;
 import com.typesafe.config.Config;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.SuperPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
+import org.checkerframework.checker.units.qual.Length;
+
 import java.util.*;
 import static java.util.Locale.US;
 
@@ -27,11 +29,16 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
 
   private final SuperPolicy superPolicy;
   public PolicyStats pipeLineStats;
+
+  public String pipelineOrder;
   final int maximumSize;
   private final HashMap<Long, Integer> lookUptable;
   long record_counter = 0;
   long evict_counter = 0;
   int maxEntries;
+  String pipelineList;
+  int pipeline_length;
+  String[] pipelineArray;
 
 static class PipelineSettings extends BasicSettings {
   public PipelineSettings(Config config) {
@@ -40,6 +47,10 @@ static class PipelineSettings extends BasicSettings {
   public double pipelineLength() {
     // Redirect to relevant field in the config file
     return config().getDouble("pipeline.length");
+  }
+  public String pipelineOrder() {
+    // Redirect to relevant field in the config file
+    return config().getString("esp.pipeline.order");
   }
 }
   public PipelinePolicy(Config config) {
@@ -52,16 +63,20 @@ static class PipelineSettings extends BasicSettings {
     this.maximumSize = Math.toIntExact(settings.maximumSize());
 //    lookUptable = new HashMap<>();
     this.maxEntries = 512;
+    //NOTE - the lookup table structure is affecting the results, each run is different
       this.lookUptable=new HashMap<Long, Integer>();//load factor affects the results can also be used with linked HashMap;
+    this.pipelineList = settings.pipelineOrder();
+    this.pipelineArray = this.pipelineList.split(",");
+    this.pipeline_length = this.pipelineArray.length;
+    System.out.println("pipeline lengtgh is "+this.pipeline_length);
 
+    //ADD MAP FROM LIST TO POLICY
 }
+
   @Override
   public void record(long key) {
 
-//    System.out.println(key);
-//    System.out.println(lookUptable.get(key));
     if(lookUptable.get(key) != null) {
-//      System.out.println("The key is already in the lookup table");
       pipeLineStats.recordOperation();
       pipeLineStats.recordHit();
       //UPDATE RELEVANT FIELDS AND PROPAGATE
@@ -81,9 +96,9 @@ static class PipelineSettings extends BasicSettings {
         superPolicy.segmentedLRUPolicy.record(SharedBuffer.getBufferKey());
       }
       if(SharedBuffer.getFlag2() ==1) {
-        System.out.println( "table size before eviction "+lookUptable.size());
+//        System.out.println( "table size before eviction "+lookUptable.size());
         lookUptable.remove(SharedBuffer.getBufferKey(),1);
-        System.out.println( "table size after eviction "+lookUptable.size());
+//        System.out.println( "table size after eviction "+lookUptable.size());
         pipeLineStats.recordEviction();
       }
     }
