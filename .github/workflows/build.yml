@@ -73,7 +73,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: check -x test ${{ env.GRADLE_ARGS }}
       - name: Cancel if failed
-        uses: andymckay/cancel-action@b9280e3f8986d7a8e91c7462efc0fa318010c8b1 # 0.3
+        uses: andymckay/cancel-action@271cfbfa11ca9222f7be99a47e8f929574549e0a # 0.4
         continue-on-error: true
         if: failure()
 
@@ -201,7 +201,7 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}-results
           path: ${{ env.ARTIFACT_NAME }}.tar.gz
       - name: Cancel if failed
-        uses: andymckay/cancel-action@b9280e3f8986d7a8e91c7462efc0fa318010c8b1 # 0.3
+        uses: andymckay/cancel-action@271cfbfa11ca9222f7be99a47e8f929574549e0a # 0.4
         continue-on-error: true
         if: failure()
 
