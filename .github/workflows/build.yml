@@ -251,7 +251,7 @@ jobs:
           java: ${{ env.PUBLISH_JDK }}
         continue-on-error: true
       - name: Publish to Codecov
-        uses: codecov/codecov-action@4fe8c5f003fae66aa5ebb77cfd3e7bfbbda0b6b0 # v3.1.5
+        uses: codecov/codecov-action@f30e4959ba63075080d4f7f90cacc18d9f3fafd7 # v4.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Publish to Codacy
