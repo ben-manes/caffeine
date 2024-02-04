@@ -58,17 +58,15 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
   }
 }
   public PipelinePolicy(Config config) {
-    // Create an instance of SuperPolicy with the provided config
-    //this.sharedBuffer = new SharedBuffer();
+//------------------INIT--------------------
     System.out.println("Creating SuperPolicy");
     superPolicy = new SuperPolicy(config);
     this.pipeLineStats = new PolicyStats("PipeLine");
     PipelineSettings settings = new PipelineSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
-//    lookUptable = new HashMap<>();
     this.maxEntries = 512;
     //NOTE - the lookup table structure is affecting the results, each run is different
-      this.lookUptable=new HashMap<Long, Integer>();//load factor affects the results can also be used with linked HashMap;
+    this.lookUptable=new HashMap<Long, Integer>();//load factor affects the results can also be used with linked HashMap;
     //------------BUILD THE PIPELINE ORDER----------------
     this.pipelineList = settings.pipelineOrder();
     this.pipelineArray = this.pipelineList.split(",");
@@ -96,7 +94,11 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
       pipeLineStats.recordOperation();
       pipeLineStats.recordMiss();
       pipelinePolicies[j].record(key);
-      while(SharedBuffer.getCounter() !=1){
+      //if the previous block evicted than it will increase the counter
+      //1. check if counter was increased, if yes move to the next block
+      //2. if counter reached max_value than last block evicted and the
+      //  entry needs to be deleted from the lookuptable and reset j;
+      while(SharedBuffer.getCounter() == j+1){
         j++;
         pipelinePolicies[j].record(SharedBuffer.getBufferKey());
       }
