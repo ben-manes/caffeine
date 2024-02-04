@@ -8,6 +8,7 @@ public class SharedBuffer {
 
   private int flag =0;
   private int flag2 =0;
+  private int counter=0;
   // Private constructor to prevent external instantiation
   private SharedBuffer() {
     // Initialize the buffer here
@@ -51,6 +52,12 @@ public class SharedBuffer {
   }
   public static synchronized int getFlag2(){
     return instance.flag2;
+  }
+  public static synchronized void incCounter(){
+    instance.counter++;
+  }
+  public static synchronized int getCounter(){
+    return instance.counter;
   }
 
 

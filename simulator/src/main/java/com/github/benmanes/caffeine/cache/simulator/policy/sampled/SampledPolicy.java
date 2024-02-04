@@ -75,15 +75,14 @@ public class SampledPolicy implements KeyOnlyPolicy {
     this.admittor = admission.from(config, policyStats);
 
     SampledSettings settings = new SampledSettings(config);
-    this.maximumSize = Math.toIntExact(settings.PPmaximumSize());
-//    this.maximumSize = this.maximumSize/2;
+    this.maximumSize = Math.toIntExact(settings.PPmaximumSize()); //need to change
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
     this.data = new Long2ObjectOpenHashMap<>();
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];
     this.policy = policy;
-    //this.sharedBuffer = SharedBuffer.getInstance();
+
 
   }
 
@@ -306,6 +305,14 @@ public class SampledPolicy implements KeyOnlyPolicy {
 
       super.key=this.key;
     }
+     Node(BaseNode basenode, long tick){
+       this.insertionTime = tick;
+       this.accessTime = tick;
+       this.key = basenode.key;
+       this.recency=basenode.recency;
+       super.key=this.key;
+
+     }
 
     @Override
     public String toString() {

@@ -25,19 +25,21 @@ public class SuperPolicy {
   TuQueuePolicy tuQueuePolicy;
   TuQueueSettings customTuQueueSettings;
 
-  SampledPolicy sampledPolicy;
-  SampledSettings customSampledSettings;
+  SampledPolicy[] sampledPolicy;
+  SampledSettings[] customSampledSettings;
 
   SegmentedLruPolicy segmentedLRUPolicy;
   SegmentedLruSettings customSegmentedLRUSettings;
+  Config inConfig;
+  PolicyStats IntraStats;
 
 
 
   public SuperPolicy(Config config) {
+  this.inConfig = config;
+  this.IntraStats = new PolicyStats("Intra-Pipeline (IGNORE)");
 
 
-
-    PolicyStats IntraStats = new PolicyStats("Intra-Pipeline (IGNORE)");
     // -------------Two Queue Instance -------------
     customTwoQueueSettings = new TwoQueueSettings(config);
     twoQueuePolicy = new TwoQueuePolicy(customTwoQueueSettings.config());
@@ -55,12 +57,12 @@ public class SuperPolicy {
     //----------------------------------------------
 
     // -------------SampledLRUPolicy Instance -------------
-    customSampledSettings = new SampledSettings(config);
-    sampledPolicy = new SampledPolicy(Admission.ALWAYS, SampledPolicy.EvictionPolicy.LRU,customSampledSettings.config());
-    sampledPolicy.policyStats = IntraStats;
-    sampledPolicy.sampleSize = customSampledSettings.sampleSize();
-    sampledPolicy.sampleStrategy = customSampledSettings.sampleStrategy();
-    //----------------------------------------------
+//    customSampledSettings = new SampledSettings(config);
+//    sampledPolicy = new SampledPolicy(Admission.ALWAYS, SampledPolicy.EvictionPolicy.LRU,customSampledSettings.config());
+//    sampledPolicy.policyStats = IntraStats;
+//    sampledPolicy.sampleSize = customSampledSettings.sampleSize();
+//    sampledPolicy.sampleStrategy = customSampledSettings.sampleStrategy();
+//    //----------------------------------------------
 
     //-----------------Segmented LRU Instance -------------
     customSegmentedLRUSettings = new SegmentedLruSettings(config);
@@ -138,4 +140,12 @@ public class SuperPolicy {
 
   }
 
+  public SampledPolicy LRUPolicyConstructor(int index) {
+    customSampledSettings[index] = new SampledSettings(this.inConfig);
+    sampledPolicy[index] = new SampledPolicy(Admission.ALWAYS, SampledPolicy.EvictionPolicy.LRU,customSampledSettings[index].config());
+    sampledPolicy[index].policyStats = this.IntraStats;
+    sampledPolicy[index].sampleSize = customSampledSettings[index].sampleSize();
+    sampledPolicy[index].sampleStrategy = customSampledSettings[index].sampleStrategy();
+    return sampledPolicy[index];
+  }
 }

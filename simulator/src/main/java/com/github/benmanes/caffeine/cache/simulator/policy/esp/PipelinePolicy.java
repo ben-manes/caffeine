@@ -12,6 +12,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.esp.SuperPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
 import org.checkerframework.checker.units.qual.Length;
 
+import java.security.Policy;
 import java.util.*;
 import static java.util.Locale.US;
 
@@ -39,8 +40,11 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
   String pipelineList;
   int pipeline_length;
   String[] pipelineArray;
+  KeyOnlyPolicy[] pipelinePolicies;
 
-static class PipelineSettings extends BasicSettings {
+
+
+  static class PipelineSettings extends BasicSettings {
   public PipelineSettings(Config config) {
     super(config);
   }
@@ -65,41 +69,36 @@ static class PipelineSettings extends BasicSettings {
     this.maxEntries = 512;
     //NOTE - the lookup table structure is affecting the results, each run is different
       this.lookUptable=new HashMap<Long, Integer>();//load factor affects the results can also be used with linked HashMap;
+    //------------BUILD THE PIPELINE ORDER----------------
     this.pipelineList = settings.pipelineOrder();
     this.pipelineArray = this.pipelineList.split(",");
     this.pipeline_length = this.pipelineArray.length;
     System.out.println("pipeline lengtgh is "+this.pipeline_length);
+    for (int i = 0; i < this.pipeline_length; i++) {
+      pipelinePolicies[i] = policyConstructor(this.pipelineArray[i],i);
 
+    }
     //ADD MAP FROM LIST TO POLICY
 }
 
   @Override
   public void record(long key) {
-
+    //IF HIT
     if(lookUptable.get(key) != null) {
       pipeLineStats.recordOperation();
       pipeLineStats.recordHit();
-      //UPDATE RELEVANT FIELDS AND PROPAGATE
-      //we first need to evict the entry by calling the containing block using the lookup table
-      //then using the shared buffer we can re-insert it into the pipeline
-    } else {
+      //NEED TO DO PIPELINE PROPAGATION
 
+      //IF MISS
+    } else {
       lookUptable.put(key, 1);
       pipeLineStats.recordAdmission();
       pipeLineStats.recordOperation();
       pipeLineStats.recordMiss();
-//      System.out.println(superPolicy.sampledPolicy.maximumSize);
-      superPolicy.sampledPolicy.record(key);
-      if(SharedBuffer.getFlag() ==1){
-//        System.out.println(superPolicy.segmentedLRUPolicy.maximumSize);
-
-        superPolicy.segmentedLRUPolicy.record(SharedBuffer.getBufferKey());
-      }
-      if(SharedBuffer.getFlag2() ==1) {
-//        System.out.println( "table size before eviction "+lookUptable.size());
-        lookUptable.remove(SharedBuffer.getBufferKey(),1);
-//        System.out.println( "table size after eviction "+lookUptable.size());
-        pipeLineStats.recordEviction();
+      pipelinePolicies[j].record(key);
+      while(SharedBuffer.getCounter() !=1){
+        j++;
+        pipelinePolicies[j].record(SharedBuffer.getBufferKey());
       }
     }
   }
@@ -116,6 +115,16 @@ static class PipelineSettings extends BasicSettings {
     // Ensure that all resources are properly cleaned up
 //    System.out.println(data.size());
     superPolicy.twoQueuePolicy.finished();
+  }
+  KeyOnlyPolicy policyConstructor(String policyName,int policyNumber) {
+    switch (policyName) {
+      case "LRU":
+        return  superPolicy.LRUPolicyConstructor(policyNumber);
+      case "SegmentedLruPolicy":
+        return superPolicy.segmentedLRUPolicy;
+      default:
+        return null;
+    }
   }
 }
 
