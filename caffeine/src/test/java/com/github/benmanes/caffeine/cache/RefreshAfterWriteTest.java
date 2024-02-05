@@ -29,7 +29,6 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
@@ -70,7 +69,6 @@ import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.truth.Truth8;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
@@ -1006,7 +1004,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
   public void ageOf_absent(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
-    Truth8.assertThat(refreshAfterWrite.ageOf(context.absentKey())).isEmpty();
+    assertThat(refreshAfterWrite.ageOf(context.absentKey())).isEmpty();
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 

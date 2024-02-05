@@ -9,7 +9,7 @@ bouncycastle-jdk18on = "1.77"
 cache2k = "2.6.1.Final"
 caffeine = "3.1.8"
 checker-framework = "3.42.0"
-checkstyle = "10.12.7"
+checkstyle = "10.13.0"
 coherence = "22.06.2"
 commons-collections4 = "4.4"
 commons-compress = "1.25.0"
@@ -62,12 +62,12 @@ json-bind = "1.0"
 jsoup = "1.17.2"
 junit-testng = "1.0.5"
 junit4 = "4.13.2"
-junit5 = "5.10.1"
+junit5 = "5.10.2"
 kotlin = "1.9.22"
 lincheck = "2.18.1"
 mockito = "5.10.0"
-nexus-publish = "2.0.0-rc-1"
-nullaway-core = "0.10.21"
+nexus-publish = "2.0.0-rc-2"
+nullaway-core = "0.10.22"
 nullaway-plugin = "1.6.0"
 okhttp-bom = "4.12.0"
 okio-bom = "3.7.0"
@@ -89,7 +89,7 @@ spotbugs-plugin = "6.0.7"
 stream = "2.9.8"
 tcache = "2.0.1"
 testng = "7.9.0"
-truth = "1.3.0"
+truth = "1.4.0"
 univocity-parsers = "2.9.1"
 versions = "0.51.0"
 xz = "1.9"
@@ -209,7 +209,6 @@ stream = { module = "com.clearspring.analytics:stream", version.ref = "stream" }
 tcache = { module = "com.trivago:triava", version.ref = "tcache" }
 testng = { module = "org.testng:testng", version.ref = "testng" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
-truth-java8 = { module = "com.google.truth.extensions:truth-java8-extension", version.ref = "truth" }
 univocity-parsers = { module = "com.univocity:univocity-parsers", version.ref = "univocity-parsers" }
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
 ycsb = { module = "site.ycsb:core", version.ref = "ycsb" }
@@ -231,7 +230,6 @@ pmd = ["pmd", "pmd-ant", "pmd-java"]
 slf4j-jdk = ["slf4j-jdk-platform-logging", "slf4j-jdk14"]
 slf4j-nop = ["slf4j-jdk-platform-logging", "slf4j-nop"]
 slf4j-test = ["slf4j-jdk-platform-logging", "slf4j-jul-bridge", "slf4j-test"]
-truth = ["truth", "truth-java8"]
 
 [plugins]
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

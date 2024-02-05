@@ -89,6 +89,8 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
 
   /**
    * Asynchronously computes or retrieves the value corresponding to {@code key}.
+   * <p>
+   * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly.
    *
    * @param key the non-null key whose value should be loaded
    * @param executor the executor that asynchronously loads the entry

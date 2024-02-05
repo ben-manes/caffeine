@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import java.util.function.Supplier;

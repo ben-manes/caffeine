@@ -15,12 +15,12 @@ configurations.configureEach {
 dependencies {
   testImplementation(libs.guava)
   testImplementation(libs.guice)
+  testImplementation(libs.truth)
   testImplementation(libs.testng)
   testImplementation(libs.mockito)
   testImplementation(libs.hamcrest)
   testImplementation(libs.awaitility)
   testImplementation(libs.bundles.junit)
-  testImplementation(libs.bundles.truth)
   testImplementation(libs.bundles.osgi.test.compile)
 
   testImplementation(platform(libs.asm.bom))

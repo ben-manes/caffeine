@@ -26,8 +26,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions;
 import org.testng.annotations.Test;
 
 /**
- * Linearizability checks for {@link MpscGrowableArrayQueue}. This tests the JCTools' version until
- * our copy is resync'd due to requiring an iterator for reporting the state.
+ * Linearizability checks for {@link MpscGrowableArrayQueue}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -36,7 +35,7 @@ public final class MpscGrowableArrayQueueLincheckTest {
   private final Queue<Integer> queue;
 
   public MpscGrowableArrayQueueLincheckTest() {
-    queue = new org.jctools.queues.MpscGrowableArrayQueue<>(4, 65_536);
+    queue = new MpscGrowableArrayQueue<>(4, 65_536);
   }
 
   @Operation
