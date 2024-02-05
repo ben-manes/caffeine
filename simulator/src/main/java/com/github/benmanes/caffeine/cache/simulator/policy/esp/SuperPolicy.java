@@ -15,9 +15,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
 
 public class SuperPolicy {
-
-
-
+  
   // POLICIES
   TwoQueuePolicy twoQueuePolicy;
   TwoQueueSettings customTwoQueueSettings;

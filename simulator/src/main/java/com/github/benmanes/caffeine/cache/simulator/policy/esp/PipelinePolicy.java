@@ -73,7 +73,7 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
     this.pipeline_length = this.pipelineArray.length;
     System.out.println("pipeline lengtgh is "+this.pipeline_length);
     for (int i = 0; i < this.pipeline_length; i++) {
-      pipelinePolicies[i] = policyConstructor(this.pipelineArray[i],i);
+      pipelinePolicies[i] =  policyConstructor(this.pipelineArray[i],i);
 
     }
     //ADD MAP FROM LIST TO POLICY
