@@ -290,7 +290,7 @@ jobs:
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@e780361cd1fc1b1a170624547b3ffda64787d365 # v2.12.0
+        uses: EnricoMi/publish-unit-test-result-action@4e121453199042300b654ee3b4b52720bc645dc6 # v2.13.0
         continue-on-error: true
         id: test-results
         with:
