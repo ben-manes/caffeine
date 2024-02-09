@@ -50,6 +50,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.linked.MultiQueuePoli
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.S4LruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SievePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.Sieve2Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Cache2kPolicy;
@@ -160,6 +161,7 @@ public final class Registry {
           config -> FrequentlyUsedPolicy.policies(config, policy));
     }
     register(SievePolicy.class, SievePolicy::new);
+    register(Sieve2Policy.class, Sieve2Policy::new);
     registerMany(S4LruPolicy.class, S4LruPolicy::policies);
     register(MultiQueuePolicy.class, MultiQueuePolicy::new);
     registerMany(SegmentedLruPolicy.class, SegmentedLruPolicy::policies);
