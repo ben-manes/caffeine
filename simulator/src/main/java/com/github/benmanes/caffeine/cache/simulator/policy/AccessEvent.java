@@ -31,7 +31,7 @@ import com.google.errorprone.annotations.Immutable;
 public class AccessEvent {
   private final long key;
 
-  private AccessEvent(long key) {
+  public AccessEvent(long key) {
     this.key = key;
   }
 

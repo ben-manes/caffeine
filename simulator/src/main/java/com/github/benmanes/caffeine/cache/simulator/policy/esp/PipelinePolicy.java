@@ -2,17 +2,20 @@ package com.github.benmanes.caffeine.cache.simulator.policy.esp;
 
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual.GDWheelPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.tangosol.util.Base;
 import com.typesafe.config.Config;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.SuperPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
 import org.checkerframework.checker.units.qual.Length;
-
-import java.security.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import java.util.*;
 import static java.util.Locale.US;
 
@@ -34,15 +37,14 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
   public String pipelineOrder;
   final int maximumSize;
   private final HashMap<Long, Integer> lookUptable;
-  long record_counter = 0;
-  long evict_counter = 0;
   int maxEntries;
   String pipelineList;
   int pipeline_length;
   String[] pipelineArray;
-  KeyOnlyPolicy[] pipelinePolicies;
-
-
+  List<Policy> pipelinePolicies =new ArrayList<>();
+  PolicyConstructor policyConstructor;
+  Config confTest;
+  int extCount=0; //used for tracking nodes in the pipeline + pipeline current stage
 
   static class PipelineSettings extends BasicSettings {
   public PipelineSettings(Config config) {
@@ -58,52 +60,103 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
   }
 }
   public PipelinePolicy(Config config) {
+    this.policyConstructor = new PolicyConstructor(config);
 //------------------INIT--------------------
-    System.out.println("Creating SuperPolicy");
     superPolicy = new SuperPolicy(config);
     this.pipeLineStats = new PolicyStats("PipeLine");
     PipelineSettings settings = new PipelineSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
-    this.maxEntries = 512;
+//    this.maxEntries = 512;
     //NOTE - the lookup table structure is affecting the results, each run is different
-    this.lookUptable=new HashMap<Long, Integer>();//load factor affects the results can also be used with linked HashMap;
-    //------------BUILD THE PIPELINE ORDER----------------
+    this.lookUptable = new HashMap<Long, Integer>();//load factor affects the results can also be used with linked HashMap;
+    //------------EXTRACT THE PIPELINE ORDER----------------
     this.pipelineList = settings.pipelineOrder();
     this.pipelineArray = this.pipelineList.split(",");
     this.pipeline_length = this.pipelineArray.length;
-    System.out.println("pipeline lengtgh is "+this.pipeline_length);
+    System.out.println("pipeline lengtgh is " + this.pipeline_length);
+
+    //-----------------BUILD THE PIPELINE-------------------
+//    policyConstructor = new PolicyConstructor(config);
     for (int i = 0; i < this.pipeline_length; i++) {
-      pipelinePolicies[i] =  policyConstructor(this.pipelineArray[i],i);
+      pipelinePolicies.add(this.policyConstructor.createPolicy(this.pipelineArray[i]));
+//      pipelinePolicies.add(superPolicy.segmentedLRUPolicy);
+//      pipelinePolicies.add(superPolicy.gdWheelPolicy);
 
     }
-    //ADD MAP FROM LIST TO POLICY
-}
+  }
 
   @Override
   public void record(long key) {
-    //IF HIT
+    extCount =0;
+    //-------PIPELINE OPERATION-----------
+    //1.check if hit
+    //  miss- insert to lookup table and write to SharedBuffer
+    //  hit - use lookup table to locate the block number - j
+    //        now use pipelinePolices[j] to call the block holding the entry
+    //        and do pipelinePolices[j].onHit() and update relevant fields (e.g freq)
+    //        ------maybe propagation-----
+    //2.in loop: pipelinePolices[j].record(), if SharedBuffer is increased by 1:
+    //           activate the next block
+    //           if counter == pipelineLength: evict from the lookup table
+    //
+
+    //------------ON HIT----------
     if(lookUptable.get(key) != null) {
       pipeLineStats.recordOperation();
       pipeLineStats.recordHit();
-      //NEED TO DO PIPELINE PROPAGATION
 
-      //IF MISS
+      //PROPAGATION
+
+      //------------ON MISS----------
     } else {
       lookUptable.put(key, 1);
       pipeLineStats.recordAdmission();
       pipeLineStats.recordOperation();
       pipeLineStats.recordMiss();
-      pipelinePolicies[j].record(key);
-      //if the previous block evicted than it will increase the counter
-      //1. check if counter was increased, if yes move to the next block
-      //2. if counter reached max_value than last block evicted and the
-      //  entry needs to be deleted from the lookuptable and reset j;
-      while(SharedBuffer.getCounter() == j+1){
-        j++;
-        pipelinePolicies[j].record(SharedBuffer.getBufferKey());
       }
+    //------------PIPELINE OPERATION----------
+    //1. First block always admits
+    if (pipelinePolicies.get(0) instanceof KeyOnlyPolicy) {
+      // Handle the event as a key-only event
+      ((KeyOnlyPolicy) pipelinePolicies.get(0)).record(key);
+    } else {
+      // Handle the event for a generic policy
+      // If Policy expects a more detailed event, construct it before recording
+      AccessEvent event = new AccessEvent(key/* Additional details here */);
+      pipelinePolicies.get(0).record(event);
     }
-  }
+    //----------MAIN PIPELINE LOOP----------
+
+for (int i = 0; i < this.pipeline_length; i++) {
+        //Read from the SharedBuffer
+        extCount = SharedBuffer.getCounter();
+        //If the SharedBuffer is increased by 1, activate the next block
+        if(extCount==i) {
+          //If the current block is the last block, evict from the lookup table
+          if(i==this.pipeline_length-1) {
+            lookUptable.remove(key);
+          }
+          //Activate the next block
+          if (pipelinePolicies.get(i) instanceof KeyOnlyPolicy) {
+            // Handle the event as a key-only event
+            ((KeyOnlyPolicy) pipelinePolicies.get(i)).record(key);
+          } else {
+            // Handle the event for a generic policy
+            AccessEvent event = new AccessEvent(key/* Additional details here */);
+            pipelinePolicies.get(i).record(event);
+          }
+
+        }
+      }
+
+
+
+
+
+
+
+    }
+
 
   @Override
   public PolicyStats stats() {
@@ -118,16 +171,7 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
 //    System.out.println(data.size());
     superPolicy.twoQueuePolicy.finished();
   }
-  KeyOnlyPolicy policyConstructor(String policyName,int policyNumber) {
-    switch (policyName) {
-      case "LRU":
-        return  superPolicy.LRUPolicyConstructor(policyNumber);
-      case "SegmentedLruPolicy":
-        return superPolicy.segmentedLRUPolicy;
-      default:
-        return null;
-    }
-  }
+
 }
 
 

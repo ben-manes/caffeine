@@ -135,7 +135,7 @@ public class SampledPolicy implements KeyOnlyPolicy {
         //move VICTIM to buffer
 //        System.out.println("The victim key from sampled: "+victim.key);
 
-        SharedBuffer.insertData(victim);
+//        SharedBuffer.insertData(victim);
 //        System.out.println("The victim key read from sampled: "+SharedBuffer.getBufferKey());
 
 //        System.out.println("The victim key is: "+victim.key);
@@ -144,8 +144,8 @@ public class SampledPolicy implements KeyOnlyPolicy {
         data.remove(victim.key);
       } else {
         //move candidate to buffer
-        SharedBuffer.insertData(candidate);
-        System.out.println("The candidate key is: "+victim.key);
+//        SharedBuffer.insertData(candidate);
+//        System.out.println("The candidate key is: "+victim.key);
 
 
         removeFromTable(candidate);

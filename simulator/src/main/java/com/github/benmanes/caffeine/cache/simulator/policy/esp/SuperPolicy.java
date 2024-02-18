@@ -7,6 +7,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePoli
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual.GDWheelPolicy;
+
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValueFactory;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -15,7 +17,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
 
 public class SuperPolicy {
-  
+
   // POLICIES
   TwoQueuePolicy twoQueuePolicy;
   TwoQueueSettings customTwoQueueSettings;
@@ -28,6 +30,8 @@ public class SuperPolicy {
 
   SegmentedLruPolicy segmentedLRUPolicy;
   SegmentedLruSettings customSegmentedLRUSettings;
+  GDWheelPolicy gdWheelPolicy;
+
   Config inConfig;
   PolicyStats IntraStats;
 
@@ -68,6 +72,8 @@ public class SuperPolicy {
     segmentedLRUPolicy.policyStats = IntraStats;
     segmentedLRUPolicy.maxProtected = (int) (segmentedLRUPolicy.maximumSize * customSegmentedLRUSettings.percentProtected());
     //----------------------------------------------
+    //----------GDWheelPolicy Instance ----------------
+    gdWheelPolicy = new GDWheelPolicy(config);
 
 
 

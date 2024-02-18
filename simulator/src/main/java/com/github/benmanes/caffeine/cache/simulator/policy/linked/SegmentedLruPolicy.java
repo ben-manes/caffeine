@@ -95,23 +95,22 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     Node node;
     policyStats.recordOperation();
     //if previous block pipeline evicted
-      onMiss(SharedBuffer.getBufferKey());
+//      onMiss(SharedBuffer.getBufferKey());
 //      Node testNode= new Node(SharedBuffer.getData());
 //      System.out.println("The key read from the segmented buffer is: "+SharedBuffer.getBufferKey());
-       node = new Node(SharedBuffer.getData());
+//       node = new Node(SharedBuffer.getData());
 //      data.get(node.key);
 
        node = data.get(key);
 
 
     admittor.record(key);
-//    System.out.println("im here in onMiss");
 
-//    if (node == null) {
-//      onMiss(key);
-//    } else {
-//      onHit(node);
-//    }
+    if (node == null) {
+      onMiss(key);
+    } else {
+      onHit(node);
+    }
   }
 
   private void onHit(Node node) {
@@ -135,8 +134,8 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   private void onMiss(long key) {
     //print im here in onMiss
-
-    Node node = new Node(key);
+    Node node = data.get(key);
+//    Node node = new Node(key);
     data.put(key, node);
     policyStats.recordMiss();
     node.appendToTail(headProbation);
@@ -146,7 +145,6 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
-      SharedBuffer.setFlag2(1);
       Node victim = (maxProtected == 0)
           ? headProtected.next // degrade to LRU
           : headProbation.next;
@@ -155,11 +153,11 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
       boolean admit = admittor.admit(candidate.key, victim.key);
       if (admit) {
         //evict from lookup table
-        SharedBuffer.insertData(victim);
+//        SharedBuffer.insertData(victim);
         evictEntry(victim);
       } else {
         //evict from lookup table
-        SharedBuffer.insertData(candidate);
+//        SharedBuffer.insertData(candidate);
 
         evictEntry(candidate);
       }
