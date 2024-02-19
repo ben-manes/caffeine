@@ -219,7 +219,7 @@ public final class BoundedLocalCacheTest {
           ref.enqueue();
         }
         GcFinalization.awaitFullGc();
-        collected[0] = (invocation.getArgument(2, RemovalCause.class) == COLLECTED);
+        collected[0] = (invocation.<RemovalCause>getArgument(2) == COLLECTED);
       }
       return null;
     };

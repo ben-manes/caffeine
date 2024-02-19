@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
-import static com.github.benmanes.caffeine.cache.CaffeineSpec.parse;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
@@ -482,6 +481,10 @@ public class CaffeineSpecGuavaTest extends TestCase {
         .weakValues()
         .expireAfterAccess(10L, TimeUnit.MINUTES);
     assertCaffeineEquivalence(expected, fromString);
+  }
+
+  private static CaffeineSpec parse(String specification) {
+    return CaffeineSpec.parse(specification);
   }
 
   private static void assertCaffeineEquivalence(Caffeine<?, ?> a, Caffeine<?, ?> b) {

@@ -42,6 +42,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import org.mockito.Mockito;
@@ -282,27 +283,24 @@ public @interface CacheSpec {
       }
     },
     CREATE {
+      @SuppressWarnings("unchecked")
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
-        return ExpiryBuilder
-            .expiringAfterCreate(expiryTime.duration())
-            .build();
+        return Expiry.creating(
+            (Serializable & BiFunction<K, V, Duration>) (k, v) -> expiryTime.duration());
       }
     },
     WRITE {
+      @SuppressWarnings("unchecked")
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
-        return ExpiryBuilder
-            .expiringAfterCreate(expiryTime.duration())
-            .expiringAfterUpdate(expiryTime.duration())
-            .build();
+        return Expiry.writing(
+            (Serializable & BiFunction<K, V, Duration>) (k, v) -> expiryTime.duration());
       }
     },
     ACCESS {
+      @SuppressWarnings("unchecked")
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
-        return ExpiryBuilder
-            .expiringAfterCreate(expiryTime.duration())
-            .expiringAfterUpdate(expiryTime.duration())
-            .expiringAfterRead(expiryTime.duration())
-            .build();
+        return Expiry.accessing(
+            (Serializable & BiFunction<K, V, Duration>) (k, v) -> expiryTime.duration());
       }
     };
 

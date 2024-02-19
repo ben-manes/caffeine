@@ -36,8 +36,10 @@ public final class CaffeineLincheckTest {
   }
 
   public static final class BoundedLincheckTest extends AbstractLincheckCacheTest {
+
     public BoundedLincheckTest() {
       super(Caffeine.newBuilder()
+          .executor(Runnable::run)
           .maximumSize(Long.MAX_VALUE)
           .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE)));
     }

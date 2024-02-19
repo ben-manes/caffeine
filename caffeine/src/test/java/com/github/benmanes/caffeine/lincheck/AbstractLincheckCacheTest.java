@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.lincheck;
 
 import java.util.Map;
-import java.util.concurrent.ForkJoinPool;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
@@ -44,8 +43,7 @@ public abstract class AbstractLincheckCacheTest {
   private final LoadingCache<Integer, Integer> cache;
 
   public AbstractLincheckCacheTest(Caffeine<Object, Object> builder) {
-    cache = builder.executor(Runnable::run).build(key -> -key);
-    ForkJoinPool.commonPool(); // force eager initialization
+    cache = builder.build(key -> -key);
   }
 
   /**

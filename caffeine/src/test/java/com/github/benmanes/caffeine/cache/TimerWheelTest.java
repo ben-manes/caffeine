@@ -403,7 +403,7 @@ public final class TimerWheelTest {
   @Test(dataProvider = "clock")
   public void expire_reschedule(long clock) {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenAnswer(invocation -> {
-      var timer = (Timer) invocation.getArgument(0);
+      Timer timer = invocation.getArgument(0);
       timer.setVariableTime(timerWheel.nanos + 100);
       return false;
     });
