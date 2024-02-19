@@ -43,6 +43,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
@@ -75,6 +76,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
+import com.google.common.testing.SerializableTester;
 
 /**
  * The test cases for caches that support the variable expiration policy.
@@ -1636,6 +1638,121 @@ public final class ExpireAfterVarTest {
     assertThat(context.cache()).hasSize(context.initialSize());
     assertThat(entries).hasSize(1);
   }
+
+  /* --------------- Expiry --------------- */
+
+  @Test
+  public void expiry_creating_null() {
+    var expiry = Expiry.creating((key, value) -> null);
+    assertThrows(NullPointerException.class, () -> expiry.expireAfterCreate(1, 2, 3));
+    assertThat(expiry.expireAfterUpdate(1, 2, 3, 99)).isEqualTo(99);
+    assertThat(expiry.expireAfterRead(1, 2, 3, 99)).isEqualTo(99);
+  }
+
+  @Test
+  public void expiry_creating() {
+    var expiry = Expiry.creating((Integer key, Integer value) -> Duration.ofSeconds(key + value));
+    assertThat(expiry.expireAfterCreate(1, 2, 3)).isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(expiry.expireAfterUpdate(1, 2, 3, 99)).isEqualTo(99);
+    assertThat(expiry.expireAfterRead(1, 2, 3, 99)).isEqualTo(99);
+  }
+
+  @Test
+  public void expiry_creating_saturating() {
+    var expiry = Expiry.creating((Long key, Long value) -> Duration.ofNanos(key));
+    assertThat(expiry.expireAfterCreate(Long.MIN_VALUE, 2L, 3)).isEqualTo(Long.MIN_VALUE);
+    assertThat(expiry.expireAfterCreate(Long.MAX_VALUE, 2L, 3)).isEqualTo(Long.MAX_VALUE);
+  }
+
+  @Test
+  public void expiry_creating_serialize() {
+    SerializableBiFunction creator = (key, value) -> Duration.ofNanos(key);
+
+    var expiry = Expiry.creating(creator);
+    var reserialized = SerializableTester.reserialize(expiry);
+    assertThat(reserialized.expireAfterCreate(1, 2, 3)).isEqualTo(1L);
+    assertThat(expiry.expireAfterUpdate(1, 2, 3, 99)).isEqualTo(99);
+    assertThat(expiry.expireAfterRead(1, 2, 3, 99)).isEqualTo(99);
+  }
+
+  @Test
+  public void expiry_writing_null() {
+    var expiry = Expiry.writing((Integer key, Integer value) -> null);
+    assertThrows(NullPointerException.class, () -> expiry.expireAfterCreate(1, 2, 3));
+    assertThrows(NullPointerException.class, () -> expiry.expireAfterUpdate(1, 2, 3, 99));
+    assertThat(expiry.expireAfterRead(1, 2, 3, 99)).isEqualTo(99);
+  }
+
+  @Test
+  public void expiry_writing() {
+    var expiry = Expiry.writing((Integer key, Integer value) -> Duration.ofSeconds(key + value));
+    assertThat(expiry.expireAfterCreate(1, 2, 3)).isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(expiry.expireAfterUpdate(1, 2, 3, 99)).isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(expiry.expireAfterRead(1, 2, 3, 99)).isEqualTo(99);
+  }
+
+  @Test
+  public void expiry_writing_saturating() {
+    var expiry = Expiry.writing((Long key, Long value) -> Duration.ofNanos(key));
+    assertThat(expiry.expireAfterCreate(Long.MIN_VALUE, 2L, 3)).isEqualTo(Long.MIN_VALUE);
+    assertThat(expiry.expireAfterCreate(Long.MAX_VALUE, 2L, 3)).isEqualTo(Long.MAX_VALUE);
+    assertThat(expiry.expireAfterUpdate(Long.MIN_VALUE, 2L, 3, 4)).isEqualTo(Long.MIN_VALUE);
+    assertThat(expiry.expireAfterUpdate(Long.MAX_VALUE, 2L, 3, 4)).isEqualTo(Long.MAX_VALUE);
+  }
+
+  @Test
+  public void expiry_writing_serialize() {
+    SerializableBiFunction writer = (key, value) -> Duration.ofSeconds(key + value);
+
+    var expiry = Expiry.writing(writer);
+    var reserialized = SerializableTester.reserialize(expiry);
+    assertThat(reserialized.expireAfterCreate(1, 2, 3)).isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(reserialized.expireAfterUpdate(1, 2, 3, 99))
+        .isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(reserialized.expireAfterRead(1, 2, 3, 99)).isEqualTo(99);
+  }
+
+  @Test
+  public void expiry_accessing_null() {
+    var expiry = Expiry.accessing((Integer key, Integer value) -> null);
+    assertThrows(NullPointerException.class, () -> expiry.expireAfterCreate(1, 2, 3));
+    assertThrows(NullPointerException.class, () -> expiry.expireAfterUpdate(1, 2, 3, 99));
+    assertThrows(NullPointerException.class, () -> expiry.expireAfterRead(1, 2, 3, 99));
+  }
+
+  @Test
+  public void expiry_accessing() {
+    var expiry = Expiry.accessing((Integer key, Integer value) -> Duration.ofSeconds(key + value));
+    assertThat(expiry.expireAfterCreate(1, 2, 3)).isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(expiry.expireAfterUpdate(1, 2, 3, 99)).isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(expiry.expireAfterRead(1, 2, 3, 99)).isEqualTo(Duration.ofSeconds(3).toNanos());
+  }
+
+  @Test
+  public void expiry_accessing_saturating() {
+    var expiry = Expiry.accessing((Long key, Long value) -> Duration.ofNanos(key));
+    assertThat(expiry.expireAfterCreate(Long.MIN_VALUE, 2L, 3)).isEqualTo(Long.MIN_VALUE);
+    assertThat(expiry.expireAfterCreate(Long.MAX_VALUE, 2L, 3)).isEqualTo(Long.MAX_VALUE);
+    assertThat(expiry.expireAfterUpdate(Long.MIN_VALUE, 2L, 3, 4)).isEqualTo(Long.MIN_VALUE);
+    assertThat(expiry.expireAfterUpdate(Long.MAX_VALUE, 2L, 3, 4)).isEqualTo(Long.MAX_VALUE);
+    assertThat(expiry.expireAfterRead(Long.MIN_VALUE, 2L, 3, 4)).isEqualTo(Long.MIN_VALUE);
+    assertThat(expiry.expireAfterRead(Long.MAX_VALUE, 2L, 3, 4)).isEqualTo(Long.MAX_VALUE);
+  }
+
+  @Test
+  public void expiry_accessing_serialize() {
+    SerializableBiFunction accessor = (key, value) -> Duration.ofSeconds(key + value);
+
+    var expiry = Expiry.accessing(accessor);
+    var reserialized = SerializableTester.reserialize(expiry);
+    assertThat(reserialized.expireAfterCreate(1, 2, 3)).isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(reserialized.expireAfterUpdate(1, 2, 3, 99))
+        .isEqualTo(Duration.ofSeconds(3).toNanos());
+    assertThat(reserialized.expireAfterRead(1, 2, 3, 99))
+        .isEqualTo(Duration.ofSeconds(3).toNanos());
+  }
+
+  interface SerializableBiFunction extends BiFunction<Integer, Integer, Duration>, Serializable {};
 
   static final class ExpirationException extends RuntimeException {
     private static final long serialVersionUID = 1L;

@@ -172,7 +172,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void schedule_immediate(Cache<Int, Int> cache, CacheContext context) {
     doAnswer(invocation -> {
-      invocation.getArgument(1, Runnable.class).run();
+      invocation.<Runnable>getArgument(1).run();
       return new CompletableFuture<>();
     }).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
 
@@ -192,8 +192,8 @@ public final class ExpirationTest {
     var delay = ArgumentCaptor.forClass(long.class);
     var task = ArgumentCaptor.forClass(Runnable.class);
     Answer<Void> onRemoval = invocation -> {
-      var key = invocation.getArgument(0, Int.class);
-      var value = invocation.getArgument(1, Duration.class);
+      Int key = invocation.getArgument(0);
+      Duration value = invocation.getArgument(1);
       actualExpirationPeriods.put(key, Duration.ofNanos(context.ticker().read()).minus(value));
       return null;
     };

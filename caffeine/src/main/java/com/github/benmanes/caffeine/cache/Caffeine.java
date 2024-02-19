@@ -140,6 +140,8 @@ import com.google.errorprone.annotations.FormatMethod;
 public final class Caffeine<K, V> {
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
   static final Logger logger = System.getLogger(Caffeine.class.getName());
+  static final Duration MIN_DURATION = Duration.ofNanos(Long.MIN_VALUE);
+  static final Duration MAX_DURATION = Duration.ofNanos(Long.MAX_VALUE);
   static final double DEFAULT_LOAD_FACTOR = 0.75;
 
   enum Strength { WEAK, SOFT }
@@ -604,8 +606,8 @@ public final class Caffeine<K, V> {
    * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
    * removal of expired entries.
    *
-   * @param duration the length of time after an entry is created that it should be automatically
-   *        removed
+   * @param duration the length of time after an entry is created or updated before it should be
+   *        automatically removed
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to live or variable expiration was already set
@@ -613,7 +615,7 @@ public final class Caffeine<K, V> {
    */
   @CanIgnoreReturnValue
   public Caffeine<K, V> expireAfterWrite(Duration duration) {
-    return expireAfterWrite(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
+    return expireAfterWrite(toNanosSaturated(duration), TimeUnit.NANOSECONDS);
   }
 
   /**
@@ -628,8 +630,8 @@ public final class Caffeine<K, V> {
    * If you can represent the duration as a {@link java.time.Duration} (which should be preferred
    * when feasible), use {@link #expireAfterWrite(Duration)} instead.
    *
-   * @param duration the length of time after an entry is created that it should be automatically
-   *        removed
+   * @param duration the length of time after an entry is created or updated before it should be
+   *        automatically removed
    * @param unit the unit that {@code duration} is expressed in
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
@@ -665,7 +667,7 @@ public final class Caffeine<K, V> {
    * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
    * removal of expired entries.
    *
-   * @param duration the length of time after an entry is last accessed that it should be
+   * @param duration the length of time after an entry is last accessed before it should be
    *        automatically removed
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
@@ -674,7 +676,7 @@ public final class Caffeine<K, V> {
    */
   @CanIgnoreReturnValue
   public Caffeine<K, V> expireAfterAccess(Duration duration) {
-    return expireAfterAccess(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
+    return expireAfterAccess(toNanosSaturated(duration), TimeUnit.NANOSECONDS);
   }
 
   /**
@@ -692,7 +694,7 @@ public final class Caffeine<K, V> {
    * If you can represent the duration as a {@link java.time.Duration} (which should be preferred
    * when feasible), use {@link #expireAfterAccess(Duration)} instead.
    *
-   * @param duration the length of time after an entry is last accessed that it should be
+   * @param duration the length of time after an entry is last accessed before it should be
    *        automatically removed
    * @param unit the unit that {@code duration} is expressed in
    * @return this {@code Caffeine} instance (for chaining)
@@ -793,7 +795,7 @@ public final class Caffeine<K, V> {
    */
   @CanIgnoreReturnValue
   public Caffeine<K, V> refreshAfterWrite(Duration duration) {
-    return refreshAfterWrite(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
+    return refreshAfterWrite(toNanosSaturated(duration), TimeUnit.NANOSECONDS);
   }
 
   /**
@@ -1186,14 +1188,10 @@ public final class Caffeine<K, V> {
    * {@link Long#MAX_VALUE} or {@link Long#MIN_VALUE}. This behavior can be useful when decomposing
    * a duration in order to call a legacy API which requires a {@code long, TimeUnit} pair.
    */
-  static long saturatedToNanos(Duration duration) {
-    // Using a try/catch seems lazy, but the catch block will rarely get invoked (except for
-    // durations longer than approximately +/- 292 years).
-    try {
-      return duration.toNanos();
-    } catch (ArithmeticException tooBig) {
-      return duration.isNegative() ? Long.MIN_VALUE : Long.MAX_VALUE;
-    }
+  static long toNanosSaturated(Duration duration) {
+    return duration.isNegative()
+        ? (duration.compareTo(MIN_DURATION) <= 0) ? Long.MIN_VALUE : duration.toNanos()
+        : (duration.compareTo(MAX_DURATION) >= 0) ? Long.MAX_VALUE : duration.toNanos();
   }
 
   /**

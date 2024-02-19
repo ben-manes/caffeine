@@ -1016,10 +1016,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public <T> T unwrap(Class<T> clazz) {
-    if (clazz.isAssignableFrom(cache.getClass())) {
+    if (clazz.isInstance(cache)) {
       return clazz.cast(cache);
-    }
-    if (clazz.isAssignableFrom(getClass())) {
+    } else if (clazz.isInstance(this)) {
       return clazz.cast(this);
     }
     throw new IllegalArgumentException("Unwrapping to " + clazz

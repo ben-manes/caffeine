@@ -240,7 +240,7 @@ public final class CacheManagerImpl implements CacheManager {
 
   @Override
   public <T> T unwrap(Class<T> clazz) {
-    if (clazz.isAssignableFrom(getClass())) {
+    if (clazz.isInstance(this)) {
       return clazz.cast(this);
     }
     throw new IllegalArgumentException("Unwapping to " + clazz

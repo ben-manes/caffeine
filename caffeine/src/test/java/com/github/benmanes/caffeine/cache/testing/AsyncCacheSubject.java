@@ -100,7 +100,7 @@ public final class AsyncCacheSubject extends Subject {
 
   /** Fails if the cache does not contain exactly the given set of entries in the given map. */
   public void containsExactlyEntriesIn(Map<?, ?> expectedMap) {
-    if (expectedMap.values().stream().anyMatch(value -> value instanceof Future<?>)) {
+    if (expectedMap.values().stream().anyMatch(Future.class::isInstance)) {
       check("cache").that(actual.asMap()).containsExactlyEntriesIn(expectedMap);
     } else {
       check("cache").about(cache())

@@ -47,6 +47,8 @@ jobs:
       - name: Run dependency-check
         uses: ./.github/actions/run-gradle
         continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         with:
           java: ${{ env.JAVA_VERSION }}
           arguments: dependencyCheckAggregate --no-configuration-cache
