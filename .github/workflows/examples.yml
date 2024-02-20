@@ -35,7 +35,7 @@ jobs:
             www.graalvm.org:443
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@a163f62ae554a8f3cbe27b23db15b60c0ae2e93c # v1.3.0
+        uses: Wandalen/wretry.action@62451a214c01d1b0136b4f87289d840b30d67b98 # v1.4.4
         timeout-minutes: 5
         with:
           action: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93 # v4.0.0
@@ -45,7 +45,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Setup Gradle
-        uses: Wandalen/wretry.action@a163f62ae554a8f3cbe27b23db15b60c0ae2e93c # v1.3.0
+        uses: Wandalen/wretry.action@62451a214c01d1b0136b4f87289d840b30d67b98 # v1.4.4
         timeout-minutes: 5
         with:
           action: gradle/actions/setup-gradle@b6816cf21e7970b88479bb3c57d9cbe5cdd4b949 # v3.0.0-rc.1
