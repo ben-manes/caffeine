@@ -6,7 +6,6 @@ on:
 permissions: read-all
 
 env:
-  GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >
     *.actions.githubusercontent.com:443
