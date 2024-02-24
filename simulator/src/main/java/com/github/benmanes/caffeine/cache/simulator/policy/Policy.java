@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -38,7 +41,7 @@ public interface Policy {
 
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
-
+  Long2ObjectMap<Object> data();
   /** The policy's name. */
   default String name() {
     PolicySpec policySpec = getClass().getAnnotation(PolicySpec.class);
@@ -66,6 +69,7 @@ public interface Policy {
     /** The event features that this policy supports. */
     Characteristic[] characteristics() default {};
   }
+
 
   /** A policy that does not exploit external event metadata. */
   interface KeyOnlyPolicy extends Policy {

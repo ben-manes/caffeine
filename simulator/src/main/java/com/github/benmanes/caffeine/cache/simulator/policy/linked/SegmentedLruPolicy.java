@@ -26,8 +26,11 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.BaseNode;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
+
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -55,14 +58,16 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   static final Node UNLINKED = new Node();
 
   final Long2ObjectMap<Node> data;
-  final PolicyStats policyStats;
+  public PolicyStats policyStats;
   final Node headProtected;
   final Node headProbation;
   final Admittor admittor;
-  final int maxProtected;
-  final int maximumSize;
+  public int maxProtected;
+  public int maximumSize;
 
   int sizeProtected;
+  //SharedBuffer sharedBuffer = SharedBuffer.getInstance();
+
 
   public SegmentedLruPolicy(Admission admission, Config config) {
     this.policyStats = new PolicyStats(admission.format(name()));
@@ -72,8 +77,9 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = Math.toIntExact(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.PPmaximumSize());
     this.maxProtected = (int) (maximumSize * settings.percentProtected());
+
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -86,9 +92,20 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    Node node;
     policyStats.recordOperation();
-    Node node = data.get(key);
+    //if previous block pipeline evicted
+//      onMiss(SharedBuffer.getBufferKey());
+//      Node testNode= new Node(SharedBuffer.getData());
+//      System.out.println("The key read from the segmented buffer is: "+SharedBuffer.getBufferKey());
+//       node = new Node(SharedBuffer.getData());
+//      data.get(node.key);
+
+       node = data.get(key);
+
+
     admittor.record(key);
+
     if (node == null) {
       onMiss(key);
     } else {
@@ -116,7 +133,9 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   }
 
   private void onMiss(long key) {
-    Node node = new Node(key);
+    //print im here in onMiss
+    Node node = data.get(key);
+//    Node node = new Node(key);
     data.put(key, node);
     policyStats.recordMiss();
     node.appendToTail(headProbation);
@@ -133,8 +152,13 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
       boolean admit = admittor.admit(candidate.key, victim.key);
       if (admit) {
+        //evict from lookup table
+//        SharedBuffer.insertData(victim);
         evictEntry(victim);
       } else {
+        //evict from lookup table
+//        SharedBuffer.insertData(candidate);
+
         evictEntry(candidate);
       }
     }
@@ -143,6 +167,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   private void evictEntry(Node node) {
     data.remove(node.key);
     node.remove();
+
   }
 
   @Override
@@ -155,7 +180,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     PROBATION,
   }
 
-  static final class Node {
+  public static  class Node extends BaseNode {
     final long key;
 
     Node prev;
@@ -166,14 +191,36 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
       this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
+
+      super.key=this.key;
     }
 
     Node(long key) {
       this.key = key;
       this.prev = UNLINKED;
       this.next = UNLINKED;
+
+      super.key=this.key;
+
     }
 
+//    public Node(BaseNode data) {
+//      super();
+//    }
+    Node(BaseNode basenode){
+      this.key = basenode.key;
+      this.prev=UNLINKED;
+      this.next=UNLINKED;
+      this.recency=basenode.recency;
+      super.key=this.key;
+    }
+
+//    public Node(SharedBuffer sharedBuffer) {
+//      this.key = SharedBuffer.getData().key;
+//      this.prev = UNLINKED;
+//      this.next = UNLINKED;
+//      //this.recency = SharedBuffer.getData().recency;
+//    }
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
       Node tail = head.prev;

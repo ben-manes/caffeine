@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 package com.github.benmanes.caffeine.cache.simulator;
-
+//gfgf//
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
@@ -89,7 +89,9 @@ public class BasicSettings {
   public long maximumSize() {
     return getFormattedLong("maximum-size");
   }
-
+  public long PPmaximumSize() {
+    return config().getLong("esp.maximum-size");
+  }
   public TraceSettings trace() {
     return new TraceSettings();
   }

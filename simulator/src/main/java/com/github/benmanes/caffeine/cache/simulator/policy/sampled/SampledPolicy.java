@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.BaseNode;
+import com.github.benmanes.caffeine.cache.simulator.policy.esp.SharedBuffer;
+
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -52,16 +55,18 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class SampledPolicy implements KeyOnlyPolicy {
+public class SampledPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
-  final PolicyStats policyStats;
+  public PolicyStats policyStats;
   final EvictionPolicy policy;
-  final Sample sampleStrategy;
+  public Sample sampleStrategy;
   final Admittor admittor;
-  final int maximumSize;
-  final int sampleSize;
+  public int maximumSize;
+  public int sampleSize;
   final Random random;
   final Node[] table;
+  //SharedBuffer sharedBuffer;
+
 
   long tick;
 
@@ -70,13 +75,16 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     this.admittor = admission.from(config, policyStats);
 
     SampledSettings settings = new SampledSettings(config);
-    this.maximumSize = Math.toIntExact(settings.maximumSize());
+    this.maximumSize = Math.toIntExact(settings.PPmaximumSize()); //need to change
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
+
     this.data = new Long2ObjectOpenHashMap<>();
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];
     this.policy = policy;
+
+
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -114,7 +122,9 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   /** Evicts if the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
+
     if (data.size() > maximumSize) {
+      SharedBuffer.setFlag(1);
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
           : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
@@ -122,13 +132,28 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       policyStats.recordEviction();
 
       if (admittor.admit(candidate.key, victim.key)) {
+
+        //move VICTIM to buffer
+//        System.out.println("The victim key from sampled: "+victim.key);
+
+//        SharedBuffer.insertData(victim);
+//        System.out.println("The victim key read from sampled: "+SharedBuffer.getBufferKey());
+
+//        System.out.println("The victim key is: "+victim.key);
+
         removeFromTable(victim);
         data.remove(victim.key);
       } else {
+        //move candidate to buffer
+//        SharedBuffer.insertData(candidate);
+//        System.out.println("The candidate key is: "+victim.key);
+
+
         removeFromTable(candidate);
         data.remove(candidate.key);
       }
     }
+
   }
 
   /** Removes the node from the table and adds the index to the free list. */
@@ -264,20 +289,31 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     abstract Node select(List<Node> sample, Random random, long tick);
   }
 
-  static final class Node {
+   public static class Node extends BaseNode {
     final long key;
     final long insertionTime;
 
     long accessTime;
-    int frequency;
+    public int frequency;
     int index;
+
 
     public Node(long key, int index, long tick) {
       this.insertionTime = tick;
       this.accessTime = tick;
       this.index = index;
       this.key = key;
+
+      super.key=this.key;
     }
+     Node(BaseNode basenode, long tick){
+       this.insertionTime = tick;
+       this.accessTime = tick;
+       this.key = basenode.key;
+       this.recency=basenode.recency;
+       super.key=this.key;
+
+     }
 
     @Override
     public String toString() {
