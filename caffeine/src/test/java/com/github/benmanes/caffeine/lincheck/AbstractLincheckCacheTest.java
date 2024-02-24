@@ -43,7 +43,7 @@ public abstract class AbstractLincheckCacheTest {
   private final LoadingCache<Integer, Integer> cache;
 
   public AbstractLincheckCacheTest(Caffeine<Object, Object> builder) {
-    cache = builder.build(key -> -key);
+    cache = builder.executor(Runnable::run).build(key -> -key);
   }
 
   /**
