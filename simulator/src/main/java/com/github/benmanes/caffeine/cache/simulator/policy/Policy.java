@@ -41,7 +41,7 @@ public interface Policy {
 
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
-  Long2ObjectMap<Object> data();
+//  Long2ObjectMap<Object> data();
   /** The policy's name. */
   default String name() {
     PolicySpec policySpec = getClass().getAnnotation(PolicySpec.class);
