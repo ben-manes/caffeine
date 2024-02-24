@@ -32,6 +32,7 @@ public interface Policy {
 
   /** Records that the entry was accessed. */
   void record(AccessEvent event);
+  void evict(AccessEvent event);
 
   /** Indicates that the recording has completed. */
   default void finished() {}
@@ -72,6 +73,10 @@ public interface Policy {
     @Override default void record(AccessEvent event) {
       record(event.key());
     }
+    @Override default void evict(AccessEvent event){
+      evict(event.key());
+    }
     void record(long key);
+    void evict(long key);
   }
 }
