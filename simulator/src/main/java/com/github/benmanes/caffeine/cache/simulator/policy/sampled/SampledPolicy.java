@@ -78,6 +78,7 @@ public class SampledPolicy implements KeyOnlyPolicy {
     this.maximumSize = Math.toIntExact(settings.PPmaximumSize()); //need to change
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
+
     this.data = new Long2ObjectOpenHashMap<>();
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];

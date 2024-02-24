@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -32,14 +35,13 @@ public interface Policy {
 
   /** Records that the entry was accessed. */
   void record(AccessEvent event);
-  void evict(AccessEvent event);
 
   /** Indicates that the recording has completed. */
   default void finished() {}
 
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
-
+  Long2ObjectMap<Object> data();
   /** The policy's name. */
   default String name() {
     PolicySpec policySpec = getClass().getAnnotation(PolicySpec.class);
@@ -68,15 +70,12 @@ public interface Policy {
     Characteristic[] characteristics() default {};
   }
 
+
   /** A policy that does not exploit external event metadata. */
   interface KeyOnlyPolicy extends Policy {
     @Override default void record(AccessEvent event) {
       record(event.key());
     }
-    @Override default void evict(AccessEvent event){
-      evict(event.key());
-    }
     void record(long key);
-    void evict(long key);
   }
 }

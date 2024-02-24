@@ -29,7 +29,7 @@ import com.google.errorprone.annotations.Immutable;
  */
 @Immutable
 public class AccessEvent {
-  private final long key;
+  public final long key;
 
   public AccessEvent(long key) {
     this.key = key;

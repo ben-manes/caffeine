@@ -107,11 +107,11 @@ public final class PipelinePolicy implements KeyOnlyPolicy {
       int blockIndex = lookUptable.get(key);
       if (pipelinePolicies.get(blockIndex) instanceof KeyOnlyPolicy) {
         // Handle the event as a key-only event
-        ((KeyOnlyPolicy) pipelinePolicies.get(blockIndex)).evict(key);
+        ((KeyOnlyPolicy) pipelinePolicies.get(blockIndex)).data.remove(key);
       } else {
         // Handle the event for a generic policy
         AccessEvent event = new AccessEvent(key/* Additional details here */);
-        pipelinePolicies.get(blockIndex).evict(event);
+        pipelinePolicies.get(blockIndex).data.remove(event.key);
       }
 
       //PROPAGATION
@@ -159,12 +159,6 @@ for (int i = 0; i < this.pipeline_length; i++) {
       }
 
     }
-
-  @Override
-  public void evict(long key) {
-
-  }
-
 
   @Override
   public PolicyStats stats() {
