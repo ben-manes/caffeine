@@ -144,8 +144,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     try {
       var loader = mappingFunction.apply(
           Collections.unmodifiableSet(proxies.keySet()), cache().executor());
-      loader.whenComplete(completer);
-      return composeResult(futures);
+      return loader.whenComplete(completer).thenCompose(ignored -> composeResult(futures));
     } catch (Throwable t) {
       completer.accept(/* result */ null, t);
       throw t;
