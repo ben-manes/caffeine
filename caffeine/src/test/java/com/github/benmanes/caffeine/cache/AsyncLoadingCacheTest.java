@@ -319,7 +319,8 @@ public final class AsyncLoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
-      removalListener = { Listener.DISABLED, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = { CacheExecutor.DIRECT, CacheExecutor.DEFAULT })
   public void getAll_exceeds(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys()).join();
 
