@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
@@ -40,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -320,7 +322,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
       removalListener = { Listener.DISABLED, Listener.REJECTING },
-      executor = { CacheExecutor.DIRECT, CacheExecutor.DEFAULT })
+      executor = { CacheExecutor.DIRECT, CacheExecutor.THREADED })
   public void getAll_exceeds(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys()).join();
 
@@ -408,6 +410,68 @@ public final class AsyncLoadingCacheTest {
 
     var result = cache.getAll(keys).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.ASYNC, removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = CacheExecutor.THREADED)
+  public void getAll_canceled_individual(CacheContext context) {
+    var ready = new AtomicBoolean();
+    var loader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public ImmutableMap<Int, Int> loadAll(Set<? extends Int> keys) {
+        await().untilTrue(ready);
+        return keys.stream().collect(toImmutableMap(identity(), Int::negate));
+      }
+    };
+
+    var cache = context.buildAsync(loader);
+    var bulk = cache.getAll(context.absentKeys());
+    for (var key : context.absentKeys()) {
+      var future = cache.getIfPresent(key);
+      future.cancel(true);
+      assertThat(future).hasCompletedExceptionally();
+    }
+    ready.set(true);
+    bulk.join();
+
+    await().untilAsserted(() -> {
+      for (var key : context.absentKeys()) {
+        assertThat(cache).containsKey(key);
+      }
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.ASYNC, removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = CacheExecutor.THREADED)
+  public void getAll_canceled_bulk(CacheContext context) {
+    var ready = new AtomicBoolean();
+    var loader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public ImmutableMap<Int, Int> loadAll(Set<? extends Int> keys) {
+        await().untilTrue(ready);
+        return keys.stream().collect(toImmutableMap(identity(), Int::negate));
+      }
+    };
+
+    var cache = context.buildAsync(loader);
+    var bulk = cache.getAll(context.absentKeys());
+    var pending = context.absentKeys().stream().map(cache::getIfPresent).collect(toImmutableList());
+
+    bulk.cancel(true);
+    ready.set(true);
+
+    CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new))
+        .orTimeout(10, TimeUnit.SECONDS)
+        .join();
+    for (var key : context.absentKeys()) {
+      assertThat(cache).containsKey(key);
+    }
   }
 
   @Test(dataProvider = "caches")

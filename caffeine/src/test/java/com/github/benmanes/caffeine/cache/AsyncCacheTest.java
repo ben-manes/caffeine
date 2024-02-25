@@ -24,6 +24,7 @@ import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
@@ -43,6 +44,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -478,7 +480,8 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = { CacheExecutor.DIRECT, CacheExecutor.THREADED })
   public void getAllFunction_exceeds(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), keys -> {
       var moreKeys = new ArrayList<Int>(keys);
@@ -580,6 +583,52 @@ public final class AsyncCacheTest {
       return Maps.toMap(moreKeys, Int::negate);
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = CacheExecutor.THREADED)
+  public void getAllFunction_canceled_individual(AsyncCache<Int, Int> cache, CacheContext context) {
+    var ready = new AtomicBoolean();
+    var bulk = cache.getAll(context.absentKeys(), keysToLoad -> {
+      await().untilTrue(ready);
+      return Maps.toMap(keysToLoad, Int::negate);
+    });
+    for (var key : context.absentKeys()) {
+      var future = cache.getIfPresent(key);
+      future.cancel(true);
+      assertThat(future).hasCompletedExceptionally();
+    }
+    ready.set(true);
+    bulk.join();
+
+    await().untilAsserted(() -> {
+      for (var key : context.absentKeys()) {
+        assertThat(cache).containsKey(key);
+      }
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = CacheExecutor.THREADED)
+  public void getAllFunction_canceled_bulk(AsyncCache<Int, Int> cache, CacheContext context) {
+    var ready = new AtomicBoolean();
+    var bulk = cache.getAll(context.absentKeys(), keysToLoad -> {
+      await().untilTrue(ready);
+      return Maps.toMap(keysToLoad, Int::negate);
+    });
+    var pending = context.absentKeys().stream().map(cache::getIfPresent).collect(toImmutableList());
+
+    bulk.cancel(true);
+    ready.set(true);
+
+    CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new))
+        .orTimeout(10, TimeUnit.SECONDS)
+        .join();
+    for (var key : context.absentKeys()) {
+      assertThat(cache).containsKey(key);
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -751,7 +800,8 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = { CacheExecutor.DIRECT, CacheExecutor.THREADED })
   public void getAllBifunction_exceeds(AsyncCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), (keys, executor) -> {
       var moreKeys = new ArrayList<Int>(keys);
@@ -843,6 +893,56 @@ public final class AsyncCacheTest {
     var result = cache.getAll(keys, (keysToLoad, executor) ->
         { throw new AssertionError(); }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = CacheExecutor.THREADED)
+  public void getAllBifunction_canceled_individual(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var ready = new AtomicBoolean();
+    var bulk = cache.getAll(context.absentKeys(), (keysToLoad, executor) -> {
+      return CompletableFuture.supplyAsync(() -> {
+        await().untilTrue(ready);
+        return Maps.toMap(keysToLoad, Int::negate);
+      }, executor);
+    });
+    for (var key : context.absentKeys()) {
+      var future = cache.getIfPresent(key);
+      future.cancel(true);
+      assertThat(future).hasCompletedExceptionally();
+    }
+    ready.set(true);
+    bulk.join();
+
+    await().untilAsserted(() -> {
+      for (var key : context.absentKeys()) {
+        assertThat(cache).containsKey(key);
+      }
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      executor = CacheExecutor.THREADED)
+  public void getAllBifunction_canceled_bulk(AsyncCache<Int, Int> cache, CacheContext context) {
+    var ready = new AtomicBoolean();
+    var bulk = cache.getAll(context.absentKeys(), (keysToLoad, executor) -> {
+      return CompletableFuture.supplyAsync(() -> {
+        await().untilTrue(ready);
+        return Maps.toMap(keysToLoad, Int::negate);
+      }, executor);
+    });
+    var pending = context.absentKeys().stream().map(cache::getIfPresent).collect(toImmutableList());
+    bulk.cancel(true);
+    ready.set(true);
+
+    CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new))
+        .orTimeout(10, TimeUnit.SECONDS)
+        .join();
+    for (var key : context.absentKeys()) {
+      assertThat(cache).containsKey(key);
+    }
   }
 
   @Test(dataProvider = "caches")
