@@ -99,7 +99,7 @@ public final class EventDispatcher<K, V> {
           configuration.getCacheEntryEventFilterFactory().create());
     }
 
-    var registration = new Registration<K, V>(configuration, filter, listener);
+    var registration = new Registration<>(configuration, filter, listener);
     dispatchQueues.putIfAbsent(registration, new ConcurrentHashMap<>());
   }
 

@@ -82,7 +82,7 @@ Powering infrastructure near you:
 
 * An in-depth description of Caffeine's architecture.
   * [Design of a Modern Cache: part #1][modern-cache-1], [part #2][modern-cache-2]
-    ([slides][modern-cache-slides]) at [HighScalability][HighScalability]
+    ([slides][modern-cache-slides]) at [HighScalability][]
 * Caffeine is presented as part of research papers evaluating its novel eviction policy.
   * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu]
     by Gil Einziger, Roy Friedman, Ben Manes
@@ -136,7 +136,7 @@ Snapshots of the development version are available in
 [modern-cache-1]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
 [modern-cache-2]: http://highscalability.com/blog/2019/2/25/design-of-a-modern-cachepart-deux.html
 [modern-cache-slides]: https://docs.google.com/presentation/d/1NlDxyXsUG1qlVHMl4vsUUBQfAJ2c2NsFPNPr2qymIBs
-[highscalability]: http://highscalability.com
+[HighScalability]: http://highscalability.com
 [spring]: https://docs.spring.io/spring/docs/current/spring-framework-reference/integration.html#cache-store-configuration-caffeine
 [scala-cache]: https://github.com/cb372/scalacache
 [scaffeine]: https://github.com/blemale/scaffeine

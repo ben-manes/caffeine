@@ -109,7 +109,7 @@ interface LinkedDeque<E> extends Deque<E> {
 
     /** Returns an iterator that returns the first iteration followed by the second iteration. */
     static <E> PeekingIterator<E> concat(PeekingIterator<E> first, PeekingIterator<E> second) {
-      return new PeekingIterator<E>() {
+      return new PeekingIterator<>() {
         @Override public boolean hasNext() {
           return first.hasNext() || second.hasNext();
         }
@@ -130,7 +130,7 @@ interface LinkedDeque<E> extends Deque<E> {
     /** Returns an iterator that selects the greater element from the backing iterators. */
     static <E> PeekingIterator<E> comparing(PeekingIterator<E> first,
           PeekingIterator<E> second, Comparator<E> comparator) {
-      return new PeekingIterator<E>() {
+      return new PeekingIterator<>() {
         @Override public boolean hasNext() {
           return first.hasNext() || second.hasNext();
         }

@@ -108,7 +108,7 @@ public final class Indicator {
     StreamSummary<Long> stream;
 
     public EstSkew() {
-      this.stream = new StreamSummary<Long>(ssSize);
+      this.stream = new StreamSummary<>(ssSize);
     }
 
     public void record(long key) {
@@ -116,7 +116,7 @@ public final class Indicator {
     }
 
     public void reset() {
-      this.stream = new StreamSummary<Long>(ssSize);
+      this.stream = new StreamSummary<>(ssSize);
     }
 
     public IntStream getTopK(int k) {

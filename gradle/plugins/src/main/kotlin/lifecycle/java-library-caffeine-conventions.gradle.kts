@@ -78,7 +78,7 @@ tasks.jar {
 }
 
 tasks.withType<Javadoc>().configureEach {
-  setFailOnError(false)
+  isFailOnError = false
   javadocOptions {
     links(
       "https://checkerframework.org/api/",

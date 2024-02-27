@@ -100,9 +100,9 @@ public interface AsyncCache<K, V> {
   /**
    * Returns the future of a map of the values associated with the {@code keys}, creating or
    * retrieving those values if necessary. The returned map contains entries that were already
-   * cached, combined with newly loaded entries; it will never contain null keys or values. If the
-   * any of the asynchronous computations fail, those entries will be automatically removed from
-   * this cache.
+   * cached, combined with newly loaded entries; it will never contain null keys or values. If any
+   * of the asynchronous computations fail, those entries will be automatically removed from this
+   * cache.
    * <p>
    * A single request to the {@code mappingFunction} is performed for all keys which are not already
    * present in the cache. If another call to {@link #get} tries to load the value for a key in
@@ -128,10 +128,10 @@ public interface AsyncCache<K, V> {
   /**
    * Returns the future of a map of the values associated with the {@code keys}, creating or
    * retrieving those values if necessary. The returned map contains entries that were already
-   * cached, combined with newly loaded entries; it will never contain null keys or values. If the
-   * any of the asynchronous computations fail, those entries will be automatically removed from
-   * this cache. The instances returned from the {@code mappingFunction} will be stored directly
-   * into the cache.
+   * cached, combined with newly loaded entries; it will never contain null keys or values. If any
+   * of the asynchronous computations fail, those entries will be automatically removed from this
+   * cache. The instances returned from the {@code mappingFunction} will be stored directly into the
+   * cache.
    * <p>
    * A single request to the {@code mappingFunction} is performed for all keys which are not already
    * present in the cache. If another call to {@link #get} tries to load the value for a key in

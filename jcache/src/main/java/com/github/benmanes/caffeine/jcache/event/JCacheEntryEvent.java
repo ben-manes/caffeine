@@ -82,7 +82,7 @@ final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V>
 
   @Override
   public Iterator<CacheEntryEvent<? extends K, ? extends V>> iterator() {
-    return new Iterator<CacheEntryEvent<? extends K, ? extends V>>() {
+    return new Iterator<>() {
       boolean hasNext = true;
 
       @Override

@@ -835,7 +835,7 @@ public interface Policy<K, V> {
    * A key-value pair that may include policy metadata for the cached entry. Unless otherwise
    * specified, this is a value-based class, it can be assumed that the implementation is an
    * immutable snapshot of the cached data at the time of this entry's creation, and it will not
-   * reflect changes afterwards.
+   * reflect changes afterward.
    */
   interface CacheEntry<K, V> extends Map.Entry<K, V> {
 

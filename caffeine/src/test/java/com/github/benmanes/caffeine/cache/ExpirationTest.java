@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Pacer.TOLERANCE;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
@@ -313,14 +314,14 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
-    var value = CacheContext.intern(List.of(context.absentValue()));
+    var value = intern(List.of(context.absentValue()));
     cache.put(context.absentKey(), value);
     assertThat(context).hasWeightedSize(1);
 
     context.ticker().advance(Duration.ofMinutes(1));
     assertThat(context).hasWeightedSize(1);
 
-    var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
+    var newValue = intern(List.copyOf(context.absent().values()));
     cache.put(context.absentKey(), newValue);
     assertThat(context).hasWeightedSize(context.absent().size());
   }
@@ -573,7 +574,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_insert(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(1));
-    cache.put(context.firstKey(), CacheContext.intern(context.absentValue().asFuture()));
+    cache.put(context.firstKey(), intern(context.absentValue().asFuture()));
 
     runVariableExpiration(context);
     assertThat(cache).hasSize(1);
@@ -734,11 +735,11 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void putIfAbsent_weighted(Map<Int, List<Int>> map, CacheContext context) {
-    var value = CacheContext.intern(List.of(context.absentValue()));
+    var value = intern(List.of(context.absentValue()));
     map.put(context.absentKey(), value);
     context.ticker().advance(Duration.ofMinutes(1));
 
-    var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
+    var newValue = intern(List.copyOf(context.absent().values()));
     map.putIfAbsent(context.absentKey(), newValue);
     assertThat(context).hasWeightedSize(context.absent().size());
   }
@@ -1022,11 +1023,11 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void computeIfAbsent_weighted(Map<Int, List<Int>> map, CacheContext context) {
-    var value = CacheContext.intern(List.of(context.absentValue()));
+    var value = intern(List.of(context.absentValue()));
     map.put(context.absentKey(), value);
     context.ticker().advance(Duration.ofMinutes(1));
 
-    var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
+    var newValue = intern(List.copyOf(context.absent().values()));
     map.computeIfAbsent(context.absentKey(), k -> newValue);
     assertThat(context).hasWeightedSize(context.absent().size());
   }
@@ -1243,11 +1244,11 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void compute_weighted(Map<Int, List<Int>> map, CacheContext context) {
-    var value = CacheContext.intern(List.of(context.absentValue()));
+    var value = intern(List.of(context.absentValue()));
     map.put(context.absentKey(), value);
     context.ticker().advance(Duration.ofMinutes(1));
 
-    var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
+    var newValue = intern(List.copyOf(context.absent().values()));
     map.compute(context.absentKey(), (k, v) -> newValue);
     assertThat(context).hasWeightedSize(context.absent().size());
   }
@@ -1378,11 +1379,11 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void merge_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
-    var value = CacheContext.intern(List.of(context.absentValue()));
+    var value = intern(List.of(context.absentValue()));
     cache.put(context.absentKey(), value);
     context.ticker().advance(Duration.ofMinutes(1));
 
-    var newValue = CacheContext.intern(List.copyOf(context.absent().values()));
+    var newValue = intern(List.copyOf(context.absent().values()));
     cache.asMap().merge(context.absentKey(), newValue,
         (oldValue, v) -> { throw new AssertionError("Should never be called"); });
     assertThat(context).hasWeightedSize(context.absent().size());

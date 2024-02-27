@@ -153,7 +153,7 @@ final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
     return new LookupKeyEqualsReference<>(key);
   }
   @Override public Object newReferenceKey(K key, ReferenceQueue<K> referenceQueue) {
-    return new WeakKeyEqualsReference<K>(key, referenceQueue);
+    return new WeakKeyEqualsReference<>(key, referenceQueue);
   }
   @Override public boolean isAlive() {
     Object keyRef = keyReference;

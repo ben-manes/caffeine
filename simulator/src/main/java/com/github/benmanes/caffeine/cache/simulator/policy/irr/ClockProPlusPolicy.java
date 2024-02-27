@@ -32,7 +32,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * with the utility-driven adaption idea borrowed from CAR. The algorithm is explained by the
  * authors in <a href="https://dl.acm.org/doi/10.1145/3319647.3325838">CLOCK-Pro+: improving
  * CLOCK-Pro cache replacement with utility-driven adaptation</a>.
- *
+ * <p>
  * Implementation here differs from ClockProPolicy only in adjusting coldTarget and tracking for
  * demoted status part. Below is a summary of coldTarget adjusting differences between ClockPro
  * and ClockPro+.

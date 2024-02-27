@@ -638,7 +638,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     }
     @Override public Iterator<E> iterator() {
       var iterator = delegate.iterator();
-      return new Iterator<E>() {
+      return new Iterator<>() {
         @Override public boolean hasNext() {
           return iterator.hasNext();
         }

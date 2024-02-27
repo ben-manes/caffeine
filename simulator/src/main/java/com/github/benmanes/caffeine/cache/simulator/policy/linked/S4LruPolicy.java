@@ -40,7 +40,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * higher queue (items in queue 3 move to the head of queue 3). Each queue is allocated 1/4 of the
  * total cache size and items are evicted from the tail of a queue to the head of the next lower
  * queue to maintain the size invariants. Items evicted from queue 0 are evicted from the cache."
- *
+ * <p>
  * For more details, see <a href="http://www.cs.cornell.edu/~qhuang/papers/sosp_fbanalysis.pdf">An
  * Analysis of Facebook Photo Caching</a>.
  *

@@ -3864,7 +3864,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     final WeakReference<BoundedLocalCache<?, ?>> reference;
 
     PerformCleanupTask(BoundedLocalCache<?, ?> cache) {
-      reference = new WeakReference<BoundedLocalCache<?,?>>(cache);
+      reference = new WeakReference<>(cache);
     }
 
     @Override

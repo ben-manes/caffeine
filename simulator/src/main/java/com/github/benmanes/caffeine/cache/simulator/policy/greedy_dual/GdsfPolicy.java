@@ -130,7 +130,7 @@ public final class GdsfPolicy implements Policy {
       // If f is among {f1, f2, ... fk}, it is simply not cached and removed from the priority
       // queue, while none of the files already in the cache is evicted. This happens when the value
       // of Pr(f) is so low that it would put f (if cached) among the first candidates for
-      // replacement, e.g. when the file size is very large. Thus the proposed procedure will
+      // replacement, e.g. when the file size is very large. Thus, the proposed procedure will
       // automatically limit the cases when such files are cached
       policyStats.recordRejection();
       remove(candidate);

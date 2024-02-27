@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
@@ -488,7 +489,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return Maps.toMap(moreKeys, Int::negate);
+      return intern(Maps.toMap(moreKeys, Int::negate));
     }).join();
 
     assertThat(result).containsExactlyKeys(context.absentKeys());
@@ -580,7 +581,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return Maps.toMap(moreKeys, Int::negate);
+      return intern(Maps.toMap(moreKeys, Int::negate));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
@@ -808,7 +809,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return CompletableFuture.completedFuture(Maps.toMap(moreKeys, Int::negate));
+      return CompletableFuture.completedFuture(intern(Maps.toMap(moreKeys, Int::negate)));
     }).join();
 
     assertThat(result).containsExactlyKeys(context.absentKeys());
@@ -958,7 +959,7 @@ public final class AsyncCacheTest {
       for (int i = 0; i < 10; i++) {
         moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
       }
-      return CompletableFuture.completedFuture(Maps.toMap(moreKeys, Int::negate));
+      return CompletableFuture.completedFuture(intern(Maps.toMap(moreKeys, Int::negate)));
     }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }

@@ -64,7 +64,7 @@ while the optimistic reloads are instead submitted to the sink. It's worth notin
   }
 ```
 
-The subscriber receives a batch of requests, each comprising of a key and a pending future result.
+The subscriber receives a batch of requests, each consisting of a key and a pending future result.
 It performs the synchronous load and then either completes the key's future with the corresponding
 value or an exception if a failure occurs.
 

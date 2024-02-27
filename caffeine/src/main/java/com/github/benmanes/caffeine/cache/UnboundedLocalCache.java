@@ -990,7 +990,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public void forEachRemaining(Consumer<? super Entry<K, V>> action) {
       requireNonNull(action);
       spliterator.forEachRemaining(entry -> {
-        var e = new WriteThroughEntry<K, V>(cache, entry.getKey(), entry.getValue());
+        var e = new WriteThroughEntry<>(cache, entry.getKey(), entry.getValue());
         action.accept(e);
       });
     }
@@ -999,7 +999,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public boolean tryAdvance(Consumer<? super Entry<K, V>> action) {
       requireNonNull(action);
       return spliterator.tryAdvance(entry -> {
-        var e = new WriteThroughEntry<K, V>(cache, entry.getKey(), entry.getValue());
+        var e = new WriteThroughEntry<>(cache, entry.getKey(), entry.getValue());
         action.accept(e);
       });
     }

@@ -225,7 +225,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
   static <K, V> CacheLoader<K, V> bulk(Function<? super Set<? extends K>,
       ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);
-    return new CacheLoader<K, V>() {
+    return new CacheLoader<>() {
       @Override public @Nullable V load(K key) {
         return loadAll(Set.of(key)).get(key);
       }

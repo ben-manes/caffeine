@@ -24,7 +24,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * empty) isLastIndex (set bit for last in chain/empty bit for not last in chain). Both indexes are
  * assumed to be 64 bits, (longs) for efficiency and simplicity. The technique update the indexes
  * upon addition/removal.
- *
+ * <p>
  * Paper link:
  * http://www.cs.technion.ac.il/users/wwwb/cgi-bin/tr-get.cgi/2015/CS/CS-2015-03.pdf
  * Presentation:

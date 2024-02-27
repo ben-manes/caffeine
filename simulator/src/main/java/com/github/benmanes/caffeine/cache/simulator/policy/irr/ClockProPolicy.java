@@ -34,7 +34,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * scanned.
  * <p>
  * ClockPro uses three hands that scan the queue. The hot hand points to the largest recency, the
- * cold hand to the cold entry furthest from the hot hand, and the test hand to the last cold entry
+ * cold hand to the cold entry farthest from the hot hand, and the test hand to the last cold entry
  * in the test period. This policy is adaptive by adjusting the percentage of hot and cold entries
  * that may reside in the cache. It uses non-resident (ghost) entries to retain additional history,
  * which are removed during the test hand's scan. The algorithm is explained by the authors in

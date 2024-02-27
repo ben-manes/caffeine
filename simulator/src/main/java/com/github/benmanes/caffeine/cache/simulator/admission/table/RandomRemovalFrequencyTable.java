@@ -30,7 +30,7 @@ import com.typesafe.config.Config;
  * maximum frequency of an element. The size of the sample in relation to the cache size can be
  * controlled with a sample factor. Instead of halving the popularity of elements a random element
  * is dropped when table is full.
- *
+ * <p>
  * This class is used to check the feasibility of using TinyTable instead of CountMin Sketch.
  *
  * @author gilg1983@gmail.com (Gil Einziger)
@@ -39,7 +39,7 @@ public final class RandomRemovalFrequencyTable implements Frequency {
   /** controls both the max count and how many items are remembered (the sum) */
   private static final int sampleFactor = 8;
 
-  /** a place holder for TinyTable */
+  /** a placeholder for TinyTable */
   private final Map<Long, Integer> table;
   /** used to dropped items at random */
   private final Random random;

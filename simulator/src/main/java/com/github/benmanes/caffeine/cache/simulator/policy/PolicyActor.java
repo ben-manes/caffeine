@@ -107,7 +107,7 @@ public final class PolicyActor {
     }
   }
 
-  /** A command to shutdown the policy and finalize the statistics. */
+  /** A command to shut down the policy and finalize the statistics. */
   private final class Finish extends Command {
     @Override public void execute() {
       policy.finished();

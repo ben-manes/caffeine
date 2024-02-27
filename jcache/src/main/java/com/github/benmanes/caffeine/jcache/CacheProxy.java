@@ -212,7 +212,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    */
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
       Set<? extends K> keys, boolean updateAccessTime) {
-    var result = new HashMap<K, Expirable<V>>(cache.getAllPresent(keys));
+    var result = new HashMap<>(cache.getAllPresent(keys));
 
     int[] expired = { 0 };
     long[] millis = { 0L };
@@ -1238,7 +1238,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       current = cursor;
       cursor = null;
       @SuppressWarnings("NullAway")
-      var entry = new EntryProxy<K, V>(copyOf(current.getKey()), copyValue(current.getValue()));
+      var entry = new EntryProxy<>(copyOf(current.getKey()), copyValue(current.getValue()));
       return entry;
     }
 

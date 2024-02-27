@@ -30,7 +30,7 @@ import com.typesafe.config.Config;
 public final class IndicatorResetCountMin4 implements Frequency {
   private final ClimberResetCountMin4 sketch;
 
-  Indicator indicator;
+  final Indicator indicator;
 
   public IndicatorResetCountMin4(Config config) {
     this.sketch = new ClimberResetCountMin4(config);

@@ -1102,7 +1102,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @Override
       public Iterator<V> iterator() {
-        return new Iterator<V>() {
+        return new Iterator<>() {
           final Iterator<Entry<K, V>> iterator = entrySet().iterator();
 
           @Override
