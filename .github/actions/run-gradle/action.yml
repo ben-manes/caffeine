@@ -32,7 +32,7 @@ runs:
         echo "GRAALVM=true" >> $GITHUB_ENV
         echo "JAVA_VERSION=${{ inputs.graal }}" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
-      uses: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93 # v4.0.0
+      uses: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
       if: (inputs.early-access != inputs.java) && (inputs.java != 'GraalVM')
       with:
         java-version: ${{ inputs.java }}
@@ -59,7 +59,7 @@ runs:
         echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
     - name: Set up JDK 17
       id: setup-gradle-jdk
-      uses: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93 # v4.0.0
+      uses: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
       if: inputs.java != 'GraalVM'
       with:
         java-version: 17
