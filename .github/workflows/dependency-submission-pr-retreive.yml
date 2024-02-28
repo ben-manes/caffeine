@@ -35,6 +35,6 @@ jobs:
             repo1.maven.org:443
             services.gradle.org:443
       - name: Retrieve and submit dependency graph
-        uses: gradle/actions/dependency-submission@b6816cf21e7970b88479bb3c57d9cbe5cdd4b949 # v3.0.0-rc.1
+        uses: gradle/actions/dependency-submission@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
         with:
           dependency-graph-action: retrieve-and-submit

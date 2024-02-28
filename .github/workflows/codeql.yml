@@ -65,7 +65,7 @@ jobs:
         uses: Wandalen/wretry.action@0ef67d343938e879e0a9bb37c107a55731e8ed35 # v1.4.5
         timeout-minutes: 5
         with:
-          action: gradle/actions/setup-gradle@b6816cf21e7970b88479bb3c57d9cbe5cdd4b949 # v3.0.0-rc.1
+          action: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
           with: |
             add-job-summary: never
             cache-read-only: false

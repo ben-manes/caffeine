@@ -44,7 +44,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Submit Dependency Graph
-        uses: gradle/actions/dependency-submission@b6816cf21e7970b88479bb3c57d9cbe5cdd4b949 # v3.0.0-rc.1
+        uses: gradle/actions/dependency-submission@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           dependency-graph-action: generate-and-save
