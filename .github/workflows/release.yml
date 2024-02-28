@@ -19,34 +19,17 @@ jobs:
           disable-sudo: true
           egress-policy: audit
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@0ef67d343938e879e0a9bb37c107a55731e8ed35 # v1.4.5
-        timeout-minutes: 5
-        with:
-          action: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93 # v4.0.0
-          with: |
-            distribution: temurin
-            java-version: ${{ env.JAVA_VERSION }}
-          attempt_limit: 3
-          attempt_delay: 2000
-      - name: Setup Gradle
-        uses: Wandalen/wretry.action@0ef67d343938e879e0a9bb37c107a55731e8ed35 # v1.4.5
-        timeout-minutes: 5
-        with:
-          action: gradle/actions/setup-gradle@b6816cf21e7970b88479bb3c57d9cbe5cdd4b949 # v3.0.0-rc.1
-          with: |
-            add-job-summary: never
-            cache-read-only: false
-            gradle-home-cache-cleanup: true
-          attempt_limit: 3
-          attempt_delay: 2000
       - name: Releasing
+        uses: ./.github/actions/run-gradle
         env:
           ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.NEXUS_USERNAME }}
           ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.NEXUS_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
-        run: >
-          ./gradlew --no-configuration-cache
-          publishToSonatype closeAndReleaseSonatypeStagingRepository -Prelease
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          arguments: >
+            publishToSonatype closeAndReleaseSonatypeStagingRepository -Prelease
+            --no-configuration-cache

@@ -275,6 +275,16 @@
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.local.AddSubtype"/>
+    <Method name="getJavaDoc"/>
+    <Bug pattern="POTENTIAL_XML_INJECTION"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.node.AddSubtype"/>
+    <Method name="getJavaDoc"/>
+    <Bug pattern="POTENTIAL_XML_INJECTION"/>
+  </Match>
+  <Match>
     <Class name="~com.github.benmanes.caffeine.*Benchmark.*"/>
     <Bug pattern="PREDICTABLE_RANDOM"/>
   </Match>

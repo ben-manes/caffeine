@@ -37,7 +37,7 @@ jobs:
         uses: Wandalen/wretry.action@0ef67d343938e879e0a9bb37c107a55731e8ed35 # v1.4.5
         timeout-minutes: 5
         with:
-          action: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93 # v4.0.0
+          action: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
           with: |
             distribution: temurin
             java-version: ${{ env.JAVA_VERSION }}

@@ -16,7 +16,8 @@ plugins {
   alias(libs.plugins.versions)
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(11)
+require(JavaVersion.current() >= JavaVersion.VERSION_17) { "Java 17 or greater is required" }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 dependencies {
   implementation(libs.bnd)
@@ -60,7 +61,6 @@ tasks.withType<DependencyUpdatesTask> {
         }
       }
     }
-    force(libs.bnd)
   }
 }
 
