@@ -29,7 +29,7 @@ publishing {
         name = "Caffeine cache"
         description = project.description
         url = "https://github.com/ben-manes/caffeine"
-        inceptionYear= "2014"
+        inceptionYear = "2014"
 
         scm {
           url = "https://github.com/ben-manes/caffeine"
