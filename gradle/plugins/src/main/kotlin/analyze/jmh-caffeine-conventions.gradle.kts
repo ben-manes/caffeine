@@ -80,7 +80,7 @@ tasks.withType<JmhTask>().configureEach {
 }
 
 tasks.withType<JmhBytecodeGeneratorTask>().configureEach {
-  javaLauncher= javaToolchains.launcherFor {
+  javaLauncher = javaToolchains.launcherFor {
     languageVersion = java.toolchain.languageVersion
   }
 }

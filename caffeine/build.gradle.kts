@@ -256,15 +256,15 @@ for (scenario in Scenario.all()) {
         "implementation" to implementation)
 
       useTestNG {
-        if (slow == Slow.Disabled) {
-          threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
-          jvmArgs("-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled")
-          excludeGroups("slow", "isolated", "lincheck")
-          parallel = "methods"
-        } else {
-          jvmArgs("-XX:+UseParallelGC")
-          includeGroups.add("slow")
+        if (slow == Slow.Enabled) {
           maxParallelForks = 2
+          includeGroups.add("slow")
+          jvmArgs("-XX:+UseParallelGC")
+        } else {
+          parallel = "methods"
+          excludeGroups("slow", "isolated", "lincheck")
+          jvmArgs("-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled")
+          threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
         }
       }
     }
