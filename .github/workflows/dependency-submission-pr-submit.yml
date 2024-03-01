@@ -47,4 +47,4 @@ jobs:
         uses: gradle/actions/dependency-submission@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          dependency-graph-action: generate-and-save
+          dependency-graph-action: generate-and-upload
