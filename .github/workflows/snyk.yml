@@ -39,7 +39,7 @@ jobs:
             services.gradle.org:443
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Run Snyk test
-        uses: snyk/actions/gradle-jdk11@master
+        uses: snyk/actions/gradle-jdk17@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -57,7 +57,7 @@ jobs:
         with:
           sarif_file: snyk.sarif
       - name: Run Snyk monitor
-        uses: snyk/actions/gradle-jdk11@master
+        uses: snyk/actions/gradle-jdk17@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
