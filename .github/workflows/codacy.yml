@@ -47,7 +47,7 @@ jobs:
         if: steps.check_files.outputs.files_exists == 'true'
         run: jq -c '.runs |= unique_by({tool, invocations, results})' < results.sarif > codacy.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@592977e6ae857384aa79bb31e7a1d62d63449ec5 # v2.16.3
+        uses: github/codeql-action/upload-sarif@8a470fddafa5cbb6266ee11b37ef4d8aae19c571 # v3.24.6
         if: steps.check_files.outputs.files_exists == 'true'
         continue-on-error: true
         with:

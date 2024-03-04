@@ -73,10 +73,10 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@592977e6ae857384aa79bb31e7a1d62d63449ec5 # v2.16.3
+        uses: github/codeql-action/init@8a470fddafa5cbb6266ee11b37ef4d8aae19c571 # v3.24.6
         with:
           languages: java
       - name: Autobuild
-        uses: github/codeql-action/autobuild@592977e6ae857384aa79bb31e7a1d62d63449ec5 # v2.16.3
+        uses: github/codeql-action/autobuild@8a470fddafa5cbb6266ee11b37ef4d8aae19c571 # v3.24.6
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@592977e6ae857384aa79bb31e7a1d62d63449ec5 # v2.16.3
+        uses: github/codeql-action/analyze@8a470fddafa5cbb6266ee11b37ef4d8aae19c571 # v3.24.6
