@@ -33,7 +33,7 @@ jobs:
             services.gradle.org:443
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@0ef67d343938e879e0a9bb37c107a55731e8ed35 # v1.4.5
+        uses: Wandalen/wretry.action@29408fc1f4712068bdfc402d6b5b82c2194b42ea # v1.4.7
         timeout-minutes: 5
         with:
           action: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
