@@ -27,7 +27,8 @@ tasks.withType<JavaCompile>().configureEach {
   options.release = javaVersion.asInt()
 
   javaCompiler = javaToolchains.compilerFor {
-    languageVersion = java.toolchain.languageVersion
+    // jdk 17+ is required by compiler plugins, e.g. error-prone
+    languageVersion = maxOf(javaVersion, JavaLanguageVersion.of(17))
   }
 
   options.compilerArgs.add("-Xlint:all,-processing,-exports,-auxiliaryclass,"
