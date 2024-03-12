@@ -1,6 +1,4 @@
 version: "1.0"
-projectJDK: temurin-11
-linter: jetbrains/qodana-jvm-community:2023.2
 profile:
   name: qodana.recommended
 exclude:

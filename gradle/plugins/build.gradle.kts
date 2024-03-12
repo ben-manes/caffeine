@@ -55,9 +55,13 @@ tasks.withType<DependencyUpdatesTask> {
   resolutionStrategy {
     componentSelection {
       val ignoredGroups = listOf("org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
+      val stable = setOf("com.fasterxml.jackson", "com.squareup.okhttp3")
+      val isNonStable = "^[0-9,.v-]+(-r)?$".toRegex()
       all {
         if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
           reject("kotlin dsl")
+        } else if ((candidate.group in stable) && !isNonStable.matches(candidate.version)) {
+          reject("Release candidate")
         }
       }
     }
