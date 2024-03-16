@@ -18,6 +18,14 @@ inputs:
   token:
     required: false
     description: 'A Github PAT'
+  attempt-limit:
+    default: '1'
+    required: false
+    description: Number of attempts
+  attempt-delay:
+    default: '0'
+    required: false
+    description: A delay between attempts in seconds
 runs:
   using: composite
   steps:
@@ -85,4 +93,14 @@ runs:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
       shell: bash
-      run: ./gradlew ${{ inputs.arguments }}
+      run: |
+        for ((i=1; i<=${{ inputs.attempt-limit }}; i++)); do
+          ./gradlew $(echo "${{ inputs.arguments }}" | tr -d '\n') && break
+          if [ $i -lt ${{ inputs.attempt-limit }} ]; then
+            echo "Attempt $i failed. Retrying in ${{ inputs.attempt-delay }} seconds..."
+            sleep ${{ inputs.attempt-delay }}
+          else
+            echo "All attempts failed."
+            exit 1
+          fi
+        done

@@ -59,7 +59,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Prepare GraalVM
         if: env.JAVA_VERSION == 'GraalVM'
         shell: bash
@@ -174,7 +174,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Run tests (${{ env.JAVA_VERSION }})
         uses: ./.github/actions/run-gradle
         with:
@@ -229,7 +229,7 @@ jobs:
             storage.googleapis.com:443
             uploader.codecov.io:443
       - name: Checkout
-        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
       - name: Download Tests Results
@@ -340,7 +340,7 @@ jobs:
             errorprone.info:443
             lightbend.github.io:443
             guava.dev:443
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
         env:
@@ -350,6 +350,8 @@ jobs:
           ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
         with:
+          attempt-limit: 3
+          attempt-delay: 2
           java: ${{ env.PUBLISH_JDK }}
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: publishToSonatype --no-configuration-cache
