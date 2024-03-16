@@ -50,17 +50,17 @@ jobs:
             -PincludePattern=ComputeBenchmark
             -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Compute JMH Results to Gist
-        uses: exuanbo/actions-deploy-gist@47697fceaeea2006a90594ee24eb9cd0a1121ef8 # v1.1.4
+        uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
         if: >
           github.event_name == 'push'
           && github.event.repository.fork == false
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
-          token: ${{ secrets.GIST_TOKEN }}
+          auth: ${{ secrets.GIST_TOKEN }}
           gist_description: Compute JMH Results
-          gist_id: 511298014cc5629cbc5e57f09fd4c430
-          file_path: ./caffeine/build/reports/jmh/results.json
-          gist_file_name: compute_results_${{ matrix.java }}.json
+          gist_title: compute_results_${{ matrix.java }}.json
+          github_file: ./caffeine/build/reports/jmh/results.json
+          gist_url: https://gist.githubusercontent.com/ben-manes/511298014cc5629cbc5e57f09fd4c430
       - name: Get/Put JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
@@ -71,17 +71,17 @@ jobs:
             -PincludePattern=GetPutBenchmark
             -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Get/Put JMH Results to Gist
-        uses: exuanbo/actions-deploy-gist@47697fceaeea2006a90594ee24eb9cd0a1121ef8 # v1.1.4
+        uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
         if: >
           github.event_name == 'push'
           && github.event.repository.fork == false
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
-          token: ${{ secrets.GIST_TOKEN }}
+          auth: ${{ secrets.GIST_TOKEN }}
           gist_description: Get/Put JMH Results
-          gist_id: b231cf57cf8e144e2247716e777edcf3
-          file_path: ./caffeine/build/reports/jmh/results.json
-          gist_file_name: getput_results_${{ matrix.java }}.json
+          gist_title: getput_results_${{ matrix.java }}.json
+          github_file: ./caffeine/build/reports/jmh/results.json
+          gist_url: https://gist.githubusercontent.com/ben-manes/b231cf57cf8e144e2247716e777edcf3
       - name: Put/Remove JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:

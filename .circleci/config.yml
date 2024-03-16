@@ -161,8 +161,7 @@ workflows:
                 - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
                 - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
                 - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
-                # https://github.com/JetBrains/lincheck/issues/278
-                # - caffeine:lincheckTest
+                - caffeine:lincheckTest
                 - caffeine:isolatedTest
                 - caffeine:junitTest
                 - simulator:run
