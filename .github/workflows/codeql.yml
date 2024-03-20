@@ -52,7 +52,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
       - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: Wandalen/wretry.action@1a10d4835a1506f513ad8e7488aeb474ab20055c # v1.4.10
+        uses: Wandalen/wretry.action@4ca71ac27896a6670a57267cf3ddec528278c86f # v2.0.0
         timeout-minutes: 5
         with:
           action: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
@@ -62,7 +62,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 2000
       - name: Setup Gradle
-        uses: Wandalen/wretry.action@1a10d4835a1506f513ad8e7488aeb474ab20055c # v1.4.10
+        uses: Wandalen/wretry.action@4ca71ac27896a6670a57267cf3ddec528278c86f # v2.0.0
         timeout-minutes: 5
         with:
           action: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
