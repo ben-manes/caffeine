@@ -46,7 +46,7 @@ runs:
         java-version: ${{ inputs.java }}
         distribution: temurin
     - name: Set up JDK ${{ inputs.java }}
-      uses: oracle-actions/setup-java@8294b2d42db153962a75462461be076c5298a7c1 # v1.3.3
+      uses: oracle-actions/setup-java@83e2004a40aaa491fbc6b4697353b9a75b095efb # v1.3.4
       if: (inputs.early-access == inputs.java) && (inputs.java != 'GraalVM')
       with:
         release: ${{ inputs.java }}
