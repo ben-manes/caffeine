@@ -8,7 +8,7 @@ permissions: read-all
 
 env:
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  JAVA_VERSION: 21
+  JAVA_VERSION: 22
 
 jobs:
   dependency-check:

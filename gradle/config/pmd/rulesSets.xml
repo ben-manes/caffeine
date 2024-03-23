@@ -40,6 +40,7 @@
     <exclude name="ShortClassName"/>
     <exclude name="ShortMethodName"/>
     <exclude name="ConfusingTernary"/>
+    <exclude name="UseExplicitTypes"/>
     <exclude name="UnnecessaryReturn"/>
     <exclude name="UseDiamondOperator"/>
     <exclude name="UselessParentheses"/>
@@ -79,10 +80,8 @@
     <exclude name="ExcessiveImports"/>
     <exclude name="CognitiveComplexity"/>
     <exclude name="CyclomaticComplexity"/>
-    <exclude name="ExcessiveClassLength"/>
     <exclude name="ExcessivePublicCount"/>
     <exclude name="LoosePackageCoupling"/>
-    <exclude name="ExcessiveMethodLength"/>
     <exclude name="CouplingBetweenObjects"/>
     <exclude name="AvoidRethrowingException"/>
     <exclude name="AbstractClassWithoutAnyMethod"/>
@@ -99,7 +98,6 @@
 
   <rule ref="category/java/errorprone.xml">
     <exclude name="DontImportSun"/>
-    <exclude name="EmptyWhileStmt"/>
     <exclude name="NullAssignment"/>
     <exclude name="AssignmentInOperand"/>
     <exclude name="UseProperClassLoader"/>
