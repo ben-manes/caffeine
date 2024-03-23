@@ -57,7 +57,6 @@ runs:
       if: inputs.java == 'GraalVM'
       with:
         distribution: 'graalvm'
-        components: 'native-image'
         github-token: ${{ inputs.token }}
         java-version: ${{ env.JAVA_VERSION }}
     - name: Prepare JDK ${{ inputs.java }}
