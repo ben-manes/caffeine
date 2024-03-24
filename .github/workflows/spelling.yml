@@ -3,8 +3,25 @@ permissions: read-all
 on: [ push, pull_request ]
 
 jobs:
-  spellcheck:
-    name: Check spelling
+  misspell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - name: Misspell
+        uses: reviewdog/action-misspell@32cdac969bc45951d79b89420a60c9b0102cf6ed # v1.16.0
+        with:
+          reporter: github-check
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  typos:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -15,11 +32,6 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-            raw.githubusercontent.com:443
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
-      - name: Install
-        run: curl -sfL https://raw.githubusercontent.com/golangci/misspell/master/install-misspell.sh | sh -s -- -b .
-      - name: Spell Check with Misspell
-        run: ./misspell -error .
-      - name: Spell Check with Typos
+      - name: Typos
         uses: crate-ci/typos@bcafd462cb07ef7ba57e34abf458fe20767e808b # v1.19.0

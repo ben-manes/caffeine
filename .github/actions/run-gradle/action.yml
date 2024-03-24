@@ -2,7 +2,7 @@ name: Run Gradle
 description: Sets up Gradle JDKs and runs Gradle
 inputs:
   arguments:
-    required: true
+    required: false
     description: Gradle arguments
   java:
     required: true
@@ -83,6 +83,7 @@ runs:
         gradle-home-cache-cleanup: true
         gradle-home-cache-strict-match: true
     - name: Run ${{ inputs.arguments }}
+      if: ${{ inputs.arguments != '' }}
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'

@@ -1,0 +1,24 @@
+name: actionlint
+permissions: read-all
+on: [ push, pull_request ]
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - name: actionlint
+        uses: reviewdog/action-actionlint@c6ee1eb0a5d47b2af53a203652b5dac0b6c4016e # v1.43.0
+        env:
+          SHELLCHECK_OPTS: -e SC2001 -e SC2035 -e SC2046 -e SC2061 -e SC2086 -e SC2156
+        with:
+          reporter: github-check
+          github_token: ${{ secrets.GITHUB_TOKEN }}
