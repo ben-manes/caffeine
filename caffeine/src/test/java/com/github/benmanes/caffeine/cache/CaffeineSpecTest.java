@@ -69,6 +69,15 @@ public final class CaffeineSpecTest {
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parseTimeUnit("key", "value"));
   }
 
+  @Test
+  public void parse_exception() {
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("="));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("=="));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("key="));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("=value"));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("key=value="));
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
@@ -122,6 +131,7 @@ public final class CaffeineSpecTest {
     checkRefreshAfterWrite(spec, context, builder, epoch);
 
     assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString()));
+    assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString().replaceAll(",", ",,")));
   }
 
   static CaffeineSpec toSpec(CacheContext context,

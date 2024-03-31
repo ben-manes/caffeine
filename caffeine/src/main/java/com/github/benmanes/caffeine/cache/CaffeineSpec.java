@@ -155,18 +155,19 @@ public final class CaffeineSpec {
     }
 
     @SuppressWarnings("StringSplitter")
-    String[] keyAndValue = option.split(SPLIT_KEY_VALUE);
-    requireArgument((keyAndValue.length >= 1) && (keyAndValue.length <= 2),
+    String[] keyAndValue = option.split(SPLIT_KEY_VALUE, 3);
+    requireArgument(keyAndValue.length >= 1, "blank key-value pair");
+    requireArgument(keyAndValue.length <= 2,
         "key-value pair %s with more than one equals sign", option);
 
     String key = keyAndValue[0].trim();
     String value = (keyAndValue.length == 1) ? null : keyAndValue[1].trim();
 
-    configure(key, value);
+    configure(option, key, value);
   }
 
   /** Configures the setting. */
-  void configure(String key, @Nullable String value) {
+  void configure(String option, String key, @Nullable String value) {
     switch (key) {
       case "initialCapacity":
         initialCapacity(key, value);
@@ -199,7 +200,7 @@ public final class CaffeineSpec {
         recordStats(value);
         return;
       default:
-        throw new IllegalArgumentException("Unknown key " + key);
+        throw new IllegalArgumentException("Invalid option " + option);
     }
   }
 
