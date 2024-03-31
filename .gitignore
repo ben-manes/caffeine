@@ -6,6 +6,7 @@ build-cache
 test-output
 jitwatch.out
 .DS_Store
+.cifuzz-corpus
 .classpath
 .settings
 .project

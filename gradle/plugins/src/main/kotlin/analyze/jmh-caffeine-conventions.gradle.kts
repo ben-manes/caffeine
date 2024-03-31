@@ -14,6 +14,7 @@ plugins {
 
 configurations.jmh {
   extendsFrom(configurations.testImplementation.get())
+  exclude(module = "jazzer-junit")
   exclude(module = "slf4j-test")
 }
 

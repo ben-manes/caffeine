@@ -72,6 +72,7 @@ final class CacheFactory {
    * @param cacheName the name of the cache
    * @return a new cache instance or null if the named cache is not defined in the settings file
    */
+  @SuppressWarnings("resource")
   public static @Nullable <K, V> CacheProxy<K, V> tryToCreateFromExternalSettings(
       CacheManager cacheManager, String cacheName) {
     return TypesafeConfigurator.<K, V>from(rootConfig(cacheManager), cacheName)

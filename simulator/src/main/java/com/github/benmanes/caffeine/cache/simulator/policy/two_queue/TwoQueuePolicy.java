@@ -71,7 +71,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  @SuppressWarnings({"PMD.ConfusingTernary", "PMD.SwitchStmtsShouldHaveDefault"})
+  @SuppressWarnings("PMD.ConfusingTernary")
   public void record(long key) {
     // On accessing a page X :
     //   if X is in Am then
@@ -111,6 +111,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
           policyStats.recordHit();
           return;
       }
+      throw new IllegalStateException("Unknown type: " + node.type);
     } else {
       node = new Node(key);
       node.type = QueueType.IN;

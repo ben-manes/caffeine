@@ -31,6 +31,7 @@ dependencies {
   testImplementation(libs.ycsb) {
     isTransitive = false
   }
+  testImplementation(libs.jazzer)
   testImplementation(libs.picocli)
   testImplementation(libs.jctools)
   testImplementation(libs.fastutil)
@@ -152,6 +153,18 @@ tasks.register<Test>("lincheckTest") {
   }
 }
 
+tasks.register<Test>("fuzzTest") {
+  group = "Verification"
+  description = "Fuzz tests"
+
+  forkEvery = 1
+  failFast = true
+  useJUnitPlatform()
+  testLogging.events("started")
+  environment("JAZZER_FUZZ", "1")
+  include("com/github/benmanes/caffeine/fuzz/**")
+}
+
 val junitTest = tasks.register<Test>("junitTest") {
   group = "Verification"
   description = "JUnit tests"
@@ -162,6 +175,7 @@ val junitTest = tasks.register<Test>("junitTest") {
   useJUnit()
   failFast = true
   maxHeapSize = "2g"
+  exclude("com/github/benmanes/caffeine/fuzz/**")
   systemProperty("caffeine.osgi.jar", relativePath(jar.get().archiveFile.get().asFile.path))
 }
 

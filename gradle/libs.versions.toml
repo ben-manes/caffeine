@@ -49,6 +49,7 @@ jakarta-inject = "2.0.1"
 jamm = "0.4.0"
 java-object-layout = "0.17"
 javapoet = "1.13.0"
+jazzer = "0.22.1"
 jcache = "1.1.1"
 jcommander = "1.82"
 jctools = "4.0.3"
@@ -67,7 +68,7 @@ kotlin = "1.9.23"
 lincheck = "2.27"
 mockito = "5.11.0"
 nexus-publish = "2.0.0-rc-2"
-nullaway-core = "0.10.24"
+nullaway-core = "0.10.25"
 nullaway-plugin = "2.0.0"
 okhttp-bom = "4.12.0"
 okio-bom = "3.9.0"
@@ -82,7 +83,7 @@ protobuf = "4.26.1"
 slf4j = "2.0.12"
 slf4j-test = "3.0.1"
 snakeyaml = "2.2"
-sonarqube = "4.4.1.3373"
+sonarqube = "5.0.0.4638"
 spotbugs-contrib = "7.6.4"
 spotbugs-core = "4.8.3"
 spotbugs-plugin = "6.0.9"
@@ -156,6 +157,7 @@ jakarta-inject = { module = "jakarta.inject:jakarta.inject-api", version.ref = "
 jamm = { module = "com.github.jbellis:jamm", version.ref = "jamm" }
 java-object-layout = { module = "org.openjdk.jol:jol-cli", version.ref = "java-object-layout" }
 javapoet = { module = "com.squareup:javapoet", version.ref = "javapoet" }
+jazzer = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }
 jcache = { module = "javax.cache:cache-api", version.ref = "jcache" }
 jcache-guice = { module = "org.jsr107.ri:cache-annotations-ri-guice", version.ref = "jcache" }
 jcache-tck = { module = "javax.cache:cache-tests", version.ref = "jcache" }

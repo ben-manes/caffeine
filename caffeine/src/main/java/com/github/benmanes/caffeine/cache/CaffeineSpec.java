@@ -156,7 +156,7 @@ public final class CaffeineSpec {
 
     @SuppressWarnings("StringSplitter")
     String[] keyAndValue = option.split(SPLIT_KEY_VALUE);
-    requireArgument(keyAndValue.length <= 2,
+    requireArgument((keyAndValue.length >= 1) && (keyAndValue.length <= 2),
         "key-value pair %s with more than one equals sign", option);
 
     String key = keyAndValue[0].trim();

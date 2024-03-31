@@ -239,6 +239,7 @@ public final class EventDispatcher<K, V> {
       JCacheEntryEvent<K, V> e = event;
       var dispatchQueue = entry.getValue();
       var future = dispatchQueue.compute(key, (k, queue) -> {
+        @SuppressWarnings("resource")
         Runnable action = () -> registration.getCacheEntryListener().dispatch(e);
         return (queue == null)
             ? CompletableFuture.runAsync(action, executor)

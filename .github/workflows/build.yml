@@ -164,6 +164,8 @@ jobs:
             java: 11
           - suite: caffeine:weakKeysAndSoftValuesSyncGuavaTest
             java: 11
+          - suite: caffeine:fuzzTest
+            java: 11
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
