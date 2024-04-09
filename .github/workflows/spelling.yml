@@ -34,4 +34,4 @@ jobs:
             objects.githubusercontent.com:443
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
       - name: Typos
-        uses: crate-ci/typos@bcafd462cb07ef7ba57e34abf458fe20767e808b # v1.19.0
+        uses: crate-ci/typos@0019ccbb098ecd8951f6fdf1c18af2845c9b9a8e # v1.20.5
