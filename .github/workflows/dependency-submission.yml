@@ -38,6 +38,6 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
       - name: Submit Dependency Graph
-        uses: gradle/actions/dependency-submission@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
+        uses: gradle/actions/dependency-submission@1168cd3d07c1876a65e1724114de42ccbdfa7b78 # v3.2.1
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
