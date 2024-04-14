@@ -3,7 +3,7 @@ permissions: read-all
 on: [ push, pull_request ]
 
 env:
-  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
   JAVA_VERSION: 11
 
 jobs:

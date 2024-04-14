@@ -133,6 +133,11 @@
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.stats.CacheStats"/>
+    <Method name="empty"/>
+    <Bug pattern="SING_SINGLETON_GETTER_NOT_SYNCHRONIZED"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.stats.CacheStats"/>
     <Or>
       <Method name="saturatedAdd"/>
       <Method name="saturatedSubtract"/>
@@ -442,6 +447,11 @@
     <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent"/>
+    <Method name="equals"/>
+    <Bug pattern="FE_FLOATING_POINT_EQUALITY"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent$PenaltiesAccessEvent"/>
     <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
   </Match>
@@ -462,6 +472,11 @@
     <Class name="com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual.GdsfPolicy$Node"/>
     <Method name="equals"/>
     <Bug pattern="FE_FLOATING_POINT_EQUALITY"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber$Adaptation"/>
+    <Method name="hold"/>
+    <Bug pattern="SING_SINGLETON_GETTER_NOT_SYNCHRONIZED"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.report.TextReporter"/>

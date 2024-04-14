@@ -1,0 +1,28 @@
+develocity {
+  if (!gradle.startParameter.isBuildScan()) {
+    server = 'https://caffeine.gradle-enterprise.cloud/'
+    buildScan.publishing.onlyIf { it.authenticated }
+  }
+  buildScan {
+    if (System.env.CI) {
+      uploadInBackground = false
+    } else {
+      obfuscation.ipAddresses { [] }
+    }
+    if (System.env.GITHUB_ACTIONS) {
+      obfuscation.username { 'github' }
+    }
+
+    termsOfUseUrl = 'https://gradle.com/terms-of-service'
+    termsOfUseAgree = 'yes'
+  }
+}
+
+buildCache {
+  remote(develocity.buildCache) {
+    // Check access key presence to avoid build cache errors on PR builds when not present
+    push = System.env.CI && System.env.DEVELOCITY_ACCESS_KEY
+    enabled = true
+  }
+  local.enabled = true
+}

@@ -3,6 +3,8 @@ import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import kotlin.math.max
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
+import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
+import org.gradle.plugins.ide.eclipse.model.Library
 
 plugins {
   id("java-library-caffeine-conventions")
@@ -21,6 +23,7 @@ sourceSets {
 
 val compileJavaPoetJava by tasks.existing
 val javaAgent: Configuration by configurations.creating
+val collections4Sources: Configuration by configurations.creating
 var javaPoetImplementation: Configuration = configurations["javaPoetImplementation"]
 
 dependencies {
@@ -43,6 +46,11 @@ dependencies {
   testImplementation(libs.commons.collections4) {
     artifact {
       classifier = "tests"
+    }
+  }
+  collections4Sources(libs.commons.collections4) {
+    artifact {
+      classifier = "test-sources"
     }
   }
   testImplementation(sourceSets["codeGen"].output)
@@ -288,8 +296,17 @@ for (scenario in Scenario.all()) {
   }
 }
 
-eclipse {
-  classpath.plusConfigurations.add(configurations["javaPoetCompileClasspath"])
+eclipse.classpath {
+  plusConfigurations.add(configurations["javaPoetCompileClasspath"])
+
+  file.whenMerged {
+    if (this is EclipseClasspath) {
+      val regex = ".*collections4.*-tests.jar".toRegex()
+      entries.filterIsInstance<Library>()
+        .filter { regex.matches(it.path) }
+        .forEach { it.sourcePath = fileReference(file(collections4Sources.asPath)) }
+    }
+  }
 }
 
 idea.module {
