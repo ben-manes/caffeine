@@ -848,9 +848,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     try {
       cache.asMap().compute(copyOf(key), remappingFunction);
       dispatcher.awaitSynchronous();
-    } catch (Throwable thr) {
+    } catch (Throwable t) {
       dispatcher.ignoreSynchronous();
-      throw thr;
+      throw t;
     }
 
     @SuppressWarnings("unchecked")

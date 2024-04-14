@@ -3,36 +3,36 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: github-actions
     directory: /.github/actions/run-gradle
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: gradle
     directory: /
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: gradle
     directory: gradle/plugins
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: gradle
     directory: examples/coalescing-bulkloader-reactor
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: gradle
     directory: examples/write-behind-rxjava
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: gradle
     directory: examples/hibernate
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: gradle
     directory: examples/resilience-failsafe
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: gradle
     directory: examples/graal-native
     schedule:
-      interval: daily
+      interval: monthly
