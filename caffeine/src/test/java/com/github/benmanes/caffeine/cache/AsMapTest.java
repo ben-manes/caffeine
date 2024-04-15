@@ -151,6 +151,16 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void containsKey_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isFalse();
+    cache.synchronous().invalidate(context.absentKey());
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void containsValue_null(Map<Int, Int> map, CacheContext context) {
     assertThrows(NullPointerException.class, () -> map.containsValue(null));
   }
@@ -1764,6 +1774,16 @@ public final class AsMapTest {
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void keySet_contains_present(Map<Int, Int> map, CacheContext context) {
     assertThat(map.keySet().contains(context.firstKey())).isTrue();
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void keySet_contains_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.synchronous().asMap().keySet().contains(context.absentKey())).isFalse();
+    cache.synchronous().invalidate(context.absentKey());
   }
 
   @CheckNoStats

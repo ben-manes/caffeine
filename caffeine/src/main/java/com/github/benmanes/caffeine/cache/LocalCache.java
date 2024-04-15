@@ -82,7 +82,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * the statistics nor the eviction policy.
    */
   @Nullable
-  V getIfPresentQuietly(K key);
+  V getIfPresentQuietly(Object key);
 
   /** See {@link Cache#getAllPresent}. */
   Map<K, V> getAllPresent(Iterable<? extends K> keys);

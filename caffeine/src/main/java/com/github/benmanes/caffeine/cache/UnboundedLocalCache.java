@@ -138,7 +138,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public @Nullable V getIfPresentQuietly(K key) {
+  @SuppressWarnings("SuspiciousMethodCalls")
+  public @Nullable V getIfPresentQuietly(Object key) {
     return data.get(key);
   }
 

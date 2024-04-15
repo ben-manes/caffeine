@@ -680,10 +680,10 @@ public final class ExpirationTest {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.asMap().containsKey(context.absentKey())).isTrue();
-    assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isTrue();
+    assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isFalse();
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().containsKey(context.absentKey())).isTrue();
-    assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isTrue();
+    assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isFalse();
     future.complete(null);
   }
 

@@ -2208,7 +2208,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  public @Nullable V getIfPresentQuietly(K key) {
+  public @Nullable V getIfPresentQuietly(Object key) {
     V value;
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if ((node == null) || ((value = node.getValue()) == null)

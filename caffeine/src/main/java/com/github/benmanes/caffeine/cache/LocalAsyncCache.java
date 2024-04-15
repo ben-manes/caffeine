@@ -591,6 +591,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   final class AsMapView<K, V> implements ConcurrentMap<K, V> {
     final LocalCache<K, CompletableFuture<V>> delegate;
 
+    @Nullable Set<K> keys;
     @Nullable Collection<V> values;
     @Nullable Set<Entry<K, V>> entries;
 
@@ -615,7 +616,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public boolean containsKey(Object key) {
-      return delegate.containsKey(key);
+      return Async.isReady(delegate.getIfPresentQuietly(key));
     }
 
     @Override
@@ -950,7 +951,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Set<K> keySet() {
-      return delegate.keySet();
+      return (keys == null) ? (keys = new KeySet()) : keys;
     }
 
     @Override
@@ -1014,6 +1015,71 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
       }
       return result.append('}').toString();
+    }
+
+    private final class KeySet extends AbstractSet<K> {
+
+      @Override
+      public boolean isEmpty() {
+        return AsMapView.this.isEmpty();
+      }
+
+      @Override
+      public int size() {
+        return AsMapView.this.size();
+      }
+
+      @Override
+      public void clear() {
+        AsMapView.this.clear();
+      }
+
+      @Override
+      public boolean contains(Object o) {
+        return AsMapView.this.containsKey(o);
+      }
+
+      @Override
+      public boolean removeAll(Collection<?> collection) {
+        return delegate.keySet().removeAll(collection);
+      }
+
+      @Override
+      public boolean remove(Object o) {
+        return delegate.keySet().remove(o);
+      }
+
+      @Override
+      public boolean removeIf(Predicate<? super K> filter) {
+        return delegate.keySet().removeIf(filter);
+      }
+
+      @Override
+      public boolean retainAll(Collection<?> collection) {
+        return delegate.keySet().retainAll(collection);
+      }
+
+      @Override
+      public Iterator<K> iterator() {
+        return new Iterator<>() {
+          final Iterator<Entry<K, V>> iterator = entrySet().iterator();
+
+          @Override
+          public boolean hasNext() {
+            return iterator.hasNext();
+          }
+
+          @Override
+          public K next() {
+            return iterator.next().getKey();
+          }
+
+          @Override
+          public void remove() {
+            iterator.remove();
+          }
+        };
+      }
     }
 
     private final class Values extends AbstractCollection<V> {
