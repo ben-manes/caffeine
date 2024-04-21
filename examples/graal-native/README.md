@@ -3,21 +3,15 @@
 ### Install GraalVM using sdkman.io
 
 ```console
-sdk install java 22.3.2.r17-grl
-sdk use java 22.3.2.r17-grl
+sdk install java 22-graal
+sdk use java 22-graal
 export JAVA_HOME=${SDKMAN_DIR}/candidates/java/current
-```
-
-### Install native image support
-
-```console
-gu install native-image
 ```
 
 ### Run on the JVM with an agent to capture class metadata
 
 ```console
-gradle run -Pagent
+./gradlew run -Pagent
 ```
 
 ### Copy the metadata as the source configuration
@@ -32,7 +26,7 @@ gradle run -Pagent
 ./gradlew nativeRun
 ```
 
-### Try the binary yourself at
+### Try the binary yourself
 
 ```console
 ./build/native/nativeCompile/graal-native

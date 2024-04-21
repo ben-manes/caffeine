@@ -129,9 +129,9 @@ public final class SchedulerTest {
 
   @Test
   public void guardedScheduler_nullFuture() {
-    var scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
+    ScheduledExecutorService scheduledExecutor = Mockito.mock();
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
-    var executor = Mockito.mock(Executor.class);
+    Executor executor = Mockito.mock();
     Runnable command = () -> {};
 
     var future = Scheduler.guardedScheduler(scheduler)
@@ -169,9 +169,9 @@ public final class SchedulerTest {
 
   @Test
   public void scheduledExecutorService_schedule() {
-    var scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
+    ScheduledExecutorService scheduledExecutor = Mockito.mock();
     var task = ArgumentCaptor.forClass(Runnable.class);
-    var executor = Mockito.mock(Executor.class);
+    Executor executor = Mockito.mock();
     Runnable command = () -> {};
 
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
@@ -189,8 +189,8 @@ public final class SchedulerTest {
 
   @Test
   public void scheduledExecutorService_shutdown() {
-    var scheduledExecutor = Mockito.mock(ScheduledExecutorService.class);
-    var executor = Mockito.mock(Executor.class);
+    ScheduledExecutorService scheduledExecutor = Mockito.mock();
+    Executor executor = Mockito.mock();
 
     when(scheduledExecutor.isShutdown()).thenReturn(true);
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);

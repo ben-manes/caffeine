@@ -256,6 +256,7 @@ tasks.register<JavaExec>("memoryOverhead") {
 tasks.register<Stress>("stress") {
   group = "Cache tests"
   description = "Executes a stress test"
+  mainClass = "com.github.benmanes.caffeine.cache.Stresser"
   classpath = sourceSets["codeGen"].runtimeClasspath + sourceSets["test"].runtimeClasspath
   outputs.upToDateWhen { false }
   dependsOn(tasks.compileTestJava)
@@ -313,23 +314,18 @@ idea.module {
   scopes["PROVIDED"]!!["plus"]!!.add(configurations["javaPoetCompileClasspath"])
 }
 
-abstract class Stress @Inject constructor(@Internal val external: ExecOperations) : DefaultTask() {
-  @get:Input @get:Optional @get:Option(option = "workload", description = "The workload type")
-  abstract val operation: Property<String>
-  @get:InputFiles @get:Classpath
-  abstract val classpath: Property<FileCollection>
+abstract class Stress : JavaExec() {
+  @Input @Option(option = "workload", description = "The workload type")
+  var operation: String = ""
 
   @TaskAction
-  fun run() {
-    external.javaexec {
-      mainClass = "com.github.benmanes.caffeine.cache.Stresser"
-      classpath(this@Stress.classpath)
-      if (operation.isPresent) {
-        args("--workload", operation.get())
-      } else {
-        args("--help")
-      }
+  override fun exec() {
+    if (operation.isNotEmpty()) {
+      args("--workload", operation)
+    } else {
+      args("--help")
     }
+    super.exec()
   }
 }
 

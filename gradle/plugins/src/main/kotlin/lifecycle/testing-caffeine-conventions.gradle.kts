@@ -41,6 +41,10 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-XX:+UnlockExperimentalVMOptions", "-Dgraal.ShowConfiguration=info",
       "-XX:+EnableJVMCI", "-XX:+UseJVMCICompiler", "-XX:+EagerJVMCI")
   }
+  if (isCI()) {
+    reports.junitXml.includeSystemOutLog = false
+    reports.junitXml.includeSystemErrLog = false
+  }
   testLogging {
     events = setOf(SKIPPED, FAILED)
     exceptionFormat = FULL

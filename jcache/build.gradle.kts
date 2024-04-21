@@ -19,7 +19,7 @@ val jcacheTckSources: Configuration by configurations.creating
 
 val testResourcesJar by tasks.registering(Jar::class) {
   from(sourceSets["testResources"].output)
-  archiveClassifier.set("test-resources")
+  archiveClassifier = "test-resources"
   outputs.cacheIf { true }
 }
 

@@ -35,7 +35,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -142,8 +141,8 @@ public final class ExpirationTest {
   public void schedule(Cache<Int, Int> cache, CacheContext context) {
     var delay = ArgumentCaptor.forClass(long.class);
     var task = ArgumentCaptor.forClass(Runnable.class);
-    doReturn(DisabledFuture.INSTANCE).when(context.scheduler()).schedule(
-        eq(context.executor()), task.capture(), delay.capture(), eq(TimeUnit.NANOSECONDS));
+    when(context.scheduler().schedule(eq(context.executor()), task.capture(), delay.capture(),
+        eq(TimeUnit.NANOSECONDS))).then(invocation -> DisabledFuture.INSTANCE);
 
     cache.put(context.absentKey(), context.absentValue());
 
@@ -172,10 +171,10 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void schedule_immediate(Cache<Int, Int> cache, CacheContext context) {
-    doAnswer(invocation -> {
+    when(context.scheduler().schedule(any(), any(), anyLong(), any())).then(invocation -> {
       invocation.<Runnable>getArgument(1).run();
       return new CompletableFuture<>();
-    }).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
+    });
 
     cache.put(context.absentKey(), context.absentValue());
     verify(context.scheduler()).schedule(any(), any(), anyLong(), any());

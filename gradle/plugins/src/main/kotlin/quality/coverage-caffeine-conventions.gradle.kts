@@ -40,7 +40,7 @@ tasks.named("coveralls").configure {
   description = "Uploads the aggregated coverage report to Coveralls"
   dependsOn(jacocoFullReport)
   incompatibleWithConfigurationCache()
-  onlyIf { System.getenv().contains("CI") }
+  onlyIf { isCI() }
 }
 
 subprojects {

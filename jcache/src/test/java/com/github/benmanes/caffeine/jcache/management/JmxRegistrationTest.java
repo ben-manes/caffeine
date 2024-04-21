@@ -44,7 +44,7 @@ public final class JmxRegistrationTest {
   public void register_error(Class<? extends Throwable> throwableType) throws JMException {
     var name = new ObjectName("");
     var bean = new JCacheStatisticsMXBean();
-    var server = Mockito.mock(MBeanServer.class);
+    MBeanServer server = Mockito.mock();
     when(server.registerMBean(bean, name)).thenThrow(throwableType);
     assertThrows(CacheException.class, () -> JmxRegistration.register(server, name, bean));
   }
@@ -52,7 +52,7 @@ public final class JmxRegistrationTest {
   @Test(dataProvider = "unegisterExceptions")
   public void unregister_error(Class<? extends Throwable> throwableType) throws JMException {
     var name = new ObjectName("");
-    var server = Mockito.mock(MBeanServer.class);
+    MBeanServer server = Mockito.mock();
     when(server.queryNames(any(), any())).thenReturn(Set.of(name));
     doThrow(throwableType).when(server).unregisterMBean(any());
     assertThrows(CacheException.class, () -> JmxRegistration.unregister(server, name));

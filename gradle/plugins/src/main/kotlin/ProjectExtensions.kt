@@ -24,6 +24,10 @@ fun caffeineSystemProperties(): Map<String, Any> {
     .associateWith { System.getProperties().getProperty(it) }
 }
 
+fun isCI(): Boolean {
+  return !System.getenv("CI").isNullOrEmpty()
+}
+
 val DisableStrongEncapsulationJvmArgs = listOf(
   "--add-exports", "jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
   "--add-exports", "jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",

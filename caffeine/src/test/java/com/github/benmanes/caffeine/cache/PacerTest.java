@@ -16,11 +16,10 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -60,8 +59,8 @@ public final class PacerTest {
   @Test
   public void schedule_initialize() {
     long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
-    doReturn(future)
-        .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+    when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
+        .then(invocation -> future);
     pacer.schedule(executor, command, NOW, delay);
 
     assertThat(pacer.isScheduled()).isTrue();
@@ -72,12 +71,13 @@ public final class PacerTest {
   @Test
   public void schedule_initialize_recurse() {
     long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
-    doAnswer(invocation -> {
-      assertThat(pacer.future).isNull();
-      assertThat(pacer.nextFireTime).isNotEqualTo(0);
-      pacer.schedule(executor, command, NOW, delay);
-      return future;
-    }).when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+    when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
+        .then(invocation -> {
+          assertThat(pacer.future).isNull();
+          assertThat(pacer.nextFireTime).isNotEqualTo(0);
+          pacer.schedule(executor, command, NOW, delay);
+          return future;
+        });
 
     pacer.schedule(executor, command, NOW, delay);
 
@@ -90,8 +90,8 @@ public final class PacerTest {
   public void schedule_cancel_schedule() {
     long fireTime = NOW + Pacer.TOLERANCE;
     long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
-    doReturn(future)
-        .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+    when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
+        .then(invocation -> future);
 
     pacer.schedule(executor, command, NOW, delay);
     assertThat(pacer.nextFireTime).isEqualTo(fireTime);
@@ -146,8 +146,8 @@ public final class PacerTest {
     pacer.future = future;
 
     long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
-    doReturn(future)
-        .when(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+    when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
+        .then(invocation -> future);
     pacer.schedule(executor, command, NOW, delay);
 
     verify(future).cancel(false);
@@ -167,8 +167,8 @@ public final class PacerTest {
     pacer.future = future;
 
     long delay = (Pacer.TOLERANCE + Math.max(1, random.nextInt()));
-    doReturn(future)
-        .when(scheduler).schedule(executor, command, delay, TimeUnit.NANOSECONDS);
+    when(scheduler.schedule(executor, command, delay, TimeUnit.NANOSECONDS))
+        .then(invocation -> future);
     pacer.schedule(executor, command, NOW, delay);
 
     verify(future).cancel(false);

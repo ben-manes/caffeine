@@ -203,7 +203,7 @@ public @interface CacheSpec {
     /** A flag indicating that the entry's weight records interactions. */
     @SuppressWarnings("unchecked")
     MOCKITO(() -> {
-      var weigher = Mockito.mock(Weigher.class);
+      Weigher<Object, Object> weigher = Mockito.mock();
       when(weigher.weigh(any(), any())).thenReturn(1);
       return weigher;
     }, 1);
@@ -391,7 +391,7 @@ public @interface CacheSpec {
     /** A {@link ConsumingRemovalListener} retains all notifications for evaluation by the test. */
     CONSUMING(RemovalListeners::consuming),
     /** A removal listener that records interactions. */
-    MOCKITO(() -> Mockito.mock(RemovalListener.class));
+    MOCKITO(() -> Mockito.mock());
 
     private final Supplier<RemovalListener<Object, Object>> factory;
 
@@ -796,7 +796,7 @@ public @interface CacheSpec {
     DISABLED(() -> null),
     SYSTEM(Scheduler::systemScheduler),
     THREADED(() -> Scheduler.forScheduledExecutorService(scheduledExecutor)),
-    MOCKITO(() -> Mockito.mock(Scheduler.class));
+    MOCKITO(() -> Mockito.mock());
 
     private final Supplier<Scheduler> scheduler;
 

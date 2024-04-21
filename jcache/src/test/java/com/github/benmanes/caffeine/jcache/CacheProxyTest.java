@@ -125,7 +125,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
 
   @Test
   public void load_cacheLoaderException() {
-    var listener = Mockito.mock(CompletionListener.class);
+    CompletionListener listener = Mockito.mock();
     var e = new CacheLoaderException();
     doThrow(e).when(listener).onCompletion();
     jcache.loadAll(keys, true, listener);

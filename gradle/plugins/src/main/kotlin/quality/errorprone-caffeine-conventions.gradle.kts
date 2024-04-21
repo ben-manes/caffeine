@@ -110,6 +110,7 @@ fun enabledChecks() = listOf(
   "MissingDefault",
   "MixedArrayDimensions",
   "MissingDefault",
+  "MockitoDoSetup",
   "MutableGuiceModule",
   "NoAllocation",
   "NonFinalStaticField",

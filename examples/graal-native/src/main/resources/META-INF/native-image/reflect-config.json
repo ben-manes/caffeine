@@ -29,10 +29,7 @@
 },
 {
   "name":"com.github.benmanes.caffeine.cache.PS",
-  "fields":[
-    {"name":"key"},
-    {"name":"value"}
-  ]
+  "fields":[{"name":"key"}, {"name":"value"}]
 },
 {
   "name":"com.github.benmanes.caffeine.cache.PSMS",
@@ -40,10 +37,25 @@
 },
 {
   "name":"com.github.benmanes.caffeine.cache.SSSMS",
-  "methods":[{"name":"<init>","parameterTypes":["com.github.benmanes.caffeine.cache.Caffeine","com.github.benmanes.caffeine.cache.AsyncCacheLoader","boolean"] }]
+  "fields":[{"name":"FACTORY"}]
 },
 {
   "name":"com.github.benmanes.caffeine.cache.StripedBuffer",
   "fields":[{"name":"tableBusy"}]
+},
+{
+  "name":"java.lang.Thread",
+  "fields":[{"name":"threadLocalRandomProbe"}]
+},
+{
+  "name":"java.util.concurrent.ForkJoinTask",
+  "fields":[{"name":"aux"}, {"name":"status"}]
+},
+{
+  "name":"java.util.concurrent.atomic.Striped64",
+  "fields":[{"name":"base"}, {"name":"cellsBusy"}]
+},
+{
+  "name":"jdk.internal.misc.Unsafe"
 }
 ]

@@ -52,7 +52,7 @@ public final class EventTypeAwareListenerTest {
   @Test
   public void closed() throws IOException {
     when(cache.isClosed()).thenReturn(true);
-    var listener = Mockito.mock(CacheEntryListener.class);
+    CacheEntryListener<Integer, Integer> listener = Mockito.mock();
     try (var forwarder = new EventTypeAwareListener<>(listener)) {
       forwarder.dispatch(new JCacheEntryEvent<>(cache, EventType.CREATED,
           /* key */ 1, /* hasOldValue */ false, /* oldValue */ null, /* newValue */ 2));

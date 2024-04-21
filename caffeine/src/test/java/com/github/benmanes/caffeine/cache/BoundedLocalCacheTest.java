@@ -56,7 +56,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -251,7 +250,7 @@ public final class BoundedLocalCacheTest {
   @CheckMaxLogLevel(ERROR)
   public void cleanupTask_exception() {
     var expected = new RuntimeException();
-    var cache = Mockito.mock(BoundedLocalCache.class);
+    BoundedLocalCache<?, ?> cache = Mockito.mock();
     doThrow(expected).when(cache).performCleanUp(any());
     var task = new PerformCleanupTask(cache);
     assertThat(task.exec()).isFalse();
@@ -267,7 +266,7 @@ public final class BoundedLocalCacheTest {
   @CheckMaxLogLevel(ERROR)
   public void cleanup_exception() {
     var expected = new RuntimeException();
-    var cache = Mockito.mock(BoundedLocalCache.class);
+    BoundedLocalCache<?, ?> cache = Mockito.mock();
     doThrow(expected).when(cache).performCleanUp(any());
     doCallRealMethod().when(cache).cleanUp();
     cache.cleanUp();
@@ -312,7 +311,7 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void scheduleDrainBuffers() {
-    var executor = Mockito.mock(Executor.class);
+    Executor executor = Mockito.mock();
     var cache = new BoundedLocalCache<Object, Object>(
         Caffeine.newBuilder().executor(executor), /* loader */ null, /* async */ false) {};
     var transitions = Map.of(
@@ -2006,8 +2005,8 @@ public final class BoundedLocalCacheTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void unschedule_cleanUp(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var future = Mockito.mock(Future.class);
-    doReturn(future).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
+    Future<?> future = Mockito.mock();
+    when(context.scheduler().schedule(any(), any(), anyLong(), any())).then(invocation -> future);
 
     for (int i = 0; i < 10; i++) {
       var value = cache.put(Int.valueOf(i), Int.valueOf(-i));
@@ -2032,8 +2031,8 @@ public final class BoundedLocalCacheTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void unschedule_invalidateAll(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var future = Mockito.mock(Future.class);
-    doReturn(future).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
+    Future<?> future = Mockito.mock();
+    when(context.scheduler().schedule(any(), any(), anyLong(), any())).then(invocation -> future);
 
     for (int i = 0; i < 10; i++) {
       var value = cache.put(Int.valueOf(i), Int.valueOf(-i));
@@ -2200,7 +2199,7 @@ public final class BoundedLocalCacheTest {
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
       compute = Compute.SYNC, stats = Stats.DISABLED)
   public void refreshIfNeeded_liveliness(CacheContext context) {
-    var stats = Mockito.mock(StatsCounter.class);
+    StatsCounter stats = Mockito.mock();
     context.caffeine().recordStats(() -> stats);
 
     // Capture the refresh parameters, should not be retired/dead sentinel entry
@@ -2300,13 +2299,13 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
       compute = Compute.ASYNC, stats = Stats.DISABLED)
   public void refresh_startReloadBeforeLoadCompletion(CacheContext context) {
-    var stats = Mockito.mock(StatsCounter.class);
     var beganLoadSuccess = new AtomicBoolean();
     var endLoadSuccess = new CountDownLatch(1);
     var beganReloading = new AtomicBoolean();
     var beganLoading = new AtomicBoolean();
     var endReloading = new AtomicBoolean();
     var endLoading = new AtomicBoolean();
+    StatsCounter stats = Mockito.mock();
 
     context.ticker().setAutoIncrementStep(Duration.ofSeconds(1));
     context.caffeine().recordStats(() -> stats);

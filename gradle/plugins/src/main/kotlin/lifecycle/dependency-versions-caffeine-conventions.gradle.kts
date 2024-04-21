@@ -18,6 +18,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
       }
     }
     force(libs.guice)
+    force(libs.hazelcast)
     force(libs.commons.collections4)
     force(libs.bundles.coherence.get())
   }

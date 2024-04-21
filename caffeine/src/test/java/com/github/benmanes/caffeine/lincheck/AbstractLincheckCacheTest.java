@@ -114,11 +114,6 @@ public abstract class AbstractLincheckCacheTest {
   }
 
   @Operation
-  public boolean containsValue(@Param(name = "value") int value) {
-    return cache.asMap().containsValue(value);
-  }
-
-  @Operation
   public Integer get_asMap(@Param(name = "key") int key) {
     return cache.asMap().get(key);
   }
@@ -169,7 +164,7 @@ public abstract class AbstractLincheckCacheTest {
 
   @Operation
   public Integer compute(@Param(name = "key") int key, @Param(name = "value") int nextValue) {
-    return cache.asMap().compute(key, (k, v) -> nextValue);
+    return cache.asMap().merge(key, nextValue, (oldValue, newValue) -> oldValue + newValue);
   }
 
   @Operation

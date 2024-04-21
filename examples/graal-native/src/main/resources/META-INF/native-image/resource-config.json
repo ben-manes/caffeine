@@ -1,5 +1,7 @@
 {
   "resources":{
-  "includes":[]},
+  "includes":[{
+    "pattern":"\\QMETA-INF/services/java.lang.System$LoggerFinder\\E"
+  }]},
   "bundles":[]
 }

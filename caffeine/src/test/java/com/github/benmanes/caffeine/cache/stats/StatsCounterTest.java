@@ -112,7 +112,7 @@ public final class StatsCounterTest {
 
   @Test
   public void guarded_exception() {
-    var statsCounter = Mockito.mock(StatsCounter.class);
+    StatsCounter statsCounter = Mockito.mock();
     when(statsCounter.snapshot()).thenThrow(new NullPointerException());
     doThrow(NullPointerException.class).when(statsCounter).recordHits(anyInt());
     doThrow(NullPointerException.class).when(statsCounter).recordMisses(anyInt());

@@ -1881,7 +1881,7 @@ public final class AsMapTest {
   @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
   public void keySet_removeAll_byCollection(Map<Int, Int> map, CacheContext context) {
     var delegate = Sets.union(context.original().keySet(), context.absentKeys());
-    var keys = Mockito.mock(Collection.class);
+    Collection<Int> keys = Mockito.mock();
     when(keys.iterator()).thenReturn(delegate.iterator());
 
     assertThat(map.keySet().removeAll(keys)).isTrue();
@@ -1894,10 +1894,9 @@ public final class AsMapTest {
   @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
   public void keySet_removeAll_bySet(Map<Int, Int> map, CacheContext context) {
     var delegate = Sets.union(context.original().keySet(), context.absentKeys());
-    var keys = Mockito.mock(Set.class);
+    Set<Int> keys = Mockito.mock();
     when(keys.size()).thenReturn(delegate.size());
-    when(keys.contains(any())).thenAnswer(invocation ->
-        delegate.contains(invocation.getArgument(0)));
+    when(keys.contains(any())).then(invocation -> delegate.contains(invocation.getArgument(0)));
 
     assertThat(map.keySet().removeAll(keys)).isTrue();
     verify(keys).size();
@@ -2726,7 +2725,7 @@ public final class AsMapTest {
   @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
   public void entrySet_removeAll_byCollection(Map<Int, Int> map, CacheContext context) {
     var delegate = Sets.union(context.original().entrySet(), context.absent().entrySet());
-    var entries = Mockito.mock(Collection.class);
+    Collection<Map.Entry<Int, Int>> entries = Mockito.mock();
     when(entries.iterator()).thenReturn(delegate.iterator());
 
     assertThat(map.entrySet().removeAll(entries)).isTrue();
@@ -2739,10 +2738,9 @@ public final class AsMapTest {
   @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
   public void entrySet_removeAll_bySet(Map<Int, Int> map, CacheContext context) {
     var delegate = Sets.union(context.original().entrySet(), context.absent().entrySet());
-    var entries = Mockito.mock(Set.class);
+    Set<Map.Entry<Int, Int>> entries = Mockito.mock();
     when(entries.size()).thenReturn(delegate.size());
-    when(entries.contains(any())).thenAnswer(invocation ->
-        delegate.contains(invocation.getArgument(0)));
+    when(entries.contains(any())).then(invocation -> delegate.contains(invocation.getArgument(0)));
 
     assertThat(map.entrySet().removeAll(entries)).isTrue();
     verify(entries).size();
