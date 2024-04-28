@@ -33,6 +33,7 @@ import org.openjdk.jmh.annotations.State;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
+@SuppressWarnings("ClassEscapesDefinedScope")
 public class TimerWheelBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

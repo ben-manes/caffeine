@@ -45,6 +45,7 @@ import com.google.common.collect.Iterators;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ClassEscapesDefinedScope")
 public final class LinkedDequeTest {
   static final int SIZE = 100;
 

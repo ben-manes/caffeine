@@ -188,7 +188,7 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final class LruWindowTinyLfuSettings extends BasicSettings {
+  public static final class LruWindowTinyLfuSettings extends BasicSettings {
     public LruWindowTinyLfuSettings(Config config) {
       super(config);
     }

@@ -27,6 +27,7 @@ import javax.cache.event.CacheEntryListener;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ClassEscapesDefinedScope")
 public final class Registration<K, V> {
   private final CacheEntryListenerConfiguration<K, V> configuration;
   private final EventTypeAwareListener<K, V> listener;

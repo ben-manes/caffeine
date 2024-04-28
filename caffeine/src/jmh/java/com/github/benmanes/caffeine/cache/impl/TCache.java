@@ -28,8 +28,10 @@ import com.trivago.triava.tcache.TCacheFactory;
 public final class TCache<K, V> implements BasicCache<K, V> {
   private final Cache<K, V> cache;
 
+  @SuppressWarnings({"PMD.CloseResource", "resource"})
   public TCache(int maximumSize, EvictionPolicy policy) {
-    cache = TCacheFactory.standardFactory().<K, V>builder()
+    var factory = new TCacheFactory();
+    cache = factory.<K, V>builder()
         .setConcurrencyLevel(CONCURRENCY_LEVEL)
         .setMaxElements(maximumSize)
         .setEvictionPolicy(policy)

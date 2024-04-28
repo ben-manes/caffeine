@@ -15,10 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.cloud_physics;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceWriter;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceWriter;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.hash.Hashing;
 
@@ -27,15 +28,21 @@ import com.google.common.hash.Hashing;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CloudPhysicsTraceWriter extends BinaryTraceWriter {
+public final class CloudPhysicsTraceWriter implements TraceWriter {
+  private final DataOutputStream writer;
 
   public CloudPhysicsTraceWriter(OutputStream output) {
-    super(output);
+    this.writer = new DataOutputStream(output);
   }
 
   @Override
   public void writeEvent(int tick, AccessEvent event) throws IOException {
     int key = Hashing.murmur3_128().hashLong(event.key()).asInt();
-    writer().writeInt(key);
+    writer.writeInt(key);
+  }
+
+  @Override
+  public void close() throws IOException {
+    writer.close();
   }
 }

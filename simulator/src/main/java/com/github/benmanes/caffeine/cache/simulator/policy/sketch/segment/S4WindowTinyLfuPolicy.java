@@ -243,7 +243,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final class S4WindowTinyLfuSettings extends BasicSettings {
+  public static final class S4WindowTinyLfuSettings extends BasicSettings {
     public S4WindowTinyLfuSettings(Config config) {
       super(config);
     }

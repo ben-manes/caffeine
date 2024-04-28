@@ -1251,7 +1251,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
   }
 
-  private static final class PutResult<V> {
+  protected static final class PutResult<V> {
     @Nullable V oldValue;
     boolean written;
   }

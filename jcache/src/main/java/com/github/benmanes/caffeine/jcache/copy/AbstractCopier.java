@@ -129,6 +129,7 @@ public abstract class AbstractCopier<A> implements Copier {
   }
 
   /** @return a shallow copy of the array. */
+  @SuppressWarnings("SuspiciousSystemArraycopy")
   private static <T> T arrayCopy(T object) {
     int length = Array.getLength(object);
     @SuppressWarnings("unchecked")

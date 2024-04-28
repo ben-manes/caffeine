@@ -38,6 +38,8 @@ import java.util.function.Function;
  *   AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
  * }</pre>
  *
+ * @param <K> the type of keys
+ * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @FunctionalInterface

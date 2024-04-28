@@ -77,7 +77,7 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
     return policyStats;
   }
 
-  static final class ExpiringMapSettings extends BasicSettings {
+  public static final class ExpiringMapSettings extends BasicSettings {
     public ExpiringMapSettings(Config config) {
       super(config);
     }
@@ -96,7 +96,7 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
     }
   }
 
-  enum Eviction {
+  public enum Eviction {
     FIFO(ExpirationPolicy.CREATED),
     LRU(ExpirationPolicy.ACCESSED);
 

@@ -30,6 +30,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ClassEscapesDefinedScope")
 public final class MpscGrowableArrayQueueTest {
   private static final int NUM_PRODUCERS = 10;
   private static final int PRODUCE = 100;

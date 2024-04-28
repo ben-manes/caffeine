@@ -40,10 +40,12 @@ import com.typesafe.config.Config;
 public final class TCachePolicy implements KeyOnlyPolicy {
   private final Cache<Long, Boolean> cache;
   private final PolicyStats policyStats;
+  private final TCacheFactory factory;
 
   public TCachePolicy(TCacheSettings settings, Eviction policy) {
     policyStats = new PolicyStats(name() + " (%s)", policy);
-    cache = TCacheFactory.standardFactory().<Long, Boolean>builder()
+    factory = new TCacheFactory();
+    cache = factory.<Long, Boolean>builder()
         .setMaxElements(Math.toIntExact(settings.maximumSize()))
         .setEvictionPolicy(policy.type)
         .setStatistics(true)
@@ -76,11 +78,11 @@ public final class TCachePolicy implements KeyOnlyPolicy {
 
   @Override
   public void finished() {
-    cache.close();
+    factory.close();
     policyStats.addEvictions(cache.statistics().getEvictionCount());
   }
 
-  static final class TCacheSettings extends BasicSettings {
+  public static final class TCacheSettings extends BasicSettings {
     public TCacheSettings(Config config) {
       super(config);
     }
@@ -99,7 +101,7 @@ public final class TCachePolicy implements KeyOnlyPolicy {
     }
   }
 
-  enum Eviction {
+  public enum Eviction {
     LRU(EvictionPolicy.LRU),
     LFU(EvictionPolicy.LFU);
 

@@ -266,7 +266,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final class FullySegmentedWindowTinyLfuSettings extends BasicSettings {
+  public static final class FullySegmentedWindowTinyLfuSettings extends BasicSettings {
     public FullySegmentedWindowTinyLfuSettings(Config config) {
       super(config);
     }

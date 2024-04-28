@@ -64,7 +64,7 @@ public final class CacheGenerator {
         /* isLoadingOnly */ false, /* isAsyncOnly */ false, /* isGuavaCompatible */ true);
   }
 
-  public CacheGenerator(CacheSpec cacheSpec, Options options,
+  CacheGenerator(CacheSpec cacheSpec, Options options,
       boolean isLoadingOnly, boolean isAsyncOnly, boolean isGuavaCompatible) {
     this.isGuavaCompatible = isGuavaCompatible;
     this.isLoadingOnly = isLoadingOnly;

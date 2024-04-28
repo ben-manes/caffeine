@@ -121,7 +121,7 @@ public final class TypesafeConfigurator {
    * @param factoryCreator the strategy for creating a factory
    */
   @Inject
-  @SuppressWarnings("UnnecessarilyVisible")
+  @SuppressWarnings({"deprecation", "UnnecessarilyVisible"})
   public static void setFactoryCreator(FactoryCreator factoryCreator) {
     TypesafeConfigurator.factoryCreator = requireNonNull(factoryCreator);
   }

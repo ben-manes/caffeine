@@ -58,6 +58,7 @@ import picocli.CommandLine.Option;
  */
 @Command(mixinStandardHelpOptions = true)
 public final class Simulate implements Runnable {
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   @Option(names = "--maximumSize", required = true, split = ",",
       description = "The maximum sizes", preprocessor = LongPreprocessor.class)
   private SortedSet<Long> maximumSizes;

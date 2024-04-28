@@ -445,6 +445,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public Set<Entry<K, CompletableFuture<V>>> entrySet() {
       return asyncCache.cache().entrySet();
     }
+    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     @Override public boolean equals(Object o) {
       return asyncCache.cache().equals(o);
     }

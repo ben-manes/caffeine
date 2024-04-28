@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ClassEscapesDefinedScope")
 public final class BoundedBufferTest {
 
   @DataProvider

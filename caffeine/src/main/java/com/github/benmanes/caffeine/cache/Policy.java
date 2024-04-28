@@ -38,6 +38,8 @@ import org.checkerframework.checker.nullness.qual.PolyNull;
  * characteristics. These operations are optional and dependent on how the cache was constructed
  * and what abilities the implementation exposes.
  *
+ * @param <K> the type of keys
+ * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Policy<K, V> {
@@ -149,7 +151,12 @@ public interface Policy<K, V> {
    */
   Optional<FixedRefresh<K, V>> refreshAfterWrite();
 
-  /** The low-level operations for a cache with a size-based eviction policy. */
+  /**
+   * The low-level operations for a cache with a size-based eviction policy.
+   *
+   * @param <K> the type of keys
+   * @param <V> the type of values
+   */
   interface Eviction<K, V> {
 
     /**
@@ -332,7 +339,12 @@ public interface Policy<K, V> {
     }
   }
 
-  /** The low-level operations for a cache with a fixed expiration policy. */
+  /**
+   * The low-level operations for a cache with a fixed expiration policy.
+   *
+   * @param <K> the type of keys
+   * @param <V> the type of values
+   */
   interface FixedExpiration<K, V> {
 
     /**
@@ -504,7 +516,12 @@ public interface Policy<K, V> {
     }
   }
 
-  /** The low-level operations for a cache with a variable expiration policy. */
+  /**
+   * The low-level operations for a cache with a variable expiration policy.
+   *
+   * @param <K> the type of keys
+   * @param <V> the type of values
+   */
   interface VarExpiration<K, V> {
 
     /**
@@ -745,7 +762,12 @@ public interface Policy<K, V> {
     }
   }
 
-  /** The low-level operations for a cache with a fixed refresh policy. */
+  /**
+   * The low-level operations for a cache with a fixed refresh policy.
+   *
+   * @param <K> the type of keys
+   * @param <V> the type of values
+   */
   interface FixedRefresh<K, V> {
 
     /**
@@ -836,6 +858,9 @@ public interface Policy<K, V> {
    * specified, this is a value-based class, it can be assumed that the implementation is an
    * immutable snapshot of the cached data at the time of this entry's creation, and it will not
    * reflect changes afterward.
+   *
+   * @param <K> the type of keys
+   * @param <V> the type of values
    */
   interface CacheEntry<K, V> extends Map.Entry<K, V> {
 

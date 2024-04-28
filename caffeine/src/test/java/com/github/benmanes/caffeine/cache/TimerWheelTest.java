@@ -64,7 +64,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(singleThreaded = true)
-@SuppressWarnings("GuardedBy")
+@SuppressWarnings({"ClassEscapesDefinedScope", "GuardedBy"})
 public final class TimerWheelTest {
   private static final Random random = new Random();
   private static final long[] CLOCKS = { Long.MIN_VALUE, -SPANS[0] + 1, 0L,

@@ -148,7 +148,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final class RandomWindowTinyLfuSettings extends BasicSettings {
+  public static final class RandomWindowTinyLfuSettings extends BasicSettings {
     public RandomWindowTinyLfuSettings(Config config) {
       super(config);
     }

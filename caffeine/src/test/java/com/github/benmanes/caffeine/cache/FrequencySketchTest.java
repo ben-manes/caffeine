@@ -26,6 +26,7 @@ import org.testng.annotations.Test;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ClassEscapesDefinedScope")
 public final class FrequencySketchTest {
   final Integer item = ThreadLocalRandom.current().nextInt();
 

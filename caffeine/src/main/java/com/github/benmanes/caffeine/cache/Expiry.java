@@ -38,6 +38,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *       .build(key -> createExpensiveGraph(key));
  * }</pre>
  *
+ * @param <K> the type of keys
+ * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Expiry<K, V> {
@@ -104,6 +106,8 @@ public interface Expiry<K, V> {
    *     Duration.between(Instant.now(), graph.createdOn().plusHours(5)));
    * }</pre>
    *
+   * @param <K> the key type
+   * @param <V> the value type
    * @param function the function used to calculate the length of time after an entry is created
    *        before it should be automatically removed
    * @return an {@code Expiry} instance with the specified expiry function
@@ -122,6 +126,8 @@ public interface Expiry<K, V> {
    *     Duration.between(Instant.now(), graph.modifiedOn().plusHours(5)));
    * }</pre>
    *
+   * @param <K> the key type
+   * @param <V> the value type
    * @param function the function used to calculate the length of time after an entry is created
    *        or updated that it should be automatically removed
    * @return an {@code Expiry} instance with the specified expiry function
@@ -140,6 +146,8 @@ public interface Expiry<K, V> {
    *     graph.isDirected() ? Duration.ofHours(1) : Duration.ofHours(3));
    * }</pre>
    *
+   * @param <K> the key type
+   * @param <V> the value type
    * @param function the function used to calculate the length of time after an entry last accessed
    *        that it should be automatically removed
    * @return an {@code Expiry} instance with the specified expiry function

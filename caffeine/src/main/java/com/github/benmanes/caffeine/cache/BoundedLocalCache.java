@@ -3974,7 +3974,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
-  @SuppressWarnings("NullableOptional")
+  @SuppressWarnings({"NullableOptional", "OptionalAssignedToNull"})
   static final class BoundedPolicy<K, V> implements Policy<K, V> {
     final BoundedLocalCache<K, V> cache;
     final Function<V, V> transformer;
@@ -4002,6 +4002,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
       return (node == null) ? null : cache.nodeToCacheEntry(node, transformer);
     }
+    @SuppressWarnings("Java9CollectionFactory")
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
       if ((refreshes == null) || refreshes.isEmpty()) {

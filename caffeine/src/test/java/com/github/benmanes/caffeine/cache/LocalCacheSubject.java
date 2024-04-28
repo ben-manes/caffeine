@@ -400,7 +400,7 @@ public final class LocalCacheSubject extends Subject {
 
   /* --------------- Unbounded --------------- */
 
-  public void checkUnbounded(UnboundedLocalCache<?, ?> unbounded) {
+  private void checkUnbounded(UnboundedLocalCache<?, ?> unbounded) {
     if (unbounded.isEmpty()) {
       check("unbounded").about(map()).that(unbounded).isExhaustivelyEmpty();
     }

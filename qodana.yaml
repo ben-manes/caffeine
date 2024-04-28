@@ -1,42 +1,27 @@
 version: "1.0"
 profile:
   name: qodana.recommended
+licenseRules:
+  - keys: [ Apache-2.0 ]
+    allowed: [ LGPL-3.0-only ]
 exclude:
-  - name: AutoCloseableResource
-  - name: CastCanBeRemovedNarrowingVariableType
-  - name: ClassEscapesItsScope
   - name: CommentedOutCode
   - name: ConstantValue
-  - name: DanglingJavadoc
   - name: DataFlowIssue
-  - name: Deprecation
+  - name: DuplicatedCode
   - name: EmptyStatementBody
-  - name: EqualsWhichDoesntCheckParameterClass
-  - name: GroovyEmptyStatementBody
-  - name: GroovyUnnecessaryReturn
-  - name: GrUnnecessarySemicolon
   - name: IgnoreResultOfCall
-  - name: Java9CollectionFactory
-  - name: JavaAnnotator
   - name: JavadocLinkAsPlainText
-  - name: JavaRequiresAutoModule
-  - name: MismatchedCollectionQueryUpdate
-  - name: NonSynchronizedMethodOverridesSynchronizedMethod
   - name: NotNullFieldNotInitialized
   - name: NullableProblems
-  - name: OptionalAssignedToNull
   - name: OptionalUsedAsFieldOrParameterType
   - name: PackageDirectoryMismatch
   - name: RedundantCollectionOperation
   - name: RedundantUnmodifiable
-  - name: ReplaceAssignmentWithOperatorAssignment
   - name: ReturnNull
-  - name: SuspiciousSystemArraycopy
   - name: SynchronizationOnLocalVariableOrMethodParameter
   - name: SystemOutErr
   - name: TrivialIf
   - name: UnnecessaryReturn
-  - name: UnnecessarySemicolon
-  - name: UnsatisfiedRange
+  - name: UnreachableCode
   - name: UnstableApiUsage
-  - name: WhileLoopSpinsOnField

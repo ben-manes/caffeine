@@ -315,7 +315,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * This implementation is correct for single consumer thread use only.
    */
   @Override
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
   public E poll() {
     final E[] buffer = consumerBuffer;
     final long index = consumerIndex;
@@ -349,8 +349,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * <p>
    * This implementation is correct for single consumer thread use only.
    */
-  @SuppressWarnings("unchecked")
   @Override
+  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
   public E peek() {
     final E[] buffer = consumerBuffer;
     final long index = consumerIndex;
@@ -363,7 +363,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
       // check the producer index. If the queue is indeed not empty we spin until element is
       // visible.
       while ((e = lvElement(buffer, offset)) == null) {
-        ;
+        // retry
       }
     }
     if (e == JUMP) {
@@ -467,7 +467,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return offer(e);
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
   public E relaxedPoll() {
     final E[] buffer = consumerBuffer;
     final long index = consumerIndex;
@@ -487,7 +487,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return (E) e;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
   public E relaxedPeek() {
     final E[] buffer = consumerBuffer;
     final long index = consumerIndex;
@@ -572,7 +572,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     P_LIMIT.setRelease(self, v);
   }
 
-  /**
+  /*
    * A concurrent access enabling class used by circular array based queues this class exposes an
    * offset computation method along with differently memory fenced load/store methods into the
    * underlying array. The class is pre-padded and the array is padded on either side to help with

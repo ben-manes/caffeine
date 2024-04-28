@@ -121,8 +121,7 @@ interface LocalCacheFactory {
     MethodHandleBasedFactory(Class<?> clazz) throws NoSuchMethodException, IllegalAccessException {
       this.methodHandle = LOOKUP.findConstructor(clazz, FACTORY).asType(FACTORY_CALL);
     }
-    
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"ClassEscapesDefinedScope", "unchecked"})
     @Override public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
         @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) throws Throwable {
       return (BoundedLocalCache<K, V>) methodHandle.invokeExact(builder, cacheLoader, async);

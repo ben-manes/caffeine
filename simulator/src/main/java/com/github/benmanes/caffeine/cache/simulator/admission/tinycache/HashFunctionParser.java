@@ -23,7 +23,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-public final class HashFunctionParser {
+final class HashFunctionParser {
   // currently, chain is bounded to be 64.
   private static final int fpSize = 8; // this implementation assumes byte.
   private static final byte fpMask = (byte) 255; // (all bits in byte are 1, (logical value of -1));
@@ -32,7 +32,7 @@ public final class HashFunctionParser {
   private static final long Seed64 = 0xe17a1465L;
   private static final int r = 47;
 
-  public final HashedItem fpaux; // used just to avoid allocating new memory as a return value.
+  final HashedItem fpaux; // used just to avoid allocating new memory as a return value.
 
   private final int nrSets;
 

@@ -107,7 +107,7 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
     checkState(stats.getEvictions() == policyStats.evictionCount());
   }
 
-  static final class HazelcastSettings extends BasicSettings {
+  public static final class HazelcastSettings extends BasicSettings {
     public HazelcastSettings(Config config) {
       super(config);
     }

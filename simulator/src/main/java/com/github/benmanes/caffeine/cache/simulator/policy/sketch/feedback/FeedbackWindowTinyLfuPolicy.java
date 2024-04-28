@@ -380,7 +380,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final class FeedbackWindowTinyLfuSettings extends BasicSettings {
+  public static final class FeedbackWindowTinyLfuSettings extends BasicSettings {
     public FeedbackWindowTinyLfuSettings(Config config) {
       super(config);
     }

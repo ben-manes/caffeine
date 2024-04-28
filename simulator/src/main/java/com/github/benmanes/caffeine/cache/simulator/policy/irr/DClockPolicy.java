@@ -304,7 +304,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final class DClockSettings extends BasicSettings {
+  public static final class DClockSettings extends BasicSettings {
     public DClockSettings(Config config) {
       super(config);
     }

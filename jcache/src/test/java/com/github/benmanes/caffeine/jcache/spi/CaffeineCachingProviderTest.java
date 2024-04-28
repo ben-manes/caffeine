@@ -16,14 +16,11 @@
 package com.github.benmanes.caffeine.jcache.spi;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.awaitility.Awaitility.await;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -34,6 +31,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -130,17 +128,18 @@ public final class CaffeineCachingProviderTest {
   }
 
   private void runWithClassloader(Consumer<CachingProvider> consumer) {
-    var provider = new AtomicReference<CachingProvider>();
-    new Thread(() -> {
+    var reference = new AtomicReference<CachingProvider>();
+    var thread = new Thread(() -> {
       Thread.currentThread().setContextClassLoader(new ClassLoader() {});
-      provider.set(new CaffeineCachingProvider());
-    }).start();
-    await().untilAtomic(provider, is(not(nullValue())));
+      reference.set(new CaffeineCachingProvider());
+    });
+    thread.start();
+    Uninterruptibles.joinUninterruptibly(thread, Duration.ofMinutes(1));
 
     var classLoader = Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(new ClassLoader() {});
-    try {
-      consumer.accept(provider.get());
+    try (var provider = reference.get()) {
+      consumer.accept(provider);
     } finally {
       Thread.currentThread().setContextClassLoader(classLoader);
     }

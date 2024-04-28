@@ -317,7 +317,6 @@ public @interface CacheSpec {
     /** A configuration where entries are after a time duration. */
     ONE_MINUTE(TimeUnit.MINUTES.toNanos(1)),
     /** A configuration where entries should never expire. */
-    /** A configuration that holds the {@link Population#FULL} count. */
     FOREVER(Long.MAX_VALUE);
 
     private final long timeNanos;

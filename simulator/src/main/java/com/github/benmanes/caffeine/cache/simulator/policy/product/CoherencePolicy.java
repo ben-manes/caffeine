@@ -108,7 +108,7 @@ public final class CoherencePolicy implements Policy {
     }
   }
 
-  static final class CoherenceSettings extends BasicSettings {
+  public static final class CoherenceSettings extends BasicSettings {
     public CoherenceSettings(Config config) {
       super(config);
     }
@@ -130,7 +130,7 @@ public final class CoherencePolicy implements Policy {
   }
 
   @SuppressWarnings("deprecation")
-  enum Eviction {
+  public enum Eviction {
     HYBRID(LocalCache.EVICTION_POLICY_HYBRID),
     LRU(LocalCache.EVICTION_POLICY_LRU),
     LFU(LocalCache.EVICTION_POLICY_LFU);

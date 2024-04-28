@@ -296,7 +296,7 @@ public abstract class QueueSanityTest {
     return allOf(hasSize(0), empty());
   }
 
-  enum Ordering {
+  public enum Ordering {
     FIFO
   }
 }

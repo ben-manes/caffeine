@@ -16,10 +16,8 @@
 package com.github.benmanes.caffeine.cache.impl;
 
 import org.ehcache.Cache;
-import org.ehcache.CacheManager;
-import org.ehcache.config.builders.CacheConfigurationBuilder;
-import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
+import org.ehcache.config.builders.UserManagedCacheBuilder;
 import org.ehcache.config.units.EntryUnit;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
@@ -32,12 +30,12 @@ public final class Ehcache3<K, V> implements BasicCache<K, V> {
 
   @SuppressWarnings({"PMD.CloseResource", "unchecked"})
   public Ehcache3(int maximumSize) {
-    CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
-    cache = (Cache<K, V>) cacheManager.createCache("benchmark",
-        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,
-            ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(maximumSize, EntryUnit.ENTRIES))
-            .build());
+    var resourcesPools = ResourcePoolsBuilder.newResourcePoolsBuilder()
+        .heap(maximumSize, EntryUnit.ENTRIES);
+    cache = (Cache<K, V>) UserManagedCacheBuilder
+        .newUserManagedCacheBuilder(Object.class, Object.class)
+        .withResourcePools(resourcesPools)
+        .build(true);
   }
 
   @Override

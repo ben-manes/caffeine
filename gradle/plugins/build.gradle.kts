@@ -16,7 +16,6 @@ plugins {
   alias(libs.plugins.versions)
 }
 
-require(JavaVersion.current() >= JavaVersion.VERSION_17) { "Java 17 or greater is required" }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 dependencies {

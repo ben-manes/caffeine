@@ -14,9 +14,9 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
             github.com:443
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - name: actionlint
-        uses: reviewdog/action-actionlint@c6ee1eb0a5d47b2af53a203652b5dac0b6c4016e # v1.43.0
+        uses: reviewdog/action-actionlint@9d8b58041eed1373f173e91b9a3db5a844197236 # v1.44.0
         env:
           SHELLCHECK_OPTS: -e SC2001 -e SC2035 -e SC2046 -e SC2061 -e SC2086 -e SC2156
         with:

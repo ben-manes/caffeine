@@ -59,7 +59,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - name: Prepare GraalVM
         if: env.JAVA_VERSION == 'GraalVM'
         shell: bash
@@ -176,7 +176,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - name: Run tests (${{ env.JAVA_VERSION }})
         uses: ./.github/actions/run-gradle
         with:
@@ -195,7 +195,7 @@ jobs:
           find . -path */jacoco/*.exec -o -path */results/*.xml
           | tar czf ${{ env.ARTIFACT_NAME }}.tar.gz --files-from -
       - name: Upload test results
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
         with:
           retention-days: 1
@@ -231,11 +231,11 @@ jobs:
             storage.googleapis.com:443
             uploader.codecov.io:443
       - name: Checkout
-        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           fetch-depth: 0
       - name: Download Tests Results
-        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Combine Jacoco Reports
@@ -287,7 +287,7 @@ jobs:
             ${{ env.ALLOWED_ENDPOINTS }}
             badgen.net:443
       - name: Download Tests
-        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Publish Test Results
@@ -342,7 +342,7 @@ jobs:
             errorprone.info:443
             lightbend.github.io:443
             guava.dev:443
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
         env:

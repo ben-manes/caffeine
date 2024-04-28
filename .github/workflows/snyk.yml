@@ -37,7 +37,7 @@ jobs:
             repo.maven.apache.org:443
             repo1.maven.org:443
             services.gradle.org:443
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - name: Run Snyk test
         uses: snyk/actions/gradle-jdk17@master
         continue-on-error: true
@@ -52,7 +52,7 @@ jobs:
         with:
           files: snyk.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@4355270be187e1b672a7a1c7c7bae5afdc1ab94a # v3.24.10
+        uses: github/codeql-action/upload-sarif@d39d31e687223d841ef683f52467bd88e9b21c14 # v3.25.3
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: snyk.sarif

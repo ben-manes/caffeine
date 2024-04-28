@@ -1251,6 +1251,7 @@ public final class ReferenceTest {
 
   /* --------------- Reference --------------- */
 
+  @SuppressWarnings("ClassEscapesDefinedScope")
   @Test(dataProviderClass = ReferenceTest.class, dataProvider = "references")
   public void reference(InternalReference<Int> reference,
       Int item, boolean identity, boolean isKey) {

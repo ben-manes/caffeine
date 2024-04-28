@@ -33,6 +33,7 @@ import com.google.common.base.MoreObjects;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ClassEscapesDefinedScope")
 public final class StripedBufferTest {
   static final Integer ELEMENT = 1;
 

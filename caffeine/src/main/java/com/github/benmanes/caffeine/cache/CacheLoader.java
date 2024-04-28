@@ -39,6 +39,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *   LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
  * }</pre>
  *
+ * @param <K> the type of keys
+ * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @FunctionalInterface

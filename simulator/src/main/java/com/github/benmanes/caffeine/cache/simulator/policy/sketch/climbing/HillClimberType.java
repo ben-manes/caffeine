@@ -35,7 +35,7 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("ImmutableEnumChecker")
-enum HillClimberType {
+public enum HillClimberType {
   // hill climbing
   SIMPLE(SimpleClimber::new),
   SIMULATED_ANNEALING(SimulatedAnnealingClimber::new),

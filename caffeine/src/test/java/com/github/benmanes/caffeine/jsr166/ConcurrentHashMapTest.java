@@ -209,6 +209,7 @@ public class ConcurrentHashMapTest extends JSR166TestCase {
         }
 
         for (int i = 0; i < size; i++) {
+            @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
             LexicographicList<BI> bis = new LexicographicList<>(new BI(i));
             assertTrue(m.containsKey(bis));
         }

@@ -496,7 +496,7 @@ public final class Caffeine<K, V> {
     return isWeighted() ? maximumWeight : maximumSize;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"JavaAnnotator", "unchecked"})
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
     Weigher<K1, V1> delegate = (weigher == null) || (weigher == Weigher.singletonWeigher())
         ? Weigher.singletonWeigher()
@@ -912,7 +912,7 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"JavaAnnotator", "unchecked"})
   <K1 extends K, V1 extends V> @Nullable RemovalListener<K1, V1> getEvictionListener(
       boolean async) {
     var castedListener = (RemovalListener<K1, V1>) evictionListener;
@@ -964,7 +964,7 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"JavaAnnotator", "unchecked"})
   @Nullable <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
     RemovalListener<K1, V1> castedListener = (RemovalListener<K1, V1>) removalListener;
     return async && (castedListener != null)

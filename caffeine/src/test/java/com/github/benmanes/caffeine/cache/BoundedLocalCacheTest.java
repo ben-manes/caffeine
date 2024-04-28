@@ -148,9 +148,9 @@ import com.google.common.util.concurrent.Uninterruptibles;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @CheckMaxLogLevel(WARN)
-@SuppressWarnings("GuardedBy")
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
+@SuppressWarnings({"ClassEscapesDefinedScope", "GuardedBy"})
 public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")

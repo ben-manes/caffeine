@@ -545,6 +545,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
   public boolean equals(Object o) {
     return (o == this) || data.equals(o);
   }
@@ -1079,6 +1080,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       V value = transformer.apply(cache.data.get(key));
       return (value == null) ? null : SnapshotEntry.forEntry(key, value);
     }
+    @SuppressWarnings("Java9CollectionFactory")
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
       if ((refreshes == null) || refreshes.isEmpty()) {
