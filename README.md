@@ -59,6 +59,7 @@ Use Caffeine in a community provided integration:
 * [Camel][camel]: Routing and mediation engine
 * [JHipster][jhipster]: Generate, develop, deploy
 * [Aedile][aedile]: Kotlin wrapper for Caffeine
+* [Bootique][bootique]: A minimally opinionated framework for runnable Java apps
 
 Powering infrastructure near you:
 
@@ -161,3 +162,4 @@ Snapshots of the development version are available in
 [grails]: https://grails.org
 [quarkus]: https://quarkus.io
 [aedile]: https://github.com/sksamuel/aedile
+[bootique]: https://bootique.io/
