@@ -59,7 +59,7 @@ Use Caffeine in a community provided integration:
 * [Camel][camel]: Routing and mediation engine
 * [JHipster][jhipster]: Generate, develop, deploy
 * [Aedile][aedile]: Kotlin wrapper for Caffeine
-* [Bootique][bootique]: A minimally opinionated framework for runnable Java apps
+* [Bootique][bootique]: A fast, simple Java platform
 
 Powering infrastructure near you:
 
