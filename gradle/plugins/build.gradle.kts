@@ -51,6 +51,8 @@ dependencies {
 }
 
 tasks.withType<DependencyUpdatesTask> {
+  checkBuildEnvironmentConstraints = true
+  checkConstraints = true
   resolutionStrategy {
     componentSelection {
       val ignoredGroups = listOf("org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")

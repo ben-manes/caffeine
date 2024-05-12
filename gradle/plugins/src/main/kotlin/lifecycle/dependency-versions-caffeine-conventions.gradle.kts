@@ -5,6 +5,8 @@ plugins {
 }
 
 tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+  checkBuildEnvironmentConstraints = true
+  checkConstraints = true
   resolutionStrategy {
     componentSelection {
       all {
