@@ -72,7 +72,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   final boolean isRecordingStats;
   final Executor executor;
   final boolean isAsync;
-  final Ticker ticker;
 
   @Nullable Set<K> keySet;
   @Nullable Collection<V> values;
@@ -85,7 +84,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     this.removalListener = builder.getRemovalListener(isAsync);
     this.isRecordingStats = builder.isRecordingStats();
     this.executor = builder.getExecutor();
-    this.ticker = builder.getTicker();
     this.isAsync = isAsync;
   }
 
@@ -237,7 +235,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public Ticker statsTicker() {
-    return ticker;
+    return isRecordingStats ? Ticker.systemTicker() : Ticker.disabledTicker();
   }
 
   /* --------------- JDK8+ Map extensions --------------- */
@@ -1056,7 +1054,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       SerializationProxy<K, V> proxy = new SerializationProxy<>();
       proxy.isRecordingStats = cache.isRecordingStats;
       proxy.removalListener = cache.removalListener;
-      proxy.ticker = cache.ticker;
       return proxy;
     }
   }
@@ -1208,7 +1205,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       SerializationProxy<K, V> proxy = new SerializationProxy<>();
       proxy.isRecordingStats = cache.isRecordingStats;
       proxy.removalListener = cache.removalListener;
-      proxy.ticker = cache.ticker;
       proxy.async = true;
       return proxy;
     }
@@ -1264,7 +1260,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       proxy.isRecordingStats = cache.isRecordingStats();
       proxy.removalListener = cache.removalListener;
       proxy.cacheLoader = cacheLoader;
-      proxy.ticker = cache.ticker;
       proxy.async = true;
       return proxy;
     }

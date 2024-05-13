@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.LinkedDequeSubject.deque;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collection;
 import java.util.Map;
@@ -36,6 +37,7 @@ import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncCache;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalManualCache;
+import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.cache.testing.Weighers;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Sets;
@@ -110,6 +112,16 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
+  private void checkStats(LocalCache<?, ?> cache) {
+    if (cache.isRecordingStats()) {
+      assertThat(cache.statsTicker()).isSameInstanceAs(Ticker.systemTicker());
+      assertThat(cache.statsCounter()).isNotSameInstanceAs(StatsCounter.disabledStatsCounter());
+    } else {
+      assertThat(cache.statsTicker()).isSameInstanceAs(Ticker.disabledTicker());
+      assertThat(cache.statsCounter()).isSameInstanceAs(StatsCounter.disabledStatsCounter());
+    }
+  }
+
   /* --------------- Bounded --------------- */
 
   private void checkBounded(BoundedLocalCache<Object, Object> bounded) {
@@ -117,6 +129,7 @@ public final class LocalCacheSubject extends Subject {
     checkReadBuffer(bounded);
 
     checkCache(bounded);
+    checkStats(bounded);
     checkTimerWheel(bounded);
     checkEvictionDeque(bounded);
   }
@@ -409,5 +422,6 @@ public final class LocalCacheSubject extends Subject {
       check("value").that(value).isNotNull();
       checkIfAsyncValue(value);
     });
+    checkStats(unbounded);
   }
 }

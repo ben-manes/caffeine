@@ -860,7 +860,7 @@ public final class Caffeine<K, V> {
 
   Ticker getTicker() {
     boolean useTicker = expiresVariable() || expiresAfterAccess()
-        || expiresAfterWrite() || refreshAfterWrite() || isRecordingStats();
+        || expiresAfterWrite() || refreshAfterWrite();
     return useTicker
         ? (ticker == null) ? Ticker.systemTicker() : ticker
         : Ticker.disabledTicker();

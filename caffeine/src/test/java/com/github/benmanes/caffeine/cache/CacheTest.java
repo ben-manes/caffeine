@@ -29,6 +29,10 @@ import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.ERROR;
 import static org.slf4j.event.Level.WARN;
 
@@ -37,6 +41,7 @@ import java.io.ObjectInputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -49,6 +54,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Triple;
+import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -67,11 +73,14 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
@@ -857,6 +866,38 @@ public final class CacheTest {
     assertThat(event.getFormattedMessage()).isEqualTo(
         "Exception thrown when submitting removal listener");
     assertThat(event.getThrowable().orElseThrow()).isInstanceOf(RejectedExecutionException.class);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.DISABLED,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      expiry = CacheExpiry.DISABLED, stats = Stats.DISABLED)
+  public void ticker_noStats(CacheContext context) {
+    var caffeineTicker = Mockito.mock(Ticker.class);
+    var guavaTicker = Mockito.mock(com.google.common.base.Ticker.class);
+    when(guavaTicker.read()).thenAnswer(invocation -> context.ticker().read());
+    when(caffeineTicker.read()).thenAnswer(invocation -> context.ticker().read());
+    context.ticker().setAutoIncrementStep(Duration.ofSeconds(1));
+
+    if (context.isGuava()) {
+      context.guava().ticker(guavaTicker);
+    } else {
+      context.caffeine().ticker(caffeineTicker);
+    }
+
+    Cache<Int, Int> cache = context.build(key -> key);
+    assertThat(cache.getIfPresent(context.absentKey())).isNull();
+    assertThat(cache.get(context.absentKey(), key -> null)).isNull();
+    assertThat(cache.get(context.absentKey(), key -> key)).isNotNull();
+    assertThat(cache.getIfPresent(context.absentKey())).isNotNull();
+
+    if (context.isGuava()) {
+      // Used for expiration timestamp and ignored
+      verify(guavaTicker, times(4)).read();
+    } else {
+      verifyNoInteractions(caffeineTicker);
+    }
   }
 
   /* --------------- serialize --------------- */

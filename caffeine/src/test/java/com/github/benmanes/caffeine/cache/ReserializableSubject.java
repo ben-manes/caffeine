@@ -253,7 +253,6 @@ public final class ReserializableSubject extends Subject {
 
   private void checkUnboundedLocalCache(
       UnboundedLocalCache<?, ?> original, UnboundedLocalCache<?, ?> copy) {
-    check("ticker").that(copy.ticker).isEqualTo(original.ticker);
     check("isRecordingStats").that(copy.isRecordingStats).isEqualTo(original.isRecordingStats);
 
     if (original.removalListener == null) {
