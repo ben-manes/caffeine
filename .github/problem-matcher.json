@@ -1,0 +1,58 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "error-prone",
+      "pattern": [
+        {
+          "regexp": "^\\s*(?<file>[^:]+):(?<line>\\d+):(?<column>\\d+): (?<type>error|warning): (?<message>.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      ]
+    },
+    {
+      "owner": "gradle",
+      "pattern": [
+        {
+          "regexp": "^(error|quiet|warning|lifecycle|info|debug)\\s+(\\S+)\\s+(.+)$",
+          "severity": 1,
+          "code": 2,
+          "message": 3
+        },
+        {
+          "regexp": "^([^\\s]+):([\\d]+)$",
+          "file": 1,
+          "line": 2
+        }
+      ]
+    },
+    {
+      "owner": "java",
+      "pattern": [
+        {
+          "regexp": "^\\s*(?<file>[^:]+):(?<line>\\d+): (?<type>error|warning): (?<message>.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      ]
+    },
+    {
+      "owner": "kotlin",
+      "pattern": [
+        {
+          "regexp": "^(e|w):\\s+(\\S+):\\s+\\((\\d+),\\s+(\\d+)\\):\\s+(.+)$",
+          "severity": 1,
+          "file": 2,
+          "line": 3,
+          "column": 4,
+          "message": 5
+        }
+      ]
+    }
+  ]
+}

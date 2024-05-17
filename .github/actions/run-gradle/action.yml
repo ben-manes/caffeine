@@ -89,6 +89,7 @@ runs:
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
       shell: bash
       run: |
+        echo "::add-matcher::.github/problem-matcher.json"
         for ((i=1; i<=${{ inputs.attempt-limit }}; i++)); do
           ./gradlew $(echo "${{ inputs.arguments }}" | tr -d '\n') && break
           if [ $i -lt ${{ inputs.attempt-limit }} ]; then

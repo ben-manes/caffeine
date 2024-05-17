@@ -844,7 +844,8 @@ public final class Caffeine<K, V> {
    * expired or refreshed. By default, {@link System#nanoTime} is used.
    * <p>
    * The primary intent of this method is to facilitate testing of caches which have been configured
-   * with {@link #expireAfterWrite}, {@link #expireAfterAccess}, or {@link #refreshAfterWrite}.
+   * with {@link #expireAfterWrite}, {@link #expireAfterAccess}, or {@link #refreshAfterWrite}. Note
+   * that this ticker is not used when recording statistics.
    *
    * @param ticker a nanosecond-precision time source
    * @return this {@code Caffeine} instance (for chaining)
