@@ -149,11 +149,6 @@ tasks.register<Test>("lincheckTest") {
   description = "Tests that assert linearizability"
   enabled = (System.getenv("JDK_EA") != "true")
   useTestNG {
-    jvmArgs(
-      "--add-opens", "java.base/jdk.internal.vm=ALL-UNNAMED",
-      "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-      "--add-opens", "java.base/jdk.internal.access=ALL-UNNAMED",
-      "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
     testLogging.events("started")
     includeGroups("lincheck")
     maxHeapSize = "3g"

@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.lincheck;
 
+import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
+
 import java.util.Map;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
@@ -51,21 +53,14 @@ public abstract class AbstractLincheckCacheTest {
    * approach can also provide a trace of an incorrect execution. However, it uses sequential
    * consistency model, so it can not find any low-level bugs (e.g., missing 'volatile'), and thus,
    * it is recommended to have both test modes.
-   * <p>
-   * This test requires the following JVM arguments,
-   * <ul>
-   *   <li>--add-opens java.base/jdk.internal.vm=ALL-UNNAMED
-   *   <li>--add-opens java.base/jdk.internal.misc=ALL-UNNAMED
-   *   <li>--add-opens java.base/jdk.internal.access=ALL-UNNAMED
-   *   <li>--add-exports java.base/jdk.internal.util=ALL-UNNAMED
-   * </ul>
    */
   @Test(groups = "lincheck")
   public void modelCheckingTest() {
     var options = new ModelCheckingOptions()
-        .iterations(100)                 // the number of different scenarios
-        .invocationsPerIteration(1_000); // how deeply each scenario is tested
-    new LinChecker(getClass(), options).check();
+        .iterations(100)                // the number of different scenarios
+        .invocationsPerIteration(1_000) // how deeply each scenario is tested
+        .hangingDetectionThreshold(5 * DEFAULT_HANGING_DETECTION_THRESHOLD);
+    LinChecker.check(getClass(), options);
   }
 
   /** This test checks linearizability with stress testing. */
@@ -74,7 +69,7 @@ public abstract class AbstractLincheckCacheTest {
     var options = new StressOptions()
         .iterations(100)                  // the number of different scenarios
         .invocationsPerIteration(10_000); // how deeply each scenario is tested
-    new LinChecker(getClass(), options).check();
+    LinChecker.check(getClass(), options);
   }
 
   /* --------------- Cache --------------- */

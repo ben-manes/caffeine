@@ -53,19 +53,13 @@ public final class MpscGrowableArrayQueueLincheckTest {
    * stress testing, this approach can also provide a trace of an incorrect execution. However, it
    * uses sequential consistency model, so it can not find any low-level bugs (e.g., missing
    * 'volatile'), and thus, it is recommended to have both test modes.
-   * <p>
-   * This test requires the following JVM arguments,
-   * <ul>
-   *   <li>--add-opens java.base/jdk.internal.misc=ALL-UNNAMED
-   *   <li>--add-exports java.base/jdk.internal.util=ALL-UNNAMED
-   * </ul>
    */
   @Test(groups = "lincheck")
   public void modelCheckingTest() {
     var options = new ModelCheckingOptions()
         .iterations(100)                  // the number of different scenarios
         .invocationsPerIteration(10_000); // how deeply each scenario is tested
-    new LinChecker(getClass(), options).check();
+    LinChecker.check(getClass(), options);
   }
 
   /** This test checks that the concurrent queue is linearizable with stress testing. */
@@ -74,6 +68,6 @@ public final class MpscGrowableArrayQueueLincheckTest {
     var options = new StressOptions()
         .iterations(100)                  // the number of different scenarios
         .invocationsPerIteration(10_000); // how deeply each scenario is tested
-    new LinChecker(getClass(), options).check();
+    LinChecker.check(getClass(), options);
   }
 }
