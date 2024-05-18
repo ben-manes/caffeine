@@ -32,6 +32,7 @@ dependencies {
   implementation(libs.dependency.check)
   implementation(libs.errorprone.plugin)
   implementation(libs.dependency.versions)
+  implementation(libs.jvm.dependency.conflict.resolution)
   implementation(libs.coveralls) {
     exclude(group = "net.sourceforge.nekohtml", module = "nekohtml")
   }

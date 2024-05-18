@@ -1,7 +1,7 @@
 # Reporting Security Issues
 
-If you discover a security issue, please use GitHub's mechanism for [privately reporting a vulnerability].
-Under the main repository's [security tab], click "Report a vulnerability" to open the advisory form.
+If you discover a security issue, please use GitHub's mechanism for [privately reporting a vulnerability][].
+Under the main repository's [security tab][], click "Report a vulnerability" to open the advisory form.
 
 Thanks for helping make everyone safer.
 

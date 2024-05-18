@@ -2,6 +2,7 @@ plugins {
   idea
   `jvm-ecosystem`
   id("eclipse-caffeine-conventions")
+  id("org.gradlex.jvm-dependency-conflict-resolution")
 }
 
 dependencies {

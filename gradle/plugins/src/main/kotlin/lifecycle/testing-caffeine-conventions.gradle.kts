@@ -6,12 +6,6 @@ plugins {
   `java-library`
 }
 
-configurations.configureEach {
-  resolutionStrategy.dependencySubstitution {
-    substitute(module("org.hamcrest:hamcrest-core")).using(module(libs.hamcrest.get().toString()))
-  }
-}
-
 dependencies {
   testImplementation(libs.guava)
   testImplementation(libs.guice)

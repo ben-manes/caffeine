@@ -4,13 +4,6 @@ plugins {
 
 val checkstyleConfig: Configuration by configurations.creating
 
-configurations.checkstyle.configure {
-  resolutionStrategy.dependencySubstitution {
-    substitute(module("com.google.collections:google-collections"))
-      .using(module(libs.guava.asProvider().get().toString()))
-  }
-}
-
 dependencies {
   checkstyleConfig(libs.checkstyle) {
     isTransitive = false
