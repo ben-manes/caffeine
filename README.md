@@ -60,6 +60,7 @@ Use Caffeine in a community provided integration:
 * [ScalaCache][scala-cache]: Simple caching in Scala
 * [JHipster][jhipster]: Generate, develop, deploy
 * [Aedile][aedile]: Kotlin wrapper for Caffeine
+* [caffeine-coroutines][caffeine-coroutines]: A simple extension that adds Kotlin Coroutines support to caffeine
 
 Powering infrastructure near you:
 
@@ -163,3 +164,4 @@ Snapshots of the development version are available in
 [quarkus]: https://quarkus.io
 [aedile]: https://github.com/sksamuel/aedile
 [bootique]: https://bootique.io/
+[caffeine-coroutines]: https://github.com/be-hase/caffeine-coroutines
