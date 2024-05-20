@@ -16,7 +16,7 @@ jobs:
       security-events: write
     if: >
       github.actor != 'dependabot[bot]'
-      && github.event.repository.fork == false
+      && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1

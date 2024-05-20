@@ -46,7 +46,7 @@ application {
 }
 
 forbiddenApis {
-  bundledSignatures.addAll(listOf("commons-io-unsafe-2.11.0", "jdk-deprecated",
+  bundledSignatures.addAll(listOf("commons-io-unsafe-2.15.1", "jdk-deprecated",
     "jdk-internal", "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
 }
 
