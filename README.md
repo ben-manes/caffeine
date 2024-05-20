@@ -21,10 +21,10 @@ experience designing [Guava's cache][guava-cache] and [ConcurrentLinkedHashMap][
 
 ```java
 LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
-    .maximumSize(10_000)
-    .expireAfterWrite(Duration.ofMinutes(5))
-    .refreshAfterWrite(Duration.ofMinutes(1))
-    .build(key -> createExpensiveGraph(key));
+  .maximumSize(10_000)
+  .expireAfterWrite(Duration.ofMinutes(5))
+  .refreshAfterWrite(Duration.ofMinutes(1))
+  .build(key -> createExpensiveGraph(key));
 ```
 
 #### Features at a Glance
@@ -33,7 +33,8 @@ Caffeine provides flexible construction to create a cache with a combination of 
 optional features:
 
 * [automatic loading of entries][population] into the cache, optionally asynchronously
-* [size-based eviction][size] when a maximum is exceeded based on [frequency and recency][efficiency]
+* [size-based eviction][size] when a maximum is exceeded based
+  on [frequency and recency][efficiency]
 * [time-based expiration][time] of entries, measured since last access or last write
 * [asynchronously refresh][refresh] when the first stale request for an entry occurs
 * keys automatically wrapped in [weak references][reference]
@@ -60,7 +61,8 @@ Use Caffeine in a community provided integration:
 * [ScalaCache][scala-cache]: Simple caching in Scala
 * [JHipster][jhipster]: Generate, develop, deploy
 * [Aedile][aedile]: Kotlin wrapper for Caffeine
-* [caffeine-coroutines][caffeine-coroutines]: A simple extension that adds Kotlin Coroutines support to caffeine
+* [caffeine-coroutines][caffeine-coroutines]: A simple extension that adds
+  Kotlin Coroutines support to Caffeine
 
 Powering infrastructure near you:
 
@@ -113,55 +115,107 @@ Snapshots of the development version are available in
 [Sonatype's snapshots repository][snapshots].
 
 [benchmarks]: https://github.com/ben-manes/caffeine/wiki/Benchmarks
+
 [users-guide]: https://github.com/ben-manes/caffeine/wiki
+
 [javadoc]: http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine
+
 [guava-cache]: https://github.com/google/guava/wiki/CachesExplained
+
 [clhm]: https://github.com/ben-manes/concurrentlinkedhashmap
+
 [population]: https://github.com/ben-manes/caffeine/wiki/Population
+
 [size]: https://github.com/ben-manes/caffeine/wiki/Eviction#size-based
+
 [time]: https://github.com/ben-manes/caffeine/wiki/Eviction#time-based
+
 [refresh]: https://github.com/ben-manes/caffeine/wiki/Refresh
+
 [reference]: https://github.com/ben-manes/caffeine/wiki/Eviction#reference-based
+
 [listener]: https://github.com/ben-manes/caffeine/wiki/Removal
+
 [compute]: https://github.com/ben-manes/caffeine/wiki/Compute
+
 [statistics]: https://github.com/ben-manes/caffeine/wiki/Statistics
+
 [simulator]: https://github.com/ben-manes/caffeine/wiki/Simulator
+
 [guava-adapter]: https://github.com/ben-manes/caffeine/wiki/Guava
+
 [jsr107]: https://github.com/ben-manes/caffeine/wiki/JCache
+
 [maven]: https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine
+
 [releases]: https://github.com/ben-manes/caffeine/releases
+
 [snapshots]: https://oss.sonatype.org/content/repositories/snapshots/com/github/ben-manes/caffeine/
+
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
+
 [tinylfu]: https://dl.acm.org/doi/10.1145/3149371?cid=99659224047
+
 [adaptive-tinylfu]: https://dl.acm.org/doi/10.1145/3274808.3274816?cid=99659224047
+
 [size-tinylfu]: https://dl.acm.org/doi/10.1145/3507920?cid=99659224047
+
 [modern-cache-1]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
+
 [modern-cache-2]: http://highscalability.com/blog/2019/2/25/design-of-a-modern-cachepart-deux.html
+
 [modern-cache-slides]: https://docs.google.com/presentation/d/1NlDxyXsUG1qlVHMl4vsUUBQfAJ2c2NsFPNPr2qymIBs
+
 [HighScalability]: http://highscalability.com
+
 [spring]: https://docs.spring.io/spring/docs/current/spring-framework-reference/integration.html#cache-store-configuration-caffeine
+
 [scala-cache]: https://github.com/cb372/scalacache
+
 [scaffeine]: https://github.com/blemale/scaffeine
+
 [kafka]: https://kafka.apache.org
+
 [hbase]: https://hbase.apache.org
+
 [cassandra]: http://cassandra.apache.org
+
 [solr]: https://solr.apache.org/
+
 [infinispan]: https://infinispan.org
+
 [neo4j]: https://github.com/neo4j/neo4j
+
 [finagle]: https://github.com/twitter/finagle
+
 [druid]: https://druid.apache.org/docs/latest/configuration/index.html#cache-configuration
+
 [jhipster]: https://www.jhipster.tech/
+
 [open-whisk]: https://openwhisk.apache.org/
+
 [camel]: https://github.com/apache/camel/blob/master/components/camel-caffeine/src/main/docs/caffeine-cache-component.adoc
+
 [coherence]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-applications/implementing-storage-and-backing-maps.html#GUID-260228C2-371A-4B91-9024-8D6514DD4B78
+
 [corfu]: https://github.com/CorfuDB/CorfuDB
+
 [micronaut]: https://docs.micronaut.io/latest/guide/index.html#caching
+
 [play]: https://www.playframework.com/documentation/latest/JavaCache
+
 [redisson]: https://github.com/redisson/redisson
+
 [accumulo]: https://accumulo.apache.org
+
 [dropwizard]: https://www.dropwizard.io
+
 [grails]: https://grails.org
+
 [quarkus]: https://quarkus.io
+
 [aedile]: https://github.com/sksamuel/aedile
+
 [bootique]: https://bootique.io/
+
 [caffeine-coroutines]: https://github.com/be-hase/caffeine-coroutines
