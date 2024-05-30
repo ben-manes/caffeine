@@ -380,16 +380,16 @@ public final class Caffeine<K, V> {
    * be used again. For example, the cache may evict an entry because it hasn't been used recently
    * or very often.
    * <p>
-   * When {@code size} is zero, elements will be evicted immediately after being loaded into the
-   * cache. This can be useful in testing, or to disable caching temporarily without a code change.
-   * As eviction is scheduled on the configured {@link #executor}, tests may instead prefer
+   * When {@code maximumSize} is zero, elements will be evicted immediately after being loaded into
+   * the cache. This can be useful in testing, or to disable caching temporarily without a code
+   * change. As eviction is scheduled on the configured {@link #executor}, tests may instead prefer
    * to configure the cache to execute tasks directly on the same thread.
    * <p>
    * This feature cannot be used in conjunction with {@link #maximumWeight}.
    *
    * @param maximumSize the maximum size of the cache
    * @return this {@code Caffeine} instance (for chaining)
-   * @throws IllegalArgumentException if {@code size} is negative
+   * @throws IllegalArgumentException if {@code maximumSize} is negative
    * @throws IllegalStateException if a maximum size or weight was already set
    */
   @CanIgnoreReturnValue
@@ -886,8 +886,8 @@ public final class Caffeine<K, V> {
    * {@link ClassCastException} being thrown by a cache operation at some <i>undefined</i> point in
    * the future.
    * <p>
-   * <b>Warning:</b> any exception thrown by {@code listener} will <i>not</i> be propagated to the
-   * {@code Cache} user, only logged via a {@link Logger}.
+   * <b>Warning:</b> any exception thrown by {@code evictionListener} will <i>not</i> be propagated
+   * to the {@code Cache} user, only logged via a {@link Logger}.
    * <p>
    * This feature cannot be used in conjunction when {@link #weakKeys()} is combined with
    * {@link #buildAsync}.
@@ -941,8 +941,8 @@ public final class Caffeine<K, V> {
    * {@link ClassCastException} being thrown by a cache operation at some <i>undefined</i> point in
    * the future.
    * <p>
-   * <b>Warning:</b> any exception thrown by {@code listener} will <i>not</i> be propagated to the
-   * {@code Cache} user, only logged via a {@link Logger}.
+   * <b>Warning:</b> any exception thrown by {@code removalListener} will <i>not</i> be propagated
+   * to the {@code Cache} user, only logged via a {@link Logger}.
    *
    * @param removalListener a listener instance that caches should notify each time an entry is
    *        removed
@@ -977,7 +977,7 @@ public final class Caffeine<K, V> {
    * Enables the accumulation of {@link CacheStats} during the operation of the cache. Without this
    * {@link Cache#stats} will return zero for all statistics. Note that recording statistics
    * requires bookkeeping to be performed with each operation, and thus imposes a performance
-   * penalty on cache operation.
+   * penalty on cache operations.
    *
    * @return this {@code Caffeine} instance (for chaining)
    */
@@ -992,7 +992,7 @@ public final class Caffeine<K, V> {
    * Enables the accumulation of {@link CacheStats} during the operation of the cache. Without this
    * {@link Cache#stats} will return zero for all statistics. Note that recording statistics
    * requires bookkeeping to be performed with each operation, and thus imposes a performance
-   * penalty on cache operation. Any exception thrown by the supplied {@link StatsCounter} will be
+   * penalty on cache operations. Any exception thrown by the supplied {@link StatsCounter} will be
    * suppressed and logged.
    *
    * @param statsCounterSupplier a supplier instance that returns a new {@link StatsCounter}
@@ -1100,7 +1100,7 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends V> AsyncCache<K1, V1> buildAsync() {
     requireState(valueStrength == null, "Weak or soft values can not be combined with AsyncCache");
     requireState(isStrongKeys() || (evictionListener == null),
-        "Weak keys cannot be combined eviction listener and with AsyncLoadingCache");
+        "Weak keys cannot be combined with eviction listener and AsyncLoadingCache");
     requireWeightWithWeigher();
     requireNonLoadingCache();
 
