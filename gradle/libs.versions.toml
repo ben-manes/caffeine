@@ -1,6 +1,6 @@
 [versions]
 asm = "9.7"
-auto-value = "1.10.4"
+auto-value = "1.11.0"
 awaitility = "4.2.1"
 bcel = "6.9.0"
 bnd = "7.0.0"
