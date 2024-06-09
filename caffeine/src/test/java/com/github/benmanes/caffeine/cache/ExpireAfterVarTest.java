@@ -78,6 +78,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.testing.SerializableTester;
@@ -412,6 +413,14 @@ public final class ExpireAfterVarTest {
         cache.getAll(context.absentKeys(), keys -> Maps.toMap(keys, Int::negate)));
     context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
+    if (context.isCaffeine()) {
+      assertThat(logEvents()
+          .withMessage("Exception thrown during asynchronous load")
+          .withThrowable(ExpirationException.class)
+          .withLevel(WARN)
+          .exclusively())
+          .hasSize(context.isAsync() ? context.absentKeys().size() : 0);
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -432,6 +441,47 @@ public final class ExpireAfterVarTest {
         .withLevel(WARN)
         .exclusively())
         .hasSize(context.absentKeys().size());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void getAll_expiryFails_newEntries(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        cache.getAll(context.absentKeys(), keys -> HashBiMap.create(context.original()).inverse()));
+    context.ticker().advance(Duration.ofHours(-1));
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    if (context.isCaffeine()) {
+      assertThat(logEvents()
+          .withMessage("Exception thrown during asynchronous load")
+          .withThrowable(ExpirationException.class)
+          .withLevel(WARN)
+          .exclusively())
+          .hasSize(context.isAsync() ? context.original().size() : 0);
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void getAll_expiryFails_newEntries_async(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    var future = new CompletableFuture<Map<Int, Int>>();
+    var result = cache.getAll(context.absentKeys(), (keys, executor) -> future);
+    future.complete(HashBiMap.create(context.original()).inverse());
+    assertThat(result).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(ExpirationException.class);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(ExpirationException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(context.original().size());
   }
 
   @Test(dataProvider = "caches")

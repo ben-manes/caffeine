@@ -28,7 +28,7 @@ import junit.framework.Test;
   "rawtypes", "ReturnValueIgnored", "unchecked", "UnnecessaryParentheses"})
 public class ConcurrentHashMapTest extends JSR166TestCase {
     public static void main(String[] args) {
-        main(suite(), args);
+        main(suite());
     }
     public static Test suite() {
         class Implementation implements MapImplementation {

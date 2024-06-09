@@ -228,7 +228,7 @@ public class CacheEvictionTest extends TestCase {
     assertEquals(1, removalListener.getCount());
   }
 
-  // FIXME(ben): Caffeine uses W-TinyLfu, not Lru
+  // Caffeine uses W-TinyLfu, not Lru
   public void disabled_testEviction_lru() {
     // test lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
@@ -261,7 +261,7 @@ public class CacheEvictionTest extends TestCase {
     assertThat(keySet).containsExactly(2, 10, 11, 12, 6, 7, 8, 13, 14, 15);
   }
 
-  // FIXME(ben): Caffeine uses W-TinyLfu, not Lru
+  // Caffeine uses W-TinyLfu, not Lru
   public void disabled_testEviction_weightedLru() {
     // test weighted lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();

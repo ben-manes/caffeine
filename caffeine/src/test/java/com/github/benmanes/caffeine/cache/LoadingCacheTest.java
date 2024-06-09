@@ -1110,7 +1110,7 @@ public final class LoadingCacheTest {
   /* --------------- CacheLoader --------------- */
 
   @Test
-  public void loadAll() throws Exception {
+  public void loadAll() {
     CacheLoader<Object, ?> loader = key -> key;
     assertThrows(UnsupportedOperationException.class, () -> loader.loadAll(Set.of()));
   }

@@ -378,8 +378,8 @@ public final class CacheContextSubject extends Subject {
           var notifications = Arrays.stream(entries)
               .map(entry -> new RemovalNotification<>(entry.getKey(), entry.getValue(), cause))
               .collect(toImmutableListMultimap(RemovalNotification::getCause, identity()));
-          var actual = Multimaps.index(listener.removed(), RemovalNotification::getCause);
-          check(type).that(actual).containsAtLeastEntriesIn(notifications);
+          var removed = Multimaps.index(listener.removed(), RemovalNotification::getCause);
+          check(type).that(removed).containsAtLeastEntriesIn(notifications);
         });
         return new Exclusive(entries.length);
       }

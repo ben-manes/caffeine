@@ -118,7 +118,7 @@ public final class CaffeineSpecTest {
   }
 
   private void runTest(CacheContext context, Epoch epoch, Function<Duration, String> formatter) {
-    CaffeineSpec spec = toSpec(context, epoch, formatter);
+    CaffeineSpec spec = toSpec(context, formatter);
     Caffeine<Object, Object> builder = Caffeine.from(spec);
 
     checkInitialCapacity(spec, context, builder);
@@ -134,8 +134,7 @@ public final class CaffeineSpecTest {
     assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString().replaceAll(",", ",,")));
   }
 
-  static CaffeineSpec toSpec(CacheContext context,
-      Epoch epoch, Function<Duration, String> formatter) {
+  static CaffeineSpec toSpec(CacheContext context, Function<Duration, String> formatter) {
     var options = new ArrayList<String>();
     if (context.initialCapacity() != InitialCapacity.DEFAULT) {
       options.add("initialCapacity=" + context.initialCapacity().size());

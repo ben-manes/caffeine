@@ -69,6 +69,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
@@ -326,6 +327,46 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  public void getAll_weigherFails_newEntries(Cache<Int, Int> cache, CacheContext context) {
+    when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+    assertThrows(IllegalStateException.class, () ->
+        cache.getAll(context.absentKeys(), keys -> HashBiMap.create(context.original()).inverse()));
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    if (context.isCaffeine()) {
+      assertThat(logEvents()
+          .withMessage("Exception thrown during asynchronous load")
+          .withThrowable(IllegalStateException.class)
+          .withLevel(WARN)
+          .exclusively())
+          .hasSize(context.isAsync() ? context.original().size() : 0);
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  public void getAll_weigherFails_newEntries_async(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+    var future = new CompletableFuture<Map<Int, Int>>();
+    var result = cache.getAll(context.absentKeys(), (keys, executor) -> future);
+    future.complete(HashBiMap.create(context.original()).inverse());
+
+    assertThat(context).stats().failures(1);
+    assertThat(result).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(IllegalStateException.class);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(context.original().size());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.NEGATIVE)
   public void put_negativeWeight(Cache<Int, Int> cache, CacheContext context) {
@@ -563,8 +604,9 @@ public final class EvictionTest {
   public void replaceConditionally_weigherFails_presentKey(
       Cache<Int, Int> cache, CacheContext context, Eviction<Int, Int> eviction) {
     when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
-    assertThrows(IllegalStateException.class, () -> cache.asMap().replace(
-        context.firstKey(), context.original().get(context.firstKey()), context.absentValue()));
+    assertThrows(IllegalStateException.class, () ->
+      cache.asMap().replace(context.firstKey(),
+          context.original().get(context.firstKey()), context.absentValue()));
     assertThat(cache).containsExactlyEntriesIn(context.original());
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }
@@ -573,39 +615,6 @@ public final class EvictionTest {
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   public void replaceConditionally_weigherFails_presentKey_async(
-      AsyncCache<Int, Int> cache, CacheContext context) {
-    when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
-    var future = new CompletableFuture<Int>();
-    cache.asMap().replace(context.firstKey(), cache.getIfPresent(context.firstKey()), future);
-    future.complete(context.absentValue());
-    assertThat(context).stats().failures(1);
-    assertThat(cache).doesNotContainKey(context.absentKey());
-    assertThat(logEvents()
-        .withMessage("Exception thrown during asynchronous load")
-        .withThrowable(IllegalStateException.class)
-        .withLevel(WARN)
-        .exclusively())
-        .hasSize(1);
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
-  public void replaceConditionally_weigherFails_presentKeyAndValue(
-      Cache<Int, Int> cache, CacheContext context, Eviction<Int, Int> eviction) {
-    when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
-    assertThrows(IllegalStateException.class, () -> {
-      cache.asMap().replace(context.firstKey(),
-          context.original().get(context.firstKey()), context.absentValue());
-    });
-    assertThat(cache).containsExactlyEntriesIn(context.original());
-    assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
-  public void replaceConditionally_weigherFails_presentKeyAndValue_async(
       AsyncCache<Int, Int> cache, CacheContext context) {
     when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
     var future = new CompletableFuture<Int>();

@@ -125,13 +125,13 @@ public final class FrequencySketchTest {
     for (int i = 0; i < 100_000; i++) {
       sketch.increment(i);
     }
-    for (long item : sketch.table) {
-      assertThat(Long.bitCount(item)).isEqualTo(64);
+    for (long slot : sketch.table) {
+      assertThat(Long.bitCount(slot)).isEqualTo(64);
     }
 
     sketch.reset();
-    for (long item : sketch.table) {
-      assertThat(item).isEqualTo(FrequencySketch.RESET_MASK);
+    for (long slot : sketch.table) {
+      assertThat(slot).isEqualTo(FrequencySketch.RESET_MASK);
     }
   }
 

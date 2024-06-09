@@ -86,9 +86,9 @@ public final class JCacheProfiler {
   private ScheduledFuture<?> scheduleStatusTask() {
     var stopwatch = Stopwatch.createStarted();
     return Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
-      long count = this.count.longValue();
-      long rate = count / stopwatch.elapsed(TimeUnit.SECONDS);
-      System.out.printf(US, "%s - %,d [%,d / sec]%n", stopwatch, count, rate);
+      long iterations = count.longValue();
+      long rate = iterations / stopwatch.elapsed(TimeUnit.SECONDS);
+      System.out.printf(US, "%s - %,d [%,d / sec]%n", stopwatch, iterations, rate);
     }, 5, 5, TimeUnit.SECONDS);
   }
 

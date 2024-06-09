@@ -2507,7 +2507,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_remove_null(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.asMap().values().remove(null)).isFalse();
+    assertThat(cache.asMap().entrySet().remove(null)).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
   }
 
@@ -2586,7 +2586,6 @@ public final class AsyncAsMapTest {
     Predicate<Map.Entry<Int, CompletableFuture<Int>>> isEven =
         entry -> (entry.getValue().join().intValue() % 2) == 0;
     boolean hasEven = cache.asMap().entrySet().stream().anyMatch(isEven);
-
     boolean removedIfEven = cache.asMap().entrySet().removeIf(isEven);
     assertThat(cache.asMap().entrySet().stream().anyMatch(isEven)).isFalse();
     assertThat(removedIfEven).isEqualTo(hasEven);
@@ -2607,21 +2606,6 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().entrySet().removeIf(v -> true)).isTrue();
       assertThat(cache).isEmpty();
       assertThat(context).removalNotifications().withCause(EXPLICIT).contains(context.original());
-    }
-  }
-
-  @CacheSpec
-  @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void entrySet_removeIf(AsyncCache<Int, Int> cache, CacheContext context) {
-    Predicate<Map.Entry<Int, CompletableFuture<Int>>> isEven =
-        entry -> (entry.getValue().join().intValue() % 2) == 0;
-    boolean hasEven = cache.asMap().entrySet().stream().anyMatch(isEven);
-    boolean removedIfEven = cache.asMap().entrySet().removeIf(isEven);
-    assertThat(cache.asMap().entrySet().stream().anyMatch(isEven)).isFalse();
-    assertThat(removedIfEven).isEqualTo(hasEven);
-    if (removedIfEven) {
-      assertThat(cache).hasSizeLessThan(context.initialSize());
     }
   }
 

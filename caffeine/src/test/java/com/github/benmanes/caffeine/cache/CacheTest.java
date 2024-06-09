@@ -36,6 +36,7 @@ import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.ERROR;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -174,7 +175,20 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void get_absent_throwsException(Cache<Int, Int> cache, CacheContext context) {
+  public void get_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
+    var error = assertThrows(Exception.class, () ->
+        cache.get(context.absentKey(), key -> { throw uncheckedThrow(new IOException()); }));
+    if (context.isSync() && context.isCaffeine()) {
+      assertThat(error).isInstanceOf(IOException.class);
+    } else {
+      assertThat(error).hasCauseThat().isInstanceOf(IOException.class);
+    }
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void get_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         cache.get(context.absentKey(), key -> { throw new IllegalStateException(); }));
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
@@ -404,7 +418,22 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void getAll_absent_throwsException(Cache<Int, Int> cache, CacheContext context) {
+  public void getAll_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
+    var error = assertThrows(Exception.class, () ->
+        cache.getAll(context.absentKeys(), keys -> { throw uncheckedThrow(new IOException()); }));
+    if (context.isSync()) {
+      assertThat(error).isInstanceOf(IOException.class);
+    } else {
+      assertThat(error).hasCauseThat().isInstanceOf(IOException.class);
+    }
+
+    int misses = context.absentKeys().size();
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAll_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         cache.getAll(context.absentKeys(), keys -> { throw new IllegalStateException(); }));
     int misses = context.absentKeys().size();
@@ -413,7 +442,7 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void getAll_function_throwsError(Cache<Int, Int> cache, CacheContext context) {
+  public void getAll_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(UnknownError.class, () ->
         cache.getAll(context.absentKeys(), keys -> { throw new UnknownError(); }));
     int misses = context.absentKeys().size();
@@ -1113,5 +1142,10 @@ public final class CacheTest {
       tester.addEqualityGroup(group.toArray());
     }
     tester.testEquals();
+  }
+
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
+  static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
+    throw (E) throwable;
   }
 }

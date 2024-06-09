@@ -65,7 +65,7 @@ public final class TypesafeConfigurationTest {
 
   @Test
   public void setConfigSource_function() {
-    TypesafeConfigurator.setConfigSource((uri, classloader) -> null);
+    TypesafeConfigurator.setConfigSource((uri, loader) -> null);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
 
     assertThrows(NullPointerException.class, () ->

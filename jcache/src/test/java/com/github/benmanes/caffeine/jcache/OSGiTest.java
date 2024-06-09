@@ -67,11 +67,10 @@ public final class OSGiTest {
 
   @Test
   public void sanity() {
-    var cachingProvider = Caching.getCachingProvider(
+    var provider = Caching.getCachingProvider(
         "com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider",
         getClass().getClassLoader());
-    var cache = cachingProvider.getCacheManager()
-        .getCache("osgi-cache", String.class, Integer.class);
+    var cache = provider.getCacheManager().getCache("osgi-cache", String.class, Integer.class);
     assertNull(cache.get("a"));
   }
 

@@ -49,19 +49,19 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 public final class Issue298Test {
   static final long EXPIRE_NS = Duration.ofDays(1).toNanos();
 
-  AtomicBoolean startedLoad;
-  AtomicBoolean doLoad;
+  private AtomicBoolean startedLoad;
+  private AtomicBoolean doLoad;
 
-  AtomicBoolean startedCreate;
-  AtomicBoolean doCreate;
+  private AtomicBoolean startedCreate;
+  private AtomicBoolean doCreate;
 
-  AtomicBoolean startedRead;
-  AtomicBoolean doRead;
-  AtomicBoolean endRead;
+  private AtomicBoolean startedRead;
+  private AtomicBoolean doRead;
+  private AtomicBoolean endRead;
 
-  AsyncLoadingCache<String, String> cache;
-  VarExpiration<String, String> policy;
-  String key;
+  private AsyncLoadingCache<String, String> cache;
+  private VarExpiration<String, String> policy;
+  private String testKey;
 
   @BeforeMethod
   public void before() {
@@ -73,7 +73,7 @@ public final class Issue298Test {
     doLoad = new AtomicBoolean();
     doRead = new AtomicBoolean();
 
-    key = "key";
+    testKey = "key";
     cache = makeAsyncCache();
     policy = cache.synchronous().policy().expireVariably().orElseThrow();
   }
@@ -87,7 +87,7 @@ public final class Issue298Test {
   @SuppressWarnings("FutureReturnValueIgnored")
   public void readDuringCreate() {
     // Loaded value and waiting at expireAfterCreate (expire: infinite)
-    var initialValue = cache.get(key);
+    var initialValue = cache.get(testKey);
     assertThat(initialValue).isNotNull();
 
     await().untilTrue(startedLoad);
@@ -97,14 +97,14 @@ public final class Issue298Test {
     // Async read trying to wait at expireAfterRead
     var reader = CompletableFuture.runAsync(() -> {
       do {
-        var value = cache.get(key);
+        var value = cache.get(testKey);
         assertThat(value).isEqualTo(initialValue);
       } while (!endRead.get());
     }, executor);
 
     // Ran expireAfterCreate (expire: infinite -> create)
     doCreate.set(true);
-    await().until(() -> policy.getExpiresAfter(key).orElseThrow().toNanos() <= EXPIRE_NS);
+    await().until(() -> policy.getExpiresAfter(testKey).orElseThrow().toNanos() <= EXPIRE_NS);
     await().untilTrue(startedRead);
 
     // Ran reader (expire: create -> ?)
@@ -113,7 +113,7 @@ public final class Issue298Test {
     reader.join();
 
     // Ensure expire is [expireAfterCreate], not [infinite]
-    assertThat(policy.getExpiresAfter(key).orElseThrow().toNanos()).isAtMost(EXPIRE_NS);
+    assertThat(policy.getExpiresAfter(testKey).orElseThrow().toNanos()).isAtMost(EXPIRE_NS);
   }
 
   private AsyncLoadingCache<String, String> makeAsyncCache() {

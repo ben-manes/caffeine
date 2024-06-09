@@ -183,7 +183,7 @@ public final class GuavaCacheFromContext {
         }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {
-        throw new CompletionException(e);
+        throw new CompletionException(e.getCause());
       } catch (ExecutionError e) {
         throw (Error) e.getCause();
       }

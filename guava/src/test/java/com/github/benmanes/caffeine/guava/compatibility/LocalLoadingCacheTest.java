@@ -69,7 +69,7 @@ public class LocalLoadingCacheTest extends TestCase {
 
   // null parameters test
 
-  public void testNullParameters() throws Exception {
+  public void testNullParameters() {
     NullPointerTester tester = new NullPointerTester();
     CacheLoader<Object, Object> loader = identityLoader();
     tester.testAllPublicInstanceMethods(makeCache(createCacheBuilder(), loader));

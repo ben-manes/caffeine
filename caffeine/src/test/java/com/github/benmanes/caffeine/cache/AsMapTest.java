@@ -2752,7 +2752,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_remove_null(Map<Int, Int> map, CacheContext context) {
-    assertThat(map.values().remove(null)).isFalse();
+    assertThat(map.entrySet().remove(null)).isFalse();
     assertThat(map).isEqualTo(context.original());
   }
 

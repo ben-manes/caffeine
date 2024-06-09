@@ -36,6 +36,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -262,7 +263,16 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void getBiFunc_throwsException(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void getBiFunc_throwsCheckedException(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThrows(IOException.class, () -> cache.get(context.absentKey(),
+        (key, executor) -> { throw uncheckedThrow(new IOException()); }));
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getBiFunc_throwsRuntimeException(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         cache.get(context.absentKey(), (key, executor) -> { throw new IllegalStateException(); }));
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
@@ -751,7 +761,22 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void getAllBifunction_absent_throwsException(
+  public void getAllBifunction_absent_throwsCheckedException(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var error = assertThrows(CompletionException.class, () -> {
+      cache.getAll(context.absentKeys(),
+          (keys, executor) -> { throw uncheckedThrow(new IOException()); });
+    });
+    assertThat(error).hasCauseThat().isInstanceOf(IOException.class);
+
+    int misses = context.absentKeys().size();
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllBifunction_absent_throwsRuntimeException(
       AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () -> {
       cache.getAll(context.absentKeys(),
@@ -1149,6 +1174,11 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   public void serialize(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache).isReserialize();
+  }
+
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
+  static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
+    throw (E) throwable;
   }
 
   private static final class LoadAllException extends RuntimeException {

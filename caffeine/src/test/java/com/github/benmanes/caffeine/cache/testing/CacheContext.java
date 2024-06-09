@@ -441,29 +441,31 @@ public final class CacheContext {
   }
 
   public <K, V> LoadingCache<K, V> build(CacheLoader<K, V> loader) {
-    LoadingCache<K, V> cache;
+    LoadingCache<K, V> loading;
     if (isCaffeine()) {
-      cache = isAsync() ? caffeine.buildAsync(loader).synchronous() : caffeine.build(loader);
+      loading = isAsync() ? caffeine.buildAsync(loader).synchronous() : caffeine.build(loader);
     } else {
       var guavaLoader = new SingleLoader<>(loader);
-      cache = new GuavaLoadingCache<>(guava.build(asyncReloading(guavaLoader, executor)), this);
+      loading = new GuavaLoadingCache<>(guava.build(asyncReloading(guavaLoader, executor)), this);
     }
-    this.cache = cache;
-    return cache;
+    this.cache = loading;
+    return loading;
   }
 
   public <K, V> AsyncLoadingCache<K, V> buildAsync(CacheLoader<K, V> loader) {
     checkState(isCaffeine() && isAsync());
-    AsyncLoadingCache<K, V> cache = caffeine.buildAsync(loader);
-    this.cache = cache.synchronous();
-    return cache;
+    AsyncLoadingCache<K, V> async = caffeine.buildAsync(loader);
+    this.cache = asyncCache.synchronous();
+    this.asyncCache = async;
+    return async;
   }
 
   public <K, V> AsyncLoadingCache<K, V> buildAsync(AsyncCacheLoader<K, V> loader) {
     checkState(isCaffeine() && isAsync());
-    AsyncLoadingCache<K, V> cache = caffeine.buildAsync(loader);
-    this.cache = cache.synchronous();
-    return cache;
+    AsyncLoadingCache<K, V> async = caffeine.buildAsync(loader);
+    this.cache = asyncCache.synchronous();
+    this.asyncCache = async;
+    return async;
   }
 
   public boolean isCaffeine() {

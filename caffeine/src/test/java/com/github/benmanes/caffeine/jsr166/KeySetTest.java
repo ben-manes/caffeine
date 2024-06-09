@@ -18,7 +18,7 @@ import junit.framework.Test;
 @SuppressWarnings("rawtypes")
 public class KeySetTest extends JSR166TestCase {
     public static void main(String[] args) {
-        main(suite(), args);
+        main(suite());
     }
 
     public static Test suite() {

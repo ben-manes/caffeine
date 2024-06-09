@@ -1557,7 +1557,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
   public void entrySet_iterator(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(10));
-    assertThat(map.keySet().iterator().hasNext()).isFalse();
+    assertThat(map.entrySet().iterator().hasNext()).isFalse();
     assertThat(map).isExhaustivelyEmpty();
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
@@ -1630,10 +1630,10 @@ public final class ExpirationTest {
     map.putAll(context.absent());
 
     context.ticker().advance(Duration.ofSeconds(45));
-    assertThat(map.hashCode()).isEqualTo(context.absent().hashCode());
+    assertThat(map.entrySet().hashCode()).isEqualTo(context.absent().entrySet().hashCode());
 
     context.cleanUp();
-    assertThat(map.hashCode()).isEqualTo(context.absent().hashCode());
+    assertThat(map.entrySet().hashCode()).isEqualTo(context.absent().entrySet().hashCode());
   }
 
   @Test(dataProvider = "caches")

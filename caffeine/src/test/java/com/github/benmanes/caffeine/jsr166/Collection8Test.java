@@ -178,7 +178,7 @@ public class Collection8Test extends JSR166TestCase {
         }
     }
 
-    public void testNullPointerExceptions() throws InterruptedException {
+    public void testNullPointerExceptions() {
         Collection c = impl.emptyCollection();
         Collection nullCollection = null;
         assertThrows(

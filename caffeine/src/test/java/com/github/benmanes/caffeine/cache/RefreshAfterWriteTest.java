@@ -964,9 +964,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("PreferJavaTimeOverload")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
   public void setRefreshesAfter(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
-    refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(2));
+    refreshAfterWrite.setRefreshesAfter(2, TimeUnit.MINUTES);
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(2);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(2);
   }

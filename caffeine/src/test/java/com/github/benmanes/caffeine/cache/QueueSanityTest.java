@@ -87,7 +87,6 @@ public abstract class QueueSanityTest {
     } else {
       // expect sum of elements is (size - 1) * size / 2 = 0 + 1 + .... + (size - 1)
       int sum = (size - 1) * size / 2;
-      i = 0;
       Integer e;
       while ((e = queue.poll()) != null) {
         assertEquals(--size, queue.size());

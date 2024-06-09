@@ -165,9 +165,9 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
       long startTime = statsTicker().read();
       try {
         value = mappingFunction.apply(key);
-      } catch (RuntimeException | Error e) {
+      } catch (Throwable t) {
         statsCounter().recordLoadFailure(statsTicker().read() - startTime);
-        throw e;
+        throw t;
       }
       long loadTime = statsTicker().read() - startTime;
       if (recordLoad) {

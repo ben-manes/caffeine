@@ -96,7 +96,7 @@ public final class CaffeinatedGuavaTest extends TestCase {
     cache.refresh(1);
   }
 
-  public void testCacheLoader_null() throws Exception {
+  public void testCacheLoader_null() {
     assertThrows(NullPointerException.class, () -> CaffeinatedGuava.caffeinate(null));
 
     var caffeine1 = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> null));
@@ -121,13 +121,13 @@ public final class CaffeinatedGuavaTest extends TestCase {
     assertThat(e2).hasCauseThat().isInstanceOf(InvalidCacheLoadException.class);
   }
 
-  public void testCacheLoader_exception() throws Exception {
+  public void testCacheLoader_exception() {
     runCacheLoaderExceptionTest(new InterruptedException());
     runCacheLoaderExceptionTest(new RuntimeException());
     runCacheLoaderExceptionTest(new Exception());
   }
 
-  public void runCacheLoaderExceptionTest(Exception error) throws Exception {
+  public void runCacheLoaderExceptionTest(Exception error) {
     var guava = new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) throws Exception {
         throw error;

@@ -42,23 +42,23 @@ import com.google.common.util.concurrent.ListenableFutureTask;
  * @author boschb (Robert Bosch)
  */
 public final class Issue193Test {
+  private final String testKey = Issue193Test.class.getSimpleName();
   private final AtomicLong counter = new AtomicLong(0);
   private final FakeTicker ticker = new FakeTicker();
 
   private ListenableFutureTask<Long> loadingTask;
 
-  private final AsyncCacheLoader<String, Long> loader = (key, exec) -> {
+  private final AsyncCacheLoader<String, Long> loader = (key, executor) -> {
     // Fools the cache into thinking there is a future that's not immediately ready.
     // (The Cache has optimizations for this that we want to avoid)
     loadingTask = ListenableFutureTask.create(counter::getAndIncrement);
     var f = new CompletableFuture<Long>();
     loadingTask.addListener(() -> {
       f.complete(Futures.getUnchecked(loadingTask));
-    }, exec);
+    }, executor);
     return f;
   };
 
-  private final String key = Issue193Test.class.getSimpleName();
 
   /** This ensures that any outstanding async loading is completed as well */
   private long loadGet(AsyncLoadingCache<String, Long> cache, String key) {
@@ -70,7 +70,7 @@ public final class Issue193Test {
   }
 
   @Test
-  public void invalidateDuringRefreshRemovalCheck() throws Exception {
+  public void invalidateDuringRefreshRemovalCheck() {
     var removed = new ArrayList<Long>();
     AsyncLoadingCache<String, Long> cache = Caffeine.newBuilder()
         .removalListener((String key, Long value, RemovalCause reason) -> removed.add(value))
@@ -80,19 +80,16 @@ public final class Issue193Test {
         .buildAsync(loader);
 
     // Load so there is an initial value.
-    assertThat(loadGet(cache, key)).isEqualTo(0);
+    assertThat(loadGet(cache, testKey)).isEqualTo(0);
 
     ticker.advance(Duration.ofNanos(11)); // Refresh should fire on next access
-    assertThat(cache).containsEntry(key, 0); // Old value
+    assertThat(cache).containsEntry(testKey, 0); // Old value
 
-    cache.synchronous().invalidate(key); // Invalidate key entirely
-    assertThat(cache).doesNotContainKey(key); // No value in cache (good)
+    cache.synchronous().invalidate(testKey); // Invalidate key entirely
+    assertThat(cache).doesNotContainKey(testKey); // No value in cache (good)
     loadingTask.run(); // Completes refresh
 
-    // FIXME: java.lang.AssertionError: Not true that <1> is null
-    assertThat(cache).doesNotContainKey(key); // Value in cache (bad)
-
-    // FIXME: Maybe? This is what I wanted to actually test :)
+    assertThat(cache).doesNotContainKey(testKey); // Value in cache (bad)
     assertThat(removed).containsExactly(0L, 1L).inOrder(); // 1L was sent to removalListener anyway
   }
 }

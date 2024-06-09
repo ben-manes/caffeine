@@ -163,7 +163,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(2, stats.hitCount());
   }
 
-  public void testReload() throws ExecutionException {
+  public void testReload() {
     final Object one = new Object();
     final Object two = new Object();
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
@@ -658,7 +658,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(0, stats.hitCount());
   }
 
-  public void testReloadNull() throws ExecutionException {
+  public void testReloadNull() {
     final Object one = new Object();
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
       @Override
@@ -704,7 +704,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.hitCount());
   }
 
-  public void testReloadNullFuture() throws ExecutionException {
+  public void testReloadNullFuture() {
     final Object one = new Object();
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
       @Override
@@ -936,7 +936,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(0, stats.hitCount());
   }
 
-  public void testReloadError() throws ExecutionException {
+  public void testReloadError() {
     final Object one = new Object();
     final Error e = new Error();
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
@@ -983,7 +983,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.hitCount());
   }
 
-  public void testReloadFutureError() throws ExecutionException {
+  public void testReloadFutureError() {
     final Object one = new Object();
     final Error e = new Error();
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
@@ -1264,7 +1264,7 @@ public class CacheLoadingTest extends TestCase {
 
   public void testReloadCheckedException() {
     final Object one = new Object();
-    final RuntimeException e = new RuntimeException();
+    final Exception e = new Exception();
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
       @Override
       public Object load(Object key) {
@@ -1272,7 +1272,7 @@ public class CacheLoadingTest extends TestCase {
       }
 
       @Override
-      public ListenableFuture<Object> reload(Object key, Object oldValue) {
+      public ListenableFuture<Object> reload(Object key, Object oldValue) throws Exception {
         throw e;
       }
     };
@@ -1536,7 +1536,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(0, stats.hitCount());
   }
 
-  public void testReloadUncheckedException() throws ExecutionException {
+  public void testReloadUncheckedException() {
     final Object one = new Object();
     final RuntimeException e = new RuntimeException();
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
@@ -1583,7 +1583,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.hitCount());
   }
 
-  public void testReloadFutureUncheckedException() throws ExecutionException {
+  public void testReloadFutureUncheckedException() {
     final Object one = new Object();
     final Exception e = new RuntimeException();
     CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
@@ -1716,7 +1716,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(0, stats.hitCount());
   }
 
-  public void testReloadAfterFailure() throws ExecutionException {
+  public void testReloadAfterFailure() {
     final AtomicInteger count = new AtomicInteger();
     final RuntimeException e =
         new IllegalStateException("exception to trigger failure on first load()");
@@ -2068,7 +2068,7 @@ public class CacheLoadingTest extends TestCase {
     return resultList;
   }
 
-  public void testAsMapDuringLoading() throws InterruptedException, ExecutionException {
+  public void testAsMapDuringLoading() throws InterruptedException {
     final CountDownLatch getStartedSignal = new CountDownLatch(2);
     final CountDownLatch letGetFinishSignal = new CountDownLatch(1);
     final CountDownLatch getFinishedSignal = new CountDownLatch(2);
@@ -2175,8 +2175,7 @@ public class CacheLoadingTest extends TestCase {
   }
 
   // ConcurrentHashMap does not support this, as it returns the removed entry
-  public void disabled_testInvalidateAndReloadDuringLoading()
-      throws InterruptedException, ExecutionException {
+  public void disabled_testInvalidateAndReloadDuringLoading() throws InterruptedException {
     // computation starts; clear() is called, computation finishes
     final CountDownLatch computationStarted = new CountDownLatch(2);
     final CountDownLatch letGetFinishSignal = new CountDownLatch(1);

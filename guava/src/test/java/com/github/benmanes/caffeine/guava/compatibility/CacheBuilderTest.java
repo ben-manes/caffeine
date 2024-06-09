@@ -389,7 +389,7 @@ public class CacheBuilderTest extends TestCase {
         Caffeine.newBuilder().removalListener(testListener);
     try {
       // even to the same instance is not allowed
-      builder = builder.removalListener(testListener);
+      builder.removalListener(testListener);
       fail();
     } catch (IllegalStateException expected) {}
   }
@@ -629,7 +629,7 @@ public class CacheBuilderTest extends TestCase {
   }
 
   @GwtIncompatible("NullPointerTester")
-  public void testNullParameters() throws Exception {
+  public void testNullParameters() {
     NullPointerTester tester = new NullPointerTester();
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     tester.testAllPublicInstanceMethods(builder);

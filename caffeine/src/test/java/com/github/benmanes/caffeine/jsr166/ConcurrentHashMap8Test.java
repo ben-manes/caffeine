@@ -33,7 +33,7 @@ import junit.framework.TestSuite;
 @SuppressWarnings({"IdentityConversion", "PreferredInterfaceType", "rawtypes", "try", "unchecked"})
 public class ConcurrentHashMap8Test extends JSR166TestCase {
     public static void main(String[] args) {
-        main(suite(), args);
+        main(suite());
     }
     public static Test suite() {
         return new TestSuite(ConcurrentHashMap8Test.class);

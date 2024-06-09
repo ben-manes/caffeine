@@ -82,7 +82,7 @@ public final class TimerWheelTest {
   }
 
   @AfterMethod
-  public void afterMethod(ITestResult testResult) throws Exception {
+  public void afterMethod(ITestResult testResult) {
     if (!testResult.isSuccess()) {
       printTimerWheel();
     }

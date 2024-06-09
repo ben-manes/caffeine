@@ -382,7 +382,7 @@ public class JSR166TestCase extends TestCase {
      * Runs all JSR166 unit tests using junit.textui.TestRunner.
      */
     public static void main(String[] args) {
-        main(suite(), args);
+        main(suite());
     }
 
     static class PithyResultPrinter extends junit.textui.ResultPrinter {
@@ -420,7 +420,7 @@ public class JSR166TestCase extends TestCase {
      * Runs all unit tests in the given test suite.
      * Actual behavior influenced by jsr166.* system properties.
      */
-    static void main(Test suite, String[] args) {
+    static void main(Test suite) {
 //        if (useSecurityManager) {
 //            System.err.println("Setting a permissive security manager");
 //            Policy.setPolicy(permissivePolicy());

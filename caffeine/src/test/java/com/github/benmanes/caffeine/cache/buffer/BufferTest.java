@@ -42,7 +42,7 @@ public final class BufferTest {
 
   @Test(dataProvider = "buffers")
   @SuppressWarnings("ThreadPriorityCheck")
-  public void record(ReadBuffer<Boolean> buffer) {
+  public void offer(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
         int added = buffer.offer(Boolean.TRUE);
