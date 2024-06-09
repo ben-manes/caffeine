@@ -27,6 +27,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VA
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.function.Function.identity;
@@ -66,8 +67,6 @@ import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
-import com.github.valfirst.slf4jtest.TestLoggerFactory;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
@@ -342,7 +341,7 @@ public final class RefreshAfterWriteTest {
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
-    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
+    assertThat(logEvents()).isEmpty();
   }
 
   @CheckNoEvictions
@@ -370,7 +369,7 @@ public final class RefreshAfterWriteTest {
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
-    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
+    assertThat(logEvents()).isEmpty();
   }
 
   @CheckNoEvictions
@@ -388,10 +387,12 @@ public final class RefreshAfterWriteTest {
     var value = cache.get(context.absentKey());
 
     assertThat(value).isEqualTo(context.absentValue());
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getThrowable().orElseThrow()).hasCauseThat().isSameInstanceAs(expected);
-    assertThat(event.getFormattedMessage()).isEqualTo("Exception thrown during refresh");
-    assertThat(event.getLevel()).isEqualTo(WARN);
+    assertThat(logEvents()
+        .withMessage("Exception thrown during refresh")
+        .withUnderlyingCause(expected)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @Test(dataProvider = "caches")
@@ -418,11 +419,12 @@ public final class RefreshAfterWriteTest {
     var value = cache.get(context.absentKey());
 
     assertThat(value).isNotNull();
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(NullPointerException.class);
-    assertThat(event.getFormattedMessage()).isEqualTo(
-        "Exception thrown when submitting refresh task");
-    assertThat(event.getLevel()).isEqualTo(WARN);
+    assertThat(logEvents()
+        .withMessage("Exception thrown when submitting refresh task")
+        .withThrowable(NullPointerException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
 
     assertThat(refreshed.get()).isTrue();
     assertThat(cache.policy().refreshes()).isEmpty();

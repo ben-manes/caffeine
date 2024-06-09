@@ -39,7 +39,7 @@ env:
     schemastore.org:443
     www.graalvm.org:443
   PUBLISH_JDK: 11
-  EA_JDK: 24
+  EA_JDK: 23
 
 jobs:
   compile:

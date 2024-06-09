@@ -295,36 +295,42 @@ abstract class LocalAsyncLoadingCache<K, V>
             return;
           }
 
-          boolean[] discard = new boolean[1];
-          var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
-            var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
-            if (successful && (currentValue == oldValueFuture[0])) {
-              if (currentValue == null) {
-                // If the entry is absent then discard the refresh and maybe notifying the listener
-                discard[0] = (newValue != null);
-                return null;
-              } else if ((currentValue == newValue) || (currentValue == castedFuture)) {
-                // If the reloaded value is the same instance then no-op
-                return currentValue;
-              } else if (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)) {
-                // If the completed futures hold the same value instance then no-op
-                return currentValue;
+          try {
+            boolean[] discard = new boolean[1];
+            var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
+              var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
+              if (successful && (currentValue == oldValueFuture[0])) {
+                if (currentValue == null) {
+                  // If the entry is absent then discard the refresh and maybe notifying the listener
+                  discard[0] = (newValue != null);
+                  return null;
+                } else if ((currentValue == newValue) || (currentValue == castedFuture)) {
+                  // If the reloaded value is the same instance then no-op
+                  return currentValue;
+                } else if (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)) {
+                  // If the completed futures hold the same value instance then no-op
+                  return currentValue;
+                }
+                return (newValue == null) ? null : castedFuture;
               }
-              return (newValue == null) ? null : castedFuture;
-            }
-            // Otherwise, a write invalidated the refresh so discard it and notify the listener
-            discard[0] = true;
-            return currentValue;
-          }, asyncCache.cache().expiry(), /* recordLoad */ false, /* recordLoadFailure */ true);
+              // Otherwise, a write invalidated the refresh so discard it and notify the listener
+              discard[0] = true;
+              return currentValue;
+            }, asyncCache.cache().expiry(), /* recordLoad */ false, /* recordLoadFailure */ true);
 
-          if (discard[0] && (newValue != null)) {
-            var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
-            asyncCache.cache().notifyRemoval(key, castedFuture, cause);
-          }
-          if (newValue == null) {
+            if (discard[0] && (newValue != null)) {
+              var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+              asyncCache.cache().notifyRemoval(key, castedFuture, cause);
+            }
+            if (newValue == null) {
+              asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
+            } else {
+              asyncCache.cache().statsCounter().recordLoadSuccess(loadTime);
+            }
+          } catch (Throwable t) {
+            logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
             asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
-          } else {
-            asyncCache.cache().statsCounter().recordLoadSuccess(loadTime);
+            asyncCache.cache().remove(key, castedFuture);
           }
         });
       }

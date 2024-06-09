@@ -39,6 +39,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
@@ -254,12 +255,12 @@ public final class BoundedLocalCacheTest {
     doThrow(expected).when(cache).performCleanUp(any());
     var task = new PerformCleanupTask(cache);
     assertThat(task.exec()).isFalse();
-
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
-    assertThat(event.getFormattedMessage()).isEqualTo(
-        "Exception thrown when performing the maintenance task");
-    assertThat(event.getLevel()).isEqualTo(ERROR);
+    assertThat(logEvents()
+        .withMessage("Exception thrown when performing the maintenance task")
+        .withThrowable(expected)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
   }
 
   @Test
@@ -271,11 +272,12 @@ public final class BoundedLocalCacheTest {
     doCallRealMethod().when(cache).cleanUp();
     cache.cleanUp();
 
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
-    assertThat(event.getFormattedMessage()).isEqualTo(
-        "Exception thrown when performing the maintenance task");
-    assertThat(event.getLevel()).isEqualTo(ERROR);
+    assertThat(logEvents()
+        .withMessage("Exception thrown when performing the maintenance task")
+        .withThrowable(expected)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
   }
 
   @Test
@@ -555,11 +557,12 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
 
     cache.afterWrite(pendingTask);
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getThrowable().orElseThrow()).isSameInstanceAs(expected);
-    assertThat(event.getFormattedMessage()).isEqualTo(
-        "Exception thrown when performing the maintenance task");
-    assertThat(event.getLevel()).isEqualTo(ERROR);
+    assertThat(logEvents()
+        .withMessage("Exception thrown when performing the maintenance task")
+        .withThrowable(expected)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
   }
 
   @Test(dataProvider = "caches")

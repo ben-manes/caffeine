@@ -48,6 +48,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * This class provides a skeletal implementation of the {@link AsyncCache} interface to minimize the
@@ -144,9 +145,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     try {
       var loader = mappingFunction.apply(
           Collections.unmodifiableSet(proxies.keySet()), cache().executor());
-      return loader.whenComplete(completer).thenCompose(ignored -> composeResult(futures));
+      return loader.handle(completer).thenCompose(ignored -> composeResult(futures));
     } catch (Throwable t) {
-      completer.accept(/* result */ null, t);
+      completer.apply(/* result */ null, t);
       throw t;
     }
   }
@@ -214,9 +215,15 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         @SuppressWarnings("unchecked")
         var castedFuture = (CompletableFuture<V>) valueFuture;
 
-        // update the weight and expiration timestamps
-        cache().statsCounter().recordLoadSuccess(loadTime);
-        cache().replace(key, castedFuture, castedFuture, /* shouldDiscardRefresh */ false);
+        try {
+          // update the weight and expiration timestamps
+          cache().replace(key, castedFuture, castedFuture, /* shouldDiscardRefresh */ false);
+          cache().statsCounter().recordLoadSuccess(loadTime);
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
+          cache().statsCounter().recordLoadFailure(loadTime);
+          cache().remove(key, valueFuture);
+        }
       }
       if (recordMiss) {
         cache().statsCounter().recordMisses(1);
@@ -226,7 +233,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
   /** A function executed asynchronously after a bulk load completes. */
   final class AsyncBulkCompleter<K, V>
-      implements BiConsumer<Map<? extends K, ? extends V>, Throwable> {
+      implements BiFunction<Map<? extends K, ? extends V>, Throwable, Map<? extends K, ? extends V>> {
     private final LocalCache<K, CompletableFuture<V>> cache;
     private final Map<K, CompletableFuture<V>> proxies;
     private final long startTime;
@@ -239,9 +246,28 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    public void accept(@Nullable Map<? extends K, ? extends V> result, @Nullable Throwable error) {
+    @CanIgnoreReturnValue
+    public @Nullable Map<? extends K, ? extends V> apply(
+        @Nullable Map<? extends K, ? extends V> result, @Nullable Throwable error) {
       long loadTime = cache.statsTicker().read() - startTime;
+      var failure = handleResponse(result, error);
 
+      if (failure == null) {
+        cache.statsCounter().recordLoadSuccess(loadTime);
+        return result;
+      }
+
+      cache.statsCounter().recordLoadFailure(loadTime);
+      if (failure instanceof RuntimeException) {
+        throw (RuntimeException) failure;
+      } else if (failure instanceof Error) {
+        throw (Error) failure;
+      }
+      throw new CompletionException(failure);
+    }
+
+    private @Nullable Throwable handleResponse(
+        @Nullable Map<? extends K, ? extends V> result, @Nullable Throwable error) {
       if (result == null) {
         if (error == null) {
           error = new NullMapCompletionException();
@@ -250,38 +276,65 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           cache.remove(entry.getKey(), entry.getValue());
           entry.getValue().obtrudeException(error);
         }
-        cache.statsCounter().recordLoadFailure(loadTime);
         if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", error);
         }
+        return error;
       } else {
-        fillProxies(result);
-        addNewEntries(result);
-        cache.statsCounter().recordLoadSuccess(loadTime);
+        var failure = fillProxies(result);
+        return addNewEntries(result, failure);
       }
     }
 
     /** Populates the proxies with the computed result. */
-    private void fillProxies(Map<? extends K, ? extends V> result) {
-      proxies.forEach((key, future) -> {
-        V value = result.get(key);
+    private @Nullable Throwable fillProxies(Map<? extends K, ? extends V> result) {
+      Throwable error = null;
+      for (var entry : proxies.entrySet()) {
+        var key = entry.getKey();
+        var value = result.get(key);
+        var future = entry.getValue();
         future.obtrudeValue(value);
+
         if (value == null) {
           cache.remove(key, future);
         } else {
-          // update the weight and expiration timestamps
-          cache.replace(key, future, future);
+          try {
+            // update the weight and expiration timestamps
+            cache.replace(key, future, future);
+          } catch (Throwable t) {
+            logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
+            cache.remove(key, future);
+            if (error == null) {
+              error = t;
+            } else {
+              error.addSuppressed(t);
+            }
+          }
         }
-      });
+      }
+      return error;
     }
 
     /** Adds to the cache any extra entries computed that were not requested. */
-    private void addNewEntries(Map<? extends K, ? extends V> result) {
-      result.forEach((key, value) -> {
+    private @Nullable Throwable addNewEntries(
+        Map<? extends K, ? extends V> result, @Nullable Throwable error) {
+      for (var entry : result.entrySet()) {
+        var key = entry.getKey();
+        var value = result.get(key);
         if (!proxies.containsKey(key)) {
-          cache.put(key, CompletableFuture.completedFuture(value));
+          try {
+            cache.put(key, CompletableFuture.completedFuture(value));
+          } catch (Throwable t) {
+            logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
+            if (error == null) {
+              error = t;
+            } else {
+              error.addSuppressed(t);
+            }
+          }
         }
-      });
+      }
+      return error;
     }
 
     static final class NullMapCompletionException extends CompletionException {
