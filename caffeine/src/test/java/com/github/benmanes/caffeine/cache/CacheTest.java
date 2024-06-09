@@ -20,8 +20,8 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -86,7 +86,6 @@ import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
-import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
@@ -845,11 +844,12 @@ public final class CacheTest {
   @CacheSpec(population = Population.SINGLETON, removalListener = Listener.REJECTING)
   public void removalListener_error_log(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
-
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getLevel()).isEqualTo(WARN);
-    assertThat(event.getFormattedMessage()).isEqualTo("Exception thrown by removal listener");
-    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(RejectedExecutionException.class);
+    assertThat(logEvents()
+        .withMessage("Exception thrown by removal listener")
+        .withThrowable(RejectedExecutionException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @CheckMaxLogLevel(ERROR)
@@ -859,13 +859,12 @@ public final class CacheTest {
       removalListener = Listener.CONSUMING)
   public void removalListener_submit_error_log(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
-
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents().stream()
-        .filter(e -> e.getLevel() == ERROR)
-        .collect(toImmutableList()));
-    assertThat(event.getFormattedMessage()).isEqualTo(
-        "Exception thrown when submitting removal listener");
-    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(RejectedExecutionException.class);
+    assertThat(logEvents()
+        .withMessage("Exception thrown when submitting removal listener")
+        .withThrowable(RejectedExecutionException.class)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
   }
 
   @CheckNoStats

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
+import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.testing.TestingExecutors.sameThreadScheduledExecutor;
 import static org.hamcrest.Matchers.is;
@@ -48,7 +49,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
-import com.google.common.collect.Iterables;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.Futures;
 
@@ -80,11 +80,12 @@ public final class SchedulerTest {
     await().untilAtomic(thread, is(not(nullValue())));
 
     if (thread.get() == Thread.currentThread()) {
-      var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-      assertThat(event.getFormattedMessage())
-          .isEqualTo("Exception thrown when submitting scheduled task");
-      assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
-      assertThat(event.getLevel()).isEqualTo(WARN);
+      assertThat(logEvents()
+          .withMessage("Exception thrown when submitting scheduled task")
+          .withThrowable(IllegalStateException.class)
+          .withLevel(WARN)
+          .exclusively())
+          .hasSize(1);
     }
   }
 
@@ -152,12 +153,12 @@ public final class SchedulerTest {
     var future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new IllegalStateException(); })
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
-
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getFormattedMessage())
-        .isEqualTo("Exception thrown by scheduler; discarded task");
-    assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
-    assertThat(event.getLevel()).isEqualTo(WARN);
+    assertThat(logEvents()
+        .withMessage("Exception thrown by scheduler; discarded task")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   /* --------------- ScheduledExecutorService --------------- */

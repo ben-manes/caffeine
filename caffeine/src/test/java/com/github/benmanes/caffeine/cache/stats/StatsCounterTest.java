@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
+import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -99,9 +100,9 @@ public final class StatsCounterTest {
     counter.recordLoadFailure(1);
     var expected = CacheStats.of(1, 1, 1, 1, 2, 1, 10);
     assertThat(counter.snapshot()).isEqualTo(expected);
-    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
     assertThat(counter.toString()).isEqualTo(expected.toString());
     assertThat(counter.snapshot().toString()).isEqualTo(expected.toString());
+    assertThat(logEvents()).isEmpty();
   }
 
   @Test
@@ -134,13 +135,12 @@ public final class StatsCounterTest {
     verify(statsCounter).recordLoadFailure(1);
     verify(statsCounter).recordEviction(10, RemovalCause.SIZE);
 
-    var events = TestLoggerFactory.getLoggingEvents();
-    assertThat(events).hasSize(6);
-    for (var event : events) {
-      assertThat(event.getLevel()).isEqualTo(WARN);
-      assertThat(event.getFormattedMessage()).isEqualTo("Exception thrown by stats counter");
-      assertThat(event.getThrowable().orElseThrow()).isInstanceOf(NullPointerException.class);
-    }
+    assertThat(logEvents()
+        .withMessage("Exception thrown by stats counter")
+        .withThrowable(NullPointerException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(6);
   }
 
   @Test

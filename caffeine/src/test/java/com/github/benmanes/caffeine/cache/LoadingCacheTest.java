@@ -29,6 +29,7 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -72,7 +73,6 @@ import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
-import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.base.Functions;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.collect.ImmutableMap;
@@ -906,7 +906,7 @@ public final class LoadingCacheTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.refresh(context.absentKey());
-    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
+    assertThat(logEvents()).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -928,7 +928,7 @@ public final class LoadingCacheTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.refresh(context.absentKey());
-    assertThat(TestLoggerFactory.getLoggingEvents()).isEmpty();
+    assertThat(logEvents()).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -941,11 +941,13 @@ public final class LoadingCacheTest {
         ? context.buildAsync(cacheLoader).synchronous()
         : context.build(cacheLoader);
     cache.refresh(context.absentKey());
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
-    assertThat(event.getThrowable().orElseThrow()).hasCauseThat().isSameInstanceAs(expected);
-    assertThat(event.getFormattedMessage()).isAnyOf(
-        "Exception thrown during asynchronous load", "Exception thrown during refresh");
-    assertThat(event.getLevel()).isEqualTo(WARN);
+    assertThat(logEvents()
+        .withMessage(msg -> msg.equals("Exception thrown during asynchronous load")
+            || msg.equals("Exception thrown during refresh"))
+        .withUnderlyingCause(expected)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @Test(dataProvider = "caches")

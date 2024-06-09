@@ -19,7 +19,7 @@ import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.asser
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
-import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.testng.ITestResult.FAILURE;
@@ -234,10 +234,9 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         .orElseGet(() -> testResult.getTestClass()
             .getRealClass().getAnnotation(CheckMaxLogLevel.class));
     if (checkMaxLogLevel != null) {
-      var events = TestLoggerFactory.getLoggingEvents().stream()
-          .filter(event -> event.getLevel().toInt() > checkMaxLogLevel.value().toInt())
-          .collect(toImmutableList());
-      assertWithMessage("maxLevel=%s", checkMaxLogLevel.value()).that(events).isEmpty();
+      assertWithMessage("maxLevel=%s", checkMaxLogLevel.value()).that(logEvents()
+          .filter(event -> event.getLevel().toInt() > checkMaxLogLevel.value().toInt()))
+          .isEmpty();
     }
   }
 
