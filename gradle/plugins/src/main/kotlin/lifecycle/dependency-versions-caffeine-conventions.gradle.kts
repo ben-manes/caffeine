@@ -10,12 +10,15 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   resolutionStrategy {
     componentSelection {
       all {
+        val ignoredGroups = listOf("com.beust", "org.apache.logging.log4j")
         val stable = setOf("com.hazelcast", "javax.json.bind",
           "org.jetbrains.kotlin", "org.osgi", "org.slf4j")
         if ((candidate.group in stable) && isNonStable(candidate.version)) {
           reject("Release candidate")
         } else if ((candidate.module == "commons-io") && candidate.version.startsWith("2003")) {
           reject("Bad release")
+        } else if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
+          reject("Internal dependency")
         }
       }
     }

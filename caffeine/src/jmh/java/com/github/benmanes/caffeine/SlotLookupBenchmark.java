@@ -126,10 +126,12 @@ public class SlotLookupBenchmark {
     return array[index];
   }
 
+  @SuppressWarnings("SunApi")
   private int getProbe_unsafe() {
     return UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), probeOffset);
   }
 
+  @SuppressWarnings("SunApi")
   private void advanceProbe_unsafe(int probe) {
     probe ^= probe << 13; // xorshift
     probe ^= probe >>> 17;

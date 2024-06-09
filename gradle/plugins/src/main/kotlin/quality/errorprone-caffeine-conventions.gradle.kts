@@ -83,6 +83,7 @@ fun disabledChecks() = listOf(
   "IsInstanceLambdaUsage",
   "LexicographicalAnnotationListing",
   "MissingSummary",
+  "PatternMatchingInstanceof",
   "StaticImport",
 )
 fun enabledChecks() = listOf(
@@ -125,6 +126,7 @@ fun enabledChecks() = listOf(
   "StringFormatWithLiteral",
   "StronglyTypeByteString",
   "StronglyTypeTime",
+  "SunApi",
   "SwitchDefault",
   "TimeUnitMismatch",
   "TransientMisuse",

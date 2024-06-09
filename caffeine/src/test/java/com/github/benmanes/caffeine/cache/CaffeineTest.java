@@ -187,6 +187,7 @@ public final class CaffeineTest {
 
   @Test
   public void calculateHashMapCapacity() {
+    @SuppressWarnings("UnnecessaryMethodReference")
     Iterable<Integer> iterable = List.of(1, 2, 3)::iterator;
     assertThat(Caffeine.calculateHashMapCapacity(iterable)).isEqualTo(16);
     assertThat(Caffeine.calculateHashMapCapacity(List.of(1, 2, 3))).isEqualTo(4);
@@ -232,6 +233,7 @@ public final class CaffeineTest {
 
   @Test
   public void asyncLoader() {
+    @SuppressWarnings("UnnecessaryMethodReference")
     AsyncCacheLoader<Object, Object> asyncLoader = loader::asyncLoad;
     var cache = Caffeine.newBuilder().buildAsync(asyncLoader);
     assertThat(cache).isNotNull();

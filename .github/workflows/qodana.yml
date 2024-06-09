@@ -19,7 +19,7 @@ jobs:
       && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -55,19 +55,19 @@ jobs:
             resources.jetbrains.com:443
             services.gradle.org:443
       - name: Checkout
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Build
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           arguments: build -x test
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@0e6bc1dc4748adcfd7dd487675e7ed3a814ce988 # v2024.1.4
+        uses: JetBrains/qodana-action@32840fdb87f8dd110e0a6b09323c7142b667b25d # v2024.1.5
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           upload-result: true
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@ccf74c947955fd1cf117aef6a0e4e66191ef6f61 # v3.25.4
+        uses: github/codeql-action/upload-sarif@2e230e8fe0ad3a14a340ad0815ddb96d599d2aff # v3.25.8
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json

@@ -37,6 +37,7 @@ public final class Reset {
     setThreadLocalRandom(RANDOM_PROBE, RANDOM_SEED);
   }
 
+  @SuppressWarnings("SunApi")
   public static void setThreadLocalRandom(int probe, int seed) {
     UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), PROBE, probe);
     UnsafeAccess.UNSAFE.putLong(Thread.currentThread(), SEED, seed);

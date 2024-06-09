@@ -31,8 +31,8 @@ tasks.withType<JavaCompile>().configureEach {
     languageVersion = maxOf(javaVersion, JavaLanguageVersion.of(17))
   }
 
-  options.compilerArgs.add("-Xlint:all,-processing,-exports,-auxiliaryclass,"
-    + "-requires-automatic,-requires-transitive-automatic")
+  options.compilerArgs.add("-Xlint:all,-auxiliaryclass,-exports,-processing,"
+    + "-removal,-requires-automatic,-requires-transitive-automatic")
   options.compilerArgs.addAll(listOf("-Xmaxerrs", "500", "-Xmaxwarns", "500"))
   if (javaVersion.canCompileOrRun(21)) {
     options.compilerArgs.add("-proc:full")

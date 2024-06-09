@@ -7,16 +7,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
             api.github.com:443
             github.com:443
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Misspell
-        uses: reviewdog/action-misspell@5bd7be2fc7ae56a517184f5c4bbcf2fd7afe3927 # v1.17.0
+        uses: reviewdog/action-misspell@8cd4a880dd86b1b175092c18c23cdec31283d654 # v1.19.0
         with:
           reporter: github-check
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -25,13 +25,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Typos
-        uses: crate-ci/typos@d503507db9c5d116c79135435b149cd0f27d726e # v1.21.0
+        uses: crate-ci/typos@8382594ee09667379b652553cf57daebb8176a3f # v1.22.3

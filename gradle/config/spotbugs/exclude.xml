@@ -8,7 +8,6 @@
       ACEM_ABSTRACT_CLASS_EMPTY_METHODS,
       AI_ANNOTATION_ISSUES_NEEDS_NULLABLE,
       AOM_ABSTRACT_OVERRIDDEN_METHOD,
-      BAS_BLOATED_ASSIGNMENT_SCOPE,
       BL_BURYING_LOGIC,
       CE_CLASS_ENVY,
       CFS_CONFUSING_FUNCTION_SEMANTICS,
@@ -133,11 +132,6 @@
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.stats.CacheStats"/>
-    <Method name="empty"/>
-    <Bug pattern="SING_SINGLETON_GETTER_NOT_SYNCHRONIZED"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.stats.CacheStats"/>
     <Or>
       <Method name="saturatedAdd"/>
       <Method name="saturatedSubtract"/>
@@ -177,13 +171,18 @@
     <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter"/>
+    <Method name="apply"/>
+    <Bug pattern="ITC_INHERITANCE_TYPE_CHECKING"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter$NullMapCompletionException"/>
     <Method name="&lt;init&gt;"/>
     <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter"/>
-    <Method name="lambda$fillProxies$0"/>
+    <Method name="fillProxies"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
@@ -472,11 +471,6 @@
     <Class name="com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual.GdsfPolicy$Node"/>
     <Method name="equals"/>
     <Bug pattern="FE_FLOATING_POINT_EQUALITY"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber$Adaptation"/>
-    <Method name="hold"/>
-    <Bug pattern="SING_SINGLETON_GETTER_NOT_SYNCHRONIZED"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.report.TextReporter"/>

@@ -39,7 +39,7 @@ env:
     schemastore.org:443
     www.graalvm.org:443
   PUBLISH_JDK: 11
-  EA_JDK: 23
+  EA_JDK: 24
 
 jobs:
   compile:
@@ -53,13 +53,13 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Prepare GraalVM
         if: env.JAVA_VERSION == 'GraalVM'
         shell: bash
@@ -170,13 +170,13 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Run tests (${{ env.JAVA_VERSION }})
         uses: ./.github/actions/run-gradle
         with:
@@ -213,7 +213,7 @@ jobs:
     if: (github.event_name == 'push') && (github.event.repository.fork == false)
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -231,7 +231,7 @@ jobs:
             storage.googleapis.com:443
             uploader.codecov.io:443
       - name: Checkout
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           fetch-depth: 0
       - name: Download Tests Results
@@ -252,7 +252,7 @@ jobs:
           java: ${{ env.PUBLISH_JDK }}
         continue-on-error: true
       - name: Publish to Codecov
-        uses: codecov/codecov-action@5ecb98a3c6b747ed38dc09f787459979aebb39be # v4.3.1
+        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Publish to Codacy
@@ -279,7 +279,7 @@ jobs:
       checks: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -331,7 +331,7 @@ jobs:
       && endsWith(github.ref, github.event.repository.default_branch)
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -342,7 +342,7 @@ jobs:
             errorprone.info:443
             lightbend.github.io:443
             guava.dev:443
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
         env:
