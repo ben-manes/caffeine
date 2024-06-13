@@ -1,0 +1,16 @@
+[versions]
+caffeine = "3.1.8"
+guava = "33.2.1-jre"
+junit-jupiter = "5.11.0-M2"
+truth = "1.4.2"
+versions = "0.51.0"
+
+[libraries]
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+guava-testlib = { module = "com.google.guava:guava-testlib", version.ref = "guava" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+truth = { module = "com.google.truth:truth", version.ref = "truth" }
+
+[plugins]
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

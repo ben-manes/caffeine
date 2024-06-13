@@ -46,7 +46,7 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: gradle
-    directory: examples/write-behind-rxjava
+    directory: examples/hibernate
     schedule:
       interval: monthly
     groups:
@@ -55,7 +55,7 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: gradle
-    directory: examples/hibernate
+    directory: examples/indexable
     schedule:
       interval: monthly
     groups:
@@ -74,6 +74,15 @@ updates:
           - "*"
   - package-ecosystem: gradle
     directory: examples/graal-native
+    schedule:
+      interval: monthly
+    groups:
+      gradle-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
+  - package-ecosystem: gradle
+    directory: examples/write-behind-rxjava
     schedule:
       interval: monthly
     groups:

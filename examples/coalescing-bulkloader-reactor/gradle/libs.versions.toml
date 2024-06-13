@@ -1,7 +1,7 @@
 [versions]
 caffeine = "3.1.8"
 junit = "5.11.0-M2"
-reactor = "3.6.6"
+reactor = "3.6.7"
 truth = "1.4.2"
 versions = "0.51.0"
 

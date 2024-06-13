@@ -59,7 +59,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Prepare GraalVM
         if: env.JAVA_VERSION == 'GraalVM'
         shell: bash
@@ -72,7 +72,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           arguments: check -x test ${{ env.GRADLE_ARGS }}
       - name: Cancel if failed
-        uses: andymckay/cancel-action@271cfbfa11ca9222f7be99a47e8f929574549e0a # 0.4
+        uses: andymckay/cancel-action@a955d435292c0d409d104b57d8e78435a93a6ef1 # 0.5
         continue-on-error: true
         if: failure()
 
@@ -176,7 +176,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Run tests (${{ env.JAVA_VERSION }})
         uses: ./.github/actions/run-gradle
         with:
@@ -202,7 +202,7 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}-results
           path: ${{ env.ARTIFACT_NAME }}.tar.gz
       - name: Cancel if failed
-        uses: andymckay/cancel-action@271cfbfa11ca9222f7be99a47e8f929574549e0a # 0.4
+        uses: andymckay/cancel-action@a955d435292c0d409d104b57d8e78435a93a6ef1 # 0.5
         continue-on-error: true
         if: failure()
 
@@ -231,7 +231,7 @@ jobs:
             storage.googleapis.com:443
             uploader.codecov.io:443
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
       - name: Download Tests Results
@@ -252,7 +252,7 @@ jobs:
           java: ${{ env.PUBLISH_JDK }}
         continue-on-error: true
       - name: Publish to Codecov
-        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Publish to Codacy
@@ -342,7 +342,7 @@ jobs:
             errorprone.info:443
             lightbend.github.io:443
             guava.dev:443
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
         env:

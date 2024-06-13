@@ -17,11 +17,4 @@ testing.suites {
   }
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(
-  System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 17)
-
-tasks.withType<JavaCompile>().configureEach {
-  javaCompiler = javaToolchains.compilerFor {
-    languageVersion = java.toolchain.languageVersion
-  }
-}
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
