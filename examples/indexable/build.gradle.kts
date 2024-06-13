@@ -5,16 +5,17 @@ plugins {
 
 dependencies {
   implementation(libs.caffeine)
-  implementation(libs.reactor)
+  implementation(libs.guava)
 
-  testImplementation(libs.junit)
+  testImplementation(libs.junit.jupiter)
+  testImplementation(libs.guava.testlib)
   testImplementation(libs.truth)
 }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 testing.suites {
   val test by getting(JvmTestSuite::class) {
     useJUnitJupiter()
   }
 }
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)

@@ -25,15 +25,6 @@ testing.suites {
   }
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(
-  System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 17)
-
-tasks.withType<JavaCompile>().configureEach {
-  javaCompiler = javaToolchains.compilerFor {
-    languageVersion = java.toolchain.languageVersion
-  }
-}
-
 eclipse.classpath.file.beforeMerged {
   if (this is Classpath) {
     val absolutePath = layout.buildDirectory.dir("generated/sources/annotationProcessor/java/main")

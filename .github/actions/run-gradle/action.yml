@@ -64,12 +64,18 @@ runs:
       run: |
         echo "JDK_CI=$JAVA_HOME" >> $GITHUB_ENV
         echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
-    - name: Set up JDK 17
+    - name: Read Gradle JDK toolchain version
+      id: read-jdk-version
+      shell: bash
+      run: |
+        toolchainVersion=$(grep -oP '(?<=^toolchainVersion=).*' gradle/gradle-daemon-jvm.properties)
+        echo "toolchainVersion=${toolchainVersion}" >> $GITHUB_ENV
+    - name: Set up JDK ${{ env.toolchainVersion }}
       id: setup-gradle-jdk
       uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
       if: inputs.java != 'GraalVM'
       with:
-        java-version: 17
+        java-version: ${{ env.toolchainVersion }}
         distribution: temurin
     - name: Setup Gradle
       id: setup-gradle

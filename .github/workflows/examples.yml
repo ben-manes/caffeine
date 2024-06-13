@@ -84,6 +84,9 @@ jobs:
       - name: Hibernate (jcache)
         working-directory: examples/hibernate
         run: ./gradlew build
+      - name: Indexable
+        working-directory: examples/indexable
+        run: ./gradlew build
       - name: Resilience (failsafe)
         working-directory: examples/resilience-failsafe
         run: ./gradlew build
