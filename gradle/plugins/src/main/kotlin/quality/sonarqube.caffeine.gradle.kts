@@ -1,6 +1,6 @@
 plugins {
   id("org.sonarqube")
-  id("coverage-caffeine-conventions")
+  id("coverage.caffeine")
 }
 
 sonarqube {

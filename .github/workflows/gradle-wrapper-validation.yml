@@ -18,4 +18,4 @@ jobs:
             github.com:443
             services.gradle.org:443
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - uses: gradle/actions/wrapper-validation@d9336dac04dea2507a617466bc058a3def92b18b # v3.4.0
+      - uses: gradle/actions/wrapper-validation@31ae3562f68c96d481c31bc1a8a55cc1be162f83 # v3.4.1

@@ -15,11 +15,13 @@
  */
 package com.github.benmanes.caffeine.examples.indexable;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.Set;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.SequencedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
@@ -28,7 +30,6 @@ import java.util.function.Function;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Ticker;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Striped;
 
@@ -42,29 +43,27 @@ import com.google.common.util.concurrent.Striped;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IndexedCache<K, V> {
-  final ConcurrentMap<K, Index<K>> indexes;
+  final ConcurrentMap<K, SequencedSet<K>> indexes;
+  final SequencedSet<Function<V, K>> indexers;
   final Function<K, V> mappingFunction;
-  final Function<V, Index<K>> indexer;
   final Striped<Lock> locks;
   final Cache<K, V> store;
 
-  private IndexedCache(Caffeine<Object, Object> cacheBuilder, Function<K, V> mappingFunction,
-      Function<V, K> primary, Set<Function<V, K>> secondaries) {
-    this.locks = Striped.lock(1_000);
-    this.mappingFunction = mappingFunction;
+  private IndexedCache(Caffeine<Object, Object> cacheBuilder,
+      Function<K, V> mappingFunction, SequencedSet<Function<V, K>> indexers) {
     this.indexes = new ConcurrentHashMap<>();
+    this.mappingFunction = mappingFunction;
+    this.locks = Striped.lock(1_024);
+    this.indexers = indexers;
     this.store = cacheBuilder
-        .evictionListener((key, value, cause) ->
-            indexes.keySet().removeAll(indexes.get(key).allKeys()))
+        .evictionListener((key, value, cause) -> indexes.keySet().removeAll(indexes.get(key)))
         .build();
-    this.indexer = value -> new Index<>(primary.apply(value),
-        secondaries.stream().map(indexer -> indexer.apply(value)).collect(toImmutableSet()));
   }
 
   /** Returns the value associated with the key or {@code null} if not found. */
   public V getIfPresent(K key) {
     var index = indexes.get(key);
-    return (index == null) ? null : store.getIfPresent(index.primaryKey());
+    return (index == null) ? null : store.getIfPresent(index.getFirst());
   }
 
   /**
@@ -103,13 +102,12 @@ public final class IndexedCache<K, V> {
   /** Associates the {@code value} with its keys, replacing the old value and keys if present. */
   public V put(V value) {
     requireNonNull(value);
-    var index = indexer.apply(value);
-    return store.asMap().compute(index.primaryKey(), (key, oldValue) -> {
+    var index = buildIndex(value);
+    return store.asMap().compute(index.getFirst(), (key, oldValue) -> {
       if (oldValue != null) {
-        indexes.keySet().removeAll(Sets.difference(
-            indexes.get(index.primaryKey()).allKeys(), index.allKeys()));
+        indexes.keySet().removeAll(Sets.difference(indexes.get(index.getFirst()), index));
       }
-      for (var indexKey : index.allKeys()) {
+      for (var indexKey : index) {
         indexes.put(indexKey, index);
       }
       return value;
@@ -123,28 +121,36 @@ public final class IndexedCache<K, V> {
       return;
     }
 
-    store.asMap().computeIfPresent(index.primaryKey(), (k, v) -> {
-      indexes.keySet().removeAll(index.allKeys());
+    store.asMap().computeIfPresent(index.getFirst(), (k, v) -> {
+      indexes.keySet().removeAll(indexes.get(key));
       return null;
     });
   }
 
-  private record Index<K>(K primaryKey, Set<K> secondaryKeys) {
-    public Set<K> allKeys() {
-      return Sets.union(Set.of(primaryKey), secondaryKeys);
+  /** Returns a sequence of keys where the first item is the primary key. */
+  private SequencedSet<K> buildIndex(V value) {
+    var index = LinkedHashSet.<K>newLinkedHashSet(indexers.size());
+    for (var indexer : indexers) {
+      var key = indexer.apply(value);
+      if (key == null) {
+        checkState(!index.isEmpty(), "The primary key may not be null");
+      } else {
+        index.add(key);
+      }
     }
+    return Collections.unmodifiableSequencedSet(index);
   }
 
   /** This builder could be extended to support most cache options, but not weak keys. */
   public static final class Builder<K, V> {
+    final SequencedSet<Function<V, K>> indexers;
     final Caffeine<Object, Object> cacheBuilder;
-    final ImmutableSet.Builder<Function<V, K>> secondaries;
 
-    Function<V, K> primary;
+    boolean hasPrimary;
 
     public Builder() {
+      indexers = new LinkedHashSet<>();
       cacheBuilder = Caffeine.newBuilder();
-      secondaries = ImmutableSet.builder();
     }
 
     /** See {@link Caffeine#expireAfterWrite(Duration)}. */
@@ -159,22 +165,25 @@ public final class IndexedCache<K, V> {
       return this;
     }
 
-    /** Adds the functions to extract the primary key. */
+    /** Adds the function to extract the unique, stable, non-null primary key. */
     public Builder<K, V> primaryKey(Function<V, K> primary) {
-      this.primary = requireNonNull(primary);
+      checkState(!hasPrimary, "The primary indexing function was already defined");
+      indexers.addFirst(requireNonNull(primary));
+      hasPrimary = true;
       return this;
     }
 
-    /** Adds the functions to extract a secondary key. */
+    /** Adds a function to extract a unique secondary key or null if absent. */
     public Builder<K, V> addSecondaryKey(Function<V, K> secondary) {
-      secondaries.add(requireNonNull(secondary));
+      indexers.addLast(requireNonNull(secondary));
       return this;
     }
 
     public IndexedCache<K, V> build(Function<K, V> mappingFunction) {
-      requireNonNull(primary);
-      requireNonNull(mappingFunction);
-      return new IndexedCache<K, V>(cacheBuilder, mappingFunction, primary, secondaries.build());
+      checkState(hasPrimary, "The primary indexing function is required");
+      requireNonNull(mappingFunction, "The mapping function to load the value is required");
+      return new IndexedCache<K, V>(cacheBuilder, mappingFunction,
+          Collections.unmodifiableSequencedSet(indexers));
     }
   }
 }

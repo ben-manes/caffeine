@@ -5,17 +5,17 @@ import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
-  id("net.ltgt.errorprone")
   id("net.ltgt.nullaway")
+  id("net.ltgt.errorprone")
 }
 
 dependencies {
-  errorprone(libs.errorprone.core) {
+  errorprone(libs.errorprone) {
     exclude(group = "com.github.ben-manes.caffeine")
   }
   errorprone(layout.buildDirectory.files("errorprone/caffeine-${libs.versions.caffeine.get()}.jar"))
 
-  errorprone(libs.nullaway.core)
+  errorprone(libs.nullaway)
   errorprone(libs.errorprone.mockito)
   errorprone(libs.bundles.errorprone.support)
 }

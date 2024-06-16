@@ -2,8 +2,8 @@ import org.gradle.api.plugins.JavaPluginExtension
 
 plugins {
   jacoco
+  id("jacoco.caffeine")
   id("com.github.kt3k.coveralls")
-  id("jacoco-caffeine-conventions")
 }
 
 dependencies {

@@ -18,7 +18,7 @@ CREATE TABLE user_info (
   username      varchar(255) NOT NULL,
   password_hash varchar(255) NOT NULL,
   created_on    timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-  modified_on   timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  modified_on   timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX user_info_email_idx ON user_info (email);
 CREATE UNIQUE INDEX user_info_username_idx ON user_info (username);
@@ -50,8 +50,8 @@ constraints. The value can then be queried using the typed key.
 ```java
 var cache = new IndexedCache.Builder<UserKey, User>()
     .primaryKey(user -> new UserById(user.id()))
-    .addSecondaryKey(user -> new UserByLogin(user.login()))
     .addSecondaryKey(user -> new UserByEmail(user.email()))
+    .addSecondaryKey(user -> new UserByLogin(user.username()))
     .expireAfterWrite(Duration.ofMinutes(5))
     .maximumSize(10_000)
     .build(this::findUser);
@@ -63,7 +63,7 @@ assertThat(userByEmail).isSameInstanceAs(userByLogin);
 
 ### How it works
 The sample [IndexedCache][] combines a key-value cache with an associated mapping from the
-individual keys to the entry's complete set. Consistency is maintained by acquiring the write lock
+individual keys to the entry's complete set. Consistency is maintained by acquiring the entry's lock
 through the cache using the primary key before updating the index. This prevents race conditions
 when the entry is concurrently updated and evicted, which could otherwise lead to missing or
 non-resident key associations in the index. On eviction, a listener discards the keys while holding

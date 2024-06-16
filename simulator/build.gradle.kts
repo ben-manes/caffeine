@@ -6,8 +6,8 @@ import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
   id("application")
-  id("auto-value-caffeine-conventions")
-  id("java-library-caffeine-conventions")
+  id("auto-value.caffeine")
+  id("java-library.caffeine")
 }
 
 dependencies {

@@ -23,7 +23,7 @@ dependencies {
 }
 
 jmh {
-  jmhVersion = libs.versions.jmh.core
+  jmhVersion = libs.versions.jmh.asProvider()
 
   benchmarkMode.add("thrpt")
   warmupIterations = 3

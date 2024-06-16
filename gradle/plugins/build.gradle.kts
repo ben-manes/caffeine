@@ -19,21 +19,24 @@ plugins {
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 dependencies {
-  implementation(libs.bnd)
-  implementation(libs.idea)
+  implementation(libs.jmh)
   implementation(libs.guava)
-  implementation(libs.sonarqube)
-  implementation(libs.bundles.jmh)
   implementation(libs.bundles.pmd)
-  implementation(libs.nexus.publish)
-  implementation(libs.forbidden.apis)
-  implementation(libs.nullaway.plugin)
-  implementation(libs.spotbugs.plugin)
-  implementation(libs.dependency.check)
-  implementation(libs.errorprone.plugin)
-  implementation(libs.dependency.versions)
-  implementation(libs.jvm.dependency.conflict.resolution)
-  implementation(libs.coveralls) {
+
+  implementation(plugin(libs.plugins.bnd))
+  implementation(plugin(libs.plugins.idea))
+  implementation(plugin(libs.plugins.nullaway))
+  implementation(plugin(libs.plugins.spotbugs))
+  implementation(plugin(libs.plugins.versions))
+  implementation(plugin(libs.plugins.sonarqube))
+  implementation(plugin(libs.plugins.jmh.report))
+  implementation(plugin(libs.plugins.errorprone))
+  implementation(plugin(libs.plugins.nexus.publish))
+  implementation(plugin(libs.plugins.forbidden.apis))
+  implementation(plugin(libs.plugins.jmh.asProvider()))
+  implementation(plugin(libs.plugins.dependency.check))
+  implementation(plugin(libs.plugins.jvm.dependency.conflict.resolution))
+  implementation(plugin(libs.plugins.coveralls)) {
     exclude(group = "net.sourceforge.nekohtml", module = "nekohtml")
   }
 
@@ -69,6 +72,11 @@ tasks.withType<DependencyUpdatesTask> {
       }
     }
   }
+}
+
+fun plugin(plugin: Provider<PluginDependency>): Provider<String> {
+  // https://docs.gradle.org/current/userguide/plugins.html#sec:plugin_markers
+  return plugin.map { "${it.pluginId}:${it.pluginId}.gradle.plugin:${it.version}" }
 }
 
 fun setProjectEncoding() {

@@ -7,8 +7,8 @@ import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.Library
 
 plugins {
-  id("java-library-caffeine-conventions")
-  id("jmh-caffeine-conventions")
+  id("jmh.caffeine")
+  id("java-library.caffeine")
 }
 
 sourceSets {

@@ -1,5 +1,5 @@
 plugins {
-  id("root-caffeine-conventions")
+  id("root.caffeine")
 }
 
 allprojects {

@@ -1,16 +1,16 @@
 plugins {
   `java-library`
+  id("pmd.caffeine")
+  id("base.caffeine")
+  id("jacoco.caffeine")
+  id("publish.caffeine")
+  id("testing.caffeine")
+  id("spotbugs.caffeine")
+  id("checkstyle.caffeine")
+  id("errorprone.caffeine")
   id("biz.aQute.bnd.builder")
-  id("pmd-caffeine-conventions")
-  id("base-caffeine-conventions")
-  id("jacoco-caffeine-conventions")
-  id("publish-caffeine-conventions")
-  id("testing-caffeine-conventions")
-  id("spotbugs-caffeine-conventions")
-  id("checkstyle-caffeine-conventions")
-  id("errorprone-caffeine-conventions")
-  id("object-layout-caffeine-conventions")
-  id("forbidden-apis-caffeine-conventions")
+  id("object-layout.caffeine")
+  id("forbidden-apis.caffeine")
 }
 
 dependencies {

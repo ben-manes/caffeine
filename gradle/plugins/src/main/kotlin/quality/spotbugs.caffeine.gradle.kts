@@ -7,7 +7,7 @@ plugins {
 }
 
 dependencies {
-  spotbugs(libs.spotbugs.core)
+  spotbugs(libs.spotbugs)
   spotbugsPlugins(libs.findsecbugs)
   spotbugsPlugins(libs.spotbugs.contrib)
 }
@@ -16,7 +16,7 @@ spotbugs {
   effort = MAX
   reportLevel = LOW
   useJavaToolchains = true
-  toolVersion = libs.versions.spotbugs.core
+  toolVersion = libs.versions.spotbugs.asProvider()
   excludeFilter = rootProject.layout.projectDirectory.file("gradle/config/spotbugs/exclude.xml")
 }
 

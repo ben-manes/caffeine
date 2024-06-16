@@ -2,7 +2,7 @@
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 
 plugins {
-  id("java-library-caffeine-conventions")
+  id("java-library.caffeine")
 }
 
 dependencies {

@@ -8,7 +8,7 @@ inputs:
     required: true
     description: The JDK version
   early-access:
-    default: '23'
+    default: '24'
     required: false
     description: The early access release
   graal:
@@ -79,7 +79,7 @@ runs:
         distribution: temurin
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@d9336dac04dea2507a617466bc058a3def92b18b # v3.4.0
+      uses: gradle/actions/setup-gradle@31ae3562f68c96d481c31bc1a8a55cc1be162f83 # v3.4.1
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
