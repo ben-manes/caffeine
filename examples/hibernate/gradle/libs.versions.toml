@@ -5,7 +5,7 @@ hibernate = "6.5.2.Final"
 junit = "5.11.0-M2"
 log4j2 = "3.0.0-beta2"
 slf4j = "2.0.7"
-truth = "1.4.2"
+truth = "1.4.3"
 versions = "0.51.0"
 
 [libraries]
