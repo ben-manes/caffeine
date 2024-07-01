@@ -2,7 +2,7 @@
 caffeine = "3.1.8"
 failsafe = "3.3.2"
 junit = "5.11.0-M2"
-truth = "1.4.2"
+truth = "1.4.3"
 versions = "0.51.0"
 
 [libraries]
