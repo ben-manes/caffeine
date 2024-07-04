@@ -173,7 +173,7 @@ public final class GuavaCacheFromContext {
         return cache.get(key, () -> {
           V value = mappingFunction.apply(key);
           if (value == null) {
-            throw new CacheMissException();
+            throw CacheMissException.INSTANCE;
           }
           return value;
         });
@@ -639,7 +639,7 @@ public final class GuavaCacheFromContext {
         error.set(null);
         V value = delegate.load(key);
         if (value == null) {
-          throw new CacheMissException();
+          throw CacheMissException.INSTANCE;
         }
         return value;
       } catch (Exception e) {
@@ -707,6 +707,11 @@ public final class GuavaCacheFromContext {
   }
 
   static final class CacheMissException extends RuntimeException {
+    private static final CacheMissException INSTANCE = new CacheMissException();
     private static final long serialVersionUID = 1L;
+
+    CacheMissException() {
+      super(null, null, /* enableSuppression */ false, /* writableStackTrace */ false);
+    }
   }
 }

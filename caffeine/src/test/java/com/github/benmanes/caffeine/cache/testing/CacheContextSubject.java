@@ -25,8 +25,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableMultiset.toImmutableMultiset;
-import static com.google.common.truth.OptionalLongSubject.optionalLongs;
-import static com.google.common.truth.StreamSubject.streams;
 import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -83,8 +81,7 @@ public final class CacheContextSubject extends Subject {
   public void hasWeightedSize(long expectedSize) {
     checkArgument(expectedSize >= 0, "expectedSize (%s) must be >= 0", expectedSize);
     actual.cache().policy().eviction().ifPresentOrElse(policy -> {
-      check("weightedSize()").about(optionalLongs())
-          .that(policy.weightedSize()).hasValue(expectedSize);
+      check("weightedSize()").that(policy.weightedSize()).hasValue(expectedSize);
     }, () -> {
       long weight = actual.cache().asMap().entrySet().stream()
           .mapToLong(entry -> actual.weigher().weigh(entry.getKey(), entry.getValue()))
@@ -97,7 +94,7 @@ public final class CacheContextSubject extends Subject {
   public void hasWeightedSizeLessThan(long other) {
     checkArgument(other >= 0, "other (%s) must be >= 0", other);
     actual.cache().policy().eviction().ifPresentOrElse(policy -> {
-      check("weightedSize()").about(optionalLongs()).that(policy.weightedSize()).isPresent();
+      check("weightedSize()").that(policy.weightedSize()).isPresent();
       check("weightedSize()").that(policy.weightedSize().orElseThrow()).isLessThan(other);
     }, () -> {
       long weight = actual.cache().asMap().entrySet().stream()
@@ -320,14 +317,14 @@ public final class CacheContextSubject extends Subject {
     public void containsExactlyValues(Object... values) {
       awaitUntil((type, listener) -> {
         var stream = listener.removed().stream().map(RemovalNotification::getValue);
-        check(type).about(streams()).that(stream).containsExactly(values);
+        check(type).that(stream).containsExactly(values);
       });
     }
 
     public void hasNoEvictions() {
       awaitUntil((type, listener) -> {
         var stream = listener.removed().stream().filter(entry -> entry.getCause().wasEvicted());
-        check(type).about(streams()).that(stream).isEmpty();
+        check(type).that(stream).isEmpty();
       });
     }
 

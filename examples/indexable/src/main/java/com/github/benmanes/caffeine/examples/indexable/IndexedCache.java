@@ -100,10 +100,10 @@ public final class IndexedCache<K, V> {
   }
 
   /** Associates the {@code value} with its keys, replacing the old value and keys if present. */
-  public V put(V value) {
+  public void put(V value) {
     requireNonNull(value);
     var index = buildIndex(value);
-    return store.asMap().compute(index.getFirst(), (key, oldValue) -> {
+    store.asMap().compute(index.getFirst(), (key, oldValue) -> {
       if (oldValue != null) {
         indexes.keySet().removeAll(Sets.difference(indexes.get(index.getFirst()), index));
       }

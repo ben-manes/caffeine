@@ -37,8 +37,8 @@ sealed interface UserKey permits UserById, UserByLogin, UserByEmail {
 private User findUser(UserKey key) {
   Condition condition = switch (key) {
     case UserById(var id) -> USER_INFO.ID.eq(id);
+    case UserByEmail(var email) -> USER_INFO.EMAIL.eq(email);
     case UserByLogin(var login) -> USER_INFO.USERNAME.eq(login);
-    case UserByEmail(var email) -> USER_INFO.EMAIL.eq(email.toLowerCase());
   };
   return db.selectFrom(USER_INFO).where(condition).fetchOneInto(User.class);
 }

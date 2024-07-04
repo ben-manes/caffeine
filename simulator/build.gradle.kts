@@ -75,20 +75,26 @@ tasks.withType<Javadoc>().configureEach {
 }
 
 tasks.named<JavaExec>("run").configure {
-  systemProperties(caffeineSystemProperties())
-  jvmArgs(javaExecJvmArgs())
+  description = "Runs a single simulation and generates a report"
 }
 
 tasks.register<Simulate>("simulate") {
   description = "Runs multiple simulations and generates an aggregate report"
   mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulate"
-  configureSimulatorTask()
 }
 
 tasks.register<Rewrite>("rewrite") {
   description = "Rewrite traces into the format used by other simulators"
   mainClass = "com.github.benmanes.caffeine.cache.simulator.parser.Rewriter"
-  configureSimulatorTask()
+}
+
+tasks.withType<JavaExec>().configureEach {
+  group = group ?: "Application"
+  dependsOn(tasks.processResources, tasks.compileJava)
+  classpath(sourceSets["main"].runtimeClasspath)
+  systemProperties(caffeineSystemProperties())
+  outputs.upToDateWhen { false }
+  jvmArgs(javaExecJvmArgs())
 }
 
 eclipse.classpath.file.beforeMerged {
@@ -96,15 +102,6 @@ eclipse.classpath.file.beforeMerged {
     val absolutePath = layout.buildDirectory.dir("generated/sources/annotationProcessor/java/main")
     entries.add(SourceFolder(relativePath(absolutePath), "bin/main"))
   }
-}
-
-fun JavaExec.configureSimulatorTask() {
-  group = "Application"
-  dependsOn(tasks.processResources, tasks.compileJava)
-  classpath(sourceSets["main"].runtimeClasspath)
-  systemProperties(caffeineSystemProperties())
-  outputs.upToDateWhen { false }
-  jvmArgs(javaExecJvmArgs())
 }
 
 abstract class Simulate @Inject constructor(

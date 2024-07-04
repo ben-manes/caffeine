@@ -84,7 +84,7 @@ public final class CoalescingBulkLoaderTest {
     }
 
     results.forEach((key, future) -> assertThat(future.join()).isEqualTo(-key));
-    batchSizes.forEach(batchSize-> assertThat(batchSize).isAtMost(maxSize));
+    batchSizes.forEach(batchSize -> assertThat(batchSize).isAtMost(maxSize));
     assertThat(batchSizes).hasSize(requests / maxSize);
 
     long delay = TimeUnit.NANOSECONDS.toMillis(end.get() - start);
