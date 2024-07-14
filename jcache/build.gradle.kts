@@ -30,9 +30,7 @@ dependencies {
   api(libs.jcache)
   api(libs.config)
 
-  testImplementation(libs.guava)
   testImplementation(libs.jcache.guice)
-  testImplementation(libs.guava.testlib)
   testImplementation(libs.bundles.slf4j.nop)
   testImplementation(files(testResourcesJar))
   testImplementation(libs.jcache.tck)
@@ -74,10 +72,6 @@ val unzipJCacheJavaDoc by tasks.registering(Copy::class) {
   description = "Unzips the JCache JavaDoc"
   from(jcacheJavadoc.map { zipTree(it) })
   into(layout.buildDirectory.dir("jcache-docs"))
-}
-
-tasks.named<JavaCompile>("compileJava").configure {
-  modularity.inferModulePath = true
 }
 
 tasks.jar {

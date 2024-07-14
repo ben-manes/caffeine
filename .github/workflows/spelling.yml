@@ -16,7 +16,7 @@ jobs:
             github.com:443
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Misspell
-        uses: reviewdog/action-misspell@30433ca7be17888deb78a32521706fb65defbf3f # v1.21.0
+        uses: reviewdog/action-misspell@278e1b3c7dd09d2827fa080919a40db73ccafe24 # v1.22.0
         with:
           reporter: github-check
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -34,4 +34,4 @@ jobs:
             objects.githubusercontent.com:443
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Typos
-        uses: crate-ci/typos@c16dc8f5b4a7ad6211464ecf136c69c851e8e83c # v1.22.9
+        uses: crate-ci/typos@320b5781474d4470a36b7f0626b131e99850e9d2 # v1.23.2

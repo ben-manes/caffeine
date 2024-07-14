@@ -10,12 +10,7 @@ dependencies {
   api(libs.guava)
 
   testImplementation(libs.jctools)
-  testImplementation(libs.guava.testlib)
   testImplementation(libs.bundles.slf4j.nop)
-}
-
-tasks.named<JavaCompile>("compileJava").configure {
-  modularity.inferModulePath = true
 }
 
 tasks.withType<Test>().configureEach {

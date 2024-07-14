@@ -55,7 +55,6 @@ tasks.withType<JavaCompile>().configureEach {
     disableWarningsInGeneratedCode = true
     nullaway.disable()
   }
-  modularity.inferModulePath = true
 }
 
 tasks.withType<Test>().configureEach {
@@ -77,19 +76,10 @@ tasks.withType<Javadoc>().configureEach {
 tasks.named<JavaExec>("run").configure {
   description = "Runs a single simulation and generates a report"
 }
-
-tasks.register<Simulate>("simulate") {
-  description = "Runs multiple simulations and generates an aggregate report"
-  mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulate"
-}
-
-tasks.register<Rewrite>("rewrite") {
-  description = "Rewrite traces into the format used by other simulators"
-  mainClass = "com.github.benmanes.caffeine.cache.simulator.parser.Rewriter"
-}
+tasks.register<Simulate>("simulate")
+tasks.register<Rewrite>("rewrite")
 
 tasks.withType<JavaExec>().configureEach {
-  group = group ?: "Application"
   dependsOn(tasks.processResources, tasks.compileJava)
   classpath(sourceSets["main"].runtimeClasspath)
   systemProperties(caffeineSystemProperties())
@@ -117,6 +107,12 @@ abstract class Simulate @Inject constructor(
   @OutputDirectory
   val reportDir = File(projectLayout.buildDirectory.get().asFile, "/reports/$name")
 
+  init {
+    group = "Application"
+    mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulate"
+    description = "Runs multiple simulations and generates an aggregate report"
+  }
+
   @TaskAction
   override fun exec() {
     if (maximumSize.isNotEmpty()) {
@@ -139,6 +135,12 @@ abstract class Rewrite : JavaExec() {
   var outputFile: String = ""
   @Input @Option(option = "outputFormat", description = "The output format")
   var outputFormat: String = ""
+
+  init {
+    group = "Application"
+    description = "Rewrite traces into the format used by other simulators"
+    mainClass = "com.github.benmanes.caffeine.cache.simulator.parser.Rewriter"
+  }
 
   @TaskAction
   override fun exec() {

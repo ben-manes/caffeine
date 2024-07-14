@@ -15,6 +15,7 @@ dependencies {
   testImplementation(libs.hamcrest)
   testImplementation(libs.awaitility)
   testImplementation(libs.bundles.junit)
+  testImplementation(libs.guava.testlib)
   testImplementation(libs.bundles.osgi.test.compile)
 
   testImplementation(platform(libs.asm.bom))

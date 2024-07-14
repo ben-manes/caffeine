@@ -13,7 +13,7 @@ plugins {
 }
 
 configurations.jmh {
-  extendsFrom(configurations.testImplementation.get())
+  extendsFrom(configurations["testImplementation"])
   exclude(module = "jazzer-junit")
   exclude(module = "slf4j-test")
 }
@@ -95,7 +95,7 @@ tasks.named("jmhReport").configure {
 }
 
 idea.module {
-  scopes["PROVIDED"]!!["plus"]!!.add(configurations.jmh.get())
+  scopes["PROVIDED"]!!["plus"]!!.add(configurations["jmh"])
 }
 
 eclipse.classpath.file.whenMerged {

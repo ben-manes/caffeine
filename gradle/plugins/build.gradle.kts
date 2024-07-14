@@ -61,7 +61,7 @@ tasks.withType<DependencyUpdatesTask> {
     componentSelection {
       val ignoredGroups = listOf("com.beust", "org.apache.logging.log4j",
         "org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
-      val stable = setOf("com.fasterxml.jackson", "com.squareup.okhttp3")
+      val stable = setOf("com.fasterxml.jackson", "com.google.protobuf", "com.squareup.okhttp3")
       val isNonStable = "^[0-9,.v-]+(-r)?$".toRegex()
       all {
         if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {

@@ -24,7 +24,7 @@ sourceSets {
 val compileJavaPoetJava by tasks.existing
 val javaAgent: Configuration by configurations.creating
 val collections4Sources: Configuration by configurations.creating
-var javaPoetImplementation: Configuration = configurations["javaPoetImplementation"]
+val javaPoetImplementation: Configuration = configurations["javaPoetImplementation"]
 
 dependencies {
   api(libs.checker.annotations)
@@ -39,7 +39,6 @@ dependencies {
   testImplementation(libs.jctools)
   testImplementation(libs.fastutil)
   testImplementation(libs.lincheck)
-  testImplementation(libs.guava.testlib)
   testImplementation(libs.commons.lang3)
   testImplementation(libs.bundles.slf4j.test)
   testImplementation(libs.commons.collections4)
