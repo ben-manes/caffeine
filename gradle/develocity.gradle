@@ -22,7 +22,7 @@ buildCache {
   remote(develocity.buildCache) {
     // Check access key presence to avoid build cache errors on PR builds when not present
     push = System.env.CI && System.env.DEVELOCITY_ACCESS_KEY
-    enabled = true
+    enabled = !gradle.startParameter.isBuildScan()
   }
   local.enabled = true
 }
