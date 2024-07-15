@@ -39,8 +39,8 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
- * The test cases that ensures the <tt>variable expiry</tt> policy and <tt>maximum size</tt>
- * settings are set simultaneously.
+ * The test cases that ensures the variable expiry policy and maximum size settings are set
+ * simultaneously.
  *
  * @author github.com/kdombeck (Ken Dombeck)
  */

@@ -37,7 +37,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * thread. This harness can be used for performance tests, investigations of
  * lock contention, etc.
  * <p/>
- * This code was adapted from <tt>Java Concurrency in Practice</tt>, using an
+ * This code was adapted from <code>Java Concurrency in Practice</code>, using an
  * example of a {@link CountDownLatch} for starting and stopping threads in
  * timing tests.
  *

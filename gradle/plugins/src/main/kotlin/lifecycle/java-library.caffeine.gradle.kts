@@ -31,7 +31,7 @@ tasks.withType<JavaCompile>().configureEach {
     languageVersion = maxOf(javaVersion, JavaLanguageVersion.of(17))
   }
 
-  options.compilerArgs.addAll(listOf( "-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",
+  options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",
     "-Xlint:-exports", "-Xlint:-processing", "-Xlint:-removal", "-Xlint:-requires-automatic"))
   if (javaVersion.canCompileOrRun(21)) {
     options.compilerArgs.add("-proc:full")
@@ -80,6 +80,12 @@ tasks.jar {
 tasks.withType<Javadoc>().configureEach {
   isFailOnError = false
   javadocOptions {
+    use()
+    quiet()
+    noTimestamp()
+    if (javaVersion.canCompileOrRun(18)) {
+      addStringOption("-link-modularity-mismatch", "info")
+    }
     links(
       "https://checkerframework.org/api/",
       "https://errorprone.info/api/latest/",

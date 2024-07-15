@@ -1838,8 +1838,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /**
-   * Atomically transitions the node to the <tt>dead</tt> state and decrements the
-   * <tt>weightedSize</tt>.
+   * Atomically transitions the node to the <code>dead</code> state and decrements the
+   * <code>weightedSize</code>.
    *
    * @param node the entry in the page replacement policy
    */
@@ -2827,7 +2827,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * remappingFunction to be statistics aware.
    *
    * @param key key with which the specified value is to be associated
-   * @param keyRef the key to associate with or a lookup only key if not <tt>computeIfAbsent</tt>
+   * @param keyRef the key to associate with or a lookup only key if not {@code computeIfAbsent}
    * @param remappingFunction the function to compute a value
    * @param expiry the calculator for the expiration time
    * @param now the current time, according to the ticker

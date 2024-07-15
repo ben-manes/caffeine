@@ -416,7 +416,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       return previous;
     }
 
-    /** Retrieves the next element to traverse to or <tt>null</tt> if there are no more elements. */
+    /** Retrieves the next element to traverse to or {@code null} if there are no more elements. */
     abstract @Nullable E computeNext();
 
     @Override

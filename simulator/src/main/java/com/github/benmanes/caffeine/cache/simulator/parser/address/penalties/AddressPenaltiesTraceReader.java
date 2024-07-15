@@ -27,20 +27,20 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic
  * An extension to {@link AddressTraceReader} where the trace files were augmented to include hit
  * and miss penalties.
  * <p>
- * Example line in this format: <tt>s 0x1fffff50 1 200 1200</tt>
+ * Example line in this format: <code>s 0x1fffff50 1 200 1200</code>
  * <p>
  * The description of each part of the line by order from left to right:
  * <ul>
- *   <li>Access Type: A single character indicating whether the access is a load (<tt>l</tt>) or a
- *       store (<tt>s</tt>).
+ *   <li>Access Type: A single character indicating whether the access is a load (<code>l</code>)
+ *       or a store (<code>s</code>).
  *   <li>Address: A 32-bit integer (in unsigned hexadecimal format) specifying the memory address
- *       that is being accessed. For example, <tt>0xff32e100</tt> specifies that memory address
- *       <tt>4281524480</tt> is accessed.
+ *       that is being accessed. For example, <code>0xff32e100</code> specifies that memory address
+ *       <code>4281524480</code> is accessed.
  *   <li>Instructions since last memory access: Indicates the number of instructions of any type
  *       that executed between since the last memory access (i.e. the one on the previous line in
  *       the trace). For example, if the 5th and 10th instructions in the program's execution are
  *       loads, and there are no memory operations between them, then the trace line for with the
- *       second load has <tt>4</tt> for this field.
+ *       second load has <code>4</code> for this field.
  *   <li>Hit penalty: Indicates the hit penalty, the time took to handle the request when it was in
  *       the cache.
  *   <li>Miss penalty: Indicates the miss penalty, the time took to handle the request when it

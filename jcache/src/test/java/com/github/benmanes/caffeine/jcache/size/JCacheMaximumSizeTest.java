@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
- * The test cases that ensure the <tt>maximum size</tt> setting is honored by the cache and removal
+ * The test cases that ensure the maximum size< setting is honored by the cache and removal
  * notifications are published.
  *
  * @author ben.manes@gmail.com (Ben Manes)

@@ -29,7 +29,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * to support usage. They are not thread-safe; in the absence of external synchronization, they do
  * not support concurrent access by multiple threads. Null elements are prohibited.
  * <p>
- * Most <tt>LinkedDeque</tt> operations run in constant time by assuming that the element parameter
+ * Most {@code LinkedDeque} operations run in constant time by assuming that the element parameter
  * is associated with the deque instance. Any usage that violates this assumption will result in
  * non-deterministic behavior.
  * <p>
@@ -79,21 +79,21 @@ interface LinkedDeque<E> extends Deque<E> {
   void moveToBack(E e);
 
   /**
-   * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
+   * Retrieves the previous element or {@code null} if either the element is unlinked or the first
    * element on the deque.
    */
   @Nullable E getPrevious(E e);
 
-  /** Sets the previous element or <tt>null</tt> if there is no link. */
+  /** Sets the previous element or {@code null} if there is no link. */
   void setPrevious(E e, @Nullable E prev);
 
   /**
-   * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
+   * Retrieves the next element or {@code null} if either the element is unlinked or the last
    * element on the deque.
    */
   @Nullable E getNext(E e);
 
-  /** Sets the next element or <tt>null</tt> if there is no link. */
+  /** Sets the next element or {@code null} if there is no link. */
   void setNext(E e, @Nullable E next);
 
   @Override

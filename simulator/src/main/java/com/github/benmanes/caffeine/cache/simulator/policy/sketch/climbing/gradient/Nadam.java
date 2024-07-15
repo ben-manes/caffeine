@@ -25,7 +25,7 @@ import com.typesafe.config.Config;
  * Nesterov-accelerated Adaptive Moment Estimation (Nadam) optimizer. Nadam modifies the Adam
  * optimizer to replace normal momentum with Nesterov's accelerated gradient. The authors describe
  * it in <a href="https://openreview.net/pdf?id=OM0jvwB8jIp57ZJjtNEZ">Incorporating Nesterov
- * Momentum into Adam<a>.
+ * Momentum into Adam</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

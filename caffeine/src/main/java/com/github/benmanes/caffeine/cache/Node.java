@@ -102,11 +102,11 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   @GuardedBy("this")
   public abstract boolean isDead();
 
-  /** Sets the node to the <tt>retired</tt> state. */
+  /** Sets the node to the <code>retired</code> state. */
   @GuardedBy("this")
   public abstract void retire();
 
-  /** Sets the node to the <tt>dead</tt> state. */
+  /** Sets the node to the <code>dead</code> state. */
   @GuardedBy("this")
   public abstract void die();
 

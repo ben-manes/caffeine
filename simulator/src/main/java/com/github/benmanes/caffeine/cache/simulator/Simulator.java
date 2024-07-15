@@ -41,7 +41,7 @@ import com.typesafe.config.ConfigFactory;
 
 /**
  * A simulator that broadcasts the recorded cache events to each policy and generates an aggregated
- * report. See <tt>reference.conf</tt> for details on the configuration.
+ * report. See <code>reference.conf</code> for details on the configuration.
  * <p>
  * The simulator reports the hit rate of each of the policy being evaluated. A miss may occur
  * due to,

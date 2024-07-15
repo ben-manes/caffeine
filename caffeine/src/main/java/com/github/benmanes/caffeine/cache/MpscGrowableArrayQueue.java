@@ -27,7 +27,7 @@ import java.util.Iterator;
  * elements are not copied on resize, instead a link to the new buffer is stored in the old buffer
  * for the consumer to follow.<br>
  * <p>
- * This is a shaded copy of <tt>MpscGrowableArrayQueue</tt> provided by
+ * This is a shaded copy of <code>MpscGrowableArrayQueue</code> provided by
  * <a href="https://github.com/JCTools/JCTools">JCTools</a> from version 2.0.
  *
  * @author nitsanw@yahoo.com (Nitsan Wakart)

@@ -26,7 +26,7 @@ import com.typesafe.config.Config;
 /**
  * Stochastic gradient descent (SGD) optimizer.
  * <p>
- * <tt>w(t+1) = w(t) - alpha * dL/dw(t)</tt> where,
+ * <code>w(t+1) = w(t) - alpha * dL/dw(t)</code> where,
  * <ul>
  *   <li><b>w(t)</b> is the current window size
  *   <li><b>alpha</b> is the learning rate (step size)

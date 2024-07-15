@@ -20,8 +20,8 @@ import java.util.Random;
 /**
  * Count-Min Sketch data structure with optional conservative addition.
  * <p>
- * This is a derived from <tt>CountMinSketch</tt> and <tt>ConservativeAddSketch</tt> provided by
- * <a href="https://github.com/addthis/stream-lib">StreamLib</a>.
+ * This is a derived from <code>CountMinSketch</code> and <code>ConservativeAddSketch</code>
+ * provided by <a href="https://github.com/addthis/stream-lib">StreamLib</a>.
  */
 final class CountMin64 {
   static final long PRIME_MODULUS = (1L << 31) - 1;

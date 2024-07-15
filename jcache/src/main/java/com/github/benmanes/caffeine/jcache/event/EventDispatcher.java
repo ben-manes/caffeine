@@ -55,7 +55,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *       listeners to be delayed until the executor is able to process the work.
  * </ul>
  * <p>
- * Some listeners may be configured as <tt>synchronous</tt>, meaning that the publishing thread
+ * Some listeners may be configured as <code>synchronous</code>, meaning that the publishing thread
  * should wait until the listener has processed the event. The calling thread should publish within
  * an atomic block that mutates the entry, and complete the operation by calling
  * {@link #awaitSynchronous()} or {@link #ignoreSynchronous()}.

@@ -56,8 +56,8 @@ public abstract class CountMin4 implements Frequency {
   }
 
   /**
-   * Increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary, to ensure that
-   * it can accurately estimate the popularity of elements given the maximum size of the cache. This
+   * Increases the capacity of this {@code CountMin4} instance, if necessary, to ensure that it can
+   * accurately estimate the popularity of elements given the maximum size of the cache. This
    * operation forgets all previous counts when resizing.
    *
    * @param maximumSize the maximum size of the cache

@@ -33,7 +33,7 @@ import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 
 /**
- * The test cases that ensure the <tt>variable expiry</tt> policy is configured.
+ * The test cases that ensure the variable expiry policy is configured.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

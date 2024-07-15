@@ -39,12 +39,6 @@ tasks.jar {
     "Automatic-Module-Name" to "com.github.benmanes.caffeine.guava"))
 }
 
-tasks.withType<Javadoc>().configureEach {
-  javadocOptions {
-    addStringOption("Xdoclint:none", "-quiet")
-  }
-}
-
 tasks.named<CheckForbiddenApis>("forbiddenApisMain").configure {
   bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
     "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))

@@ -39,6 +39,10 @@ public final class CaffeinatedGuava {
    * Returns a Caffeine cache wrapped in a Guava {@link Cache} facade.
    *
    * @param builder the configured cache builder
+   * @param <K> the most general key type to create caches for
+   * @param <V> the most general value type to create caches for
+   * @param <K1> the key type of the cache
+   * @param <V1> the value type of the cache
    * @return a cache exposed under the Guava APIs
    */
   public static <K, V, K1 extends K, V1 extends V> Cache<K1, V1> build(Caffeine<K, V> builder) {
@@ -50,6 +54,10 @@ public final class CaffeinatedGuava {
    *
    * @param builder the configured cache builder
    * @param loader the cache loader used to obtain new values
+   * @param <K> the most general key type to create caches for
+   * @param <V> the most general value type to create caches for
+   * @param <K1> the key type of the cache
+   * @param <V1> the value type of the cache
    * @return a cache exposed under the Guava APIs
    */
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
@@ -64,6 +72,10 @@ public final class CaffeinatedGuava {
    *
    * @param builder the configured cache builder
    * @param loader the cache loader used to obtain new values
+   * @param <K> the most general key type to create caches for
+   * @param <V> the most general value type to create caches for
+   * @param <K1> the key type of the cache
+   * @param <V1> the value type of the cache
    * @return a cache exposed under the Guava APIs
    */
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
@@ -76,6 +88,8 @@ public final class CaffeinatedGuava {
    * Returns a Caffeine cache loader that delegates to a Guava cache loader.
    *
    * @param loader the cache loader used to obtain new values
+   * @param <K> the type of keys
+   * @param <V> the type of values
    * @return a cache loader exposed under the Caffeine APIs
    */
   public static <K, V> com.github.benmanes.caffeine.cache.CacheLoader<K, V> caffeinate(

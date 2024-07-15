@@ -30,9 +30,9 @@ import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 
 /**
- * The test cases that ensure the <tt>expiry for update</tt> time is set for the updated entries.
- * The TCK asserts that the {@link ExpiryPolicy#getExpiryForUpdate()} is only called for the
- * following methods, but does not check that the expiration time was set.
+ * The test cases that ensure the expiry for update time is set for the updated entries. The TCK
+ * asserts that the {@link ExpiryPolicy#getExpiryForUpdate()} is only called for the following
+ * methods, but does not check that the expiration time was set.
  * <ul>
  *   <li>getAndPut
  *   <li>getAndReplace

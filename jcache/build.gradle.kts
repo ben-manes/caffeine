@@ -93,7 +93,7 @@ tasks.jar {
 tasks.named<Javadoc>("javadoc").configure {
   dependsOn(unzipJCacheJavaDoc)
   javadocOptions {
-    addStringOption("Xdoclint:none", "-quiet")
+    addBooleanOption("Xdoclint:all,-missing", true)
     linksOffline("https://static.javadoc.io/javax.cache/cache-api/${libs.versions.jcache.get()}/",
       relativePath(unzipJCacheJavaDoc.map { it.destinationDir }))
   }

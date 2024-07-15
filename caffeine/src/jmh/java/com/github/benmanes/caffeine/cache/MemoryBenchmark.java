@@ -40,7 +40,7 @@ import com.jakewharton.fliptables.FlipTable;
  * padding may or may not have a visible effect.
  * <p>
  * This benchmark requires a JavaAgent to evaluate the object sizes and can be executed using
- * <tt>gradle -q memoryOverhead</tt>.
+ * <code>gradle -q memoryOverhead</code>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

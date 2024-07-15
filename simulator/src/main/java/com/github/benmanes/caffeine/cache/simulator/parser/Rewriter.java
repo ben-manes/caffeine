@@ -38,7 +38,7 @@ import picocli.CommandLine.Option;
  * A simple utility to rewrite traces into the format used by other simulators. This lets us run
  * multiple simulators in parallel for a quick-and-dirty analysis, rather than port their code into
  * Java.
- * <p>
+ *
  * <pre>{@code
  *   ./gradlew :simulator:rewrite -q \
  *      --inputFormat=? \

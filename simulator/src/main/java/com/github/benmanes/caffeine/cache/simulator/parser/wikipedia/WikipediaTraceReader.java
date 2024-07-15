@@ -29,7 +29,7 @@ import com.google.common.hash.Hashing;
 
 /**
  * A reader for the trace files provided by the <a href="http://www.wikibench.eu">wikibench</a>
- * project. The requests are sanitized and filtered using the <tt>TraceBench</tt> optimizations.
+ * project. The requests are sanitized and filtered using the <code>TraceBench</code> optimizations.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

@@ -69,7 +69,7 @@ tasks.jar {
 
 tasks.withType<Javadoc>().configureEach {
   javadocOptions {
-    addStringOption("Xdoclint:none", "-quiet")
+    addBooleanOption("Xdoclint:all,-missing", true)
   }
 }
 

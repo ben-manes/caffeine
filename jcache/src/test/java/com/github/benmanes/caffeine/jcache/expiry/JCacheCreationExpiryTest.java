@@ -31,9 +31,9 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
- * The test cases that ensure the <tt>expiry for creation</tt> time is set for the created entries.
- * The TCK asserts that the {@link ExpiryPolicy#getExpiryForCreation()} is only called for
- * the following methods, but does not check that the expiration time was updated.
+ * The test cases that ensure the <code>expiry for creation</code> time is set for the created
+ * entries. The TCK asserts that the {@link ExpiryPolicy#getExpiryForCreation()} is only called
+ * for the following methods, but does not check that the expiration time was updated.
  * <ul>
  *   <li>get (loading)
  *   <li>getAndPut

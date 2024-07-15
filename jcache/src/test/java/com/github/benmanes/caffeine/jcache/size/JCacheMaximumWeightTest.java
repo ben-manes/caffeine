@@ -32,8 +32,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
- * The test cases that ensure the <tt>maximum weight</tt> setting is honored by the cache and
- * removal notifications are published.
+ * The test cases that ensure the maximum weight setting is honored by the cache and removal
+ * notifications are published.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

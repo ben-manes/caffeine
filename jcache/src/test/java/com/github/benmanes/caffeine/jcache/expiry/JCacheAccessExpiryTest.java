@@ -34,7 +34,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
 /**
- * The test cases that ensure the <tt>expiry for access</tt> time is updated for the accessed
+ * The test cases that ensure the <code>expiry for access</code> time is updated for the accessed
  * entries. The TCK asserts that the {@link ExpiryPolicy#getExpiryForAccess()} is only called for
  * the following methods, but does not check that the expiration time was updated.
  * <ul>

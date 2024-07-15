@@ -44,9 +44,11 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * The protected segment is finite in size. When it gets full, the overflowed will be re-cached in
  * probationary segment. Since objects in protected segment have to go a longer way before being
  * evicted, popular object or an object with more accesses tends to be kept in cache for longer
- * time." from <a href="
- * http://www.is.kyusan-u.ac.jp/~chengk/pub/papers/compsac00_A07-07.pdf">LRU-SP: A Size-Adjusted and
- * Popularity-Aware LRU Replacement Algorithm for Web Caching</a>
+ * time." from
+ * <a href="https://citeseerx.ist.psu.edu/document?doi=111f5bf8d3c528759e1ae7db0cd4af746d5b4c5b">
+ * LRU-SP: A Size-Adjusted and Popularity-Aware LRU Replacement Algorithm for Web Caching</a>. The
+ * algorithm is described by its authors in <a href="https://ieeexplore.ieee.org/document/268884">
+ * Caching Strategies to Improve Disk System Performance</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.jcache.copy;
 
 /**
- * An object is copied when the cache is configured with <tt>storeByValue</tt> to guard against
+ * An object is copied when the cache is configured with <code>storeByValue</code> to guard against
  * mutations of the key or value.
  *
  * @author ben.manes@gmail.com (Ben Manes)

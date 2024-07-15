@@ -44,7 +44,7 @@ import picocli.CommandLine.Option;
  * A command that runs multiple simulations, writes the result to a csv file, and renders a chart.
  * An underscore may be used as a numeric separator and the default configuration may be overridden
  * by using system properties.
- * <p>
+ *
  * <pre>{@code
  *   ./gradlew simulator:simulate -q \
  *     -Dcaffeine.simulator.files.paths.0="lirs:gli.trace.gz" \

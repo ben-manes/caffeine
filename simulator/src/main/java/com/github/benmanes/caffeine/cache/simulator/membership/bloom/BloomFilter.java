@@ -60,7 +60,7 @@ public final class BloomFilter implements Membership {
   }
 
   /**
-   * Initializes and increases the capacity of this <tt>BloomFilter</tt> instance, if necessary,
+   * Initializes and increases the capacity of this {@code BloomFilter} instance, if necessary,
    * to ensure that it can accurately estimate the membership of elements given the expected
    * number of insertions. This operation forgets all previous memberships when resizing.
    *

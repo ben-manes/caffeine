@@ -79,7 +79,7 @@ final class FrequencySketch<E> {
   public FrequencySketch() {}
 
   /**
-   * Initializes and increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary,
+   * Initializes and increases the capacity of this {@code FrequencySketch} instance, if necessary,
    * to ensure that it can accurately estimate the popularity of elements given the maximum size of
    * the cache. This operation forgets all previous counts when resizing.
    *
