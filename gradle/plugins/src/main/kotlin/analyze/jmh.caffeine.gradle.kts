@@ -30,20 +30,13 @@ jmh {
   iterations = 3
   timeUnit = "s"
 
+  jvmArgs = defaultJvmArgs()
   failOnError = true
   forceGC = true
   fork = 1
 
   resultsFile = layout.buildDirectory.file("reports/jmh/results.json")
   resultFormat = "json"
-
-  val jvmArguments = mutableListOf("-Xmx2G")
-  if (System.getenv("GRAALVM") == "true") {
-    jvmArguments += listOf(
-      "-XX:+UnlockExperimentalVMOptions", "-Dgraal.ShowConfiguration=info",
-      "-XX:+EnableJVMCI", "-XX:+UseJVMCICompiler", "-XX:+EagerJVMCI")
-  }
-  jvmArgs = jvmArguments
 
   val includePattern: String? by project
   if (includePattern != null) {

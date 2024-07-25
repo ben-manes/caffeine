@@ -31,8 +31,8 @@ import java.util.Set;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
-import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -89,7 +89,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     this.initialPercentMain = percentMain;
     this.policyStats = new PolicyStats(name() + " (%s %.0f%%)",
         strategy.name().toLowerCase(US), 100 * (1.0 - initialPercentMain));
-    this.admittor = new TinyLfu(settings.config(), policyStats);
+    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
     this.climber = strategy.create(settings.config());
 
     printSegmentSizes();

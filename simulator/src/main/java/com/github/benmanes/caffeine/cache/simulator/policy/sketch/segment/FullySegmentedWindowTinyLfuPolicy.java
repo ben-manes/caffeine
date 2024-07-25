@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
-import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -69,7 +69,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
     this.maxWindow = maximumSize - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxWindowProtected = (int) (maxWindow * settings.percentWindowProtected());
-    this.admittor = new TinyLfu(settings.config(), policyStats);
+    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.headWindowProbation = new Node();
     this.headWindowProtected = new Node();

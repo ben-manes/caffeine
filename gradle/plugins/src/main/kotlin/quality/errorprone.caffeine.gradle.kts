@@ -111,6 +111,7 @@ fun enabledChecks() = listOf(
   "MissingDefault",
   "MixedArrayDimensions",
   "MissingDefault",
+  "MissingRuntimeRetention",
   "MockitoDoSetup",
   "MutableGuiceModule",
   "NoAllocation",

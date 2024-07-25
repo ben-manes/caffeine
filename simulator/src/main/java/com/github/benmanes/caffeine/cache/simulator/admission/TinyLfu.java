@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
+import static java.util.Locale.US;
+
 import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -57,33 +59,6 @@ public final class TinyLfu implements KeyOnlyAdmittor {
     }
   }
 
-  private Frequency makeSketch(BasicSettings settings) {
-    String type = settings.tinyLfu().sketch();
-    if (type.equalsIgnoreCase("count-min-4")) {
-      String reset = settings.tinyLfu().countMin4().reset();
-      if (reset.equalsIgnoreCase("periodic")) {
-        return new PeriodicResetCountMin4(settings.config());
-      } else if (reset.equalsIgnoreCase("incremental")) {
-        return new IncrementalResetCountMin4(settings.config());
-      } else if (reset.equalsIgnoreCase("climber")) {
-        return new ClimberResetCountMin4(settings.config());
-      } else if (reset.equalsIgnoreCase("indicator")) {
-        return new IndicatorResetCountMin4(settings.config());
-      } else {
-        throw new IllegalStateException("Unknown reset type: " + reset);
-      }
-    } else if (type.equalsIgnoreCase("count-min-64")) {
-      return new CountMin64TinyLfu(settings.config());
-    } else if (type.equalsIgnoreCase("random-table")) {
-      return new RandomRemovalFrequencyTable(settings.config());
-    } else if (type.equalsIgnoreCase("tiny-table")) {
-      return new TinyCacheAdapter(settings.config());
-    } else if (type.equalsIgnoreCase("perfect-table")) {
-      return new PerfectFrequency(settings.config());
-    }
-    throw new IllegalStateException("Unknown sketch type: " + type);
-  }
-
   public int frequency(long key) {
     return sketch.frequency(key);
   }
@@ -106,5 +81,27 @@ public final class TinyLfu implements KeyOnlyAdmittor {
     }
     policyStats.recordRejection();
     return false;
+  }
+
+  /** Returns the frequency histogram. */
+  private static Frequency makeSketch(BasicSettings settings) {
+    String type = settings.tinyLfu().sketch();
+    switch (type.toLowerCase(US)) {
+      case "count-min-4": {
+        String reset = settings.tinyLfu().countMin4().reset();
+        switch (reset.toLowerCase(US)) {
+          case "climber": return new ClimberResetCountMin4(settings.config());
+          case "periodic": return new PeriodicResetCountMin4(settings.config());
+          case "indicator": return new IndicatorResetCountMin4(settings.config());
+          case "incremental": return new IncrementalResetCountMin4(settings.config());
+          default: throw new IllegalStateException("Unknown reset type: " + reset);
+        }
+      }
+      case "tiny-table": return new TinyCacheAdapter(settings.config());
+      case "count-min-64": return new CountMin64TinyLfu(settings.config());
+      case "perfect-table": return new PerfectFrequency(settings.config());
+      case "random-table": return new RandomRemovalFrequencyTable(settings.config());
+      default: throw new IllegalStateException("Unknown sketch type: " + type);
+    }
   }
 }

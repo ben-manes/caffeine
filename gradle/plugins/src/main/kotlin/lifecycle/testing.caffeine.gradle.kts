@@ -32,10 +32,7 @@ tasks.withType<Test>().configureEach {
   if ("debug" in systemProperties) {
     jvmArgs("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005")
   }
-  if (environment["GRAALVM"] == "true") {
-    jvmArgs("-XX:+UnlockExperimentalVMOptions", "-Dgraal.ShowConfiguration=info",
-      "-XX:+EnableJVMCI", "-XX:+UseJVMCICompiler", "-XX:+EagerJVMCI")
-  }
+  jvmArgs(defaultJvmArgs())
   if (isCI()) {
     reports.junitXml.includeSystemOutLog = false
     reports.junitXml.includeSystemErrLog = false

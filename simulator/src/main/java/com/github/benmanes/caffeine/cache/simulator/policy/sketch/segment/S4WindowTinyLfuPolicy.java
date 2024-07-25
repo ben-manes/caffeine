@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
-import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -58,7 +58,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public S4WindowTinyLfuPolicy(double percentMain, S4WindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
-    this.admittor = new TinyLfu(settings.config(), policyStats);
+    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.maxMain = (int) (maximumSize * percentMain);
     this.maxWindow = maximumSize - maxMain;

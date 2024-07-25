@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
+import static java.util.Locale.US;
 
+import java.util.function.BiFunction;
+
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.clairvoyant.Clairvoyant;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.base.Enums;
 import com.typesafe.config.Config;
 
 /**
@@ -29,15 +32,16 @@ import com.typesafe.config.Config;
  */
 @SuppressWarnings("ImmutableEnumChecker")
 public enum Admission {
-  ALWAYS((config, policyStats) -> Admittor.always(), UnaryOperator.identity()),
-  TINYLFU(TinyLfu::new, name -> name + "_TinyLfu");
+  ALWAYS((config, policyStats) -> Admittor.always(), ""),
+  CLAIRVOYANT(Clairvoyant::new, "_Clairvoyant"),
+  TINYLFU(TinyLfu::new, "_TinyLfu");
 
   private final BiFunction<Config, PolicyStats, Admittor> factory;
-  private final Function<String, String> formatter;
+  private final String suffix;
 
-  Admission(BiFunction<Config, PolicyStats, Admittor> factory, UnaryOperator<String> formatter) {
-    this.formatter = formatter;
+  Admission(BiFunction<Config, PolicyStats, Admittor> factory, String suffix) {
     this.factory = factory;
+    this.suffix = suffix;
   }
 
   /**
@@ -48,11 +52,16 @@ public enum Admission {
    * @return an admission policy
    */
   public Admittor from(Config config, PolicyStats policyStats) {
+    if (this == TINYLFU) {
+      var override = new BasicSettings(config).tinyLfu().sketch().toUpperCase(US);
+      return Enums.getIfPresent(Admission.class, override).or(this)
+          .factory.apply(config, policyStats);
+    }
     return factory.apply(config, policyStats);
   }
 
   /** Returns the policy's formatted name. */
   public String format(String name) {
-    return formatter.apply(name);
+    return name + suffix;
   }
 }

@@ -84,7 +84,7 @@ tasks.withType<JavaExec>().configureEach {
   classpath(sourceSets["main"].runtimeClasspath)
   systemProperties(caffeineSystemProperties())
   outputs.upToDateWhen { false }
-  jvmArgs(javaExecJvmArgs())
+  jvmArgs(defaultJvmArgs())
 }
 
 eclipse.classpath.file.beforeMerged {
