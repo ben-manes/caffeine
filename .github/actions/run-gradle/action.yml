@@ -79,7 +79,7 @@ runs:
         distribution: temurin
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda # v3.4.2
+      uses: gradle/actions/setup-gradle@d9c87d481d55275bb5441eef3fe0e46805f9ef70 # v3.5.0
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
