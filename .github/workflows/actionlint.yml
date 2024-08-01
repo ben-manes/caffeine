@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
+        uses: step-security/harden-runner@0d381219ddf674d61a7572ddd19d7941e271515c # v2.9.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -16,7 +16,7 @@ jobs:
             github.com:443
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: actionlint
-        uses: reviewdog/action-actionlint@d99f1ceaf59e7db022a790dc308ccccb68dda71a # v1.53.0
+        uses: reviewdog/action-actionlint@4f8f9963ca57a41e5fd5b538dd79dbfbd3e0b38a # v1.54.0
         env:
           SHELLCHECK_OPTS: -e SC2001 -e SC2035 -e SC2046 -e SC2061 -e SC2086 -e SC2156
         with:
