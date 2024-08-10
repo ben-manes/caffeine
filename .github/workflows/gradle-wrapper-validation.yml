@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
+        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -18,4 +18,4 @@ jobs:
             github.com:443
             services.gradle.org:443
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - uses: gradle/actions/wrapper-validation@dbbdc275be76ac10734476cc723d82dfe7ec6eda # v3.4.2
+      - uses: gradle/actions/wrapper-validation@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
