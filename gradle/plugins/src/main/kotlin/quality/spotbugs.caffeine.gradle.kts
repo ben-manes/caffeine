@@ -6,6 +6,14 @@ plugins {
   id("com.github.spotbugs")
 }
 
+configurations.spotbugsSlf4j {
+  resolutionStrategy.eachDependency {
+    if (requested.group == "org.slf4j") {
+      useVersion(libs.versions.slf4j.asProvider().get())
+    }
+  }
+}
+
 dependencies {
   spotbugs(libs.spotbugs)
   spotbugsPlugins(libs.findsecbugs)

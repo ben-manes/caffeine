@@ -40,7 +40,7 @@ runs:
         echo "GRAALVM=true" >> $GITHUB_ENV
         echo "JAVA_VERSION=${{ inputs.graal }}" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
-      uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
+      uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018 # v4.2.2
       if: (inputs.early-access != inputs.java) && (inputs.java != 'GraalVM')
       with:
         java-version: ${{ inputs.java }}
@@ -72,21 +72,20 @@ runs:
         echo "toolchainVersion=${toolchainVersion}" >> $GITHUB_ENV
     - name: Set up JDK ${{ env.toolchainVersion }}
       id: setup-gradle-jdk
-      uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
+      uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018 # v4.2.2
       if: inputs.java != 'GraalVM'
       with:
         java-version: ${{ env.toolchainVersion }}
         distribution: temurin
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda # v3.4.2
+      uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
       with:
         add-job-summary: never
         cache-read-only: false
-        gradle-home-cache-cleanup: true
         gradle-home-cache-strict-match: true
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}
