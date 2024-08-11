@@ -88,6 +88,7 @@ fun disabledChecks() = listOf(
 )
 fun enabledChecks() = listOf(
   "AssertFalse",
+  "AutoValueBoxedValues",
   "BanClassLoader",
   "BuilderReturnThis",
   "CatchingUnchecked",
@@ -97,6 +98,7 @@ fun enabledChecks() = listOf(
   "ComparisonContractViolated",
   "CannotMockFinalClass",
   "CannotMockFinalMethod",
+  "DefaultLocale",
   "DepAnn",
   "EmptyIf",
   "EqualsBrokenForNull",

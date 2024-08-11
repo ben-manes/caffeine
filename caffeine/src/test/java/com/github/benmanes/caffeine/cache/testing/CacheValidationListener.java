@@ -143,7 +143,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   private void validate(ITestResult testResult) {
     CacheContext context = Arrays.stream(testResult.getParameters())
         .filter(CacheContext.class::isInstance)
-        .findFirst().map(param -> (CacheContext) param)
+        .findFirst().map(CacheContext.class::cast)
         .orElse(null);
     if (context != null) {
       awaitExecutor(context);
