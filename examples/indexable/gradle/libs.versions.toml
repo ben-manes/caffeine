@@ -1,7 +1,7 @@
 [versions]
 caffeine = "3.1.8"
-guava = "33.2.1-jre"
-junit-jupiter = "5.11.0-RC1"
+guava = "33.3.0-jre"
+junit-jupiter = "5.11.0"
 truth = "1.4.4"
 versions = "0.51.0"
 
