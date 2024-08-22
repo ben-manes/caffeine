@@ -39,6 +39,7 @@ import org.jfree.chart.axis.Axis;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.DefaultDrawingSupplier;
 import org.jfree.chart.ui.RectangleInsets;
+import org.jfree.data.Range;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 
@@ -109,9 +110,28 @@ public final class PlotCsv implements Runnable {
     configureAxis(plot.getRangeAxis());
     configureGrid(plot);
 
+    plot.getRangeAxis().setAutoRange(false);
+    plot.getRangeAxis().setRange(calculateRange(plot));
+
     for (int i = 0; i < plot.getCategories().size(); i++) {
       plot.getRenderer().setSeriesStroke(i, new BasicStroke(3.0f));
     }
+  }
+
+  private Range calculateRange(CategoryPlot plot) {
+    double upperBound = 0;
+    double lowerBound = 100;
+    for (int series = 0; series < plot.getDataset().getRowCount(); series++) {
+      for (int item = 0; item < plot.getDataset().getColumnCount(); item++) {
+        var value = plot.getDataset().getValue(series, item);
+        if (value != null) {
+          lowerBound = Math.min(lowerBound, value.doubleValue());
+          upperBound = Math.max(upperBound, value.doubleValue());
+        }
+      }
+    }
+    double margin = 0.1 * (upperBound - lowerBound);
+    return new Range(Math.max(0, lowerBound - margin), Math.min(100, upperBound + margin));
   }
 
   private void applyTheme(JFreeChart chart) {
