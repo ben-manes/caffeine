@@ -28,15 +28,15 @@ import com.squareup.javapoet.CodeBlock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class Finalize extends NodeRule {
+public class Finalize implements NodeRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(NodeContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
+  public void execute(NodeContext context) {
     if (!context.suppressedWarnings.isEmpty()) {
       var format = (context.suppressedWarnings.size() == 1)
           ? "$S"
@@ -49,10 +49,10 @@ public class Finalize extends NodeRule {
         .addMethod(context.constructorDefault.build())
         .addMethod(context.constructorByKey.build())
         .addMethod(context.constructorByKeyRef.build());
-    addStaticBlock();
+    addStaticBlock(context);
   }
 
-  private void addStaticBlock() {
+  private void addStaticBlock(NodeContext context) {
     if (context.varHandles.isEmpty()) {
       return;
     }

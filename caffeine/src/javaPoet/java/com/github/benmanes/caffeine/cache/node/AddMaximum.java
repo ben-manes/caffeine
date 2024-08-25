@@ -16,6 +16,8 @@
 package com.github.benmanes.caffeine.cache.node;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
+import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 
@@ -24,21 +26,20 @@ import com.squareup.javapoet.TypeName;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
-public final class AddMaximum extends NodeRule {
+public final class AddMaximum implements NodeRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(NodeContext context) {
     return Feature.usesMaximum(context.generateFeatures);
   }
 
   @Override
-  protected void execute() {
-    addQueueFlag();
-    addWeight();
+  public void execute(NodeContext context) {
+    addQueueFlag(context);
+    addWeight(context);
   }
 
-  private void addQueueFlag() {
+  private void addQueueFlag(NodeContext context) {
     context.nodeSubtype.addField(int.class, "queueType");
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getQueueType")
         .addModifiers(context.publicFinalModifiers())
@@ -52,18 +53,20 @@ public final class AddMaximum extends NodeRule {
         .build());
   }
 
-  private void addWeight() {
+  private void addWeight(NodeContext context) {
     if (!context.generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
       return;
     }
     context.nodeSubtype.addField(int.class, "weight")
-        .addMethod(newGetter(Strength.STRONG, TypeName.INT, "weight", Visibility.VOLATILE))
-        .addMethod(newSetter(TypeName.INT, "weight", Visibility.VOLATILE));
+        .addMethod(context.newGetter(Strength.STRONG,
+            TypeName.INT, "weight", Visibility.VOLATILE))
+        .addMethod(context.newSetter(TypeName.INT, "weight", Visibility.VOLATILE));
     context.constructorByKey.addStatement("this.$N = $N", "weight", "weight");
     context.constructorByKeyRef.addStatement("this.$N = $N", "weight", "weight");
 
     context.nodeSubtype.addField(int.class, "policyWeight")
-        .addMethod(newGetter(Strength.STRONG, TypeName.INT, "policyWeight", Visibility.VOLATILE))
-        .addMethod(newSetter(TypeName.INT, "policyWeight", Visibility.VOLATILE));
+        .addMethod(context.newGetter(Strength.STRONG,
+            TypeName.INT, "policyWeight", Visibility.VOLATILE))
+        .addMethod(context.newSetter(TypeName.INT, "policyWeight", Visibility.VOLATILE));
   }
 }

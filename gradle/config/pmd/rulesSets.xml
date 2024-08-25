@@ -107,12 +107,6 @@
     <exclude name="ConstructorCallsOverridableMethod"/>
     <exclude name="AvoidBranchingStatementAsLastInLoop"/>
   </rule>
-  <rule ref="category/java/errorprone.xml/AvoidDuplicateLiterals">
-    <properties>
-      <property name="skipAnnotations" value="true"/>
-      <property name="maxDuplicateLiterals" value="10"/>
-    </properties>
-  </rule>
 
   <rule ref="category/java/multithreading.xml">
     <exclude name="DoNotUseThreads"/>

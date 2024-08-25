@@ -16,10 +16,12 @@
 package com.github.benmanes.caffeine.cache.local;
 
 import static com.github.benmanes.caffeine.cache.Specifications.ASYNC_CACHE_LOADER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
+
 import javax.lang.model.element.Modifier;
+
 import com.squareup.javapoet.FieldSpec;
 
 /**
@@ -27,15 +29,15 @@ import com.squareup.javapoet.FieldSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddConstructor extends LocalCacheRule {
+public final class AddConstructor implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     context.constructor
         .addParameter(BUILDER_PARAM)
         .addParameter(ASYNC_CACHE_LOADER_PARAM)

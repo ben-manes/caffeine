@@ -24,10 +24,10 @@ import com.squareup.javapoet.MethodSpec;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddFastPath extends LocalCacheRule {
+public final class AddFastPath implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     boolean parentFastPath = Feature.usesFastPath(context.parentFeatures);
     boolean fastpath = Feature.usesFastPath(Sets.union(
         context.parentFeatures, context.generateFeatures));
@@ -35,7 +35,7 @@ public final class AddFastPath extends LocalCacheRule {
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     boolean fastpath = Feature.usesFastPath(Sets.union(
         context.parentFeatures, context.generateFeatures));
     context.cache.addMethod(MethodSpec.methodBuilder("fastpath")

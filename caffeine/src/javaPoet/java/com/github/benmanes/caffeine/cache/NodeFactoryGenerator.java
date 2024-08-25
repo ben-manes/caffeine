@@ -76,7 +76,6 @@ import com.squareup.javapoet.TypeSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class NodeFactoryGenerator {
   private final List<NodeRule> rules = List.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
@@ -86,7 +85,6 @@ public final class NodeFactoryGenerator {
   private final List<TypeSpec> nodeTypes;
   private final Path directory;
 
-  @SuppressWarnings("NullAway.Init")
   private NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
     this.nodeTypes = new ArrayList<>();
@@ -129,7 +127,7 @@ public final class NodeFactoryGenerator {
   }
 
   private void generatedNodes() {
-    NavigableMap<String, Set<Feature>> classNameToFeatures = getClassNameToFeatures();
+    NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures = getClassNameToFeatures();
     classNameToFeatures.forEach((className, features) -> {
       String higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
@@ -138,8 +136,8 @@ public final class NodeFactoryGenerator {
     });
   }
 
-  private NavigableMap<String, Set<Feature>> getClassNameToFeatures() {
-    var classNameToFeatures = new TreeMap<String, Set<Feature>>();
+  private NavigableMap<String, ImmutableSet<Feature>> getClassNameToFeatures() {
+    var classNameToFeatures = new TreeMap<String, ImmutableSet<Feature>>();
     for (List<Object> combination : combinations()) {
       var features = getFeatures(combination);
       var className = Feature.makeClassName(features);
@@ -163,27 +161,28 @@ public final class NodeFactoryGenerator {
     return ImmutableSet.copyOf(features);
   }
 
-  @SuppressWarnings("NullAway")
-  private TypeSpec makeNodeSpec(String className, boolean isFinal, Set<Feature> features) {
+  private TypeSpec makeNodeSpec(String className, boolean isFinal, ImmutableSet<Feature> features) {
     TypeName superClass;
-    Set<Feature> parentFeatures;
-    Set<Feature> generateFeatures;
+    ImmutableSet<Feature> parentFeatures;
+    ImmutableSet<Feature> generateFeatures;
     if (features.size() == 2) {
-      parentFeatures = Set.of();
+      parentFeatures = ImmutableSet.of();
       generateFeatures = features;
       superClass = TypeName.OBJECT;
     } else {
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
-      generateFeatures = ImmutableSet.of(Iterables.getLast(features));
+      generateFeatures = ImmutableSet.of(features.asList().get(features.size() - 1));
       superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
 
     var context = new NodeContext(superClass, className, isFinal, parentFeatures, generateFeatures);
     for (NodeRule rule : rules) {
-      rule.accept(context);
+      if (rule.applies(context)) {
+        rule.execute(context);
+      }
     }
-    return context.nodeSubtype.build();
+    return context.build();
   }
 
   private Set<List<Object>> combinations() {

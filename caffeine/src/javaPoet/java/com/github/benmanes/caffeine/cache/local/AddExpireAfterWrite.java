@@ -24,15 +24,15 @@ import com.squareup.javapoet.MethodSpec;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddExpireAfterWrite extends LocalCacheRule {
+public final class AddExpireAfterWrite implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return context.generateFeatures.contains(Feature.EXPIRE_WRITE);
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     context.constructor.addStatement(
         "this.expiresAfterWriteNanos = builder.getExpiresAfterWriteNanos()");
     context.cache.addField(FieldSpec.builder(long.class, "expiresAfterWriteNanos")

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -38,15 +39,16 @@ import net.jodah.expiringmap.ExpiringMap;
  */
 @PolicySpec(name = "product.ExpiringMap")
 public final class ExpiringMapPolicy implements KeyOnlyPolicy {
-  @SuppressWarnings("PMD.LooseCoupling")
-  private final ExpiringMap<Long, Boolean> cache;
+  private final Map<Long, Boolean> cache;
   private final PolicyStats policyStats;
+  private final int maximumSize;
 
   public ExpiringMapPolicy(ExpiringMapSettings settings, Eviction policy) {
     policyStats = new PolicyStats(name() + " (%s)", policy);
+    maximumSize = Math.toIntExact(settings.maximumSize());
     cache = ExpiringMap.builder()
-        .maxSize(Math.toIntExact(settings.maximumSize()))
         .expirationPolicy(policy.type)
+        .maxSize(maximumSize)
         .build();
   }
 
@@ -62,7 +64,7 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
   public void record(long key) {
     var value = cache.get(key);
     if (value == null) {
-      if (cache.size() == cache.getMaxSize()) {
+      if (cache.size() == maximumSize) {
         policyStats.recordEviction();
       }
       cache.put(key, Boolean.TRUE);

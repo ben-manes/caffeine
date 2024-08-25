@@ -28,21 +28,21 @@ import com.squareup.javapoet.TypeName;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddDeques extends LocalCacheRule {
+public final class AddDeques implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
-    addAccessOrderWindowDeque();
-    addAccessOrderMainDeque();
-    addWriteOrderDeque();
+  public void execute(LocalCacheContext context) {
+    addAccessOrderWindowDeque(context);
+    addAccessOrderMainDeque(context);
+    addWriteOrderDeque(context);
   }
 
-  private void addAccessOrderWindowDeque() {
+  private void addAccessOrderWindowDeque(LocalCacheContext context) {
     if (Feature.usesAccessOrderWindowDeque(context.parentFeatures)
         || !Feature.usesAccessOrderWindowDeque(context.generateFeatures)) {
       return;
@@ -51,39 +51,39 @@ public final class AddDeques extends LocalCacheRule {
     context.constructor.addStatement(
         "this.$L = builder.evicts() || builder.expiresAfterAccess()\n? new $T()\n: null",
         "accessOrderWindowDeque", ACCESS_ORDER_DEQUE);
-    addFieldAndMethod(ACCESS_ORDER_DEQUE, "accessOrderWindowDeque");
+    addFieldAndMethod(context, ACCESS_ORDER_DEQUE, "accessOrderWindowDeque");
     context.suppressedWarnings.add("NullAway");
   }
 
-  private void addAccessOrderMainDeque() {
+  private void addAccessOrderMainDeque(LocalCacheContext context) {
     if (Feature.usesAccessOrderMainDeque(context.parentFeatures)
         || !Feature.usesAccessOrderMainDeque(context.generateFeatures)) {
       return;
     }
-    addDeque(ACCESS_ORDER_DEQUE, "accessOrderProbationDeque");
-    addDeque(ACCESS_ORDER_DEQUE, "accessOrderProtectedDeque");
+    addDeque(context, ACCESS_ORDER_DEQUE, "accessOrderProbationDeque");
+    addDeque(context, ACCESS_ORDER_DEQUE, "accessOrderProtectedDeque");
     context.suppressedWarnings.add("NullAway");
   }
 
-  private void addWriteOrderDeque() {
+  private void addWriteOrderDeque(LocalCacheContext context) {
     if (Feature.usesWriteOrderDeque(context.parentFeatures)
         || !Feature.usesWriteOrderDeque(context.generateFeatures)) {
       return;
     }
-    addDeque(WRITE_ORDER_DEQUE, "writeOrderDeque");
+    addDeque(context, WRITE_ORDER_DEQUE, "writeOrderDeque");
     context.suppressedWarnings.add("NullAway");
   }
 
-  private void addDeque(TypeName type, String name) {
-    addConstructor(type, name);
-    addFieldAndMethod(type, name);
+  private void addDeque(LocalCacheContext context, TypeName type, String name) {
+    addConstructor(context, type, name);
+    addFieldAndMethod(context, type, name);
   }
 
-  private void addConstructor(TypeName type, String name) {
+  private void addConstructor(LocalCacheContext context, TypeName type, String name) {
     context.constructor.addStatement("this.$L = new $T()", name, type);
   }
 
-  private void addFieldAndMethod(TypeName type, String name) {
+  private void addFieldAndMethod(LocalCacheContext context, TypeName type, String name) {
     context.cache.addField(FieldSpec.builder(type, name, Modifier.FINAL).build());
     context.cache.addMethod(MethodSpec.methodBuilder(name)
         .addModifiers(context.protectedFinalModifiers())

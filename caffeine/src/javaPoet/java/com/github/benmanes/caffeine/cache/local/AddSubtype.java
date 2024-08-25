@@ -28,18 +28,18 @@ import com.google.common.base.CaseFormat;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddSubtype extends LocalCacheRule {
+public final class AddSubtype implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     context.suppressedWarnings.add("MissingOverride");
     context.cache.superclass(context.superClass)
-        .addJavadoc(getJavaDoc())
+        .addJavadoc(getJavaDoc(context))
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {
@@ -47,7 +47,7 @@ public final class AddSubtype extends LocalCacheRule {
     }
   }
 
-  private String getJavaDoc() {
+  private String getJavaDoc(LocalCacheContext context) {
     StringBuilder doc = new StringBuilder(200);
     doc.append("<em>WARNING: GENERATED CODE</em>\n\n"
         + "A cache that provides the following features:\n<ul>");

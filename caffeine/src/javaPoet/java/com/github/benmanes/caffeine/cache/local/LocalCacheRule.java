@@ -15,29 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
-import java.util.function.Consumer;
-
 /**
  * A code generation rule for a cache.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public abstract class LocalCacheRule implements Consumer<LocalCacheContext> {
-  protected LocalCacheContext context;
-
-  @SuppressWarnings({"NullAway.Init", "PMD.UnnecessaryConstructor"})
-  LocalCacheRule() {}
-
-  @Override
-  public void accept(LocalCacheContext context) {
-    this.context = context;
-    if (applies()) {
-      execute();
-    }
-  }
+public interface LocalCacheRule {
 
   /** Returns if the rule should be executed. */
-  protected abstract boolean applies();
+  boolean applies(LocalCacheContext context);
 
-  protected abstract void execute();
+  /** Modifies the context. */
+  void execute(LocalCacheContext context);
 }

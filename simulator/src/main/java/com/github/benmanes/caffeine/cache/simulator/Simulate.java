@@ -149,7 +149,6 @@ public final class Simulate implements Runnable {
   }
 
   private static final class LongPreprocessor implements IParameterPreprocessor {
-    @SuppressWarnings("PMD.ReplaceVectorWithList")
     @Override public boolean preprocess(Stack<String> args,
         CommandSpec commandSpec, ArgSpec argSpec, Map<String, Object> info) {
       args.replaceAll(arg -> arg.replace("_", ""));

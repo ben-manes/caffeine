@@ -22,15 +22,15 @@ import com.squareup.javapoet.AnnotationSpec;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Finalize extends LocalCacheRule {
+public final class Finalize implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     if (!context.suppressedWarnings.isEmpty()) {
       var format = (context.suppressedWarnings.size() == 1)
           ? "$S"

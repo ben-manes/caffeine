@@ -19,8 +19,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.io.InvalidObjectException;
-import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collections;
@@ -436,12 +434,6 @@ public final class GuavaCacheFromContext {
       protected ConcurrentMap<K, V> delegate() {
         return cache.asMap();
       }
-
-      @SuppressWarnings({"UnusedMethod", "UnusedVariable"})
-      private void readObject(ObjectInputStream stream) throws InvalidObjectException {
-        statsCounter = new SimpleStatsCounter();
-      }
-
       final class KeySetView extends ForwardingSet<K> {
         @Override public boolean remove(Object o) {
           requireNonNull(o);

@@ -24,31 +24,30 @@ import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
 import com.google.common.base.CaseFormat;
-import com.squareup.javapoet.TypeSpec;
 
 /**
  * Adds the node inheritance hierarchy.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddSubtype extends NodeRule {
+public final class AddSubtype implements NodeRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(NodeContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
+  public void execute(NodeContext context) {
     context.suppressedWarnings.add("MissingOverride");
-    context.nodeSubtype = TypeSpec.classBuilder(context.className)
-        .addJavadoc(getJavaDoc())
+    context.nodeSubtype
+        .addJavadoc(getJavaDoc(context))
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {
       context.nodeSubtype.addModifiers(Modifier.FINAL);
     }
-    if (isBaseClass()) {
+    if (context.isBaseClass()) {
       context.nodeSubtype
           .superclass(NODE)
           .addSuperinterface(NODE_FACTORY);
@@ -57,7 +56,7 @@ public final class AddSubtype extends NodeRule {
     }
   }
 
-  private String getJavaDoc() {
+  private String getJavaDoc(NodeContext context) {
     var doc = new StringBuilder(200);
     doc.append("<em>WARNING: GENERATED CODE</em>\n\n"
         + "A cache entry that provides the following features:\n<ul>");

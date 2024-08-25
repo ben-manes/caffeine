@@ -22,6 +22,7 @@ import java.util.List;
 
 import javax.lang.model.element.Modifier;
 
+import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -31,42 +32,41 @@ import com.squareup.javapoet.MethodSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
-public final class AddKey extends NodeRule {
+public final class AddKey implements NodeRule {
 
   @Override
-  protected boolean applies() {
-    return isBaseClass();
+  public boolean applies(NodeContext context) {
+    return context.isBaseClass();
   }
 
   @Override
-  protected void execute() {
-    if (isStrongValues()) {
-      addIfStrongValue();
+  public void execute(NodeContext context) {
+    if (context.isStrongValues()) {
+      addIfStrongValue(context);
     } else {
-      addIfCollectedValue();
+      addIfCollectedValue(context);
     }
   }
 
-  private void addIfStrongValue() {
-    var fieldSpec = isStrongKeys()
+  private void addIfStrongValue(NodeContext context) {
+    var fieldSpec = context.isStrongKeys()
         ? FieldSpec.builder(kTypeVar, "key", Modifier.VOLATILE)
-        : FieldSpec.builder(keyReferenceType(), "key", Modifier.VOLATILE);
+        : FieldSpec.builder(context.keyReferenceType(), "key", Modifier.VOLATILE);
     context.nodeSubtype
         .addField(fieldSpec.build())
-        .addMethod(newGetter(keyStrength(), kTypeVar, "key", Visibility.PLAIN))
-        .addMethod(newGetRef("key"));
-    addVarHandle("key", isStrongKeys()
+        .addMethod(context.newGetter(context.keyStrength(), kTypeVar, "key", Visibility.PLAIN))
+        .addMethod(context.newGetRef("key"));
+    context.addVarHandle("key", context.isStrongKeys()
         ? ClassName.get(Object.class)
-        : keyReferenceType().rawType);
+        : context.keyReferenceType().rawType);
   }
 
-  private void addIfCollectedValue() {
+  private void addIfCollectedValue(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getKeyReference")
         .addModifiers(context.publicFinalModifiers())
         .returns(Object.class)
         .addStatement("$1T valueRef = ($1T) $2L.get(this)",
-            valueReferenceType(), varHandleName("value"))
+            context.valueReferenceType(), context.varHandleName("value"))
         .addStatement("return valueRef.getKeyReference()")
         .build());
 
@@ -74,8 +74,8 @@ public final class AddKey extends NodeRule {
         .addModifiers(context.publicFinalModifiers())
         .returns(kTypeVar)
         .addStatement("$1T valueRef = ($1T) $2L.get(this)",
-            valueReferenceType(), varHandleName("value"));
-    if (isStrongKeys()) {
+            context.valueReferenceType(), context.varHandleName("value"));
+    if (context.isStrongKeys()) {
       getKey.addStatement("return ($T) valueRef.getKeyReference()", kTypeVar);
     } else {
       getKey.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceType);

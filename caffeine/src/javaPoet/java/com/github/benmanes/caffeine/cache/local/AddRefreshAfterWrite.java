@@ -24,15 +24,15 @@ import com.squareup.javapoet.MethodSpec;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddRefreshAfterWrite extends LocalCacheRule {
+public final class AddRefreshAfterWrite implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return context.generateFeatures.contains(Feature.REFRESH_WRITE);
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     context.constructor.addStatement(
         "this.refreshAfterWriteNanos = builder.getRefreshAfterWriteNanos()");
     context.cache.addField(FieldSpec.builder(long.class, "refreshAfterWriteNanos")

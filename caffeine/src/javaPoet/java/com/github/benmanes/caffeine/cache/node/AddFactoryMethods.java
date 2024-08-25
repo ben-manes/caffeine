@@ -34,28 +34,28 @@ import com.squareup.javapoet.ParameterSpec;
 /**
  * @author github.com/jvassev (Julian Vassev)
  */
-public final class AddFactoryMethods extends NodeRule {
+public final class AddFactoryMethods implements NodeRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(NodeContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
-    addFactories();
+  public void execute(NodeContext context) {
+    addFactories(context);
 
     if (context.generateFeatures.contains(Feature.WEAK_KEYS)) {
-      addWeakKeys();
+      addWeakKeys(context);
     }
     if (context.generateFeatures.contains(Feature.WEAK_VALUES)) {
-      addWeakValues();
+      addWeakValues(context);
     } else if (context.generateFeatures.contains(Feature.SOFT_VALUES)) {
-      addSoftValues();
+      addSoftValues(context);
     }
   }
 
-  private void addFactories() {
+  private void addFactories(NodeContext context) {
     context.nodeSubtype.addMethod(
         newNode(keySpec, keyRefQueueSpec)
             .addStatement("return new $N<>(key, keyReferenceQueue, value, "
@@ -68,7 +68,7 @@ public final class AddFactoryMethods extends NodeRule {
             .build());
   }
 
-  private void addWeakKeys() {
+  private void addWeakKeys(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("newLookupKey")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(Object.class, "key")
@@ -84,7 +84,7 @@ public final class AddFactoryMethods extends NodeRule {
         .build());
   }
 
-  private void addSoftValues() {
+  private void addSoftValues(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("softValues")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return true")
@@ -92,7 +92,7 @@ public final class AddFactoryMethods extends NodeRule {
         .build());
   }
 
-  private void addWeakValues() {
+  private void addWeakValues(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("weakValues")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return true")

@@ -26,16 +26,16 @@ import com.squareup.javapoet.MethodSpec;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddExpirationTicker extends LocalCacheRule {
+public final class AddExpirationTicker implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return !(Feature.usesExpirationTicker(context.parentFeatures)
         || !Feature.usesExpirationTicker(context.generateFeatures));
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     context.constructor.addStatement("this.ticker = builder.getTicker()");
     context.cache.addField(FieldSpec.builder(TICKER, "ticker", Modifier.FINAL).build());
     context.cache.addMethod(MethodSpec.methodBuilder("expirationTicker")

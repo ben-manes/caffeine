@@ -236,7 +236,6 @@ public final class BoundedLocalCacheTest {
   /* --------------- Maintenance --------------- */
 
   @Test
-  @SuppressWarnings("UnusedVariable")
   public void cleanupTask_allowGc() {
     var cache = new BoundedLocalCache<Object, Object>(
         Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};

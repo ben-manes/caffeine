@@ -15,39 +15,41 @@
  */
 package com.github.benmanes.caffeine.cache.impl;
 
+import java.util.Map;
+
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.tangosol.net.cache.LocalCache;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"deprecation", "unchecked"})
 public final class CoherenceCache<K, V> implements BasicCache<K, V> {
-  @SuppressWarnings("PMD.LooseCoupling")
-  private final LocalCache cache;
+  private final Map<K, V> map;
 
+  @SuppressWarnings({"deprecation", "unchecked"})
   public CoherenceCache(int maximumSize, int evictionPolicyType) {
-    cache = new LocalCache(Math.max(1, maximumSize));
+    var cache = new LocalCache(Math.max(1, maximumSize));
     cache.setEvictionType(evictionPolicyType);
+    map = cache;
   }
 
   @Override
   public V get(K key) {
-    return (V) cache.get(key);
+    return map.get(key);
   }
 
   @Override
   public void put(K key, V value) {
-    cache.put(key, value);
+    map.put(key, value);
   }
 
   @Override
   public void remove(K key) {
-    cache.remove(key);
+    map.remove(key);
   }
 
   @Override
   public void clear() {
-    cache.clear();
+    map.clear();
   }
 }

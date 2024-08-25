@@ -23,6 +23,7 @@ import java.util.Objects;
 
 import javax.lang.model.element.Modifier;
 
+import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
@@ -33,44 +34,43 @@ import com.squareup.javapoet.MethodSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
-public final class AddValue extends NodeRule {
+public final class AddValue implements NodeRule {
 
   @Override
-  protected boolean applies() {
-    return isBaseClass();
+  public boolean applies(NodeContext context) {
+    return context.isBaseClass();
   }
 
   @Override
-  protected void execute() {
+  public void execute(NodeContext context) {
     context.nodeSubtype
-        .addField(newValueField())
-        .addMethod(makeGetValue())
-        .addMethod(newGetRef("value"))
-        .addMethod(makeSetValue())
-        .addMethod(makeContainsValue());
-    if (isStrongValues()) {
-      addVarHandle("value", ClassName.get(Object.class));
+        .addField(newValueField(context))
+        .addMethod(makeGetValue(context))
+        .addMethod(context.newGetRef("value"))
+        .addMethod(makeSetValue(context))
+        .addMethod(makeContainsValue(context));
+    if (context.isStrongValues()) {
+      context.addVarHandle("value", ClassName.get(Object.class));
     } else {
-      addVarHandle("value", valueReferenceType().rawType);
+      context.addVarHandle("value", context.valueReferenceType().rawType);
       context.suppressedWarnings.add("NullAway");
     }
   }
 
-  private FieldSpec newValueField() {
-    var fieldSpec = isStrongValues()
+  private FieldSpec newValueField(NodeContext context) {
+    var fieldSpec = context.isStrongValues()
         ? FieldSpec.builder(vTypeVar, "value", Modifier.VOLATILE)
-        : FieldSpec.builder(valueReferenceType(), "value", Modifier.VOLATILE);
+        : FieldSpec.builder(context.valueReferenceType(), "value", Modifier.VOLATILE);
     return fieldSpec.build();
   }
 
   /** Creates the getValue method. */
-  private MethodSpec makeGetValue() {
+  private MethodSpec makeGetValue(NodeContext context) {
     var getter = MethodSpec.methodBuilder("getValue")
         .addModifiers(context.publicFinalModifiers())
         .returns(vTypeVar);
-    String handle = varHandleName("value");
-    if (valueStrength() == Strength.STRONG) {
+    String handle = context.varHandleName("value");
+    if (context.valueStrength() == Strength.STRONG) {
       getter.addStatement("return ($T) $L.get(this)", vTypeVar, handle);
       return getter.build();
     }
@@ -88,31 +88,32 @@ public final class AddValue extends NodeRule {
   }
 
   /** Creates the setValue method. */
-  private MethodSpec makeSetValue() {
+  private MethodSpec makeSetValue(NodeContext context) {
     var setter = MethodSpec.methodBuilder("setValue")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(vTypeVar, "value")
         .addParameter(vRefQueueType, "referenceQueue");
 
-    if (isStrongValues()) {
-      setter.addStatement("$L.setRelease(this, $N)", varHandleName("value"), "value");
+    if (context.isStrongValues()) {
+      setter.addStatement("$L.setRelease(this, $N)", context.varHandleName("value"), "value");
     } else {
       setter.addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)",
-          Reference.class, varHandleName("value"));
+          Reference.class, context.varHandleName("value"));
       setter.addStatement("$L.setRelease(this, new $T($L, $N, referenceQueue))",
-          varHandleName("value"), valueReferenceType(), "getKeyReference()", "value");
+          context.varHandleName("value"), context.valueReferenceType(),
+          "getKeyReference()", "value");
       setter.addStatement("ref.clear()");
     }
 
     return setter.build();
   }
 
-  private MethodSpec makeContainsValue() {
+  private MethodSpec makeContainsValue(NodeContext context) {
     var containsValue = MethodSpec.methodBuilder("containsValue")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(Object.class, "value")
         .returns(boolean.class);
-    if (isStrongValues()) {
+    if (context.isStrongValues()) {
       containsValue.addStatement("return $T.equals(value, getValue())", Objects.class);
     } else {
       containsValue.addStatement("return getValue() == value");

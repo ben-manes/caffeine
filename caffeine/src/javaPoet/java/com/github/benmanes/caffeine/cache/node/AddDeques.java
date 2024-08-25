@@ -18,37 +18,39 @@ package com.github.benmanes.caffeine.cache.node;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
+import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
 
 /**
  * Adds the access and write deques, if needed, to the node.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddDeques extends NodeRule {
+public final class AddDeques implements NodeRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(NodeContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
+  public void execute(NodeContext context) {
     if (!Feature.usesAccessOrderWindowDeque(context.parentFeatures)
         && Feature.usesAccessOrderWindowDeque(context.generateFeatures)) {
-      addFieldAndGetter("previousInAccessOrder");
-      addFieldAndGetter("nextInAccessOrder");
+      addFieldAndGetter(context, "previousInAccessOrder");
+      addFieldAndGetter(context, "nextInAccessOrder");
     }
     if (!Feature.usesWriteOrderDeque(context.parentFeatures)
         && Feature.usesWriteOrderDeque(context.generateFeatures)) {
-      addFieldAndGetter("previousInWriteOrder");
-      addFieldAndGetter("nextInWriteOrder");
+      addFieldAndGetter(context, "previousInWriteOrder");
+      addFieldAndGetter(context, "nextInWriteOrder");
     }
   }
 
   /** Adds a simple field, accessor, and mutator for the variable. */
-  private void addFieldAndGetter(String varName) {
+  private void addFieldAndGetter(NodeContext context, String varName) {
     context.nodeSubtype.addField(NODE, varName)
-        .addMethod(newGetter(Strength.STRONG, NODE, varName, Visibility.VOLATILE))
-        .addMethod(newSetter(NODE, varName, Visibility.VOLATILE));
+        .addMethod(context.newGetter(Strength.STRONG, NODE, varName, Visibility.VOLATILE))
+        .addMethod(context.newSetter(NODE, varName, Visibility.VOLATILE));
   }
 }

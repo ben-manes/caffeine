@@ -1876,7 +1876,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @Override
     @GuardedBy("evictionLock")
-    @SuppressWarnings("FutureReturnValueIgnored")
     public void run() {
       if (evicts()) {
         setWeightedSize(weightedSize() + weight);
@@ -3964,7 +3963,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return (p == null) ? (policy = new BoundedPolicy<>(cache, identity(), cache.isWeighted)) : p;
     }
 
-    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -4471,7 +4469,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return bulkMappingFunction;
     }
 
-    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -4528,7 +4525,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return policy;
     }
 
-    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -4581,7 +4577,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return policy;
     }
 
-    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }

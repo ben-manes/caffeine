@@ -16,8 +16,6 @@
 package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 
@@ -28,50 +26,41 @@ import com.squareup.javapoet.MethodSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
-public final class AddConstructors extends NodeRule {
+public final class AddConstructors implements NodeRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(NodeContext context) {
     return true;
   }
 
   @Override
-  protected void execute() {
-    addConstructorDefault();
-    addConstructorByKey();
-    addConstructorByKeyRef();
+  public void execute(NodeContext context) {
+    addConstructorByKey(context);
+    addConstructorByKeyRef(context);
     context.suppressedWarnings.add("NullAway");
-    if (isBaseClass()) {
+    if (context.isBaseClass()) {
       context.suppressedWarnings.add("PMD.UnusedFormalParameter");
     }
   }
 
-  /** Adds the constructor used to create a factory. */
-  private void addConstructorDefault() {
-    context.constructorDefault = MethodSpec.constructorBuilder();
-  }
-
   /** Adds the constructor by key to the node type. */
-  private void addConstructorByKey() {
-    context.constructorByKey = MethodSpec.constructorBuilder().addParameter(keySpec);
+  private void addConstructorByKey(NodeContext context) {
     context.constructorByKey.addParameter(keyRefQueueSpec);
     addCommonParameters(context.constructorByKey);
-    if (isBaseClass()) {
-      callSiblingConstructor();
+    if (context.isBaseClass()) {
+      callSiblingConstructor(context);
     } else {
-      callParentByKey();
+      callParentByKey(context);
     }
   }
 
   /** Adds the constructor by key reference to the node type. */
-  private void addConstructorByKeyRef() {
-    context.constructorByKeyRef = MethodSpec.constructorBuilder().addParameter(keyRefSpec);
+  private void addConstructorByKeyRef(NodeContext context) {
     addCommonParameters(context.constructorByKeyRef);
-    if (isBaseClass()) {
-      assignKeyRefAndValue();
+    if (context.isBaseClass()) {
+      assignKeyRefAndValue(context);
     } else {
-      callParentByKeyRef();
+      callParentByKeyRef(context);
     }
   }
 
@@ -82,35 +71,35 @@ public final class AddConstructors extends NodeRule {
     constructor.addParameter(long.class, "now");
   }
 
-  private void callSiblingConstructor() {
-    if (isStrongKeys()) {
+  private void callSiblingConstructor(NodeContext context) {
+    if (context.isStrongKeys()) {
       context.constructorByKey.addStatement("this(key, value, valueReferenceQueue, weight, now)");
     } else {
       context.constructorByKey.addStatement(
-          "this(new $T($N, $N), value, valueReferenceQueue, weight, now)", keyReferenceType(),
-          "key", "keyReferenceQueue");
+          "this(new $T($N, $N), value, valueReferenceQueue, weight, now)",
+          context.keyReferenceType(), "key", "keyReferenceQueue");
     }
   }
 
-  private void assignKeyRefAndValue() {
-    if (isStrongValues()) {
+  private void assignKeyRefAndValue(NodeContext context) {
+    if (context.isStrongValues()) {
       context.constructorByKeyRef.addStatement("$L.set(this, $N)",
-          varHandleName("key"), "keyReference");
+          context.varHandleName("key"), "keyReference");
       context.constructorByKeyRef.addStatement("$L.set(this, $N)",
-          varHandleName("value"), "value");
+          context.varHandleName("value"), "value");
     } else {
       context.constructorByKeyRef.addStatement("$L.set(this, new $T($N, $N, $N))",
-          varHandleName("value"), valueReferenceType(), "keyReference",
-          "value", "valueReferenceQueue");
+          context.varHandleName("value"), context.valueReferenceType(),
+          "keyReference", "value", "valueReferenceQueue");
     }
   }
 
-  private void callParentByKey() {
+  private void callParentByKey(NodeContext context) {
     context.constructorByKey.addStatement(
         "super(key, keyReferenceQueue, value, valueReferenceQueue, weight, now)");
   }
 
-  private void callParentByKeyRef() {
+  private void callParentByKeyRef(NodeContext context) {
     context.constructorByKeyRef.addStatement(
         "super(keyReference, value, valueReferenceQueue, weight, now)");
   }

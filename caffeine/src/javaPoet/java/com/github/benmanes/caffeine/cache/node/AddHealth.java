@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_K
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
 
+import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.squareup.javapoet.MethodSpec;
 
 /**
@@ -28,18 +29,18 @@ import com.squareup.javapoet.MethodSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddHealth extends NodeRule {
+public final class AddHealth implements NodeRule {
 
   @Override
-  protected boolean applies() {
-    return isBaseClass();
+  public boolean applies(NodeContext context) {
+    return context.isBaseClass();
   }
 
   @Override
-  protected void execute() {
+  public void execute(NodeContext context) {
     String retiredArg;
     String deadArg;
-    if (keyStrength() == Strength.STRONG) {
+    if (context.keyStrength() == Strength.STRONG) {
       retiredArg = RETIRED_STRONG_KEY;
       deadArg = DEAD_STRONG_KEY;
     } else {
@@ -53,11 +54,12 @@ public final class AddHealth extends NodeRule {
         .addModifiers(context.publicFinalModifiers())
         .returns(boolean.class)
         .build());
-    addState("isRetired", "retire", retiredArg, false);
-    addState("isDead", "die", deadArg, true);
+    addState(context, "isRetired", "retire", retiredArg, false);
+    addState(context, "isDead", "die", deadArg, true);
   }
 
-  private void addState(String checkName, String actionName, String arg, boolean finalized) {
+  private void addState(NodeContext context, String checkName
+      , String actionName, String arg, boolean finalized) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder(checkName)
         .addStatement("return (getKeyReference() == $L)", arg)
         .addModifiers(context.publicFinalModifiers())
@@ -66,20 +68,20 @@ public final class AddHealth extends NodeRule {
 
     var action = MethodSpec.methodBuilder(actionName)
         .addModifiers(context.publicFinalModifiers());
-    if (valueStrength() == Strength.STRONG) {
-      if (keyStrength() != Strength.STRONG) {
+    if (context.valueStrength() == Strength.STRONG) {
+      if (context.keyStrength() != Strength.STRONG) {
         action.addStatement("key.clear()");
       }
       // Set the value to null only when dead, as otherwise the explicit removal of an expired async
       // value will be notified as explicit rather than expired due to the isComputingAsync() check
       if (finalized) {
-        action.addStatement("$L.set(this, null)", varHandleName("value"));
+        action.addStatement("$L.set(this, null)", context.varHandleName("value"));
       }
-      action.addStatement("$L.set(this, $N)", varHandleName("key"), arg);
+      action.addStatement("$L.set(this, $N)", context.varHandleName("key"), arg);
     } else {
       action.addStatement("$1T valueRef = ($1T) $2L.get(this)",
-          valueReferenceType(), varHandleName("value"));
-      if (keyStrength() != Strength.STRONG) {
+          context.valueReferenceType(), context.varHandleName("value"));
+      if (context.keyStrength() != Strength.STRONG) {
         action.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceType);
         action.addStatement("keyRef.clear()");
       }

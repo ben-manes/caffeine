@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.impl;
 
-import java.util.Map;
-
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -26,29 +24,27 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  */
 public final class CaffeineCache<K, V> implements BasicCache<K, V> {
   private final Cache<K, V> cache;
-  private final Map<K, V> map;
 
   public CaffeineCache(int maximumSize) {
     cache = Caffeine.newBuilder()
         .initialCapacity(maximumSize)
         .maximumSize(maximumSize)
         .build();
-    map = cache.asMap();
   }
 
   @Override
   public V get(K key) {
-    return map.get(key);
+    return cache.getIfPresent(key);
   }
 
   @Override
   public void put(K key, V value) {
-    map.put(key, value);
+    cache.put(key, value);
   }
 
   @Override
   public void remove(K key) {
-    map.remove(key);
+    cache.invalidate(key);
   }
 
   @Override

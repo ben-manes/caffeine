@@ -83,7 +83,6 @@ public final class LocalCacheFactoryGenerator {
   private final List<TypeSpec> factoryTypes;
   private final Path directory;
 
-  @SuppressWarnings("NullAway.Init")
   private LocalCacheFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
     this.factoryTypes = new ArrayList<>();
@@ -126,7 +125,7 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private void generateLocalCaches() {
-    NavigableMap<String, Set<Feature>> classNameToFeatures = getClassNameToFeatures();
+    NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures = getClassNameToFeatures();
     classNameToFeatures.forEach((className, features) -> {
       String higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
@@ -135,17 +134,17 @@ public final class LocalCacheFactoryGenerator {
     });
   }
 
-  private NavigableMap<String, Set<Feature>> getClassNameToFeatures() {
-    var classNameToFeatures = new TreeMap<String, Set<Feature>>();
+  private NavigableMap<String, ImmutableSet<Feature>> getClassNameToFeatures() {
+    var classNameToFeatures = new TreeMap<String, ImmutableSet<Feature>>();
     for (List<Object> combination : combinations()) {
-      Set<Feature> features = getFeatures(combination);
+      ImmutableSet<Feature> features = getFeatures(combination);
       String className = encode(Feature.makeClassName(features));
       classNameToFeatures.put(className, features);
     }
     return classNameToFeatures;
   }
 
-  private Set<Feature> getFeatures(List<Object> combination) {
+  private ImmutableSet<Feature> getFeatures(List<Object> combination) {
     var features = new LinkedHashSet<Feature>();
     features.add(((Boolean) combination.get(0)) ? Feature.STRONG_KEYS : Feature.WEAK_KEYS);
     features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
@@ -157,7 +156,7 @@ public final class LocalCacheFactoryGenerator {
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       features.remove(Feature.MAXIMUM_SIZE);
     }
-    return features;
+    return ImmutableSet.copyOf(features);
   }
 
   private Set<List<Object>> combinations() {
@@ -165,18 +164,18 @@ public final class LocalCacheFactoryGenerator {
     return Sets.cartesianProduct(sets);
   }
 
-  @SuppressWarnings("NullAway")
-  private TypeSpec makeLocalCacheSpec(String className, boolean isFinal, Set<Feature> features) {
+  private TypeSpec makeLocalCacheSpec(String className,
+      boolean isFinal, ImmutableSet<Feature> features) {
     TypeName superClass;
-    Set<Feature> parentFeatures;
-    Set<Feature> generateFeatures;
+    ImmutableSet<Feature> parentFeatures;
+    ImmutableSet<Feature> generateFeatures;
     if (features.size() == 2) {
-      parentFeatures = Set.of();
+      parentFeatures = ImmutableSet.of();
       generateFeatures = features;
       superClass = BOUNDED_LOCAL_CACHE;
     } else {
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
-      generateFeatures = ImmutableSet.of(Iterables.getLast(features));
+      generateFeatures = ImmutableSet.of(features.asList().get(features.size() - 1));
       superClass = ParameterizedTypeName.get(ClassName.bestGuess(
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
@@ -184,9 +183,11 @@ public final class LocalCacheFactoryGenerator {
     var context = new LocalCacheContext(superClass,
         className, isFinal, parentFeatures, generateFeatures);
     for (LocalCacheRule rule : rules) {
-      rule.accept(context);
+      if (rule.applies(context)) {
+        rule.execute(context);
+      }
     }
-    return context.cache.build();
+    return context.build();
   }
 
   /** Returns an encoded form of the class name for compact use. */

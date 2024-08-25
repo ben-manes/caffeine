@@ -27,21 +27,21 @@ import com.squareup.javapoet.MethodSpec;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddExpireAfterAccess extends LocalCacheRule {
+public final class AddExpireAfterAccess implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return context.generateFeatures.contains(Feature.EXPIRE_ACCESS);
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     context.suppressedWarnings.add("NullAway");
-    variableExpiration();
-    fixedExpiration();
+    variableExpiration(context);
+    fixedExpiration(context);
   }
 
-  private void fixedExpiration() {
+  private void fixedExpiration(LocalCacheContext context) {
     context.constructor.addStatement(
         "this.expiresAfterAccessNanos = builder.getExpiresAfterAccessNanos()");
     context.cache.addField(FieldSpec.builder(long.class, "expiresAfterAccessNanos")
@@ -63,7 +63,7 @@ public final class AddExpireAfterAccess extends LocalCacheRule {
         .build());
   }
 
-  private void variableExpiration() {
+  private void variableExpiration(LocalCacheContext context) {
     context.cache.addMethod(MethodSpec.methodBuilder("expiresVariable")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return (timerWheel != null)")

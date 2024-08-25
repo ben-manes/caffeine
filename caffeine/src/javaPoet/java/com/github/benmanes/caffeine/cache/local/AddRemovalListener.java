@@ -26,15 +26,15 @@ import com.squareup.javapoet.MethodSpec;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddRemovalListener extends LocalCacheRule {
+public final class AddRemovalListener implements LocalCacheRule {
 
   @Override
-  protected boolean applies() {
+  public boolean applies(LocalCacheContext context) {
     return context.generateFeatures.contains(Feature.LISTENING);
   }
 
   @Override
-  protected void execute() {
+  public void execute(LocalCacheContext context) {
     context.suppressedWarnings.add("NullAway");
     context.cache.addField(
         FieldSpec.builder(REMOVAL_LISTENER, "removalListener", Modifier.FINAL).build());
