@@ -112,6 +112,7 @@
     <exclude name="DoNotUseThreads"/>
     <exclude name="AvoidUsingVolatile"/>
     <exclude name="UseConcurrentHashMap"/>
+    <exclude name="AvoidSynchronizedStatement"/>
   </rule>
 
   <rule ref="category/java/performance.xml">

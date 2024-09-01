@@ -1157,7 +1157,7 @@ public final class Caffeine<K, V> {
     requireState(valueStrength == null,
         "Weak or soft values can not be combined with AsyncLoadingCache");
     requireState(isStrongKeys() || (evictionListener == null),
-        "Weak keys cannot be combined eviction listener and with AsyncLoadingCache");
+        "Weak keys cannot be combined with eviction listener and AsyncLoadingCache");
     requireWeightWithWeigher();
     requireNonNull(loader);
 
