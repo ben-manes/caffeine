@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.Serializable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -135,7 +134,7 @@ final class Async {
    * {@code 0} to indicate that the entry should not be evicted due to a size constraint. If the
    * value is computed successfully then the entry must be reinserted so that the weight is updated
    * and the expiration timeouts reflect the value once present. This can be done safely using
-   * {@link Map#replace(Object, Object, Object)}.
+   * {@link java.util.Map#replace(Object, Object, Object)}.
    */
   static final class AsyncWeigher<K, V> implements Weigher<K, CompletableFuture<V>>, Serializable {
     private static final long serialVersionUID = 1L;

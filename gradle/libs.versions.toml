@@ -19,7 +19,7 @@ commons-text = "1.12.0"
 concurrentlinkedhashmap = "1.4.2"
 config = "1.4.3"
 coveralls = "2.12.2"
-dependency-check = "10.0.3"
+dependency-check = "10.0.4"
 eclipse-collections = "12.0.0.M3"
 ehcache3 = "3.10.8"
 errorprone = "2.31.0"
@@ -207,8 +207,8 @@ zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 [bundles]
 coherence = ["coherence", "json-bind"]
 constraints = ["bcel", "bouncycastle-jdk18on", "commons-compress", "commons-text", "h2",
-  "httpclient", "guava", "jcommander", "jgit", "jsoup", "protobuf", "snakeyaml" ]
-errorprone-support = [ "errorprone-support", "errorprone-support-refaster" ]
+  "httpclient", "guava", "jcommander", "jgit", "jsoup", "protobuf", "snakeyaml"]
+errorprone-support = ["errorprone-support", "errorprone-support-refaster"]
 junit = ["junit4", "junit5"]
 junit-engines = ["junit5-vintage", "junit5-testng"]
 osgi-test-compile = ["pax-exam-junit4"]

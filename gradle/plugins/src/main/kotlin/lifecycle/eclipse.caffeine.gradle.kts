@@ -11,7 +11,10 @@ eclipse {
       excludeInfoFiles(this)
     }
   }
-  setProjectEncoding()
+  addPreferences("org.eclipse.core.resources.prefs", mapOf(
+    "encoding/<project>" to "UTF-8"))
+  addPreferences("org.eclipse.jdt.core.prefs", mapOf(
+    "org.eclipse.jdt.core.compiler.problem.unusedWarningToken" to "ignore"))
 }
 
 /** Exclude module-info and package-info when compiling through Eclipse. */
@@ -26,14 +29,16 @@ fun excludeInfoFiles(classpath: Classpath) {
   }
 }
 
-/** Specifies the content encoding for the Eclipse project. */
-fun setProjectEncoding() {
-  val prefs = file(".settings/org.eclipse.core.resources.prefs")
-  if (!prefs.exists()) {
-    prefs.parentFile.mkdirs()
-    prefs.writeText("eclipse.preferences.version=1\n")
+/** Adds preferences to the Eclipse project. */
+fun addPreferences(path: String, preferences: Map<String, String>) {
+  val settings = file(".settings/$path")
+  if (!settings.exists()) {
+    settings.parentFile.mkdirs()
+    settings.writeText("eclipse.preferences.version=1\n")
   }
-  if ("encoding/<project>" !in prefs.readText()) {
-    prefs.appendText("encoding/<project>=UTF-8\n")
-  }
+  val text = settings.readLines()
+    .filter { line -> line.substringBefore('=') !in preferences }
+    .plus(preferences.map { (key, value) -> "$key=$value" })
+    .joinToString(separator = "\n", postfix = "\n")
+  settings.writeText(text)
 }
