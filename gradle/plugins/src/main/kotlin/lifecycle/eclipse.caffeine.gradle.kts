@@ -5,16 +5,23 @@ plugins {
   eclipse
 }
 
+val eclipsePreferences by tasks.registering {
+  description = "Generates the Eclipse preferences files."
+  doFirst {
+    addPreferences("org.eclipse.core.resources.prefs", mapOf(
+      "encoding/<project>" to "UTF-8"))
+    addPreferences("org.eclipse.jdt.core.prefs", mapOf(
+      "org.eclipse.jdt.core.compiler.problem.unusedWarningToken" to "ignore"))
+  }
+}
+
 eclipse {
   classpath.file.whenMerged {
     if (this is Classpath) {
       excludeInfoFiles(this)
     }
   }
-  addPreferences("org.eclipse.core.resources.prefs", mapOf(
-    "encoding/<project>" to "UTF-8"))
-  addPreferences("org.eclipse.jdt.core.prefs", mapOf(
-    "org.eclipse.jdt.core.compiler.problem.unusedWarningToken" to "ignore"))
+  synchronizationTasks(eclipsePreferences)
 }
 
 /** Exclude module-info and package-info when compiling through Eclipse. */
@@ -34,11 +41,11 @@ fun addPreferences(path: String, preferences: Map<String, String>) {
   val settings = file(".settings/$path")
   if (!settings.exists()) {
     settings.parentFile.mkdirs()
-    settings.writeText("eclipse.preferences.version=1\n")
   }
+  val updates = preferences + ("eclipse.preferences.version" to "1")
   val text = settings.readLines()
-    .filter { line -> line.substringBefore('=') !in preferences }
-    .plus(preferences.map { (key, value) -> "$key=$value" })
+    .filter { line -> line.substringBefore('=') !in updates }
+    .plus(updates.map { (key, value) -> "$key=$value" })
     .joinToString(separator = "\n", postfix = "\n")
   settings.writeText(text)
 }
