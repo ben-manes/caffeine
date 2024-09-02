@@ -221,8 +221,10 @@ jobs:
             ${{ env.ALLOWED_ENDPOINTS }}
             artifacts.codacy.com:443
             api.codacy.com:443
+            app.deepsource.com:443
             codecov.io:443
             coveralls.io:443
+            deepsource.io:443
             fastly.com:443
             nodejs.org:443
             raw.githubusercontent.com
@@ -260,6 +262,14 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         continue-on-error: true
+      - name: Publish to DeepSource
+        env:
+          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+        continue-on-error: true
+        run: |
+          curl https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key java \
+            --value-file ./build/reports/jacoco/jacocoFullReport/jacocoFullReport.xml
       - name: Publish to SonarQube
         uses: ./.github/actions/run-gradle
         env:

@@ -24,12 +24,14 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,6 +56,7 @@ import com.google.common.util.concurrent.Callables;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -2233,6 +2236,55 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(2, cache.size());
     assertEquals(getKey + suffix, map.get(getKey));
     assertEquals(refreshKey + suffix, map.get(refreshKey));
+  }
+
+  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored"})
+  public void testLongAsyncRefresh() throws Exception {
+    FakeTicker ticker = new FakeTicker();
+    AtomicInteger counter = new AtomicInteger();
+    CountDownLatch reloadStarted = new CountDownLatch(1);
+    CountDownLatch reloadExpired = new CountDownLatch(1);
+    CountDownLatch reloadCompleted = new CountDownLatch(1);
+
+    ListeningExecutorService refreshExecutor = MoreExecutors.listeningDecorator(
+        Executors.newSingleThreadExecutor());
+    try {
+      Caffeine<Object, Object> builder = Caffeine.newBuilder()
+          .expireAfterWrite(100, MILLISECONDS)
+          .refreshAfterWrite(5, MILLISECONDS)
+          .executor(refreshExecutor)
+          .ticker(ticker::read);
+
+      CacheLoader<String, String> loader =
+          new CacheLoader<String, String>() {
+            @Override public String load(String key) {
+              return key + "Load-" + counter.incrementAndGet();
+            }
+            @Override public ListenableFuture<String> reload(String key, String oldValue) {
+              ListenableFuture<String> future = refreshExecutor.submit(() -> {
+                reloadStarted.countDown();
+                reloadExpired.await();
+                return key + "Reload";
+              });
+              future.addListener(reloadCompleted::countDown, refreshExecutor);
+              return future;
+            }
+          };
+      LoadingCache<String, String> cache = CaffeinatedGuava.build(builder, loader);
+
+      assertThat(cache.get("test")).isEqualTo("testLoad-1");
+
+      ticker.advance(10, MILLISECONDS); // so that the next call will trigger refresh
+      assertThat(cache.get("test")).isEqualTo("testLoad-1");
+      reloadStarted.await();
+      ticker.advance(500, MILLISECONDS); // so that the entry expires during the reload
+      reloadExpired.countDown();
+
+      assertThat(cache.get("test")).isEqualTo("testLoad-2");
+    } finally {
+      refreshExecutor.shutdown();
+      refreshExecutor.awaitTermination(Duration.ofMinutes(1));
+    }
   }
 
   static <T> Callable<T> throwing(final Exception exception) {

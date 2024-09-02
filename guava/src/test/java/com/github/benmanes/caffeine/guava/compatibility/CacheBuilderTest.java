@@ -547,6 +547,8 @@ public class CacheBuilderTest extends TestCase {
     // notification.
     assertEquals(expectedKeys, Sets.union(cache.asMap().keySet(), removalNotifications.keySet()));
     assertTrue(Collections.disjoint(cache.asMap().keySet(), removalNotifications.keySet()));
+    threadPool.shutdown();
+    threadPool.awaitTermination(300, SECONDS);
   }
 
   /**

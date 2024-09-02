@@ -25,6 +25,7 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
+            api.deps.dev:443
             api.github.com:443
             api.osv.dev:443
             api.securityscorecards.dev:443

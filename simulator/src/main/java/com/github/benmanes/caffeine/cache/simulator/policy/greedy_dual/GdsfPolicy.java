@@ -210,7 +210,7 @@ public final class GdsfPolicy implements Policy {
         return false;
       }
       var node = (Node) o;
-      return (key == node.key) && (priority == node.priority);
+      return compareTo(node) == 0;
     }
 
     @Override

@@ -15,7 +15,11 @@
 package com.github.benmanes.caffeine.guava.compatibility;
 
 import static java.util.Arrays.asList;
-import junit.framework.TestCase;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
@@ -23,6 +27,9 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheStats;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.UncheckedExecutionException;
+
+import junit.framework.TestCase;
 
 /**
  * @author Charles Fry
@@ -155,4 +162,55 @@ public class CacheManualTest extends TestCase {
     assertEquals(6, stats.hitCount());
   }
 
+  public void testLoadDifferentKeyInLoader() throws ExecutionException {
+    Cache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
+    String key1 = "key1";
+    String key2 = "key2";
+
+    // loads a different key, should work
+    assertEquals(key2, cache.get(key1, () -> cache.get(key2, () -> key2)));
+  }
+
+  public void testRecursiveLoad() throws InterruptedException {
+    Cache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
+    String key = "key";
+
+    // recursive load, this should fail
+    Callable<String> loader = () -> cache.get(key, () -> key);
+    testLoadThrows(key, cache, loader);
+  }
+
+  public void testRecursiveLoadWithProxy() throws InterruptedException {
+    String key = "key";
+    String otherKey = "otherKey";
+    Cache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
+
+    // recursive load (same as the initial one), this should fail
+    Callable<String> loader = () -> cache.get(key, () -> key);
+    // loads another key, is ok
+    Callable<String> proxyLoader = () -> cache.get(otherKey, loader);
+    testLoadThrows(key, cache, proxyLoader);
+  }
+
+  private void testLoadThrows(String key, Cache<String, String> cache, Callable<String> loader)
+      throws InterruptedException {
+    CountDownLatch doneSignal = new CountDownLatch(1);
+    Thread thread = new Thread(() -> {
+      try {
+        cache.get(key, loader);
+      } catch (UncheckedExecutionException | ExecutionException e) {
+        doneSignal.countDown();
+      }
+    });
+    thread.start();
+
+    boolean done = doneSignal.await(1, TimeUnit.SECONDS);
+    if (!done) {
+      StringBuilder builder = new StringBuilder();
+      for (StackTraceElement trace : thread.getStackTrace()) {
+        builder.append("\tat ").append(trace).append('\n');
+      }
+      fail(builder.toString());
+    }
+  }
 }
