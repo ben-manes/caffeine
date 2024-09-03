@@ -1,4 +1,5 @@
 plugins {
+  eclipse
   `java-library`
 }
 
@@ -13,4 +14,8 @@ dependencies {
 
 tasks.named<Jar>("sourcesJar").configure {
   dependsOn(tasks.compileJava)
+}
+
+eclipse {
+  synchronizationTasks(tasks.compileJava)
 }

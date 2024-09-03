@@ -141,11 +141,14 @@ tasks.named<CheckForbiddenApis>("forbiddenApisTest").configure {
     "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
 }
 
-eclipse.classpath.file.whenMerged {
-  if (this is Classpath) {
-    val regex = ".*cache-tests.*-tests.jar".toRegex()
-    entries.filterIsInstance<Library>()
-      .filter { regex.matches(it.path) }
-      .forEach { it.sourcePath = fileReference(file(jcacheTckSources.asPath)) }
+eclipse {
+  classpath.file.whenMerged {
+    if (this is Classpath) {
+      val regex = ".*cache-tests.*-tests.jar".toRegex()
+      entries.filterIsInstance<Library>()
+        .filter { regex.matches(it.path) }
+        .forEach { it.sourcePath = fileReference(file(jcacheTckSources.asPath)) }
+    }
   }
+  synchronizationTasks(testResourcesJar)
 }

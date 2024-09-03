@@ -291,17 +291,20 @@ for (scenario in Scenario.all()) {
   }
 }
 
-eclipse.classpath {
-  plusConfigurations.add(configurations["javaPoetCompileClasspath"])
+eclipse {
+  classpath {
+    plusConfigurations.add(configurations["javaPoetCompileClasspath"])
 
-  file.whenMerged {
-    if (this is EclipseClasspath) {
-      val regex = ".*collections4.*-tests.jar".toRegex()
-      entries.filterIsInstance<Library>()
-        .filter { regex.matches(it.path) }
-        .forEach { it.sourcePath = fileReference(file(collections4Sources.asPath)) }
+    file.whenMerged {
+      if (this is EclipseClasspath) {
+        val regex = ".*collections4.*-tests.jar".toRegex()
+        entries.filterIsInstance<Library>()
+          .filter { regex.matches(it.path) }
+          .forEach { it.sourcePath = fileReference(file(collections4Sources.asPath)) }
+      }
     }
   }
+  synchronizationTasks(generateLocalCaches, generateNodes)
 }
 
 idea.module {

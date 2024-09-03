@@ -7,6 +7,7 @@ plugins {
 
 val eclipsePreferences by tasks.registering {
   description = "Generates the Eclipse preferences files."
+  incompatibleWithConfigurationCache()
   doFirst {
     addPreferences("org.eclipse.core.resources.prefs", mapOf(
       "encoding/<project>" to "UTF-8"))
@@ -41,6 +42,7 @@ fun addPreferences(path: String, preferences: Map<String, String>) {
   val settings = file(".settings/$path")
   if (!settings.exists()) {
     settings.parentFile.mkdirs()
+    settings.createNewFile()
   }
   val updates = preferences + ("eclipse.preferences.version" to "1")
   val text = settings.readLines()
