@@ -12,7 +12,8 @@ val eclipsePreferences by tasks.registering {
     addPreferences("org.eclipse.core.resources.prefs", mapOf(
       "encoding/<project>" to "UTF-8"))
     addPreferences("org.eclipse.jdt.core.prefs", mapOf(
-      "org.eclipse.jdt.core.compiler.problem.unusedWarningToken" to "ignore"))
+      "org.eclipse.jdt.core.compiler.problem.unusedWarningToken" to "ignore",
+      "org.eclipse.jdt.core.compiler.problem.unhandledWarningToken" to "ignore"))
   }
 }
 
