@@ -54,7 +54,7 @@ dependencies {
   }
 }
 
-tasks.withType<DependencyUpdatesTask> {
+tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   checkBuildEnvironmentConstraints = true
   checkConstraints = true
   resolutionStrategy {
