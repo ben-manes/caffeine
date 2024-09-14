@@ -27,6 +27,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.adapt_size.AdaptSizeT
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.penalties.AddressPenaltiesTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.baleen.BaleenTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cachelib.CachelibTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.camelab.CamelabTraceReader;
@@ -41,6 +42,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lrb.LrbTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.enterprise.EnterpriseTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.keyvalue.ObjectStoreTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.K5cloudTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentBlockTraceReader;
@@ -69,6 +71,7 @@ public enum TraceFormat {
   ADDRESS_PENALTIES(AddressPenaltiesTraceReader::new),
   ADAPT_SIZE(AdaptSizeTraceReader::new),
   ARC(ArcTraceReader::new),
+  BALEEN(BaleenTraceReader::new),
   CACHE2K(Cache2kTraceReader::new),
   CACHELIB(CachelibTraceReader::new),
   CAMELAB(CamelabTraceReader::new),
@@ -83,6 +86,7 @@ public enum TraceFormat {
   OUTBRAIN(OutbrainTraceReader::new),
   SCARAB(ScarabTraceReader::new),
   SNIA_CAMBRIDGE(CambridgeTraceReader::new),
+  SNIA_ENTERPRISE(EnterpriseTraceReader::new),
   SNIA_K5CLOUD(K5cloudTraceReader::new),
   SNIA_OBJECT_STORE(ObjectStoreTraceReader::new),
   SNIA_SYSTOR(SystorTraceReader::new),
