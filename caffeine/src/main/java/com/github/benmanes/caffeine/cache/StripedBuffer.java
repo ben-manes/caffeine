@@ -29,6 +29,8 @@ import java.util.function.Consumer;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A base class providing the mechanics for supporting dynamic striping of bounded buffers. This
  * implementation is an adaption of the numeric 64-bit <i>java.util.concurrent.atomic.Striped64</i>
@@ -115,6 +117,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   protected abstract Buffer<E> create(E e);
 
   @Override
+  @SuppressWarnings("Varifier")
   public int offer(E e) {
     @SuppressWarnings("deprecation")
     long z = mix64(Thread.currentThread().getId());
@@ -124,7 +127,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     int mask;
     int result;
     Buffer<E> buffer;
-    boolean uncontended = true;
+    @Var boolean uncontended = true;
     Buffer<E>[] buffers = table;
     if ((buffers == null)
         || ((mask = buffers.length - 1) < 0)
@@ -146,9 +149,9 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    * @param wasUncontended false if CAS failed before this call
    * @return {@code Buffer.SUCCESS}, {@code Buffer.FAILED}, or {@code Buffer.FULL}
    */
-  final int expandOrRetry(E e, int h, int increment, boolean wasUncontended) {
-    int result = Buffer.FAILED;
-    boolean collide = false; // True if last slot nonempty
+  final int expandOrRetry(E e, @Var int h, int increment, @Var boolean wasUncontended) {
+    @Var int result = Buffer.FAILED;
+    @Var boolean collide = false; // True if last slot nonempty
     for (int attempt = 0; attempt < ATTEMPTS; attempt++) {
       Buffer<E>[] buffers;
       Buffer<E> buffer;
@@ -156,10 +159,11 @@ abstract class StripedBuffer<E> implements Buffer<E> {
       if (((buffers = table) != null) && ((n = buffers.length) > 0)) {
         if ((buffer = buffers[(n - 1) & h]) == null) {
           if ((tableBusy == 0) && casTableBusy()) { // Try to attach new Buffer
-            boolean created = false;
+            @Var boolean created = false;
             try { // Recheck under lock
               Buffer<E>[] rs;
-              int mask, j;
+              int mask;
+              int j;
               if (((rs = table) != null) && ((mask = rs.length) > 0)
                   && (rs[j = (mask - 1) & h] == null)) {
                 rs[j] = create(e);
@@ -196,7 +200,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
         }
         h += increment;
       } else if ((tableBusy == 0) && (table == buffers) && casTableBusy()) {
-        boolean init = false;
+        @Var boolean init = false;
         try { // Initialize table
           if (table == buffers) {
             @SuppressWarnings({"rawtypes", "unchecked"})
@@ -236,7 +240,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     if (buffers == null) {
       return 0;
     }
-    long reads = 0;
+    @Var long reads = 0;
     for (Buffer<E> buffer : buffers) {
       if (buffer != null) {
         reads += buffer.reads();
@@ -251,7 +255,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     if (buffers == null) {
       return 0;
     }
-    long writes = 0;
+    @Var long writes = 0;
     for (Buffer<E> buffer : buffers) {
       if (buffer != null) {
         writes += buffer.writes();
@@ -261,7 +265,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   }
 
   /** Computes Stafford variant 13 of 64-bit mix function. */
-  static long mix64(long z) {
+  static long mix64(@Var long z) {
     z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9L;
     z = (z ^ (z >>> 27)) * 0x94d049bb133111ebL;
     return z ^ (z >>> 31);

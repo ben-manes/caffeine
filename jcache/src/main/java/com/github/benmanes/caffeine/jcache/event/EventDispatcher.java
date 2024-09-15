@@ -37,6 +37,8 @@ import javax.cache.event.EventType;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A dispatcher that publishes cache events to listeners for asynchronous execution.
  * <p>
@@ -93,11 +95,10 @@ public final class EventDispatcher<K, V> {
     var listener = new EventTypeAwareListener<K, V>(
         configuration.getCacheEntryListenerFactory().create());
 
-    CacheEntryEventFilter<K, V> filter = event -> true;
-    if (configuration.getCacheEntryEventFilterFactory() != null) {
-      filter = new EventTypeFilter<>(listener,
-          configuration.getCacheEntryEventFilterFactory().create());
-    }
+    var factory = configuration.getCacheEntryEventFilterFactory();
+    CacheEntryEventFilter<K, V> filter = (factory == null)
+        ? event -> true
+        : new EventTypeFilter<>(listener, factory.create());
 
     var registration = new Registration<>(configuration, filter, listener);
     dispatchQueues.putIfAbsent(registration, new ConcurrentHashMap<>());
@@ -122,8 +123,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishCreated(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.CREATED, key, /* hasOldValue */ false,
-        /* oldValue */ null, /* newValue */ value, /* quiet */ false);
+    publish(cache, EventType.CREATED, key, /* hasOldValue= */ false,
+        /* oldValue= */ null, /* newValue= */ value, /* quiet= */ false);
   }
 
   /**
@@ -135,8 +136,8 @@ public final class EventDispatcher<K, V> {
    * @param newValue the entry's new value
    */
   public void publishUpdated(Cache<K, V> cache, K key, V oldValue, V newValue) {
-    publish(cache, EventType.UPDATED, key, /* hasOldValue */ true,
-        oldValue, newValue, /* quiet */ false);
+    publish(cache, EventType.UPDATED, key, /* hasOldValue= */ true,
+        oldValue, newValue, /* quiet= */ false);
   }
 
   /**
@@ -147,8 +148,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemoved(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.REMOVED, key, /* hasOldValue */ true,
-        /* oldValue */ value, /* newValue */ value, /* quiet */ false);
+    publish(cache, EventType.REMOVED, key, /* hasOldValue= */ true,
+        /* oldValue= */ value, /* newValue= */ value, /* quiet= */ false);
   }
 
   /**
@@ -160,8 +161,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemovedQuietly(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.REMOVED, key, /* hasOldValue */ true,
-        /* oldValue */ value, /* newValue */ value, /* quiet */ true);
+    publish(cache, EventType.REMOVED, key, /* hasOldValue= */ true,
+        /* oldValue= */ value, /* newValue= */ value, /* quiet= */ true);
   }
 
   /**
@@ -172,8 +173,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpired(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.EXPIRED, key, /* hasOldValue */ true,
-        /* oldValue */ value, /* newValue */ value, /* quiet */ false);
+    publish(cache, EventType.EXPIRED, key, /* hasOldValue= */ true,
+        /* oldValue= */ value, /* newValue= */ value, /* quiet= */ false);
   }
 
   /**
@@ -185,8 +186,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpiredQuietly(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.EXPIRED, key, /* hasOldValue */ true,
-        /* oldValue */ value, /* newValue */ value, /* quiet */ true);
+    publish(cache, EventType.EXPIRED, key, /* hasOldValue= */ true,
+        /* oldValue= */ value, /* newValue= */ value, /* quiet= */ true);
   }
 
   /**
@@ -223,7 +224,7 @@ public final class EventDispatcher<K, V> {
       return;
     }
 
-    JCacheEntryEvent<K, V> event = null;
+    @Var JCacheEntryEvent<K, V> event = null;
     for (var entry : dispatchQueues.entrySet()) {
       var registration = entry.getKey();
       if (!registration.getCacheEntryListener().isCompatible(eventType)) {

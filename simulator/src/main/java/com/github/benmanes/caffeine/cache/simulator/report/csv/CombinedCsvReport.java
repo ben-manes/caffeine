@@ -21,11 +21,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.text.NumberFormat;
-import java.util.SortedMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
 import com.univocity.parsers.csv.CsvWriter;
@@ -38,12 +40,14 @@ import com.univocity.parsers.csv.CsvWriterSettings;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CombinedCsvReport implements Runnable {
-  private final SortedMap<Long, Path> inputFiles;
+  private static final String POLICY_KEY = "Policy";
+
+  private final ImmutableSortedMap<Long, Path> inputFiles;
   private final Path outputFile;
   private final String metric;
 
-  public CombinedCsvReport(SortedMap<Long, Path> inputFiles, String metric, Path outputFile) {
-    this.inputFiles = requireNonNull(inputFiles);
+  public CombinedCsvReport(ImmutableMap<Long, Path> inputFiles, String metric, Path outputFile) {
+    this.inputFiles = ImmutableSortedMap.copyOf(inputFiles);
     this.outputFile = requireNonNull(outputFile);
     this.metric = metric.replace('_', ' ');
   }
@@ -53,40 +57,41 @@ public final class CombinedCsvReport implements Runnable {
     writeReport(tabulate());
   }
 
-  /** Returns the combined results for the policy, maximum size, and the metric being compared. */
-  private Table</* policy */ String, /* size */ Long, /* metric */ String> tabulate() {
-    Table<String, Long, String> results = HashBasedTable.create();
+  /** Returns the results for the (policy, maximumSize) to the metric value being compared. */
+  private Map<Label, String> tabulate() {
+    var results = new TreeMap<Label, String>();
     inputFiles.forEach((maximumSize, path) -> {
       var records = newCsvParser().parseAllRecords(path.toFile());
       for (var record : records) {
-        results.put(record.getString("Policy"), maximumSize, record.getValue(metric, ""));
+        var label = new Label(record.getString(POLICY_KEY), maximumSize);
+        results.put(label, record.getValue(metric, ""));
       }
     });
     return results;
   }
 
   /** Writes a combined report with the headers: policy, maximumSize, and the metric. */
-  private void writeReport(Table<String, Long, String> table) {
+  private void writeReport(Map<Label, String> table) {
     var policies = newCsvParser()
         .parseAllRecords(inputFiles.values().iterator().next().toFile()).stream()
-        .map(record -> record.getString("Policy"))
+        .map(record -> record.getString(POLICY_KEY))
         .collect(toImmutableList());
     var formatter = NumberFormat.getInstance(US);
     var headers = Stream
-        .concat(Stream.of("Policy"), inputFiles.keySet().stream().map(formatter::format))
+        .concat(Stream.of(POLICY_KEY), inputFiles.keySet().stream().map(formatter::format))
         .toArray(String[]::new);
     var writer = newWriter(headers);
     for (var policy : policies) {
-      writer.addValue("Policy", policy);
+      writer.addValue(POLICY_KEY, policy);
       for (Long size : inputFiles.keySet()) {
-        writer.addValue(formatter.format(size), table.get(policy, size));
+        writer.addValue(formatter.format(size), table.get(new Label(policy, size)));
       }
       writer.writeValuesToRow();
     }
     writer.close();
   }
 
-  private CsvParser newCsvParser() {
+  private static CsvParser newCsvParser() {
     var settings = new CsvParserSettings();
     settings.setHeaderExtractionEnabled(true);
     return new CsvParser(settings);
@@ -97,5 +102,28 @@ public final class CombinedCsvReport implements Runnable {
     settings.setHeaderWritingEnabled(true);
     settings.setHeaders(headers);
     return new CsvWriter(outputFile.toFile(), settings);
+  }
+
+  private static final class Label implements Comparable<Label> {
+    final String policy;
+    final long size;
+
+    Label(String policy, long size) {
+      this.policy = requireNonNull(policy);
+      this.size = size;
+    }
+    @Override
+    public boolean equals(Object o) {
+      return (o instanceof Label) && (compareTo((Label) o) == 0);
+    }
+    @Override
+    public int hashCode() {
+      return Objects.hash(policy, size);
+    }
+    @Override
+    public int compareTo(Label label) {
+      int ordering = policy.compareTo(label.policy);
+      return (ordering == 0) ? Long.compare(size, label.size) : ordering;
+    }
   }
 }

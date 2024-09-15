@@ -75,7 +75,7 @@ public final class OSGiTest {
   }
 
   @Test
-  public void testOSGIDS() {
+  public void declarativeService() {
     assertNotNull("Should have found a registered CachingProvider.", cachingProvider);
     assertEquals(CaffeineCachingProvider.class, cachingProvider.getClass());
   }

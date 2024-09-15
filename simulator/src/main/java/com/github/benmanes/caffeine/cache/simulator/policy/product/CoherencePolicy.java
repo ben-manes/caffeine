@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.CaseFormat;
+import com.google.errorprone.annotations.Var;
 import com.tangosol.net.cache.ConfigurableCacheMap.UnitCalculator;
 import com.tangosol.net.cache.LocalCache;
 import com.tangosol.util.MapEvent;
@@ -50,8 +51,8 @@ public final class CoherencePolicy implements Policy {
     policyStats = new PolicyStats(name() + " (%s)", policy);
 
     // auto scale units to integer range (from LocalScheme)
-    int factor = 1;
-    long maximum = settings.maximumSize();
+    @Var int factor = 1;
+    @Var long maximum = settings.maximumSize();
     while (maximum >= Integer.MAX_VALUE) {
       maximum /= 1024;
       factor *= 1024;

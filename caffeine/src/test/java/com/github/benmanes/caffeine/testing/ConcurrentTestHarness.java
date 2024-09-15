@@ -77,13 +77,14 @@ public final class ConcurrentTestHarness {
    * @return the result of each task and the full execution time, in nanoseconds
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("InterruptedExceptionSwallowed")
   public static <T> TestResult<T> timeTasks(int nThreads, Callable<T> task) {
     var startGate = new CountDownLatch(1);
     var endGate = new CountDownLatch(nThreads);
     var results = new AtomicReferenceArray<T>(nThreads);
 
     for (int i = 0; i < nThreads; i++) {
-      final int index = i;
+      int index = i;
       executor.execute(() -> {
         try {
           startGate.await();

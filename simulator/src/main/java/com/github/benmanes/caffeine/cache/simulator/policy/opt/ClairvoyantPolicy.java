@@ -52,7 +52,7 @@ public final class ClairvoyantPolicy implements Policy {
   private int tick;
 
   public ClairvoyantPolicy(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     maximumSize = Math.toIntExact(settings.maximumSize());
     accessTimes = new Long2ObjectOpenHashMap<>();
     policyStats = new PolicyStats(name());
@@ -68,11 +68,8 @@ public final class ClairvoyantPolicy implements Policy {
 
     tick++;
     recorder.add(event);
-    IntPriorityQueue times = accessTimes.get(event.key());
-    if (times == null) {
-      times = new IntArrayFIFOQueue();
-      accessTimes.put(event.key(), times);
-    }
+
+    var times = accessTimes.computeIfAbsent(event.key(), key -> new IntArrayFIFOQueue());
     times.enqueue(tick);
   }
 

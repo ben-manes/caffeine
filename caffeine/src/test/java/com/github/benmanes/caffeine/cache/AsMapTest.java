@@ -1032,9 +1032,8 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void computeIfAbsent_error(Map<Int, Int> map, CacheContext context) {
-    try {
-      map.computeIfAbsent(context.absentKey(), key -> { throw new ExpectedError(); });
-    } catch (ExpectedError expected) {}
+    assertThrows(ExpectedError.class, () ->
+        map.computeIfAbsent(context.absentKey(), key -> { throw new ExpectedError(); }));
     assertThat(map).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
     assertThat(map.computeIfAbsent(context.absentKey(), key -> key)).isEqualTo(context.absentKey());
@@ -1167,9 +1166,8 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void computeIfPresent_error(Map<Int, Int> map, CacheContext context) {
-    try {
-      map.computeIfPresent(context.firstKey(), (key, value) -> { throw new ExpectedError(); });
-    } catch (ExpectedError expected) {}
+    assertThrows(ExpectedError.class, () ->
+        map.computeIfPresent(context.firstKey(), (key, value) -> { throw new ExpectedError(); }));
     assertThat(map).isEqualTo(context.original());
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
     assertThat(map.computeIfPresent(context.firstKey(), (k, v) -> k.negate()))
@@ -1533,10 +1531,9 @@ public final class AsMapTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void merge_error(Map<Int, Int> map, CacheContext context) {
-    try {
-      map.merge(context.firstKey(), context.original().get(context.firstKey()),
-          (oldValue, value) -> { throw new ExpectedError(); });
-    } catch (ExpectedError expected) {}
+    assertThrows(ExpectedError.class, () ->
+        map.merge(context.firstKey(), context.original().get(context.firstKey()),
+            (oldValue, value) -> { throw new ExpectedError(); }));
     assertThat(map).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
   }

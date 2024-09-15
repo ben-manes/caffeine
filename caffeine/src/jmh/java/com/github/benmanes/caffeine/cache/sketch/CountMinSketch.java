@@ -82,8 +82,7 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
   @Override
-  @NonNegative
-  public int frequency(E e) {
+  public @NonNegative int frequency(E e) {
     int hash = spread(e.hashCode());
     int start = (hash & 3) << 2;
     int frequency = Integer.MAX_VALUE;

@@ -104,8 +104,8 @@ public interface HillClimber {
         case HOLD: return "0";
         case INCREASE_WINDOW: return "+" + amount;
         case DECREASE_WINDOW: return "-" + amount;
-        default: throw new IllegalStateException();
       }
+      throw new IllegalStateException();
     }
   }
 }

@@ -42,7 +42,7 @@ public final class CaffeinePolicy implements Policy {
 
   public CaffeinePolicy(Config config, Set<Characteristic> characteristics) {
     policyStats = new PolicyStats(name());
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     Caffeine<Long, AccessEvent> builder = Caffeine.newBuilder()
         .removalListener((Long key, AccessEvent value, RemovalCause cause) ->
             policyStats.recordEviction())

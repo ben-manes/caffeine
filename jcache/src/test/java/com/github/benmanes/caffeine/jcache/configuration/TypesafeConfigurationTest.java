@@ -189,7 +189,7 @@ public final class TypesafeConfigurationTest {
 
   @Test
   public void cacheNames() {
-    assertThat(TypesafeConfigurator.cacheNames(ConfigFactory.empty())).isEmpty();;
+    assertThat(TypesafeConfigurator.cacheNames(ConfigFactory.empty())).isEmpty();
 
     var names = TypesafeConfigurator.cacheNames(ConfigFactory.load());
     assertThat(names).containsExactly("default", "listeners", "osgi-cache",

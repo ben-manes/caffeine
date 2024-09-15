@@ -220,7 +220,7 @@ public final class ReserializableSubject extends Subject {
     }
   }
 
-  private Weigher<?, ?> unwrapWeigher(Weigher<?, ?> weigher) {
+  private static Weigher<?, ?> unwrapWeigher(Weigher<?, ?> weigher) {
     for (;;) {
       if (weigher instanceof BoundedWeigher<?, ?>) {
         weigher = ((BoundedWeigher<?, ?>) weigher).delegate;
@@ -232,7 +232,7 @@ public final class ReserializableSubject extends Subject {
     }
   }
 
-  private Expiry<?, ?> unwrapExpiry(Expiry<?, ?> expiry) {
+  private static Expiry<?, ?> unwrapExpiry(Expiry<?, ?> expiry) {
     for (;;) {
       if (expiry instanceof AsyncExpiry<?, ?>) {
         expiry = ((AsyncExpiry<?, ?>) expiry).delegate;

@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class MapSubject extends com.google.common.truth.MapSubject {
+  @SuppressWarnings("ImmutableMemberCollection")
   private final Map<?, ?> actual;
 
   public MapSubject(FailureMetadata metadata, Map<?, ?> subject) {

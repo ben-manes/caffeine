@@ -192,8 +192,8 @@ public class CacheManualTest extends TestCase {
     testLoadThrows(key, cache, proxyLoader);
   }
 
-  private void testLoadThrows(String key, Cache<String, String> cache, Callable<String> loader)
-      throws InterruptedException {
+  private static void testLoadThrows(String key,
+      Cache<String, String> cache, Callable<String> loader) throws InterruptedException {
     CountDownLatch doneSignal = new CountDownLatch(1);
     Thread thread = new Thread(() -> {
       try {

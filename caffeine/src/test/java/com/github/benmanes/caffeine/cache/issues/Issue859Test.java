@@ -56,7 +56,7 @@ public final class Issue859Test {
     }
   }
 
-  private TestRun runTest() {
+  private static TestRun runTest() {
     var latch = new CountDownLatch(NUMBER_OF_KEYS);
     Cache<Integer, Boolean> cache = Caffeine.newBuilder()
         .removalListener((key, value, cause) -> latch.countDown())

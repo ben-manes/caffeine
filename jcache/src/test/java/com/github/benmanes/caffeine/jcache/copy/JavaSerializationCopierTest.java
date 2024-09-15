@@ -123,14 +123,14 @@ public final class JavaSerializationCopierTest {
   @Test(dataProvider = "copier")
   @SuppressWarnings({"JavaUtilDate", "JdkObsolete", "UndefinedEquals"})
   public void deepCopy_date(Copier copier) {
-    Date date = new Date();
+    var date = new Date();
     assertThat(copy(copier, date)).isEqualTo(date);
   }
 
   @Test(dataProvider = "copier")
   @SuppressWarnings({"JavaUtilDate", "JdkObsolete"})
   public void deepCopy_calendar(Copier copier) {
-    Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), US);
+    var calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), US);
     calendar.setTime(new Date());
     assertThat(copy(copier, calendar)).isEqualTo(calendar);
   }
@@ -153,7 +153,7 @@ public final class JavaSerializationCopierTest {
     assertThat(copy(copier, array)).asList().containsExactlyElementsIn(array).inOrder();
   }
 
-  private <T> T copy(Copier copier, T object) {
+  private static <T> T copy(Copier copier, T object) {
     return copier.copy(object, Thread.currentThread().getContextClassLoader());
   }
 

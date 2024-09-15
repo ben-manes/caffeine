@@ -98,7 +98,7 @@ public final class NodeFactoryGenerator {
 
   private void writeJavaFile() throws IOException {
     String header = Resources.toString(Resources.getResource("license.txt"), UTF_8).trim();
-    ZoneId timeZone = ZoneId.of("America/Los_Angeles");
+    var timeZone = ZoneId.of("America/Los_Angeles");
     for (TypeSpec node : nodeTypes) {
       JavaFile.builder(getClass().getPackage().getName(), node)
           .addFileComment(header, Year.now(timeZone))
@@ -185,7 +185,7 @@ public final class NodeFactoryGenerator {
     return context.build();
   }
 
-  private Set<List<Object>> combinations() {
+  private static Set<List<Object>> combinations() {
     var keyStrengths = Set.of(Feature.STRONG_KEYS, Feature.WEAK_KEYS);
     var valueStrengths = Set.of(Feature.STRONG_VALUES, Feature.WEAK_VALUES, Feature.SOFT_VALUES);
     var expireAfterAccess = Set.of(false, true);

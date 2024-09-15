@@ -18,15 +18,17 @@ import static com.github.benmanes.caffeine.guava.compatibility.CacheTesting.chec
 import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.constantLoader;
 import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.exceptionLoader;
 import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.queuingRemovalListener;
+import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertThrows;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.QueuingRemovalListener;
+import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalCause;
 import com.google.common.cache.RemovalNotification;
-import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
@@ -112,28 +114,21 @@ public class NullCacheTest extends TestCase {
         .removalListener(listener),
         constantLoader(null));
 
-    try {
-      cache.getUnchecked(new Object());
-      fail();
-    } catch (InvalidCacheLoadException e) { /* expected */}
+    assertThrows(InvalidCacheLoadException.class, () -> cache.getUnchecked(new Object()));
 
     assertTrue(listener.isEmpty());
     checkEmpty(cache);
   }
 
   public void testGet_runtimeException() {
-    final RuntimeException e = new RuntimeException();
+    RuntimeException e = new RuntimeException();
     LoadingCache<Object, Object> map = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumSize(0)
         .removalListener(listener),
         exceptionLoader(e));
 
-    try {
-      map.getUnchecked(new Object());
-      fail();
-    } catch (UncheckedExecutionException uee) {
-      assertSame(e, uee.getCause());
-    }
+    var uee = assertThrows(UncheckedExecutionException.class, () -> map.getUnchecked(new Object()));
+    assertThat(uee).hasCauseThat().isSameInstanceAs(e);
     assertTrue(listener.isEmpty());
     checkEmpty(map);
   }

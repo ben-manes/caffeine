@@ -67,7 +67,7 @@ public class AccessEvent {
     } else if (!(o instanceof AccessEvent)) {
       return false;
     }
-    AccessEvent event = (AccessEvent) o;
+    var event = (AccessEvent) o;
     return (key() == event.key())
         && (weight() == event.weight())
         && (hitPenalty() == event.hitPenalty())

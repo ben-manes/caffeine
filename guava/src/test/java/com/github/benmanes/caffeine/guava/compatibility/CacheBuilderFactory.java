@@ -129,7 +129,7 @@ class CacheBuilderFactory {
    * Optionals, calls Sets.cartesianProduct with those, then transforms the result to unwrap
    * the Optionals.
    */
-  private Iterable<List<Object>> buildCartesianProduct(Set<?>... sets) {
+  private static Iterable<List<Object>> buildCartesianProduct(Set<?>... sets) {
     List<Set<Optional<?>>> optionalSets = Lists.newArrayListWithExpectedSize(sets.length);
     for (Set<?> set : sets) {
       Set<Optional<?>> optionalSet =
@@ -145,7 +145,7 @@ class CacheBuilderFactory {
         });
   }
 
-  private Caffeine<Object, Object> createCacheBuilder(
+  private static Caffeine<Object, Object> createCacheBuilder(
       Integer concurrencyLevel, Integer initialCapacity, Integer maximumSize,
       DurationSpec expireAfterWrite, DurationSpec expireAfterAccess, DurationSpec refresh,
       Strength keyStrength, Strength valueStrength) {

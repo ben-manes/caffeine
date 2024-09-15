@@ -1298,7 +1298,7 @@ public final class ReferenceTest {
     };
   }
 
-  private List<Map.Entry<Int, Int>> getExpectedAfterGc(
+  private static List<Map.Entry<Int, Int>> getExpectedAfterGc(
       CacheContext context, Map<Int, Int> original) {
     var expected = new ArrayList<Map.Entry<Int, Int>>();
     original.forEach((key, value) -> {

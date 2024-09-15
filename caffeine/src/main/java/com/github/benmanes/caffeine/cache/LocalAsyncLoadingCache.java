@@ -35,6 +35,8 @@ import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * This class provides a skeletal implementation of the {@link AsyncLoadingCache} interface to
  * minimize the effort required to implement a {@link LocalCache}.
@@ -106,7 +108,7 @@ abstract class LocalAsyncLoadingCache<K, V>
   /** Returns whether the supplied cache loader has bulk load functionality. */
   boolean canBulkLoad(AsyncCacheLoader<?, ?> loader) {
     try {
-      Class<?> defaultLoaderClass = AsyncCacheLoader.class;
+      @Var Class<?> defaultLoaderClass = AsyncCacheLoader.class;
       if (loader instanceof CacheLoader<?, ?>) {
         defaultLoaderClass = CacheLoader.class;
 
@@ -189,7 +191,7 @@ abstract class LocalAsyncLoadingCache<K, V>
 
       Object keyReference = asyncCache.cache().referenceKey(key);
       for (;;) {
-        var future = tryOptimisticRefresh(key, keyReference);
+        @Var var future = tryOptimisticRefresh(key, keyReference);
         if (future == null) {
           future = tryComputeRefresh(key, keyReference);
         }
@@ -230,7 +232,7 @@ abstract class LocalAsyncLoadingCache<K, V>
         if (oldValueFuture != null) {
           asyncCache.cache().remove(key, oldValueFuture);
         }
-        var future = asyncCache.get(key, asyncCache.mappingFunction, /* recordStats */ false);
+        var future = asyncCache.get(key, asyncCache.mappingFunction, /* recordStats= */ false);
         @SuppressWarnings("unchecked")
         var prior = (CompletableFuture<V>) asyncCache.cache()
             .refreshes().putIfAbsent(keyReference, future);
@@ -301,7 +303,7 @@ abstract class LocalAsyncLoadingCache<K, V>
               var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
               if (successful && (currentValue == oldValueFuture[0])) {
                 if (currentValue == null) {
-                  // If the entry is absent then discard the refresh and maybe notifying the listener
+                  // If absent then discard the refresh and maybe notifying the listener
                   discard[0] = (newValue != null);
                   return null;
                 } else if ((currentValue == newValue) || (currentValue == castedFuture)) {
@@ -316,7 +318,7 @@ abstract class LocalAsyncLoadingCache<K, V>
               // Otherwise, a write invalidated the refresh so discard it and notify the listener
               discard[0] = true;
               return currentValue;
-            }, asyncCache.cache().expiry(), /* recordLoad */ false, /* recordLoadFailure */ true);
+            }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
 
             if (discard[0] && (newValue != null)) {
               var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;

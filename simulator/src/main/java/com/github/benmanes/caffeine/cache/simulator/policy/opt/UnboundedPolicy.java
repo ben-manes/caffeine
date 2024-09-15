@@ -43,7 +43,7 @@ public final class UnboundedPolicy implements Policy {
   private final LongSet data;
 
   public UnboundedPolicy(Config config, Set<Characteristic> characteristics) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     int initialSize = characteristics.contains(WEIGHTED)
         ? LongOpenHashSet.DEFAULT_INITIAL_SIZE
         : Ints.saturatedCast(settings.maximumSize());

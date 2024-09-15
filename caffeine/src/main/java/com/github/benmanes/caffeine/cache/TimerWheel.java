@@ -25,6 +25,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A hierarchical timer wheel to add, remove, and fire expiration events in amortized O(1) time. The
  * expiration events are deferred until the timer is advanced, which is performed as part of the
@@ -86,8 +88,8 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @param currentTimeNanos the current time, in nanoseconds
    */
   @SuppressWarnings("PMD.UnusedAssignment")
-  public void advance(BoundedLocalCache<K, V> cache, long currentTimeNanos) {
-    long previousTimeNanos = nanos;
+  public void advance(BoundedLocalCache<K, V> cache, @Var long currentTimeNanos) {
+    @Var long previousTimeNanos = nanos;
     nanos = currentTimeNanos;
 
     // If wrapping then temporarily shift the clock for a positive comparison. We assume that the
@@ -122,6 +124,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @param previousTicks the previous number of ticks
    * @param delta the number of additional ticks
    */
+  @SuppressWarnings("Varifier")
   void expire(BoundedLocalCache<K, V> cache, int index, long previousTicks, long delta) {
     Node<K, V>[] timerWheel = wheel[index];
     int mask = timerWheel.length - 1;
@@ -135,7 +138,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
     for (int i = start; i < end; i++) {
       Node<K, V> sentinel = timerWheel[i & mask];
       Node<K, V> prev = sentinel.getPreviousInVariableOrder();
-      Node<K, V> node = sentinel.getNextInVariableOrder();
+      @Var Node<K, V> node = sentinel.getNextInVariableOrder();
       sentinel.setPreviousInVariableOrder(sentinel);
       sentinel.setNextInVariableOrder(sentinel);
 
@@ -200,6 +203,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @param time the time when the event fires
    * @return the sentinel at the head of the bucket
    */
+  @SuppressWarnings("Varifier")
   Node<K, V> findBucket(long time) {
     long duration = time - nanos;
     int length = wheel.length - 1;
@@ -233,7 +237,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   }
 
   /** Returns the duration until the next bucket expires, or {@link Long#MAX_VALUE} if none. */
-  @SuppressWarnings("IntLongMath")
+  @SuppressWarnings({"IntLongMath", "Varifier"})
   public long getExpirationDelay() {
     for (int i = 0; i < SHIFT.length; i++) {
       Node<K, V>[] timerWheel = wheel[i];
@@ -250,7 +254,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
           continue;
         }
         long buckets = (j - start);
-        long delay = (buckets << SHIFT[i]) - (nanos & spanMask);
+        @Var long delay = (buckets << SHIFT[i]) - (nanos & spanMask);
         delay = (delay > 0) ? delay : SPANS[i];
 
         for (int k = i + 1; k < SHIFT.length; k++) {
@@ -269,6 +273,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    *
    * @param index the timing wheel being operated on
    */
+  @SuppressWarnings("Varifier")
   long peekAhead(int index) {
     long ticks = (nanos >>> SHIFT[index]);
     Node<K, V>[] timerWheel = wheel[index];
@@ -336,7 +341,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
     }
 
     @Nullable Node<K, V> computeNext() {
-      var node = (current == null) ? sentinel() : current;
+      @Var var node = (current == null) ? sentinel() : current;
       for (;;) {
         node = traverse(node);
         if (node != sentinel()) {
@@ -392,6 +397,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
       return wheel[wheelIndex][bucketIndex()];
     }
     int bucketIndex() {
+      @SuppressWarnings("Varifier")
       int ticks = (int) (nanos >>> SHIFT[wheelIndex]);
       int bucketMask = wheel[wheelIndex].length - 1;
       int bucketOffset = (ticks & bucketMask) + 1;
@@ -428,6 +434,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
       return node.getPreviousInVariableOrder();
     }
     int bucketIndex() {
+      @SuppressWarnings("Varifier")
       int ticks = (int) (nanos >>> SHIFT[wheelIndex]);
       int bucketMask = wheel[wheelIndex].length - 1;
       int bucketOffset = (ticks & bucketMask);

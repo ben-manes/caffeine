@@ -155,7 +155,7 @@ public enum CacheType {
   },
   LinkedHashMap_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new LinkedHashMapCache<>(maximumSize, /* accessOrder */ true);
+      return new LinkedHashMapCache<>(maximumSize, /* accessOrder= */ true);
     }
   },
   TCache_Lfu {

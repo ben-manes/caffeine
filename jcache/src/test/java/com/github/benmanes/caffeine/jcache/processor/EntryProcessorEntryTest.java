@@ -29,7 +29,8 @@ import org.testng.annotations.Test;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EntryProcessorEntryTest {
-  EntryProcessorEntry<Integer, Integer> entry = new EntryProcessorEntry<>(1, 2, Optional.empty());
+  final EntryProcessorEntry<Integer, Integer> entry =
+      new EntryProcessorEntry<>(1, 2, Optional.empty());
 
   @Test
   public void unwrap_fail() {

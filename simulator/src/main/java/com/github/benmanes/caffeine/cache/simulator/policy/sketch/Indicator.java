@@ -41,14 +41,13 @@ public final class Indicator {
   private long sample;
 
   public Indicator(Config config) {
+    var settings = new IndicatorSettings(config);
     this.sketch = new PeriodicResetCountMin4(
         ConfigFactory.parseString("maximum-size = 5000").withFallback(config));
-    IndicatorSettings settings = new IndicatorSettings(config);
-    this.sample = 0;
-    this.k = settings.k();
     this.ssSize = settings.ssSize();
     this.estSkew = new EstSkew();
     this.hinter = new Hinter();
+    this.k = settings.k();
   }
 
   public void record(long key) {
@@ -124,8 +123,8 @@ public final class Indicator {
     }
 
     public double estSkew(int k) {
-      SimpleRegression regression = new SimpleRegression();
       int[] idx = { 1 };
+      var regression = new SimpleRegression();
       getTopK(k).forEachOrdered(freq -> regression.addData(Math.log(idx[0]++), Math.log(freq)));
       return -regression.getSlope();
     }

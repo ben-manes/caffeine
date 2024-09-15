@@ -140,7 +140,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   }
 
   /** Validates the internal state of the cache. */
-  private void validate(ITestResult testResult) {
+  private static void validate(ITestResult testResult) {
     CacheContext context = Arrays.stream(testResult.getParameters())
         .filter(CacheContext.class::isInstance)
         .findFirst().map(CacheContext.class::cast)
@@ -157,7 +157,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   }
 
   /** Waits until the executor has completed all of the submitted work. */
-  private void awaitExecutor(CacheContext context) {
+  private static void awaitExecutor(CacheContext context) {
     if (context.executor() != null) {
       context.executor().resume();
 
@@ -192,7 +192,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   }
 
   /** Checks that the cache is in an valid state. */
-  private void checkCache(CacheContext context) {
+  private static void checkCache(CacheContext context) {
     if (context.cache != null) {
       assertThat(context.cache).isValid();
     } else if (context.asyncCache != null) {
@@ -257,14 +257,14 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     CacheContext.interner().clear();
   }
 
-  private void dedupTestName(ITestResult testResult, boolean briefParams) {
+  private static void dedupTestName(ITestResult testResult, boolean briefParams) {
     if ((testResult.getName() != null) && briefParams) {
       testResult.setTestName(simpleNames.get(testResult.getName(), Object::toString));
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void resetMocks(ITestResult testResult) {
+  private static void resetMocks(ITestResult testResult) {
     for (Object param : testResult.getParameters()) {
       if (param instanceof CacheContext) {
         var context = (CacheContext) param;
@@ -278,7 +278,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
   }
 
-  private void resetCache(ITestResult testResult) {
+  private static void resetCache(ITestResult testResult) {
     for (Object param : testResult.getParameters()) {
       if (param instanceof CacheContext) {
         var context = (CacheContext) param;
@@ -289,13 +289,13 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
   }
 
-  private void clearTestResults(ITestResult testResult) {
+  private static void clearTestResults(ITestResult testResult) {
     var result = (TestResult) testResult;
     result.setParameters(EMPTY_PARAMS);
     result.setContext(testngContext);
   }
 
-  private void stringifyParams(ITestResult testResult, boolean briefParams) {
+  private static void stringifyParams(ITestResult testResult, boolean briefParams) {
     Object[] params = testResult.getParameters();
     for (int i = 0; i < params.length; i++) {
       Object param = params[i];

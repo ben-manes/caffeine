@@ -47,8 +47,8 @@ public final class JCacheMaximumSizeTest extends AbstractJCacheTest {
     var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setMaximumSize(OptionalLong.of(MAXIMUM));
     var listenerConfiguration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
-        () -> listener, /* filterFactory */ null,
-        /* isOldValueRequired */ false, /* isSynchronous */ true);
+        () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
     configuration.addCacheEntryListenerConfiguration(listenerConfiguration);
     configuration.setExecutorFactory(MoreExecutors::directExecutor);
     return configuration;

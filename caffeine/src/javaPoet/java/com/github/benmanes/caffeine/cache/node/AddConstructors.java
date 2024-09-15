@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.node;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
+import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import com.squareup.javapoet.MethodSpec;
 
@@ -37,14 +38,13 @@ public final class AddConstructors implements NodeRule {
   public void execute(NodeContext context) {
     addConstructorByKey(context);
     addConstructorByKeyRef(context);
-    context.suppressedWarnings.add("NullAway");
     if (context.isBaseClass()) {
       context.suppressedWarnings.add("PMD.UnusedFormalParameter");
     }
   }
 
   /** Adds the constructor by key to the node type. */
-  private void addConstructorByKey(NodeContext context) {
+  private static void addConstructorByKey(NodeContext context) {
     context.constructorByKey.addParameter(keyRefQueueSpec);
     addCommonParameters(context.constructorByKey);
     if (context.isBaseClass()) {
@@ -55,7 +55,7 @@ public final class AddConstructors implements NodeRule {
   }
 
   /** Adds the constructor by key reference to the node type. */
-  private void addConstructorByKeyRef(NodeContext context) {
+  private static void addConstructorByKeyRef(NodeContext context) {
     addCommonParameters(context.constructorByKeyRef);
     if (context.isBaseClass()) {
       assignKeyRefAndValue(context);
@@ -64,14 +64,14 @@ public final class AddConstructors implements NodeRule {
     }
   }
 
-  private void addCommonParameters(MethodSpec.Builder constructor) {
+  private static void addCommonParameters(MethodSpec.Builder constructor) {
     constructor.addParameter(valueSpec);
     constructor.addParameter(valueRefQueueSpec);
     constructor.addParameter(int.class, "weight");
     constructor.addParameter(long.class, "now");
   }
 
-  private void callSiblingConstructor(NodeContext context) {
+  private static void callSiblingConstructor(NodeContext context) {
     if (context.isStrongKeys()) {
       context.constructorByKey.addStatement("this(key, value, valueReferenceQueue, weight, now)");
     } else {
@@ -81,25 +81,25 @@ public final class AddConstructors implements NodeRule {
     }
   }
 
-  private void assignKeyRefAndValue(NodeContext context) {
+  private static void assignKeyRefAndValue(NodeContext context) {
     if (context.isStrongValues()) {
       context.constructorByKeyRef.addStatement("$L.set(this, $N)",
-          context.varHandleName("key"), "keyReference");
+          varHandleName("key"), "keyReference");
       context.constructorByKeyRef.addStatement("$L.set(this, $N)",
-          context.varHandleName("value"), "value");
+          varHandleName("value"), "value");
     } else {
       context.constructorByKeyRef.addStatement("$L.set(this, new $T($N, $N, $N))",
-          context.varHandleName("value"), context.valueReferenceType(),
+          varHandleName("value"), context.valueReferenceType(),
           "keyReference", "value", "valueReferenceQueue");
     }
   }
 
-  private void callParentByKey(NodeContext context) {
+  private static void callParentByKey(NodeContext context) {
     context.constructorByKey.addStatement(
         "super(key, keyReferenceQueue, value, valueReferenceQueue, weight, now)");
   }
 
-  private void callParentByKeyRef(NodeContext context) {
+  private static void callParentByKeyRef(NodeContext context) {
     context.constructorByKeyRef.addStatement(
         "super(keyReference, value, valueReferenceQueue, weight, now)");
   }

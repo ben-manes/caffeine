@@ -35,6 +35,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -69,7 +70,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
     this.admittor = admission.from(config, policyStats);
 
-    SampledSettings settings = new SampledSettings(config);
+    var settings = new SampledSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
@@ -81,7 +82,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
       new SampledPolicy(admission, policy, config)
     ).collect(toUnmodifiableSet());
@@ -94,7 +95,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    Node node = data.get(key);
+    @Var Node node = data.get(key);
     admittor.record(key);
     long now = ++tick;
     if (node == null) {
@@ -159,9 +160,9 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     RESERVOIR {
       @Override public <E> List<E> sample(E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
-        List<E> sample = new ArrayList<>(sampleSize);
+        var sample = new ArrayList<E>(sampleSize);
         policyStats.addOperations(elements.length);
-        int count = 0;
+        @Var int count = 0;
         for (E e : elements) {
           if (e == candidate) {
             continue;
@@ -182,7 +183,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     SHUFFLE {
       @Override public <E> List<E> sample(E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
-        List<E> sample = new ArrayList<>(Arrays.asList(elements));
+        var sample = new ArrayList<E>(Arrays.asList(elements));
         policyStats.addOperations(elements.length);
         Collections.shuffle(sample, random);
         sample.remove(candidate);

@@ -101,7 +101,7 @@ public final class Issue30Test {
     secondUpdate(cache, source);
   }
 
-  private void initialValues(AsyncLoadingCache<String, String> cache,
+  private static void initialValues(AsyncLoadingCache<String, String> cache,
       ConcurrentMap<String, String> source, ConcurrentMap<String, Instant> lastLoad) {
     source.put(A_KEY, A_ORIGINAL);
     source.put(B_KEY, B_ORIGINAL);
@@ -112,7 +112,7 @@ public final class Issue30Test {
   }
 
   @SuppressWarnings("PreferJavaTimeOverload")
-  private void firstUpdate(AsyncLoadingCache<String, String> cache,
+  private static void firstUpdate(AsyncLoadingCache<String, String> cache,
       ConcurrentMap<String, String> source) throws InterruptedException {
     source.put(A_KEY, A_UPDATE_1);
     source.put(B_KEY, B_UPDATE_1);
@@ -132,7 +132,7 @@ public final class Issue30Test {
   }
 
   @SuppressWarnings("PreferJavaTimeOverload")
-  private void secondUpdate(AsyncLoadingCache<String, String> cache,
+  private static void secondUpdate(AsyncLoadingCache<String, String> cache,
       ConcurrentMap<String, String> source) throws InterruptedException {
     source.put(A_KEY, A_UPDATE_2);
     source.put(B_KEY, B_UPDATE_2);

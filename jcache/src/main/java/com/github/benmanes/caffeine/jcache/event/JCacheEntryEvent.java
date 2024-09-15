@@ -76,7 +76,7 @@ final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V>
       throw new IllegalArgumentException("Class " + clazz + " is unknown to this implementation");
     }
     @SuppressWarnings("unchecked")
-    T castedEntry = (T) this;
+    var castedEntry = (T) this;
     return castedEntry;
   }
 

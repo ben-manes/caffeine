@@ -34,6 +34,8 @@ import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * This class provides a skeletal implementation of the {@link LoadingCache} interface to minimize
  * the effort required to implement a {@link LocalCache}.
@@ -73,7 +75,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
       result.put(key, null);
     }
 
-    int count = 0;
+    @Var int count = 0;
     try {
       for (var iter = result.entrySet().iterator(); iter.hasNext();) {
         Map.Entry<K, V> entry = iter.next();
@@ -100,7 +102,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
     long[] startTime = new long[1];
     @SuppressWarnings("unchecked")
-    V[] oldValue = (V[]) new Object[1];
+    var oldValue = (V[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
     CompletableFuture<? extends V>[] reloading = new CompletableFuture[1];
     Object keyReference = cache().referenceKey(key);
@@ -148,7 +150,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
           }
           discard[0] = (currentValue != newValue);
           return currentValue;
-        }, cache().expiry(), /* recordLoad */ false, /* recordLoadFailure */ true);
+        }, cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
 
         if (discard[0] && (newValue != null)) {
           var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
@@ -163,7 +165,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     }
 
     @SuppressWarnings("unchecked")
-    CompletableFuture<V> castedFuture = (CompletableFuture<V>) future;
+    var castedFuture = (CompletableFuture<V>) future;
     return castedFuture;
   }
 
@@ -201,7 +203,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     return keysToLoad -> {
       try {
         @SuppressWarnings("unchecked")
-        Map<K, V> loaded = (Map<K, V>) cacheLoader.loadAll(keysToLoad);
+        var loaded = (Map<K, V>) cacheLoader.loadAll(keysToLoad);
         return loaded;
       } catch (RuntimeException e) {
         throw e;

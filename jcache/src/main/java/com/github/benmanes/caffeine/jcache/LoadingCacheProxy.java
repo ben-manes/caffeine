@@ -39,6 +39,7 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
+import com.google.errorprone.annotations.Var;
 
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine loading cache.
@@ -49,7 +50,7 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, Expirable<V>> cache;
 
-  @SuppressWarnings("PMD.ExcessiveParameterList")
+  @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
   public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,
@@ -80,8 +81,8 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
 
-    long millis = 0L;
-    Expirable<V> expirable = cache.getIfPresent(key);
+    @Var long millis = 0L;
+    @Var Expirable<V> expirable = cache.getIfPresent(key);
     if ((expirable != null) && !expirable.isEternal()) {
       millis = nanosToMillis((start == 0L) ? ticker.read() : start);
       if (expirable.hasExpired(millis)) {
@@ -105,7 +106,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       statistics.recordHits(1L);
     }
 
-    V value = null;
+    @Var V value = null;
     if (expirable != null) {
       setAccessExpireTime(key, expirable, millis);
       value = copyValue(expirable);
@@ -118,7 +119,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
-    return getAll(keys, true);
+    return getAll(keys, /* updateAccessTime= */ true);
   }
 
   /** Returns the entries, loading if necessary, and optionally updates their access expiry time. */
@@ -167,10 +168,10 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
           @SuppressWarnings("NullAway")
           Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
           for (var entry : loaded.entrySet()) {
-            putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false);
+            putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter= */ false);
           }
         } else {
-          getAll(keys, /* updateAccessTime */ false);
+          getAll(keys, /* updateAccessTime= */ false);
         }
         listener.onCompletion();
       } catch (RuntimeException e) {

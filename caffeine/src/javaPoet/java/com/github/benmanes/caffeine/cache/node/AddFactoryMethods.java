@@ -55,7 +55,7 @@ public final class AddFactoryMethods implements NodeRule {
     }
   }
 
-  private void addFactories(NodeContext context) {
+  private static void addFactories(NodeContext context) {
     context.nodeSubtype.addMethod(
         newNode(keySpec, keyRefQueueSpec)
             .addStatement("return new $N<>(key, keyReferenceQueue, value, "
@@ -68,7 +68,7 @@ public final class AddFactoryMethods implements NodeRule {
             .build());
   }
 
-  private void addWeakKeys(NodeContext context) {
+  private static void addWeakKeys(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("newLookupKey")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(Object.class, "key")
@@ -84,7 +84,7 @@ public final class AddFactoryMethods implements NodeRule {
         .build());
   }
 
-  private void addSoftValues(NodeContext context) {
+  private static void addSoftValues(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("softValues")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return true")
@@ -92,7 +92,7 @@ public final class AddFactoryMethods implements NodeRule {
         .build());
   }
 
-  private void addWeakValues(NodeContext context) {
+  private static void addWeakValues(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("weakValues")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return true")
@@ -100,7 +100,7 @@ public final class AddFactoryMethods implements NodeRule {
         .build());
   }
 
-  private MethodSpec.Builder newNode(ParameterSpec... keyParams) {
+  private static MethodSpec.Builder newNode(ParameterSpec... keyParams) {
     return MethodSpec.methodBuilder("newNode")
         .addModifiers(Modifier.PUBLIC)
         .addParameters(ImmutableList.copyOf(keyParams))

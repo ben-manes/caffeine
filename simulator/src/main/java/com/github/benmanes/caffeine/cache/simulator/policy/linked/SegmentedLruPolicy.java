@@ -69,8 +69,8 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   public SegmentedLruPolicy(Admission admission, Config config) {
     this.policyStats = new PolicyStats(admission.format(name()));
     this.admittor = admission.from(config, policyStats);
+    var settings = new SegmentedLruSettings(config);
 
-    SegmentedLruSettings settings = new SegmentedLruSettings(config);
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.data = new Long2ObjectOpenHashMap<>();
@@ -80,7 +80,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
       new SegmentedLruPolicy(admission, config)
     ).collect(toUnmodifiableSet());
@@ -118,7 +118,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   }
 
   private void onMiss(long key) {
-    Node node = new Node(key);
+    var node = new Node(key);
     data.put(key, node);
     policyStats.recordMiss();
     node.appendToTail(headProbation);

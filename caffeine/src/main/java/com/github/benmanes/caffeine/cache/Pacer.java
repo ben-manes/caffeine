@@ -57,7 +57,7 @@ final class Pacer {
       if (maySkip(scheduleAt)) {
         return;
       }
-      future.cancel(/* mayInterruptIfRunning */ false);
+      future.cancel(/* mayInterruptIfRunning= */ false);
     }
     long actualDelay = calculateSchedule(now, delay, scheduleAt);
     future = scheduler.schedule(executor, command, actualDelay, TimeUnit.NANOSECONDS);
@@ -66,7 +66,7 @@ final class Pacer {
   /** Attempts to cancel execution of the scheduled task, if present. */
   public void cancel() {
     if (future != null) {
-      future.cancel(/* mayInterruptIfRunning */ false);
+      future.cancel(/* mayInterruptIfRunning= */ false);
       nextFireTime = 0L;
       future = null;
     }

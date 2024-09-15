@@ -238,7 +238,7 @@ public final class BoundedLocalCacheTest {
   @Test
   public void cleanupTask_allowGc() {
     var cache = new BoundedLocalCache<Object, Object>(
-        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var task = cache.drainBuffersTask;
     cache = null;
 
@@ -282,7 +282,7 @@ public final class BoundedLocalCacheTest {
   @Test
   public void scheduleAfterWrite() {
     var cache = new BoundedLocalCache<Object, Object>(
-        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
       @Override void scheduleDrainBuffers() {}
     };
     var transitions = Map.of(
@@ -300,7 +300,7 @@ public final class BoundedLocalCacheTest {
   @Test
   public void scheduleAfterWrite_invalidDrainStatus() {
     var cache = new BoundedLocalCache<Object, Object>(
-        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
     var invalid = IntStream.generate(ThreadLocalRandom.current()::nextInt).boxed()
         .filter(Predicate.not(valid::contains))
@@ -314,7 +314,7 @@ public final class BoundedLocalCacheTest {
   public void scheduleDrainBuffers() {
     Executor executor = Mockito.mock();
     var cache = new BoundedLocalCache<Object, Object>(
-        Caffeine.newBuilder().executor(executor), /* loader */ null, /* async */ false) {};
+        Caffeine.newBuilder().executor(executor), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var transitions = Map.of(
         IDLE, PROCESSING_TO_IDLE,
         REQUIRED, PROCESSING_TO_IDLE,
@@ -377,7 +377,7 @@ public final class BoundedLocalCacheTest {
   @Test
   public void shouldDrainBuffers_invalidDrainStatus() {
     var cache = new BoundedLocalCache<Object, Object>(
-        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
     var invalid = IntStream.generate(ThreadLocalRandom.current()::nextInt).boxed()
         .filter(Predicate.not(valid::contains))
@@ -543,7 +543,7 @@ public final class BoundedLocalCacheTest {
   public void afterWrite_exception() {
     var expected = new RuntimeException();
     var cache = new BoundedLocalCache<Object, Object>(
-        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
       @Override void maintenance(Runnable task) {
         throw expected;
       }
@@ -747,28 +747,28 @@ public final class BoundedLocalCacheTest {
     }
 
     checkContainsInOrder(cache,
-        /* expect */ Int.listOf(9, 0, 1, 2, 3, 4, 5, 6, 7, 8));
+        /* expect= */ Int.listOf(9, 0, 1, 2, 3, 4, 5, 6, 7, 8));
 
     // re-order
-    checkReorder(cache, /* keys */ Int.listOf(0, 1, 2),
-        /* expect */ Int.listOf(9, 3, 4, 5, 6, 7, 8, 0, 1, 2));
+    checkReorder(cache, /* keys= */ Int.listOf(0, 1, 2),
+        /* expect= */ Int.listOf(9, 3, 4, 5, 6, 7, 8, 0, 1, 2));
 
     // evict 9, 10, 11
-    checkEvict(cache, /* keys */ Int.listOf(10, 11, 12),
-        /* expect */ Int.listOf(12, 3, 4, 5, 6, 7, 8, 0, 1, 2));
+    checkEvict(cache, /* keys= */ Int.listOf(10, 11, 12),
+        /* expect= */ Int.listOf(12, 3, 4, 5, 6, 7, 8, 0, 1, 2));
 
     // re-order
-    checkReorder(cache, /* keys */ Int.listOf(6, 7, 8),
-        /* expect */ Int.listOf(12, 3, 4, 5, 0, 1, 2, 6, 7, 8));
+    checkReorder(cache, /* keys= */ Int.listOf(6, 7, 8),
+        /* expect= */ Int.listOf(12, 3, 4, 5, 0, 1, 2, 6, 7, 8));
 
     // evict 12, 13, 14
-    checkEvict(cache, /* keys */ Int.listOf(13, 14, 15),
-        /* expect */ Int.listOf(15, 3, 4, 5, 0, 1, 2, 6, 7, 8));
+    checkEvict(cache, /* keys= */ Int.listOf(13, 14, 15),
+        /* expect= */ Int.listOf(15, 3, 4, 5, 0, 1, 2, 6, 7, 8));
 
     assertThat(context).stats().evictions(6);
   }
 
-  private void checkReorder(Cache<Int, Int> cache, List<Int> keys, List<Int> expect) {
+  private static void checkReorder(Cache<Int, Int> cache, List<Int> keys, List<Int> expect) {
     for (var key : keys) {
       var value = cache.getIfPresent(key);
       assertThat(value).isNotNull();
@@ -776,12 +776,12 @@ public final class BoundedLocalCacheTest {
     checkContainsInOrder(cache, expect);
   }
 
-  private void checkEvict(Cache<Int, Int> cache, List<Int> keys, List<Int> expect) {
+  private static void checkEvict(Cache<Int, Int> cache, List<Int> keys, List<Int> expect) {
     keys.forEach(i -> cache.put(i, i));
     checkContainsInOrder(cache, expect);
   }
 
-  private void checkContainsInOrder(Cache<Int, Int> cache, List<Int> expect) {
+  private static void checkContainsInOrder(Cache<Int, Int> cache, List<Int> expect) {
     var evictionOrder = cache.policy().eviction().orElseThrow().coldest(Integer.MAX_VALUE).keySet();
     assertThat(cache).containsExactlyKeys(expect);
     assertThat(evictionOrder).containsExactlyElementsIn(expect).inOrder();
@@ -1584,7 +1584,7 @@ public final class BoundedLocalCacheTest {
     var result = buffer.offer(dummy);
     assertThat(result).isEqualTo(Buffer.FULL);
 
-    var refreshed = cache.afterRead(dummy, 0, /* recordHit */ true);
+    var refreshed = cache.afterRead(dummy, /* now= */ 0, /* recordHit= */ true);
     assertThat(refreshed).isNull();
 
     result = buffer.offer(dummy);
@@ -1736,7 +1736,7 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   public void adapt_increaseWindow(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    prepareForAdaption(cache, context, /* make frequency-bias */ false);
+    prepareForAdaption(cache, context, /* recencyBias= */ false);
 
     int sampleSize = cache.frequencySketch().sampleSize;
     long protectedSize = cache.mainProtectedWeightedSize();
@@ -1756,7 +1756,7 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   public void adapt_decreaseWindow(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    prepareForAdaption(cache, context, /* make recency-bias */ true);
+    prepareForAdaption(cache, context, /* recencyBias= */ true);
 
     int sampleSize = cache.frequencySketch().sampleSize;
     long protectedSize = cache.mainProtectedWeightedSize();
@@ -1772,7 +1772,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.windowMaximum()).isLessThan(windowMaximum);
   }
 
-  private void prepareForAdaption(BoundedLocalCache<Int, Int> cache,
+  private static void prepareForAdaption(BoundedLocalCache<Int, Int> cache,
       CacheContext context, boolean recencyBias) {
     cache.setStepSize((recencyBias ? 1 : -1) * Math.abs(cache.stepSize()));
     cache.setWindowMaximum((long) (0.5 * context.maximumWeightOrSize()));
@@ -1792,7 +1792,7 @@ public final class BoundedLocalCacheTest {
     }
   }
 
-  private void adapt(BoundedLocalCache<Int, Int> cache, int sampleSize) {
+  private static void adapt(BoundedLocalCache<Int, Int> cache, int sampleSize) {
     cache.setPreviousSampleHitRate(0.80);
     cache.setMissesInSample(sampleSize / 2);
     cache.setHitsInSample(sampleSize - cache.missesInSample());
@@ -2237,7 +2237,7 @@ public final class BoundedLocalCacheTest {
     cache.evictionLock.lock();
     try {
       context.ticker().advance(Duration.ofMinutes(10));
-      var value = cache.getIfPresent(context.absentKey(), /* recordStats */ true);
+      var value = cache.getIfPresent(context.absentKey(), /* recordStats= */ true);
       assertThat(value).isEqualTo(context.absentValue());
       assertThat(refreshEntry.get()).isNull();
     } finally {
@@ -2526,6 +2526,13 @@ public final class BoundedLocalCacheTest {
   /* --------------- Miscellaneous --------------- */
 
   @Test
+  public void reflectivelyConstruct() throws ReflectiveOperationException {
+    var constructor = BLCHeader.class.getDeclaredConstructor();
+    constructor.setAccessible(true);
+    constructor.newInstance();
+  }
+
+  @Test
   public void cacheFactory_null() {
     assertThrows(NullPointerException.class,
         () -> LocalCacheFactory.loadFactory(null));
@@ -2547,7 +2554,7 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void cacheFactory_brokenConstructor() {
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    var builder = Caffeine.newBuilder();
     var factory = LocalCacheFactory.loadFactory("BoundedLocalCacheTest$BadBoundedLocalCache");
     assertThrows(IllegalStateException.class, () -> factory.newInstance(builder, null, false));
   }
@@ -2561,7 +2568,8 @@ public final class BoundedLocalCacheTest {
       when(factory.newInstance(any(), any(), anyBoolean())).thenThrow(IOException.class);
       Caffeine<Object, Object> builder = Caffeine.newBuilder().weakKeys();
       var expected = assertThrows(IllegalStateException.class, () ->
-          LocalCacheFactory.newBoundedLocalCache(builder, /* loader */ null, false));
+          LocalCacheFactory.newBoundedLocalCache(builder,
+              /* cacheLoader= */ null, /* isAsync= */ false));
       assertThat(expected).hasCauseThat().isInstanceOf(IOException.class);
     } finally {
       LocalCacheFactory.FACTORIES.clear();
@@ -2576,8 +2584,8 @@ public final class BoundedLocalCacheTest {
 
       Caffeine<Object, Object> builder = Caffeine.newBuilder().weakKeys();
       when(factory.newInstance(any(), any(), anyBoolean())).thenThrow(Error.class);
-      assertThrows(Error.class, () ->
-          LocalCacheFactory.newBoundedLocalCache(builder, /* loader */ null, false));
+      assertThrows(Error.class, () -> LocalCacheFactory.newBoundedLocalCache(
+          builder, /* cacheLoader= */ null, /* isAsync= */ false));
     } finally {
       LocalCacheFactory.FACTORIES.clear();
     }
@@ -2587,7 +2595,8 @@ public final class BoundedLocalCacheTest {
   public void cacheFactory_noStaticFactory() throws Throwable {
     var factory = LocalCacheFactory.loadFactory("BoundedLocalCacheTest$CustomBoundedLocalCache");
     assertThat(factory).isInstanceOf(MethodHandleBasedFactory.class);
-    var cache = factory.newInstance(Caffeine.newBuilder(), /* loader */ null, false);
+    var cache = factory.newInstance(Caffeine.newBuilder(),
+        /* cacheLoader= */ null, /* isAsync= */ false);
     assertThat(cache).isInstanceOf(CustomBoundedLocalCache.class);
   }
 
@@ -2596,7 +2605,8 @@ public final class BoundedLocalCacheTest {
   public void cacheFactory_loadFactory(
       BoundedLocalCache<Int, Int> cache, CacheContext context) throws Throwable {
     var factory1 = LocalCacheFactory.loadFactory(cache.getClass().getSimpleName());
-    var other = factory1.newInstance(context.caffeine(), /* cacheLoader */ null, context.isAsync());
+    var other = factory1.newInstance(context.caffeine(),
+        /* cacheLoader= */ null, context.isAsync());
     assertThat(other.getClass()).isEqualTo(cache.getClass());
     assertThat(LocalCacheFactory.FACTORIES).containsEntry(
         cache.getClass().getSimpleName(), factory1);
@@ -2614,15 +2624,15 @@ public final class BoundedLocalCacheTest {
     assertThat(methodHandleFactory).isNotSameInstanceAs(staticFactory);
 
     var c1 = methodHandleFactory.newInstance(
-        context.caffeine(), /* cacheLoader */ null, context.isAsync());
+        context.caffeine(), /* cacheLoader= */ null, context.isAsync());
     var c2 = staticFactory.newInstance(
-        context.caffeine(), /* cacheLoader */ null, context.isAsync());
+        context.caffeine(), /* cacheLoader= */ null, context.isAsync());
     assertThat(c1.getClass()).isEqualTo(c2.getClass());
   }
 
   @Test
   public void nodeFactory_null() {
-    assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(/* className */ null));
+    assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(/* className= */ null));
   }
 
   @Test

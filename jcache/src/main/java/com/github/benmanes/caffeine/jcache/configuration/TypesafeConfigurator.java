@@ -44,6 +44,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.jcache.expiry.JCacheExpiryPolicy;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -103,15 +104,14 @@ public final class TypesafeConfigurator {
    * @return the configuration for the cache
    */
   public static <K, V> Optional<CaffeineConfiguration<K, V>> from(Config config, String cacheName) {
-    CaffeineConfiguration<K, V> configuration = null;
     try {
-      if (config.hasPath("caffeine.jcache." + cacheName)) {
-        configuration = new Configurator<K, V>(config, cacheName).configure();
-      }
+      return config.hasPath("caffeine.jcache." + cacheName)
+          ? Optional.of(new Configurator<K, V>(config, cacheName).configure())
+          : Optional.empty();
     } catch (ConfigException.BadPath e) {
       logger.log(Level.WARNING, "Failed to load cache configuration", e);
+      return Optional.empty();
     }
-    return Optional.ofNullable(configuration);
   }
 
   /**
@@ -239,9 +239,9 @@ public final class TypesafeConfigurator {
     private void addKeyValueTypes() {
       try {
         @SuppressWarnings("unchecked")
-        Class<K> keyType = (Class<K>) Class.forName(merged.getString("key-type"));
+        var keyType = (Class<K>) Class.forName(merged.getString("key-type"));
         @SuppressWarnings("unchecked")
-        Class<V> valueType = (Class<V>) Class.forName(merged.getString("value-type"));
+        var valueType = (Class<V>) Class.forName(merged.getString("value-type"));
         configuration.setTypes(keyType, valueType);
       } catch (ClassNotFoundException e) {
         throw new IllegalStateException(e);
@@ -278,7 +278,7 @@ public final class TypesafeConfigurator {
 
         Factory<? extends CacheEntryListener<? super K, ? super V>> listenerFactory =
             factoryCreator.factoryOf(listener.getString("class"));
-        Factory<? extends CacheEntryEventFilter<? super K, ? super V>> filterFactory = null;
+        @Var Factory<? extends CacheEntryEventFilter<? super K, ? super V>> filterFactory = null;
         if (listener.hasPath("filter")) {
           filterFactory = factoryCreator.factoryOf(listener.getString("filter"));
         }

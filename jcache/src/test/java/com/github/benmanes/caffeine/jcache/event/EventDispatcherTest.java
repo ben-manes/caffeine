@@ -331,7 +331,7 @@ public final class EventDispatcherTest {
         pendingFutures.addAll(secondary.pending.get());
 
     var configuration = new MutableCacheEntryListenerConfiguration<>(
-        () -> listener, null, /* isOldValueRequired */ false, /* isSynchronous */ true);
+        () -> listener, null, /* isOldValueRequired= */ false, /* isSynchronous= */ true);
     primary.register(configuration);
     int key = 1;
 
@@ -378,7 +378,7 @@ public final class EventDispatcherTest {
   private static final class ConsumingCacheListener implements
       CacheEntryCreatedListener<Integer, Integer>,  CacheEntryUpdatedListener<Integer, Integer>,
       CacheEntryRemovedListener<Integer, Integer>, CacheEntryExpiredListener<Integer, Integer> {
-    Queue<CacheEntryEvent<?, ?>> queue = new ConcurrentLinkedQueue<>();
+    final Queue<CacheEntryEvent<?, ?>> queue = new ConcurrentLinkedQueue<>();
 
     @Override
     public void onCreated(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {

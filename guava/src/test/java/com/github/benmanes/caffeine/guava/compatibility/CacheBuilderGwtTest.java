@@ -63,8 +63,7 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testLoader() throws ExecutionException {
-
-    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
 
     Callable<Integer> loader = new Callable<Integer>() {
       private int i = 0;
@@ -90,7 +89,7 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testSizeConstraint() {
-    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .executor(MoreExecutors.directExecutor())
         .initialCapacity(100)
         .maximumSize(4));
@@ -149,7 +148,7 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testExpireAfterAccess() {
-    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker::read));
@@ -166,7 +165,7 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testExpireAfterWrite() {
-    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker::read));
@@ -193,7 +192,7 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testExpireAfterWriteAndAccess() {
-    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .expireAfterAccess(500, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
@@ -266,7 +265,7 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testRemovalListener() {
-    final int[] stats = new int[4];
+    int[] stats = new int[4];
 
     RemovalListener<Integer, Integer> countingListener = new RemovalListener<Integer, Integer>() {
       @Override

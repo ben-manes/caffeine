@@ -63,7 +63,7 @@ public abstract class ParallelMapIteratePutAcceptanceTest {
   }
 
   @Test
-  public void testMapIteratePut() {
+  public void mapIteratePut() {
     int constSize = 100_000;
     int size = 10_000_000;
     Integer[] contents = new Integer[size];
@@ -84,7 +84,7 @@ public abstract class ParallelMapIteratePutAcceptanceTest {
     ExecutorService executorService = new ThreadPoolExecutor(MAX_THREADS, MAX_THREADS, 0,
         TimeUnit.SECONDS, new LinkedBlockingDeque<>(MAX_THREADS));
     int threads = 10;
-    runPutTest1(threads, contents, constContents, executorService, false);
+    runPutTest1(threads, contents, constContents, executorService, /* warmup= */ false);
     executorService.shutdown();
   }
 

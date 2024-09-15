@@ -40,6 +40,7 @@ import org.tukaani.xz.XZInputStream;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
+import com.google.errorprone.annotations.Var;
 
 /**
  * A skeletal implementation that reads the trace files into a data stream.
@@ -66,11 +67,11 @@ public abstract class AbstractTraceReader implements TraceReader {
 
   @SuppressWarnings("PMD.CloseResource")
   protected BufferedInputStream readInput(InputStream input) {
-    BufferedInputStream buffered = null;
+    @Var BufferedInputStream buffered = null;
     try {
       buffered = new BufferedInputStream(input, BUFFER_SIZE);
-      List<UnaryOperator<InputStream>> extractors = List.of(
-          this::tryXZ, this::tryCompressed, this::tryArchived);
+      var extractors = List.<UnaryOperator<InputStream>>of(
+          AbstractTraceReader::tryXz, AbstractTraceReader::tryCompressed, this::tryArchived);
       for (var extractor : extractors) {
         buffered.mark(100);
         InputStream next = extractor.apply(buffered);
@@ -92,12 +93,12 @@ public abstract class AbstractTraceReader implements TraceReader {
         t.addSuppressed(e);
       }
       Throwables.throwIfUnchecked(t);
-      throw new RuntimeException(t);
+      throw new IllegalStateException(t);
     }
   }
 
   /** Returns a uncompressed stream if XZ encoded, else {@code null}. */
-  private @Nullable InputStream tryXZ(InputStream input) {
+  private static @Nullable InputStream tryXz(InputStream input) {
     try {
       return new XZInputStream(input);
     } catch (IOException e) {
@@ -106,7 +107,7 @@ public abstract class AbstractTraceReader implements TraceReader {
   }
 
   /** Returns a uncompressed stream, else {@code null}. */
-  private @Nullable InputStream tryCompressed(InputStream input) {
+  private static @Nullable InputStream tryCompressed(InputStream input) {
     try {
       return new CompressorStreamFactory().createCompressorInputStream(input);
     } catch (CompressorException e) {

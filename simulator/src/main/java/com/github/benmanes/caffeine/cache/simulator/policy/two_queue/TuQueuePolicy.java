@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -69,7 +71,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
 
   @SuppressWarnings("this-escape")
   public TuQueuePolicy(Config config) {
-    TuQueueSettings settings = new TuQueueSettings(config);
+    var settings = new TuQueueSettings(config);
 
     this.headHot = new Node();
     this.headWarm = new Node();
@@ -125,7 +127,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
 
   /** Adds the entry to the cache as HOT, overflowing to the COLD queue, and evicts if necessary. */
   private void onMiss(long key) {
-    Node node = new Node(key);
+    var node = new Node(key);
     node.type = QueueType.HOT;
     node.appendToTail(headHot);
     data.put(key, node);
@@ -172,9 +174,9 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Node prev;
-    Node next;
-    QueueType type;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable QueueType type;
 
     Node() {
       this.key = Long.MIN_VALUE;

@@ -89,7 +89,10 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
 }
 
 /** The namespace for field padding through inheritance. */
+@SuppressWarnings("MultiVariableDeclaration")
 final class ManyToOneSpacedHeader {
+
+  private ManyToOneSpacedHeader() {}
 
   @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
   abstract static class PadReadCounter<E> extends ReadBuffer<E> {

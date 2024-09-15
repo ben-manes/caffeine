@@ -19,6 +19,8 @@ import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 
 import org.checkerframework.checker.index.qual.NonNegative;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A probabilistic multiset for estimating the popularity of an element within a time window. The
  * maximum frequency of an element is limited to 15 (4-bits) and an aging process periodically
@@ -85,6 +87,7 @@ final class FrequencySketch<E> {
    *
    * @param maximumSize the maximum size of the cache
    */
+  @SuppressWarnings("Varifier")
   public void ensureCapacity(@NonNegative long maximumSize) {
     requireArgument(maximumSize >= 0);
     int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
@@ -115,8 +118,7 @@ final class FrequencySketch<E> {
    * @param e the element to count occurrences of
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
-  @NonNegative
-  public int frequency(E e) {
+  public @NonNegative int frequency(E e) {
     if (isNotInitialized()) {
       return 0;
     }
@@ -169,7 +171,7 @@ final class FrequencySketch<E> {
   }
 
   /** Applies a supplemental hash function to defend against a poor quality hash. */
-  static int spread(int x) {
+  static int spread(@Var int x) {
     x ^= x >>> 17;
     x *= 0xed5ad4bb;
     x ^= x >>> 11;
@@ -179,7 +181,7 @@ final class FrequencySketch<E> {
   }
 
   /** Applies another round of hashing for additional randomization. */
-  static int rehash(int x) {
+  static int rehash(@Var int x) {
     x *= 0x31848bab;
     x ^= x >>> 14;
     return x;
@@ -204,7 +206,7 @@ final class FrequencySketch<E> {
 
   /** Reduces every counter by half of its original value. */
   void reset() {
-    int count = 0;
+    @Var int count = 0;
     for (int i = 0; i < table.length; i++) {
       count += Long.bitCount(table[i] & ONE_MASK);
       table[i] = (table[i] >>> 1) & RESET_MASK;

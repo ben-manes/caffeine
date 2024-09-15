@@ -39,7 +39,6 @@ public final class AddSubtype implements NodeRule {
 
   @Override
   public void execute(NodeContext context) {
-    context.suppressedWarnings.add("MissingOverride");
     context.nodeSubtype
         .addJavadoc(getJavaDoc(context))
         .addTypeVariable(kTypeVar)
@@ -56,7 +55,7 @@ public final class AddSubtype implements NodeRule {
     }
   }
 
-  private String getJavaDoc(NodeContext context) {
+  private static String getJavaDoc(NodeContext context) {
     var doc = new StringBuilder(200);
     doc.append("<em>WARNING: GENERATED CODE</em>\n\n"
         + "A cache entry that provides the following features:\n<ul>");

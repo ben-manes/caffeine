@@ -48,7 +48,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
   public Stream<AccessEvent> events() {
     var input = new DataInputStream(readFile());
     var stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
-        new TraceIterator(input), ORDERED | NONNULL), /* parallel */ false);
+        new TraceIterator(input), ORDERED | NONNULL), /* parallel= */ false);
     return stream.onClose(() -> Closeables.closeQuietly(input));
   }
 

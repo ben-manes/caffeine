@@ -48,6 +48,7 @@ tasks.withType<JavaCompile>().configureEach {
     if (System.getenv("JDK_EA") == "true") {
       isEnabled = false
     }
+    allDisabledChecksAsWarnings = true
 
     errorproneArgs.add(buildString {
       append("-XepOpt:Refaster:NamePattern=^")
@@ -59,7 +60,6 @@ tasks.withType<JavaCompile>().configureEach {
       append(".*")
     })
     disabledChecks().forEach { disable(it) }
-    enabledChecks().forEach { enable(it) }
     errorChecks().forEach { error(it) }
 
     nullaway {
@@ -80,68 +80,17 @@ fun errorChecks() = listOf(
 )
 fun disabledChecks() = listOf(
   "AvoidObjectArrays",
+  "AndroidJdkLibsChecker",
   "IsInstanceLambdaUsage",
+  "Java7ApiChecker",
+  "Java8ApiChecker",
   "LexicographicalAnnotationListing",
   "MissingSummary",
+  "MultipleTopLevelClasses",
   "PatternMatchingInstanceof",
   "StaticImport",
-)
-fun enabledChecks() = listOf(
-  "AssertFalse",
-  "AutoValueBoxedValues",
-  "BanClassLoader",
-  "BuilderReturnThis",
-  "CatchingUnchecked",
-  "CanIgnoreReturnValueSuggester",
-  "CheckedExceptionNotThrown",
-  "ClassName",
-  "ComparisonContractViolated",
-  "CannotMockFinalClass",
-  "CannotMockFinalMethod",
-  "DefaultLocale",
-  "DepAnn",
-  "EmptyIf",
-  "EqualsBrokenForNull",
-  "FieldCanBeLocal",
-  "FieldCanBeStatic",
-  "ForEachIterable",
-  "FuzzyEqualsShouldNotBeUsedInEqualsMethod",
-  "FunctionalInterfaceClash",
-  "IterablePathParameter",
-  "LongLiteralLowerCaseSuffix",
-  "MissingBraces",
-  "MissingDefault",
-  "MixedArrayDimensions",
-  "MissingDefault",
-  "MissingRuntimeRetention",
-  "MockitoDoSetup",
-  "MutableGuiceModule",
-  "NoAllocation",
-  "NonFinalStaticField",
-  "OverridingMethodInconsistentArgumentNamesChecker",
-  "PackageLocation",
-  "PreferredInterfaceType",
-  "PreferJavaTimeOverload",
-  "RedundantThrows",
-  "RemoveUnusedImports",
-  "ReturnsNullCollection",
-  "SelfAlwaysReturnsThis",
-  "StringFormatWithLiteral",
-  "StronglyTypeByteString",
-  "StronglyTypeTime",
-  "SunApi",
-  "SwitchDefault",
-  "TimeUnitMismatch",
-  "TransientMisuse",
-  "TruthContainsExactlyElementsInUsage",
-  "UnnecessarilyVisible",
-  "UnnecessaryAnonymousClass",
-  "UnnecessaryOptionalGet",
-  "UnnecessarilyUsedValue",
-  "UnsafeLocaleUsage",
-  "UnusedTypeParameter",
-  "UsingJsr305CheckReturnValue",
-  "YodaCondition",
+  "SuppressWarningsWithoutExplanation",
+  "UngroupedOverloads",
 )
 fun disabledRules() = listOf(
   "ImmutableListRules\\\$ImmutableListBuilder",

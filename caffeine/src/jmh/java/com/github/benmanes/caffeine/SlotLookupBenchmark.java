@@ -152,11 +152,11 @@ public class SlotLookupBenchmark {
     return array[index];
   }
 
-  private int getProbe_varHandle() {
+  private static int getProbe_varHandle() {
     return (int) PROBE.get(Thread.currentThread());
   }
 
-  private void advanceProbe_varHandle(int probe) {
+  private static void advanceProbe_varHandle(int probe) {
     probe ^= probe << 13; // xorshift
     probe ^= probe >>> 17;
     probe ^= probe << 5;

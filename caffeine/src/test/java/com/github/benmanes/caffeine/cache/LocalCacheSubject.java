@@ -112,7 +112,7 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private void checkStats(LocalCache<?, ?> cache) {
+  private static void checkStats(LocalCache<?, ?> cache) {
     if (cache.isRecordingStats()) {
       assertThat(cache.statsTicker()).isSameInstanceAs(Ticker.systemTicker());
       assertThat(cache.statsCounter()).isNotSameInstanceAs(StatsCounter.disabledStatsCounter());
@@ -134,7 +134,7 @@ public final class LocalCacheSubject extends Subject {
     checkEvictionDeque(bounded);
   }
 
-  private void drain(BoundedLocalCache<Object, Object> bounded) {
+  private static void drain(BoundedLocalCache<Object, Object> bounded) {
     long adjustment = 0;
     for (;;) {
       bounded.cleanUp();
@@ -149,13 +149,13 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private void checkReadBuffer(BoundedLocalCache<Object, Object> bounded) {
+  private static void checkReadBuffer(BoundedLocalCache<Object, Object> bounded) {
     if (!tryDrainBuffers(bounded)) {
       await().pollInSameThread().until(() -> tryDrainBuffers(bounded));
     }
   }
 
-  private Boolean tryDrainBuffers(BoundedLocalCache<Object, Object> bounded) {
+  private static boolean tryDrainBuffers(BoundedLocalCache<Object, Object> bounded) {
     bounded.cleanUp();
     var buffer = bounded.readBuffer;
     return (buffer.size() == 0) && (buffer.reads() == buffer.writes());
@@ -236,7 +236,7 @@ public final class LocalCacheSubject extends Subject {
     check("cache.size() == timerWheel.size()").that(bounded).hasSize(seen.size());
   }
 
-  private boolean doesTimerWheelMatch(BoundedLocalCache<Object, Object> bounded) {
+  private static boolean doesTimerWheelMatch(BoundedLocalCache<Object, Object> bounded) {
     bounded.evictionLock.lock();
     try {
       var seen = Sets.newIdentityHashSet();

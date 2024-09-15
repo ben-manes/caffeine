@@ -22,6 +22,7 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
@@ -60,7 +61,7 @@ public final class LinkedPolicy implements Policy {
     this.admittor = admission.from(config, policyStats);
     this.weighted = characteristics.contains(WEIGHTED);
 
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.sentinel = new Node();
@@ -70,7 +71,7 @@ public final class LinkedPolicy implements Policy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config,
       Set<Characteristic> characteristics, EvictionPolicy policy) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
       new LinkedPolicy(config, characteristics, admission, policy)
     ).collect(toUnmodifiableSet());
@@ -83,8 +84,8 @@ public final class LinkedPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    final int weight = weighted ? event.weight() : 1;
-    final long key = event.key();
+    int weight = weighted ? event.weight() : 1;
+    long key = event.key();
     Node old = data.get(key);
     admittor.record(key);
     if (old == null) {
@@ -93,7 +94,7 @@ public final class LinkedPolicy implements Policy {
         policyStats.recordOperation();
         return;
       }
-      Node node = new Node(key, weight, sentinel);
+      var node = new Node(key, weight, sentinel);
       data.put(key, node);
       currentSize += node.weight;
       node.appendToTail();
@@ -215,11 +216,12 @@ public final class LinkedPolicy implements Policy {
   static final class Node {
     final Node sentinel;
 
-    boolean marked;
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+
     long key;
     int weight;
+    boolean marked;
 
     /** Creates a new sentinel node. */
     public Node() {

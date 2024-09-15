@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -66,8 +67,7 @@ public class DelegationBenchmark {
   static final class InheritMap extends ConcurrentHashMap<Integer, Integer> {
     private static final long serialVersionUID = 1L;
 
-    @Override
-    public Integer get(Object key) {
+    @Override public @Nullable Integer get(Object key) {
       Integer value = super.get(key);
       return (value == null) ? null : (value - 1);
     }
@@ -76,14 +76,11 @@ public class DelegationBenchmark {
   static final class DelegateMap extends ForwardingMap<Integer, Integer> {
     final Map<Integer, Integer> delegate = new ConcurrentHashMap<>();
 
-    @Override
-    public Integer get(Object key) {
+    @Override public @Nullable Integer get(Object key) {
       Integer value = delegate.get(key);
       return (value == null) ? null : (value - 1);
     }
-
-    @Override
-    protected Map<Integer, Integer> delegate() {
+    @Override protected Map<Integer, Integer> delegate() {
       return delegate;
     }
   }

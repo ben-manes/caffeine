@@ -44,6 +44,8 @@ public final class HashClashTest {
   private static final int STEP = 5;
   private static final Long LONG_1 = 1L;
   private static final long ITERS = 200_000;
+  private static final Long CLASH = (ITERS << 32) ^ ITERS ^ 1;
+
   private static final boolean debug = false;
 
   @Test(dataProvider = "caches")
@@ -58,7 +60,6 @@ public final class HashClashTest {
     printKeys(cache);
 
     // add a hashcode clash for 1
-    Long CLASH = (ITERS << 32) ^ ITERS ^ 1;
     assertThat(CLASH.hashCode()).isEqualTo(LONG_1.hashCode());
     cache.get(CLASH, identity());
     printKeys(cache);

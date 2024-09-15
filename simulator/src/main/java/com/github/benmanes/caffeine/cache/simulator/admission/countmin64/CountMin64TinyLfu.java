@@ -42,7 +42,7 @@ public final class CountMin64TinyLfu implements Frequency {
   int size;
 
   public CountMin64TinyLfu(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     sketch = new CountMin64(settings.tinyLfu().countMin64().eps(),
         settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
     sampleSize = Math.toIntExact(10 * settings.maximumSize());
@@ -58,7 +58,7 @@ public final class CountMin64TinyLfu implements Frequency {
   @Override
   public void increment(long o) {
     if (sketch.estimateCount(o) < MAX_COUNT) {
-      sketch.add(conservative, o, 1);
+      sketch.add(o, 1, conservative);
     }
     size += 1;
     resetIfNeeded();

@@ -214,7 +214,7 @@ public final class GuavaCacheFromContext {
         long end = ticker.read();
         statsCounter.recordLoadSuccess(end - start);
 
-        Map<K, V> result = new LinkedHashMap<>();
+        var result = new LinkedHashMap<K, V>();
         for (K key : keys) {
           V value = found.get(key);
           if (value == null) {
@@ -552,7 +552,7 @@ public final class GuavaCacheFromContext {
 
     @Override
     public CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-      Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
+      var result = new LinkedHashMap<K, CompletableFuture<V>>();
       for (K key : keys) {
         result.computeIfAbsent(key, this::refresh);
       }
@@ -567,7 +567,7 @@ public final class GuavaCacheFromContext {
       @SuppressWarnings("rawtypes")
       CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
       return CompletableFuture.allOf(array).thenApply(ignored -> {
-        Map<K, V> result = new LinkedHashMap<>(futures.size());
+        var result = new LinkedHashMap<K, V>(futures.size());
         futures.forEach((key, future) -> {
           V value = future.getNow(null);
           if (value != null) {
@@ -703,7 +703,7 @@ public final class GuavaCacheFromContext {
     private static final long serialVersionUID = 1L;
 
     CacheMissException() {
-      super(null, null, /* enableSuppression */ false, /* writableStackTrace */ false);
+      super(null, null, /* enableSuppression= */ false, /* writableStackTrace= */ false);
     }
   }
 }

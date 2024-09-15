@@ -357,7 +357,7 @@ public final class CacheStats {
     } else if (!(o instanceof CacheStats)) {
       return false;
     }
-    CacheStats other = (CacheStats) o;
+    var other = (CacheStats) o;
     return hitCount == other.hitCount
         && missCount == other.missCount
         && loadSuccessCount == other.loadSuccessCount

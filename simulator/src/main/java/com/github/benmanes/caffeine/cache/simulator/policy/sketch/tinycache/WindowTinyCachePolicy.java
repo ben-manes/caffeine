@@ -15,12 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCache;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheWithGhostCache;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 /**
@@ -28,14 +31,14 @@ import com.typesafe.config.Config;
  */
 @PolicySpec(name = "sketch.WindowTinyCache")
 public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
-  private final TinyCache window;
-  private final PolicyStats policyStats;
   private final TinyCacheWithGhostCache tinyCache;
+  private final @Nullable TinyCache window;
+  private final PolicyStats policyStats;
 
   public WindowTinyCachePolicy(Config config) {
     policyStats = new PolicyStats(name());
-    BasicSettings settings = new BasicSettings(config);
-    int maxSize = Math.toIntExact(settings.maximumSize());
+    var settings = new BasicSettings(config);
+    @Var int maxSize = Math.toIntExact(settings.maximumSize());
     if (maxSize <= 64) {
       window = null;
     } else {
@@ -52,7 +55,7 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
       tinyCache.recordItem(key);
       policyStats.recordHit();
     } else {
-      boolean evicted = tinyCache.addItem(key);
+      @Var boolean evicted = tinyCache.addItem(key);
       if (!evicted && (window != null)) {
         evicted = window.addItem(key);
       }

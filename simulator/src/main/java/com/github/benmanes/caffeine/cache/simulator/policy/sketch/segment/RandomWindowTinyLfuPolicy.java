@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -52,6 +53,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
   int windowSize;
   int mainSize;
 
+  @SuppressWarnings("Varifier")
   public RandomWindowTinyLfuPolicy(double percentMain, RandomWindowTinyLfuSettings settings) {
     policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     maximumSize = Math.toIntExact(settings.maximumSize());
@@ -66,7 +68,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    RandomWindowTinyLfuSettings settings = new RandomWindowTinyLfuSettings(config);
+    var settings = new RandomWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new RandomWindowTinyLfuPolicy(percentMain, settings))
         .collect(toUnmodifiableSet());
@@ -79,7 +81,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    Node node = data.get(key);
+    @Var Node node = data.get(key);
     admittor.record(key);
     if (node == null) {
       node = new Node(key, windowSize);
@@ -121,7 +123,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   /** Removes the node from the table and adds the index to the free list. */
-  private void removeFromTable(Node[] table, Node node) {
+  private static void removeFromTable(Node[] table, Node node) {
     int last = table.length - 1;
     table[node.index] = table[last];
     table[node.index].index = node.index;

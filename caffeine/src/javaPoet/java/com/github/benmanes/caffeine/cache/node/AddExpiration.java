@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.NODE;
+import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import javax.lang.model.element.Modifier;
@@ -46,7 +47,7 @@ public final class AddExpiration implements NodeRule {
     addRefreshExpiration(context);
   }
 
-  private void addVariableExpiration(NodeContext context) {
+  private static void addVariableExpiration(NodeContext context) {
     if (context.generateFeatures.contains(Feature.EXPIRE_ACCESS)) {
       addLink(context, "previousInVariableOrder", "previousInAccessOrder");
       addLink(context, "nextInVariableOrder", "nextInAccessOrder");
@@ -65,7 +66,7 @@ public final class AddExpiration implements NodeRule {
     }
   }
 
-  private void addLink(NodeContext context, String method, String varName) {
+  private static void addLink(NodeContext context, String method, String varName) {
     var getter = MethodSpec.methodBuilder("get" + capitalize(method))
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return $N", varName)
@@ -81,16 +82,16 @@ public final class AddExpiration implements NodeRule {
         .addMethod(setter);
   }
 
-  private void addVariableTime(NodeContext context, String varName) {
+  private static void addVariableTime(NodeContext context, String varName) {
     var getter = MethodSpec.methodBuilder("getVariableTime")
         .addModifiers(Modifier.PUBLIC)
-        .addStatement("return (long) $L.getOpaque(this)", context.varHandleName(varName))
+        .addStatement("return (long) $L.getOpaque(this)", varHandleName(varName))
         .returns(long.class)
         .build();
     var setter = MethodSpec.methodBuilder("setVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(long.class, varName)
-        .addStatement("$L.setOpaque(this, $N)", context.varHandleName(varName), varName)
+        .addStatement("$L.setOpaque(this, $N)", varHandleName(varName), varName)
         .build();
     var cas = MethodSpec.methodBuilder("casVariableTime")
         .addModifiers(Modifier.PUBLIC)
@@ -98,7 +99,7 @@ public final class AddExpiration implements NodeRule {
         .addParameter(long.class, "update")
         .returns(boolean.class)
         .addStatement("return ($N == $N)\n&& $L.compareAndSet(this, $N, $N)",
-            varName, "expect", context.varHandleName(varName), "expect", "update")
+            varName, "expect", varHandleName(varName), "expect", "update")
         .build();
     context.nodeSubtype
         .addMethod(getter)
@@ -106,7 +107,7 @@ public final class AddExpiration implements NodeRule {
         .addMethod(cas);
   }
 
-  private void addAccessExpiration(NodeContext context) {
+  private static void addAccessExpiration(NodeContext context) {
     if (!context.generateFeatures.contains(Feature.EXPIRE_ACCESS)) {
       return;
     }
@@ -117,11 +118,11 @@ public final class AddExpiration implements NodeRule {
             TypeName.LONG, "accessTime", Visibility.OPAQUE))
         .addMethod(context.newSetter(TypeName.LONG, "accessTime", Visibility.OPAQUE));
     context.addVarHandle("accessTime", TypeName.get(long.class));
-    addTimeConstructorAssignment(context, context.constructorByKey, "accessTime", "now");
-    addTimeConstructorAssignment(context, context.constructorByKeyRef, "accessTime", "now");
+    addTimeConstructorAssignment(context.constructorByKey, "accessTime", "now");
+    addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime", "now");
   }
 
-  private void addWriteExpiration(NodeContext context) {
+  private static void addWriteExpiration(NodeContext context) {
     if (!Feature.useWriteTime(context.parentFeatures)
         && Feature.useWriteTime(context.generateFeatures)) {
       context.nodeSubtype
@@ -130,12 +131,12 @@ public final class AddExpiration implements NodeRule {
               TypeName.LONG, "writeTime", Visibility.OPAQUE))
           .addMethod(context.newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
       context.addVarHandle("writeTime", TypeName.get(long.class));
-      addTimeConstructorAssignment(context, context.constructorByKey, "writeTime", "now & ~1L");
-      addTimeConstructorAssignment(context, context.constructorByKeyRef, "writeTime", "now & ~1L");
+      addTimeConstructorAssignment(context.constructorByKey, "writeTime", "now & ~1L");
+      addTimeConstructorAssignment(context.constructorByKeyRef, "writeTime", "now & ~1L");
     }
   }
 
-  private void addRefreshExpiration(NodeContext context) {
+  private static void addRefreshExpiration(NodeContext context) {
     if (!context.generateFeatures.contains(Feature.REFRESH_WRITE)) {
       return;
     }
@@ -145,13 +146,13 @@ public final class AddExpiration implements NodeRule {
         .addParameter(long.class, "update")
         .returns(boolean.class)
         .addStatement("return ($N == $N)\n&& $L.compareAndSet(this, $N, $N)",
-            "writeTime", "expect", context.varHandleName("writeTime"), "expect", "update")
+            "writeTime", "expect", varHandleName("writeTime"), "expect", "update")
         .build());
   }
 
   /** Adds a long constructor assignment. */
-  private void addTimeConstructorAssignment(NodeContext context,
+  private static void addTimeConstructorAssignment(
       MethodSpec.Builder constructor, String field, String value) {
-    constructor.addStatement("$L.set(this, $N)", context.varHandleName(field), value);
+    constructor.addStatement("$L.set(this, $N)", varHandleName(field), value);
   }
 }

@@ -90,13 +90,13 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** Returns a modifiable copy of the configuration. */
   public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
-    this(configuration, /* readOnly */ false);
+    this(configuration, /* readOnly= */ false);
   }
 
   private CaffeineConfiguration(CompleteConfiguration<K, V> configuration, boolean readOnly) {
     delegate = new MutableConfiguration<>(configuration);
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
-      CaffeineConfiguration<K, V> config = (CaffeineConfiguration<K, V>) configuration;
+      var config = (CaffeineConfiguration<K, V>) configuration;
       refreshAfterWriteNanos = config.refreshAfterWriteNanos;
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
@@ -120,7 +120,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** Returns an unmodifiable copy of this configuration. */
   public CaffeineConfiguration<K, V> immutableCopy() {
-    return new CaffeineConfiguration<>(this, /* immutable */ true);
+    return new CaffeineConfiguration<>(this, /* readOnly= */ true);
   }
 
   private void checkIfReadOnly() {
@@ -198,7 +198,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     var factory = delegate.getCacheWriterFactory();
     if (factory != null) {
       @SuppressWarnings("unchecked")
-      CacheWriter<K , V> writer = (CacheWriter<K, V>) factory.create();
+      var writer = (CacheWriter<K, V>) factory.create();
       return writer;
     }
     return null;
@@ -612,7 +612,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     } else if (!(o instanceof CaffeineConfiguration<?, ?>)) {
       return false;
     }
-    CaffeineConfiguration<?, ?> config = (CaffeineConfiguration<?, ?>) o;
+    var config = (CaffeineConfiguration<?, ?>) o;
     return Objects.equals(refreshAfterWriteNanos, config.refreshAfterWriteNanos)
         && Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
         && Objects.equals(expireAfterWriteNanos, config.expireAfterWriteNanos)

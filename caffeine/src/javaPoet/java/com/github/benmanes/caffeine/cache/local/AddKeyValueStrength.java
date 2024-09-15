@@ -41,20 +41,20 @@ public final class AddKeyValueStrength implements LocalCacheRule {
     addValueStrength(context);
   }
 
-  private void addKeyStrength(LocalCacheContext context) {
+  private static void addKeyStrength(LocalCacheContext context) {
     if (context.generateFeatures.contains(Feature.WEAK_KEYS)) {
       addStrength(context, "collectKeys", "keyReferenceQueue", kRefQueueType);
     }
   }
 
-  private void addValueStrength(LocalCacheContext context) {
+  private static void addValueStrength(LocalCacheContext context) {
     if (context.generateFeatures.contains(Feature.INFIRM_VALUES)) {
       addStrength(context, "collectValues", "valueReferenceQueue", vRefQueueType);
     }
   }
 
   /** Adds the reference strength methods for the key or value. */
-  private void addStrength(LocalCacheContext context,
+  private static void addStrength(LocalCacheContext context,
       String collectName, String queueName, TypeName type) {
     context.cache.addMethod(MethodSpec.methodBuilder(queueName)
         .addModifiers(context.protectedFinalModifiers())

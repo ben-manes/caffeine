@@ -22,6 +22,8 @@ import java.util.NoSuchElementException;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * This class provides a skeletal implementation of the {@link LinkedDeque} interface to minimize
  * the effort required to implement this interface.
@@ -63,8 +65,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
    *
    * @param e the unlinked element
    */
-  void linkFirst(final E e) {
-    final E f = first;
+  void linkFirst(E e) {
+    E f = first;
     first = e;
 
     if (f == null) {
@@ -81,8 +83,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
    *
    * @param e the unlinked element
    */
-  void linkLast(final E e) {
-    final E l = last;
+  void linkLast(E e) {
+    E l = last;
     last = e;
 
     if (l == null) {
@@ -97,8 +99,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   /** Unlinks the non-null first element. */
   @SuppressWarnings("NullAway")
   E unlinkFirst() {
-    final E f = first;
-    final E next = getNext(f);
+    E f = first;
+    E next = getNext(f);
     setNext(f, null);
 
     first = next;
@@ -114,8 +116,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   /** Unlinks the non-null last element. */
   @SuppressWarnings("NullAway")
   E unlinkLast() {
-    final E l = last;
-    final E prev = getPrevious(l);
+    E l = last;
+    E prev = getPrevious(l);
     setPrevious(l, null);
     last = prev;
     if (prev == null) {
@@ -129,8 +131,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
 
   /** Unlinks the non-null element. */
   void unlink(E e) {
-    final E prev = getPrevious(e);
-    final E next = getNext(e);
+    E prev = getPrevious(e);
+    E next = getNext(e);
 
     if (prev == null) {
       first = next;
@@ -166,7 +168,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
    */
   @Override
   public int size() {
-    int size = 0;
+    @Var int size = 0;
     for (E e = first; e != null; e = getNext(e)) {
       size++;
     }
@@ -175,7 +177,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
 
   @Override
   public void clear() {
-    E e = first;
+    @Var E e = first;
     while (e != null) {
       E next = getNext(e);
       setPrevious(e, null);
@@ -340,7 +342,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
 
   @Override
   public boolean removeAll(Collection<?> c) {
-    boolean modified = false;
+    @Var boolean modified = false;
     for (Object o : c) {
       modified |= remove(o);
     }

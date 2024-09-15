@@ -39,7 +39,7 @@ public final class AddMaximum implements NodeRule {
     addWeight(context);
   }
 
-  private void addQueueFlag(NodeContext context) {
+  private static void addQueueFlag(NodeContext context) {
     context.nodeSubtype.addField(int.class, "queueType");
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getQueueType")
         .addModifiers(context.publicFinalModifiers())
@@ -53,7 +53,7 @@ public final class AddMaximum implements NodeRule {
         .build());
   }
 
-  private void addWeight(NodeContext context) {
+  private static void addWeight(NodeContext context) {
     if (!context.generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
       return;
     }

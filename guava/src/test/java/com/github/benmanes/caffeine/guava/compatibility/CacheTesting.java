@@ -41,6 +41,8 @@ import com.google.common.testing.FakeTicker;
 @SuppressWarnings({"GuardedByChecker", "PreferJavaTimeOverload"})
 class CacheTesting {
 
+  private CacheTesting() {}
+
   static void drainRecencyQueues(Cache<?, ?> cache) {
     cache.cleanUp();
   }

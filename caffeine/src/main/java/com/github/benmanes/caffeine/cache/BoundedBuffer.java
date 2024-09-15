@@ -19,6 +19,8 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.function.Consumer;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A striped, non-blocking, bounded buffer.
  *
@@ -66,6 +68,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
     }
 
     @Override
+    @SuppressWarnings("Varifier")
     public int offer(E e) {
       long head = readCounter;
       long tail = writeCounterOpaque();
@@ -82,8 +85,9 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
     }
 
     @Override
+    @SuppressWarnings("Varifier")
     public void drainTo(Consumer<E> consumer) {
-      long head = readCounter;
+      @Var long head = readCounter;
       long tail = writeCounterOpaque();
       long size = (tail - head);
       if (size == 0) {
@@ -92,7 +96,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
       do {
         int index = (int) (head & MASK);
         @SuppressWarnings("unchecked")
-        E e = (E) BUFFER.getAcquire(buffer, index);
+        var e = (E) BUFFER.getAcquire(buffer, index);
         if (e == null) {
           // not published yet
           break;
@@ -117,7 +121,10 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
 }
 
 /** The namespace for field padding through inheritance. */
+@SuppressWarnings("MultiVariableDeclaration")
 final class BBHeader {
+
+  private BBHeader() {}
 
   @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
   abstract static class PadReadCounter {

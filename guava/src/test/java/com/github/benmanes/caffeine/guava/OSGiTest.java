@@ -52,7 +52,7 @@ public final class OSGiTest {
 
   @Test
   public void sanity() {
-    CacheLoader<Integer, Integer> loader = new CacheLoader<Integer, Integer>() {
+    var loader = new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) {
         return -key;
       }

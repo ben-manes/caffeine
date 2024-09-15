@@ -79,8 +79,9 @@ public class CacheExpirationTest extends TestCase {
     checkExpiration(cache, loader, ticker, removalListener);
   }
 
-  private void checkExpiration(LoadingCache<String, Integer> cache, WatchedCreatorLoader loader,
-      FakeTicker ticker, CountingRemovalListener<String, Integer> removalListener) {
+  private static void checkExpiration(LoadingCache<String, Integer> cache,
+      WatchedCreatorLoader loader, FakeTicker ticker,
+      CountingRemovalListener<String, Integer> removalListener) {
 
     for (int i = 0; i < 10; i++) {
       assertEquals(Integer.valueOf(VALUE_PREFIX + i), cache.getUnchecked(KEY_PREFIX + i));
@@ -130,8 +131,9 @@ public class CacheExpirationTest extends TestCase {
     runExpirationTest(cache, loader, ticker, removalListener);
   }
 
-  private void runExpirationTest(LoadingCache<String, Integer> cache, WatchedCreatorLoader loader,
-      FakeTicker ticker, CountingRemovalListener<String, Integer> removalListener) {
+  private static void runExpirationTest(LoadingCache<String, Integer> cache,
+      WatchedCreatorLoader loader, FakeTicker ticker,
+      CountingRemovalListener<String, Integer> removalListener) {
 
     for (int i = 0; i < 10; i++) {
       assertEquals(Integer.valueOf(VALUE_PREFIX + i), cache.getUnchecked(KEY_PREFIX + i));
@@ -181,9 +183,9 @@ public class CacheExpirationTest extends TestCase {
 
   public void testRemovalListener_expireAfterWrite() {
     FakeTicker ticker = new FakeTicker();
-    final AtomicInteger evictionCount = new AtomicInteger();
-    final AtomicInteger applyCount = new AtomicInteger();
-    final AtomicInteger totalSum = new AtomicInteger();
+    AtomicInteger evictionCount = new AtomicInteger();
+    AtomicInteger applyCount = new AtomicInteger();
+    AtomicInteger totalSum = new AtomicInteger();
 
     RemovalListener<Integer, AtomicInteger> removalListener =
         new RemovalListener<Integer, AtomicInteger>() {
@@ -406,7 +408,7 @@ public class CacheExpirationTest extends TestCase {
     assertThat(keySet).containsExactly(3, 6);
   }
 
-  private void runRemovalScheduler(LoadingCache<String, Integer> cache,
+  private static void runRemovalScheduler(LoadingCache<String, Integer> cache,
       CountingRemovalListener<String, Integer> removalListener,
       WatchedCreatorLoader loader,
       FakeTicker ticker, String keyPrefix, long ttl) {
@@ -452,7 +454,7 @@ public class CacheExpirationTest extends TestCase {
     assertEquals(10, removalListener.getCount());
   }
 
-  private void getAll(LoadingCache<Integer, Integer> cache, List<Integer> keys) {
+  private static void getAll(LoadingCache<Integer, Integer> cache, List<Integer> keys) {
     for (int i : keys) {
       cache.getUnchecked(i);
     }
@@ -460,7 +462,6 @@ public class CacheExpirationTest extends TestCase {
 
   private static class WatchedCreatorLoader extends CacheLoader<String, Integer> {
     boolean wasCalled = false; // must be set in load()
-    String keyPrefix = KEY_PREFIX;
     int valuePrefix = VALUE_PREFIX;
 
     public WatchedCreatorLoader() {
@@ -480,7 +481,7 @@ public class CacheExpirationTest extends TestCase {
 
     @Override public Integer load(String key) {
       wasCalled = true;
-      return valuePrefix + Integer.parseInt(key.substring(keyPrefix.length()));
+      return valuePrefix + Integer.parseInt(key.substring(KEY_PREFIX.length()));
     }
   }
 }

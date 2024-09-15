@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -57,7 +58,7 @@ public final class Threads {
 
   private Threads() {}
 
-  public static <A> void runTest(A collection, List<BiConsumer<A, Int>> operations) {
+  public static <A> void runTest(A collection, ImmutableList<BiConsumer<A, Int>> operations) {
     var failures = new ConcurrentLinkedQueue<String>();
     var thrasher = new Thrasher<A>(collection, failures, operations);
     Threads.executeWithTimeOut(failures, () ->
@@ -98,7 +99,7 @@ public final class Threads {
     fail("Spun forever", e);
   }
 
-  public static List<List<Int>> workingSets(int nThreads, int iterations) {
+  public static ImmutableList<ImmutableList<Int>> workingSets(int nThreads, int iterations) {
     var keys = IntStream.range(0, iterations)
         .map(i -> ThreadLocalRandom.current().nextInt(iterations / 100))
         .mapToObj(Int::valueOf)
@@ -112,25 +113,26 @@ public final class Threads {
    * @param samples the number of variants to create
    * @param baseline the base working set to build from
    */
-  private static <T> List<List<T>> shuffle(int samples, List<T> baseline) {
-    var workingSets = new ArrayList<List<T>>(samples);
+  private static <T> ImmutableList<ImmutableList<T>> shuffle(int samples, List<T> baseline) {
+    var workingSets = new ArrayList<ImmutableList<T>>(samples);
     var workingSet = new ArrayList<T>(baseline);
     for (int i = 0; i < samples; i++) {
       Collections.shuffle(workingSet);
-      workingSets.add(List.copyOf(workingSet));
+      workingSets.add(ImmutableList.copyOf(workingSet));
     }
-    return List.copyOf(workingSets);
+    return ImmutableList.copyOf(workingSets);
   }
 
   /** Executes operations against the cache to simulate random load. */
   public static final class Thrasher<A> implements Runnable {
-    private final List<BiConsumer<A, Int>> operations;
-    private final List<List<Int>> sets;
+    private final ImmutableList<BiConsumer<A, Int>> operations;
+    private final ImmutableList<ImmutableList<Int>> sets;
     private final Queue<String> failures;
     private final AtomicInteger index;
     private final A collection;
 
-    public Thrasher(A collection, Queue<String> failures, List<BiConsumer<A, Int>> operations) {
+    public Thrasher(A collection, Queue<String> failures,
+        ImmutableList<BiConsumer<A, Int>> operations) {
       this.sets = workingSets(Threads.NTHREADS, Threads.ITERATIONS);
       this.index = new AtomicInteger();
       this.operations = operations;

@@ -32,7 +32,7 @@ import junit.framework.TestSuite;
 public final class GuavaMapTests extends TestCase {
 
   public static Test suite() {
-    TestSuite suite = new TestSuite();
+    var suite = new TestSuite();
     addGuavaViewTests(suite);
     return suite;
   }

@@ -49,6 +49,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multimaps;
 import com.google.common.truth.FailureMetadata;
@@ -276,11 +277,11 @@ public final class CacheContextSubject extends Subject {
     static final Factory<ListenerSubject, CacheContext> LISTENERS_FACTORY =
         factoryOf(RemovalListenerType.values());
 
-    private final Map<RemovalListenerType, RemovalListener<Int, Int>> actual;
+    private final ImmutableMap<RemovalListenerType, RemovalListener<Int, Int>> actual;
     private final boolean isDirect;
 
     private ListenerSubject(FailureMetadata metadata, CacheContext context,
-        Map<RemovalListenerType, RemovalListener<Int, Int>> subject) {
+        ImmutableMap<RemovalListenerType, RemovalListener<Int, Int>> subject) {
       super(metadata, subject);
       this.actual = subject;
       this.isDirect = (context.executorType() == CacheExecutor.DIRECT);

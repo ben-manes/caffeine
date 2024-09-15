@@ -101,7 +101,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
       throw new IllegalArgumentException("Class " + clazz + " is unknown to this implementation");
     }
     @SuppressWarnings("unchecked")
-    T castedEntry = (T) this;
+    var castedEntry = (T) this;
     return castedEntry;
   }
 

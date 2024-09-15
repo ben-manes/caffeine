@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission.countmin4;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 /**
@@ -40,7 +41,7 @@ public final class ClimberResetCountMin4 extends CountMin4 {
 
   public ClimberResetCountMin4(Config config) {
     super(config);
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     doorkeeper = settings.tinyLfu().countMin4().periodic().doorkeeper().enabled()
         ? settings.membership().filter().create(config)
         : Membership.disabled();
@@ -58,7 +59,7 @@ public final class ClimberResetCountMin4 extends CountMin4 {
 
   @Override
   public int frequency(long e) {
-    int count = super.frequency(e);
+    @Var int count = super.frequency(e);
     if (doorkeeper.mightContain(e)) {
       count++;
     }
@@ -89,7 +90,7 @@ public final class ClimberResetCountMin4 extends CountMin4 {
       return;
     }
 
-    int count = 0;
+    @Var int count = 0;
     for (int i = 0; i < table.length; i++) {
       count += Long.bitCount(table[i] & ONE_MASK);
       table[i] = (table[i] >>> 1) & RESET_MASK;

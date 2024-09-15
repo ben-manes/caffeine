@@ -21,6 +21,8 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 import java.util.Arrays;
 import java.util.Set;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -57,7 +59,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   private final int levels;
 
   public S4LruPolicy(Admission admission, Config config) {
-    S4LruSettings settings = new S4LruSettings(config);
+    var settings = new S4LruSettings(config);
     this.policyStats = new PolicyStats(admission.format(name()));
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.admittor = admission.from(config, policyStats);
@@ -71,7 +73,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
       new S4LruPolicy(admission, config)
     ).collect(toUnmodifiableSet());
@@ -106,7 +108,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   }
 
   private void onMiss(long key) {
-    Node node = new Node(key);
+    var node = new Node(key);
     data.put(key, node);
     node.appendToTail(headQ[0]);
     sizeQ[0]++;
@@ -168,8 +170,9 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+
     int level;
 
     Node(long key) {
@@ -177,7 +180,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
     }
 
     static Node sentinel(int level) {
-      Node node = new Node(Long.MIN_VALUE);
+      var node = new Node(Long.MIN_VALUE);
       node.level = level;
       node.prev = node;
       node.next = node;

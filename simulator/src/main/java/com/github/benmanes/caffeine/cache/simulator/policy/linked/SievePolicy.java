@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -98,7 +99,7 @@ public final class SievePolicy implements Policy {
   }
 
   private void evict() {
-    var victim = (hand == null) ? tail : hand;
+    @Var var victim = (hand == null) ? tail : hand;
     while ((victim != null) && victim.visited) {
       victim.visited = false;
       victim = (victim.prev == null) ? tail : victim.prev;

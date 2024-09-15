@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import java.lang.ref.Reference;
 import java.util.Objects;
@@ -53,11 +54,10 @@ public final class AddValue implements NodeRule {
       context.addVarHandle("value", ClassName.get(Object.class));
     } else {
       context.addVarHandle("value", context.valueReferenceType().rawType);
-      context.suppressedWarnings.add("NullAway");
     }
   }
 
-  private FieldSpec newValueField(NodeContext context) {
+  private static FieldSpec newValueField(NodeContext context) {
     var fieldSpec = context.isStrongValues()
         ? FieldSpec.builder(vTypeVar, "value", Modifier.VOLATILE)
         : FieldSpec.builder(context.valueReferenceType(), "value", Modifier.VOLATILE);
@@ -65,11 +65,11 @@ public final class AddValue implements NodeRule {
   }
 
   /** Creates the getValue method. */
-  private MethodSpec makeGetValue(NodeContext context) {
+  private static MethodSpec makeGetValue(NodeContext context) {
     var getter = MethodSpec.methodBuilder("getValue")
         .addModifiers(context.publicFinalModifiers())
         .returns(vTypeVar);
-    String handle = context.varHandleName("value");
+    String handle = varHandleName("value");
     if (context.valueStrength() == Strength.STRONG) {
       getter.addStatement("return ($T) $L.get(this)", vTypeVar, handle);
       return getter.build();
@@ -88,19 +88,19 @@ public final class AddValue implements NodeRule {
   }
 
   /** Creates the setValue method. */
-  private MethodSpec makeSetValue(NodeContext context) {
+  private static MethodSpec makeSetValue(NodeContext context) {
     var setter = MethodSpec.methodBuilder("setValue")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(vTypeVar, "value")
         .addParameter(vRefQueueType, "referenceQueue");
 
     if (context.isStrongValues()) {
-      setter.addStatement("$L.setRelease(this, $N)", context.varHandleName("value"), "value");
+      setter.addStatement("$L.setRelease(this, $N)", varHandleName("value"), "value");
     } else {
       setter.addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)",
-          Reference.class, context.varHandleName("value"));
+          Reference.class, varHandleName("value"));
       setter.addStatement("$L.setRelease(this, new $T($L, $N, referenceQueue))",
-          context.varHandleName("value"), context.valueReferenceType(),
+          varHandleName("value"), context.valueReferenceType(),
           "getKeyReference()", "value");
       setter.addStatement("ref.clear()");
     }
@@ -108,7 +108,7 @@ public final class AddValue implements NodeRule {
     return setter.build();
   }
 
-  private MethodSpec makeContainsValue(NodeContext context) {
+  private static MethodSpec makeContainsValue(NodeContext context) {
     var containsValue = MethodSpec.methodBuilder("containsValue")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(Object.class, "value")

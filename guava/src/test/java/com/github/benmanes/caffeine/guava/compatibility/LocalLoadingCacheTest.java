@@ -51,7 +51,7 @@ public class LocalLoadingCacheTest extends TestCase {
     return CaffeinatedGuava.build(builder, loader);
   }
 
-  private Caffeine<Object, Object> createCacheBuilder() {
+  private static Caffeine<Object, Object> createCacheBuilder() {
     return Caffeine.newBuilder().executor(MoreExecutors.directExecutor()).recordStats();
   }
 
@@ -280,8 +280,9 @@ public class LocalLoadingCacheTest extends TestCase {
   }
 
   // Bug in JDK8; fixed but not released as of 1.8.0_25-b17
+  @SuppressWarnings("MemberName")
   public void disabled_testRecursiveComputation() throws InterruptedException {
-    final AtomicReference<LoadingCache<Integer, String>> cacheRef =
+    AtomicReference<LoadingCache<Integer, String>> cacheRef =
         new AtomicReference<LoadingCache<Integer, String>>();
     CacheLoader<Integer, String> recursiveLoader = new CacheLoader<Integer, String>() {
       @Override
@@ -313,7 +314,7 @@ public class LocalLoadingCacheTest extends TestCase {
     cacheRef.set(recursiveCache);
 
     // tells the test when the compution has completed
-    final CountDownLatch doneSignal = new CountDownLatch(1);
+    CountDownLatch doneSignal = new CountDownLatch(1);
 
     Thread thread = new Thread() {
       @Override

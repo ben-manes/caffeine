@@ -17,11 +17,14 @@ package com.github.benmanes.caffeine.cache.simulator.policy.adaptive;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -62,7 +65,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
   private int q;
 
   public CartPolicy(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
@@ -95,7 +98,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
   }
 
-  private void onMiss(long key, Node node) {
+  private void onMiss(long key, @Var Node node) {
     // if (|T1| + |T2| = c) then
     //   /* cache full, replace a page from cache */
     //   replace()
@@ -157,7 +160,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
 
       // Set filter bit of x to "S"
       // nS = nS + 1 /* history hit */
-      node.filter = FilterType.ShortTerm;
+      node.filter = FilterType.SHORT_TERM;
       sizeS++;
     } else if (node.type == QueueType.B1) {
       // Adapt: Increase the target size for the list T1 as: p = min{p + max{1, nS / |B1|}, c}
@@ -173,7 +176,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
       // Reset the page reference bit of x
       // Set nL = nL + 1.
       // Set type of x to "L".
-      node.filter = FilterType.LongTerm;
+      node.filter = FilterType.LONG_TERM;
       node.marked = false;
       sizeL++;
     } else if (node.type == QueueType.B2) {
@@ -189,7 +192,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
 
       // Reset the page reference bit of x
       // Set nL = nL + 1
-      node.filter = FilterType.LongTerm;
+      node.filter = FilterType.LONG_TERM;
       node.marked = false;
       sizeL++;
 
@@ -253,15 +256,15 @@ public final class CartPolicy implements KeyOnlyPolicy {
       }
     }
 
-    while ((headT1.next.filter == FilterType.LongTerm) || headT1.next.marked) {
+    while ((headT1.next.filter == FilterType.LONG_TERM) || headT1.next.marked) {
       policyStats.recordOperation();
       Node node = headT1.next;
       if (node.marked) {
         node.moveToTail(headT1);
         node.marked = false;
 
-        if ((sizeT1 >= Math.max(p + 1, sizeB1)) && (node.filter == FilterType.ShortTerm)) {
-          node.filter = FilterType.LongTerm;
+        if ((sizeT1 >= Math.max(p + 1, sizeB1)) && (node.filter == FilterType.SHORT_TERM)) {
+          node.filter = FilterType.LONG_TERM;
           sizeS--;
           sizeL++;
         }
@@ -316,17 +319,17 @@ public final class CartPolicy implements KeyOnlyPolicy {
   }
 
   private enum FilterType {
-    ShortTerm,
-    LongTerm,
+    SHORT_TERM,
+    LONG_TERM,
   }
 
   static final class Node {
     final long key;
 
-    Node prev;
-    Node next;
-    QueueType type;
-    FilterType filter;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable QueueType type;
+    @Nullable FilterType filter;
 
     boolean marked;
 

@@ -81,7 +81,7 @@ public class FactoryBenchmark {
                 methodHandle.type(), methodHandle, methodHandle.type())
             .getTarget().invokeExact();
       } catch (Throwable e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
 
@@ -89,7 +89,7 @@ public class FactoryBenchmark {
       try {
         return (Alpha) methodHandle.invoke();
       } catch (Throwable e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
 
@@ -97,7 +97,7 @@ public class FactoryBenchmark {
       try {
         return (Alpha) methodHandle.invokeExact();
       } catch (Throwable e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
 
@@ -113,7 +113,7 @@ public class FactoryBenchmark {
       try {
         constructor = Alpha.class.getConstructor();
       } catch (NoSuchMethodException | SecurityException e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
 
@@ -121,7 +121,7 @@ public class FactoryBenchmark {
       try {
         return constructor.newInstance();
       } catch (Throwable e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
   }

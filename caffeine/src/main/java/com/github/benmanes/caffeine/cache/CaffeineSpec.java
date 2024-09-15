@@ -97,7 +97,7 @@ public final class CaffeineSpec {
    * @return a builder configured to the specification
    */
   Caffeine<Object, Object> toBuilder() {
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    var builder = Caffeine.newBuilder();
     if (initialCapacity != UNSET_INT) {
       builder.initialCapacity(initialCapacity);
     }
@@ -141,7 +141,7 @@ public final class CaffeineSpec {
    */
   @SuppressWarnings("StringSplitter")
   public static CaffeineSpec parse(String specification) {
-    CaffeineSpec spec = new CaffeineSpec(specification);
+    var spec = new CaffeineSpec(specification);
     for (String option : specification.split(SPLIT_OPTIONS)) {
       spec.parseOption(option.trim());
     }
@@ -336,7 +336,7 @@ public final class CaffeineSpec {
     } else if (!(o instanceof CaffeineSpec)) {
       return false;
     }
-    CaffeineSpec spec = (CaffeineSpec) o;
+    var spec = (CaffeineSpec) o;
     return Objects.equals(refreshAfterWrite, spec.refreshAfterWrite)
         && Objects.equals(expireAfterAccess, spec.expireAfterAccess)
         && Objects.equals(expireAfterWrite, spec.expireAfterWrite)

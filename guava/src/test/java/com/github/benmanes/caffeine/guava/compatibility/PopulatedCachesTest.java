@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoade
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertThrows;
 
 import java.util.Collection;
 import java.util.List;
@@ -283,11 +284,7 @@ public class PopulatedCachesTest extends TestCase {
       assertEquals(3, cache.getIfPresent(1));
       checkValidState(cache);
 
-      try {
-        entry.setValue(null);
-        fail();
-      } catch (NullPointerException expected) {
-      }
+      assertThrows(NullPointerException.class, () -> entry.setValue(null));
       checkValidState(cache);
     }
   }
@@ -297,7 +294,7 @@ public class PopulatedCachesTest extends TestCase {
   /**
    * Most of the tests in this class run against every one of these caches.
    */
-  private Iterable<LoadingCache<Object, Object>> caches() {
+  private static Iterable<LoadingCache<Object, Object>> caches() {
     // lots of different ways to configure a LoadingCache
     CacheBuilderFactory factory = cacheFactory();
     return Iterables.transform(factory.buildAllPermutations(),
@@ -309,7 +306,7 @@ public class PopulatedCachesTest extends TestCase {
         });
   }
 
-  private CacheBuilderFactory cacheFactory() {
+  private static CacheBuilderFactory cacheFactory() {
     // This is trickier than expected. We plan to put 15 values in each of these (WARMUP_MIN to
     // WARMUP_MAX), but the tests assume no values get evicted. Even with a maximumSize of 100, one
     // of the values gets evicted. With weak keys, we use identity equality, which means using
@@ -336,7 +333,7 @@ public class PopulatedCachesTest extends TestCase {
             DurationSpec.of(1, DAYS)));
   }
 
-  private List<Map.Entry<Object, Object>> warmUp(LoadingCache<Object, Object> cache) {
+  private static List<Map.Entry<Object, Object>> warmUp(LoadingCache<Object, Object> cache) {
     return warmUp(cache, WARMUP_MIN, WARMUP_MAX);
   }
 
@@ -344,7 +341,7 @@ public class PopulatedCachesTest extends TestCase {
    * Returns the entries that were added to the map, so they won't fall out of a map with weak or
    * soft references until the caller drops the reference to the returned entries.
    */
-  private List<Map.Entry<Object, Object>> warmUp(
+  private static List<Map.Entry<Object, Object>> warmUp(
       LoadingCache<Object, Object> cache, int minimum, int maximum) {
 
     List<Map.Entry<Object, Object>> entries = Lists.newArrayList();
@@ -357,11 +354,11 @@ public class PopulatedCachesTest extends TestCase {
   }
 
   @SuppressWarnings("MapEntry")
-  private Map.Entry<Object, Object> entryOf(Object key, Object value) {
+  private static Map.Entry<Object, Object> entryOf(Object key, Object value) {
     return Maps.immutableEntry(key, value);
   }
 
-  private void assertMapSize(Map<?, ?> map, int size) {
+  private static void assertMapSize(Map<?, ?> map, int size) {
     assertEquals(size, map.size());
     if (size > 0) {
       assertFalse(map.isEmpty());
@@ -374,7 +371,7 @@ public class PopulatedCachesTest extends TestCase {
   }
 
   @SuppressWarnings("CollectionSize")
-  private void assertCollectionSize(Collection<?> collection, int size) {
+  private static void assertCollectionSize(Collection<?> collection, int size) {
     assertEquals(size, collection.size());
     if (size > 0) {
       assertFalse(collection.isEmpty());

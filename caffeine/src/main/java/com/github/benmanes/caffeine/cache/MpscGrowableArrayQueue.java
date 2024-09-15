@@ -21,6 +21,8 @@ import java.lang.invoke.VarHandle;
 import java.util.AbstractQueue;
 import java.util.Iterator;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * An MPSC array queue which starts at <i>initialCapacity</i> and grows to <i>maxCapacity</i> in
  * linked chunks of the initial size. The queue grows only when the current buffer is full and
@@ -51,7 +53,7 @@ class MpscGrowableArrayQueue<E> extends MpscChunkedArrayQueue<E> {
     if (buffer.length > maxSize) {
       throw new IllegalStateException();
     }
-    final int newSize = 2 * (buffer.length - 1);
+    int newSize = 2 * (buffer.length - 1);
     return newSize + 1;
   }
 
@@ -61,7 +63,7 @@ class MpscGrowableArrayQueue<E> extends MpscChunkedArrayQueue<E> {
   }
 }
 
-@SuppressWarnings("OvershadowingSubclassFields")
+@SuppressWarnings({"MultiVariableDeclaration", "OvershadowingSubclassFields"})
 abstract class MpscChunkedArrayQueue<E> extends MpscChunkedArrayQueueColdProducerFields<E> {
   byte p000, p001, p002, p003, p004, p005, p006, p007;
   byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -110,6 +112,7 @@ abstract class MpscChunkedArrayQueueColdProducerFields<E> extends BaseMpscLinked
   }
 }
 
+@SuppressWarnings("MultiVariableDeclaration")
 abstract class BaseMpscLinkedArrayQueuePad1<E> extends AbstractQueue<E> {
   byte p000, p001, p002, p003, p004, p005, p006, p007;
   byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -132,7 +135,7 @@ abstract class BaseMpscLinkedArrayQueueProducerFields<E> extends BaseMpscLinkedA
   protected long producerIndex;
 }
 
-@SuppressWarnings("OvershadowingSubclassFields")
+@SuppressWarnings({"MultiVariableDeclaration", "OvershadowingSubclassFields"})
 abstract class BaseMpscLinkedArrayQueuePad2<E> extends BaseMpscLinkedArrayQueueProducerFields<E> {
   byte p000, p001, p002, p003, p004, p005, p006, p007;
   byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -158,7 +161,7 @@ abstract class BaseMpscLinkedArrayQueueConsumerFields<E> extends BaseMpscLinkedA
   protected long consumerIndex;
 }
 
-@SuppressWarnings("OvershadowingSubclassFields")
+@SuppressWarnings({"MultiVariableDeclaration", "OvershadowingSubclassFields"})
 abstract class BaseMpscLinkedArrayQueuePad3<E> extends BaseMpscLinkedArrayQueueConsumerFields<E> {
   byte p000, p001, p002, p003, p004, p005, p006, p007;
   byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -200,7 +203,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * @param initialCapacity the queue initial capacity. If chunk size is fixed this will be the
    *        chunk size. Must be 2 or more.
    */
-  BaseMpscLinkedArrayQueue(final int initialCapacity) {
+  BaseMpscLinkedArrayQueue(int initialCapacity) {
     if (initialCapacity < 2) {
       throw new IllegalArgumentException("Initial capacity must be 2 or more");
     }
@@ -229,14 +232,14 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   @Override
   @SuppressWarnings("MissingDefault")
-  public boolean offer(final E e) {
+  public boolean offer(E e) {
     if (e == null) {
       throw new NullPointerException();
     }
 
-    long mask;
-    E[] buffer;
-    long pIndex;
+    @Var long mask;
+    @Var E[] buffer;
+    @Var long pIndex;
 
     while (true) {
       long producerLimit = lvProducerLimit();
@@ -273,7 +276,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
       }
     }
     // INDEX visible before ELEMENT, consistent with consumer expectation
-    final long offset = modifiedCalcElementOffset(pIndex, mask);
+    long offset = modifiedCalcElementOffset(pIndex, mask);
     soElement(buffer, offset, e);
     return true;
   }
@@ -282,8 +285,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * We do not inline resize into this method because we do not resize on fill.
    */
   private int offerSlowPath(long mask, long pIndex, long producerLimit) {
-    int result;
-    final long cIndex = lvConsumerIndex(this);
+    @Var int result;
+    long cIndex = lvConsumerIndex(this);
     long bufferCapacity = getCurrentBufferCapacity(mask);
     result = 0;// 0 - goto pIndex CAS
     if (cIndex + bufferCapacity > pIndex) {
@@ -307,7 +310,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   /**
    * @return available elements in queue * 2
    */
-  protected abstract long availableInQueue(long pIndex, final long cIndex);
+  protected abstract long availableInQueue(long pIndex, long cIndex);
 
   /**
    * {@inheritDoc}
@@ -317,12 +320,12 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   @Override
   @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
   public E poll() {
-    final E[] buffer = consumerBuffer;
-    final long index = consumerIndex;
-    final long mask = consumerMask;
+    E[] buffer = consumerBuffer;
+    long index = consumerIndex;
+    long mask = consumerMask;
 
-    final long offset = modifiedCalcElementOffset(index, mask);
-    Object e = lvElement(buffer, offset);// LoadLoad
+    long offset = modifiedCalcElementOffset(index, mask);
+    @Var Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null) {
       if (index != lvProducerIndex(this)) {
         // poll() == null iff queue is empty, null element is not strong enough indicator, so we
@@ -336,7 +339,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
       }
     }
     if (e == JUMP) {
-      final E[] nextBuffer = getNextBuffer(buffer, mask);
+      E[] nextBuffer = getNextBuffer(buffer, mask);
       return newBufferPoll(nextBuffer, index);
     }
     soElement(buffer, offset, null);
@@ -352,12 +355,12 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   @Override
   @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
   public E peek() {
-    final E[] buffer = consumerBuffer;
-    final long index = consumerIndex;
-    final long mask = consumerMask;
+    E[] buffer = consumerBuffer;
+    long index = consumerIndex;
+    long mask = consumerMask;
 
-    final long offset = modifiedCalcElementOffset(index, mask);
-    Object e = lvElement(buffer, offset);// LoadLoad
+    long offset = modifiedCalcElementOffset(index, mask);
+    @Var Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null && index != lvProducerIndex(this)) {
       // peek() == null iff queue is empty, null element is not strong enough indicator, so we must
       // check the producer index. If the queue is indeed not empty we spin until element is
@@ -373,20 +376,20 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   }
 
   @SuppressWarnings("unchecked")
-  private E[] getNextBuffer(final E[] buffer, final long mask) {
-    final long nextArrayOffset = nextArrayOffset(mask);
-    final E[] nextBuffer = (E[]) lvElement(buffer, nextArrayOffset);
+  private E[] getNextBuffer(E[] buffer, long mask) {
+    long nextArrayOffset = nextArrayOffset(mask);
+    var nextBuffer = (E[]) lvElement(buffer, nextArrayOffset);
     soElement(buffer, nextArrayOffset, null);
     return nextBuffer;
   }
 
-  private long nextArrayOffset(final long mask) {
+  private static long nextArrayOffset(long mask) {
     return modifiedCalcElementOffset(mask + 2, Long.MAX_VALUE);
   }
 
-  private E newBufferPoll(E[] nextBuffer, final long index) {
-    final long offsetInNew = newBufferAndOffset(nextBuffer, index);
-    final E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
+  private E newBufferPoll(E[] nextBuffer, long index) {
+    long offsetInNew = newBufferAndOffset(nextBuffer, index);
+    E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
     if (n == null) {
       throw new IllegalStateException("new buffer must have at least one element");
     }
@@ -395,16 +398,16 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return n;
   }
 
-  private E newBufferPeek(E[] nextBuffer, final long index) {
-    final long offsetInNew = newBufferAndOffset(nextBuffer, index);
-    final E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
+  private E newBufferPeek(E[] nextBuffer, long index) {
+    long offsetInNew = newBufferAndOffset(nextBuffer, index);
+    E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
     if (n == null) {
       throw new IllegalStateException("new buffer must have at least one element");
     }
     return n;
   }
 
-  private long newBufferAndOffset(E[] nextBuffer, final long index) {
+  private long newBufferAndOffset(E[] nextBuffer, long index) {
     consumerBuffer = nextBuffer;
     consumerMask = (nextBuffer.length - 2L) << 1;
     return modifiedCalcElementOffset(index, consumerMask);
@@ -420,11 +423,11 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
      * In the event of concurrent polls/offers to this method the size is OVER estimated as we read
      * consumer index BEFORE the producer index.
      */
-    long after = lvConsumerIndex(this);
+    @Var long after = lvConsumerIndex(this);
     long size;
     while (true) {
-      final long before = after;
-      final long currentProducerIndex = lvProducerIndex(this);
+      long before = after;
+      long currentProducerIndex = lvProducerIndex(this);
       after = lvConsumerIndex(this);
       if (before == after) {
         size = ((currentProducerIndex - after) >> 1);
@@ -469,17 +472,17 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
   public E relaxedPoll() {
-    final E[] buffer = consumerBuffer;
-    final long index = consumerIndex;
-    final long mask = consumerMask;
+    E[] buffer = consumerBuffer;
+    long index = consumerIndex;
+    long mask = consumerMask;
 
-    final long offset = modifiedCalcElementOffset(index, mask);
+    long offset = modifiedCalcElementOffset(index, mask);
     Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null) {
       return null;
     }
     if (e == JUMP) {
-      final E[] nextBuffer = getNextBuffer(buffer, mask);
+      E[] nextBuffer = getNextBuffer(buffer, mask);
       return newBufferPoll(nextBuffer, index);
     }
     soElement(buffer, offset, null);
@@ -489,11 +492,11 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
   public E relaxedPeek() {
-    final E[] buffer = consumerBuffer;
-    final long index = consumerIndex;
-    final long mask = consumerMask;
+    E[] buffer = consumerBuffer;
+    long index = consumerIndex;
+    long mask = consumerMask;
 
-    final long offset = modifiedCalcElementOffset(index, mask);
+    long offset = modifiedCalcElementOffset(index, mask);
     Object e = lvElement(buffer, offset);// LoadLoad
     if (e == JUMP) {
       return newBufferPeek(getNextBuffer(buffer, mask), index);
@@ -501,23 +504,23 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return (E) e;
   }
 
-  private void resize(long oldMask, E[] oldBuffer, long pIndex, final E e) {
+  private void resize(long oldMask, E[] oldBuffer, long pIndex, E e) {
     int newBufferLength = getNextBufferSize(oldBuffer);
-    final E[] newBuffer = allocate(newBufferLength);
+    E[] newBuffer = allocate(newBufferLength);
 
     producerBuffer = newBuffer;
-    final int newMask = (newBufferLength - 2) << 1;
+    int newMask = (newBufferLength - 2) << 1;
     producerMask = newMask;
 
-    final long offsetInOld = modifiedCalcElementOffset(pIndex, oldMask);
-    final long offsetInNew = modifiedCalcElementOffset(pIndex, newMask);
+    long offsetInOld = modifiedCalcElementOffset(pIndex, oldMask);
+    long offsetInNew = modifiedCalcElementOffset(pIndex, newMask);
 
     soElement(newBuffer, offsetInNew, e);// element in new array
     soElement(oldBuffer, nextArrayOffset(oldMask), newBuffer);// buffer linked
 
     // ASSERT code
-    final long cIndex = lvConsumerIndex(this);
-    final long availableInQueue = availableInQueue(pIndex, cIndex);
+    long cIndex = lvConsumerIndex(this);
+    long availableInQueue = availableInQueue(pIndex, cIndex);
     if (availableInQueue <= 0) {
       throw new IllegalStateException();
     }

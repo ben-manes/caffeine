@@ -40,7 +40,7 @@ public final class GuavaPolicy implements Policy {
 
   public GuavaPolicy(Config config, Set<Characteristic> characteristics) {
     policyStats = new PolicyStats(name());
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     CacheBuilder<Long, AccessEvent> builder = CacheBuilder.newBuilder()
         .removalListener(notification -> policyStats.recordEviction());
     if (characteristics.contains(WEIGHTED)) {

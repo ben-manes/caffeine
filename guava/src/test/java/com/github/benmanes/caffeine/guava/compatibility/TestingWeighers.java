@@ -23,6 +23,8 @@ import com.github.benmanes.caffeine.cache.Weigher;
  */
 public class TestingWeighers {
 
+  private TestingWeighers() {}
+
   /**
    * Returns a {@link Weigher} that returns the given {@code constant} for every request.
    */

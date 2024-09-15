@@ -31,7 +31,7 @@ public final class IncrementalResetCountMin4 extends CountMin4 {
 
   public IncrementalResetCountMin4(Config config) {
     super(config);
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     interval = settings.tinyLfu().countMin4().incremental().interval();
     cursor = settings.randomSeed();
   }

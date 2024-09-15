@@ -2,6 +2,7 @@ import com.google.common.collect.Sets
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import kotlin.math.max
 import net.ltgt.gradle.errorprone.errorprone
+import net.ltgt.gradle.nullaway.nullaway
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.Library
@@ -78,6 +79,13 @@ val compileCodeGenJava by tasks.existing(JavaCompile::class) {
   classpath = sourceSets["main"].runtimeClasspath + sourceSets["main"].output
   dependsOn(tasks.compileJava)
   options.isDebug = false
+
+  options.errorprone {
+    disable("FieldMissingNullable")
+    disable("MissingOverride")
+    disable("Varifier")
+    nullaway.disable()
+  }
 }
 
 compileJavaPoetJava.configure {
@@ -120,6 +128,21 @@ tasks.named<JavaCompile>("compileJava").configure {
 
 tasks.named<JavaCompile>("compileTestJava").configure {
   dependsOn(tasks.jar, compileCodeGenJava)
+  options.errorprone {
+    disable("MemberName")
+    disable("SystemOut")
+    disable("Varifier")
+    disable("Var")
+  }
+}
+
+tasks.named<JavaCompile>("compileJmhJava").configure {
+  options.errorprone {
+    disable("MemberName")
+    disable("SystemOut")
+    disable("Varifier")
+    disable("Var")
+  }
 }
 
 tasks.test.configure {

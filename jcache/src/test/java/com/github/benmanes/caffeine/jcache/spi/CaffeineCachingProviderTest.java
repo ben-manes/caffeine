@@ -127,7 +127,7 @@ public final class CaffeineCachingProviderTest {
     }
   }
 
-  private void runWithClassloader(Consumer<CachingProvider> consumer) {
+  private static void runWithClassloader(Consumer<CachingProvider> consumer) {
     var reference = new AtomicReference<CachingProvider>();
     var thread = new Thread(() -> {
       Thread.currentThread().setContextClassLoader(new ClassLoader() {});

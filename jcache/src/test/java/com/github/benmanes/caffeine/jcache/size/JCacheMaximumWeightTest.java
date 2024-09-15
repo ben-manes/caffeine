@@ -51,8 +51,8 @@ public final class JCacheMaximumWeightTest extends AbstractJCacheTest {
     configuration.setMaximumWeight(OptionalLong.of(MAXIMUM));
     configuration.setWeigherFactory(Optional.of(() -> (key, value) -> value));
     var listenerConfiguration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
-        () -> listener, /* filterFactory */ null,
-        /* isOldValueRequired */ true, /* isSynchronous */ true);
+        () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ true, /* isSynchronous= */ true);
     configuration.addCacheEntryListenerConfiguration(listenerConfiguration);
     configuration.setExecutorFactory(MoreExecutors::directExecutor);
     return configuration;

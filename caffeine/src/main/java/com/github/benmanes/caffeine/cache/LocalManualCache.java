@@ -29,6 +29,7 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.google.errorprone.annotations.Var;
 
 /**
  * This class provides a skeletal implementation of the {@link Cache} interface to minimize the
@@ -53,7 +54,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
 
   @Override
   default @Nullable V getIfPresent(K key) {
-    return cache().getIfPresent(key, /* recordStats */ true);
+    return cache().getIfPresent(key, /* recordStats= */ true);
   }
 
   @Override
@@ -97,8 +98,8 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
    */
   default void bulkLoad(Set<K> keysToLoad, Map<K, V> result,
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
-    boolean success = false;
     long startTime = cache().statsTicker().read();
+    @Var boolean success = false;
     try {
       var loaded = mappingFunction.apply(Collections.unmodifiableSet(keysToLoad));
       loaded.forEach(cache()::put);

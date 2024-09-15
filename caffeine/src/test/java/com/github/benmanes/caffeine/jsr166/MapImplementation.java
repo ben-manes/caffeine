@@ -23,7 +23,7 @@ public interface MapImplementation {
     default int valueToInt(Object value) { return (Integer) value; }
 
     public boolean isConcurrent();
-    default boolean remappingFunctionCalledAtMostOnce() { return true; };
+    default boolean remappingFunctionCalledAtMostOnce() { return true; }
     public boolean permitsNullKeys();
     public boolean permitsNullValues();
     public boolean supportsSetValue();

@@ -42,6 +42,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.benmanes.caffeine.testing.Threads;
+import com.google.common.collect.ImmutableList;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -100,7 +101,7 @@ public final class MultiThreadedTest {
 
   @SuppressWarnings({"CollectionToArray", "FutureReturnValueIgnored", "MethodReferenceUsage",
     "rawtypes", "ReturnValueIgnored", "SelfEquals", "SizeGreaterThanOrEqualsZero"})
-  List<BiConsumer<LoadingCache<Int, Int>, Int>> operations = List.of(
+  ImmutableList<BiConsumer<LoadingCache<Int, Int>, Int>> operations = ImmutableList.of(
       // LoadingCache
       (cache, key) -> { cache.get(key); },
       (cache, key) -> { cache.getAll(List.of(key)); },
@@ -160,7 +161,7 @@ public final class MultiThreadedTest {
       });
 
   @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored", "MethodReferenceUsage"})
-  List<BiConsumer<AsyncLoadingCache<Int, Int>, Int>> asyncOperations = List.of(
+  ImmutableList<BiConsumer<AsyncLoadingCache<Int, Int>, Int>> asyncOperations = ImmutableList.of(
       (cache, key) -> { cache.getIfPresent(key); },
       (cache, key) -> { cache.get(key, k -> key); },
       (cache, key) -> { cache.get(key, (k, e) -> CompletableFuture.completedFuture(key)); },

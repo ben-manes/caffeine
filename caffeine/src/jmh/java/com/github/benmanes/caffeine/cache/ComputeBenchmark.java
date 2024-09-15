@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -93,7 +92,7 @@ public class ComputeBenchmark {
   }
 
   private void setupConcurrentHashMap() {
-    ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>();
+    var map = new ConcurrentHashMap<Integer, Boolean>();
     benchmarkFunction = key -> map.computeIfAbsent(key, mappingFunction);
   }
 

@@ -51,7 +51,7 @@ public abstract class MutableMapTestCase extends MutableMapIterableTestCase {
   }
 
   @Test
-  public void testClone() {
+  public void cloneable() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 2, "Two");
     MutableMap<Integer, String> clone = map.clone();
     Assert.assertNotSame(map, clone);

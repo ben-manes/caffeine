@@ -332,7 +332,7 @@ public final class TimerWheelTest {
     }
   }
 
-  private LongArrayList getTimers(Node<?, ?> sentinel) {
+  private static LongArrayList getTimers(Node<?, ?> sentinel) {
     var timers = new LongArrayList();
     for (var node = sentinel.getNextInVariableOrder();
          node != sentinel; node = node.getNextInVariableOrder()) {
@@ -506,11 +506,11 @@ public final class TimerWheelTest {
     var ascending = Streams.stream(timerWheel.iterator())
         .limit(range + 1).map(Node::getKey).collect(toImmutableList());
     assertThat(ascending).containsExactlyElementsIn(input);
-    assertThat(ascending).containsExactlyElementsIn(snapshot(/* ascending */ true)).inOrder();
+    assertThat(ascending).containsExactlyElementsIn(snapshot(/* ascending= */ true)).inOrder();
 
     var descending = Streams.stream(timerWheel.descendingIterator())
         .limit(range + 1).map(Node::getKey).collect(toImmutableList());
-    assertThat(descending).containsExactlyElementsIn(snapshot(/* ascending */ false)).inOrder();
+    assertThat(descending).containsExactlyElementsIn(snapshot(/* ascending= */ false)).inOrder();
     assertThat(descending).containsExactlyElementsIn(input);
   }
 

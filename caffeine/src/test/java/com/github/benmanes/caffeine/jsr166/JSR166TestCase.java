@@ -48,8 +48,10 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintStream;
 import java.lang.management.LockInfo;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -97,10 +99,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
+import junit.textui.ResultPrinter;
+import junit.textui.TestRunner;
 
 /**
  * Base class for JSR166 Junit TCK tests.  Defines some constants,
@@ -188,10 +194,11 @@ import junit.framework.TestSuite;
  * </ul>
  */
 @SuppressWarnings({"AnnotateFormatMethod", "ClassEscapesDefinedScope", "CollectionToArray",
-    "EqualsIncompatibleType", "FunctionalInterfaceClash", "JavaUtilDate",
-    "JUnit3FloatingPointComparisonWithoutDelta", "NonFinalStaticField", "NumericEquality",
-    "rawtypes", "ReferenceEquality", "RethrowReflectiveOperationExceptionAsLinkageError",
-    "serial", "SwitchDefault", "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals"})
+    "ConstantField", "EqualsIncompatibleType", "FunctionalInterfaceClash",
+    "InterruptedExceptionSwallowed", "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta",
+    "NonFinalStaticField", "NumericEquality", "rawtypes", "ReferenceEquality",
+    "RethrowReflectiveOperationExceptionAsLinkageError", "serial", "SwitchDefault",
+    "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals", "UnnecessaryFinal"})
 public class JSR166TestCase extends TestCase {
 //    private static final boolean useSecurityManager =
 //        Boolean.getBoolean("jsr166.useSecurityManager");
@@ -245,7 +252,7 @@ public class JSR166TestCase extends TestCase {
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(
                 String.format(US, "Bad float value in system property %s=%s",
-                              name, floatString));
+                              name, floatString), ex);
         }
     }
 
@@ -385,8 +392,8 @@ public class JSR166TestCase extends TestCase {
         main(suite());
     }
 
-    static class PithyResultPrinter extends junit.textui.ResultPrinter {
-        PithyResultPrinter(java.io.PrintStream writer) { super(writer); }
+    static class PithyResultPrinter extends ResultPrinter {
+        PithyResultPrinter(PrintStream writer) { super(writer); }
         long runTime;
         @Override
         public void startTest(Test test) {}
@@ -410,8 +417,8 @@ public class JSR166TestCase extends TestCase {
      * Returns a TestRunner that doesn't bother with unnecessary
      * fluff, like printing a "." for each test case.
      */
-    static junit.textui.TestRunner newPithyTestRunner() {
-        junit.textui.TestRunner runner = new junit.textui.TestRunner();
+    static TestRunner newPithyTestRunner() {
+        TestRunner runner = new TestRunner();
         runner.setPrinter(new PithyResultPrinter(System.out));
         return runner;
     }
@@ -622,6 +629,7 @@ public class JSR166TestCase extends TestCase {
      * Returns junit-style testSuite for the given test class, but
      * parameterized by passing extra data to each test.
      */
+    @SuppressWarnings("TypeParameterNaming")
     public static <ExtraData> Test parameterizedTestSuite
         (Class<? extends JSR166TestCase> testClass,
          Class<ExtraData> dataClass,
@@ -644,6 +652,7 @@ public class JSR166TestCase extends TestCase {
      * given test class, but parameterized by passing extra data to
      * each test.  Uses reflection to allow compilation in jdk7.
      */
+    @SuppressWarnings("TypeParameterNaming")
     public static <ExtraData> Test jdk8ParameterizedTestSuite
         (Class<? extends JSR166TestCase> testClass,
          Class<ExtraData> dataClass,
@@ -1526,7 +1535,7 @@ public class JSR166TestCase extends TestCase {
      * @param waitingForGodot if non-null, an additional condition to satisfy
      */
     void waitForThreadToEnterWaitState(Thread thread, long timeoutMillis,
-                                       Callable<Boolean> waitingForGodot) {
+                                       @Nullable Callable<Boolean> waitingForGodot) {
         for (long startTime = 0L;;) {
             switch (thread.getState()) {
             default: break;
@@ -1959,7 +1968,7 @@ public class JSR166TestCase extends TestCase {
             try {
                 return super.await(LONGER_DELAY_MS, MILLISECONDS);
             } catch (TimeoutException timedOut) {
-                throw new AssertionError("timed out");
+                throw new AssertionError("timed out", timedOut);
             } catch (Exception fail) {
                 throw new AssertionError("Unexpected exception: " + fail, fail);
             }
@@ -2046,7 +2055,7 @@ public class JSR166TestCase extends TestCase {
      */
     @SuppressWarnings("unchecked")
     <T> T serialClonePossiblyFailing(T o)
-        throws ReflectiveOperationException, java.io.IOException {
+        throws ReflectiveOperationException, IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(o);
@@ -2224,8 +2233,8 @@ public class JSR166TestCase extends TestCase {
         Callable<Boolean> c = () -> Boolean.TRUE;
 
         class Recorder implements RejectedExecutionHandler {
-            public volatile Runnable r = null;
-            public volatile ThreadPoolExecutor p = null;
+            public volatile @Nullable Runnable r = null;
+            public volatile @Nullable ThreadPoolExecutor p = null;
             public void reset() { r = null; p = null; }
             @Override
             public void rejectedExecution(Runnable r, ThreadPoolExecutor p) {

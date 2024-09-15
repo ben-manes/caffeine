@@ -42,7 +42,7 @@ public final class CaffeineCacheFromContext {
   private CaffeineCacheFromContext() {}
 
   public static <K, V> Cache<K, V> newCaffeineCache(CacheContext context) {
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    var builder = Caffeine.newBuilder();
     context.caffeine = builder;
 
     if (context.initialCapacity() != InitialCapacity.DEFAULT) {

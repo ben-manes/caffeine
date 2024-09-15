@@ -115,7 +115,7 @@ public final class LinkedDequeTest {
     checkMoveToFront(deque, deque.getLast());
   }
 
-  private void checkMoveToFront(LinkedDeque<LinkedValue> deque, LinkedValue element) {
+  private static void checkMoveToFront(LinkedDeque<LinkedValue> deque, LinkedValue element) {
     deque.moveToFront(element);
     assertThat(deque).hasSize(SIZE);
     assertThat(deque.peekFirst()).isEqualTo(element);
@@ -136,7 +136,7 @@ public final class LinkedDequeTest {
     checkMoveToBack(deque, deque.getLast());
   }
 
-  private void checkMoveToBack(LinkedDeque<LinkedValue> deque, LinkedValue element) {
+  private static void checkMoveToBack(LinkedDeque<LinkedValue> deque, LinkedValue element) {
     deque.moveToBack(element);
     assertThat(deque).hasSize(SIZE);
     assertThat(deque.getLast()).isEqualTo(element);

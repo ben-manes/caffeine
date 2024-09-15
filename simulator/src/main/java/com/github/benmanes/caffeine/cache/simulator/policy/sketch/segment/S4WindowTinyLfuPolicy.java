@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -56,6 +58,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   private int sizeWindow;
 
+  @SuppressWarnings("Varifier")
   public S4WindowTinyLfuPolicy(double percentMain, S4WindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
@@ -72,7 +75,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    S4WindowTinyLfuSettings settings = new S4WindowTinyLfuSettings(config);
+    var settings = new S4WindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new S4WindowTinyLfuPolicy(percentMain, settings))
         .collect(toUnmodifiableSet());
@@ -104,7 +107,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    Node node = new Node(key, Status.WINDOW);
+    var node = new Node(key, Status.WINDOW);
     node.appendToTail(headWindow);
     data.put(key, node);
     sizeWindow++;
@@ -175,7 +178,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
   public void finished() {
     for (int i = 0; i < levels; i++) {
       int level = i;
-      int count = (int) data.values().stream()
+      long count = data.values().stream()
           .filter(node -> node.status == Status.MAIN)
           .filter(node -> node.level == level)
           .count();
@@ -193,20 +196,21 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Status status;
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable Status status;
+
     int level;
 
     /** Creates a new, unlinked node. */
-    public Node(long key, Status status) {
+    public Node(long key, @Nullable Status status) {
       this.status = status;
       this.key = key;
     }
 
     /** Creates a new sentinel node. */
     static Node sentinel(int level) {
-      Node node = new Node(Long.MIN_VALUE, null);
+      var node = new Node(Long.MIN_VALUE, null);
       node.level = level;
       node.prev = node;
       node.next = node;

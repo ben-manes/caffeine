@@ -43,24 +43,24 @@ public final class MpscGrowableArrayQueueTest {
   @Test
   public void constructor_initialCapacity_tooSmall() {
     assertThrows(IllegalArgumentException.class, () ->
-        new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 1, /* maxCapacity */ 4));
+        new MpscGrowableArrayQueue<Integer>(/* initialCapacity= */ 1, /* maxCapacity= */ 4));
   }
 
   @Test
   public void constructor_maxCapacity_tooSmall() {
     assertThrows(IllegalArgumentException.class, () ->
-        new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 1));
+        new MpscGrowableArrayQueue<Integer>(/* initialCapacity= */ 4, /* maxCapacity= */ 1));
   }
 
   @Test
   public void constructor_inverted() {
     assertThrows(IllegalArgumentException.class, () ->
-        new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 8, /* maxCapacity */ 4));
+        new MpscGrowableArrayQueue<Integer>(/* initialCapacity= */ 8, /* maxCapacity= */ 4));
   }
 
   @Test
   public void constructor() {
-    var queue = new MpscGrowableArrayQueue<Integer>(/* initialCapacity */ 4, /* maxCapacity */ 8);
+    var queue = new MpscGrowableArrayQueue<Integer>(/* initialCapacity= */ 4, /* maxCapacity= */ 8);
     assertThat(queue.capacity()).isEqualTo(8);
   }
 

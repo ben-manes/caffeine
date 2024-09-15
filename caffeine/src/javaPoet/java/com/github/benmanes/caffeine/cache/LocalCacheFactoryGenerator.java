@@ -95,8 +95,8 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private void writeJavaFile() throws IOException {
-    String header = Resources.toString(Resources.getResource("license.txt"), UTF_8).trim();
-    ZoneId timeZone = ZoneId.of("America/Los_Angeles");
+    var header = Resources.toString(Resources.getResource("license.txt"), UTF_8).trim();
+    var timeZone = ZoneId.of("America/Los_Angeles");
     for (TypeSpec typeSpec : factoryTypes) {
       JavaFile.builder(getClass().getPackageName(), typeSpec)
           .addFileComment(header, Year.now(timeZone))

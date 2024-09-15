@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -32,6 +34,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -80,6 +83,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   boolean debug;
   boolean trace;
 
+  @SuppressWarnings("Varifier")
   public FeedbackWindowTinyLfuPolicy(double percentMain, FeedbackWindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
@@ -108,7 +112,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    FeedbackWindowTinyLfuSettings settings = new FeedbackWindowTinyLfuSettings(config);
+    var settings = new FeedbackWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new FeedbackWindowTinyLfuPolicy(percentMain, settings))
         .collect(toUnmodifiableSet());
@@ -151,7 +155,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    Node node = new Node(key, Status.WINDOW);
+    var node = new Node(key, Status.WINDOW);
     node.appendToTail(headWindow);
     data.put(key, node);
     sizeWindow++;
@@ -223,7 +227,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  private boolean adapt(Node candidate) {
+  private boolean adapt(@Var Node candidate) {
     if (adjusted == sampled) {
       // Already adjusted this period
       return false;
@@ -271,7 +275,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
       adjusted = sampled;
 
       // Decrease admission window
-      boolean decremented = false;
+      @Var boolean decremented = false;
       for (int i = 0; i < pivotDecrement; i++) {
         if (pivot > 0) {
           pivot--;
@@ -325,9 +329,9 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Status status;
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable Status status;
 
     /** Creates a new sentinel node. */
     public Node() {
@@ -410,10 +414,11 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
       return config().getDouble("feedback-window-tiny-lfu.adaptive-fpp");
     }
     public Config filterConfig(int sampleSize) {
-      Map<String, Object> properties = Map.of(
-          "membership.fpp", adaptiveFpp(),
-          "maximum-size", sampleSize);
-      return ConfigFactory.parseMap(properties).withFallback(config());
+      return ConfigFactory
+          .parseMap(Map.of(
+              "membership.fpp", adaptiveFpp(),
+              "maximum-size", sampleSize))
+          .withFallback(config());
     }
   }
 }

@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy.adaptive;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -72,7 +74,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
   private int p;
 
   public ArcPolicy(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
@@ -152,7 +154,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     //   REPLACE(p) .
     // Put x at the top of T1 and place it in the cache.
 
-    Node node = new Node(key);
+    var node = new Node(key);
     node.type = QueueType.T1;
 
     int sizeL1 = (sizeT1 + sizeB1);
@@ -237,9 +239,9 @@ public final class ArcPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Node prev;
-    Node next;
-    QueueType type;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable QueueType type;
 
     Node() {
       this.key = Long.MIN_VALUE;

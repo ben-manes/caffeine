@@ -259,7 +259,8 @@ public final class Caffeine<K, V> {
   static <K> BoundedLocalCache<K, Boolean> newWeakInterner() {
     var builder = new Caffeine<K, Boolean>().executor(Runnable::run).weakKeys();
     builder.interner = true;
-    return LocalCacheFactory.newBoundedLocalCache(builder, /* loader */ null, /* async */ false);
+    return LocalCacheFactory.newBoundedLocalCache(builder,
+        /* cacheLoader= */ null, /* isAsync= */ false);
   }
 
   /**
@@ -479,7 +480,7 @@ public final class Caffeine<K, V> {
         "weigher can not be combined with maximum size");
 
     @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    var self = (Caffeine<K1, V1>) this;
     self.weigher = weigher;
     return self;
   }
@@ -757,7 +758,7 @@ public final class Caffeine<K, V> {
         "Expiry may not be used with expiresAfterWrite");
 
     @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    var self = (Caffeine<K1, V1>) this;
     self.expiry = expiry;
     return self;
   }
@@ -831,12 +832,12 @@ public final class Caffeine<K, V> {
     return this;
   }
 
-  long getRefreshAfterWriteNanos() {
-    return refreshAfterWrite() ? refreshAfterWriteNanos : DEFAULT_REFRESH_NANOS;
-  }
-
   boolean refreshAfterWrite() {
     return refreshAfterWriteNanos != UNSET_INT;
+  }
+
+  long getRefreshAfterWriteNanos() {
+    return refreshAfterWrite() ? refreshAfterWriteNanos : DEFAULT_REFRESH_NANOS;
   }
 
   /**
@@ -908,7 +909,7 @@ public final class Caffeine<K, V> {
         "eviction listener was already set to %s", this.evictionListener);
 
     @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    var self = (Caffeine<K1, V1>) this;
     self.evictionListener = requireNonNull(evictionListener);
     return self;
   }
@@ -960,14 +961,14 @@ public final class Caffeine<K, V> {
         "removal listener was already set to %s", this.removalListener);
 
     @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    var self = (Caffeine<K1, V1>) this;
     self.removalListener = requireNonNull(removalListener);
     return self;
   }
 
   @SuppressWarnings({"JavaAnnotator", "unchecked"})
-  @Nullable <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
-    RemovalListener<K1, V1> castedListener = (RemovalListener<K1, V1>) removalListener;
+  <K1 extends K, V1 extends V> @Nullable RemovalListener<K1, V1> getRemovalListener(boolean async) {
+    var castedListener = (RemovalListener<K1, V1>) removalListener;
     return async && (castedListener != null)
         ? (RemovalListener<K1, V1>) new AsyncRemovalListener<>(castedListener, getExecutor())
         : castedListener;
@@ -1046,7 +1047,7 @@ public final class Caffeine<K, V> {
     requireNonLoadingCache();
 
     @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    var self = (Caffeine<K1, V1>) this;
     return isBounded()
         ? new BoundedLocalCache.BoundedLocalManualCache<>(self)
         : new UnboundedLocalCache.UnboundedLocalManualCache<>(self);
@@ -1071,7 +1072,7 @@ public final class Caffeine<K, V> {
     requireWeightWithWeigher();
 
     @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    var self = (Caffeine<K1, V1>) this;
     return isBounded() || refreshAfterWrite()
         ? new BoundedLocalCache.BoundedLocalLoadingCache<>(self, loader)
         : new UnboundedLocalCache.UnboundedLocalLoadingCache<>(self, loader);
@@ -1105,7 +1106,7 @@ public final class Caffeine<K, V> {
     requireNonLoadingCache();
 
     @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    var self = (Caffeine<K1, V1>) this;
     return isBounded()
         ? new BoundedLocalCache.BoundedLocalAsyncCache<>(self)
         : new UnboundedLocalCache.UnboundedLocalAsyncCache<>(self);
@@ -1162,7 +1163,7 @@ public final class Caffeine<K, V> {
     requireNonNull(loader);
 
     @SuppressWarnings("unchecked")
-    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    var self = (Caffeine<K1, V1>) this;
     return isBounded() || refreshAfterWrite()
         ? new BoundedLocalCache.BoundedLocalAsyncLoadingCache<>(self, loader)
         : new UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<>(self, loader);
@@ -1201,8 +1202,8 @@ public final class Caffeine<K, V> {
    */
   @Override
   public String toString() {
-    StringBuilder s = new StringBuilder(200);
-    s.append(getClass().getSimpleName()).append('{');
+    var s = new StringBuilder(200)
+        .append(getClass().getSimpleName()).append('{');
     int baseLength = s.length();
     if (initialCapacity != UNSET_INT) {
       s.append("initialCapacity=").append(initialCapacity).append(", ");

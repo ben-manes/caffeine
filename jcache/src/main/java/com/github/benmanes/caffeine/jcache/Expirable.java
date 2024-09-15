@@ -26,11 +26,11 @@ import static java.util.Objects.requireNonNull;
 public final class Expirable<V> {
   private final V value;
 
-  private volatile long expireTimeMS;
+  private volatile long expireTimeMillis;
 
-  public Expirable(V value, long expireTimeMS) {
+  public Expirable(V value, long expireTimeMillis) {
     this.value = requireNonNull(value);
-    this.expireTimeMS = expireTimeMS;
+    this.expireTimeMillis = expireTimeMillis;
   }
 
   /** Returns the value. */
@@ -39,28 +39,28 @@ public final class Expirable<V> {
   }
 
   /** Returns the time, in milliseconds, when the value will expire. */
-  public long getExpireTimeMS() {
-    return expireTimeMS;
+  public long getExpireTimeMillis() {
+    return expireTimeMillis;
   }
 
   /** Specifies the time, in milliseconds, when the value will expire. */
-  public void setExpireTimeMS(long expireTimeMS) {
-    this.expireTimeMS = expireTimeMS;
+  public void setExpireTimeMillis(long expireTimeMillis) {
+    this.expireTimeMillis = expireTimeMillis;
   }
 
   /** Returns if the value has expired and is eligible for eviction. */
-  public boolean hasExpired(long currentTimeMS) {
-    return (currentTimeMS - expireTimeMS) >= 0;
+  public boolean hasExpired(long currentTimeMillis) {
+    return (currentTimeMillis - expireTimeMillis) >= 0;
   }
 
   /** Returns if the value will never expire. */
   public boolean isEternal() {
-    return (expireTimeMS == Long.MAX_VALUE);
+    return (expireTimeMillis == Long.MAX_VALUE);
   }
 
   @Override
   public String toString() {
-    return String.format(US, "%s{value=%s, expireTimeMS=%,d}",
-        getClass().getSimpleName(), value, expireTimeMS);
+    return String.format(US, "%s{value=%s, expireTimeMillis=%,d}",
+        getClass().getSimpleName(), value, expireTimeMillis);
   }
 }

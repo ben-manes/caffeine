@@ -22,8 +22,8 @@ import java.util.Arrays;
 import org.checkerframework.checker.index.qual.NonNegative;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.MembershipSettings;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 /**
@@ -55,7 +55,7 @@ public final class BloomFilter implements Membership {
    * probability.
    */
   public BloomFilter(Config config) {
-    MembershipSettings settings = new BasicSettings(config).membership();
+    var settings = new BasicSettings(config).membership();
     ensureCapacity(settings.expectedInsertions(), settings.fpp());
   }
 
@@ -67,6 +67,7 @@ public final class BloomFilter implements Membership {
    * @param expectedInsertions the number of expected insertions
    * @param fpp the false positive probability, where {@literal 0.0 > fpp < 1.0}
    */
+  @SuppressWarnings("Varifier")
   public void ensureCapacity(@NonNegative long expectedInsertions, @NonNegative double fpp) {
     checkArgument(expectedInsertions >= 0);
     checkArgument(fpp > 0 && fpp < 1);
@@ -126,7 +127,7 @@ public final class BloomFilter implements Membership {
    * Applies a supplemental hash function to a given hashCode, which defends against poor quality
    * hash functions.
    */
-  int spread(int x) {
+  int spread(@Var int x) {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;
@@ -140,7 +141,7 @@ public final class BloomFilter implements Membership {
    * @return the table index
    */
   static int seeded(int item, int i) {
-    long hash = (item + SEED[i]) * SEED[i];
+    @Var long hash = (item + SEED[i]) * SEED[i];
     hash += hash >>> 32;
     return (int) hash;
   }

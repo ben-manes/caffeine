@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
 import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
 import com.google.common.base.MoreObjects;
@@ -117,8 +119,8 @@ public final class LinkedDequeTests extends TestCase {
   static final class LinkedValue implements AccessOrder<LinkedValue>, WriteOrder<LinkedValue> {
     final String value;
 
-    LinkedValue prev;
-    LinkedValue next;
+    @Nullable LinkedValue prev;
+    @Nullable LinkedValue next;
 
     LinkedValue(String value) {
       this.value = value;
@@ -130,7 +132,7 @@ public final class LinkedDequeTests extends TestCase {
     }
 
     @Override
-    public void setPreviousInAccessOrder(LinkedValue prev) {
+    public void setPreviousInAccessOrder(@Nullable LinkedValue prev) {
       this.prev = prev;
     }
 
@@ -140,7 +142,7 @@ public final class LinkedDequeTests extends TestCase {
     }
 
     @Override
-    public void setNextInAccessOrder(LinkedValue next) {
+    public void setNextInAccessOrder(@Nullable LinkedValue next) {
       this.next = next;
     }
 

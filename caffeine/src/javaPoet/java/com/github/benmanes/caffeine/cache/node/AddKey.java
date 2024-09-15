@@ -17,8 +17,7 @@ package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
-
-import java.util.List;
+import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import javax.lang.model.element.Modifier;
 
@@ -48,7 +47,7 @@ public final class AddKey implements NodeRule {
     }
   }
 
-  private void addIfStrongValue(NodeContext context) {
+  private static void addIfStrongValue(NodeContext context) {
     var fieldSpec = context.isStrongKeys()
         ? FieldSpec.builder(kTypeVar, "key", Modifier.VOLATILE)
         : FieldSpec.builder(context.keyReferenceType(), "key", Modifier.VOLATILE);
@@ -61,12 +60,12 @@ public final class AddKey implements NodeRule {
         : context.keyReferenceType().rawType);
   }
 
-  private void addIfCollectedValue(NodeContext context) {
+  private static void addIfCollectedValue(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getKeyReference")
         .addModifiers(context.publicFinalModifiers())
         .returns(Object.class)
         .addStatement("$1T valueRef = ($1T) $2L.get(this)",
-            context.valueReferenceType(), context.varHandleName("value"))
+            context.valueReferenceType(), varHandleName("value"))
         .addStatement("return valueRef.getKeyReference()")
         .build());
 
@@ -74,7 +73,7 @@ public final class AddKey implements NodeRule {
         .addModifiers(context.publicFinalModifiers())
         .returns(kTypeVar)
         .addStatement("$1T valueRef = ($1T) $2L.get(this)",
-            context.valueReferenceType(), context.varHandleName("value"));
+            context.valueReferenceType(), varHandleName("value"));
     if (context.isStrongKeys()) {
       getKey.addStatement("return ($T) valueRef.getKeyReference()", kTypeVar);
     } else {
@@ -82,6 +81,6 @@ public final class AddKey implements NodeRule {
       getKey.addStatement("return keyRef.get()");
     }
     context.nodeSubtype.addMethod(getKey.build());
-    context.suppressedWarnings.addAll(List.of("NullAway", "unchecked"));
+    context.suppressedWarnings.add("unchecked");
   }
 }

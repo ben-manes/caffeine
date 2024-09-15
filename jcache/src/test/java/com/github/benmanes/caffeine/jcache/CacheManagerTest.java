@@ -63,7 +63,7 @@ public final class CacheManagerTest {
     checkConfigurationJmx(() -> cacheManager.getCache("test-cache"));
   }
 
-  private void checkConfigurationJmx(Supplier<Cache<?, ?>> cacheSupplier)
+  private static void checkConfigurationJmx(Supplier<Cache<?, ?>> cacheSupplier)
       throws OperationsException {
     Cache<?, ?> cache = cacheSupplier.get();
 

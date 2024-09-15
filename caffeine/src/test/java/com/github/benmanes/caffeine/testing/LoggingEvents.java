@@ -40,13 +40,13 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  */
 public final class LoggingEvents extends ForwardingList<LoggingEvent> {
   private final List<Predicate<LoggingEvent>> predicates;
-  private final List<LoggingEvent> events;
+  private final ImmutableList<LoggingEvent> events;
 
   private ImmutableList<LoggingEvent> filteredEvents;
   private boolean exclusive;
 
   private LoggingEvents(List<LoggingEvent> events) {
-    this.events = requireNonNull(events);
+    this.events = ImmutableList.copyOf(events);
     this.predicates = new ArrayList<>();
   }
 

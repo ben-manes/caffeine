@@ -115,7 +115,7 @@ public abstract class Metrics {
         Object value2 = ((Supplier<?>) metric2.value()).get();
         if (value1 instanceof Comparable<?>) {
           @SuppressWarnings("unchecked")
-          Comparable<Object> comparator = (Comparable<Object>) value1;
+          var comparator = (Comparable<Object>) value1;
           return comparator.compareTo(value2);
         }
         return objectFormatter().apply(value1)

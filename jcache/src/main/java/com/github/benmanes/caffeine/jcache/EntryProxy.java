@@ -38,7 +38,7 @@ public final class EntryProxy<K, V> extends SimpleImmutableEntry<K, V>
       throw new IllegalArgumentException("Class " + clazz + " is unknown to this implementation");
     }
     @SuppressWarnings("unchecked")
-    T castedEntry = (T) this;
+    var castedEntry = (T) this;
     return castedEntry;
   }
 }

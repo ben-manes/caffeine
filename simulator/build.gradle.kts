@@ -53,6 +53,7 @@ forbiddenApis {
 tasks.withType<JavaCompile>().configureEach {
   options.errorprone {
     disableWarningsInGeneratedCode = true
+    disable("SystemOut")
     nullaway.disable()
   }
 }

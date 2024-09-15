@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -108,7 +109,7 @@ public final class GdsfPolicy implements Policy {
     //  – Fr(f) is set to one.
     //  – Pr(f) is computed using Eq. 1 and f is enqueued accordingly.
     //  – Used is increased by Size(f).
-    Node candidate = new Node(event.key(), event.weight(), priorityOf(event, 1));
+    var candidate = new Node(event.key(), event.weight(), priorityOf(event, 1));
     data.put(candidate.key, candidate);
     priorityQueue.add(candidate);
     size += candidate.weight;
@@ -152,7 +153,7 @@ public final class GdsfPolicy implements Policy {
   }
 
   private Set<Node> getVictims(long weightDifference) {
-    long weightedSize = 0L;
+    @Var long weightedSize = 0L;
     var victims = new LinkedHashSet<Node>();
     for (Node node : priorityQueue) {
       victims.add(node);

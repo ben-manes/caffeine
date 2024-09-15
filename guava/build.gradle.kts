@@ -1,5 +1,6 @@
 /** Guava compatibility adapter. The tests are forked from Guava commit e370dde. */
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
+import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
   id("java-library.caffeine")
@@ -11,6 +12,13 @@ dependencies {
 
   testImplementation(libs.jctools)
   testImplementation(libs.bundles.slf4j.nop)
+}
+
+tasks.named<JavaCompile>("compileTestJava").configure {
+  options.errorprone {
+    disable("Varifier")
+    disable("Var")
+  }
 }
 
 tasks.withType<Test>().configureEach {

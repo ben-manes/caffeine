@@ -195,18 +195,18 @@ public @interface CacheSpec {
     /** A flag indicating that every entry is valued at Integer.MAX_VALUE units. */
     MAX_VALUE(Integer.MAX_VALUE),
     /** A flag indicating that the entry is weighted by the absolute integer value. */
-    VALUE(() -> (key, value) -> Math.abs(((Int) value).intValue()), 1),
+    VALUE(() -> (key, value) -> Math.abs(((Int) value).intValue())),
     /** A flag indicating that the entry is weighted by the value's collection size. */
-    COLLECTION(() -> (key, value) -> ((Collection<?>) value).size(), 1),
+    COLLECTION(() -> (key, value) -> ((Collection<?>) value).size()),
     /** A flag indicating that the entry's weight is randomly changing. */
-    RANDOM(Weighers::random, 1),
+    RANDOM(Weighers::random),
     /** A flag indicating that the entry's weight records interactions. */
     @SuppressWarnings("unchecked")
     MOCKITO(() -> {
       Weigher<Object, Object> weigher = Mockito.mock();
       when(weigher.weigh(any(), any())).thenReturn(1);
       return weigher;
-    }, 1);
+    });
 
     private final Supplier<Weigher<Object, Object>> factory;
     private final int units;
@@ -215,9 +215,9 @@ public @interface CacheSpec {
       this.factory = () -> Weighers.constant(units);
       this.units = units;
     }
-    CacheWeigher(Supplier<Weigher<Object, Object>> factory, int units) {
+    CacheWeigher(Supplier<Weigher<Object, Object>> factory) {
       this.factory = factory;
-      this.units = units;
+      this.units = 1;
     }
     public int unitsPerEntry() {
       return units;

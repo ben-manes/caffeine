@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.Var;
 
 /**
  * An implementation of TinySet's indexing method. A method to index a succinct hash table that is
@@ -39,9 +40,9 @@ final class TinySetIndexing {
 
   public int getChainStart(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
-    int currentChainNumber = rank(isLastIndex[fpaux.set], requiredChainNumber);
-    int currentOffset = requiredChainNumber;
-    long tempIsLastIndex = isLastIndex[fpaux.set] >>> requiredChainNumber;
+    @Var int currentChainNumber = rank(isLastIndex[fpaux.set], requiredChainNumber);
+    @Var int currentOffset = requiredChainNumber;
+    @Var long tempIsLastIndex = isLastIndex[fpaux.set] >>> requiredChainNumber;
     while (currentChainNumber < requiredChainNumber) {
       currentChainNumber += ((int) tempIsLastIndex) & 1;
       currentOffset++;
@@ -57,10 +58,10 @@ final class TinySetIndexing {
   @CanIgnoreReturnValue
   public int getChain(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
-    int currentChainNumber = rank(isLastIndex[fpaux.set], requiredChainNumber);
-    int currentOffset = requiredChainNumber;
+    @Var int currentChainNumber = rank(isLastIndex[fpaux.set], requiredChainNumber);
+    @Var int currentOffset = requiredChainNumber;
 
-    long tempisLastIndex = isLastIndex[fpaux.set] >>> requiredChainNumber;
+    @Var long tempisLastIndex = isLastIndex[fpaux.set] >>> requiredChainNumber;
     while (currentChainNumber < requiredChainNumber) {
       currentChainNumber += ((int) tempisLastIndex) & 1;
       currentOffset++;
@@ -80,7 +81,7 @@ final class TinySetIndexing {
   public int getChainAtOffset(HashedItem fpaux,
       long[] chainIndex, long[] isLastIndex, int offset) {
     int nonEmptyChainsToSee = rank(isLastIndex[fpaux.set], offset);
-    int nonEmptyChainSeen = rank(chainIndex[fpaux.set], nonEmptyChainsToSee);
+    @Var int nonEmptyChainSeen = rank(chainIndex[fpaux.set], nonEmptyChainsToSee);
     for (int i = nonEmptyChainsToSee; i <= 64;) {
       if (chainExist(chainIndex[fpaux.set], i)
           && (nonEmptyChainSeen == nonEmptyChainsToSee)) {
@@ -89,7 +90,7 @@ final class TinySetIndexing {
       i += Math.max(1, nonEmptyChainsToSee - nonEmptyChainSeen);
       nonEmptyChainSeen = rank(chainIndex[fpaux.set], i);
     }
-    throw new RuntimeException("Cannot choose victim!");
+    throw new IllegalStateException("Cannot choose victim!");
   }
 
   public boolean chainExist(long chainIndex, int chainId) {
@@ -113,7 +114,7 @@ final class TinySetIndexing {
   }
 
   @SuppressWarnings("UnnecessaryParentheses")
-  private long extendZero(long isLastIndex, int offset) {
+  private static long extendZero(long isLastIndex, int offset) {
     long constantPartMask = (1L << offset) - 1;
     return (isLastIndex & constantPartMask)
         | ((isLastIndex << 1L)
@@ -122,7 +123,7 @@ final class TinySetIndexing {
   }
 
   @SuppressWarnings("UnnecessaryParentheses")
-  private long shrinkOffset(long isLastIndex, int offset) {
+  private static long shrinkOffset(long isLastIndex, int offset) {
     long conMask = ((1L << offset) - 1);
     return (isLastIndex & conMask) | (((~conMask) & isLastIndex) >>> 1);
   }

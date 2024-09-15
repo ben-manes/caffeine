@@ -55,6 +55,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Triple;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
@@ -304,7 +305,8 @@ public final class CacheTest {
         context.original().keySet(), context.original().keySet());
     var result = cache.getAllPresent(keys);
 
-    long hits, misses;
+    long hits;
+    long misses;
     if (context.isGuava()) {
       // Guava does not skip duplicates
       hits = 2L * context.initialSize();
@@ -519,7 +521,8 @@ public final class CacheTest {
     var result = cache.getAll(keys, bulkMappingFunction());
     assertThat(result).containsExactlyKeys(keys);
 
-    long hits, misses;
+    long hits;
+    long misses;
     if (context.isGuava()) {
       // Guava does not skip duplicates
       hits = 2L * context.initialSize();
@@ -981,7 +984,7 @@ public final class CacheTest {
     }
   }
 
-  private void checkNullPointer(Object o) {
+  private void checkNullPointer(@Nullable Object o) {
     if (o == null) {
       return;
     }
@@ -991,7 +994,7 @@ public final class CacheTest {
         .forEach(method -> npeTester.testMethod(o, method));
   }
 
-  private ImmutableSetMultimap<Class<?>, Method> getPublicMethods() {
+  private static ImmutableSetMultimap<Class<?>, Method> getPublicMethods() {
     var classes = List.of(Cache.class, LoadingCache.class, AsyncCache.class,
         AsyncLoadingCache.class, CacheStats.class, Policy.class, Eviction.class,
         FixedRefresh.class, FixedExpiration.class, VarExpiration.class, Map.class,

@@ -40,7 +40,7 @@ public final class Nadam extends AbstractClimber {
   private double velocity;
 
   public Nadam(Config config) {
-    NadamSettings settings = new NadamSettings(config);
+    var settings = new NadamSettings(config);
     int maximumSize = Math.toIntExact(settings.maximumSize());
     sampleSize = (int) (settings.percentSample() * maximumSize);
     stepSize = (int) (settings.percentPivot() * maximumSize);

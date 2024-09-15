@@ -42,7 +42,7 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
  */
 @Test(singleThreaded = true)
 public final class CacheWriterTest extends AbstractJCacheTest {
-  private CloseableCacheWriter writer = Mockito.mock();
+  private final CloseableCacheWriter writer = Mockito.mock();
 
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {

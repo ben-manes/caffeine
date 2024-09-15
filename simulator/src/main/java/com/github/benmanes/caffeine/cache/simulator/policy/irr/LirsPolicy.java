@@ -20,11 +20,14 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -53,6 +56,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @PolicySpec(name = "irr.Lirs")
+@SuppressWarnings("MemberName")
 public final class LirsPolicy implements KeyOnlyPolicy {
   // Enable to print out the internal state
   private static final boolean debug = false;
@@ -75,7 +79,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   int residentSize;
 
   public LirsPolicy(Config config) {
-    LirsSettings settings = new LirsSettings(config);
+    var settings = new LirsSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.maximumNonResidentSize = (int) (maximumSize * settings.nonResidentMultiplier());
     this.maximumHotSize = (int) (maximumSize * settings.percentHot());
@@ -90,7 +94,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     policyStats.recordOperation();
-    Node node = data.get(key);
+    @Var Node node = data.get(key);
     if (node == null) {
       node = new Node(key);
       data.put(key,node);
@@ -178,7 +182,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   }
 
   /** Records a miss when the cold set is not full. */
-  private void onHirWarmupMiss(Node node) {
+  private static void onHirWarmupMiss(Node node) {
     node.status = Status.HIR_RESIDENT;
     node.moveToTop(StackType.Q);
   }
@@ -243,7 +247,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
     // Bound the number of non-resident entries. While not described in the paper, the author's
     // reference implementation provides a similar parameter to avoid uncontrolled growth.
-    Node node = headNR.prevNR;
+    @Var Node node = headNR.prevNR;
     while (sizeNR >  maximumNonResidentSize) {
       policyStats.recordOperation();
       Node removed = node;
@@ -358,14 +362,13 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   final class Node {
     final long key;
 
-    Status status;
-
-    Node prevS;
-    Node nextS;
-    Node prevQ;
-    Node nextQ;
-    Node prevNR;
-    Node nextNR;
+    @Nullable Node prevS;
+    @Nullable Node nextS;
+    @Nullable Node prevQ;
+    @Nullable Node nextQ;
+    @Nullable Node prevNR;
+    @Nullable Node nextNR;
+    @Nullable Status status;
 
     boolean isInS;
     boolean isInQ;
@@ -383,27 +386,27 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     }
 
     public boolean isInStack(StackType stackType) {
-      if (stackType == StackType.S) {
-        return isInS;
-      } else if (stackType == StackType.Q) {
-        return isInQ;
-      } else if (stackType == StackType.NR) {
-        return isInNR;
-      } else {
-        throw new IllegalArgumentException();
+      switch (stackType) {
+        case S:
+          return isInS;
+        case Q:
+          return isInQ;
+        case NR:
+          return isInNR;
       }
+      throw new IllegalArgumentException();
     }
 
     public boolean isStackTop(StackType stackType) {
-      if (stackType == StackType.S) {
-        return (headS.nextS == this);
-      } else if (stackType == StackType.Q) {
-        return (headQ.nextQ == this);
-      } else if (stackType == StackType.NR) {
-        return (headNR.nextNR == this);
-      } else {
-        throw new IllegalArgumentException();
+      switch (stackType) {
+        case S:
+          return (headS.nextS == this);
+        case Q:
+          return (headQ.nextQ == this);
+        case NR:
+          return (headNR.nextNR == this);
       }
+      throw new IllegalArgumentException();
     }
 
     public void moveToTop(StackType stackType) {
@@ -411,59 +414,71 @@ public final class LirsPolicy implements KeyOnlyPolicy {
         removeFrom(stackType);
       }
 
-      if (stackType == StackType.S) {
-        Node next = headS.nextS;
-        headS.nextS = this;
-        next.prevS = this;
-        this.nextS = next;
-        this.prevS = headS;
-        isInS = true;
-        sizeS++;
-      } else if (stackType == StackType.Q) {
-        Node next = headQ.nextQ;
-        headQ.nextQ = this;
-        next.prevQ = this;
-        this.nextQ = next;
-        this.prevQ = headQ;
-        isInQ = true;
-        sizeQ++;
-      } else if (stackType == StackType.NR) {
-        Node next = headNR.nextNR;
-        headNR.nextNR = this;
-        next.prevNR = this;
-        this.nextNR = next;
-        this.prevNR = headNR;
-        isInNR = true;
-        sizeNR++;
-      } else {
-        throw new IllegalArgumentException();
+      switch (stackType) {
+        case S: {
+          Node next = headS.nextS;
+          headS.nextS = this;
+          next.prevS = this;
+          this.nextS = next;
+          this.prevS = headS;
+          isInS = true;
+          sizeS++;
+          return;
+        }
+        case Q: {
+          Node next = headQ.nextQ;
+          headQ.nextQ = this;
+          next.prevQ = this;
+          this.nextQ = next;
+          this.prevQ = headQ;
+          isInQ = true;
+          sizeQ++;
+          return;
+        }
+        case NR: {
+          Node next = headNR.nextNR;
+          headNR.nextNR = this;
+          next.prevNR = this;
+          this.nextNR = next;
+          this.prevNR = headNR;
+          isInNR = true;
+          sizeNR++;
+          return;
+        }
       }
+      throw new IllegalArgumentException();
     }
 
     public void removeFrom(StackType stackType) {
       checkState(isInStack(stackType));
 
-      if (stackType == StackType.S) {
-        prevS.nextS = nextS;
-        nextS.prevS = prevS;
-        prevS = nextS = null;
-        isInS = false;
-        sizeS--;
-      } else if (stackType == StackType.Q) {
-        prevQ.nextQ = nextQ;
-        nextQ.prevQ = prevQ;
-        prevQ = nextQ = null;
-        isInQ = false;
-        sizeQ--;
-      } else if (stackType == StackType.NR) {
-        prevNR.nextNR = nextNR;
-        nextNR.prevNR = prevNR;
-        prevNR = nextNR = null;
-        isInNR = false;
-        sizeNR--;
-      } else {
-        throw new IllegalArgumentException();
+      switch (stackType) {
+        case S: {
+          prevS.nextS = nextS;
+          nextS.prevS = prevS;
+          prevS = nextS = null;
+          isInS = false;
+          sizeS--;
+          return;
+        }
+        case Q: {
+          prevQ.nextQ = nextQ;
+          nextQ.prevQ = prevQ;
+          prevQ = nextQ = null;
+          isInQ = false;
+          sizeQ--;
+          return;
+        }
+        case NR: {
+          prevNR.nextNR = nextNR;
+          nextNR.prevNR = prevNR;
+          prevNR = nextNR = null;
+          isInNR = false;
+          sizeNR--;
+          return;
+        }
       }
+      throw new IllegalArgumentException();
     }
 
     @Override

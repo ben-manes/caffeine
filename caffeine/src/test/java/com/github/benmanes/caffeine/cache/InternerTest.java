@@ -149,7 +149,7 @@ public final class InternerTest extends TestCase {
     var builder = Caffeine.newBuilder();
     builder.interner = true;
 
-    var factory = NodeFactory.newFactory(builder, /* async */ false);
+    var factory = NodeFactory.newFactory(builder, /* isAsync= */ false);
     assertThat(factory).isSameInstanceAs(Interned.FACTORY);
   }
 
@@ -167,7 +167,7 @@ public final class InternerTest extends TestCase {
     assertThat(node.isDead()).isTrue();
   }
 
-  private void checkSize(Interner<Int> interner, int size) {
+  private static void checkSize(Interner<Int> interner, int size) {
     if (interner instanceof StrongInterner) {
       assertThat(((StrongInterner<Int>) interner).map).hasSize(size);
     } else if (interner instanceof WeakInterner) {
@@ -185,7 +185,7 @@ public final class InternerTest extends TestCase {
     }
   }
 
-  private void checkState(Interner<Int> interner) {
+  private static void checkState(Interner<Int> interner) {
     if (interner instanceof WeakInterner) {
       assertAbout(mapLocal()).that(((WeakInterner<Int>) interner).cache).isValid();
     }

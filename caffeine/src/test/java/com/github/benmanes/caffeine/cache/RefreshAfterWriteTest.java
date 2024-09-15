@@ -400,7 +400,7 @@ public final class RefreshAfterWriteTest {
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
   public void refreshIfNeeded_nullFuture(CacheContext context) {
     var refreshed = new AtomicBoolean();
-    CacheLoader<Int, Int> loader = new CacheLoader<Int, Int>() {
+    var loader = new CacheLoader<Int, Int>() {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }

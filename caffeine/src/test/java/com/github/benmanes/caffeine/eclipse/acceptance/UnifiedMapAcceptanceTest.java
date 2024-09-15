@@ -333,7 +333,7 @@ public abstract class UnifiedMapAcceptanceTest {
     assertUnifiedMapPutAllWithHashMap(3);
   }
 
-  private void assertUnifiedMapPutAllWithHashMap(int shift) {
+  private static void assertUnifiedMapPutAllWithHashMap(int shift) {
     Map<CollidingInt, String> map = new HashMap<>();
 
     int size = 100000;
@@ -1247,7 +1247,7 @@ public abstract class UnifiedMapAcceptanceTest {
     runCollidingGetTest(new HashMap<>(), "JDK HashMap", 3);
   }
 
-  private void runGetTest(Map<CollidingInt, String> map, String mapName, int size) {
+  private static void runGetTest(Map<CollidingInt, String> map, String mapName, int size) {
     Integer[] keys = createMap((Map<Object, String>) (Map<?, ?>) map, size);
     sleep(100L);
     int n = 10000000 / size;
@@ -1276,7 +1276,7 @@ public abstract class UnifiedMapAcceptanceTest {
     return keys;
   }
 
-  private void runMapGet(Map<CollidingInt, String> map, Object[] keys, int n) {
+  private static void runMapGet(Map<CollidingInt, String> map, Object[] keys, int n) {
     for (int i = 0; i < n; i++) {
       for (Object key : keys) {
         map.get(key);
@@ -1284,7 +1284,7 @@ public abstract class UnifiedMapAcceptanceTest {
     }
   }
 
-  private void runCollidingGetTest(Map<CollidingInt, String> map, String mapName, int shift) {
+  private static void runCollidingGetTest(Map<CollidingInt, String> map, String mapName, int shift) {
     int size = 100000;
     Object[] keys = createCollidingMap(map, size, shift);
     sleep(100L);
@@ -1311,7 +1311,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @SuppressWarnings("PreferJavaTimeOverload")
-  private void sleep(long millis) {
+  private static void sleep(long millis) {
     long now = System.currentTimeMillis();
     long target = now + millis;
     while (now < target) {

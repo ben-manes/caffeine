@@ -30,7 +30,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
-@SuppressWarnings({"IdentityConversion", "PreferredInterfaceType", "rawtypes", "try", "unchecked"})
+@SuppressWarnings({"IdentityConversion", "PreferredInterfaceType",
+  "rawtypes", "try", "unchecked", "UnnecessaryFinal"})
 public class ConcurrentHashMap8Test extends JSR166TestCase {
     public static void main(String[] args) {
         main(suite());

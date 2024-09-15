@@ -229,6 +229,7 @@ public class CacheEvictionTest extends TestCase {
   }
 
   // Caffeine uses W-TinyLfu, not Lru
+  @SuppressWarnings("MemberName")
   public void disabled_testEviction_lru() {
     // test lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
@@ -262,6 +263,7 @@ public class CacheEvictionTest extends TestCase {
   }
 
   // Caffeine uses W-TinyLfu, not Lru
+  @SuppressWarnings("MemberName")
   public void disabled_testEviction_weightedLru() {
     // test weighted lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
@@ -351,13 +353,13 @@ public class CacheEvictionTest extends TestCase {
     assertThat(keySet).containsExactly(5, 6, 7, 8, 9, 10, 11, 12);
   }
 
-  private void getAll(LoadingCache<Integer, Integer> cache, List<Integer> keys) {
+  private static void getAll(LoadingCache<Integer, Integer> cache, List<Integer> keys) {
     for (int i : keys) {
       cache.getUnchecked(i);
     }
   }
 
-  private Object objectWithHash(final int hash) {
+  private static Object objectWithHash(int hash) {
     return new Object() {
       @Override public int hashCode() {
         return hash;

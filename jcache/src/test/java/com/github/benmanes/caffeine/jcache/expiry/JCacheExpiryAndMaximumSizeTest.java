@@ -69,7 +69,7 @@ public class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
 
     configuration.setMaximumSize(OptionalLong.of(MAXIMUM));
     var listenerConfiguration = new MutableCacheEntryListenerConfiguration<>(() -> listener,
-        /* filterFactory */ null, /* isOldValueRequired */ false, /* isSynchronous */ true);
+        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ true);
     configuration.addCacheEntryListenerConfiguration(listenerConfiguration);
     configuration.setExecutorFactory(MoreExecutors::directExecutor);
 

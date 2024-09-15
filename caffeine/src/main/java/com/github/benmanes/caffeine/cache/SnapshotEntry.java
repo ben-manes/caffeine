@@ -77,7 +77,7 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
 
   /** Returns a cache entry containing the given key, value, and snapshot. */
   public static <K, V> SnapshotEntry<K, V> forEntry(K key, V value) {
-    return new SnapshotEntry<>(key, value, /* snapshot */ 0);
+    return new SnapshotEntry<>(key, value, /* snapshot= */ 0);
   }
 
   /** Returns a cache entry with the specified metadata. */

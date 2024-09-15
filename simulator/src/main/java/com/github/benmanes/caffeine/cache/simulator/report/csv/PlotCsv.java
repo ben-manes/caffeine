@@ -46,6 +46,7 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.AutoValue.CopyAnnotations;
 import com.google.common.base.Strings;
+import com.google.errorprone.annotations.Var;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
 
@@ -118,9 +119,9 @@ public final class PlotCsv implements Runnable {
     }
   }
 
-  private Range calculateRange(CategoryPlot plot) {
-    double upperBound = 0;
-    double lowerBound = 100;
+  private static Range calculateRange(CategoryPlot plot) {
+    @Var double upperBound = 0;
+    @Var double lowerBound = 100;
     for (int series = 0; series < plot.getDataset().getRowCount(); series++) {
       for (int item = 0; item < plot.getDataset().getColumnCount(); item++) {
         var value = plot.getDataset().getValue(series, item);
@@ -186,17 +187,16 @@ public final class PlotCsv implements Runnable {
   }
 
   private Color[] getWheelColors() {
-    int n = 360;
-    int wheelStep = 3;
-    int paintIndex = 0;
-    var colors = new Color[n];
-    var wheelPaints = new boolean[n];
-    while (paintIndex < n) {
-      int step = n / wheelStep;
-      for (int angle = 0; angle < n; angle += step) {
+    @Var int wheelStep = 3;
+    @Var int paintIndex = 0;
+    var colors = new Color[360];
+    var wheelPaints = new boolean[colors.length];
+    while (paintIndex < colors.length) {
+      int step = (colors.length / wheelStep);
+      for (int angle = 0; angle < colors.length; angle += step) {
         if (!wheelPaints[angle]) {
           wheelPaints[angle] = true;
-          float hue = ((float) angle) / n;
+          float hue = ((float) angle) / colors.length;
           colors[paintIndex++] = getLineColor(hue);
         }
       }
@@ -208,7 +208,7 @@ public final class PlotCsv implements Runnable {
   private Color getLineColor(float hue) {
     int rgb = 0xffffff & Color.HSBtoRGB(hue, style.saturation(), style.brightness());
     int a = ((int) (style.alpha() * 255.0 + 0.5)) << 24;
-    return new Color(rgb | a, /* alpha */  true);
+    return new Color(rgb | a, /* hasalpha= */  true);
   }
 
   @AutoValue

@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
@@ -99,7 +100,7 @@ public final class Clairvoyant implements KeyOnlyAdmittor {
     try (Stream<AccessEvent> events = trace.events()) {
       int[] tick = { 0 };
       events.forEach(event -> {
-        var times = accessTimes.get(event.key());
+        @Var var times = accessTimes.get(event.key());
         if (times == null) {
           times = new IntArrayList();
           accessTimes.put(event.key(), times);

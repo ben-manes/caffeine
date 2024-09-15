@@ -21,6 +21,8 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 import java.util.List;
 import java.util.Set;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -61,6 +63,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private int sizeWindowProtected;
   private int sizeMainProtected;
 
+  @SuppressWarnings("Varifier")
   public FullySegmentedWindowTinyLfuPolicy(
       double percentMain, FullySegmentedWindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
@@ -79,7 +82,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    FullySegmentedWindowTinyLfuSettings settings = new FullySegmentedWindowTinyLfuSettings(config);
+    var settings = new FullySegmentedWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new FullySegmentedWindowTinyLfuPolicy(percentMain, settings))
         .collect(toUnmodifiableSet());
@@ -118,7 +121,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    Node node = new Node(key, Status.WINDOW_PROBATION);
+    var node = new Node(key, Status.WINDOW_PROBATION);
     node.appendToTail(headWindowProbation);
     data.put(key, node);
     sizeWindow++;
@@ -219,9 +222,9 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Status status;
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable Status status;
 
     /** Creates a new sentinel node. */
     public Node() {

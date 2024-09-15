@@ -53,7 +53,7 @@ public interface Weigher<K, V> {
    */
   static <K, V> Weigher<K, V> singletonWeigher() {
     @SuppressWarnings("unchecked")
-    Weigher<K, V> instance = (Weigher<K, V>) SingletonWeigher.INSTANCE;
+    var instance = (Weigher<K, V>) SingletonWeigher.INSTANCE;
     return instance;
   }
 

@@ -47,9 +47,12 @@ public abstract class AbstractJCacheTest {
   protected static final Duration EXPIRY_DURATION = Duration.ofMinutes(1);
   protected static final Duration START_TIME = Duration.ofNanos(
       ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, Long.MAX_VALUE));
-  protected static final Integer KEY_1 = 1, VALUE_1 = -1;
-  protected static final Integer KEY_2 = 2, VALUE_2 = -2;
-  protected static final Integer KEY_3 = 3, VALUE_3 = -3;
+  protected static final Integer KEY_1 = 1;
+  protected static final Integer KEY_2 = 2;
+  protected static final Integer KEY_3 = 3;
+  protected static final Integer VALUE_1 = -1;
+  protected static final Integer VALUE_2 = -2;
+  protected static final Integer VALUE_3 = -3;
 
   protected final ImmutableSet<Integer> keys = ImmutableSet.of(KEY_1, KEY_2, KEY_3);
   protected final ImmutableMap<Integer, Integer> entries = ImmutableMap.of(
@@ -89,8 +92,7 @@ public abstract class AbstractJCacheTest {
 
   /* --------------- Utility methods ------------- */
 
-  @Nullable
-  protected static Expirable<Integer> getExpirable(
+  protected static @Nullable Expirable<Integer> getExpirable(
       CacheProxy<Integer, Integer> cache, Integer key) {
     return cache.cache.getIfPresent(key);
   }

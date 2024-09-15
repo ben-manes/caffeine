@@ -35,7 +35,6 @@ import javax.management.ObjectName;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JmxRegistration {
-  public enum MBeanType { Configuration, Statistics }
 
   private JmxRegistration() {}
 
@@ -46,7 +45,7 @@ public final class JmxRegistration {
    * @param mxbean the management bean
    * @param type the mxbean type
    */
-  public static void registerMXBean(Cache<?, ?> cache, Object mxbean, MBeanType type) {
+  public static void registerMxBean(Cache<?, ?> cache, Object mxbean, MBeanType type) {
     MBeanServer server = ManagementFactory.getPlatformMBeanServer();
     ObjectName objectName = getObjectName(cache, type);
     register(server, objectName, mxbean);
@@ -58,7 +57,7 @@ public final class JmxRegistration {
    * @param cache the cache to unregister
    * @param type the mxbean type
    */
-  public static void unregisterMXBean(Cache<?, ?> cache, MBeanType type) {
+  public static void unregisterMxBean(Cache<?, ?> cache, MBeanType type) {
     MBeanServer server = ManagementFactory.getPlatformMBeanServer();
     ObjectName objectName = getObjectName(cache, type);
     unregister(server, objectName);
@@ -92,7 +91,7 @@ public final class JmxRegistration {
     String cacheManagerName = sanitize(cache.getCacheManager().getURI().toString());
     String cacheName = sanitize(cache.getName());
     String name = String.format(US, "javax.cache:type=Cache%s,CacheManager=%s,Cache=%s",
-        type, cacheManagerName, cacheName);
+        type.formatted(), cacheManagerName, cacheName);
     return newObjectName(name);
   }
 
@@ -108,5 +107,13 @@ public final class JmxRegistration {
   /** Returns a sanatized string for use as a management bean name. */
   static String sanitize(String name) {
     return (name == null) ? "" : name.replaceAll("[,:=\n]", ".");
+  }
+
+  public enum MBeanType {
+    CONFIGURATION, STATISTICS;
+
+    private String formatted() {
+      return Character.toUpperCase(name().charAt(0)) + name().toLowerCase(US).substring(1);
+    }
   }
 }

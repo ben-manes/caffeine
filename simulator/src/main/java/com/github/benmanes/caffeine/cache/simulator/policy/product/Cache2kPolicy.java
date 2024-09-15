@@ -48,10 +48,10 @@ public final class Cache2kPolicy implements Policy {
     logger.setLevel(Level.WARNING);
 
     policyStats = new PolicyStats(name());
+    var settings = new BasicSettings(config);
     CacheEntryEvictedListener<Long, AccessEvent> listener =
         (cache, entry) -> policyStats.recordEviction();
-    BasicSettings settings = new BasicSettings(config);
-    Cache2kBuilder<Long, AccessEvent> builder = Cache2kBuilder.of(Long.class, AccessEvent.class)
+    var builder = Cache2kBuilder.of(Long.class, AccessEvent.class)
         .addListener(listener)
         .strictEviction(true);
     if (characteristics.contains(WEIGHTED)) {

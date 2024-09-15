@@ -89,7 +89,10 @@ final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
 }
 
 /** The namespace for field padding through inheritance. */
+@SuppressWarnings("MultiVariableDeclaration")
 final class FastFlowHeader {
+
+  private FastFlowHeader() {}
 
   abstract static class PadReadCache<E> extends ReadBuffer<E> {
     byte p000, p001, p002, p003, p004, p005, p006, p007;

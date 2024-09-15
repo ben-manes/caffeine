@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Map;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -64,7 +66,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
 
   public FeedbackTinyLfuPolicy(Config config) {
     this.policyStats = new PolicyStats(name());
-    FeedbackTinyLfuSettings settings = new FeedbackTinyLfuSettings(config);
+    var settings = new FeedbackTinyLfuSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
@@ -108,7 +110,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
       admittor.record(key);
     }
 
-    Node node = new Node(key);
+    var node = new Node(key);
     node.appendToTail(head);
     data.put(key, node);
     evict(node);
@@ -181,8 +183,8 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
 
     /** Creates a new sentinel node. */
     public Node() {
@@ -239,10 +241,11 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
       return config().getDouble("feedback-tiny-lfu.adaptive-fpp");
     }
     public Config filterConfig(int sampleSize) {
-      Map<String, Object> properties = Map.of(
-          "membership.fpp", adaptiveFpp(),
-          "maximum-size", sampleSize);
-      return ConfigFactory.parseMap(properties).withFallback(config());
+      return ConfigFactory
+          .parseMap(Map.of(
+              "membership.fpp", adaptiveFpp(),
+              "maximum-size", sampleSize))
+          .withFallback(config());
     }
   }
 }

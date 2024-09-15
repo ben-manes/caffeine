@@ -37,7 +37,6 @@ public final class AddSubtype implements LocalCacheRule {
 
   @Override
   public void execute(LocalCacheContext context) {
-    context.suppressedWarnings.add("MissingOverride");
     context.cache.superclass(context.superClass)
         .addJavadoc(getJavaDoc(context))
         .addTypeVariable(kTypeVar)
@@ -47,8 +46,8 @@ public final class AddSubtype implements LocalCacheRule {
     }
   }
 
-  private String getJavaDoc(LocalCacheContext context) {
-    StringBuilder doc = new StringBuilder(200);
+  private static String getJavaDoc(LocalCacheContext context) {
+    var doc = new StringBuilder(200);
     doc.append("<em>WARNING: GENERATED CODE</em>\n\n"
         + "A cache that provides the following features:\n<ul>");
     for (Feature feature : context.generateFeatures) {

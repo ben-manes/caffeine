@@ -69,7 +69,7 @@ final class References {
       if (object == this) {
         return true;
       } else if (object instanceof InternalReference<?>) {
-        InternalReference<?> referent = (InternalReference<?>) object;
+        var referent = (InternalReference<?>) object;
         return (get() == referent.get());
       }
       return false;
@@ -87,7 +87,7 @@ final class References {
       if (object == this) {
         return true;
       } else if (object instanceof InternalReference<?>) {
-        InternalReference<?> referent = (InternalReference<?>) object;
+        var referent = (InternalReference<?>) object;
         return Objects.equals(get(), referent.get());
       }
       return false;

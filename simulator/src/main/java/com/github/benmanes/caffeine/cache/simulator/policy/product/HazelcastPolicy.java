@@ -65,7 +65,7 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
             .setEvictionPolicy(policy)
             .setSize(maximumSize));
     cache = new DefaultNearCache<>("simulation", config, DummySerializationService.INSTANCE,
-        /* TaskScheduler */ null, getClass().getClassLoader(), /* HazelcastProperties */ null);
+        /* scheduler= */ null, getClass().getClassLoader(), /* properties= */ null);
     cache.initialize();
   }
 
@@ -84,7 +84,7 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
       if (cache.size() == maximumSize) {
         policyStats.recordEviction();
       }
-      cache.put(key, /* keyData */ null, Boolean.TRUE, /* valueDate */ null);
+      cache.put(key, /* keyData= */ null, Boolean.TRUE, /* valueDate= */ null);
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();
@@ -143,7 +143,7 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
       return (T) data;
     }
     @Override public ManagedContext getManagedContext() {
-      return null;
+      throw new UnsupportedOperationException();
     }
     @Override public <B extends Data> B trimSchema(Data data) {
       return (B) data;

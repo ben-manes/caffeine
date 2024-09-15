@@ -37,7 +37,7 @@ public final class TinyCacheAdapter implements Frequency {
    * Note that in this implementation there are always 64 items per set.
    */
   public TinyCacheAdapter(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     // number of (independent sets)
     int nrSets = Math.toIntExact(sampleFactor * settings.maximumSize() / 64);
     tcs = new TinyCacheSketch(nrSets, 64,settings.randomSeed());

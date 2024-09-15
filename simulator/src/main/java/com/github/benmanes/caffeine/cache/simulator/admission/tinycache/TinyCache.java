@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 import java.util.Random;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.Var;
 
 /**
  * This is the TinyCache model that takes advantage of random eviction policy with a ghost cache as
@@ -99,6 +100,7 @@ public final class TinyCache {
     return false;
   }
 
+  @SuppressWarnings("Varifier")
   private boolean selectVictim(int bucketStart) {
     byte victimOffset = (byte) rnd.nextInt(itemsPerSet);
     int victimChain = indexing.getChainAtOffset(
@@ -108,14 +110,13 @@ public final class TinyCache {
     if (indexing.chainExist(chainIndex[hashFunc.fpaux.set], victimChain)) {
       replace(hashFunc.fpaux, (byte) victimChain, bucketStart, victimOffset);
       return true;
-    } else {
-      throw new RuntimeException("Failed to replace");
     }
+    throw new IllegalStateException("Failed to replace");
   }
 
-  private void replaceItems(int idx, long value, int start, int delta) {
+  private void replaceItems(int idx, @Var long value, @Var int start, int delta) {
+    @Var long entry;
     start += idx;
-    long entry;
     do {
       entry = cache[start];
       cache[start] = value;

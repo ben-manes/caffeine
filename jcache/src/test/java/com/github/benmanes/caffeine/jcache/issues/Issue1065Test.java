@@ -89,7 +89,7 @@ public final class Issue1065Test {
         new MutableConfiguration<String, String>()
             .addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
                 FactoryBuilder.factoryOf(new Listener()), FactoryBuilder.factoryOf(event -> true),
-                /* isOldValueRequired */ true, /* isSynchronous */ true))
+                /* isOldValueRequired= */ true, /* isSynchronous= */ true))
             .setCacheLoaderFactory(new FactoryBuilder.SingletonFactory<>(new Loader()))
             .setReadThrough(true));
     executor = Executors.newWorkStealingPool(NUM_THREADS);

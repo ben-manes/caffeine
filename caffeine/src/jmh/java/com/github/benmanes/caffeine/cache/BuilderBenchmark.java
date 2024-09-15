@@ -38,32 +38,12 @@ import com.google.common.cache.CacheBuilder;
  */
 @State(Scope.Benchmark)
 public class BuilderBenchmark {
-  @Param
-  BuilderType type;
-
+  @Param BuilderType type;
   Supplier<?> builder;
 
   @Setup
   public void setup() {
-    if (type == BuilderType.Unbound_Caffeine) {
-      builder = Caffeine.newBuilder()::build;
-    } else if (type == BuilderType.Bounded_Caffeine) {
-      builder = Caffeine.newBuilder()
-          .expireAfterAccess(Duration.ofMinutes(1))
-          .maximumSize(100)
-          ::build;
-    } else if (type == BuilderType.Unbound_Guava) {
-      builder = CacheBuilder.newBuilder()::build;
-    } else if (type == BuilderType.Bounded_Guava) {
-      builder = CacheBuilder.newBuilder()
-          .expireAfterAccess(Duration.ofMinutes(1))
-          .maximumSize(100)
-          ::build;
-    } else if (type == BuilderType.ConcurrentHashMap) {
-      builder = ConcurrentHashMap::new;
-    } else {
-      throw new IllegalStateException();
-    }
+    builder = type.builder();
   }
 
   @Benchmark
@@ -75,5 +55,27 @@ public class BuilderBenchmark {
     Unbound_Caffeine, Bounded_Caffeine,
     Unbound_Guava, Bounded_Guava,
     ConcurrentHashMap;
+
+    Supplier<?> builder() {
+      switch (this) {
+        case Unbound_Caffeine:
+          return Caffeine.newBuilder()::build;
+        case Bounded_Caffeine:
+          return Caffeine.newBuilder()
+              .expireAfterAccess(Duration.ofMinutes(1))
+              .maximumSize(100)
+              ::build;
+        case Unbound_Guava:
+          return CacheBuilder.newBuilder()::build;
+        case Bounded_Guava:
+          return CacheBuilder.newBuilder()
+              .expireAfterAccess(Duration.ofMinutes(1))
+              .maximumSize(100)
+              ::build;
+        case ConcurrentHashMap:
+          return ConcurrentHashMap::new;
+      }
+      throw new IllegalStateException();
+    }
   }
 }

@@ -41,7 +41,7 @@ public final class AddStats implements LocalCacheRule {
     addStatsCounter(context);
   }
 
-  private void addIsRecording(LocalCacheContext context) {
+  private static void addIsRecording(LocalCacheContext context) {
     context.cache.addMethod(MethodSpec.methodBuilder("isRecordingStats")
         .addModifiers(context.publicFinalModifiers())
         .addStatement("return true")
@@ -49,7 +49,7 @@ public final class AddStats implements LocalCacheRule {
         .build());
   }
 
-  private void addStatsCounter(LocalCacheContext context) {
+  private static void addStatsCounter(LocalCacheContext context) {
     context.constructor.addStatement("this.statsCounter = builder.getStatsCounterSupplier().get()");
     context.cache.addField(FieldSpec.builder(
         STATS_COUNTER, "statsCounter", Modifier.FINAL).build());
@@ -60,7 +60,7 @@ public final class AddStats implements LocalCacheRule {
         .build());
   }
 
-  private void addStatsTicker(LocalCacheContext context) {
+  private static void addStatsTicker(LocalCacheContext context) {
     context.cache.addMethod(MethodSpec.methodBuilder("statsTicker")
         .addModifiers(context.publicFinalModifiers())
         .addStatement("return $T.systemTicker()", TICKER)

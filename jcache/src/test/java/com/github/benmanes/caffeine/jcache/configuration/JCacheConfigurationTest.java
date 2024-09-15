@@ -78,7 +78,7 @@ public final class JCacheConfigurationTest {
         cacheManager.getCache("test-cache-2", String.class, Integer.class), 1000L);
   }
 
-  private void checkConfiguration(Supplier<Cache<?, ?>> cacheSupplier, long expectedValue) {
+  private static void checkConfiguration(Supplier<Cache<?, ?>> cacheSupplier, long expectedValue) {
     Cache<?, ?> cache = cacheSupplier.get();
 
     @SuppressWarnings("unchecked")

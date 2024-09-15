@@ -119,11 +119,12 @@ public final class CacheContext {
   long initialSize;
 
   // Generated on-demand
-  Int absentKey;
-  Int absentValue;
+  @Nullable Int absentKey;
+  @Nullable Int absentValue;
 
-  Map<Int, Int> absent;
+  @Nullable Map<Int, Int> absent;
 
+  @SuppressWarnings("TooManyParameters")
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher cacheWeigher,
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
       Expire refresh, ReferenceType keyStrength, ReferenceType valueStrength,
@@ -273,7 +274,7 @@ public final class CacheContext {
     return absent().keySet();
   }
 
-  private Int nextAbsentKey() {
+  private static Int nextAbsentKey() {
     return Int.valueOf(ThreadLocalRandom.current().nextInt(
         (Integer.MAX_VALUE / 2), Integer.MAX_VALUE));
   }

@@ -140,6 +140,7 @@ public final class Registry {
   }
 
   /** Registers the policy using the specified name. */
+  @SuppressWarnings("InconsistentOverloads")
   private void registerMany(String name, Class<? extends Policy> policyClass,
       Function<Config, Set<Policy>> creator) {
     factories.put(name.trim().toLowerCase(US), Factory.of(policyClass, creator));

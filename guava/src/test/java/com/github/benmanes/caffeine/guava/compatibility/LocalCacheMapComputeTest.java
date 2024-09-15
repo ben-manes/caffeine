@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.guava.compatibility;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntConsumer;
@@ -111,11 +112,10 @@ public class LocalCacheMapComputeTest extends TestCase {
   }
 
   public void testComputeExceptionally() {
-    try {
-      doParallelCacheOp(count, n -> {
-        cache.asMap().compute(key, (k, v) -> { throw new RuntimeException(); });
+    assertThrows(RuntimeException.class, () -> doParallelCacheOp(count, n -> {
+      cache.asMap().compute(key, (k, v) -> {
+        throw new RuntimeException();
       });
-      fail("Should not get here");
-    } catch (RuntimeException expected) {}
+    }));
   }
 }

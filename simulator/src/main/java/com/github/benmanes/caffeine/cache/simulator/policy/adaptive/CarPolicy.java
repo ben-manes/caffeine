@@ -17,11 +17,14 @@ package com.github.benmanes.caffeine.cache.simulator.policy.adaptive;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -59,7 +62,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
   private int p;
 
   public CarPolicy(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
@@ -92,7 +95,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
   }
 
-  private void onMiss(long key, Node node) {
+  private void onMiss(long key, @Var Node node) {
     // if (|T1| + |T2| = c) then
     //   /* cache full, replace a page from cache */
     //   replace()
@@ -254,9 +257,10 @@ public final class CarPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Node prev;
-    Node next;
-    QueueType type;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable QueueType type;
+
     boolean marked;
 
     Node() {

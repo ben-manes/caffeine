@@ -36,7 +36,7 @@ public final class SimpleClimber extends AbstractClimber {
   private double stepSize;
 
   public SimpleClimber(Config config) {
-    SimpleClimberSettings settings = new SimpleClimberSettings(config);
+    var settings = new SimpleClimberSettings(config);
     int maximumSize = Math.toIntExact(settings.maximumSize());
     this.initialSampleSize = (int) (settings.percentSample() * maximumSize);
     this.initialStepSize = settings.percentPivot() * maximumSize;

@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.WeakHashMap;
@@ -39,6 +38,7 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 
 import com.github.benmanes.caffeine.jcache.CacheManagerImpl;
+import com.google.errorprone.annotations.Var;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 /**
@@ -93,16 +93,16 @@ public final class CaffeineCachingProvider implements CachingProvider {
 
   @Override
   public CacheManager getCacheManager(URI uri, ClassLoader classLoader, Properties properties) {
-    URI managerURI = getManagerUri(uri);
+    URI managerUri = getManagerUri(uri);
     ClassLoader managerClassLoader = getManagerClassLoader(classLoader);
 
     synchronized (cacheManagers) {
-      Map<URI, CacheManager> cacheManagersByURI = cacheManagers.computeIfAbsent(
+      Map<URI, CacheManager> cacheManagersByUri = cacheManagers.computeIfAbsent(
           managerClassLoader, any -> new HashMap<>());
-      return cacheManagersByURI.computeIfAbsent(managerURI, any -> {
+      return cacheManagersByUri.computeIfAbsent(managerUri, any -> {
         Properties managerProperties = (properties == null) ? getDefaultProperties() : properties;
         return new CacheManagerImpl(this, isOsgiComponent,
-            managerURI, managerClassLoader, managerProperties);
+            managerUri, managerClassLoader, managerProperties);
       });
     }
   }
@@ -121,9 +121,9 @@ public final class CaffeineCachingProvider implements CachingProvider {
   public void close(ClassLoader classLoader) {
     synchronized (cacheManagers) {
       ClassLoader managerClassLoader = getManagerClassLoader(classLoader);
-      Map<URI, CacheManager> cacheManagersByURI = cacheManagers.remove(managerClassLoader);
-      if (cacheManagersByURI != null) {
-        for (CacheManager cacheManager : cacheManagersByURI.values()) {
+      Map<URI, CacheManager> cacheManagersByUri = cacheManagers.remove(managerClassLoader);
+      if (cacheManagersByUri != null) {
+        for (CacheManager cacheManager : cacheManagersByUri.values()) {
           cacheManager.close();
         }
       }
@@ -135,14 +135,14 @@ public final class CaffeineCachingProvider implements CachingProvider {
   public void close(URI uri, ClassLoader classLoader) {
     synchronized (cacheManagers) {
       ClassLoader managerClassLoader = getManagerClassLoader(classLoader);
-      Map<URI, CacheManager> cacheManagersByURI = cacheManagers.get(managerClassLoader);
+      Map<URI, CacheManager> cacheManagersByUri = cacheManagers.get(managerClassLoader);
 
-      if (cacheManagersByURI != null) {
-        CacheManager cacheManager = cacheManagersByURI.remove(getManagerUri(uri));
+      if (cacheManagersByUri != null) {
+        CacheManager cacheManager = cacheManagersByUri.remove(getManagerUri(uri));
         if (cacheManager != null) {
           cacheManager.close();
         }
-        if (cacheManagersByURI.isEmpty()) {
+        if (cacheManagersByUri.isEmpty()) {
           cacheManagers.remove(managerClassLoader);
         }
       }
@@ -174,8 +174,9 @@ public final class CaffeineCachingProvider implements CachingProvider {
 
     @Override
     public Class<?> loadClass(String name) throws ClassNotFoundException {
+      @Var ClassNotFoundException error = null;
+
       ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-      ClassNotFoundException error = null;
       if ((contextClassLoader != null) && (contextClassLoader != DEFAULT_CLASS_LOADER)) {
         try {
           return contextClassLoader.loadClass(name);
@@ -239,7 +240,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
 
     @Override
     public Enumeration<URL> getResources(String name) throws IOException {
-      List<URL> resources = new ArrayList<>();
+      var resources = new ArrayList<URL>();
 
       ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
       if (contextClassLoader != null && contextClassLoader != DEFAULT_CLASS_LOADER) {

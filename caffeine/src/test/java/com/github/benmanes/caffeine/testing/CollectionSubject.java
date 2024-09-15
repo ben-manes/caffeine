@@ -26,13 +26,14 @@ import java.util.Queue;
 import java.util.Set;
 
 import com.google.common.truth.FailureMetadata;
+import com.google.common.truth.IterableSubject;
 
 /**
  * Additional propositions for {@link Collection} subjects.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class CollectionSubject extends com.google.common.truth.IterableSubject {
+public class CollectionSubject extends IterableSubject {
   private final Collection<?> actual;
 
   public CollectionSubject(FailureMetadata metadata, Collection<?> subject) {

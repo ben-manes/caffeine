@@ -21,6 +21,8 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 import java.util.List;
 import java.util.Set;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -29,6 +31,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -66,7 +69,7 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    LruWindowTinyLfuSettings settings = new LruWindowTinyLfuSettings(config);
+    var settings = new LruWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new LruWindowTinyLfuPolicy(percentMain, settings))
         .collect(toUnmodifiableSet());
@@ -80,7 +83,7 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     policyStats.recordOperation();
-    Node node = data.get(key);
+    @Var Node node = data.get(key);
     admittor.record(key);
 
     if (node == null) {
@@ -142,9 +145,9 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Status status;
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable Status status;
 
     /** Creates a new sentinel node. */
     public Node() {

@@ -77,7 +77,7 @@ public final class MemoryBenchmark {
     softValues();
   }
 
-  private Caffeine<Object, Object> builder() {
+  private static Caffeine<Object, Object> builder() {
     // Avoid counting ForkJoinPool in estimates
     return Caffeine.newBuilder().executor(Runnable::run);
   }

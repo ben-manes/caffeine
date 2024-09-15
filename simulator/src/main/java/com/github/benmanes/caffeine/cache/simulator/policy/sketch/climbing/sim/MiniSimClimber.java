@@ -23,6 +23,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuP
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -41,19 +42,19 @@ public final class MiniSimClimber implements HillClimber {
 
   private final WindowTinyLfuPolicy[] minis;
   private final long[] prevMisses;
+  private final int samplingRate;
   private final int cacheSize;
   private final int period;
-  private final int R;
 
   private int sample;
   private double prevPercent;
 
   public MiniSimClimber(Config config) {
-    MiniSimSettings settings = new MiniSimSettings(config);
+    var settings = new MiniSimSettings(config);
     this.cacheSize = Math.toIntExact(settings.maximumSize());
-    R = (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100);
-    WindowTinyLfuSettings simulationSettings = new WindowTinyLfuSettings(ConfigFactory
-        .parseString("maximum-size = " + cacheSize / R)
+    samplingRate = (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100);
+    var simulationSettings = new WindowTinyLfuSettings(ConfigFactory
+        .parseString("maximum-size = " + (cacheSize / samplingRate))
         .withFallback(config));
     this.prevPercent = 1 - settings.percentMain().get(0);
     this.period = settings.minisimPeriod();
@@ -79,7 +80,7 @@ public final class MiniSimClimber implements HillClimber {
   private void onAccess(long key) {
     sample++;
 
-    if (Math.floorMod(hasher.hashLong(key).asInt(), R) < 1) {
+    if (Math.floorMod(hasher.hashLong(key).asInt(), samplingRate) < 1) {
       for (WindowTinyLfuPolicy policy : minis) {
         policy.record(key);
       }
@@ -98,7 +99,7 @@ public final class MiniSimClimber implements HillClimber {
       periodMisses[i] = minis[i].stats().missCount() - prevMisses[i];
       prevMisses[i] = minis[i].stats().missCount();
     }
-    int minIndex = 0;
+    @Var int minIndex = 0;
     for (int i = 1; i < periodMisses.length; i++) {
       if (periodMisses[i] < periodMisses[minIndex]) {
         minIndex = i;

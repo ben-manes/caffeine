@@ -31,6 +31,8 @@ import com.google.common.cache.RemovalNotification;
 @GwtCompatible(emulated = true)
 class TestingRemovalListeners {
 
+  private TestingRemovalListeners() {}
+
   /**
    * Returns a new no-op {@code RemovalListener}.
    */

@@ -21,6 +21,8 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.LinkedHashSet;
 import java.util.function.IntConsumer;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -28,6 +30,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -90,7 +93,7 @@ public final class S3FifoPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    Node node;
+    @Var Node node;
     if ((node = dataSmall.get(event.key())) != null) {
       onHit(event, node, change -> sizeSmall += change);
     } else if ((node = dataMain.get(event.key())) != null) {
@@ -172,7 +175,7 @@ public final class S3FifoPolicy implements Policy {
   }
 
   private void evictFromSmall() {
-    boolean evicted = false;
+    @Var boolean evicted = false;
     while (!evicted && !dataSmall.isEmpty()) {
       var victim = sentinelSmall.prev;
       policyStats.recordOperation();
@@ -193,7 +196,7 @@ public final class S3FifoPolicy implements Policy {
   }
 
   private void evictFromMain() {
-    boolean evicted = false;
+    @Var boolean evicted = false;
     while (!evicted && !dataMain.isEmpty()) {
       var victim = sentinelMain.prev;
       policyStats.recordOperation();
@@ -238,7 +241,7 @@ public final class S3FifoPolicy implements Policy {
     checkState(actualSize <= maximumSize, "Total: %s > %s", actualSize, maximumSize);
   }
 
-  private void checkLinks(String label, Long2ObjectMap<Node> data, Node sentinel) {
+  private static void checkLinks(String label, Long2ObjectMap<Node> data, Node sentinel) {
     var forwards = new LinkedHashSet<Node>();
     for (var node = sentinel.next; node != sentinel; node = node.next) {
       checkState(node == data.get(node.key), "%s: %s != %s", label, node, data.get(node.key));
@@ -264,8 +267,9 @@ public final class S3FifoPolicy implements Policy {
   static final class Node {
     final long key;
 
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+
     int weight;
     int frequency;
 

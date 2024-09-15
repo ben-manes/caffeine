@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.github.benmanes.caffeine.cache.References.LookupKeyReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
+import com.google.errorprone.annotations.Var;
 
 /**
  * A factory for cache nodes optimized for a particular configuration.
@@ -136,7 +137,7 @@ interface NodeFactory<K, V> {
 
   @SuppressWarnings("unchecked")
   static <K, V> NodeFactory<K, V> loadFactory(String className) {
-    var factory = FACTORIES.get(className);
+    @Var var factory = FACTORIES.get(className);
     if (factory == null) {
       factory = FACTORIES.computeIfAbsent(className, NodeFactory::newFactory);
     }
@@ -157,10 +158,10 @@ interface NodeFactory<K, V> {
   }
 
   final class RetiredWeakKey extends WeakKeyReference<Object> {
-    RetiredWeakKey() { super(/* key */ null, /* referenceQueue */ null); }
+    RetiredWeakKey() { super(/* key= */ null, /* queue= */ null); }
   }
   final class DeadWeakKey extends WeakKeyReference<Object> {
-    DeadWeakKey() { super(/* key */ null, /* referenceQueue */ null); }
+    DeadWeakKey() { super(/* key= */ null, /* queue= */ null); }
   }
   final class RetiredStrongKey {}
   final class DeadStrongKey {}

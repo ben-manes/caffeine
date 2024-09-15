@@ -110,14 +110,15 @@ public final class CaffeineSpecTest {
     runScenarios(context, new Epoch(TimeUnit.DAYS, "d"));
   }
 
-  private void runScenarios(CacheContext context, Epoch epoch) {
+  private static void runScenarios(CacheContext context, Epoch epoch) {
     runTest(context, epoch, duration -> epoch.toUnitString(duration).toLowerCase(US));
     runTest(context, epoch, duration -> epoch.toUnitString(duration).toUpperCase(US));
     runTest(context, epoch, duration -> epoch.truncate(duration).toString().toLowerCase(US));
     runTest(context, epoch, duration -> epoch.truncate(duration).toString().toUpperCase(US));
   }
 
-  private void runTest(CacheContext context, Epoch epoch, Function<Duration, String> formatter) {
+  private static void runTest(CacheContext context,
+      Epoch epoch, Function<Duration, String> formatter) {
     CaffeineSpec spec = toSpec(context, formatter);
     Caffeine<Object, Object> builder = Caffeine.from(spec);
 

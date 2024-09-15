@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoade
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertThrows;
 
 import java.util.Collection;
 import java.util.Map;
@@ -31,7 +32,6 @@ import com.github.benmanes.caffeine.guava.compatibility.CacheBuilderFactory.Dura
 import com.github.benmanes.caffeine.guava.compatibility.CacheBuilderFactory.Strength;
 import com.google.common.base.Function;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -92,24 +92,14 @@ public class EmptyCachesTest extends TestCase {
 
   public void testGet_null() throws ExecutionException {
     for (LoadingCache<Object, Object> cache : caches()) {
-      try {
-        cache.get(null);
-        fail("Expected NullPointerException");
-      } catch (NullPointerException e) {
-        // expected
-      }
+      assertThrows(NullPointerException.class, () -> cache.get(null));
       checkEmpty(cache);
     }
   }
 
   public void testGetUnchecked_null() {
     for (LoadingCache<Object, Object> cache : caches()) {
-      try {
-        cache.getUnchecked(null);
-        fail("Expected NullPointerException");
-      } catch (NullPointerException e) {
-        // expected
-      }
+      assertThrows(NullPointerException.class, () -> cache.getUnchecked(null));
       checkEmpty(cache);
     }
   }
@@ -119,31 +109,18 @@ public class EmptyCachesTest extends TestCase {
   public void testKeySet_nullToArray() {
     for (LoadingCache<Object, Object> cache : caches()) {
       Set<Object> keys = cache.asMap().keySet();
-      try {
-        keys.toArray((Object[]) null);
-        fail();
-      } catch (NullPointerException e) {
-        // expected
-      }
+      assertThrows(NullPointerException.class, () -> keys.toArray((Object[]) null));
       checkEmpty(cache);
     }
   }
 
   public void testKeySet_addNotSupported() {
     for (LoadingCache<Object, Object> cache : caches()) {
-      try {
-        cache.asMap().keySet().add(1);
-        fail();
-      } catch (UnsupportedOperationException e) {
-        // expected
-      }
+      assertThrows(UnsupportedOperationException.class,
+          () -> cache.asMap().keySet().add(1));
 
-      try {
-        cache.asMap().keySet().addAll(asList(1, 2));
-        fail();
-      } catch (UnsupportedOperationException e) {
-        // expected
-      }
+      assertThrows(UnsupportedOperationException.class,
+          () -> cache.asMap().keySet().addAll(asList(1, 2)));
     }
   }
 
@@ -196,31 +173,18 @@ public class EmptyCachesTest extends TestCase {
   public void testValues_nullToArray() {
     for (LoadingCache<Object, Object> cache : caches()) {
       Collection<Object> values = cache.asMap().values();
-      try {
-        values.toArray((Object[]) null);
-        fail();
-      } catch (NullPointerException e) {
-        // expected
-      }
+      assertThrows(NullPointerException.class, () -> values.toArray((Object[]) null));
       checkEmpty(cache);
     }
   }
 
   public void testValues_addNotSupported() {
     for (LoadingCache<Object, Object> cache : caches()) {
-      try {
-        cache.asMap().values().add(1);
-        fail();
-      } catch (UnsupportedOperationException e) {
-        // expected
-      }
+      assertThrows(UnsupportedOperationException.class,
+          () -> cache.asMap().values().add(1));
 
-      try {
-        cache.asMap().values().addAll(asList(1, 2));
-        fail();
-      } catch (UnsupportedOperationException e) {
-        // expected
-      }
+      assertThrows(UnsupportedOperationException.class,
+          () -> cache.asMap().values().addAll(asList(1, 2)));
     }
   }
 
@@ -273,37 +237,19 @@ public class EmptyCachesTest extends TestCase {
   public void testEntrySet_nullToArray() {
     for (LoadingCache<Object, Object> cache : caches()) {
       Set<Map.Entry<Object, Object>> entries = cache.asMap().entrySet();
-      try {
-        entries.toArray((Map.Entry<?, ?>[]) null);
-        fail();
-      } catch (NullPointerException e) {
-        // expected
-      }
+      assertThrows(NullPointerException.class,
+          () -> entries.toArray((Map.Entry<Object, Object>[]) null));
       checkEmpty(cache);
     }
   }
 
   public void testEntrySet_addNotSupported() {
     for (LoadingCache<Object, Object> cache : caches()) {
-      try {
-        cache.asMap().entrySet().add(entryOf(1, 1));
-        fail();
-      } catch (UnsupportedOperationException e) {
-        // expected
-      }
-      try {
-        cache.asMap().entrySet().addAll(ImmutableList.of());
-        fail();
-      } catch (UnsupportedOperationException e) {
-        // expected
-      }
+      assertThrows(UnsupportedOperationException.class,
+          () -> cache.asMap().entrySet().add(entryOf(1, 1)));
 
-      try {
-        cache.asMap().values().addAll(asList(entryOf(1, 1), entryOf(2, 2)));
-        fail();
-      } catch (UnsupportedOperationException e) {
-        // expected
-      }
+      assertThrows(UnsupportedOperationException.class,
+          () -> cache.asMap().values().addAll(asList(entryOf(1, 1), entryOf(2, 2))));
     }
   }
 
@@ -356,7 +302,7 @@ public class EmptyCachesTest extends TestCase {
   /**
    * Most of the tests in this class run against every one of these caches.
    */
-  private Iterable<LoadingCache<Object, Object>> caches() {
+  private static Iterable<LoadingCache<Object, Object>> caches() {
     // lots of different ways to configure a LoadingCache
     CacheBuilderFactory factory = cacheFactory();
     return Iterables.transform(factory.buildAllPermutations(),
@@ -368,7 +314,7 @@ public class EmptyCachesTest extends TestCase {
         });
   }
 
-  private CacheBuilderFactory cacheFactory() {
+  private static CacheBuilderFactory cacheFactory() {
     return new CacheBuilderFactory()
         .withKeyStrengths(ImmutableSet.of(Strength.STRONG, Strength.WEAK))
         .withValueStrengths(ImmutableSet.copyOf(Strength.values()))
@@ -388,14 +334,14 @@ public class EmptyCachesTest extends TestCase {
             DurationSpec.of(1, DAYS)));
   }
 
-  private void warmUp(LoadingCache<Object, Object> cache, int minimum, int maximum) {
+  private static void warmUp(LoadingCache<Object, Object> cache, int minimum, int maximum) {
     for (int i = minimum; i < maximum; i++) {
       cache.getUnchecked(i);
     }
   }
 
   @SuppressWarnings("MapEntry")
-  private Map.Entry<Object, Object> entryOf(Object key, Object value) {
+  private static Map.Entry<Object, Object> entryOf(Object key, Object value) {
     return Maps.immutableEntry(key, value);
   }
 }

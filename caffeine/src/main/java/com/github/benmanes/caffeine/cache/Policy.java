@@ -76,8 +76,7 @@ public interface Policy<K, V> {
    *         mapping for the key
    * @throws NullPointerException if the specified key is null
    */
-  @Nullable
-  default CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
+  default @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
     // This method was added & implemented in version 3.0.6
     throw new UnsupportedOperationException();
   }

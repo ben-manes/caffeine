@@ -34,9 +34,9 @@ public final class PerfectFrequency implements Frequency {
   private int size;
 
   public PerfectFrequency(Config config) {
-    BasicSettings settings = new BasicSettings(config);
-    sampleSize = Math.toIntExact(10 * settings.maximumSize());
     counts = new Long2IntOpenHashMap();
+    var settings = new BasicSettings(config);
+    sampleSize = Math.toIntExact(10 * settings.maximumSize());
   }
 
   @Override

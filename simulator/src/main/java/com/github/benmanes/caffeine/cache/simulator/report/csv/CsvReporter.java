@@ -45,8 +45,8 @@ public final class CsvReporter extends TextReporter {
 
   @Override
   protected String assemble(Set<String> headers, List<PolicyStats> results) {
-    StringWriter output = new StringWriter();
-    CsvWriter writer = new CsvWriter(output, new CsvWriterSettings());
+    var output = new StringWriter();
+    var writer = new CsvWriter(output, new CsvWriterSettings());
     writer.writeHeaders(headers);
     for (PolicyStats policyStats : results) {
       String[] data = headers.stream()

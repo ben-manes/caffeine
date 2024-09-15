@@ -39,7 +39,7 @@ public final class Adam extends AbstractClimber {
   private double velocity;
 
   public Adam(Config config) {
-    AdamSettings settings = new AdamSettings(config);
+    var settings = new AdamSettings(config);
     int maximumSize = Math.toIntExact(settings.maximumSize());
     sampleSize = (int) (settings.percentSample() * maximumSize);
     stepSize = (int) (settings.percentPivot() * maximumSize);

@@ -52,7 +52,7 @@ final class SerializationProxy<K, V> implements Serializable {
   @Nullable RemovalListener<?, ?> evictionListener;
 
   Caffeine<Object, Object> recreateCaffeine() {
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    var builder = Caffeine.newBuilder();
     if (ticker != null) {
       builder.ticker(ticker);
     }
@@ -99,13 +99,13 @@ final class SerializationProxy<K, V> implements Serializable {
   }
 
   Object readResolve() {
-    Caffeine<Object, Object> builder = recreateCaffeine();
+    var builder = recreateCaffeine();
     if (async) {
       if (cacheLoader == null) {
         return builder.buildAsync();
       }
       @SuppressWarnings("unchecked")
-      AsyncCacheLoader<K, V> loader = (AsyncCacheLoader<K, V>) cacheLoader;
+      var loader = (AsyncCacheLoader<K, V>) cacheLoader;
       return builder.buildAsync(loader);
     }
 
@@ -113,7 +113,7 @@ final class SerializationProxy<K, V> implements Serializable {
       return builder.build();
     }
     @SuppressWarnings("unchecked")
-    CacheLoader<K, V> loader = (CacheLoader<K, V>) cacheLoader;
+    var loader = (CacheLoader<K, V>) cacheLoader;
     return builder.build(loader);
   }
 }

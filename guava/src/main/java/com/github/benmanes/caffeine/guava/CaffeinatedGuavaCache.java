@@ -57,10 +57,10 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     this.cache = requireNonNull(cache);
   }
 
-  @Override @Nullable
-  public V getIfPresent(Object key) {
+  @Override
+  public @Nullable V getIfPresent(Object key) {
     @SuppressWarnings("unchecked")
-    K castedKey = (K) key;
+    var castedKey = (K) key;
     return cache.getIfPresent(castedKey);
   }
 
@@ -114,7 +114,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   @Override
   public void invalidate(Object key) {
     @SuppressWarnings("unchecked")
-    K castedKey = (K) key;
+    var castedKey = (K) key;
     cache.invalidate(castedKey);
   }
 
@@ -240,7 +240,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
     CacheLoaderException(Throwable cause) {
-      super(null, cause, /* enableSuppression */ false, /* writableStackTrace */ false);
+      super(null, cause, /* enableSuppression= */ false, /* writableStackTrace= */ false);
     }
   }
 }

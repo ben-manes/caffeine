@@ -44,7 +44,7 @@ public final class HazelcastCache<K, V> implements BasicCache<K, V> {
             .setEvictionPolicy(policy)
             .setSize(maximumSize));
     cache = new DefaultNearCache<>("simulation", config, DummySerializationService.INSTANCE,
-        /* TaskScheduler */ null, getClass().getClassLoader(), /* HazelcastProperties */ null);
+        /* scheduler= */ null, getClass().getClassLoader(), /* properties= */ null);
     cache.initialize();
   }
 
@@ -55,7 +55,7 @@ public final class HazelcastCache<K, V> implements BasicCache<K, V> {
 
   @Override
   public void put(K key, V value) {
-    cache.put(key, /* keyData */ null, value, /* valueDate */ null);
+    cache.put(key, /* keyData= */ null, value, /* valueDate= */ null);
   }
 
   @Override
@@ -88,7 +88,7 @@ public final class HazelcastCache<K, V> implements BasicCache<K, V> {
       return (T) data;
     }
     @Override public ManagedContext getManagedContext() {
-      return null;
+      throw new UnsupportedOperationException();
     }
     @Override public <B extends Data> B trimSchema(Data data) {
       return (B) data;

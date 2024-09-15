@@ -52,7 +52,7 @@ public class Finalize implements NodeRule {
     addStaticBlock(context);
   }
 
-  private void addStaticBlock(NodeContext context) {
+  private static void addStaticBlock(NodeContext context) {
     if (context.varHandles.isEmpty()) {
       return;
     }

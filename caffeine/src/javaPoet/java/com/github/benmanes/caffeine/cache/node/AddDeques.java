@@ -48,7 +48,7 @@ public final class AddDeques implements NodeRule {
   }
 
   /** Adds a simple field, accessor, and mutator for the variable. */
-  private void addFieldAndGetter(NodeContext context, String varName) {
+  private static void addFieldAndGetter(NodeContext context, String varName) {
     context.nodeSubtype.addField(NODE, varName)
         .addMethod(context.newGetter(Strength.STRONG, NODE, varName, Visibility.VOLATILE))
         .addMethod(context.newSetter(NODE, varName, Visibility.VOLATILE));

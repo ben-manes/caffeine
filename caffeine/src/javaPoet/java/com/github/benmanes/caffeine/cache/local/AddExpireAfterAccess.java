@@ -36,12 +36,11 @@ public final class AddExpireAfterAccess implements LocalCacheRule {
 
   @Override
   public void execute(LocalCacheContext context) {
-    context.suppressedWarnings.add("NullAway");
     variableExpiration(context);
     fixedExpiration(context);
   }
 
-  private void fixedExpiration(LocalCacheContext context) {
+  private static void fixedExpiration(LocalCacheContext context) {
     context.constructor.addStatement(
         "this.expiresAfterAccessNanos = builder.getExpiresAfterAccessNanos()");
     context.cache.addField(FieldSpec.builder(long.class, "expiresAfterAccessNanos")
@@ -63,7 +62,7 @@ public final class AddExpireAfterAccess implements LocalCacheRule {
         .build());
   }
 
-  private void variableExpiration(LocalCacheContext context) {
+  private static void variableExpiration(LocalCacheContext context) {
     context.cache.addMethod(MethodSpec.methodBuilder("expiresVariable")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return (timerWheel != null)")

@@ -43,7 +43,7 @@ public final class EventTypeFilterTest {
   @Test
   public void equals_false() {
     CacheEntryCreatedListener<Integer, Integer> created = events -> {};
-    EventTypeFilter<Integer, Integer> other = new EventTypeFilter<>(created, event -> false);
+    var other = new EventTypeFilter<>(created, event -> false);
     assertThat(filter).isNotEqualTo(other);
   }
 

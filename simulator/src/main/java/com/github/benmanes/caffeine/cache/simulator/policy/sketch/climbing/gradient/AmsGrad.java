@@ -40,7 +40,7 @@ public final class AmsGrad extends AbstractClimber {
   private double maxVelocity;
 
   public AmsGrad(Config config) {
-    AmsGradSettings settings = new AmsGradSettings(config);
+    var settings = new AmsGradSettings(config);
     int maximumSize = Math.toIntExact(settings.maximumSize());
     sampleSize = (int) (settings.percentSample() * maximumSize);
     stepSize = (int) (settings.percentPivot() * maximumSize);

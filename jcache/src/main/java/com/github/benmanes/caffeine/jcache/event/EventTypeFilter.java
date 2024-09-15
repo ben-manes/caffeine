@@ -70,7 +70,7 @@ final class EventTypeFilter<K, V> implements CacheEntryEventFilter<K, V> {
     } else if (!(o instanceof EventTypeFilter<?, ?>)) {
       return false;
     }
-    EventTypeFilter<?, ?> other = (EventTypeFilter<?, ?>) o;
+    var other = (EventTypeFilter<?, ?>) o;
     return Objects.equals(listener, other.listener)
         && Objects.equals(filter, other.filter);
   }

@@ -153,27 +153,34 @@ public final class NodeContext {
         .addModifiers(publicFinalModifiers())
         .returns(varType);
     if (strength == Strength.STRONG) {
-      if (visibility == Visibility.PLAIN) {
-        var template = String.format(US, "return (%s) $L.get(this)",
-            varType.isPrimitive() ? "$L" : "$T");
-        getter.addStatement(template, varType, varHandleName(varName));
-      } else if (visibility == Visibility.OPAQUE) {
-        var template = String.format(US, "return (%s) $L.getOpaque(this)",
-            varType.isPrimitive() ? "$L" : "$T");
-        getter.addStatement(template, varType, varHandleName(varName));
-      } else if (visibility == Visibility.VOLATILE) {
-        getter.addStatement("return $N", varName);
-      } else {
-        throw new IllegalArgumentException();
+      switch (visibility) {
+        case OPAQUE: {
+          var template = String.format(US, "return (%s) $L.getOpaque(this)",
+              varType.isPrimitive() ? "$L" : "$T");
+          getter.addStatement(template, varType, varHandleName(varName));
+          break;
+        }
+        case PLAIN: {
+          var template = String.format(US, "return (%s) $L.get(this)",
+              varType.isPrimitive() ? "$L" : "$T");
+          getter.addStatement(template, varType, varHandleName(varName));
+          break;
+        }
+        case VOLATILE:
+          getter.addStatement("return $N", varName);
+          break;
       }
     } else {
-      if (visibility == Visibility.PLAIN) {
-        getter.addStatement("return (($T<$T>) $L.get(this)).get()",
-            Reference.class, varType, varHandleName(varName));
-      } else if (visibility == Visibility.VOLATILE) {
-        getter.addStatement("return $N.get()", varName);
-      } else {
-        throw new IllegalArgumentException();
+      switch (visibility) {
+        case OPAQUE:
+          throw new IllegalArgumentException();
+        case PLAIN:
+          getter.addStatement("return (($T<$T>) $L.get(this)).get()",
+              Reference.class, varType, varHandleName(varName));
+          break;
+        case VOLATILE:
+          getter.addStatement("return $N.get()", varName);
+          break;
       }
     }
     return getter.build();
@@ -185,20 +192,22 @@ public final class NodeContext {
     var setter = MethodSpec.methodBuilder(methodName)
         .addModifiers(publicFinalModifiers())
         .addParameter(varType, varName);
-    if (visibility == Visibility.PLAIN) {
-      setter.addStatement("$L.set(this, $N)", varHandleName(varName), varName);
-    } else if (visibility == Visibility.OPAQUE) {
-      setter.addStatement("$L.setOpaque(this, $N)", varHandleName(varName), varName);
-    } else if (visibility == Visibility.VOLATILE) {
-      setter.addStatement("this.$N = $N", varName, varName);
-    } else {
-      throw new IllegalArgumentException();
+    switch (visibility) {
+      case OPAQUE:
+        setter.addStatement("$L.setOpaque(this, $N)", varHandleName(varName), varName);
+        break;
+      case PLAIN:
+        setter.addStatement("$L.set(this, $N)", varHandleName(varName), varName);
+        break;
+      case VOLATILE:
+        setter.addStatement("this.$N = $N", varName, varName);
+        break;
     }
     return setter.build();
   }
 
   /** Returns the name of the VarHandle to this variable. */
-  public String varHandleName(String varName) {
+  public static String varHandleName(String varName) {
     return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName);
   }
 

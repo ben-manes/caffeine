@@ -35,8 +35,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
-  @Nullable
-  public abstract K getKey();
+  public abstract @Nullable K getKey();
 
   /**
    * Returns the reference that the cache is holding the entry by. This is either the key if
@@ -45,8 +44,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   public abstract Object getKeyReference();
 
   /** Return the value or {@code null} if it has been reclaimed by the garbage collector. */
-  @Nullable
-  public abstract V getValue();
+  public abstract @Nullable V getValue();
 
   /**
    * Returns the reference to the value. This is either the value if strongly held or a
@@ -65,9 +63,8 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   public abstract boolean containsValue(Object value);
 
   /** Returns the weight of this entry from the entry's perspective. */
-  @NonNegative
   @GuardedBy("this")
-  public int getWeight() {
+  public @NonNegative int getWeight() {
     return 1;
   }
 
@@ -76,9 +73,8 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   public void setWeight(@NonNegative int weight) {}
 
   /** Returns the weight of this entry from the policy's perspective. */
-  @NonNegative
   // @GuardedBy("evictionLock")
-  public int getPolicyWeight() {
+  public @NonNegative int getPolicyWeight() {
     return 1;
   }
 

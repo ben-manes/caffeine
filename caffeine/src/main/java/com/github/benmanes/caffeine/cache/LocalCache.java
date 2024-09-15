@@ -97,7 +97,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   default @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     return compute(key, remappingFunction, expiry(),
-        /* recordLoad */ true, /* recordLoadFailure */ true);
+        /* recordLoad= */ true, /* recordLoadFailure= */ true);
   }
 
   /**
@@ -109,7 +109,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   @Override
   default @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-    return computeIfAbsent(key, mappingFunction, /* recordStats */ true, /* recordLoad */ true);
+    return computeIfAbsent(key, mappingFunction, /* recordStats= */ true, /* recordLoad= */ true);
   }
 
   /**
@@ -184,7 +184,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Decorates the remapping function to record statistics if enabled. */
   default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
-    return statsAware(remappingFunction, /* recordLoad */ true, /* recordLoadFailure */ true);
+    return statsAware(remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */

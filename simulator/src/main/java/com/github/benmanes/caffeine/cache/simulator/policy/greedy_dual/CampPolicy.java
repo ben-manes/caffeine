@@ -22,6 +22,8 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -101,6 +103,7 @@ public final class CampPolicy implements Policy {
     }
   }
 
+  @SuppressWarnings("Varifier")
   private int roundedCost(AccessEvent event) {
     // Given a number x, let b be the order of its highest non-zero bit. To round x to precision p,
     // zero out the b − p lower order bits or, in other words, preserve only the p most significant
@@ -136,15 +139,14 @@ public final class CampPolicy implements Policy {
     int priority = priorityQueue.isEmpty()
         ? roundCost
         : priorityQueue.first().priority + roundCost;
-    var sentinel = sentinelMapping.get(roundCost);
-    if (sentinel == null) {
-      // checks if new LRU list needs to be created for the rounded cost
-      sentinel = new Sentinel(roundCost);
-      sentinel.priority = priority;
-      sentinel.lastRequest = requestCount;
-      sentinelMapping.put(roundCost, sentinel);
-      priorityQueue.add(sentinelMapping.get(roundCost));
-    }
+    var sentinel = sentinelMapping.computeIfAbsent(roundCost, cost -> {
+      // Add a new LRU list for the rounded cost
+      var head = new Sentinel(roundCost);
+      head.lastRequest = requestCount;
+      head.priority = priority;
+      priorityQueue.add(head);
+      return head;
+    });
 
     // cost of entry might be used later to find sentinel in case of hit
     var node = new Node(event.key(), event.weight(), sentinel);
@@ -244,8 +246,8 @@ public final class CampPolicy implements Policy {
     final long key;
 
     Sentinel sentinel;
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
 
     int weight;
     int cost;

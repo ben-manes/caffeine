@@ -67,33 +67,34 @@ public class PolicyStats {
     this.name = String.format(US, format, args);
     this.metrics = new LinkedHashMap<>();
 
-    addMetric(Metric.of("Policy", (Supplier<String>) this::name, OBJECT, true));
-    addMetric(Metric.of("Hit Rate", (DoubleSupplier) this::hitRate, PERCENT, true));
-    addMetric(Metric.of("Miss Rate", (DoubleSupplier) this::missRate, PERCENT, true));
-    addMetric(Metric.of("Hits", (LongSupplier) this::hitCount, NUMBER, true));
-    addMetric(Metric.of("Misses", (LongSupplier) this::missCount, NUMBER, true));
-    addMetric(Metric.of("Requests", (LongSupplier) this::requestCount, NUMBER, true));
-    addMetric(Metric.of("Evictions", (LongSupplier) this::evictionCount, NUMBER, true));
+    addMetric(Metric.builder()
+        .name("Policy").addValue(this::name).type(OBJECT).required(true));
+    addMetric(Metric.builder()
+        .name("Hit Rate").addValue(this::hitRate).type(PERCENT).required(true));
+    addMetric(Metric.builder()
+        .name("Miss Rate").addValue(this::missRate).type(PERCENT).required(true));
+    addMetric(Metric.builder()
+        .name("Hits").addValue(this::hitCount).type(NUMBER).required(true));
+    addMetric(Metric.builder()
+        .name("Misses").addValue(this::missCount).type(NUMBER).required(true));
+    addMetric(Metric.builder()
+        .name("Misses").addValue(this::missCount).type(NUMBER).required(true));
+    addMetric(Metric.builder()
+        .name("Requests").addValue(this::requestCount).type(NUMBER).required(true));
+    addMetric(Metric.builder()
+        .name("Evictions").addValue(this::evictionCount).type(NUMBER).required(true));
+
     addPercentMetric("Admit rate",
         () -> (admittedCount + rejectedCount) == 0 ? 0 : admissionRate());
     addMetric(Metric.builder()
-        .value((LongSupplier) this::requestsWeight)
-        .addCharacteristic(WEIGHTED)
-        .name("Requests Weight")
-        .type(NUMBER)
-        .build());
+        .name("Requests Weight").addValue(this::requestsWeight)
+        .type(NUMBER).addCharacteristic(WEIGHTED));
     addMetric(Metric.builder()
-        .value((DoubleSupplier) this::weightedHitRate)
-        .addCharacteristic(WEIGHTED)
-        .name("Weighted Hit Rate")
-        .type(PERCENT)
-        .build());
+        .name("Weighted Hit Rate").addValue(this::weightedHitRate)
+        .addCharacteristic(WEIGHTED).type(PERCENT));
     addMetric(Metric.builder()
-        .value((DoubleSupplier) this::weightedMissRate)
-        .addCharacteristic(WEIGHTED)
-        .name("Weighted Miss Rate")
-        .type(PERCENT)
-        .build());
+        .name("Weighted Miss Rate").addValue(this::weightedMissRate)
+        .type(PERCENT).addCharacteristic(WEIGHTED));
     addPercentMetric("Adaption", this::percentAdaption);
     addMetric("Average Miss Penalty", this::averageMissPenalty);
     addMetric("Average Penalty", this::avergePenalty);
@@ -101,24 +102,25 @@ public class PolicyStats {
     addMetric("Time", this::stopwatch);
   }
 
-  public void addMetric(Metric metric) {
+  public void addMetric(Metric.Builder metricBuilder) {
+    var metric = metricBuilder.build();
     metrics.put(metric.name(), requireNonNull(metric));
   }
 
   public void addMetric(String name, Supplier<?> supplier) {
-    addMetric(Metric.builder().name(name).value(supplier).type(OBJECT).build());
+    addMetric(Metric.builder().name(name).value(supplier).type(OBJECT));
   }
 
   public void addMetric(String name, LongSupplier supplier) {
-    addMetric(Metric.builder().name(name).value(supplier).type(NUMBER).build());
+    addMetric(Metric.builder().name(name).value(supplier).type(NUMBER));
   }
 
   public void addMetric(String name, DoubleSupplier supplier) {
-    addMetric(Metric.builder().name(name).value(supplier).type(NUMBER).build());
+    addMetric(Metric.builder().name(name).value(supplier).type(NUMBER));
   }
 
   public void addPercentMetric(String name, DoubleSupplier supplier) {
-    addMetric(Metric.builder().name(name).value(supplier).type(PERCENT).build());
+    addMetric(Metric.builder().name(name).value(supplier).type(PERCENT));
   }
 
   public Map<String, Metric> metrics() {
@@ -329,6 +331,18 @@ public class PolicyStats {
       public final Builder addCharacteristic(Characteristic characteristic) {
         characteristicsBuilder().add(characteristic);
         return this;
+      }
+      @CanIgnoreReturnValue
+      public Builder addValue(Supplier<?> value) {
+        return value(value);
+      }
+      @CanIgnoreReturnValue
+      public Builder addValue(LongSupplier value) {
+        return value(value);
+      }
+      @CanIgnoreReturnValue
+      public Builder addValue(DoubleSupplier value) {
+        return value(value);
       }
     }
   }

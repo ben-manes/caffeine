@@ -43,6 +43,7 @@ import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.event.JCacheEvictionListener;
 import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 /**
@@ -73,7 +74,7 @@ final class CacheFactory {
    * @return a new cache instance or null if the named cache is not defined in the settings file
    */
   @SuppressWarnings("resource")
-  public static @Nullable <K, V> CacheProxy<K, V> tryToCreateFromExternalSettings(
+  public static <K, V> @Nullable CacheProxy<K, V> tryToCreateFromExternalSettings(
       CacheManager cacheManager, String cacheName) {
     return TypesafeConfigurator.<K, V>from(rootConfig(cacheManager), cacheName)
         .map(configuration -> createCache(cacheManager, cacheName, configuration))
@@ -110,7 +111,7 @@ final class CacheFactory {
 
     CaffeineConfiguration<K, V> template = TypesafeConfigurator.defaults(rootConfig(cacheManager));
     if (configuration instanceof CompleteConfiguration<?, ?>) {
-      CompleteConfiguration<K, V> complete = (CompleteConfiguration<K, V>) configuration;
+      var complete = (CompleteConfiguration<K, V>) configuration;
       template.setReadThrough(complete.isReadThrough());
       template.setWriteThrough(complete.isWriteThrough());
       template.setManagementEnabled(complete.isManagementEnabled());
@@ -162,11 +163,11 @@ final class CacheFactory {
 
     /** Creates a configured cache. */
     public CacheProxy<K, V> build() {
-      boolean evicts = false;
+      @Var boolean evicts = false;
       evicts |= configureMaximumSize();
       evicts |= configureMaximumWeight();
 
-      boolean expires = false;
+      @Var boolean expires = false;
       expires |= configureExpireAfterWrite();
       expires |= configureExpireAfterAccess();
       expires |= configureExpireVariably();
@@ -178,7 +179,7 @@ final class CacheFactory {
         caffeine.recordStats();
       }
 
-      JCacheEvictionListener<K, V> evictionListener = null;
+      @Var JCacheEvictionListener<K, V> evictionListener = null;
       if (evicts || expires) {
         evictionListener = new JCacheEvictionListener<>(dispatcher, statistics);
         caffeine.evictionListener(evictionListener);
@@ -219,9 +220,9 @@ final class CacheFactory {
       }
 
       CacheLoader<K, V> cacheLoader = factory.create();
-      JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
+      var adapter = new JCacheLoaderAdapter<>(
           cacheLoader, dispatcher, expiryPolicy, ticker, statistics);
-      CacheProxy<K, V> cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
+      var cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
           caffeine.build(adapter), dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
       adapter.setCache(cache);
       return cache;
@@ -327,12 +328,12 @@ final class CacheFactory {
       return toNanos(expirable);
     }
     private long toNanos(Expirable<V> expirable) {
-      if (expirable.getExpireTimeMS() == 0L) {
+      if (expirable.getExpireTimeMillis() == 0L) {
         return -1L;
       } else if (expirable.isEternal()) {
         return Long.MAX_VALUE;
       }
-      return TimeUnit.MILLISECONDS.toNanos(expirable.getExpireTimeMS()) - ticker.read();
+      return TimeUnit.MILLISECONDS.toNanos(expirable.getExpireTimeMillis()) - ticker.read();
     }
   }
 }

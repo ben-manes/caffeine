@@ -90,7 +90,7 @@ public final class CacheProfiler extends ProfilerHook {
   }
 
   public static void main(String[] args) {
-    CacheProfiler profile = new CacheProfiler();
+    var profile = new CacheProfiler();
     profile.run();
   }
 }

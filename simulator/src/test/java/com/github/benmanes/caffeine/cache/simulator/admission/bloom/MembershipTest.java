@@ -32,34 +32,38 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
-import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.Var;
 import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 /**
  * @author ashish0x90 (Ashish Yadav)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class MembershipTest {
+public final class MembershipTest {
   static final String[] HEADERS = { "Type", "Capacity", "Insertions", "False Positives" };
   static final double EXPECTED_INSERTIONS_MULTIPLIER = 0.5;
   static final double FPP = 0.03;
 
   static final boolean display = false;
 
+  @SuppressWarnings("Varifier")
   @Test(dataProvider = "filterTypes")
   public void bloomFilterTest(FilterType filterType) {
-    List<Integer> capacities = new ArrayList<>(ImmutableList.of(0, 1));
+    var capacities = new IntArrayList(IntList.of(0, 1));
     for (int capacity = 2 << 10; capacity < (2 << 22); capacity <<= 2) {
       capacities.add(capacity);
     }
 
-    Random random = new Random();
+    var random = new Random();
     for (int capacity : capacities) {
       long[] input = random.longs(capacity).distinct().toArray();
       Config config = getConfig(filterType, capacity);
-      List<String[]> rows = new ArrayList<>();
+      var rows = new ArrayList<String[]>();
 
       Membership filter = filterType.create(config);
       int falsePositives = falsePositives(filter, input);
@@ -79,7 +83,7 @@ public class MembershipTest {
 
   @Test(dataProvider = "ensureCapacity")
   public void caffeine_ensureCapacity(int expectedInsertions, double fpp) {
-    BloomFilter filter = new BloomFilter();
+    var filter = new BloomFilter();
     filter.ensureCapacity(expectedInsertions, fpp);
     assertThat(filter.put(-1)).isTrue();
   }
@@ -95,10 +99,10 @@ public class MembershipTest {
   }
 
   /** Returns the false positives based on an input of unique elements. */
-  private int falsePositives(Membership filter, long[] input) {
-    int falsePositives = 0;
-    int truePositives = 0;
-    int i = 0;
+  private static int falsePositives(Membership filter, long[] input) {
+    @Var int falsePositives = 0;
+    @Var int truePositives = 0;
+    @Var int i = 0;
 
     // Add only first half of input array
     for (; i < (input.length / 2); i++) {
@@ -118,8 +122,8 @@ public class MembershipTest {
     return falsePositives;
   }
 
-  private Config getConfig(FilterType filterType, int capacity) {
-    Map<String, Object> properties = Map.of(
+  private static Config getConfig(FilterType filterType, int capacity) {
+    var properties = Map.of(
         "membership.expected-insertions-multiplier", EXPECTED_INSERTIONS_MULTIPLIER,
         "membership.filter", filterType.name(),
         "maximum-size", capacity,
@@ -141,7 +145,7 @@ public class MembershipTest {
 
   /** Displays the rows as a pretty printed table. */
   private static void printTable(List<String[]> rows) {
-    String[][] data = new String[rows.size()][HEADERS.length];
+    var data = new String[rows.size()][HEADERS.length];
     for (int i = 0; i < rows.size(); i++) {
       data[i] = rows.get(i);
     }

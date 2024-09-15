@@ -31,8 +31,8 @@ public final class TinyCachePolicy implements KeyOnlyPolicy {
   private final TinyCache tinyCache;
 
   public TinyCachePolicy(Config config) {
+    var settings = new BasicSettings(config);
     this.policyStats = new PolicyStats(name());
-    BasicSettings settings = new BasicSettings(config);
     int maximumSize = Math.toIntExact(settings.maximumSize());
     tinyCache = new TinyCache((int) Math.ceil(maximumSize / 64.0),
         64, settings.randomSeed());

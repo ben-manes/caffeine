@@ -116,6 +116,7 @@ public final class PolicyActor {
   }
 
   private abstract class Command implements Runnable {
+    @SuppressWarnings("Interruption")
     @Override public final void run() {
       var name = Thread.currentThread().getName();
       Thread.currentThread().setName(policy.getClass().getSimpleName());

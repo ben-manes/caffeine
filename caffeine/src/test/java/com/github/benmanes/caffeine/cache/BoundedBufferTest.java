@@ -98,4 +98,11 @@ public final class BoundedBufferTest {
     assertThat(buffer.readCounter).isEqualTo(Long.MIN_VALUE);
     assertThat(buffer.writeCounter).isEqualTo(Long.MIN_VALUE);
   }
+
+  @Test
+  public void reflectivelyConstruct() throws ReflectiveOperationException {
+    var constructor = BBHeader.class.getDeclaredConstructor();
+    constructor.setAccessible(true);
+    constructor.newInstance();
+  }
 }

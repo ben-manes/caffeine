@@ -64,12 +64,8 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_initialCapacityRepeated() {
-    try {
-      parse("initialCapacity=10, initialCapacity=20");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class,
+        () -> parse("initialCapacity=10, initialCapacity=20"));
   }
 
   public void testParse_maximumSize() {
@@ -86,12 +82,7 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_maximumSizeRepeated() {
-    try {
-      parse("maximumSize=10, maximumSize=20");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("maximumSize=10, maximumSize=20"));
   }
 
   public void testParse_maximumWeight() {
@@ -108,21 +99,11 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_maximumWeightRepeated() {
-    try {
-      parse("maximumWeight=10, maximumWeight=20");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("maximumWeight=10, maximumWeight=20"));
   }
 
   public void testParse_maximumSizeAndMaximumWeight() {
-    try {
-      parse("maximumSize=10, maximumWeight=20");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("maximumSize=10, maximumWeight=20"));
   }
 
   public void testParse_weakKeys() {
@@ -140,21 +121,11 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_weakKeysCannotHaveValue() {
-    try {
-      parse("weakKeys=true");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("weakKeys=true"));
   }
 
   public void testParse_repeatedKeyStrength() {
-    try {
-      parse("weakKeys, weakKeys");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("weakKeys, weakKeys"));
   }
 
   public void testParse_softValues() {
@@ -172,12 +143,7 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_softValuesCannotHaveValue() {
-    try {
-      parse("softValues=true");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("softValues=true"));
   }
 
   public void testParse_weakValues() {
@@ -195,42 +161,17 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_weakValuesCannotHaveValue() {
-    try {
-      parse("weakValues=true");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("weakValues=true"));
   }
 
   public void testParse_repeatedValueStrength() {
-    try {
-      parse("softValues, softValues");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("softValues, softValues"));
 
-    try {
-      parse("softValues, weakValues");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("softValues, weakValues"));
 
-    try {
-      parse("weakValues, softValues");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("weakValues, softValues"));
 
-    try {
-      parse("weakValues, weakValues");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("weakValues, weakValues"));
   }
 
   public void testParse_writeExpirationDays() {
@@ -269,13 +210,8 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_writeExpirationRepeated() {
-    try {
-      parse(
-          "expireAfterWrite=10s,expireAfterWrite=10m");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class,
+        () -> parse("expireAfterWrite=10s,expireAfterWrite=10m"));
   }
 
   public void testParse_accessExpirationDays() {
@@ -315,13 +251,8 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_accessExpirationRepeated() {
-    try {
-      parse(
-          "expireAfterAccess=10s,expireAfterAccess=10m");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class,
+        () -> parse("expireAfterAccess=10s,expireAfterAccess=10m"));
   }
 
   public void testParse_recordStats() {
@@ -331,21 +262,11 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_recordStatsValueSpecified() {
-    try {
-      parse("recordStats=True");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("recordStats=True"));
   }
 
   public void testParse_recordStatsRepeated() {
-    try {
-      parse("recordStats,recordStats");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("recordStats,recordStats"));
   }
 
   public void testParse_accessExpirationAndWriteExpiration() {
@@ -399,36 +320,16 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   public void testParse_unknownKey() {
-    try {
-      parse("foo=17");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("foo=17"));
   }
 
   // Allowed by Caffeine
   public void disabled_testParse_extraCommaIsInvalid() {
-    try {
-      parse("weakKeys,");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("weakKeys,"));
 
-    try {
-      parse(",weakKeys");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse(",weakKeys"));
 
-    try {
-      parse("weakKeys,,softValues");
-      fail("Expected exception");
-    } catch (IllegalArgumentException expected) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> parse("weakKeys,,softValues"));
   }
 
   public void testEqualsAndHashCode() {

@@ -63,7 +63,7 @@ public abstract class TextReporter implements Reporter {
       return;
     }
     try {
-      Path path = Path.of(output);
+      var path = Path.of(output);
       Files.createDirectories(path.getParent());
       Files.write(path, report.getBytes(UTF_8));
     } catch (IOException e) {

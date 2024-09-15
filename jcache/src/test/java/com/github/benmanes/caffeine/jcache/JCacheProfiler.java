@@ -83,6 +83,7 @@ public final class JCacheProfiler {
   }
 
   @CanIgnoreReturnValue
+  @SuppressWarnings("SystemOut")
   private ScheduledFuture<?> scheduleStatusTask() {
     var stopwatch = Stopwatch.createStarted();
     return Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {

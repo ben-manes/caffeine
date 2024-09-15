@@ -21,6 +21,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
 import com.google.common.math.IntMath;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 /**
@@ -45,9 +46,9 @@ public abstract class CountMin4 implements Frequency {
    * Creates a frequency sketch that can accurately estimate the popularity of elements given
    * the maximum size of the cache.
    */
-  @SuppressWarnings("this-escape")
+  @SuppressWarnings({"this-escape", "Varifier"})
   protected CountMin4(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    var settings = new BasicSettings(config);
     conservative = settings.tinyLfu().conservative();
 
     double countersMultiplier = settings.tinyLfu().countMin4().countersMultiplier();
@@ -62,6 +63,7 @@ public abstract class CountMin4 implements Frequency {
    *
    * @param maximumSize the maximum size of the cache
    */
+  @SuppressWarnings("Varifier")
   protected void ensureCapacity(long maximumSize) {
     checkArgument(maximumSize >= 0);
     int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
@@ -80,10 +82,11 @@ public abstract class CountMin4 implements Frequency {
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
   @Override
+  @SuppressWarnings("Varifier")
   public int frequency(long e) {
     int hash = spread(Long.hashCode(e));
     int start = (hash & 3) << 2;
-    int frequency = Integer.MAX_VALUE;
+    @Var int frequency = Integer.MAX_VALUE;
     for (int i = 0; i < 4; i++) {
       int index = indexOf(hash, i);
       int count = (int) ((table[index] >>> ((start + i) << 2)) & 0xfL);
@@ -119,7 +122,7 @@ public abstract class CountMin4 implements Frequency {
     int index2 = indexOf(hash, 2);
     int index3 = indexOf(hash, 3);
 
-    boolean added = incrementAt(index0, start, step);
+    @Var boolean added = incrementAt(index0, start, step);
     added |= incrementAt(index1, start + 1, step);
     added |= incrementAt(index2, start + 2, step);
     added |= incrementAt(index3, start + 3, step);
@@ -134,7 +137,7 @@ public abstract class CountMin4 implements Frequency {
 
     int[] index = new int[4];
     int[] count = new int[4];
-    int min = Integer.MAX_VALUE;
+    @Var int min = Integer.MAX_VALUE;
     for (int i = 0; i < 4; i++) {
       index[i] = indexOf(hash, i);
       count[i] = (int) ((table[index[i]] >>> ((start + i) << 2)) & 0xfL);
@@ -186,7 +189,7 @@ public abstract class CountMin4 implements Frequency {
    * @return the table index
    */
   int indexOf(int item, int i) {
-    long hash = (item + SEED[i]) * SEED[i];
+    @Var long hash = (item + SEED[i]) * SEED[i];
     hash += (hash >>> 32);
     return ((int) hash) & tableMask;
   }
@@ -195,7 +198,7 @@ public abstract class CountMin4 implements Frequency {
    * Applies a supplemental hash function to a given hashCode, which defends against poor quality
    * hash functions.
    */
-  int spread(int x) {
+  int spread(@Var int x) {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;

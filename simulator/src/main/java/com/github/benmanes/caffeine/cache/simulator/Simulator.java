@@ -119,7 +119,7 @@ public final class Simulator {
   }
 
   /** Returns a trace reader for the access events. */
-  private TraceReader getTraceReader(BasicSettings settings) {
+  private static TraceReader getTraceReader(BasicSettings settings) {
     if (settings.trace().isSynthetic()) {
       return Synthetic.generate(settings.trace());
     }
@@ -137,7 +137,7 @@ public final class Simulator {
   }
 
   /** Throws the underlying cause for the simulation failure. */
-  private void throwError(RuntimeException error, Iterable<PolicyActor> policies) {
+  private static void throwError(RuntimeException error, Iterable<PolicyActor> policies) {
     if (!Thread.currentThread().isInterrupted()) {
       throw error;
     }

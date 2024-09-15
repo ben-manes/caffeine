@@ -25,7 +25,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import junit.framework.Test;
 
 @SuppressWarnings({"ForEachIterable", "ModifyCollectionInEnhancedForLoop", "PreferredInterfaceType",
-  "rawtypes", "ReturnValueIgnored", "unchecked", "UnnecessaryParentheses"})
+  "rawtypes", "ReturnValueIgnored", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses"})
 public class ConcurrentHashMapTest extends JSR166TestCase {
     public static void main(String[] args) {
         main(suite());
@@ -51,8 +51,8 @@ public class ConcurrentHashMapTest extends JSR166TestCase {
         }
         return newTestSuite(
             ConcurrentHashMapTest.class,
-            MapTest.testSuite(new Implementation(false)),
-            MapTest.testSuite(new Implementation(true)));
+            MapTest.testSuite(new Implementation(/* bounded= */ false)),
+            MapTest.testSuite(new Implementation(/* bounded= */ true)));
     }
 
     private static <K, V> ConcurrentMap<K, V> unbounded() {
@@ -878,6 +878,7 @@ public class ConcurrentHashMapTest extends JSR166TestCase {
         mustEqual(mapSize, map.size());
     }
 
+    @SuppressWarnings("TryFailRefactoring")
     public void testReentrantComputeIfAbsent() {
         if (Runtime.version().feature() < 14) {
           return;

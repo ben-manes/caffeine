@@ -44,7 +44,7 @@ public final class AddMaximum implements LocalCacheRule {
     addFrequencySketch(context);
   }
 
-  private void addEvicts(LocalCacheContext context) {
+  private static void addEvicts(LocalCacheContext context) {
     context.cache.addMethod(MethodSpec.methodBuilder("evicts")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return true")
@@ -52,7 +52,7 @@ public final class AddMaximum implements LocalCacheRule {
         .build());
   }
 
-  private void addMaximumSize(LocalCacheContext context) {
+  private static void addMaximumSize(LocalCacheContext context) {
     addField(context, long.class, "maximum");
     addField(context, long.class, "weightedSize");
     addField(context, long.class, "windowMaximum");
@@ -61,7 +61,7 @@ public final class AddMaximum implements LocalCacheRule {
     addField(context, long.class, "mainProtectedWeightedSize");
   }
 
-  private void addHillClimber(LocalCacheContext context) {
+  private static void addHillClimber(LocalCacheContext context) {
     addField(context, double.class, "stepSize");
     addField(context, long.class, "adjustment");
     addField(context, int.class, "hitsInSample");
@@ -69,7 +69,7 @@ public final class AddMaximum implements LocalCacheRule {
     addField(context, double.class, "previousSampleHitRate");
   }
 
-  private void addFrequencySketch(LocalCacheContext context) {
+  private static void addFrequencySketch(LocalCacheContext context) {
     context.cache.addField(FieldSpec.builder(
         FREQUENCY_SKETCH, "sketch", Modifier.FINAL).build());
     context.constructor.addCode(CodeBlock.builder()
@@ -86,7 +86,7 @@ public final class AddMaximum implements LocalCacheRule {
         .build());
   }
 
-  private void addField(LocalCacheContext context, Class<?> type, String name) {
+  private static void addField(LocalCacheContext context, Class<?> type, String name) {
     context.cache.addField(FieldSpec.builder(type, name).build());
     context.cache.addMethod(MethodSpec.methodBuilder(name)
         .addModifiers(context.protectedFinalModifiers())

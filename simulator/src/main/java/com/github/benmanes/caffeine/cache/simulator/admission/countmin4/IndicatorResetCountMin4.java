@@ -62,7 +62,7 @@ public final class IndicatorResetCountMin4 implements Frequency {
     return indicator.getIndicator();
   }
 
-  private int hintToStep(double ind) {
+  private static int hintToStep(double ind) {
     return (int) (ind * 30);
   }
 

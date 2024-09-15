@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
+import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.squareup.javapoet.MethodSpec;
@@ -54,12 +55,12 @@ public final class AddHealth implements NodeRule {
         .addModifiers(context.publicFinalModifiers())
         .returns(boolean.class)
         .build());
-    addState(context, "isRetired", "retire", retiredArg, false);
-    addState(context, "isDead", "die", deadArg, true);
+    addState(context, "isRetired", "retire", retiredArg, /* finalized= */ false);
+    addState(context, "isDead", "die", deadArg, /* finalized= */ true);
   }
 
-  private void addState(NodeContext context, String checkName
-      , String actionName, String arg, boolean finalized) {
+  private static void addState(NodeContext context, String checkName,
+      String actionName, String arg, boolean finalized) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder(checkName)
         .addStatement("return (getKeyReference() == $L)", arg)
         .addModifiers(context.publicFinalModifiers())
@@ -75,12 +76,12 @@ public final class AddHealth implements NodeRule {
       // Set the value to null only when dead, as otherwise the explicit removal of an expired async
       // value will be notified as explicit rather than expired due to the isComputingAsync() check
       if (finalized) {
-        action.addStatement("$L.set(this, null)", context.varHandleName("value"));
+        action.addStatement("$L.set(this, null)", varHandleName("value"));
       }
-      action.addStatement("$L.set(this, $N)", context.varHandleName("key"), arg);
+      action.addStatement("$L.set(this, $N)", varHandleName("key"), arg);
     } else {
       action.addStatement("$1T valueRef = ($1T) $2L.get(this)",
-          context.valueReferenceType(), context.varHandleName("value"));
+          context.valueReferenceType(), varHandleName("value"));
       if (context.keyStrength() != Strength.STRONG) {
         action.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceType);
         action.addStatement("keyRef.clear()");

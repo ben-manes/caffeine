@@ -61,7 +61,7 @@ public final class CacheGenerator {
 
   public CacheGenerator(CacheSpec cacheSpec) {
     this(cacheSpec, Options.fromSystemProperties(),
-        /* isLoadingOnly */ false, /* isAsyncOnly */ false, /* isGuavaCompatible */ true);
+        /* isLoadingOnly= */ false, /* isAsyncOnly= */ false, /* isGuavaCompatible= */ true);
   }
 
   CacheGenerator(CacheSpec cacheSpec, Options options,
@@ -250,7 +250,7 @@ public final class CacheGenerator {
 
   /** Returns a cache of integers and their negation. */
   private static ImmutableList<Map.Entry<Int, Int>> makeInts() {
-    int size = Arrays.stream(CacheSpec.Population.values())
+    int size = Arrays.stream(Population.values())
         .mapToInt(population -> Math.toIntExact(population.size()))
         .max().getAsInt();
     var builder = new ImmutableList.Builder<Map.Entry<Int, Int>>();

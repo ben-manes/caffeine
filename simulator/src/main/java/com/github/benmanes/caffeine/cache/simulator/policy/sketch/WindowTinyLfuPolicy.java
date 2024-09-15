@@ -21,6 +21,8 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 import java.util.List;
 import java.util.Set;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -68,6 +70,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   private int sizeWindow;
   private int sizeProtected;
 
+  @SuppressWarnings("Varifier")
   public WindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
@@ -84,7 +87,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    WindowTinyLfuSettings settings = new WindowTinyLfuSettings(config);
+    var settings = new WindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new WindowTinyLfuPolicy(percentMain, settings))
         .collect(toUnmodifiableSet());
@@ -120,7 +123,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   private void onMiss(long key) {
     admittor.record(key);
 
-    Node node = new Node(key, Status.WINDOW);
+    var node = new Node(key, Status.WINDOW);
     node.appendToTail(headWindow);
     data.put(key, node);
     sizeWindow++;
@@ -204,9 +207,9 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   static final class Node {
     final long key;
 
-    Status status;
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+    @Nullable Status status;
 
     /** Creates a new sentinel node. */
     public Node() {

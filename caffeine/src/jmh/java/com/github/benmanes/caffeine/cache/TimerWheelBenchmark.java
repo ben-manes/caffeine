@@ -156,7 +156,7 @@ public class TimerWheelBenchmark {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     MockCache() {
-      super((Caffeine) Caffeine.newBuilder(), /* cacheLoader */ null, /* isAsync */ false);
+      super((Caffeine) Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false);
     }
 
     @Override
