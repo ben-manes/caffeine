@@ -8,7 +8,7 @@ permissions: read-all
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  JAVA_VERSION: 22
+  JAVA_VERSION: 23
 
 jobs:
   dependency-check:

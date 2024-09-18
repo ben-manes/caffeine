@@ -38,7 +38,8 @@ import org.junit.Test;
 /**
  * @author nitsanw@yahoo.com (Nitsan Wakart)
  */
-@SuppressWarnings({"deprecation", "PreferJavaTimeOverload", "ThreadPriorityCheck"})
+@SuppressWarnings({"deprecation", "PMD.AbstractClassWithoutAbstractMethod",
+    "PreferJavaTimeOverload", "ThreadPriorityCheck"})
 public abstract class QueueSanityTest {
   public static final int SIZE = 8192 * 2;
 
@@ -144,7 +145,7 @@ public abstract class QueueSanityTest {
     assertThat(queue, emptyAndZeroSize());
 
     // Act
-    Integer e = 1876876;
+    Integer e = 1_876_876;
     queue.offer(e);
     assertFalse(queue.isEmpty());
     assertEquals(1, queue.size());

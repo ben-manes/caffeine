@@ -16,7 +16,7 @@ plugins {
   alias(libs.plugins.versions)
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 dependencies {
   implementation(libs.jmh)

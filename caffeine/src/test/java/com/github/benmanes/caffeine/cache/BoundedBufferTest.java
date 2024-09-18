@@ -100,6 +100,7 @@ public final class BoundedBufferTest {
   }
 
   @Test
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   public void reflectivelyConstruct() throws ReflectiveOperationException {
     var constructor = BBHeader.class.getDeclaredConstructor();
     constructor.setAccessible(true);

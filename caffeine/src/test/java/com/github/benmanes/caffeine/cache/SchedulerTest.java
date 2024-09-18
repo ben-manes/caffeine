@@ -124,12 +124,14 @@ public final class SchedulerTest {
 
   /* --------------- guarded --------------- */
 
+  @Test
   public void guardedScheduler_null() {
     assertThrows(NullPointerException.class, () -> Scheduler.guardedScheduler(null));
   }
 
   @Test
   public void guardedScheduler_nullFuture() {
+    @SuppressWarnings("PMD.CloseResource")
     ScheduledExecutorService scheduledExecutor = Mockito.mock();
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
     Executor executor = Mockito.mock();
@@ -170,6 +172,7 @@ public final class SchedulerTest {
 
   @Test
   public void scheduledExecutorService_schedule() {
+    @SuppressWarnings("PMD.CloseResource")
     ScheduledExecutorService scheduledExecutor = Mockito.mock();
     var task = ArgumentCaptor.forClass(Runnable.class);
     Executor executor = Mockito.mock();
@@ -190,6 +193,7 @@ public final class SchedulerTest {
 
   @Test
   public void scheduledExecutorService_shutdown() {
+    @SuppressWarnings("PMD.CloseResource")
     ScheduledExecutorService scheduledExecutor = Mockito.mock();
     Executor executor = Mockito.mock();
 

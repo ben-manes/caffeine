@@ -48,6 +48,7 @@ public final class TrackingExecutor extends ForwardingExecutorService {
   }
 
   @Override
+  @SuppressWarnings("PMD.ExceptionAsFlowControl")
   public void execute(Runnable command) {
     try {
       submitted.incrementAndGet();

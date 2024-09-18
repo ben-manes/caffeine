@@ -59,6 +59,7 @@ import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.google.common.collect.Streams;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -332,7 +333,7 @@ public final class TimerWheelTest {
     }
   }
 
-  private static LongArrayList getTimers(Node<?, ?> sentinel) {
+  private static LongList getTimers(Node<?, ?> sentinel) {
     var timers = new LongArrayList();
     for (var node = sentinel.getNextInVariableOrder();
          node != sentinel; node = node.getNextInVariableOrder()) {
@@ -359,9 +360,8 @@ public final class TimerWheelTest {
   }
 
   private void checkEmpty() {
-    for (int i = 0; i < timerWheel.wheel.length; i++) {
-      for (int j = 0; j < timerWheel.wheel[i].length; j++) {
-        var sentinel = timerWheel.wheel[i][j];
+    for (var wheel : timerWheel.wheel) {
+      for (var sentinel : wheel) {
         assertThat(sentinel.getNextInVariableOrder()).isSameInstanceAs(sentinel);
         assertThat(sentinel.getPreviousInVariableOrder()).isSameInstanceAs(sentinel);
       }
@@ -465,7 +465,7 @@ public final class TimerWheelTest {
   }
 
   @DataProvider(name = "iterator")
-  @SuppressWarnings("MethodReferenceUsage")
+  @SuppressWarnings({"MethodReferenceUsage", "PMD.LambdaCanBeMethodReference"})
   public Object[][] providesIterators() {
     Iterable<Node<Long, Long>> descending = () -> timerWheel.descendingIterator();
     Iterable<Node<Long, Long>> ascending = () -> timerWheel.iterator();

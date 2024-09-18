@@ -236,6 +236,7 @@ public final class BoundedLocalCacheTest {
   /* --------------- Maintenance --------------- */
 
   @Test
+  @SuppressWarnings("PMD.UnusedAssignment")
   public void cleanupTask_allowGc() {
     var cache = new BoundedLocalCache<Object, Object>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
@@ -2206,7 +2207,7 @@ public final class BoundedLocalCacheTest {
 
     // Capture the refresh parameters, should not be retired/dead sentinel entry
     var refreshEntry = new AtomicReference<Map.Entry<Object, Object>>();
-    var cache = asBoundedLocalCache(context.build(new CacheLoader<Object, Object>() {
+    var cache = asBoundedLocalCache(context.build(new CacheLoader<>() {
       @Override public Int load(Object key) {
         throw new AssertionError();
       }
@@ -2526,6 +2527,7 @@ public final class BoundedLocalCacheTest {
   /* --------------- Miscellaneous --------------- */
 
   @Test
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   public void reflectivelyConstruct() throws ReflectiveOperationException {
     var constructor = BLCHeader.class.getDeclaredConstructor();
     constructor.setAccessible(true);

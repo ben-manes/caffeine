@@ -25,6 +25,7 @@ import javax.cache.annotation.CacheResult;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.integration.CacheLoader;
+import javax.cache.spi.CachingProvider;
 
 import org.jsr107.ri.annotations.DefaultCacheResolverFactory;
 import org.jsr107.ri.annotations.guice.module.CacheAnnotationsModule;
@@ -48,7 +49,9 @@ import jakarta.inject.Inject;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.CloseResource")
 public final class JCacheGuiceTest {
+  @Inject CachingProvider cachingProvider;
   @Inject CacheManager cacheManager;
   @Inject Service service;
 
@@ -61,6 +64,8 @@ public final class JCacheGuiceTest {
   @AfterClass
   public void afterClass() {
     TypesafeConfigurator.setFactoryCreator(FactoryBuilder::factoryOf);
+    cachingProvider.close();
+    cacheManager.close();
   }
 
   @Test
@@ -142,6 +147,7 @@ public final class JCacheGuiceTest {
       cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
       bind(CacheResolverFactory.class).toInstance(new DefaultCacheResolverFactory(cacheManager));
       bind(CacheManager.class).toInstance(cacheManager);
+      bind(CachingProvider.class).toInstance(provider);
     }
   }
 }

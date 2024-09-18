@@ -33,7 +33,8 @@ import junit.framework.TestCase;
  *
  * @author Adam Winer
  */
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"PMD.DetachedTestCase",
+    "PMD.JUnit4TestShouldUseTestAnnotation", "PreferJavaTimeOverload"})
 public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_empty() {

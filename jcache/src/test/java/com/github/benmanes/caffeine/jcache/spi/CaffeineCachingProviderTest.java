@@ -117,13 +117,14 @@ public final class CaffeineCachingProviderTest {
   public void osgi_getCache() {
     try (var provider = new CaffeineCachingProvider()) {
       provider.isOsgiComponent = true;
-      var cacheManager = provider.getCacheManager(
-          provider.getDefaultURI(), provider.getDefaultClassLoader());
-      assertThat(cacheManager.getCache("test-cache", Object.class, Object.class)).isNotNull();
-      assertThat(cacheManager.getCache("test-cache")).isNotNull();
-
-      cacheManager.createCache("new-cache", new CaffeineConfiguration<>());
-      assertThat(cacheManager.getCache("new-cache")).isNotNull();
+      try (var cacheManager = provider.getCacheManager(
+          provider.getDefaultURI(), provider.getDefaultClassLoader())) {
+        assertThat(cacheManager.getCache("test-cache", Object.class, Object.class)).isNotNull();
+        assertThat(cacheManager.getCache("test-cache")).isNotNull();
+        try (var cache = cacheManager.createCache("new-cache", new CaffeineConfiguration<>())) {
+          assertThat(cacheManager.getCache("new-cache")).isSameInstanceAs(cache);
+        }
+      }
     }
   }
 

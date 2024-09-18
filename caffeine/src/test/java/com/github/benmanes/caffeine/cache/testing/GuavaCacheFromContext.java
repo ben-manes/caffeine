@@ -68,7 +68,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("serial")
+@SuppressWarnings({"PMD.PreserveStackTrace", "serial"})
 public final class GuavaCacheFromContext {
   private GuavaCacheFromContext() {}
   private static final ThreadLocal<Throwable> error = new ThreadLocal<>();
@@ -626,6 +626,7 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
+    @SuppressWarnings("PMD.ExceptionAsFlowControl")
     public V load(K key) throws Exception {
       try {
         error.set(null);

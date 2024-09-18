@@ -15,13 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
+import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpmcArrayQueue;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class MpmcArrayBuffer<E> extends ReadBuffer<E> {
-  final MpmcArrayQueue<E> queue;
+  final MessagePassingQueue<E> queue;
+
   long reads;
 
   MpmcArrayBuffer() {

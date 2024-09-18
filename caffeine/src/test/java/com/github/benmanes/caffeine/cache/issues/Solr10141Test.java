@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 
 import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -45,7 +46,7 @@ public final class Solr10141Test {
   static final int maxEntries = blocksInTest / 2;
 
   static final int nThreads = 64;
-  static final int nReads = 10000000;
+  static final int nReads = 10_000_000;
   static final int readsPerThread = nReads / nThreads;
 
   // odds (1 in N) of the next block operation being on the same block as the previous operation...
@@ -78,8 +79,8 @@ public final class Solr10141Test {
         .build();
 
     var lastBlock = new AtomicLong();
-    var failed = new AtomicBoolean();
     var maxObservedSize = new AtomicLong();
+    var failed = new ConcurrentLinkedQueue<Throwable>();
 
     ConcurrentTestHarness.timeTasks(nThreads, new Runnable() {
 
@@ -90,8 +91,7 @@ public final class Solr10141Test {
             test(r);
           }
         } catch (Throwable e) {
-          failed.set(true);
-          e.printStackTrace();
+          failed.add(e);
         }
       }
 
@@ -132,14 +132,14 @@ public final class Solr10141Test {
         + "entries=%,d inserts=%,d removals=%,d hits=%,d maxEntries=%,d maxObservedSize=%,d%n",
         cache.estimatedSize(), inserts.get(), removals.get(),
         hits.get(), maxEntries, maxObservedSize.get());
-    assertThat(failed.get()).isFalse();
+    assertThat(failed).isEmpty();
   }
 
   @Test
   public void clear() {
     var inserts = new AtomicLong();
     var removals = new AtomicLong();
-    var failed = new AtomicBoolean();
+    var failed = new ConcurrentLinkedQueue<Throwable>();
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
       assertThat(v.key).isEqualTo(k);
@@ -164,8 +164,7 @@ public final class Solr10141Test {
             test(r);
           }
         } catch (Throwable e) {
-          failed.set(true);
-          e.printStackTrace();
+          failed.add(e);
         }
       }
 
@@ -191,7 +190,7 @@ public final class Solr10141Test {
 
     cache.asMap().clear();
     await().until(() -> inserts.get() == removals.get());
-    assertThat(failed.get()).isFalse();
+    assertThat(failed).isEmpty();
   }
 
   static class Val {

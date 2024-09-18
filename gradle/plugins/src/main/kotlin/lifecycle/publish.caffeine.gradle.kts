@@ -17,7 +17,7 @@ val testJar by tasks.registering(Jar::class) {
 }
 
 val testArtifacts: Configuration by configurations.creating
-artifacts.add("testArtifacts", testJar)
+artifacts.add(testArtifacts.name, testJar)
 
 publishing {
   publications {

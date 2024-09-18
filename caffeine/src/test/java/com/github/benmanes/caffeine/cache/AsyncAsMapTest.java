@@ -55,7 +55,6 @@ import java.util.stream.IntStream;
 
 import org.eclipse.collections.impl.factory.Sets;
 import org.mockito.Mockito;
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -829,10 +828,9 @@ public final class AsyncAsMapTest {
         return cache.asMap().computeIfAbsent(key, this);
       }
     };
-    try {
-      cache.asMap().computeIfAbsent(context.absentKey(), mappingFunction);
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class,
+        () -> cache.asMap().computeIfAbsent(context.absentKey(), mappingFunction));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @CacheSpec
@@ -843,10 +841,9 @@ public final class AsyncAsMapTest {
         return cache.asMap().computeIfAbsent(key.negate(), this);
       }
     };
-    try {
-      cache.asMap().computeIfAbsent(context.absentKey(), mappingFunction);
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class,
+        () -> cache.asMap().computeIfAbsent(context.absentKey(), mappingFunction));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @Test(dataProvider = "caches")
@@ -1085,10 +1082,9 @@ public final class AsyncAsMapTest {
         return cache.asMap().compute(key, this);
       }
     };
-    try {
-      cache.asMap().compute(context.absentKey(), mappingFunction);
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class,
+        () -> cache.asMap().compute(context.absentKey(), mappingFunction));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @Test(dataProvider = "caches")
@@ -1101,10 +1097,8 @@ public final class AsyncAsMapTest {
         return cache.asMap().compute(key.equals(key1) ? key2 : key1, this);
       }
     };
-    try {
-      cache.asMap().compute(key1, mappingFunction);
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class, () -> cache.asMap().compute(key1, mappingFunction));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @Test(dataProvider = "caches")

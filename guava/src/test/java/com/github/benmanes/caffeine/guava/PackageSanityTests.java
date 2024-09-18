@@ -32,7 +32,7 @@ public final class PackageSanityTests extends AbstractPackageSanityTests {
     setDefault(CacheLoader.class, key -> key);
     setDefault(Caffeine.class, Caffeine.newBuilder());
     setDefault(com.google.common.cache.CacheLoader.class,
-        new com.google.common.cache.CacheLoader<Object, Object>() {
+        new com.google.common.cache.CacheLoader<>() {
           @CanIgnoreReturnValue
           @Override public Object load(Object key) {
             return key;

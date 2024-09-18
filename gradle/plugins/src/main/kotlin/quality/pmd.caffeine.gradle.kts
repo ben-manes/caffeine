@@ -22,3 +22,8 @@ tasks.withType<Pmd>().configureEach {
   }
   isConsoleOutput = true
 }
+
+tasks.named<Pmd>("pmdTest").configure {
+  ruleSetConfig = resources.text.fromFile(
+    rootProject.layout.projectDirectory.file("gradle/config/pmd/rulesSets-test.xml"))
+}

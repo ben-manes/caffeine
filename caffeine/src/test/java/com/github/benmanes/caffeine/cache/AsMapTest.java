@@ -58,7 +58,6 @@ import java.util.stream.IntStream;
 
 import org.eclipse.collections.impl.factory.Sets;
 import org.mockito.Mockito;
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -1009,10 +1008,9 @@ public final class AsMapTest {
         return map.computeIfAbsent(key, this);
       }
     };
-    try {
-      map.computeIfAbsent(context.absentKey(), mappingFunction);
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class,
+        () -> map.computeIfAbsent(context.absentKey(), mappingFunction));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @CacheSpec
@@ -1023,10 +1021,9 @@ public final class AsMapTest {
         return map.computeIfAbsent(key.negate(), this);
       }
     };
-    try {
-      map.computeIfAbsent(context.absentKey(), mappingFunction);
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class,
+        () -> map.computeIfAbsent(context.absentKey(), mappingFunction));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @Test(dataProvider = "caches")
@@ -1308,10 +1305,9 @@ public final class AsMapTest {
         return map.compute(key, this);
       }
     };
-    try {
-      map.compute(context.absentKey(), mappingFunction);
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class,
+        () -> map.compute(context.absentKey(), mappingFunction));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @Test(dataProvider = "caches")
@@ -1324,20 +1320,15 @@ public final class AsMapTest {
         return map.compute(key.equals(key1) ? key2 : key1, this);
       }
     };
-    try {
-      map.compute(key1, mappingFunction);
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class, () -> map.compute(key1, mappingFunction));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @CacheSpec
   @Test(dataProvider = "caches")
   public void compute_error(Map<Int, Int> map, CacheContext context) {
-    try {
-      map.compute(context.absentKey(), (key, value) -> { throw new IllegalStateException(); });
-      Assert.fail();
-    } catch (IllegalStateException e) { /* ignored */ }
-
+    assertThrows(IllegalStateException.class, () ->
+        map.compute(context.absentKey(), (key, value) -> { throw new IllegalStateException(); }));
     assertThat(map).isEqualTo(context.original());
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
     assertThat(map.compute(context.absentKey(), (k, v) -> intern(k.negate())))
@@ -3095,6 +3086,7 @@ public final class AsMapTest {
     assertThat(entry.toString()).isNotEqualTo(other.toString());
   }
 
+  @SuppressWarnings("PMD.DoNotExtendJavaLangError")
   static final class ExpectedError extends Error {
     private static final long serialVersionUID = 1L;
   }

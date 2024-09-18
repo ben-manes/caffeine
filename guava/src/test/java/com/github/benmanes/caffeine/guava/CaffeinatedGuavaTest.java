@@ -17,11 +17,15 @@ package com.github.benmanes.caffeine.guava;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
+
+import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.CaffeinatedLoader;
@@ -43,14 +47,13 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
-import junit.framework.TestCase;
-
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CaffeinatedGuavaTest extends TestCase {
+final class CaffeinatedGuavaTest {
 
-  public void testSerializable() {
+  @Test
+  void serializable() {
     SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder()));
     SerializableTester.reserialize(CaffeinatedGuava.build(
         Caffeine.newBuilder(), IdentityLoader.INSTANCE));
@@ -58,20 +61,24 @@ public final class CaffeinatedGuavaTest extends TestCase {
         Caffeine.newBuilder(), TestingCacheLoaders.identityLoader()));
   }
 
-  public void testReflectivelyConstruct() throws ReflectiveOperationException {
+  @Test
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+  void reflectivelyConstruct() throws ReflectiveOperationException {
     Constructor<?> constructor = CaffeinatedGuava.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();
   }
 
-  public void testHasMethod_notFound() {
-    assertFalse(CaffeinatedGuava.hasMethod(TestingCacheLoaders.identityLoader(), "abc"));
+  @Test
+  void hasMethod_notFound() {
+    assertThat(CaffeinatedGuava.hasMethod(TestingCacheLoaders.identityLoader(), "abc")).isFalse();
   }
 
-  public void testReload_interrupted() {
+  @Test
+  void reload_interrupted() {
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
         Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
-        new CacheLoader<Integer, Integer>() {
+        new CacheLoader<>() {
           @Override public Integer load(Integer key) throws InterruptedException {
             throw new InterruptedException();
           }
@@ -82,10 +89,11 @@ public final class CaffeinatedGuavaTest extends TestCase {
     cache.refresh(1);
   }
 
-  public void testReload_throwable() {
+  @Test
+  void reload_throwable() {
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
         Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
-        new CacheLoader<Integer, Integer>() {
+        new CacheLoader<>() {
           @Override public Integer load(Integer key) throws Exception {
             throw new Exception();
           }
@@ -96,7 +104,8 @@ public final class CaffeinatedGuavaTest extends TestCase {
     cache.refresh(1);
   }
 
-  public void testCacheLoader_null() {
+  @Test
+  void cacheLoader_null() {
     assertThrows(NullPointerException.class, () -> CaffeinatedGuava.caffeinate(null));
 
     var caffeine1 = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> null));
@@ -121,13 +130,14 @@ public final class CaffeinatedGuavaTest extends TestCase {
     assertThat(e2).hasCauseThat().isInstanceOf(InvalidCacheLoadException.class);
   }
 
-  public void testCacheLoader_exception() {
+  @Test
+  void cacheLoader_exception() {
     runCacheLoaderExceptionTest(new InterruptedException());
     runCacheLoaderExceptionTest(new RuntimeException());
     runCacheLoaderExceptionTest(new Exception());
   }
 
-  public void runCacheLoaderExceptionTest(Exception error) {
+  private static void runCacheLoaderExceptionTest(Exception error) {
     var guava = new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) throws Exception {
         throw error;
@@ -149,7 +159,8 @@ public final class CaffeinatedGuavaTest extends TestCase {
     assertThat(e3).hasCauseThat().isSameInstanceAs(error);
   }
 
-  public void testCacheLoader_single() throws Exception {
+  @Test
+  void cacheLoader_single() throws Exception {
     var error = new Exception();
     var guava = new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) throws Exception {
@@ -164,7 +175,8 @@ public final class CaffeinatedGuavaTest extends TestCase {
     checkSingleLoader(error, guava, caffeine);
   }
 
-  public void testCacheLoader_bulk() throws Exception {
+  @Test
+  void cacheLoader_bulk() throws Exception {
     var error = new Exception();
     var guava = new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) throws Exception {
@@ -186,8 +198,8 @@ public final class CaffeinatedGuavaTest extends TestCase {
     checkBulkLoader(error, caffeine);
   }
 
-
-  public void testCacheLoader_reload() throws Exception {
+  @Test
+  void cacheLoader_reload() throws Exception {
     SettableFuture<Integer> reloader = SettableFuture.create();
     var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) {
@@ -206,7 +218,8 @@ public final class CaffeinatedGuavaTest extends TestCase {
     assertThat(future.join()).isEqualTo(3);
   }
 
-  public void testCacheLoader_reloadFailure() throws Exception {
+  @Test
+  void cacheLoader_reloadFailure() throws Exception {
     SettableFuture<Integer> reloader = SettableFuture.create();
     var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) {
@@ -228,6 +241,7 @@ public final class CaffeinatedGuavaTest extends TestCase {
     assertThat(e).hasCauseThat().isSameInstanceAs(error);
   }
 
+  @SuppressWarnings("PMD.SignatureDeclareThrowsException")
   private static void checkSingleLoader(Exception error, CacheLoader<Integer, Integer> guava,
       com.github.benmanes.caffeine.cache.CacheLoader<Integer, Integer> caffeine) throws Exception {
     assertThat(caffeine).isInstanceOf(ExternalSingleLoader.class);
@@ -245,6 +259,7 @@ public final class CaffeinatedGuavaTest extends TestCase {
     assertThat(e2).hasCauseThat().isSameInstanceAs(error);
   }
 
+  @SuppressWarnings("PMD.SignatureDeclareThrowsException")
   private static void checkBulkLoader(Exception error,
       com.github.benmanes.caffeine.cache.CacheLoader<Integer, Integer> caffeine) throws Exception {
     assertThat(caffeine).isInstanceOf(ExternalBulkLoader.class);

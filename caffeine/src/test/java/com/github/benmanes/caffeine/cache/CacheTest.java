@@ -333,7 +333,8 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void getAllPresent_jdk8186171(Cache<Object, Int> cache, CacheContext context) {
-    class Key {
+    @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
+    final class Key {
       @Override public int hashCode() {
         return 0; // to put keys in one bucket
       }
@@ -582,7 +583,8 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void getAll_jdk8186171(CacheContext context) {
-    class Key {
+    @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
+    final class Key {
       @Override public int hashCode() {
         return 0; // to put keys in one bucket
       }
@@ -942,6 +944,7 @@ public final class CacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void readObject(CacheContext context) throws NoSuchMethodException {
     var cache = context.isAsync() ? context.asyncCache() : context.cache();

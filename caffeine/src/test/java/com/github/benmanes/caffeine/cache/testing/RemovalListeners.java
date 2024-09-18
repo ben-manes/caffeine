@@ -75,6 +75,7 @@ public final class RemovalListeners {
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
+    @SuppressWarnings("PMD.LooseCoupling")
     private final CopyOnWriteArrayList<RemovalNotification<K, V>> removed;
 
     public ConsumingRemovalListener() {

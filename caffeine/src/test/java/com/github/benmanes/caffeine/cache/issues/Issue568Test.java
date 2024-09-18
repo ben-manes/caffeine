@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.google.common.testing.GcFinalization;
 
 /**
  * Issue #568: Incorrect handling of weak/soft reference caching.
@@ -110,7 +111,7 @@ public class Issue568Test {
             break;
           }
           if (Math.random() < .01) {
-            System.gc();
+            GcFinalization.awaitFullGc();
             cache.cleanUp();
           } else if ((cache.getIfPresent(key) == null) && !missing.getAndSet(true)) {
             cache.put(key, new Object());

@@ -205,13 +205,13 @@ public final class CaffeineTest {
   @Test
   public void async_weakValues() {
     var builder = Caffeine.newBuilder().weakValues();
-    assertThrows(IllegalStateException.class, () -> builder.buildAsync());
+    assertThrows(IllegalStateException.class, builder::buildAsync);
   }
 
   @Test
   public void async_softValues() {
     var builder = Caffeine.newBuilder().softValues();
-    assertThrows(IllegalStateException.class, () -> builder.buildAsync());
+    assertThrows(IllegalStateException.class, builder::buildAsync);
   }
 
   @Test

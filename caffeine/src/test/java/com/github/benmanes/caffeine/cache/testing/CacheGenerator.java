@@ -147,6 +147,7 @@ public final class CacheGenerator {
   }
 
   /** Returns a new cache context based on the combination. */
+  @SuppressWarnings("PMD.UnusedAssignment")
   private CacheContext newCacheContext(List<Object> combination) {
     int index = 0;
     return new CacheContext(

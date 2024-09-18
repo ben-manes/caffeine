@@ -31,6 +31,7 @@ import junit.framework.TestSuite;
  */
 public final class GuavaMapTests extends TestCase {
 
+  @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")
   public static Test suite() {
     var suite = new TestSuite();
     addGuavaViewTests(suite);

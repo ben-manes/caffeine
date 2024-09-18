@@ -104,6 +104,7 @@ public final class CacheStatsTest {
     assertThat(CacheStats.empty().minus(max)).isEqualTo(CacheStats.empty());
   }
 
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   private static void checkStats(CacheStats stats, long requestCount, long hitCount,
       double hitRate, long missCount, double missRate, long loadSuccessCount,
       long loadFailureCount, double loadFailureRate, long loadCount, long totalLoadTime,

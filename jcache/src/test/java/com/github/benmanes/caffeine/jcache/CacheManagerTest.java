@@ -19,15 +19,16 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 
 import java.lang.management.ManagementFactory;
-import java.util.function.Supplier;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.CompleteConfiguration;
+import javax.cache.spi.CachingProvider;
 import javax.management.ObjectName;
 import javax.management.OperationsException;
 
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -42,31 +43,47 @@ import com.typesafe.config.ConfigFactory;
 public final class CacheManagerTest {
   private static final String PROVIDER_NAME = CaffeineCachingProvider.class.getName();
 
+  private CachingProvider cachingProvider;
   private CacheManager cacheManager;
 
   @BeforeClass
   public void beforeClass() {
-    var provider = Caching.getCachingProvider(PROVIDER_NAME);
-    cacheManager = provider.getCacheManager(
-        provider.getDefaultURI(), provider.getDefaultClassLoader());
+    cachingProvider = Caching.getCachingProvider(PROVIDER_NAME);
+    cacheManager = cachingProvider.getCacheManager(
+        cachingProvider.getDefaultURI(), cachingProvider.getDefaultClassLoader());
     cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
+  }
+
+  @AfterClass
+  public void afterClass() {
+    cachingProvider.close();
+    cacheManager.close();
   }
 
   @Test
   public void jmxBeanIsRegistered_createCache() throws OperationsException {
-    checkConfigurationJmx(() -> cacheManager.createCache("cache-not-in-config-file",
+    checkConfigurationJmx(cacheManager.createCache("cache-not-in-config-file",
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache").orElseThrow()));
   }
 
   @Test
   public void jmxBeanIsRegistered_getCache() throws OperationsException {
-    checkConfigurationJmx(() -> cacheManager.getCache("test-cache"));
+    checkConfigurationJmx(cacheManager.getCache("test-cache"));
   }
 
-  private static void checkConfigurationJmx(Supplier<Cache<?, ?>> cacheSupplier)
-      throws OperationsException {
-    Cache<?, ?> cache = cacheSupplier.get();
+  @Test
+  public void enableManagement_absent() {
+    cacheManager.enableManagement("absent", true);
+    assertThat(cacheManager.getCache("absent")).isNull();
+  }
 
+  @Test
+  public void enableStatistics_absent() {
+    cacheManager.enableStatistics("absent", true);
+    assertThat(cacheManager.getCache("absent")).isNull();
+  }
+
+  private static void checkConfigurationJmx(Cache<?, ?> cache) throws OperationsException {
     @SuppressWarnings("unchecked")
     CompleteConfiguration<?, ?> configuration = cache.getConfiguration(CompleteConfiguration.class);
     assertThat(configuration.isManagementEnabled()).isTrue();
@@ -75,15 +92,5 @@ public final class CacheManagerTest {
     String name = "javax.cache:Cache=%s,CacheManager=%s,type=CacheStatistics";
     ManagementFactory.getPlatformMBeanServer().getObjectInstance(
         new ObjectName(String.format(US, name, cache.getName(), PROVIDER_NAME)));
-  }
-
-  @Test
-  public void enableManagement_absent() {
-    cacheManager.enableManagement("absent", true);
-  }
-
-  @Test
-  public void enableStatistics_absent() {
-    cacheManager.enableStatistics("absent", true);
   }
 }

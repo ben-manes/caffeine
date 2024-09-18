@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -79,7 +78,6 @@ public final class Issue1065Test {
 
   Cache<String, String> fallback;
   Cache<String, String> cache;
-  ExecutorService executor;
 
   @BeforeMethod
   public void before() {
@@ -88,37 +86,41 @@ public final class Issue1065Test {
     cache = provider.getCacheManager().createCache("primary",
         new MutableConfiguration<String, String>()
             .addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
-                FactoryBuilder.factoryOf(new Listener()), FactoryBuilder.factoryOf(event -> true),
-                /* isOldValueRequired= */ true, /* isSynchronous= */ true))
+                FactoryBuilder.factoryOf(new Listener(fallback)), FactoryBuilder.factoryOf(
+                    event -> true), /* isOldValueRequired= */ true, /* isSynchronous= */ true))
             .setCacheLoaderFactory(new FactoryBuilder.SingletonFactory<>(new Loader()))
             .setReadThrough(true));
-    executor = Executors.newWorkStealingPool(NUM_THREADS);
   }
 
   @AfterMethod
   public void after() {
-    executor.shutdownNow();
     fallback.close();
     cache.close();
   }
 
   @Test
   public void deadlock() throws Exception {
-    for (int i = 0; i < 500; i++) {
-      var threads = new ConcurrentLinkedQueue<Thread>();
-      var futures = new CompletableFuture<?>[NUM_THREADS];
-      for (int j = 0; j < NUM_THREADS; j++) {
-        futures[j] = CompletableFuture.runAsync(() -> {
-          threads.add(Thread.currentThread());
-          cache.get("key");
-        }, executor);
+    var executor = Executors.newWorkStealingPool(NUM_THREADS);
+    try {
+      for (int i = 0; i < 500; i++) {
+        var threads = new ConcurrentLinkedQueue<Thread>();
+        var futures = new CompletableFuture<?>[NUM_THREADS];
+        for (int j = 0; j < NUM_THREADS; j++) {
+          futures[j] = CompletableFuture.runAsync(() -> {
+            threads.add(Thread.currentThread());
+            cache.get("key");
+          }, executor);
+        }
+        try {
+          CompletableFuture.allOf(futures).get(1, TimeUnit.SECONDS);
+          cache.removeAll();
+        } catch (TimeoutException e) {
+          fail(i, threads);
+        }
       }
-      try {
-        CompletableFuture.allOf(futures).get(1, TimeUnit.SECONDS);
-        cache.removeAll();
-      } catch (TimeoutException e) {
-        fail(i, threads);
-      }
+    } finally {
+      executor.shutdown();
+      executor.awaitTermination(1, TimeUnit.MINUTES);
     }
   }
 
@@ -133,9 +135,15 @@ public final class Issue1065Test {
     throw failure;
   }
 
-  private final class Listener implements CacheEntryCreatedListener<String, String>, Serializable {
+  private static final class Listener
+      implements CacheEntryCreatedListener<String, String>, Serializable {
     private static final long serialVersionUID = 1L;
 
+    private final transient Cache<String, String> fallback;
+
+    Listener(Cache<String, String> fallback) {
+      this.fallback = fallback;
+    }
     @Override public void onCreated(
         Iterable<CacheEntryEvent<? extends String, ? extends String>> events) {
       events.forEach(event -> fallback.put(event.getKey(), event.getValue()));

@@ -299,7 +299,11 @@ for (scenario in Scenario.all()) {
         if (slow == Slow.Enabled) {
           maxParallelForks = 2
           includeGroups.add("slow")
-          jvmArgs("-XX:+UseParallelGC")
+          if (java.toolchain.languageVersion.get().canCompileOrRun(23)) {
+            jvmArgs("-XX:+UseShenandoahGC")
+          } else {
+            jvmArgs("-XX:+UseParallelGC")
+          }
         } else {
           parallel = "methods"
           excludeGroups("slow", "isolated", "lincheck")

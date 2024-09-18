@@ -18,14 +18,14 @@ package com.github.benmanes.caffeine.jcache.configuration;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import java.util.function.Supplier;
-
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
+import javax.cache.spi.CachingProvider;
 
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -39,17 +39,24 @@ public final class JCacheConfigurationTest {
   private static final String PROVIDER_NAME = CaffeineCachingProvider.class.getName();
 
   private MutableConfiguration<String, String> cacheConfig;
+  private CachingProvider cachingProvider;
   private CacheManager cacheManager;
 
   @BeforeClass
   public void beforeClass() {
-    var provider = Caching.getCachingProvider(PROVIDER_NAME);
-    cacheManager = provider.getCacheManager();
+    cachingProvider = Caching.getCachingProvider(PROVIDER_NAME);
+    cacheManager = cachingProvider.getCacheManager();
     cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
 
     cacheConfig = new MutableConfiguration<>();
     cacheConfig.setTypes(String.class, String.class);
     cacheConfig.setStatisticsEnabled(true);
+  }
+
+  @AfterClass
+  public void afterClass() {
+    cachingProvider.close();
+    cacheManager.close();
   }
 
   @Test
@@ -63,24 +70,18 @@ public final class JCacheConfigurationTest {
 
   @Test
   public void anonymousCache() {
-    checkConfiguration(() ->
-        cacheManager.createCache("cache-not-in-config-file", cacheConfig), 500L);
-    checkConfiguration(() ->
-        cacheManager.getCache("cache-not-in-config-file", String.class, String.class), 500L);
+    checkConfiguration(cacheManager.createCache("cache-not-in-config-file", cacheConfig), 500L);
+    checkConfiguration(cacheManager.getCache(
+        "cache-not-in-config-file", String.class, String.class), 500L);
   }
 
   @Test
   public void definedCache() {
-    assertThrows(CacheException.class, () ->
-        cacheManager.createCache("test-cache-2", cacheConfig));
-
-    checkConfiguration(() ->
-        cacheManager.getCache("test-cache-2", String.class, Integer.class), 1000L);
+    assertThrows(CacheException.class, () -> cacheManager.createCache("test-cache-2", cacheConfig));
+    checkConfiguration(cacheManager.getCache("test-cache-2", String.class, Integer.class), 1000L);
   }
 
-  private static void checkConfiguration(Supplier<Cache<?, ?>> cacheSupplier, long expectedValue) {
-    Cache<?, ?> cache = cacheSupplier.get();
-
+  private static void checkConfiguration(Cache<?, ?> cache, long expectedValue) {
     @SuppressWarnings("unchecked")
     CaffeineConfiguration<?, ?> configuration =
         cache.getConfiguration(CaffeineConfiguration.class);

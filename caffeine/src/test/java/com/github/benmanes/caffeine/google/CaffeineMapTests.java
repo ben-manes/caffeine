@@ -38,6 +38,7 @@ import junit.framework.TestSuite;
  */
 public final class CaffeineMapTests extends TestCase {
 
+  @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")
   public static Test suite() {
     var suite = new TestSuite();
     new CacheGenerator(cacheSpec()).generate().parallel()

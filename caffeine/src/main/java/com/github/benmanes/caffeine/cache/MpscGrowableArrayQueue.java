@@ -63,7 +63,8 @@ class MpscGrowableArrayQueue<E> extends MpscChunkedArrayQueue<E> {
   }
 }
 
-@SuppressWarnings({"MultiVariableDeclaration", "OvershadowingSubclassFields"})
+@SuppressWarnings({"MultiVariableDeclaration",
+    "OvershadowingSubclassFields", "PMD.OneDeclarationPerLine"})
 abstract class MpscChunkedArrayQueue<E> extends MpscChunkedArrayQueueColdProducerFields<E> {
   byte p000, p001, p002, p003, p004, p005, p006, p007;
   byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -112,7 +113,7 @@ abstract class MpscChunkedArrayQueueColdProducerFields<E> extends BaseMpscLinked
   }
 }
 
-@SuppressWarnings("MultiVariableDeclaration")
+@SuppressWarnings({"MultiVariableDeclaration", "PMD.OneDeclarationPerLine"})
 abstract class BaseMpscLinkedArrayQueuePad1<E> extends AbstractQueue<E> {
   byte p000, p001, p002, p003, p004, p005, p006, p007;
   byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -135,7 +136,8 @@ abstract class BaseMpscLinkedArrayQueueProducerFields<E> extends BaseMpscLinkedA
   protected long producerIndex;
 }
 
-@SuppressWarnings({"MultiVariableDeclaration", "OvershadowingSubclassFields"})
+@SuppressWarnings({"MultiVariableDeclaration",
+    "OvershadowingSubclassFields", "PMD.OneDeclarationPerLine"})
 abstract class BaseMpscLinkedArrayQueuePad2<E> extends BaseMpscLinkedArrayQueueProducerFields<E> {
   byte p000, p001, p002, p003, p004, p005, p006, p007;
   byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -161,7 +163,8 @@ abstract class BaseMpscLinkedArrayQueueConsumerFields<E> extends BaseMpscLinkedA
   protected long consumerIndex;
 }
 
-@SuppressWarnings({"MultiVariableDeclaration", "OvershadowingSubclassFields"})
+@SuppressWarnings({"MultiVariableDeclaration",
+    "OvershadowingSubclassFields", "PMD.OneDeclarationPerLine"})
 abstract class BaseMpscLinkedArrayQueuePad3<E> extends BaseMpscLinkedArrayQueueConsumerFields<E> {
   byte p000, p001, p002, p003, p004, p005, p006, p007;
   byte p008, p009, p010, p011, p012, p013, p014, p015;

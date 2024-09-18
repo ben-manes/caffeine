@@ -48,6 +48,7 @@ import junit.framework.TestSuite;
  */
 public final class InternerTest extends TestCase {
 
+  @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")
   public static TestSuite suite() {
     return SetTestSuiteBuilder
         .using(new TestStringSetGenerator() {
@@ -85,6 +86,7 @@ public final class InternerTest extends TestCase {
   }
 
   @Test
+  @SuppressWarnings("PMD.UnusedAssignment")
   public void intern_weak_replace() {
     var canonical = new Int(1);
     var other = new Int(1);
@@ -102,6 +104,7 @@ public final class InternerTest extends TestCase {
   }
 
   @Test
+  @SuppressWarnings("PMD.UnusedAssignment")
   public void intern_weak_remove() {
     var canonical = new Int(1);
     var next = new Int(2);

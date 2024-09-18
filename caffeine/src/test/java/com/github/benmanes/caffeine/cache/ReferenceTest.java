@@ -89,8 +89,9 @@ import com.google.common.testing.GcFinalization;
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
 
-  // These tests require that the JVM uses -XX:SoftRefLRUPolicyMSPerMB=0 and -XX:+UseParallelGC so
-  // that soft references can be reliably garbage collected by making them behave as weak
+  // These tests require that the JVM uses a garbage collection algorithm that strictly honors
+  // -XX:SoftRefLRUPolicyMSPerMB=0 (-XX:+UseParallelGC until 23; -XX:+UseShenandoahGC onward)
+  // so that soft references can be reliably garbage collected by making them behave as weak
   // references.
 
   @Test(dataProvider = "caches")
@@ -564,6 +565,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("PMD.UnusedAssignment")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,

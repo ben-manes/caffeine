@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 22, 24, GraalVM ]
+        java: [ 11, 23, 24, GraalVM ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -118,7 +118,7 @@ jobs:
           - simulator:check
           - jcache:check
           - guava:check
-        java: [ 11, 22 ]
+        java: [ 11, 23 ]
         include:
           - suite: caffeine:weakKeysAndStrongValuesStatsSyncGuavaSlowTest
             java: 11

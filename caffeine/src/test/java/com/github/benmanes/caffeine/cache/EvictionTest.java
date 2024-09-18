@@ -946,9 +946,13 @@ public final class EvictionTest {
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   public void refresh_weigherFails_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
-    try {
-      cache.refresh(context.absentKey()).join();
-    } catch (IllegalStateException e) { /* ignored */ }
+    if (context.isAsync()) {
+      assertThrows(IllegalStateException.class, () -> cache.refresh(context.absentKey()).join());
+    } else if (context.isCaffeine()) {
+      assertThat(cache.refresh(context.absentKey())).succeedsWith(context.absentKey().negate());
+    } else {
+      assertThat(cache.refresh(context.absentKey())).succeedsWithNull();
+    }
     assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
@@ -973,10 +977,14 @@ public final class EvictionTest {
   @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   public void refresh_weigherFails_present(LoadingCache<Int, Int> cache, CacheContext context) {
+    // the refresh's reload is successful but updating the cache fails, is logged, and is discarded
     when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
-    try {
-      cache.refresh(context.firstKey()).join();
-    } catch (IllegalStateException e) { /* ignored */ }
+    if (context.isGuava()) {
+      // an artifact of poor emulation by looking up the current value once completed.
+      assertThat(cache.refresh(context.firstKey())).succeedsWith(context.firstKey().negate());
+    } else {
+      assertThat(cache.refresh(context.firstKey())).succeedsWith(context.firstKey());
+    }
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 

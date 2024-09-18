@@ -58,7 +58,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
 import org.mockito.Mockito;
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -1233,10 +1232,9 @@ public final class ExpireAfterVarTest {
         return expireAfterVar.compute(key, this, Duration.ofDays(1));
       }
     };
-    try {
-      expireAfterVar.compute(context.absentKey(), mappingFunction, Duration.ofDays(1));
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class, () ->
+        expireAfterVar.compute(context.absentKey(), mappingFunction, Duration.ofDays(1)));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @Test(dataProvider = "caches")
@@ -1250,10 +1248,9 @@ public final class ExpireAfterVarTest {
         return expireAfterVar.compute(key.equals(key1) ? key2 : key1, this, Duration.ofDays(1));
       }
     };
-    try {
-      expireAfterVar.compute(key1, mappingFunction, Duration.ofDays(1));
-      Assert.fail();
-    } catch (StackOverflowError | IllegalStateException e) { /* ignored */ }
+    var error = assertThrows(Throwable.class, () ->
+        expireAfterVar.compute(key1, mappingFunction, Duration.ofDays(1)));
+    assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
   @Test(dataProvider = "caches")

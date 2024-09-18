@@ -236,14 +236,15 @@ public final class TypesafeConfigurationTest {
 
   @Test
   public void getCache() {
-    Cache<Integer, Integer> cache = Caching.getCachingProvider()
-        .getCacheManager().getCache("test-cache");
-    assertThat(cache).isNotNull();
+    try (Cache<Integer, Integer> cache = Caching.getCachingProvider()
+        .getCacheManager().getCache("test-cache")) {
+      assertThat(cache).isNotNull();
 
-    @SuppressWarnings("unchecked")
-    CaffeineConfiguration<Integer, Integer> config =
-        cache.getConfiguration(CaffeineConfiguration.class);
-    checkTestCache(config);
+      @SuppressWarnings("unchecked")
+      CaffeineConfiguration<Integer, Integer> config =
+          cache.getConfiguration(CaffeineConfiguration.class);
+      checkTestCache(config);
+    }
   }
 
   private URI getJarResource(String resourceName) {

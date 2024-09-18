@@ -22,8 +22,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.integration.CacheLoader;
+import javax.cache.spi.CachingProvider;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -61,14 +63,15 @@ public abstract class AbstractJCacheTest {
   protected CaffeineConfiguration<Integer, Integer> jcacheConfiguration;
   protected LoadingCacheProxy<Integer, Integer> jcacheLoading;
   protected CacheProxy<Integer, Integer> jcache;
+  protected CachingProvider cachingProvider;
   protected CacheManager cacheManager;
   protected FakeTicker ticker;
 
   @BeforeClass(alwaysRun = true)
   public void beforeClass() {
-    var provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
-    cacheManager = provider.getCacheManager(
-        provider.getDefaultURI(), provider.getDefaultClassLoader());
+    cachingProvider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
+    cacheManager = cachingProvider.getCacheManager(
+        cachingProvider.getDefaultURI(), cachingProvider.getDefaultClassLoader());
     cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
   }
 
@@ -85,6 +88,12 @@ public abstract class AbstractJCacheTest {
   public void after() {
     cacheManager.destroyCache("jcache");
     cacheManager.destroyCache("jcacheLoading");
+  }
+
+  @AfterClass(alwaysRun = true)
+  public void afterClass() {
+    cachingProvider.close();
+    cacheManager.close();
   }
 
   /** The base configuration used by the test. */
@@ -120,7 +129,7 @@ public abstract class AbstractJCacheTest {
 
   /** The cache loader used by the test. */
   protected CacheLoader<Integer, Integer> getCacheLoader() {
-    return new CacheLoader<Integer, Integer>() {
+    return new CacheLoader<>() {
       @CanIgnoreReturnValue
       @Override public Integer load(Integer key) {
         return key;

@@ -73,24 +73,24 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
 
   @Test
   public void reload() {
-    var value1 = jcache.invoke(KEY_1, EntryProcessorTest::process);
+    var value1 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
     assertThat(loads).isEqualTo(1);
     assertThat(value1).isNull();
 
     ticker.advance(Duration.ofMinutes(1));
-    var value2 = jcache.invoke(KEY_1, EntryProcessorTest::process);
+    var value2 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
     assertThat(loads).isEqualTo(1);
     assertThat(value2).isNull();
 
     // Expire the entry
     ticker.advance(Duration.ofMinutes(5));
 
-    var value3 = jcache.invoke(KEY_1, EntryProcessorTest::process);
+    var value3 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
     assertThat(loads).isEqualTo(2);
     assertThat(value3).isNull();
 
     ticker.advance(Duration.ofMinutes(1));
-    var value4 = jcache.invoke(KEY_1, EntryProcessorTest::process);
+    var value4 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
     assertThat(loads).isEqualTo(2);
     assertThat(value4).isNull();
   }
@@ -98,13 +98,13 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   @Test
   public void writeOccursForInitialLoadOfEntry() {
     map.put(KEY_1, 100);
-    var value = jcache.invoke(KEY_1, EntryProcessorTest::process);
+    var value = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
     assertThat(writes).isEqualTo(1);
     assertThat(loads).isEqualTo(1);
     assertThat(value).isNull();
   }
 
-  private static Object process(MutableEntry<Integer, Integer> entry, Object... arguments) {
+  private static Object process(MutableEntry<Integer, Integer> entry) {
     var value = 1 + firstNonNull(entry.getValue(), 0);
     entry.setValue(value);
     return null;

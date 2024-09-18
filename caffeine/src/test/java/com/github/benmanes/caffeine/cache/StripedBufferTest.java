@@ -109,14 +109,14 @@ public final class StripedBufferTest {
 
   static final class FakeBuffer<E> extends StripedBuffer<E> {
     final int result;
-    int drains = 0;
+    int drains;
 
     FakeBuffer(int result) {
       this.result = result;
     }
 
     @Override protected Buffer<E> create(E e) {
-      return new Buffer<E>() {
+      return new Buffer<>() {
         @Override public int offer(E e) {
           return result;
         }

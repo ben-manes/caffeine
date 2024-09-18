@@ -67,6 +67,7 @@ public final class Threads {
   }
 
   public static void executeWithTimeOut(Queue<String> failures, Callable<Long> task) {
+    @SuppressWarnings("PMD.CloseResource")
     var es = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     try {
       var future = es.submit(task);

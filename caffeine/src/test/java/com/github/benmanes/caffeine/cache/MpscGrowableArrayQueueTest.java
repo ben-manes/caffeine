@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("ClassEscapesDefinedScope")
+@SuppressWarnings({"ClassEscapesDefinedScope", "PMD.LooseCoupling"})
 public final class MpscGrowableArrayQueueTest {
   private static final int NUM_PRODUCERS = 10;
   private static final int PRODUCE = 100;
@@ -129,7 +129,7 @@ public final class MpscGrowableArrayQueueTest {
 
   @Test(dataProvider = "full")
   public void poll_toEmpty(MpscGrowableArrayQueue<Integer> queue) {
-    while (queue.poll() != null) {}
+    while (queue.poll() != null) { /* consume */ }
     assertThat(queue).isEmpty();
   }
 
@@ -146,7 +146,7 @@ public final class MpscGrowableArrayQueueTest {
 
   @Test(dataProvider = "full")
   public void relaxedPoll_toEmpty(MpscGrowableArrayQueue<Integer> queue) {
-    while (queue.relaxedPoll() != null) {}
+    while (queue.relaxedPoll() != null) { /* consume */ }
     assertThat(queue).isEmpty();
   }
 
@@ -224,7 +224,7 @@ public final class MpscGrowableArrayQueueTest {
       started.incrementAndGet();
       await().untilAtomic(started, is(2));
       for (int i = 0; i < PRODUCE; i++) {
-        while (!queue.offer(i)) {}
+        while (!queue.offer(i)) { /* produce */ }
       }
       finished.incrementAndGet();
     });
@@ -232,7 +232,7 @@ public final class MpscGrowableArrayQueueTest {
       started.incrementAndGet();
       await().untilAtomic(started, is(2));
       for (int i = 0; i < PRODUCE; i++) {
-        while (queue.poll() == null) {}
+        while (queue.poll() == null) { /* consume */ }
       }
       finished.incrementAndGet();
     });
@@ -263,7 +263,7 @@ public final class MpscGrowableArrayQueueTest {
       started.incrementAndGet();
       await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < (NUM_PRODUCERS * PRODUCE); i++) {
-        while (queue.poll() == null) {}
+        while (queue.poll() == null) { /* consume */ }
       }
       finished.incrementAndGet();
     });
@@ -272,7 +272,7 @@ public final class MpscGrowableArrayQueueTest {
       started.incrementAndGet();
       await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < PRODUCE; i++) {
-        while (!queue.offer(i)) {}
+        while (!queue.offer(i)) { /* produce */ }
       }
       finished.incrementAndGet();
     });

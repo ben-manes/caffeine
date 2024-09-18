@@ -121,7 +121,7 @@ public final class CacheSubject extends Subject {
   }
 
   /** Fails if the cache contains the given entry. */
-  public final void doesNotContainEntry(Object key, Object value) {
+  public void doesNotContainEntry(Object key, Object value) {
     check("cache").that(actual.asMap())
         .comparingValuesUsing(EQUALITY)
         .doesNotContainEntry(key, value);
@@ -150,10 +150,9 @@ public final class CacheSubject extends Subject {
   }
 
   private static boolean tolerantEquals(Object o1, Object o2) {
-    if ((o1 instanceof Integer) && (o2 instanceof Long)) {
-      return ((Integer) o1).longValue() == ((Long) o2).longValue();
-    } else if ((o1 instanceof Long) && (o2 instanceof Integer)) {
-      return ((Long) o1).longValue() == ((Integer) o2).longValue();
+    if (((o1 instanceof Integer) || (o1 instanceof Long))
+        && ((o2 instanceof Integer) || (o2 instanceof Long))) {
+      return ((Number) o1).longValue() == ((Number) o2).longValue();
     }
     return Objects.equals(o1, o2);
   }

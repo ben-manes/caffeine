@@ -38,6 +38,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.LooseCoupling")
 public final class LoggingEvents extends ForwardingList<LoggingEvent> {
   private final List<Predicate<LoggingEvent>> predicates;
   private final ImmutableList<LoggingEvent> events;

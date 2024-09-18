@@ -45,7 +45,7 @@ import com.google.common.collect.Iterators;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("ClassEscapesDefinedScope")
+@SuppressWarnings({"ClassEscapesDefinedScope", "PMD.LooseCoupling"})
 public final class LinkedDequeTest {
   static final int SIZE = 100;
 

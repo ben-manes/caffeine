@@ -103,7 +103,7 @@ public final class ConcurrentTestHarness {
     startGate.countDown();
     Uninterruptibles.awaitUninterruptibly(endGate);
     long end = System.nanoTime();
-    return new TestResult<T>(end - start, toList(results));
+    return new TestResult<>(end - start, toList(results));
   }
 
   /**

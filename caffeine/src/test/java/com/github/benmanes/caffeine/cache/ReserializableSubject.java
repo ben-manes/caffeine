@@ -220,6 +220,7 @@ public final class ReserializableSubject extends Subject {
     }
   }
 
+  @SuppressWarnings("PMD.AvoidReassigningParameters")
   private static Weigher<?, ?> unwrapWeigher(Weigher<?, ?> weigher) {
     for (;;) {
       if (weigher instanceof BoundedWeigher<?, ?>) {
@@ -232,6 +233,7 @@ public final class ReserializableSubject extends Subject {
     }
   }
 
+  @SuppressWarnings("PMD.AvoidReassigningParameters")
   private static Expiry<?, ?> unwrapExpiry(Expiry<?, ?> expiry) {
     for (;;) {
       if (expiry instanceof AsyncExpiry<?, ?>) {

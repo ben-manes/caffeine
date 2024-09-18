@@ -1,4 +1,4 @@
-import java.net.URL
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import net.ltgt.gradle.errorprone.errorprone
@@ -32,9 +32,9 @@ val downloadCaffeine by tasks.registering {
 
   doFirst {
     library.parentFile.mkdirs()
-    val url = URL("https://repo1.maven.org/maven2/"
+    val uri = URI.create("https://repo1.maven.org/maven2/"
       + "com/github/ben-manes/caffeine/caffeine/$version/caffeine-$version.jar")
-    url.openStream().buffered().use {
+    uri.toURL().openStream().buffered().use {
       Files.copy(it, library.toPath(), REPLACE_EXISTING)
     }
   }

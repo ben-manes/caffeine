@@ -53,14 +53,15 @@ public final class LinkedDequeTests extends TestCase {
   // cause unexpected mutations. Instead, a different collection type should be used for comparison
   static final ThreadLocal<Boolean> useTarget = ThreadLocal.withInitial(() -> false);
 
+  @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")
   public static Test suite() {
     var suite = new TestSuite();
-    suite.addTest(suite("AccessOrderDeque", AccessOrderDeque::new));
-    suite.addTest(suite("WriteOrderDeque", WriteOrderDeque::new));
+    suite.addTest(newTestSuite("AccessOrderDeque", AccessOrderDeque::new));
+    suite.addTest(newTestSuite("WriteOrderDeque", WriteOrderDeque::new));
     return suite;
   }
 
-  static Test suite(String name, Supplier<LinkedDeque<LinkedValue>> supplier) {
+  private static Test newTestSuite(String name, Supplier<LinkedDeque<LinkedValue>> supplier) {
     return QueueTestSuiteBuilder
         .using(new TestLinkedValueGenerator() {
           @Override public Queue<LinkedValue> create(LinkedValue[] elements) {
@@ -92,7 +93,7 @@ public final class LinkedDequeTests extends TestCase {
 
     @Override
     public SampleElements<LinkedValue> samples() {
-      return new SampleElements<LinkedValue>(b, a, c, d, e);
+      return new SampleElements<>(b, a, c, d, e);
     }
 
     @Override

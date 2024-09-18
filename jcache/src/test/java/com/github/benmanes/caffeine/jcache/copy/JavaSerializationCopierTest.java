@@ -89,7 +89,7 @@ public final class JavaSerializationCopierTest {
           InputStream in, ClassLoader classLoader) throws IOException {
         return new ObjectInputStream(in) {
           @Override protected Class<?> resolveClass(ObjectStreamClass desc)
-              throws IOException, ClassNotFoundException {
+              throws ClassNotFoundException {
             throw new ClassNotFoundException();
           }
         };

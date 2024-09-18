@@ -15,13 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
+import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpscCompoundQueue;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class MpscCompoundBuffer<E> extends ReadBuffer<E> {
-  final MpscCompoundQueue<E> queue;
+  final MessagePassingQueue<E> queue;
+
   long reads;
 
   MpscCompoundBuffer() {

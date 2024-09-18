@@ -20,8 +20,10 @@ import org.jctools.queues.MpscArrayQueue;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.LooseCoupling")
 final class MpscArrayBuffer<E> extends ReadBuffer<E> {
   final MpscArrayQueue<E> queue;
+
   long reads;
 
   MpscArrayBuffer() {

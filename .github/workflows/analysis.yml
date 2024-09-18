@@ -23,7 +23,7 @@ jobs:
   forbiddenApis:
     runs-on: ubuntu-latest
     env:
-      JAVA_VERSION: 21
+      JAVA_VERSION: 22
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
@@ -36,12 +36,12 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: forbiddenApis -DforbiddenApis
+          arguments: forbiddenApis forbiddenApisTest -DforbiddenApis
 
   pmd:
     runs-on: ubuntu-latest
     env:
-      JAVA_VERSION: 22
+      JAVA_VERSION: 23
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
@@ -54,12 +54,12 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh -Dpmd
+          arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh pmdTest -Dpmd
 
   spotbugs:
     runs-on: ubuntu-latest
     env:
-      JAVA_VERSION: 22
+      JAVA_VERSION: 23
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1

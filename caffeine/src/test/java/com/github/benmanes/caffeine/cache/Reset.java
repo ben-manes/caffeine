@@ -27,8 +27,8 @@ import com.github.benmanes.caffeine.cache.LocalAsyncCache.AbstractCacheView;
 public final class Reset {
   static final long PROBE = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomProbe");
   static final long SEED = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomSeed");
+  static final int RANDOM_SEED = 1_033_096_058;
   static final int RANDOM_PROBE = 0x9e3779b9;
-  static final int RANDOM_SEED = 1033096058;
 
   private Reset() {}
 

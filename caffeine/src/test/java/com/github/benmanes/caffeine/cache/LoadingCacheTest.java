@@ -427,7 +427,8 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void getAll_jdk8186171(CacheContext context) {
-    class Key {
+    @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
+    final class Key {
       @Override public int hashCode() {
         return 0; // to put keys in one bucket
       }

@@ -390,7 +390,7 @@ public @interface CacheSpec {
     /** A {@link ConsumingRemovalListener} retains all notifications for evaluation by the test. */
     CONSUMING(RemovalListeners::consuming),
     /** A removal listener that records interactions. */
-    MOCKITO(() -> Mockito.mock());
+    MOCKITO(Mockito::mock);
 
     private final Supplier<RemovalListener<Object, Object>> factory;
 
@@ -461,7 +461,7 @@ public @interface CacheSpec {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @SuppressWarnings("ReturnsNullCollection")
+      @SuppressWarnings({"PMD.ReturnEmptyCollectionRatherThanNull", "ReturnsNullCollection"})
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
         return null;
       }
@@ -795,7 +795,7 @@ public @interface CacheSpec {
     DISABLED(() -> null),
     SYSTEM(Scheduler::systemScheduler),
     THREADED(() -> Scheduler.forScheduledExecutorService(scheduledExecutor)),
-    MOCKITO(() -> Mockito.mock());
+    MOCKITO(Mockito::mock);
 
     private final Supplier<Scheduler> scheduler;
 
