@@ -290,9 +290,11 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   }
 
   private static void clearTestResults(ITestResult testResult) {
-    var result = (TestResult) testResult;
-    result.setParameters(EMPTY_PARAMS);
-    result.setContext(testngContext);
+    testResult.setParameters(EMPTY_PARAMS);
+    if (testResult instanceof TestResult) {
+      var result = (TestResult) testResult;
+      result.setContext(testngContext);
+    }
   }
 
   private static void stringifyParams(ITestResult testResult, boolean briefParams) {

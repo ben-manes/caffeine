@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
@@ -80,7 +81,7 @@ public final class AsyncTest {
   @Test
   public void getWhenSuccessful_success_async() {
     var future = new CompletableFuture<Integer>();
-    var result = new AtomicInteger();
+    var result = new AtomicReference<Integer>();
     ConcurrentTestHarness.execute(() -> {
       result.set(1);
       result.set(Async.getWhenSuccessful(future));

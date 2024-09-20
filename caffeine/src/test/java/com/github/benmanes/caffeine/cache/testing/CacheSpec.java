@@ -31,7 +31,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -57,6 +56,7 @@ import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.testing.TestingExecutors;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -471,7 +471,7 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
-        var result = new HashMap<Int, Int>(keys.size());
+        Map<Int, Int> result = Maps.newHashMapWithExpectedSize(keys.size());
         for (Int key : keys) {
           result.put(key, key);
           intern(key);
@@ -484,7 +484,7 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) throws Exception {
-        var result = new HashMap<Int, Int>(keys.size());
+        Map<Int, Int> result = Maps.newHashMapWithExpectedSize(keys.size());
         for (Int key : keys) {
           result.put(key, NEGATIVE.load(key));
           intern(key);

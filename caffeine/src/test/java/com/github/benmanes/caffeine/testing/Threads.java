@@ -15,20 +15,21 @@
  */
 package com.github.benmanes.caffeine.testing;
 
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.timeTasks;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 import static org.testng.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -42,7 +43,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Shared utilities for multithreaded tests.
@@ -61,26 +61,21 @@ public final class Threads {
   public static <A> void runTest(A collection, ImmutableList<BiConsumer<A, Int>> operations) {
     var failures = new ConcurrentLinkedQueue<String>();
     var thrasher = new Thrasher<A>(collection, failures, operations);
-    Threads.executeWithTimeOut(failures, () ->
-        ConcurrentTestHarness.timeTasks(Threads.NTHREADS, thrasher));
+    Threads.executeWithTimeOut(failures, () -> timeTasks(Threads.NTHREADS, thrasher));
     assertThat(failures).isEmpty();
   }
 
   public static void executeWithTimeOut(Queue<String> failures, Callable<Long> task) {
-    @SuppressWarnings("PMD.CloseResource")
-    var es = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     try {
-      var future = es.submit(task);
+      var future = executor.submit(task);
       long timeNS = future.get(TIMEOUT, TimeUnit.SECONDS);
       logger.debug("\nExecuted in {} second(s)", TimeUnit.NANOSECONDS.toSeconds(timeNS));
     } catch (ExecutionException e) {
       fail("Exception during test: " + e, e);
     } catch (TimeoutException e) {
-      handleTimeout(failures, es, e);
+      handleTimeout(failures, executor, e);
     } catch (InterruptedException e) {
       fail("", e);
-    } finally {
-      es.shutdown();
     }
   }
 
@@ -114,7 +109,7 @@ public final class Threads {
    * @param samples the number of variants to create
    * @param baseline the base working set to build from
    */
-  private static <T> ImmutableList<ImmutableList<T>> shuffle(int samples, List<T> baseline) {
+  private static <T> ImmutableList<ImmutableList<T>> shuffle(int samples, Collection<T> baseline) {
     var workingSets = new ArrayList<ImmutableList<T>>(samples);
     var workingSet = new ArrayList<T>(baseline);
     for (int i = 0; i < samples; i++) {

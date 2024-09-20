@@ -39,6 +39,7 @@ import static org.slf4j.event.Level.WARN;
 
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -1300,13 +1301,14 @@ public final class ReferenceTest {
     };
   }
 
+  @SuppressWarnings("MapEntry")
   private static List<Map.Entry<Int, Int>> getExpectedAfterGc(
       CacheContext context, Map<Int, Int> original) {
     var expected = new ArrayList<Map.Entry<Int, Int>>();
     original.forEach((key, value) -> {
       key = context.isStrongKeys() ? new Int(key) : null;
       value = context.isStrongValues() ? new Int(value) : null;
-      expected.add(new SimpleEntry<>(key, value));
+      expected.add(new SimpleImmutableEntry<>(key, value));
     });
     return expected;
   }

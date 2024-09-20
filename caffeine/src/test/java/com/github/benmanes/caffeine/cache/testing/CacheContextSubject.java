@@ -32,7 +32,7 @@ import static java.util.function.Function.identity;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
@@ -366,7 +366,7 @@ public final class CacheContextSubject extends Subject {
       }
 
       @CanIgnoreReturnValue
-      public Exclusive contains(List<Entry<Int, Int>> entries) {
+      public Exclusive contains(Collection<Entry<Int, Int>> entries) {
         return contains(entries.toArray(Map.Entry[]::new));
       }
 

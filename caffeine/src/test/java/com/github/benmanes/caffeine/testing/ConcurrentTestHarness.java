@@ -25,6 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -90,10 +91,13 @@ public final class ConcurrentTestHarness {
           startGate.await();
           try {
             results.set(index, task.call());
+          } catch (Exception e) {
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
           } finally {
             endGate.countDown();
           }
-        } catch (Exception e) {
+        } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
       });

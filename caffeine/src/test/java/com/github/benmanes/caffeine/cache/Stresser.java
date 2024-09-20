@@ -116,14 +116,16 @@ public final class Stresser implements Runnable {
   }
 
   private void status() {
-    int drainStatus;
+    var evictionLock = local.evictionLock;
     int pendingWrites;
-    local.evictionLock.lock();
+    int drainStatus;
+
+    evictionLock.lock();
     try {
       pendingWrites = local.writeBuffer.size();
       drainStatus = local.drainStatusAcquire();
     } finally {
-      local.evictionLock.unlock();
+      evictionLock.unlock();
     }
 
     var elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(SECONDS));
@@ -134,8 +136,7 @@ public final class Stresser implements Runnable {
     System.out.printf(US, "Evictions = %,d%n", cache.stats().evictionCount());
     System.out.printf(US, "Size = %,d (max: %,d)%n",
         local.data.mappingCount(), workload.maxEntries);
-    System.out.printf(US, "Lock = [%s%n", StringUtils.substringAfter(
-        local.evictionLock.toString(), "["));
+    System.out.printf(US, "Lock = [%s%n", StringUtils.substringAfter(evictionLock.toString(), "["));
     System.out.printf(US, "Pending reloads = %,d%n", local.refreshes.size());
     System.out.printf(US, "Pending tasks = %,d%n",
         ForkJoinPool.commonPool().getQueuedSubmissionCount());
@@ -163,8 +164,8 @@ public final class Stresser implements Runnable {
     WRITE(MAX_THREADS, WRITE_MAX_SIZE),
     REFRESH(MAX_THREADS, TOTAL_KEYS / 4);
 
-    private final int maxThreads;
-    private final int maxEntries;
+    final int maxThreads;
+    final int maxEntries;
 
     Workload(int maxThreads, int maxEntries) {
       this.maxThreads = maxThreads;

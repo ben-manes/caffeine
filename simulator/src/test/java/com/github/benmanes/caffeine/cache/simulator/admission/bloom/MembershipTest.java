@@ -32,6 +32,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
+import com.google.common.base.CaseFormat;
 import com.google.errorprone.annotations.Var;
 import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;
@@ -53,17 +54,17 @@ public final class MembershipTest {
 
   @SuppressWarnings("Varifier")
   @Test(dataProvider = "filterTypes")
-  public void bloomFilterTest(FilterType filterType) {
+  public void bloomFilter(FilterType filterType) {
     var capacities = new IntArrayList(IntList.of(0, 1));
     for (int capacity = 2 << 10; capacity < (2 << 22); capacity <<= 2) {
       capacities.add(capacity);
     }
 
     var random = new Random();
+    var rows = new ArrayList<String[]>();
     for (int capacity : capacities) {
       long[] input = random.longs(capacity).distinct().toArray();
       Config config = getConfig(filterType, capacity);
-      var rows = new ArrayList<String[]>();
 
       Membership filter = filterType.create(config);
       int falsePositives = falsePositives(filter, input);
@@ -75,9 +76,9 @@ public final class MembershipTest {
       }
       rows.add(row(filterType, capacity, expectedInsertions, falsePositives, falsePositiveRate));
 
-      if (display) {
-        printTable(rows);
-      }
+    }
+    if (display) {
+      printTable(rows);
     }
   }
 
@@ -136,7 +137,7 @@ public final class MembershipTest {
   private static String[] row(FilterType filterType, int capacity,
       int expectedInsertions, int falsePositives, double falsePositiveRate) {
     return new String[] {
-        filterType.toString(),
+        CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, filterType.toString()),
         String.format(US, "%,d", capacity),
         String.format(US, "%,d", expectedInsertions),
         String.format(US, "%,d (%.2f %%)", falsePositives, 100 * falsePositiveRate),

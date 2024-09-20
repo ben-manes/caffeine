@@ -39,8 +39,8 @@ import static org.slf4j.event.Level.ERROR;
 import static org.slf4j.event.Level.WARN;
 
 import java.util.AbstractMap;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1810,7 +1810,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySet_removeAll_nullKey(Map<Int, Int> map, CacheContext context) {
-    map.keySet().removeAll(Arrays.asList((Object) null));
+    map.keySet().removeAll(Collections.singletonList((Object) null));
     assertThat(map).isEqualTo(context.original());
   }
 
@@ -1978,7 +1978,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySet_retainAll_nullKey(Map<Int, Int> map, CacheContext context) {
-    map.keySet().retainAll(Arrays.asList((Object) null));
+    map.keySet().retainAll(Collections.singletonList((Object) null));
     assertThat(map).isExhaustivelyEmpty();
   }
 
@@ -2221,7 +2221,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void values_removeAll_nullValue(Map<Int, Int> map, CacheContext context) {
-    map.values().removeAll(Arrays.asList((Object) null));
+    map.values().removeAll(Collections.singletonList((Object) null));
     assertThat(map).isEqualTo(context.original());
   }
 
@@ -2382,7 +2382,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void values_retainAll_nullValue(Map<Int, Int> map, CacheContext context) {
-    map.values().retainAll(Arrays.asList((Object) null));
+    map.values().retainAll(Collections.singletonList((Object) null));
     assertThat(map).isExhaustivelyEmpty();
   }
 
@@ -2651,7 +2651,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_removeAll_nullEntry(Map<Int, Int> map, CacheContext context) {
-    map.entrySet().removeAll(Arrays.asList((Object) null));
+    map.entrySet().removeAll(Collections.singletonList((Object) null));
     assertThat(map).isEqualTo(context.original());
   }
 
@@ -2853,7 +2853,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_retainAll_nullEntry(Map<Int, Int> map, CacheContext context) {
-    map.entrySet().retainAll(Arrays.asList((Object) null));
+    map.entrySet().retainAll(Collections.singletonList((Object) null));
     assertThat(map).isExhaustivelyEmpty();
   }
 

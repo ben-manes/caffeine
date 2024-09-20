@@ -42,7 +42,6 @@ import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +72,9 @@ import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.Futures;
 
@@ -1217,15 +1218,15 @@ public final class ExpirationTest {
       return value;
     })).isEqualTo(value);
 
-    var evicted = new ArrayList<Map.Entry<Int, Int>>(context.original().size());
+    var evicted = ArrayListMultimap.<Int, Int>create();
     var difference = Maps.difference(context.original(), map);
-    evicted.addAll(difference.entriesOnlyOnRight().entrySet());
-    evicted.addAll(difference.entriesOnlyOnLeft().entrySet());
-    evicted.add(entry(key, context.original().get(key)));
+    evicted.putAll(Multimaps.forMap(difference.entriesOnlyOnRight()));
+    evicted.putAll(Multimaps.forMap(difference.entriesOnlyOnLeft()));
+    evicted.put(key, context.original().get(key));
 
     assertThat(evicted).hasSize(context.original().size() - map.size() + 1);
     assertThat(context).notifications().withCause(EXPIRED)
-        .contains(evicted.toArray(Map.Entry[]::new))
+        .contains(evicted.entries())
         .exclusively();
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
@@ -1357,15 +1358,15 @@ public final class ExpirationTest {
       throw new AssertionError("Should never be called");
     })).isEqualTo(value);
 
-    var evicted = new ArrayList<Map.Entry<Int, Int>>(context.original().size());
+    var evicted = ArrayListMultimap.<Int, Int>create();
     var difference = Maps.difference(context.original(), map);
-    evicted.addAll(difference.entriesOnlyOnRight().entrySet());
-    evicted.addAll(difference.entriesOnlyOnLeft().entrySet());
-    evicted.add(entry(key, context.original().get(key)));
+    evicted.putAll(Multimaps.forMap(difference.entriesOnlyOnRight()));
+    evicted.putAll(Multimaps.forMap(difference.entriesOnlyOnLeft()));
+    evicted.put(key, context.original().get(key));
 
     assertThat(evicted).hasSize(context.original().size() - map.size() + 1);
     assertThat(context).notifications().withCause(EXPIRED)
-        .contains(evicted.toArray(Map.Entry[]::new))
+        .contains(evicted.entries())
         .exclusively();
   }
 

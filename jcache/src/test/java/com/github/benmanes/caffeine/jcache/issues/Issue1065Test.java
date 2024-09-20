@@ -118,9 +118,10 @@ public final class Issue1065Test {
           fail(i, threads);
         }
       }
-    } finally {
       executor.shutdown();
       executor.awaitTermination(1, TimeUnit.MINUTES);
+    } finally {
+      executor.shutdownNow();
     }
   }
 

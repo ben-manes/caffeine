@@ -40,13 +40,13 @@ runs:
         echo "GRAALVM=true" >> $GITHUB_ENV
         echo "JAVA_VERSION=${{ inputs.graal }}" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
-      uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018 # v4.2.2
+      uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88 # v4.3.0
       if: (inputs.early-access != inputs.java) && (inputs.java != 'GraalVM')
       with:
         java-version: ${{ inputs.java }}
         distribution: temurin
     - name: Set up JDK ${{ inputs.java }}
-      uses: oracle-actions/setup-java@83e2004a40aaa491fbc6b4697353b9a75b095efb # v1.3.4
+      uses: oracle-actions/setup-java@2e744f723b003fdd759727d0ff654c8717024845 # v1.4.0
       if: (inputs.early-access == inputs.java) && (inputs.java != 'GraalVM')
       with:
         release: ${{ inputs.java }}
@@ -72,14 +72,14 @@ runs:
         echo "toolchainVersion=${toolchainVersion}" >> $GITHUB_ENV
     - name: Set up JDK ${{ env.toolchainVersion }}
       id: setup-gradle-jdk
-      uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018 # v4.2.2
+      uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88 # v4.3.0
       if: inputs.java != 'GraalVM'
       with:
         java-version: ${{ env.toolchainVersion }}
         distribution: temurin
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@16bf8bc8fe830fa669c3c9f914d3eb147c629707 # v4.0.1
+      uses: gradle/actions/setup-gradle@d156388eb19639ec20ade50009f3d199ce1e2808 # v4.1.0
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'

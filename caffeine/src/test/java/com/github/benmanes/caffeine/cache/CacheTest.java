@@ -868,7 +868,7 @@ public final class CacheTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void cleanup(Cache<Int, Int> cache, CacheContext context) {
+  public void cleanUp(Cache<Int, Int> cache, CacheContext context) {
     cache.cleanUp();
   }
 

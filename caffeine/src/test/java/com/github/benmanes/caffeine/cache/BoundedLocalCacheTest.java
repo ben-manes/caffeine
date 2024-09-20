@@ -769,7 +769,8 @@ public final class BoundedLocalCacheTest {
     assertThat(context).stats().evictions(6);
   }
 
-  private static void checkReorder(Cache<Int, Int> cache, List<Int> keys, List<Int> expect) {
+  private static void checkReorder(Cache<Int, Int> cache,
+      Iterable<Int> keys, Iterable<Int> expect) {
     for (var key : keys) {
       var value = cache.getIfPresent(key);
       assertThat(value).isNotNull();
@@ -777,12 +778,12 @@ public final class BoundedLocalCacheTest {
     checkContainsInOrder(cache, expect);
   }
 
-  private static void checkEvict(Cache<Int, Int> cache, List<Int> keys, List<Int> expect) {
+  private static void checkEvict(Cache<Int, Int> cache, Iterable<Int> keys, Iterable<Int> expect) {
     keys.forEach(i -> cache.put(i, i));
     checkContainsInOrder(cache, expect);
   }
 
-  private static void checkContainsInOrder(Cache<Int, Int> cache, List<Int> expect) {
+  private static void checkContainsInOrder(Cache<Int, Int> cache, Iterable<Int> expect) {
     var evictionOrder = cache.policy().eviction().orElseThrow().coldest(Integer.MAX_VALUE).keySet();
     assertThat(cache).containsExactlyKeys(expect);
     assertThat(evictionOrder).containsExactlyElementsIn(expect).inOrder();
@@ -2839,7 +2840,7 @@ public final class BoundedLocalCacheTest {
   }
   static final class BadLocalCacheFactory implements LocalCacheFactory {
     @Override public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
-        AsyncCacheLoader<? super K, V> cacheLoader, boolean async) throws Throwable {
+        AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
       throw new IllegalStateException();
     }
   }

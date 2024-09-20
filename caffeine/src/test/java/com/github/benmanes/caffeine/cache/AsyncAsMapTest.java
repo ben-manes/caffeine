@@ -41,6 +41,7 @@ import static org.slf4j.event.Level.WARN;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1534,7 +1535,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySet_removeAll_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().keySet().removeAll(Arrays.asList((Object) null));
+    cache.asMap().keySet().removeAll(Collections.singletonList((Object) null));
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
   }
 
@@ -1698,7 +1699,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySet_retainAll_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().keySet().retainAll(Arrays.asList((Object) null));
+    cache.asMap().keySet().retainAll(Collections.singletonList((Object) null));
     assertThat(cache).isEmpty();
   }
 
@@ -1948,7 +1949,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void values_removeAll_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().values().removeAll(Arrays.asList((Object) null));
+    cache.asMap().values().removeAll(Collections.singletonList((Object) null));
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
   }
 
@@ -2126,7 +2127,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void values_retainAll_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().values().retainAll(Arrays.asList((Object) null));
+    cache.asMap().values().retainAll(Collections.singletonList((Object) null));
     assertThat(cache).isEmpty();
   }
 
@@ -2410,7 +2411,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_removeAll_nullEntry(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().entrySet().removeAll(Arrays.asList((Object) null));
+    cache.asMap().entrySet().removeAll(Collections.singletonList((Object) null));
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
   }
 
@@ -2614,7 +2615,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_retainAll_nullEntry(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().entrySet().retainAll(Arrays.asList((Object) null));
+    cache.asMap().entrySet().retainAll(Collections.singletonList((Object) null));
     assertThat(cache).isEmpty();
   }
 

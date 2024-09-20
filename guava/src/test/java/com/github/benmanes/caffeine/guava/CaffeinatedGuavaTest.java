@@ -120,8 +120,7 @@ final class CaffeinatedGuavaTest {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override
-      public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
+      @Override public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
         return null;
       }
     });

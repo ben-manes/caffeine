@@ -46,7 +46,7 @@ public final class LoggingEvents extends ForwardingList<LoggingEvent> {
   private ImmutableList<LoggingEvent> filteredEvents;
   private boolean exclusive;
 
-  private LoggingEvents(List<LoggingEvent> events) {
+  private LoggingEvents(Iterable<LoggingEvent> events) {
     this.events = ImmutableList.copyOf(events);
     this.predicates = new ArrayList<>();
   }

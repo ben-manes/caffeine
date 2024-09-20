@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 
 import javax.cache.Cache;
 import javax.cache.Caching;
+import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 
@@ -287,7 +288,7 @@ public final class TypesafeConfigurationTest {
     assertThat(config.getCopierFactory().create()).isInstanceOf(JavaSerializationCopier.class);
   }
 
-  static void checkListener(CaffeineConfiguration<?, ?> config) {
+  static void checkListener(CompleteConfiguration<?, ?> config) {
     var listener = Iterables.getOnlyElement(config.getCacheEntryListenerConfigurations());
     assertThat(listener.getCacheEntryListenerFactory().create())
         .isInstanceOf(TestCacheEntryListener.class);
@@ -297,7 +298,7 @@ public final class TypesafeConfigurationTest {
     assertThat(listener.isOldValueRequired()).isTrue();
   }
 
-  static void checkLazyExpiration(CaffeineConfiguration<?, ?> config) {
+  static void checkLazyExpiration(CompleteConfiguration<?, ?> config) {
     ExpiryPolicy expiry = config.getExpiryPolicyFactory().create();
     assertThat(expiry.getExpiryForCreation()).isEqualTo(Duration.ONE_MINUTE);
     assertThat(expiry.getExpiryForUpdate()).isEqualTo(Duration.FIVE_MINUTES);

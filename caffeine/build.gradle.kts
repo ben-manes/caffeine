@@ -378,7 +378,7 @@ data class Scenario(val implementation: Implementation,
   }
 
   fun testName(): String = buildString {
-    append(keys.name.lowercase() + "Keys")
+    append(keys.name.lowercase()).append("Keys")
     append("And").append(values).append("Values")
     if (stats == Stats.Enabled) {
       append("Stats")
