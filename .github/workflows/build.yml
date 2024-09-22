@@ -263,13 +263,12 @@ jobs:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         continue-on-error: true
       - name: Publish to DeepSource
-        env:
-          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+        uses: deepsourcelabs/test-coverage-action@e02a039827236fa21a95866e7cd0b1c52ca61e76 # v1.1.2
         continue-on-error: true
-        run: |
-          curl https://deepsource.io/cli | sh
-          ./bin/deepsource report --analyzer test-coverage --key java \
-            --value-file ./build/reports/jacoco/jacocoFullReport/jacocoFullReport.xml
+        with:
+          key: java
+          dsn: ${{ secrets.DEEPSOURCE_DSN }}
+          coverage-file: ./build/reports/jacoco/jacocoFullReport/jacocoFullReport.xml
       - name: Publish to SonarQube
         uses: ./.github/actions/run-gradle
         env:
