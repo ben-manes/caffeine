@@ -24,7 +24,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 
 /**
  * Accumulates statistics during the operation of a {@link Cache} for presentation by
- * {@link Cache#stats}. This is solely intended for consumption by {@code Cache} implementors.
+ * {@link Cache#stats}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
