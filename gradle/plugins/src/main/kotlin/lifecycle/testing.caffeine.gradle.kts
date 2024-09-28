@@ -28,6 +28,8 @@ dependencies {
 }
 
 tasks.withType<Test>().configureEach {
+  inputs.property("javaVendor", java.toolchain.vendor.get().toString())
+
   jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+EnableDynamicAgentLoading", "-Xshare:off")
   if ("debug" in systemProperties) {
     jvmArgs("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005")

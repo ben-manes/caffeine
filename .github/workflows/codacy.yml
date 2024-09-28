@@ -29,7 +29,7 @@ jobs:
             registry-1.docker.io:443
             *.blob.core.windows.net:443
       - name: Checkout code
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
       - name: Run Codacy Analysis
         uses: codacy/codacy-analysis-cli-action@97bf5df3c09e75f5bcd72695998f96ebd701846e # v4.4.5
         continue-on-error: true
@@ -47,7 +47,7 @@ jobs:
         if: steps.check_files.outputs.files_exists == 'true'
         run: jq -c '.runs |= unique_by({tool, invocations, results})' < results.sarif > codacy.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@294a9d92911152fe08befb9ec03e240add280cb3 # v3.26.8
+        uses: github/codeql-action/upload-sarif@461ef6c76dfe95d5c364de2f431ddbd31a417628 # v3.26.9
         if: steps.check_files.outputs.files_exists == 'true'
         continue-on-error: true
         with:

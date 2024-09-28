@@ -19,16 +19,21 @@ dependencies {
 }
 
 val javaVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
-java.toolchain.languageVersion = javaVersion
+val javaVendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.matching(it) }
+java.toolchain {
+  languageVersion = javaVersion
+  vendor = javaVendor
+}
 
 tasks.withType<JavaCompile>().configureEach {
+  inputs.property("javaVendor", javaVendor.toString())
   sourceCompatibility = javaVersion.toString()
   targetCompatibility = javaVersion.toString()
   options.release = javaVersion.asInt()
 
   javaCompiler = javaToolchains.compilerFor {
     // jdk 17+ is required by compiler plugins, e.g. error-prone
-    languageVersion = maxOf(javaVersion, JavaLanguageVersion.of(17))
+    languageVersion = maxOf(javaVersion, JavaLanguageVersion.of(21))
   }
 
   options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",

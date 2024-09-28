@@ -1,6 +1,6 @@
 [versions]
 caffeine = "3.1.8"
-junit = "5.11.0"
+junit = "5.11.1"
 reactor = "3.6.10"
 truth = "1.4.4"
 versions = "0.51.0"

@@ -15,9 +15,9 @@ inputs:
     default: '21'
     required: false
     description: The GraalVM version
-  token:
+  cache-encryption-key:
     required: false
-    description: 'A Github PAT'
+    description: A Gradle cache encryption key
   attempt-limit:
     default: '1'
     required: false
@@ -29,68 +29,53 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Prepare OpenJDK
-      if: inputs.java != 'GraalVM'
-      shell: bash
-      run: echo "JAVA_VERSION=${{ inputs.java }}" >> $GITHUB_ENV
-    - name: Prepare GraalVM
-      if: inputs.java == 'GraalVM'
-      shell: bash
-      run: |
-        echo "GRAALVM=true" >> $GITHUB_ENV
-        echo "JAVA_VERSION=${{ inputs.graal }}" >> $GITHUB_ENV
-    - name: Set up JDK ${{ inputs.java }}
-      uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88 # v4.3.0
-      if: (inputs.early-access != inputs.java) && (inputs.java != 'GraalVM')
-      with:
-        java-version: ${{ inputs.java }}
-        distribution: temurin
-    - name: Set up JDK ${{ inputs.java }}
-      uses: oracle-actions/setup-java@2e744f723b003fdd759727d0ff654c8717024845 # v1.4.0
-      if: (inputs.early-access == inputs.java) && (inputs.java != 'GraalVM')
-      with:
-        release: ${{ inputs.java }}
-        website: jdk.java.net
-        version: latest
-    - name: Set up GraalVM
-      uses: graalvm/setup-graalvm@22cc13fe88ef133134b3798e128fb208df55e1f5 # v1.2.3
-      if: inputs.java == 'GraalVM'
-      with:
-        distribution: 'graalvm'
-        github-token: ${{ inputs.token }}
-        java-version: ${{ env.JAVA_VERSION }}
-    - name: Prepare JDK ${{ inputs.java }}
-      shell: bash
-      run: |
-        echo "JDK_CI=$JAVA_HOME" >> $GITHUB_ENV
-        echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
     - name: Read Gradle JDK toolchain version
-      id: read-jdk-version
       shell: bash
       run: |
         toolchainVersion=$(grep -oP '(?<=^toolchainVersion=).*' gradle/gradle-daemon-jvm.properties)
         echo "toolchainVersion=${toolchainVersion}" >> $GITHUB_ENV
     - name: Set up JDK ${{ env.toolchainVersion }}
-      id: setup-gradle-jdk
-      uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88 # v4.3.0
-      if: inputs.java != 'GraalVM'
+      uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73 # v4.4.0
       with:
         java-version: ${{ env.toolchainVersion }}
         distribution: temurin
+    - name: Prepare JDK toolchain
+      shell: bash
+      run: |
+        if [[ "${{ inputs.java }}" == "GraalVM" ]]; then
+          echo "JAVA_VENDOR=GraalVM Community" >> $GITHUB_ENV
+          echo "JAVA_VERSION=${{ inputs.graal }}" >> $GITHUB_ENV
+        else
+          echo "JAVA_VENDOR=Adoptium" >> $GITHUB_ENV
+          echo "JAVA_VERSION=${{ inputs.java }}" >> $GITHUB_ENV
+        fi
+    - name: Set up JDK
+      uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73 # v4.4.0
+      with:
+        java-version: ${{
+          inputs.java == 'GraalVM' && inputs.graal ||
+          (inputs.early-access == inputs.java && format('{0}-ea', inputs.java) || inputs.java) }}
+        distribution: ${{ inputs.java == 'GraalVM' && 'graalvm' || 'temurin' }}
+    - name: Prepare JDK ${{ inputs.java }}
+      shell: bash
+      run: |
+        if [[ "${{ inputs.java }}" == "GraalVM" ]]; then
+          echo "GRAALVM_HOME=$JAVA_HOME" >> $GITHUB_ENV
+        fi
+        echo "JDK_CI=$JAVA_HOME" >> $GITHUB_ENV
+        echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
     - name: Setup Gradle
-      id: setup-gradle
       uses: gradle/actions/setup-gradle@d156388eb19639ec20ade50009f3d199ce1e2808 # v4.1.0
       env:
-        JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
       with:
         add-job-summary: never
         cache-read-only: false
         gradle-home-cache-strict-match: true
+        cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}
       env:
-        JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
       shell: bash
       run: |

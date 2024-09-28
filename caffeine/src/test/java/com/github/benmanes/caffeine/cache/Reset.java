@@ -63,6 +63,8 @@ public final class Reset {
           destroyTimerWheel(bounded);
         }
         bounded.data.clear();
+        bounded.writeBuffer.clear();
+        bounded.readBuffer.drainTo(e -> {});
       } finally {
         bounded.evictionLock.unlock();
       }

@@ -31,12 +31,13 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
       - name: Forbidden Apis
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           arguments: forbiddenApis -DforbiddenApis
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   pmd:
     runs-on: ubuntu-latest
@@ -49,11 +50,12 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
       - name: Pmd
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh pmdTest -Dpmd
 
   spotbugs:
@@ -67,10 +69,11 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
       - name: Spotbugs
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             spotbugsJavaPoet spotbugsMain spotbugsCodeGen spotbugsJmh spotbugsTest -Dspotbugs

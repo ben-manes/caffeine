@@ -39,7 +39,6 @@ env:
     schemastore.org:443
     www.graalvm.org:443
   PUBLISH_JDK: 11
-  EA_JDK: 24
 
 jobs:
   compile:
@@ -59,18 +58,13 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - name: Prepare GraalVM
-        if: env.JAVA_VERSION == 'GraalVM'
-        shell: bash
-        run: echo "GRADLE_ARGS=--no-build-cache" >> $GITHUB_ENV
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
       - name: Compile
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          early-access: ${{ env.EA_JDK }}
-          token: ${{ secrets.GITHUB_TOKEN }}
           arguments: check -x test ${{ env.GRADLE_ARGS }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Cancel if failed
         uses: andymckay/cancel-action@a955d435292c0d409d104b57d8e78435a93a6ef1 # 0.5
         continue-on-error: true
@@ -176,13 +170,13 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
       - name: Run tests (${{ env.JAVA_VERSION }})
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           arguments: ${{ matrix.suite }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Format Test Artifact Name
         if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
         run: |
@@ -233,7 +227,7 @@ jobs:
             storage.googleapis.com:443
             uploader.codecov.io:443
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           fetch-depth: 0
       - name: Download Tests Results
@@ -245,6 +239,7 @@ jobs:
         with:
           arguments: check -x test
           java: ${{ env.PUBLISH_JDK }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Publish to Coveralls
         uses: ./.github/actions/run-gradle
         env:
@@ -252,6 +247,7 @@ jobs:
         with:
           arguments: coveralls
           java: ${{ env.PUBLISH_JDK }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
       - name: Publish to Codecov
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
@@ -277,6 +273,7 @@ jobs:
         with:
           java: ${{ env.PUBLISH_JDK }}
           arguments: sonar -Dsonar.branch.name=${GITHUB_REF##*/}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
 
   test-results:
@@ -351,7 +348,7 @@ jobs:
             errorprone.info:443
             lightbend.github.io:443
             guava.dev:443
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
         env:
@@ -364,5 +361,5 @@ jobs:
           attempt-limit: 3
           attempt-delay: 2
           java: ${{ env.PUBLISH_JDK }}
-          token: ${{ secrets.GITHUB_TOKEN }}
           arguments: publishToSonatype --no-configuration-cache
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
