@@ -299,7 +299,8 @@ public final class LocalCacheSubject extends Subject {
     Set<Node<Object, Object>> seen = Sets.newIdentityHashSet();
     for (var cell : deques.cellSet()) {
       long weightedSize = scanLinks(bounded, cell.getValue(), seen);
-      check(cell.getRowKey()).that(weightedSize).isEqualTo(cell.getColumnKey());
+      check("%s: %s in %s", cell.getRowKey(), cell.getValue(), bounded.data)
+          .that(weightedSize).isEqualTo(cell.getColumnKey());
       totalSize += cell.getValue().size();
       totalWeightedSize += weightedSize;
     }

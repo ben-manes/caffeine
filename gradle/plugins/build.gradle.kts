@@ -90,4 +90,6 @@ fun setProjectEncoding() {
   }
 }
 
-setProjectEncoding()
+if (System.getenv("CI").isNullOrEmpty()) {
+  setProjectEncoding()
+}

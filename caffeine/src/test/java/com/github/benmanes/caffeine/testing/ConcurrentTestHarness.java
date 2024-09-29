@@ -21,6 +21,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -56,6 +57,11 @@ public final class ConcurrentTestHarness {
   /** Executes the task using the shared thread pool. */
   public static void execute(Runnable task) {
     executor.execute(task);
+  }
+
+  /** Submits the task using the shared thread pool and returns a future representing its result. */
+  public static Future<?> submit(Runnable task) {
+    return executor.submit(task);
   }
 
   /**

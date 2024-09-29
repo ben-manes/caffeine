@@ -1671,6 +1671,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * schedule an asynchronous maintenance task. This may occur due to a concurrent write after the
    * maintenance work had started or if the amortized threshold of work per clean up was reached.
    */
+  @SuppressWarnings("resource")
   void rescheduleCleanUpIfIncomplete() {
     if (drainStatusOpaque() != REQUIRED) {
       return;

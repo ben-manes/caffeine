@@ -141,6 +141,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.testing.GcFinalization;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
@@ -1947,9 +1948,10 @@ public final class BoundedLocalCacheTest {
     var node = cache.data.get(context.absentKey());
     node.retire();
 
+    var future = new Future<?>[1];
     var value = cache.data.compute(context.absentKey(), (k, n) -> {
       var writer = new AtomicReference<Thread>();
-      ConcurrentTestHarness.execute(() -> {
+      future[0] = ConcurrentTestHarness.submit(() -> {
         writer.set(Thread.currentThread());
         var oldValue = cache.put(context.absentKey(), context.absentKey());
         assertThat(oldValue).isAnyOf(context.absentValue(), null);
@@ -1963,8 +1965,9 @@ public final class BoundedLocalCacheTest {
     });
     assertThat(value).isNull();
 
-    await().untilAsserted(() ->
-        assertThat(cache).containsEntry(context.absentKey(), context.absentKey()));
+    await().untilAsserted(() -> assertThat(cache)
+        .containsEntry(context.absentKey(), context.absentKey()));
+    assertThat(Futures.getUnchecked(future[0])).isNull();
     cache.afterWrite(cache.new RemovalTask(node));
   }
 
