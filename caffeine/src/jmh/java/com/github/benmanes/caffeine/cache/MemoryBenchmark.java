@@ -44,7 +44,8 @@ import com.jakewharton.fliptables.FlipTable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"LexicographicalAnnotationAttributeListing", "PMD.MethodNamingConventions"})
+@SuppressWarnings({"LexicographicalAnnotationAttributeListing",
+  "MemberName", "PMD.MethodNamingConventions", "SystemOut"})
 public final class MemoryBenchmark {
   // The number of entries added to minimize skew due to non-entry factors
   static final int FUZZY_SIZE = 25_000;

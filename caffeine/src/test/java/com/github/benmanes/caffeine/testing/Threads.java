@@ -68,8 +68,8 @@ public final class Threads {
   public static void executeWithTimeOut(Queue<String> failures, Callable<Long> task) {
     try {
       var future = executor.submit(task);
-      long timeNS = future.get(TIMEOUT, TimeUnit.SECONDS);
-      logger.debug("\nExecuted in {} second(s)", TimeUnit.NANOSECONDS.toSeconds(timeNS));
+      long nanos = future.get(TIMEOUT, TimeUnit.SECONDS);
+      logger.debug("\nExecuted in {} second(s)", TimeUnit.NANOSECONDS.toSeconds(nanos));
     } catch (ExecutionException e) {
       fail("Exception during test: " + e, e);
     } catch (TimeoutException e) {

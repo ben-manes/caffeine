@@ -27,10 +27,10 @@ public final class CaffeineSpecFuzzer {
   // These tests require the environment variable JAZZER_FUZZ=1 to try new input arguments
 
   @FuzzTest(maxDuration = "5m")
-  @SuppressWarnings({"CheckReturnValue", "PMD.EmptyCatchBlock"})
+  @SuppressWarnings("CheckReturnValue")
   public void parse(FuzzedDataProvider data) {
     try {
       CaffeineSpec.parse(data.consumeRemainingAsString());
-    } catch (IllegalArgumentException e) { /* ignored */ }
+    } catch (IllegalArgumentException expected) { /* ignored */ }
   }
 }

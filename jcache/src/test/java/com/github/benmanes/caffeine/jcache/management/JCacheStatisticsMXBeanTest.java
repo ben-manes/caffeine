@@ -22,6 +22,7 @@ import org.testng.annotations.Test;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("MemberName")
 public final class JCacheStatisticsMXBeanTest {
 
   @Test

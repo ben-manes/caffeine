@@ -36,7 +36,7 @@ import org.openjdk.jmh.infra.Blackhole;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings("PMD.MethodNamingConventions")
+@SuppressWarnings({"MemberName", "PMD.MethodNamingConventions"})
 public class FactoryBenchmark {
   private final ReflectionFactory reflectionFactory = new ReflectionFactory();
   private final MethodHandleFactory methodHandleFactory = new MethodHandleFactory();

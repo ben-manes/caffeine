@@ -37,6 +37,7 @@ import com.google.common.cache.CacheBuilder;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
+@SuppressWarnings("MemberName")
 public class BuilderBenchmark {
   @Param BuilderType type;
   Supplier<?> builder;

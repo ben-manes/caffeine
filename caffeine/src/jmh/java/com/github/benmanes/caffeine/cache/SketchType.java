@@ -23,6 +23,7 @@ import com.github.benmanes.caffeine.cache.sketch.TinyLfuSketch;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("MemberName")
 public enum SketchType {
   Flat {
     @Override public <E> TinyLfuSketch<E> create(long estimatedSize) {

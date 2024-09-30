@@ -35,6 +35,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @RunWith(PaxExam.class)
+@SuppressWarnings("MemberName")
 @ExamReactorStrategy(PerMethod.class)
 public final class OSGiTest {
 

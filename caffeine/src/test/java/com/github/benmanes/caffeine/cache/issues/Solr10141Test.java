@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Locale.US;
 
 import java.util.Random;
@@ -30,6 +31,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.google.common.base.MoreObjects;
 
 /**
  * SOLR-10141: Removal listener notified with stale value
@@ -112,8 +114,7 @@ public final class Solr10141Test {
         }
 
         if ((v == null) || (updateAnyway && r.nextBoolean())) {
-          v = new Val();
-          v.key = k;
+          v = new Val(k);
           cache.put(k, v);
           inserts.incrementAndGet();
         }
@@ -128,11 +129,11 @@ public final class Solr10141Test {
 
     await().until(() -> (inserts.get() - removals.get()) == cache.estimatedSize());
 
-    System.out.printf(US, "Done!%n"
-        + "entries=%,d inserts=%,d removals=%,d hits=%,d maxEntries=%,d maxObservedSize=%,d%n",
-        cache.estimatedSize(), inserts.get(), removals.get(),
-        hits.get(), maxEntries, maxObservedSize.get());
-    assertThat(failed).isEmpty();
+    var message = String.format(US,
+        "entries=%,d inserts=%,d removals=%,d hits=%,d maxEntries=%,d maxObservedSize=%,d%n",
+        cache.estimatedSize(), inserts.get(), removals.get(), hits.get(), maxEntries,
+        maxObservedSize.get());
+    assertWithMessage(message).that(failed).isEmpty();
   }
 
   @Test
@@ -176,8 +177,7 @@ public final class Solr10141Test {
         }
 
         if ((v == null) || (updateAnyway && r.nextBoolean())) {
-          v = new Val();
-          v.key = k;
+          v = new Val(k);
           cache.put(k, v);
           inserts.incrementAndGet();
         }
@@ -193,8 +193,19 @@ public final class Solr10141Test {
     assertThat(failed).isEmpty();
   }
 
-  static class Val {
-    long key;
-    AtomicBoolean live = new AtomicBoolean(true);
+  static final class Val {
+    final AtomicBoolean live;
+    final long key;
+
+    Val(long key) {
+      this.live = new AtomicBoolean(true);
+      this.key = key;
+    }
+    @Override public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("key", key)
+          .add("live", live.get())
+          .toString();
+    }
   }
 }

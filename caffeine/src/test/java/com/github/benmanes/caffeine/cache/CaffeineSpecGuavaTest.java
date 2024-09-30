@@ -325,6 +325,7 @@ public class CaffeineSpecGuavaTest extends TestCase {
   }
 
   // Allowed by Caffeine
+  @SuppressWarnings("MemberName")
   public void disabled_testParse_extraCommaIsInvalid() {
     assertThrows(IllegalArgumentException.class, () -> parse("weakKeys,"));
 

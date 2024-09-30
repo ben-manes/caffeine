@@ -1819,11 +1819,7 @@ public class CacheLoadingTest extends TestCase {
     }
 
     // subsequent calls should call the loader again, not get the old exception
-    try {
-      cache.getUnchecked("bar");
-      fail();
-    } catch (UncheckedExecutionException expected) {
-    }
+    assertThrows(UncheckedExecutionException.class, () -> cache.getUnchecked("bar"));
     assertEquals(count + 1, callCount.get());
   }
 
@@ -1867,11 +1863,7 @@ public class CacheLoadingTest extends TestCase {
     }
 
     // subsequent calls should call the loader again, not get the old exception
-    try {
-      cache.getUnchecked("bar");
-      fail();
-    } catch (UncheckedExecutionException expected) {
-    }
+    assertThrows(UncheckedExecutionException.class, () -> cache.getUnchecked("bar"));
     assertEquals(count + 1, callCount.get());
   }
 

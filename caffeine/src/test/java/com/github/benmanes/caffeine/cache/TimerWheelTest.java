@@ -561,6 +561,7 @@ public final class TimerWheelTest {
     return snapshot;
   }
 
+  @SuppressWarnings("SystemOut")
   private void printTimerWheel() {
     var builder = new StringBuilder();
     for (int i = 0; i < timerWheel.wheel.length; i++) {

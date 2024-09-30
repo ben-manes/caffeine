@@ -84,6 +84,7 @@ public final class HashClashTest {
     assertThat(cache.stats().hitRate()).isGreaterThan(0.99d);
   }
 
+  @SuppressWarnings("SystemOut")
   static void printStats(Cache<Long, Long> cache) {
     if (debug) {
       System.out.printf("size %,d requests %,d hit ratio %f%n",
@@ -91,6 +92,7 @@ public final class HashClashTest {
     }
   }
 
+  @SuppressWarnings("SystemOut")
   static void printKeys(Cache<Long, Long> cache) {
     if (debug) {
       Set<Long> keys = cache.policy().eviction()

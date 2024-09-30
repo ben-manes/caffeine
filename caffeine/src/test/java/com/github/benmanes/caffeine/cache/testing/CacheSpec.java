@@ -67,8 +67,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("ImmutableEnumChecker")
 @Target(METHOD) @Retention(RUNTIME)
+@SuppressWarnings({"ImmutableEnumChecker", "MemberName"})
 public @interface CacheSpec {
 
   /* --------------- Compute --------------- */

@@ -115,6 +115,7 @@ public final class Stresser implements Runnable {
     });
   }
 
+  @SuppressWarnings("SystemOut")
   private void status() {
     var evictionLock = local.evictionLock;
     int pendingWrites;

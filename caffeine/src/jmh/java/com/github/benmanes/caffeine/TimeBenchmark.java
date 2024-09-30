@@ -21,7 +21,7 @@ import org.openjdk.jmh.annotations.Threads;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.MethodNamingConventions")
+@SuppressWarnings({"MemberName", "PMD.MethodNamingConventions"})
 public class TimeBenchmark {
 
   @Benchmark @Threads(1)

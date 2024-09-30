@@ -26,6 +26,7 @@ import javax.cache.management.CacheMXBean;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("MemberName")
 public final class JCacheMXBean implements CacheMXBean {
   private final Cache<?, ?> cache;
 

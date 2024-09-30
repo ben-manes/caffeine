@@ -448,7 +448,7 @@ public class CacheBuilderTest extends TestCase {
    * (removed because of size limits or expiration) trigger appropriate removal notifications.
    */
   @GwtIncompatible("QueuingRemovalListener")
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"EmptyCatch", "FutureReturnValueIgnored"})
   public void testRemovalNotification_get_basher() throws InterruptedException {
     int nTasks = 1000;
     int nThreads = 100;

@@ -167,7 +167,7 @@ public final class Issue30Test {
       return CompletableFuture.completedFuture(source.get(key));
     }
 
-    @SuppressWarnings("TimeZoneUsage")
+    @SuppressWarnings({"SystemOut", "TimeZoneUsage"})
     private void reportCacheMiss(String key) {
       Instant now = Instant.now();
       Instant last = lastLoad.get(key);

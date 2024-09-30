@@ -243,6 +243,19 @@ public final class Caffeine<K, V> {
   }
 
   /**
+   * Returns the number of nanoseconds of the given duration without throwing or overflowing.
+   * <p>
+   * Instead of throwing {@link ArithmeticException}, this method silently saturates to either
+   * {@link Long#MAX_VALUE} or {@link Long#MIN_VALUE}. This behavior can be useful when decomposing
+   * a duration in order to call a legacy API which requires a {@code long, TimeUnit} pair.
+   */
+  static long toNanosSaturated(Duration duration) {
+    return duration.isNegative()
+        ? (duration.compareTo(MIN_DURATION) <= 0) ? Long.MIN_VALUE : duration.toNanos()
+        : (duration.compareTo(MAX_DURATION) >= 0) ? Long.MAX_VALUE : duration.toNanos();
+  }
+
+  /**
    * Constructs a new {@code Caffeine} instance with default settings, including strong keys, strong
    * values, and no automatic eviction of any kind.
    * <p>
@@ -1181,19 +1194,6 @@ public final class Caffeine<K, V> {
     } else if (maximumWeight == UNSET_INT) {
       logger.log(Level.WARNING, "ignoring weigher specified without maximumWeight");
     }
-  }
-
-  /**
-   * Returns the number of nanoseconds of the given duration without throwing or overflowing.
-   * <p>
-   * Instead of throwing {@link ArithmeticException}, this method silently saturates to either
-   * {@link Long#MAX_VALUE} or {@link Long#MIN_VALUE}. This behavior can be useful when decomposing
-   * a duration in order to call a legacy API which requires a {@code long, TimeUnit} pair.
-   */
-  static long toNanosSaturated(Duration duration) {
-    return duration.isNegative()
-        ? (duration.compareTo(MIN_DURATION) <= 0) ? Long.MIN_VALUE : duration.toNanos()
-        : (duration.compareTo(MAX_DURATION) >= 0) ? Long.MAX_VALUE : duration.toNanos();
   }
 
   /**

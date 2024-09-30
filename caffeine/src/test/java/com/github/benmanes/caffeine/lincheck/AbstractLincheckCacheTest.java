@@ -41,7 +41,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  */
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
 @Param(name = "value", gen = IntGen.class, conf = "1:10")
-@SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
+@SuppressWarnings({"MemberName", "PMD.AbstractClassWithoutAbstractMethod"})
 public abstract class AbstractLincheckCacheTest {
   private final LoadingCache<Integer, Integer> cache;
 

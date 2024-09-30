@@ -83,6 +83,7 @@ val compileCodeGenJava by tasks.existing(JavaCompile::class) {
   options.errorprone {
     disable("FieldMissingNullable")
     disable("MissingOverride")
+    disable("MemberName")
     disable("Varifier")
     nullaway.disable()
   }
@@ -129,8 +130,6 @@ tasks.named<JavaCompile>("compileJava").configure {
 tasks.named<JavaCompile>("compileTestJava").configure {
   dependsOn(tasks.jar, compileCodeGenJava)
   options.errorprone {
-    disable("MemberName")
-    disable("SystemOut")
     disable("Varifier")
     disable("Var")
   }
@@ -138,8 +137,6 @@ tasks.named<JavaCompile>("compileTestJava").configure {
 
 tasks.named<JavaCompile>("compileJmhJava").configure {
   options.errorprone {
-    disable("MemberName")
-    disable("SystemOut")
     disable("Varifier")
     disable("Var")
   }

@@ -27,6 +27,7 @@ import org.checkerframework.checker.index.qual.NonNegative;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("MemberName")
 public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
   private final LongAdder puts = new LongAdder();
   private final LongAdder hits = new LongAdder();
