@@ -30,7 +30,7 @@ import org.openjdk.jmh.infra.Blackhole;
  * This benchmark can be run by optionally specifying the target jvm in the command.
  * <p>
  * <pre>{@code
- *   JAVA_VERSION=20 ./gradlew jmh -PincludePattern=FactoryBenchmark --no-daemon
+ *   ./gradlew jmh -PincludePattern=FactoryBenchmark --rerun
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)

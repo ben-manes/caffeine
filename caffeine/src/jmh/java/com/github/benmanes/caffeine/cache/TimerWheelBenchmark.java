@@ -27,7 +27,7 @@ import org.openjdk.jmh.annotations.State;
 
 /**
  * <pre>{@code
- *   ./gradlew jmh -PincludePattern=TimerWheelBenchmark
+ *   ./gradlew jmh -PincludePattern=TimerWheelBenchmark --rerun
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)

@@ -29,7 +29,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * <pre>{@code
- *   ./gradlew jmh -PincludePattern=FrequencySketchBenchmark
+ *   ./gradlew jmh -PincludePattern=FrequencySketchBenchmark --rerun
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)

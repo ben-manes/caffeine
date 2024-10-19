@@ -41,7 +41,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * concerns and should not be used to compare implementations.
  * <p>
  * <pre>{@code
- *   ./gradlew jmh -PincludePattern=PutRemoveBenchmark
+ *   ./gradlew jmh -PincludePattern=PutRemoveBenchmark --rerun
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)
