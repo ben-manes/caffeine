@@ -28,7 +28,7 @@ import org.openjdk.jmh.annotations.TearDown;
  * a 100% eviction rate to mimic worst case behavior.
  * <p>
  * <pre>{@code
- *   ./gradlew jmh -PincludePattern=EvictionBenchmark
+ *   ./gradlew jmh -PincludePattern=EvictionBenchmark -q --rerun
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)

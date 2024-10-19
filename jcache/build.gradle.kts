@@ -102,7 +102,7 @@ tasks.named<Javadoc>("javadoc").configure {
 tasks.withType<Test>().configureEach {
   useJUnitPlatform()
   dependsOn(unzipTestKit)
-  testClassesDirs += layout.buildDirectory.files("tck")
+  testClassesDirs = files(testClassesDirs, layout.buildDirectory.files("tck"))
 
   project(":caffeine").plugins.withId("java-library") {
     val caffeineJar = project(":caffeine").tasks.named<Jar>("jar")

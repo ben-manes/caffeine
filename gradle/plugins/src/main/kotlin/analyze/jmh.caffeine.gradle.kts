@@ -59,11 +59,16 @@ jmhReport {
   jmhReportOutput = file(layout.buildDirectory.file("reports/jmh")).toString()
 }
 
+// Use --rerun for repeated executions
 tasks.withType<JmhTask>().configureEach {
   group = "Benchmarks"
   description = "Executes a Java microbenchmark"
   incompatibleWithConfigurationCache()
-  outputs.upToDateWhen { false }
+
+  inputs.property("benchmarkParameters", jmh.benchmarkParameters)
+  inputs.property("includes", includes)
+  outputs.file(jmh.resultsFile)
+  outputs.cacheIf { true }
 
   doFirst {
     if (!project.hasProperty("includePattern")) {
@@ -81,6 +86,7 @@ tasks.withType<JmhBytecodeGeneratorTask>().configureEach {
 
 tasks.named("jmhJar").configure {
   incompatibleWithConfigurationCache()
+  outputs.cacheIf { true }
 }
 
 tasks.named("jmhReport").configure {

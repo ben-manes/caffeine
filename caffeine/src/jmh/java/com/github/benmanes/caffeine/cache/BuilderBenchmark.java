@@ -31,7 +31,7 @@ import com.google.common.cache.CacheBuilder;
 /**
  * <p>
  * <pre>{@code
- * ./gradlew jmh -PincludePattern=BuilderBenchmark --no-daemon
+ *   ./gradlew jmh -PincludePattern=BuilderBenchmark -q --rerun
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)
