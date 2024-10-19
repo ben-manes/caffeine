@@ -81,7 +81,7 @@ runs:
       run: |
         echo "::add-matcher::.github/problem-matcher.json"
         for ((i=1; i<=${{ inputs.attempt-limit }}; i++)); do
-          ./gradlew $(echo "${{ inputs.arguments }}" | tr -d '\n') && break
+          ./gradlew --no-problems-report $(echo "${{ inputs.arguments }}" | tr -d '\n') && break
           if [ $i -lt ${{ inputs.attempt-limit }} ]; then
             echo "Attempt $i failed. Retrying in ${{ inputs.attempt-delay }} seconds..."
             sleep ${{ inputs.attempt-delay }}
