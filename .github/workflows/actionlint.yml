@@ -14,7 +14,7 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
             github.com:443
-      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: actionlint
         uses: reviewdog/action-actionlint@053981cb135d7a696bbeec6181d9d5fae6e07dae # v1.57.0
         env:

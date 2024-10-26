@@ -14,9 +14,9 @@
     <exclude name="SystemPrintln"/>
     <exclude name="GuardLogStatement"/>
     <exclude name="LiteralsFirstInComparisons"/>
-    <exclude name="JUnitTestsShouldIncludeAssert"/>
-    <exclude name="JUnitTestContainsTooManyAsserts"/>
-    <exclude name="JUnitAssertionsShouldIncludeMessage"/>
+    <exclude name="UnitTestShouldIncludeAssert"/>
+    <exclude name="UnitTestContainsTooManyAsserts"/>
+    <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
   </rule>
   <rule ref="category/java/bestpractices.xml/LooseCoupling">
     <properties>

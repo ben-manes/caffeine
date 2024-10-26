@@ -55,7 +55,7 @@ jobs:
             resources.jetbrains.com:443
             services.gradle.org:443
       - name: Checkout
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Build
         uses: ./.github/actions/run-gradle
         with:
@@ -63,13 +63,13 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: check -x test
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@84494be4d1a2f64ec1c4bfdf475406e246e34672 # v2024.2.3
+        uses: JetBrains/qodana-action@4f04143e8d52028fee27c2a219c8856035094962 # v2024.2.5
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           upload-result: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@f779452ac5af1c261dce0346a8f964149f49322b # v3.26.13
+        uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json

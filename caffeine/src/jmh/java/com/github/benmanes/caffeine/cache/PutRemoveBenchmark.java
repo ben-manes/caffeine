@@ -48,7 +48,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  */
 @State(Scope.Group)
 @SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing",
-    "PMD.JUnit4TestShouldUseAfterAnnotation", "PMD.MethodNamingConventions"})
+    "PMD.UnitTestShouldUseAfterAnnotation", "PMD.MethodNamingConventions"})
 public class PutRemoveBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

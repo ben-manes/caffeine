@@ -14,7 +14,7 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
             github.com:443
-      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Misspell
         uses: reviewdog/action-misspell@ef8b22c1cca06c8d306fc6be302c3dab0f6ca12f # v1.23.0
         with:
@@ -32,6 +32,6 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Typos
-        uses: crate-ci/typos@6802cc60d4e7f78b9d5454f6cf3935c042d5e1e3 # v1.26.0
+        uses: crate-ci/typos@0d9e0c2c1bd7f770f6eb90f87780848ca02fc12c # v1.26.8

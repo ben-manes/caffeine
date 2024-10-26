@@ -35,7 +35,7 @@ import org.openjdk.jmh.annotations.TearDown;
  */
 @State(Scope.Benchmark)
 @SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing",
-  "PMD.JUnit4TestShouldUseAfterAnnotation"})
+  "PMD.UnitTestShouldUseAfterAnnotation"})
 public class EvictionBenchmark {
 
   @Param({

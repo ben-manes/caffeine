@@ -83,11 +83,13 @@ tasks.register<Rewrite>("rewrite")
 tasks.withType<JavaExec>().configureEach {
   dependsOn(tasks.processResources, tasks.compileJava)
   classpath(sourceSets["main"].runtimeClasspath)
-  inputs.properties(caffeineSystemProperties())
-  systemProperties(caffeineSystemProperties())
   outputs.upToDateWhen { false }
   outputs.cacheIf { false }
   jvmArgs(defaultJvmArgs())
+
+  doFirst {
+    systemProperties(caffeineSystemProperties())
+  }
 }
 
 eclipse.classpath.file.beforeMerged {
