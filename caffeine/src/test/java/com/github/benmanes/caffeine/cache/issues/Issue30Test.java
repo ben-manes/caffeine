@@ -151,7 +151,7 @@ public final class Issue30Test {
 
   static final class Loader implements AsyncCacheLoader<String, String> {
     private static final DateTimeFormatter FORMATTER =
-        DateTimeFormatter.ofPattern("hh:MM:ss.SSS", US);
+        DateTimeFormatter.ofPattern("HH:mm:ss.SSS", US);
 
     final ConcurrentMap<String, String> source;
     final ConcurrentMap<String, Instant> lastLoad;
