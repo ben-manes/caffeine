@@ -201,22 +201,21 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     /** Evicts entries based on insertion order. */
     FIFO {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min(Comparator.comparingLong(
-            node -> node.insertionTime)).orElseThrow();
+        return Collections.min(sample, Comparator.comparingLong(node -> node.insertionTime));
       }
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     LRU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min(Comparator.comparingLong(node -> node.accessTime)).orElseThrow();
+        return Collections.min(sample, Comparator.comparingLong(node -> node.accessTime));
       }
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     MRU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().max(Comparator.comparingLong(node -> node.accessTime)).orElseThrow();
+        return Collections.max(sample, Comparator.comparingLong(node -> node.accessTime));
       }
     },
 
@@ -225,7 +224,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      */
     LFU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min(Comparator.comparingInt(node -> node.frequency)).orElseThrow();
+        return Collections.min(sample, Comparator.comparingInt(node -> node.frequency));
       }
     },
 
@@ -234,7 +233,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      */
     MFU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().max(Comparator.comparingInt(node -> node.frequency)).orElseThrow();
+        return Collections.max(sample, Comparator.comparingInt(node -> node.frequency));
       }
     },
 
@@ -249,8 +248,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     /** Evicts entries based on how frequently they are used divided by their age. */
     HYPERBOLIC {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min(Comparator.comparingDouble(
-            node -> hyperbolic(node, tick))).orElseThrow();
+        return Collections.min(sample, Comparator.comparingDouble(node -> hyperbolic(node, tick)));
       }
       double hyperbolic(Node node, long tick) {
         return node.frequency / (double) (tick - node.insertionTime);

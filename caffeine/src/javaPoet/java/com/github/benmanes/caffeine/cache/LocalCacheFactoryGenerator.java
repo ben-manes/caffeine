@@ -25,7 +25,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Year;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -144,6 +143,7 @@ public final class LocalCacheFactoryGenerator {
     return classNameToFeatures;
   }
 
+  @SuppressWarnings("SetsImmutableEnumSetIterable")
   private ImmutableSet<Feature> getFeatures(List<Object> combination) {
     var features = new LinkedHashSet<Feature>();
     features.add(((Boolean) combination.get(0)) ? Feature.STRONG_KEYS : Feature.WEAK_KEYS);
@@ -156,6 +156,7 @@ public final class LocalCacheFactoryGenerator {
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       features.remove(Feature.MAXIMUM_SIZE);
     }
+    // In featureByIndex order for class naming
     return ImmutableSet.copyOf(features);
   }
 
@@ -164,6 +165,7 @@ public final class LocalCacheFactoryGenerator {
     return Sets.cartesianProduct(sets);
   }
 
+  @SuppressWarnings("SetsImmutableEnumSetIterable")
   private TypeSpec makeLocalCacheSpec(String className,
       boolean isFinal, ImmutableSet<Feature> features) {
     TypeName superClass;
@@ -174,8 +176,9 @@ public final class LocalCacheFactoryGenerator {
       generateFeatures = features;
       superClass = BOUNDED_LOCAL_CACHE;
     } else {
+      // Requires that parentFeatures is in featureByIndex order for super class naming
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
-      generateFeatures = ImmutableSet.of(features.asList().get(features.size() - 1));
+      generateFeatures = Sets.immutableEnumSet(features.asList().get(features.size() - 1));
       superClass = ParameterizedTypeName.get(ClassName.bestGuess(
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
@@ -208,6 +211,6 @@ public final class LocalCacheFactoryGenerator {
   }
 
   public static void main(String[] args) throws FormatterException, IOException {
-    new LocalCacheFactoryGenerator(Paths.get(args[0])).generate();
+    new LocalCacheFactoryGenerator(Path.of(args[0])).generate();
   }
 }

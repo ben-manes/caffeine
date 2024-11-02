@@ -35,6 +35,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.testing.EqualsTester;
 
 import junit.framework.TestCase;
@@ -316,8 +317,8 @@ public class EmptyCachesTest extends TestCase {
 
   private static CacheBuilderFactory cacheFactory() {
     return new CacheBuilderFactory()
-        .withKeyStrengths(ImmutableSet.of(Strength.STRONG, Strength.WEAK))
-        .withValueStrengths(ImmutableSet.copyOf(Strength.values()))
+        .withKeyStrengths(Sets.immutableEnumSet(Strength.STRONG, Strength.WEAK))
+        .withValueStrengths(Sets.immutableEnumSet(asList(Strength.values())))
         .withConcurrencyLevels(ImmutableSet.of(1, 4, 16, 64))
         .withMaximumSizes(ImmutableSet.of(0, 1, 10, 100, 1000))
         .withInitialCapacities(ImmutableSet.of(0, 1, 10, 100, 1000))

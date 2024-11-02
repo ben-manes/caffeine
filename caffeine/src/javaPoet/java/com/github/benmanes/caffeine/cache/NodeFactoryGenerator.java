@@ -25,7 +25,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Year;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -146,6 +145,7 @@ public final class NodeFactoryGenerator {
     return classNameToFeatures;
   }
 
+  @SuppressWarnings("SetsImmutableEnumSetIterable")
   private ImmutableSet<Feature> getFeatures(List<Object> combination) {
     var features = new LinkedHashSet<Feature>();
     features.add((Feature) combination.get(0));
@@ -158,9 +158,11 @@ public final class NodeFactoryGenerator {
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       features.remove(Feature.MAXIMUM_SIZE);
     }
+    // In featureByIndex order for class naming
     return ImmutableSet.copyOf(features);
   }
 
+  @SuppressWarnings("SetsImmutableEnumSetIterable")
   private TypeSpec makeNodeSpec(String className, boolean isFinal, ImmutableSet<Feature> features) {
     TypeName superClass;
     ImmutableSet<Feature> parentFeatures;
@@ -170,8 +172,9 @@ public final class NodeFactoryGenerator {
       generateFeatures = features;
       superClass = TypeName.OBJECT;
     } else {
+      // Requires that parentFeatures is in featureByIndex order for super class naming
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
-      generateFeatures = ImmutableSet.of(features.asList().get(features.size() - 1));
+      generateFeatures = Sets.immutableEnumSet(features.asList().get(features.size() - 1));
       superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
@@ -215,6 +218,6 @@ public final class NodeFactoryGenerator {
   }
 
   public static void main(String[] args) throws FormatterException, IOException {
-    new NodeFactoryGenerator(Paths.get(args[0])).generate();
+    new NodeFactoryGenerator(Path.of(args[0])).generate();
   }
 }

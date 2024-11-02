@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Locale.US;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -77,6 +78,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePoli
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -238,11 +240,11 @@ public final class Registry {
     abstract Class<? extends Policy> policyClass();
     abstract Function<Config, Set<Policy>> creator();
 
-    Set<Characteristic> characteristics() {
+    ImmutableSet<Characteristic> characteristics() {
       var policySpec = policyClass().getAnnotation(PolicySpec.class);
       return (policySpec == null)
           ? ImmutableSet.of()
-          : ImmutableSet.copyOf(policySpec.characteristics());
+          : Sets.immutableEnumSet(Arrays.asList(policySpec.characteristics()));
     }
 
     static Factory of(Class<? extends Policy> policyClass, Function<Config, Set<Policy>> creator) {

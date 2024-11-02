@@ -89,61 +89,64 @@ public final class CacheGenerator {
   @SuppressWarnings("IdentityConversion")
   private Set<List<Object>> combinations() {
     var asyncLoader = ImmutableSet.of(true, false);
-    var loaders = ImmutableSet.copyOf(cacheSpec.loader());
     var keys = filterTypes(options.keys(), cacheSpec.keys());
     var values = filterTypes(options.values(), cacheSpec.values());
     var statistics = filterTypes(options.stats(), cacheSpec.stats());
     var computations = filterTypes(options.compute(), cacheSpec.compute());
+    var loaders = Sets.immutableEnumSet(Arrays.asList(cacheSpec.loader()));
     var implementations = filterTypes(options.implementation(), cacheSpec.implementation());
 
     if (isAsyncOnly) {
       values = values.contains(ReferenceType.STRONG)
-          ? ImmutableSet.of(ReferenceType.STRONG)
+          ? Sets.immutableEnumSet(ReferenceType.STRONG)
           : ImmutableSet.of();
-      computations = Sets.intersection(computations, Set.of(Compute.ASYNC));
+      computations = Sets.intersection(computations,
+          Sets.immutableEnumSet(Compute.ASYNC)).immutableCopy();
     }
-    if (!isGuavaCompatible || isAsyncOnly || computations.equals(ImmutableSet.of(Compute.ASYNC))) {
-      implementations = Sets.difference(implementations, Set.of(Implementation.Guava));
+    if (!isGuavaCompatible || isAsyncOnly
+        || computations.equals(Sets.immutableEnumSet(Compute.ASYNC))) {
+      implementations = Sets.difference(implementations,
+          Sets.immutableEnumSet(Implementation.Guava)).immutableCopy();
     }
-    if (computations.equals(ImmutableSet.of(Compute.SYNC))) {
+    if (computations.equals(Sets.immutableEnumSet(Compute.SYNC))) {
       asyncLoader = ImmutableSet.of(false);
     }
 
     if (isLoadingOnly) {
-      loaders = Sets.difference(loaders, Set.of(Loader.DISABLED)).immutableCopy();
+      loaders = Sets.difference(loaders, Sets.immutableEnumSet(Loader.DISABLED)).immutableCopy();
     }
 
-    if (computations.isEmpty() || implementations.isEmpty()
-        || keys.isEmpty() || values.isEmpty()) {
+    if (computations.isEmpty() || implementations.isEmpty() || keys.isEmpty() || values.isEmpty()) {
       return ImmutableSet.of();
     }
     return Sets.cartesianProduct(
-        ImmutableSet.copyOf(cacheSpec.initialCapacity()),
-        ImmutableSet.copyOf(statistics),
-        ImmutableSet.copyOf(cacheSpec.weigher()),
-        ImmutableSet.copyOf(cacheSpec.maximumSize()),
-        ImmutableSet.copyOf(cacheSpec.expiry()),
-        ImmutableSet.copyOf(cacheSpec.expireAfterAccess()),
-        ImmutableSet.copyOf(cacheSpec.expireAfterWrite()),
-        ImmutableSet.copyOf(cacheSpec.refreshAfterWrite()),
-        ImmutableSet.copyOf(keys),
-        ImmutableSet.copyOf(values),
-        ImmutableSet.copyOf(cacheSpec.executor()),
-        ImmutableSet.copyOf(cacheSpec.scheduler()),
-        ImmutableSet.copyOf(cacheSpec.removalListener()),
-        ImmutableSet.copyOf(cacheSpec.evictionListener()),
-        ImmutableSet.copyOf(cacheSpec.population()),
-        ImmutableSet.copyOf(asyncLoader),
-        ImmutableSet.copyOf(computations),
-        ImmutableSet.copyOf(loaders),
-        ImmutableSet.copyOf(implementations));
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.initialCapacity())),
+        Sets.immutableEnumSet(statistics),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.weigher())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.maximumSize())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.expiry())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.expireAfterAccess())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.expireAfterWrite())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.refreshAfterWrite())),
+        Sets.immutableEnumSet(keys),
+        Sets.immutableEnumSet(values),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.executor())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.scheduler())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.removalListener())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.evictionListener())),
+        Sets.immutableEnumSet(Arrays.asList(cacheSpec.population())),
+        asyncLoader,
+        Sets.immutableEnumSet(computations),
+        Sets.immutableEnumSet(loaders),
+        Sets.immutableEnumSet(implementations));
   }
 
   /** Returns the set of options filtered if a specific type is specified. */
-  private static <T> Set<T> filterTypes(Optional<T> type, T[] options) {
+  private static <T extends Enum<T>> ImmutableSet<T> filterTypes(Optional<T> type, T[] options) {
     return type.isPresent()
-        ? Sets.intersection(Set.of(options), Set.of(type.orElseThrow()))
-        : ImmutableSet.copyOf(options);
+        ? Sets.intersection(Sets.immutableEnumSet(Arrays.asList(options)),
+            Set.of(type.orElseThrow())).immutableCopy()
+        : Sets.immutableEnumSet(Arrays.asList(options));
   }
 
   /** Returns a new cache context based on the combination. */

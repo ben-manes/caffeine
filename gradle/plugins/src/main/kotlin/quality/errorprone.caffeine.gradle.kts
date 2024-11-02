@@ -81,6 +81,7 @@ fun errorChecks() = listOf(
 fun disabledChecks() = listOf(
   "AvoidObjectArrays",
   "AndroidJdkLibsChecker",
+  "ConstantNaming",
   "IsInstanceLambdaUsage",
   "Java7ApiChecker",
   "Java8ApiChecker",
@@ -88,6 +89,7 @@ fun disabledChecks() = listOf(
   "MissingSummary",
   "MultipleTopLevelClasses",
   "PatternMatchingInstanceof",
+  "Slf4jLoggerDeclaration",
   "StaticImport",
   "SuppressWarningsWithoutExplanation",
   "UngroupedOverloads",

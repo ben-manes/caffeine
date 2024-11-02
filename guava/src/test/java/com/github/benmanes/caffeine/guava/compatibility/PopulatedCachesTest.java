@@ -22,6 +22,7 @@ import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertThrows;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.testing.EqualsTester;
 
 import junit.framework.TestCase;
@@ -314,8 +316,8 @@ public class PopulatedCachesTest extends TestCase {
     // so more than (maximumSize / #segments) keys could get assigned to the same segment, which
     // would cause one to be evicted.
     return new CacheBuilderFactory()
-        .withKeyStrengths(ImmutableSet.of(Strength.STRONG, Strength.WEAK))
-        .withValueStrengths(ImmutableSet.copyOf(Strength.values()))
+        .withKeyStrengths(Sets.immutableEnumSet(Strength.STRONG, Strength.WEAK))
+        .withValueStrengths(Sets.immutableEnumSet(Arrays.asList(Strength.values())))
         .withConcurrencyLevels(ImmutableSet.of(1, 4, 16, 64))
         .withMaximumSizes(ImmutableSet.of(400, 1000))
         .withInitialCapacities(ImmutableSet.of(0, 1, 10, 100, 1000))

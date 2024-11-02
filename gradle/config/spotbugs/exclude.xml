@@ -678,4 +678,8 @@
     <Class name="com.github.benmanes.caffeine.cache.issues.Issue859Test$TestRun"/>
     <Bug pattern="URF_UNREAD_FIELD"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaTest"/>
+    <Bug pattern="UTAO_JUNIT_ASSERTION_ODDITIES_NO_ASSERT"/>
+  </Match>
 </FindBugsFilter>

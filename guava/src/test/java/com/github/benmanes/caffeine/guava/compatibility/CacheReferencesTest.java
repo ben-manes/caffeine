@@ -28,6 +28,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 import junit.framework.TestCase;
 
@@ -49,8 +50,8 @@ public class CacheReferencesTest extends TestCase {
 
   private static CacheBuilderFactory factoryWithAllKeyStrengths() {
     return new CacheBuilderFactory()
-        .withKeyStrengths(ImmutableSet.of(STRONG, Strength.WEAK))
-        .withValueStrengths(ImmutableSet.of(STRONG, Strength.WEAK, Strength.SOFT));
+        .withKeyStrengths(Sets.immutableEnumSet(STRONG, Strength.WEAK))
+        .withValueStrengths(Sets.immutableEnumSet(STRONG, Strength.WEAK, Strength.SOFT));
   }
 
   private static Iterable<LoadingCache<Key, String>> caches() {

@@ -294,7 +294,7 @@ public final class TimerWheelTest {
 
   @DataProvider(name = "clock")
   public Iterator<Object> providesClock() {
-    return LongStream.of(CLOCKS).mapToObj(o -> (Object) o).iterator();
+    return LongStream.of(CLOCKS).mapToObj(Object.class::cast).iterator();
   }
 
   @DataProvider(name = "schedule")

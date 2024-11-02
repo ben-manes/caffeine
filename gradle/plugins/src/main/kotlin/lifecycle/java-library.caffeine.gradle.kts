@@ -20,6 +20,7 @@ dependencies {
 
 val javaVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
 val javaVendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.matching(it) }
+val javaLtsVersion = JavaLanguageVersion.of(21)
 java.toolchain {
   languageVersion = javaVersion
   vendor = javaVendor
@@ -33,7 +34,7 @@ tasks.withType<JavaCompile>().configureEach {
 
   javaCompiler = javaToolchains.compilerFor {
     // jdk 17+ is required by compiler plugins, e.g. error-prone
-    languageVersion = maxOf(javaVersion, JavaLanguageVersion.of(21))
+    languageVersion = maxOf(javaVersion, javaLtsVersion)
   }
 
   options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",
@@ -88,9 +89,8 @@ tasks.withType<Javadoc>().configureEach {
     use()
     quiet()
     noTimestamp()
-    if (javaVersion.canCompileOrRun(18)) {
-      addStringOption("-link-modularity-mismatch", "info")
-    }
+    addStringOption("-release", javaVersion.toString())
+    addStringOption("-link-modularity-mismatch", "info")
     links(
       "https://checkerframework.org/api/",
       "https://errorprone.info/api/latest/",
@@ -103,5 +103,8 @@ tasks.withType<Javadoc>().configureEach {
         relativePath(project(":caffeine").layout.buildDirectory.dir("docs/javadoc")))
       dependsOn(":caffeine:javadoc")
     }
+  }
+  javadocTool = javaToolchains.javadocToolFor {
+    languageVersion = maxOf(javaVersion, javaLtsVersion)
   }
 }

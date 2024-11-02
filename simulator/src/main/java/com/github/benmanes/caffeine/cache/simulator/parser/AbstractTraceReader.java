@@ -24,7 +24,7 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.UnaryOperator;
@@ -138,7 +138,7 @@ public abstract class AbstractTraceReader implements TraceReader {
 
   /** Returns the input stream for the raw file. */
   private InputStream openFile() throws IOException {
-    var file = Paths.get(filePath);
+    var file = Path.of(filePath);
     if (Files.exists(file)) {
       return Files.newInputStream(file);
     }
