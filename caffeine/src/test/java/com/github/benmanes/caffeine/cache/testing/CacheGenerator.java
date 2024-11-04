@@ -92,9 +92,21 @@ public final class CacheGenerator {
     var keys = filterTypes(options.keys(), cacheSpec.keys());
     var values = filterTypes(options.values(), cacheSpec.values());
     var statistics = filterTypes(options.stats(), cacheSpec.stats());
+    var expiry = Sets.immutableEnumSet(Arrays.asList(cacheSpec.expiry()));
     var computations = filterTypes(options.compute(), cacheSpec.compute());
     var loaders = Sets.immutableEnumSet(Arrays.asList(cacheSpec.loader()));
+    var weigher = Sets.immutableEnumSet(Arrays.asList(cacheSpec.weigher()));
+    var executor = Sets.immutableEnumSet(Arrays.asList(cacheSpec.executor()));
+    var scheduler = Sets.immutableEnumSet(Arrays.asList(cacheSpec.scheduler()));
+    var population = Sets.immutableEnumSet(Arrays.asList(cacheSpec.population()));
+    var maximumSize = Sets.immutableEnumSet(Arrays.asList(cacheSpec.maximumSize()));
     var implementations = filterTypes(options.implementation(), cacheSpec.implementation());
+    var initialCapacity = Sets.immutableEnumSet(Arrays.asList(cacheSpec.initialCapacity()));
+    var removalListener = Sets.immutableEnumSet(Arrays.asList(cacheSpec.removalListener()));
+    var evictionListener = Sets.immutableEnumSet(Arrays.asList(cacheSpec.evictionListener()));
+    var expireAfterWrite = Sets.immutableEnumSet(Arrays.asList(cacheSpec.expireAfterWrite()));
+    var expireAfterAccess = Sets.immutableEnumSet(Arrays.asList(cacheSpec.expireAfterAccess()));
+    var refreshAfterWrite = Sets.immutableEnumSet(Arrays.asList(cacheSpec.refreshAfterWrite()));
 
     if (isAsyncOnly) {
       values = values.contains(ReferenceType.STRONG)
@@ -119,26 +131,11 @@ public final class CacheGenerator {
     if (computations.isEmpty() || implementations.isEmpty() || keys.isEmpty() || values.isEmpty()) {
       return ImmutableSet.of();
     }
-    return Sets.cartesianProduct(
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.initialCapacity())),
-        Sets.immutableEnumSet(statistics),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.weigher())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.maximumSize())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.expiry())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.expireAfterAccess())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.expireAfterWrite())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.refreshAfterWrite())),
-        Sets.immutableEnumSet(keys),
-        Sets.immutableEnumSet(values),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.executor())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.scheduler())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.removalListener())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.evictionListener())),
-        Sets.immutableEnumSet(Arrays.asList(cacheSpec.population())),
-        asyncLoader,
-        Sets.immutableEnumSet(computations),
-        Sets.immutableEnumSet(loaders),
-        Sets.immutableEnumSet(implementations));
+
+    return Sets.cartesianProduct(initialCapacity, statistics, weigher, maximumSize, expiry,
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, keys, values, executor, scheduler,
+        removalListener, evictionListener, population, asyncLoader, computations, loaders,
+        implementations);
   }
 
   /** Returns the set of options filtered if a specific type is specified. */

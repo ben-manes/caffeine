@@ -6,6 +6,8 @@ plugins {
   `java-library`
 }
 
+val mockitoAgent: Configuration by configurations.creating
+
 dependencies {
   testImplementation(libs.guava)
   testImplementation(libs.guice)
@@ -25,6 +27,10 @@ dependencies {
   testRuntimeOnly(libs.junit5.launcher)
   testRuntimeOnly(libs.bundles.junit.engines)
   testRuntimeOnly(libs.bundles.osgi.test.runtime)
+
+  mockitoAgent(libs.mockito) {
+    isTransitive = false
+  }
 }
 
 tasks.withType<Test>().configureEach {
@@ -32,6 +38,7 @@ tasks.withType<Test>().configureEach {
 
   // Use --debug-jvm to remotely attach to the test task
   jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+EnableDynamicAgentLoading", "-Xshare:off")
+  jvmArgs("-javaagent:${mockitoAgent.asPath}")
   jvmArgs(defaultJvmArgs())
   if (isCI()) {
     reports.junitXml.includeSystemOutLog = false

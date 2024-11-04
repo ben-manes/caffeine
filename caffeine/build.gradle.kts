@@ -23,7 +23,7 @@ sourceSets {
 }
 
 val compileJavaPoetJava by tasks.existing
-val javaAgent: Configuration by configurations.creating
+val jammAgent: Configuration by configurations.creating
 val collections4Sources: Configuration by configurations.creating
 val javaPoetImplementation: Configuration = configurations["javaPoetImplementation"]
 
@@ -48,15 +48,18 @@ dependencies {
       classifier = "tests"
     }
   }
+  testImplementation(sourceSets["codeGen"].output)
+  testImplementation(libs.eclipse.collections.testutils)
+
   collections4Sources(libs.commons.collections4) {
     artifact {
       classifier = "test-sources"
     }
   }
-  testImplementation(sourceSets["codeGen"].output)
-  testImplementation(libs.eclipse.collections.testutils)
 
-  javaAgent(libs.jamm)
+  jammAgent(libs.jamm) {
+    isTransitive = false
+  }
 
   jmh(libs.jamm)
   jmh(libs.tcache)
@@ -264,7 +267,7 @@ tasks.register<JavaExec>("memoryOverhead") {
     "--add-opens", "java.base/java.lang.ref=ALL-UNNAMED",
     "--add-opens", "java.base/java.lang=ALL-UNNAMED",
     "--add-opens", "java.base/java.util=ALL-UNNAMED",
-    "-javaagent:${configurations["javaAgent"].singleFile}")
+    "-javaagent:${jammAgent.asPath}")
 }
 
 tasks.register<Stress>("stress") {

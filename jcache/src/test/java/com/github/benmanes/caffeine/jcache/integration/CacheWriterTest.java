@@ -111,5 +111,13 @@ public final class CacheWriterTest extends AbstractJCacheTest {
     DisabledCacheWriter.get().deleteAll(null);
   }
 
+  @Test
+  public void hasCacheWriter() {
+    var noWriter = new CaffeineConfiguration<>(jcacheConfiguration)
+        .setCacheWriterFactory(null);
+    assertThat(noWriter.hasCacheWriter()).isFalse();
+    assertThat(jcacheConfiguration.hasCacheWriter()).isTrue();
+  }
+
   interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}
 }

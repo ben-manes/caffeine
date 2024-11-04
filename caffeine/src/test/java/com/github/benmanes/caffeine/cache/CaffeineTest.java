@@ -808,6 +808,7 @@ public final class CaffeineTest {
     Ticker ticker = new FakeTicker()::read;
     var builder = Caffeine.newBuilder().ticker(ticker);
     assertThat(builder.ticker).isSameInstanceAs(ticker);
+    assertThat(builder.getTicker()).isSameInstanceAs(Ticker.disabledTicker());
     assertThat(builder.build()).isNotNull();
   }
 
