@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.spi.ToolProvider;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.node.AddConstructors;
@@ -52,8 +54,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
-import com.google.googlejavaformat.java.Formatter;
-import com.google.googlejavaformat.java.FormatterException;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -89,7 +89,7 @@ public final class NodeFactoryGenerator {
     this.nodeTypes = new ArrayList<>();
   }
 
-  private void generate() throws FormatterException, IOException {
+  private void generate() throws IOException {
     generatedNodes();
     writeJavaFile();
     reformat();
@@ -108,20 +108,21 @@ public final class NodeFactoryGenerator {
     }
   }
 
-  private void reformat() throws FormatterException, IOException {
+  @SuppressWarnings("SystemOut")
+  private void reformat() throws IOException {
     if (Boolean.parseBoolean(System.getenv("JDK_EA"))) {
       return; // may be incompatible for EA builds
     }
     try (Stream<Path> stream = Files.walk(directory)) {
-      ImmutableList<Path> files = stream
-          .filter(path -> path.toString().endsWith(".java"))
+      ImmutableList<String> files = stream
+          .map(Path::toString)
+          .filter(path -> path.endsWith(".java"))
           .collect(toImmutableList());
-      var formatter = new Formatter();
-      for (Path file : files) {
-        String source = Files.readString(file);
-        String formatted = formatter.formatSourceAndFixImports(source);
-        Files.writeString(file, formatted);
-      }
+      ToolProvider.findFirst("google-java-format").ifPresent(formatter -> {
+        int result = formatter.run(System.err, System.out,
+            Stream.concat(Stream.of("-i"), files.stream()).toArray(String[]::new));
+        checkState(result == 0, "Java formatting failed with %s exit code", result);
+      });
     }
   }
 
@@ -217,7 +218,7 @@ public final class NodeFactoryGenerator {
         .replaceFirst("_SIZE", "S");
   }
 
-  public static void main(String[] args) throws FormatterException, IOException {
+  public static void main(String[] args) throws IOException {
     new NodeFactoryGenerator(Path.of(args[0])).generate();
   }
 }

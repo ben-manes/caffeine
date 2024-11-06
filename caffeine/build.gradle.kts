@@ -25,6 +25,7 @@ sourceSets {
 val compileJavaPoetJava by tasks.existing
 val jammAgent: Configuration by configurations.creating
 val collections4Sources: Configuration by configurations.creating
+val javaPoetRuntimeOnly: Configuration = configurations["javaPoetRuntimeOnly"]
 val javaPoetImplementation: Configuration = configurations["javaPoetImplementation"]
 
 dependencies {
@@ -75,7 +76,8 @@ dependencies {
   javaPoetImplementation(libs.guava)
   javaPoetImplementation(libs.javapoet)
   javaPoetImplementation(libs.commons.lang3)
-  javaPoetImplementation(libs.google.java.format)
+
+  javaPoetRuntimeOnly(libs.google.java.format)
 }
 
 val compileCodeGenJava by tasks.existing(JavaCompile::class) {
@@ -244,7 +246,7 @@ tasks.named<CheckForbiddenApis>("forbiddenApisMain").configure {
 
 tasks.named<CheckForbiddenApis>("forbiddenApisJavaPoet").configure {
   bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
+    "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
 }
 
 tasks.named<CheckForbiddenApis>("forbiddenApisTest").configure {
