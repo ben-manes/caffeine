@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.spi.ToolProvider;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.node.AddConstructors;
@@ -52,8 +53,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
-import com.google.googlejavaformat.java.Formatter;
-import com.google.googlejavaformat.java.FormatterException;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -89,7 +88,7 @@ public final class NodeFactoryGenerator {
     this.nodeTypes = new ArrayList<>();
   }
 
-  private void generate() throws FormatterException, IOException {
+  private void generate() throws IOException {
     generatedNodes();
     writeJavaFile();
     reformat();
@@ -108,7 +107,7 @@ public final class NodeFactoryGenerator {
     }
   }
 
-  private void reformat() throws FormatterException, IOException {
+  private void reformat() throws IOException {
     if (Boolean.parseBoolean(System.getenv("JDK_EA"))) {
       return; // may be incompatible for EA builds
     }
@@ -116,11 +115,20 @@ public final class NodeFactoryGenerator {
       ImmutableList<Path> files = stream
           .filter(path -> path.toString().endsWith(".java"))
           .collect(toImmutableList());
-      var formatter = new Formatter();
-      for (Path file : files) {
-        String source = Files.readString(file);
-        String formatted = formatter.formatSourceAndFixImports(source);
-        Files.writeString(file, formatted);
+      var formatter = ToolProvider.findFirst("google-java-format");
+      if (formatter.isEmpty()) {
+        return;
+      }
+      int result =
+          formatter
+              .get()
+              .run(
+                  System.err,
+                  System.out,
+                  Stream.concat(Stream.of("-i"), files.stream().map(Path::toString))
+                      .toArray(String[]::new));
+      if (result != 0) {
+        throw new IOException();
       }
     }
   }
@@ -217,7 +225,7 @@ public final class NodeFactoryGenerator {
         .replaceFirst("_SIZE", "S");
   }
 
-  public static void main(String[] args) throws FormatterException, IOException {
+  public static void main(String[] args) throws IOException {
     new NodeFactoryGenerator(Path.of(args[0])).generate();
   }
 }
