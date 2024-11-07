@@ -81,8 +81,9 @@ public final class EventDispatcherTest {
 
   @Test
   public void register_noListener() {
-    var configuration =
-        new MutableCacheEntryListenerConfiguration<Integer, Integer>(null, null, false, false);
+    var configuration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+        /* listenerFactory= */ null, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     dispatcher.register(configuration);
     assertThat(dispatcher.dispatchQueues).isEmpty();
@@ -92,7 +93,8 @@ public final class EventDispatcherTest {
   public void register_twice() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var configuration = new MutableCacheEntryListenerConfiguration<>(
-        () -> createdListener, null, false, false);
+        () -> createdListener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     dispatcher.register(configuration);
     dispatcher.register(configuration);
     assertThat(dispatcher.dispatchQueues).hasSize(1);
@@ -101,11 +103,14 @@ public final class EventDispatcherTest {
   @Test
   public void register_equality() {
     var c1 = new MutableCacheEntryListenerConfiguration<>(
-        () -> createdListener, null, false, false);
+        () -> createdListener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     var c2 = new MutableCacheEntryListenerConfiguration<>(
-        c1.getCacheEntryListenerFactory(), null, false, false);
+        c1.getCacheEntryListenerFactory(), /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     var c3 = new MutableCacheEntryListenerConfiguration<>(
-        c1.getCacheEntryListenerFactory(), null, true, true);
+        c1.getCacheEntryListenerFactory(), /* filterFactory= */ null,
+        /* isOldValueRequired= */ true, /* isSynchronous= */ true);
 
     new EqualsTester()
         .addEqualityGroup(
@@ -122,7 +127,8 @@ public final class EventDispatcherTest {
   public void deregister() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var configuration = new MutableCacheEntryListenerConfiguration<>(
-        () -> createdListener, null, false, false);
+        () -> createdListener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     dispatcher.register(configuration);
     dispatcher.deregister(configuration);
     assertThat(dispatcher.dispatchQueues).isEmpty();
@@ -193,7 +199,8 @@ public final class EventDispatcherTest {
     var listener = new ConsumingCacheListener();
     var dispatcher = new EventDispatcher<Integer, Integer>(executor);
     dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
-        () -> listener, null, false, false));
+        () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false));
 
     dispatcher.publishCreated(cache, 1, 2);
     dispatcher.publishUpdated(cache, 1, 2, 3);
@@ -252,7 +259,8 @@ public final class EventDispatcherTest {
 
     var dispatcher = new EventDispatcher<Integer, Integer>(executor);
     dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
-        () -> listener, null, false, false));
+        () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false));
     dispatcher.publishCreated(cache, 1, 1);
     dispatcher.publishCreated(cache, 2, 2);
     execute.set(true);
@@ -287,9 +295,11 @@ public final class EventDispatcherTest {
 
     var dispatcher = new EventDispatcher<Integer, Integer>(executor);
     dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
-        () -> consumer, null, false, false));
+        () -> consumer, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false));
     dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
-        () -> waiter, null, false, false));
+        () -> waiter, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false));
 
     dispatcher.publishCreated(cache, 1, 2);
     execute.set(true);
@@ -331,7 +341,8 @@ public final class EventDispatcherTest {
         pendingFutures.addAll(secondary.pending.get());
 
     var configuration = new MutableCacheEntryListenerConfiguration<>(
-        () -> listener, null, /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+        () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     primary.register(configuration);
     int key = 1;
 

@@ -2562,7 +2562,8 @@ public final class BoundedLocalCacheTest {
   public void cacheFactory_brokenConstructor() {
     var builder = Caffeine.newBuilder();
     var factory = LocalCacheFactory.loadFactory("BoundedLocalCacheTest$BadBoundedLocalCache");
-    assertThrows(IllegalStateException.class, () -> factory.newInstance(builder, null, false));
+    assertThrows(IllegalStateException.class, () -> factory.newInstance(builder,
+        /* cacheLoader= */ null, /* isAsync= */ false));
   }
 
   @Test(groups = "isolated")
@@ -2650,7 +2651,7 @@ public final class BoundedLocalCacheTest {
   @Test
   public void nodeFactory_classNotFound() {
     var expected = assertThrows(IllegalStateException.class, () ->
-        NodeFactory.loadFactory(/* className */ ""));
+        NodeFactory.loadFactory(/* className= */ ""));
     assertThat(expected).hasCauseThat().isInstanceOf(ClassNotFoundException.class);
   }
 

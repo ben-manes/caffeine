@@ -83,14 +83,18 @@ dependencies {
 val compileCodeGenJava by tasks.existing(JavaCompile::class) {
   classpath = sourceSets["main"].runtimeClasspath + sourceSets["main"].output
   dependsOn(tasks.compileJava)
-  options.isDebug = false
 
-  options.errorprone {
-    disable("FieldMissingNullable")
-    disable("MissingOverride")
-    disable("MemberName")
-    disable("Varifier")
-    nullaway.disable()
+  options.apply {
+    compilerArgs.remove("-parameters")
+    isDebug = false
+
+    errorprone {
+      disable("FieldMissingNullable")
+      disable("MissingOverride")
+      disable("MemberName")
+      disable("Varifier")
+      nullaway.disable()
+    }
   }
 }
 

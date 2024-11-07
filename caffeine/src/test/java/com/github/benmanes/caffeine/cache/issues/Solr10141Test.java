@@ -67,7 +67,7 @@ public final class Solr10141Test {
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
       assertThat(v.key).isEqualTo(k);
-      if (!v.live.compareAndSet(true, false)) {
+      if (!v.live.compareAndSet(/* expectedValue= */ true, /* newValue= */ false)) {
         throw new RuntimeException(String.format(US,
             "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
       }
@@ -144,7 +144,7 @@ public final class Solr10141Test {
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
       assertThat(v.key).isEqualTo(k);
-      if (!v.live.compareAndSet(true, false)) {
+      if (!v.live.compareAndSet(/* expectedValue= */ true, /* newValue= */ false)) {
         throw new RuntimeException(String.format(US,
             "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
       }

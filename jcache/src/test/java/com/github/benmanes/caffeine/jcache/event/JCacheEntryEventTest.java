@@ -44,7 +44,8 @@ public final class JCacheEntryEventTest {
   @BeforeTest
   public void before() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    event = new JCacheEntryEvent<>(cache, EventType.CREATED, 1, true, 2, 3);
+    event = new JCacheEntryEvent<>(cache, EventType.CREATED,
+        1, /* hasOldValue= */ true, 2, 3);
   }
 
   @Test
@@ -59,7 +60,8 @@ public final class JCacheEntryEventTest {
 
   @Test
   public void isOldValueAvailable_false() {
-    var entry = new JCacheEntryEvent<>(cache, EventType.CREATED, 1, false, null, 3);
+    var entry = new JCacheEntryEvent<>(cache, EventType.CREATED,
+        1, /* hasOldValue= */ false, null, 3);
     assertThat(entry.isOldValueAvailable()).isFalse();
   }
 

@@ -200,7 +200,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       long startTime, boolean recordMiss) {
     var completed = new AtomicBoolean();
     valueFuture.whenComplete((value, error) -> {
-      if (!completed.compareAndSet(false, true)) {
+      if (!completed.compareAndSet(/* expectedValue= */ false, /* newValue= */ true)) {
         // Ignore multiple invocations due to ForkJoinPool retrying on delays
         return;
       }

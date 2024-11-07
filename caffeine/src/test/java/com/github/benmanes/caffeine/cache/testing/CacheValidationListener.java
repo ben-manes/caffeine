@@ -97,7 +97,8 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         .forEach(logger -> logger.setEnabledLevels(TRACE_LEVELS));
     TestLoggerFactory.clear();
 
-    if (beforeCleanup.get() || !beforeCleanup.compareAndSet(false, true)) {
+    if (beforeCleanup.get()
+        || !beforeCleanup.compareAndSet(/* expectedValue= */ false, /* newValue= */ true)) {
       return;
     }
 

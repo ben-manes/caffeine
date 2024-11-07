@@ -39,9 +39,9 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_empty() {
     CaffeineSpec spec = parse("");
-    assertEquals(spec.initialCapacity, UNSET_INT);
-    assertEquals(spec.maximumSize, UNSET_INT);
-    assertEquals(spec.maximumWeight, UNSET_INT);
+    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
     assertNull(spec.keyStrength);
     assertNull(spec.valueStrength);
     assertNull(spec.expireAfterAccess);
@@ -52,9 +52,9 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_initialCapacity() {
     CaffeineSpec spec = parse("initialCapacity=10");
-    assertEquals(10, spec.initialCapacity);
-    assertEquals(spec.maximumSize, UNSET_INT);
-    assertEquals(spec.maximumWeight, UNSET_INT);
+    assertThat(spec.initialCapacity).isEqualTo(10);
+    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
     assertNull(spec.keyStrength);
     assertNull(spec.valueStrength);
     assertNull(spec.expireAfterWrite);
@@ -71,8 +71,8 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_maximumSize() {
     CaffeineSpec spec = parse("maximumSize=9000");
-    assertEquals(spec.initialCapacity, UNSET_INT);
-    assertEquals(9000, spec.maximumSize);
+    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumSize).isEqualTo(9000);
     assertNull(spec.keyStrength);
     assertNull(spec.valueStrength);
     assertNull(spec.expireAfterWrite);
@@ -88,8 +88,8 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_maximumWeight() {
     CaffeineSpec spec = parse("maximumWeight=9000");
-    assertEquals(spec.initialCapacity, UNSET_INT);
-    assertEquals(9000, spec.maximumWeight);
+    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isEqualTo(9000);
     assertNull(spec.keyStrength);
     assertNull(spec.valueStrength);
     assertNull(spec.expireAfterWrite);
@@ -109,10 +109,10 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_weakKeys() {
     CaffeineSpec spec = parse("weakKeys");
-    assertEquals(spec.initialCapacity, UNSET_INT);
-    assertEquals(spec.maximumSize, UNSET_INT);
-    assertEquals(spec.maximumWeight, UNSET_INT);
-    assertEquals(Strength.WEAK, spec.keyStrength);
+    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
     assertNull(spec.valueStrength);
     assertNull(spec.expireAfterWrite);
     assertNull(spec.expireAfterAccess);
@@ -131,11 +131,11 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_softValues() {
     CaffeineSpec spec = parse("softValues");
-    assertEquals(spec.initialCapacity, UNSET_INT);
-    assertEquals(spec.maximumSize, UNSET_INT);
-    assertEquals(spec.maximumWeight, UNSET_INT);
+    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
     assertNull(spec.keyStrength);
-    assertEquals(Strength.SOFT, spec.valueStrength);
+    assertThat(spec.valueStrength).isEqualTo(Strength.SOFT);
     assertNull(spec.expireAfterWrite);
     assertNull(spec.expireAfterAccess);
     assertNull(spec.refreshAfterWrite);
@@ -149,11 +149,11 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_weakValues() {
     CaffeineSpec spec = parse("weakValues");
-    assertEquals(spec.initialCapacity, UNSET_INT);
-    assertEquals(spec.maximumSize, UNSET_INT);
-    assertEquals(spec.maximumWeight, UNSET_INT);
+    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
     assertNull(spec.keyStrength);
-    assertEquals(Strength.WEAK, spec.valueStrength);
+    assertThat(spec.valueStrength).isEqualTo(Strength.WEAK);
     assertNull(spec.expireAfterWrite);
     assertNull(spec.expireAfterAccess);
     assertNull(spec.refreshAfterWrite);
@@ -177,12 +177,12 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_writeExpirationDays() {
     CaffeineSpec spec = parse("expireAfterWrite=10d");
-    assertEquals(spec.initialCapacity, UNSET_INT);
-    assertEquals(spec.maximumSize, UNSET_INT);
-    assertEquals(spec.maximumWeight, UNSET_INT);
+    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
     assertNull(spec.keyStrength);
     assertNull(spec.valueStrength);
-    assertEquals(Duration.ofDays(10), spec.expireAfterWrite);
+    assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofDays(10));
     assertNull(spec.expireAfterAccess);
     assertNull(spec.refreshAfterWrite);
     assertCaffeineEquivalence(
@@ -191,21 +191,21 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_writeExpirationHours() {
     CaffeineSpec spec = parse("expireAfterWrite=150h");
-    assertEquals(Duration.ofHours(150), spec.expireAfterWrite);
+    assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofHours(150));
     assertCaffeineEquivalence(
         Caffeine.newBuilder().expireAfterWrite(150L, TimeUnit.HOURS), Caffeine.from(spec));
   }
 
   public void testParse_writeExpirationMinutes() {
     CaffeineSpec spec = parse("expireAfterWrite=10m");
-    assertEquals(Duration.ofMinutes(10), spec.expireAfterWrite);
+    assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofMinutes(10));
     assertCaffeineEquivalence(
         Caffeine.newBuilder().expireAfterWrite(10L, TimeUnit.MINUTES), Caffeine.from(spec));
   }
 
   public void testParse_writeExpirationSeconds() {
     CaffeineSpec spec = parse("expireAfterWrite=10s");
-    assertEquals(Duration.ofSeconds(10), spec.expireAfterWrite);
+    assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofSeconds(10));
     assertCaffeineEquivalence(
         Caffeine.newBuilder().expireAfterWrite(10L, TimeUnit.SECONDS), Caffeine.from(spec));
   }
@@ -217,27 +217,27 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_accessExpirationDays() {
     CaffeineSpec spec = parse("expireAfterAccess=10d");
-    assertEquals(spec.initialCapacity, UNSET_INT);
-    assertEquals(spec.maximumSize, UNSET_INT);
-    assertEquals(spec.maximumWeight, UNSET_INT);
+    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
     assertNull(spec.keyStrength);
     assertNull(spec.valueStrength);
     assertNull(spec.expireAfterWrite);
-    assertEquals(Duration.ofDays(10), spec.expireAfterAccess);
+    assertThat(spec.expireAfterAccess).isEqualTo(Duration.ofDays(10));
     assertCaffeineEquivalence(
         Caffeine.newBuilder().expireAfterAccess(10L, TimeUnit.DAYS), Caffeine.from(spec));
   }
 
   public void testParse_accessExpirationHours() {
     CaffeineSpec spec = parse("expireAfterAccess=150h");
-    assertEquals(Duration.ofHours(150), spec.expireAfterAccess);
+    assertThat(spec.expireAfterAccess).isEqualTo(Duration.ofHours(150));
     assertCaffeineEquivalence(
         Caffeine.newBuilder().expireAfterAccess(150L, TimeUnit.HOURS), Caffeine.from(spec));
   }
 
   public void testParse_accessExpirationMinutes() {
     CaffeineSpec spec = parse("expireAfterAccess=10m");
-    assertEquals(Duration.ofMinutes(10), spec.expireAfterAccess);
+    assertThat(spec.expireAfterAccess).isEqualTo(Duration.ofMinutes(10));
     assertCaffeineEquivalence(
         Caffeine.newBuilder().expireAfterAccess(10L, TimeUnit.MINUTES),
         Caffeine.from(spec));
@@ -245,7 +245,7 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_accessExpirationSeconds() {
     CaffeineSpec spec = parse("expireAfterAccess=10s");
-    assertEquals(Duration.ofSeconds(10), spec.expireAfterAccess);
+    assertThat(spec.expireAfterAccess).isEqualTo(Duration.ofSeconds(10));
     assertCaffeineEquivalence(
         Caffeine.newBuilder().expireAfterAccess(10L, TimeUnit.SECONDS),
         Caffeine.from(spec));
@@ -272,8 +272,8 @@ public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_accessExpirationAndWriteExpiration() {
     CaffeineSpec spec = parse("expireAfterAccess=10s,expireAfterWrite=9m");
-    assertEquals(Duration.ofMinutes(9), spec.expireAfterWrite);
-    assertEquals(Duration.ofSeconds(10), spec.expireAfterAccess);
+    assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofMinutes(9));
+    assertThat(spec.expireAfterAccess).isEqualTo(Duration.ofSeconds(10));
     assertCaffeineEquivalence(
         Caffeine.newBuilder()
           .expireAfterAccess(10L, TimeUnit.SECONDS)
@@ -284,13 +284,13 @@ public class CaffeineSpecGuavaTest extends TestCase {
   public void testParse_multipleKeys() {
     CaffeineSpec spec = parse("initialCapacity=10,maximumSize=20,"
         + "weakKeys,weakValues,expireAfterAccess=10m,expireAfterWrite=1h");
-    assertEquals(10, spec.initialCapacity);
-    assertEquals(20, spec.maximumSize);
-    assertEquals(spec.maximumWeight, UNSET_INT);
-    assertEquals(Strength.WEAK, spec.keyStrength);
-    assertEquals(Strength.WEAK, spec.valueStrength);
-    assertEquals(Duration.ofHours(1), spec.expireAfterWrite);
-    assertEquals(Duration.ofMinutes(10), spec.expireAfterAccess);
+    assertThat(spec.initialCapacity).isEqualTo(10);
+    assertThat(spec.maximumSize).isEqualTo(20);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
+    assertThat(spec.valueStrength).isEqualTo(Strength.WEAK);
+    assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofHours(1));
+    assertThat(spec.expireAfterAccess).isEqualTo(Duration.ofMinutes(10));
     Caffeine<?, ?> expected = Caffeine.newBuilder()
         .initialCapacity(10)
         .maximumSize(20)
@@ -304,12 +304,12 @@ public class CaffeineSpecGuavaTest extends TestCase {
   public void testParse_whitespaceAllowed() {
     CaffeineSpec spec = parse(" initialCapacity=10,\nmaximumSize=20,\t\r"
         + "weakKeys \t ,softValues \n , \r  expireAfterWrite \t =  15s\n\n");
-    assertEquals(10, spec.initialCapacity);
-    assertEquals(20, spec.maximumSize);
-    assertEquals(spec.maximumWeight, UNSET_INT);
-    assertEquals(Strength.WEAK, spec.keyStrength);
-    assertEquals(Strength.SOFT, spec.valueStrength);
-    assertEquals(Duration.ofSeconds(15), spec.expireAfterWrite);
+    assertThat(spec.initialCapacity).isEqualTo(10);
+    assertThat(spec.maximumSize).isEqualTo(20);
+    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
+    assertThat(spec.valueStrength).isEqualTo(Strength.SOFT);
+    assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofSeconds(15));
     assertNull(spec.expireAfterAccess);
     Caffeine<?, ?> expected = Caffeine.newBuilder()
         .initialCapacity(10)

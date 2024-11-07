@@ -38,7 +38,11 @@ tasks.withType<JavaCompile>().configureEach {
   }
 
   options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",
-    "-Xlint:-exports", "-Xlint:-processing", "-Xlint:-removal", "-Xlint:-requires-automatic"))
+    "-Xlint:-exports", "-Xlint:-processing", "-Xlint:-removal", "-Xlint:-requires-automatic",
+    "-parameters"))
+  if (isCI()) {
+    options.compilerArgs.add("-Werror")
+  }
   if (javaVersion.canCompileOrRun(21)) {
     options.compilerArgs.add("-proc:full")
   }

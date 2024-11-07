@@ -119,7 +119,7 @@ public final class NodeFactoryGenerator {
           .filter(path -> path.endsWith(".java"))
           .collect(toImmutableList());
       ToolProvider.findFirst("google-java-format").ifPresent(formatter -> {
-        int result = formatter.run(System.err, System.out,
+        int result = formatter.run(System.out, System.err,
             Stream.concat(Stream.of("-i"), files.stream()).toArray(String[]::new));
         checkState(result == 0, "Java formatting failed with %s exit code", result);
       });

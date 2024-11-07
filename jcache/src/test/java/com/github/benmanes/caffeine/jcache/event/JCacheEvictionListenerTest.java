@@ -58,7 +58,8 @@ public final class JCacheEvictionListenerTest {
     statistics.enable(true);
 
     dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
-        () -> entryListener, null, false, false));
+        /* listenerFactory= */ () -> entryListener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false));
   }
 
   @DataProvider
