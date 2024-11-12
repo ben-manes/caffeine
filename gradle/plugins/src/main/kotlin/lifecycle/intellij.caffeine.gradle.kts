@@ -10,10 +10,19 @@ plugins {
   id("org.jetbrains.gradle.plugin.idea-ext")
 }
 
+val mockitoAgent: Configuration by configurations.creating
+
+dependencies {
+  mockitoAgent(libs.mockito) {
+    isTransitive = false
+  }
+}
+
 idea.project.settings {
   delegateActions.testRunner = PLATFORM
   runConfigurations {
     val jvmArgs = listOf(
+      "-javaagent:${mockitoAgent.asPath}",
       "-XX:+EnableDynamicAgentLoading",
       "-XX:SoftRefLRUPolicyMSPerMB=0",
       "-XX:+UseParallelGC",
