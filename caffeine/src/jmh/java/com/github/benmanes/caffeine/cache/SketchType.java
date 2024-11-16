@@ -27,7 +27,19 @@ import com.github.benmanes.caffeine.cache.sketch.TinyLfuSketch;
 public enum SketchType {
   Flat {
     @Override public <E> TinyLfuSketch<E> create(long estimatedSize) {
-      return new CountMinSketch<>(estimatedSize);
+      var frequencySketch = new CountMinSketch<E>();
+      frequencySketch.ensureCapacity(estimatedSize);
+      return new TinyLfuSketch<>() {
+        @Override public int frequency(E e) {
+          return frequencySketch.frequency(e);
+        }
+        @Override public void increment(E e) {
+          frequencySketch.increment(e);
+        }
+        @Override public void reset() {
+          frequencySketch.reset();
+        }
+      };
     }
   },
   Block {

@@ -28,7 +28,7 @@ import com.google.common.math.IntMath;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CountMinSketch<E> implements TinyLfuSketch<E> {
+public final class CountMinSketch<E> {
 
   /*
    * This class maintains a 4-bit CountMinSketch [1] with periodic aging to provide the popularity
@@ -63,9 +63,27 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
   long[] table;
   int size;
 
-  public CountMinSketch(@NonNegative long maximumSize) {
+  /**
+   * Creates a lazily initialized frequency sketch, requiring {@link #ensureCapacity} be called
+   * when the maximum size of the cache has been determined.
+   */
+  @SuppressWarnings({"NullAway.Init", "PMD.UnnecessaryConstructor"})
+  public CountMinSketch() {}
+
+  /**
+   * Initializes and increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary,
+   * to ensure that it can accurately estimate the popularity of elements given the maximum size of
+   * the cache. This operation forgets all previous counts when resizing.
+   *
+   * @param maximumSize the maximum size of the cache
+   */
+  public void ensureCapacity(@NonNegative long maximumSize) {
     checkArgument(maximumSize >= 0);
     int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
+    if ((table != null) && (table.length >= maximum)) {
+      return;
+    }
+
     table = new long[(maximum == 0) ? 1 : IntMath.ceilingPowerOfTwo(maximum)];
     tableMask = Math.max(0, table.length - 1);
     sampleSize = (maximumSize == 0) ? 10 : (10 * maximum);
@@ -76,13 +94,24 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
   }
 
   /**
+   * Returns if the sketch has not yet been initialized, requiring that {@link #ensureCapacity} is
+   * called before it begins to track frequencies.
+   */
+  public boolean isNotInitialized() {
+    return (table == null);
+  }
+
+  /**
    * Returns the estimated number of occurrences of an element, up to the maximum (15).
    *
    * @param e the element to count occurrences of
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
-  @Override
   public @NonNegative int frequency(E e) {
+    if (isNotInitialized()) {
+      return 0;
+    }
+
     int hash = spread(e.hashCode());
     int start = (hash & 3) << 2;
     int frequency = Integer.MAX_VALUE;
@@ -101,12 +130,15 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
    *
    * @param e the element to add
    */
-  @Override
   public void increment(E e) {
+    if (isNotInitialized()) {
+      return;
+    }
+
     int hash = spread(e.hashCode());
     int start = (hash & 3) << 2;
 
-    // Loop unrolling improves throughput
+    // Loop unrolling improves throughput by 5m ops/s
     int index0 = indexOf(hash, 0);
     int index1 = indexOf(hash, 1);
     int index2 = indexOf(hash, 2);
@@ -140,7 +172,6 @@ public final class CountMinSketch<E> implements TinyLfuSketch<E> {
   }
 
   /** Reduces every counter by half of its original value. */
-  @Override
   public void reset() {
     int count = 0;
     for (int i = 0; i < table.length; i++) {

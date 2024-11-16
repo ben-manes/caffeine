@@ -300,6 +300,11 @@
     <Class name="~com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7.*"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.sketch.CountMinSketch"/>
+    <Method name="reset"/>
+    <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.DelegationBenchmark$DelegateMap"/>
     <Method name="get"/>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>

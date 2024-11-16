@@ -1,7 +1,7 @@
 [versions]
 caffeine = "3.1.8"
 h2 = "2.3.232"
-hibernate = "7.0.0.Beta1"
+hibernate = "7.0.0.Beta2"
 junit = "5.11.3"
 log4j2 = "3.0.0-beta2"
 truth = "1.4.4"
@@ -16,7 +16,7 @@ hibernate-jpamodelgen = { module = "org.hibernate.orm:hibernate-jpamodelgen", ve
 hibernate-hikaricp = { module = "org.hibernate.orm:hibernate-hikaricp", version.ref = "hibernate" }
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 log4j2-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j2" }
-log4j2-slf4j = { module = "org.apache.logging.log4j:log4j-slf4j-impl", version.ref = "log4j2" }
+log4j2-slf4j = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j2" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
 
 [bundles]

@@ -65,7 +65,7 @@ runs:
         echo "JDK_CI=$JAVA_HOME" >> $GITHUB_ENV
         echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@d156388eb19639ec20ade50009f3d199ce1e2808 # v4.1.0
+      uses: gradle/actions/setup-gradle@473878a77f1b98e2b5ac4af93489d1656a80a5ed # v4.2.0
       env:
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
       with:

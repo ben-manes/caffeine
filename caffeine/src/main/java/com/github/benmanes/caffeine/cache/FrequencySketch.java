@@ -118,12 +118,13 @@ final class FrequencySketch<E> {
    * @param e the element to count occurrences of
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
+  @SuppressWarnings("Varifier")
   public @NonNegative int frequency(E e) {
     if (isNotInitialized()) {
       return 0;
     }
 
-    int[] count = new int[4];
+    @Var int frequency = Integer.MAX_VALUE;
     int blockHash = spread(e.hashCode());
     int counterHash = rehash(blockHash);
     int block = (blockHash & blockMask) << 3;
@@ -131,9 +132,11 @@ final class FrequencySketch<E> {
       int h = counterHash >>> (i << 3);
       int index = (h >>> 1) & 15;
       int offset = h & 1;
-      count[i] = (int) ((table[block + offset + (i << 1)] >>> (index << 2)) & 0xfL);
+      int slot = block + offset + (i << 1);
+      int count = (int) ((table[slot] >>> (index << 2)) & 0xfL);
+      frequency = Math.min(frequency, count);
     }
-    return Math.min(Math.min(count[0], count[1]), Math.min(count[2], count[3]));
+    return frequency;
   }
 
   /**
@@ -143,27 +146,37 @@ final class FrequencySketch<E> {
    *
    * @param e the element to add
    */
-  @SuppressWarnings("ShortCircuitBoolean")
+  @SuppressWarnings({"ShortCircuitBoolean", "UnnecessaryLocalVariable"})
   public void increment(E e) {
     if (isNotInitialized()) {
       return;
     }
 
-    int[] index = new int[8];
     int blockHash = spread(e.hashCode());
     int counterHash = rehash(blockHash);
     int block = (blockHash & blockMask) << 3;
-    for (int i = 0; i < 4; i++) {
-      int h = counterHash >>> (i << 3);
-      index[i] = (h >>> 1) & 15;
-      int offset = h & 1;
-      index[i + 4] = block + offset + (i << 1);
-    }
+
+    // Loop unrolling improves throughput by 10m ops/s
+    int h0 = counterHash;
+    int h1 = counterHash >>> 8;
+    int h2 = counterHash >>> 16;
+    int h3 = counterHash >>> 24;
+
+    int index0 = (h0 >>> 1) & 15;
+    int index1 = (h1 >>> 1) & 15;
+    int index2 = (h2 >>> 1) & 15;
+    int index3 = (h3 >>> 1) & 15;
+
+    int slot0 = block + (h0 & 1);
+    int slot1 = block + (h1 & 1) + 2;
+    int slot2 = block + (h2 & 1) + 4;
+    int slot3 = block + (h3 & 1) + 6;
+
     boolean added =
-          incrementAt(index[4], index[0])
-        | incrementAt(index[5], index[1])
-        | incrementAt(index[6], index[2])
-        | incrementAt(index[7], index[3]);
+          incrementAt(slot0, index0)
+        | incrementAt(slot1, index1)
+        | incrementAt(slot2, index2)
+        | incrementAt(slot3, index3);
 
     if (added && (++size == sampleSize)) {
       reset();
