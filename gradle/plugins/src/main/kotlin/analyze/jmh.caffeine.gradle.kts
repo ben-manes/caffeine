@@ -7,15 +7,22 @@ import me.champeau.jmh.JMHTask as JmhTask
 plugins {
   idea
   eclipse
-  `java-library`
   id("me.champeau.jmh")
   id("io.morethan.jmhreport")
+  id("java-library.caffeine")
 }
 
 configurations.jmh {
   extendsFrom(configurations["testImplementation"])
   exclude(module = "jazzer-junit")
   exclude(module = "slf4j-test")
+
+  resolutionStrategy {
+    if (java.toolchain.languageVersion.get().asInt() < 17) {
+      force("com.oracle.coherence.ce:coherence:22.06.10")
+      force("com.hazelcast:hazelcast:5.3.8")
+    }
+  }
 }
 
 dependencies {
@@ -29,6 +36,7 @@ jmh {
   warmupIterations = 3
   iterations = 3
   timeUnit = "s"
+  zip64 = true
 
   jvmArgs = defaultJvmArgs()
   failOnError = true

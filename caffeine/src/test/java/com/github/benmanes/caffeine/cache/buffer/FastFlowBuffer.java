@@ -56,6 +56,7 @@ final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void drainTo(Consumer<E> consumer) {
     long head = readCounter;
     long tail = writeCounterOpaque();

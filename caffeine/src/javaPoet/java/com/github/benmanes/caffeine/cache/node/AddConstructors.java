@@ -39,6 +39,7 @@ public final class AddConstructors implements NodeRule {
     addConstructorByKey(context);
     addConstructorByKeyRef(context);
     if (context.isBaseClass()) {
+      context.suppressedWarnings.add("unchecked");
       context.suppressedWarnings.add("PMD.UnusedFormalParameter");
     }
   }

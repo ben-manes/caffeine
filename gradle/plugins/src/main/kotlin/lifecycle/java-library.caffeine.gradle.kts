@@ -20,7 +20,7 @@ dependencies {
 
 val javaVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
 val javaVendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.matching(it) }
-val javaLtsVersion = JavaLanguageVersion.of(21)
+val javaRuntimeVersion = maxOf(javaVersion, JavaLanguageVersion.of(21))
 java.toolchain {
   languageVersion = javaVersion
   vendor = javaVendor
@@ -34,7 +34,7 @@ tasks.withType<JavaCompile>().configureEach {
 
   javaCompiler = javaToolchains.compilerFor {
     // jdk 17+ is required by compiler plugins, e.g. error-prone
-    languageVersion = maxOf(javaVersion, javaLtsVersion)
+    languageVersion = javaRuntimeVersion
   }
 
   options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",
@@ -52,7 +52,8 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.withType<JavaExec>().configureEach {
   jvmArgs(DisableStrongEncapsulationJvmArgs)
   javaLauncher = javaToolchains.launcherFor {
-    languageVersion = java.toolchain.languageVersion
+    // jdk 17+ is required by dependencies, e.g. google-java-format
+    languageVersion = javaRuntimeVersion
   }
 }
 
@@ -109,6 +110,6 @@ tasks.withType<Javadoc>().configureEach {
     }
   }
   javadocTool = javaToolchains.javadocToolFor {
-    languageVersion = maxOf(javaVersion, javaLtsVersion)
+    languageVersion = javaRuntimeVersion
   }
 }

@@ -13,7 +13,8 @@ find . -type f -name "settings.gradle.kts" | while read -r gradle_file; do
   echo -e "${BOLD}Evaluating...${RESET}"
 
   gradle=$( [[ -f "$project_dir/gradlew" ]] && echo "./$project_dir/gradlew" || echo "./gradlew" )
-  output=$($gradle --project-dir "$project_dir" dependencyUpdates --refresh-dependencies -q "$@" | \
+  output=$(JAVA_VERSION=21 \
+    $gradle --project-dir "$project_dir" dependencyUpdates --refresh-dependencies -q "$@" | \
     sed -e '/^------------------------------------------------------------/,/^$/d' \
         -e '/The following dependencies are using the latest milestone version:/,/^$/d' \
         -e '/Gradle release-candidate updates:/d' \

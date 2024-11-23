@@ -16,7 +16,7 @@ jobs:
       contents: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
         with:
           disable-sudo: true
           egress-policy: block
@@ -35,6 +35,6 @@ jobs:
             repo1.maven.org:443
             services.gradle.org:443
       - name: Retrieve and submit dependency graph
-        uses: gradle/actions/dependency-submission@473878a77f1b98e2b5ac4af93489d1656a80a5ed # v4.2.0
+        uses: gradle/actions/dependency-submission@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4.2.1
         with:
           dependency-graph: download-and-submit
