@@ -131,7 +131,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   /** Notify the removal listener of a replacement if the value reference was changed. */
   @SuppressWarnings("FutureReturnValueIgnored")
-  default void notifyOnReplace(K key, V oldValue, V newValue) {
+  default void notifyOnReplace(K key, @Nullable V oldValue, V newValue) {
     if ((oldValue == null) || (oldValue == newValue)) {
       return;
     } else if (isAsync()) {

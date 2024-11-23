@@ -1757,7 +1757,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Var Reference<? extends V> valueRef;
     while ((valueRef = valueReferenceQueue().poll()) != null) {
       @SuppressWarnings("unchecked")
-      var ref = (InternalReference<V>) valueRef;
+      var ref = (InternalReference<V>) (Object) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
       if ((node != null) && (valueRef == node.getValueReference())) {
         evictEntry(node, RemovalCause.COLLECTED, 0L);
@@ -2095,10 +2095,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @SuppressWarnings("GuardedByChecker")
   void removeNode(Node<K, V> node, long now) {
     K key = node.getKey();
-    @SuppressWarnings("unchecked")
-    var value = (V[]) new Object[1];
     var cause = new RemovalCause[1];
     var keyReference = node.getKeyReference();
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] value = (V[]) new Object[1];
 
     data.computeIfPresent(keyReference, (k, n) -> {
       if (n != node) {
@@ -2437,8 +2437,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     var castKey = (K) key;
     @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] node = new Node[1];
-    @SuppressWarnings("unchecked")
-    var oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] oldValue = (V[]) new Object[1];
     RemovalCause[] cause = new RemovalCause[1];
     Object lookupKey = nodeFactory.newLookupKey(key);
 
@@ -2479,10 +2479,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] removed = new Node[1];
-    @SuppressWarnings("unchecked")
-    var oldKey = (K[]) new Object[1];
-    @SuppressWarnings("unchecked")
-    var oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable K[] oldKey = (K[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] oldValue = (V[]) new Object[1];
     RemovalCause[] cause = new RemovalCause[1];
     Object lookupKey = nodeFactory.newLookupKey(key);
 
@@ -2526,10 +2526,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     long[] now = new long[1];
     var oldWeight = new int[1];
-    @SuppressWarnings("unchecked")
-    var nodeKey = (K[]) new Object[1];
-    @SuppressWarnings("unchecked")
-    var oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable K[] nodeKey = (K[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] oldValue = (V[]) new Object[1];
     int weight = weigher.weigh(key, value);
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
@@ -2555,7 +2555,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     });
 
-    if (oldValue[0] == null) {
+    if ((nodeKey[0] == null) || (oldValue[0] == null)) {
       return null;
     }
 
@@ -2582,11 +2582,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(newValue);
 
     int weight = weigher.weigh(key, newValue);
-    boolean[] replaced = new boolean[1];
-    @SuppressWarnings("unchecked")
-    var nodeKey = (K[]) new Object[1];
-    @SuppressWarnings("unchecked")
-    var prevValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable K[] nodeKey = (K[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] prevValue = (V[]) new Object[1];
     int[] oldWeight = new int[1];
     long[] now = new long[1];
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
@@ -2597,6 +2596,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         oldWeight[0] = n.getWeight();
         if ((nodeKey[0] == null) || (prevValue[0] == null) || !n.containsValue(oldValue)
             || hasExpired(n, now[0] = expirationTicker().read())) {
+          prevValue[0] = null;
           return n;
         }
 
@@ -2607,7 +2607,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setVariableTime(n, varTime);
         setAccessTime(n, now[0]);
         setWriteTime(n, now[0]);
-        replaced[0] = true;
 
         if (shouldDiscardRefresh) {
           discardRefresh(k);
@@ -2616,7 +2615,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return n;
     });
 
-    if (!replaced[0]) {
+    if ((nodeKey[0] == null) || (prevValue[0] == null)) {
       return false;
     }
 
@@ -2673,13 +2672,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** Returns the current value from a computeIfAbsent invocation. */
   @Nullable V doComputeIfAbsent(K key, Object keyRef,
-      Function<? super K, ? extends V> mappingFunction, long[/* 1 */] now, boolean recordStats) {
-    @SuppressWarnings("unchecked")
-    var oldValue = (V[]) new Object[1];
-    @SuppressWarnings("unchecked")
-    var newValue = (V[]) new Object[1];
-    @SuppressWarnings("unchecked")
-    var nodeKey = (K[]) new Object[1];
+      Function<? super K, ? extends @Nullable V> mappingFunction, long[/* 1 */] now,
+      boolean recordStats) {
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] newValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] removed = new Node[1];
 
@@ -2838,14 +2838,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    */
   @SuppressWarnings("PMD.EmptyControlStatement")
   @Nullable V remap(K key, Object keyRef,
-      BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       Expiry<? super K, ? super V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {
-    @SuppressWarnings("unchecked")
-    var nodeKey = (K[]) new Object[1];
-    @SuppressWarnings("unchecked")
-    var oldValue = (V[]) new Object[1];
-    @SuppressWarnings("unchecked")
-    var newValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable K[] nodeKey = (K[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] newValue = (V[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] removed = new Node[1];
 
@@ -2929,6 +2929,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     if (cause[0] != null) {
       if (cause[0] == RemovalCause.REPLACED) {
+        requireNonNull(newValue[0]);
         notifyOnReplace(key, oldValue[0], newValue[0]);
       } else {
         if (cause[0].wasEvicted()) {
@@ -3186,7 +3187,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /** Returns an entry for the given node if it can be used externally, else null. */
-  @Nullable CacheEntry<K, V> nodeToCacheEntry(Node<K, V> node, Function<V, V> transformer) {
+  @Nullable CacheEntry<K, V> nodeToCacheEntry(
+      Node<K, V> node, Function<@Nullable V, @Nullable V> transformer) {
     V value = transformer.apply(node.getValue());
     K key = node.getKey();
     long now;
@@ -3980,8 +3982,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @SuppressWarnings({"NullableOptional", "OptionalAssignedToNull"})
   static final class BoundedPolicy<K, V> implements Policy<K, V> {
+    final Function<@Nullable V, @Nullable V> transformer;
     final BoundedLocalCache<K, V> cache;
-    final Function<V, V> transformer;
     final boolean isWeighted;
 
     @Nullable Optional<Eviction<K, V>> eviction;
@@ -3990,7 +3992,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable Optional<FixedExpiration<K, V>> afterAccess;
     @Nullable Optional<VarExpiration<K, V>> variable;
 
-    BoundedPolicy(BoundedLocalCache<K, V> cache, Function<V, V> transformer, boolean isWeighted) {
+    BoundedPolicy(BoundedLocalCache<K, V> cache,
+        Function<@Nullable V, @Nullable V> transformer, boolean isWeighted) {
       this.transformer = transformer;
       this.isWeighted = isWeighted;
       this.cache = cache;
@@ -4523,7 +4526,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (policy == null) {
         @SuppressWarnings("unchecked")
         var castCache = (BoundedLocalCache<K, V>) cache;
-        Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
+        Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         var castTransformer = (Function<V, V>) transformer;
         policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
@@ -4575,7 +4578,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (policy == null) {
         @SuppressWarnings("unchecked")
         var castCache = (BoundedLocalCache<K, V>) cache;
-        Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
+        Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         var castTransformer = (Function<V, V>) transformer;
         policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);

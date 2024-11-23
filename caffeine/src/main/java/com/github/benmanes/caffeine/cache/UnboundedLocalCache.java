@@ -251,10 +251,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     requireNonNull(function);
 
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    var notificationKey = (K[]) new Object[1];
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    var notificationValue = (V[]) new Object[1];
+    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @Nullable K[] notificationKey = (K[]) new Object[1];
+    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @Nullable V[] notificationValue = (V[]) new Object[1];
     data.replaceAll((key, value) -> {
       if (notificationKey[0] != null) {
         notifyRemoval(notificationKey[0], notificationValue[0], RemovalCause.REPLACED);
@@ -1060,10 +1060,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   /** An eviction policy that supports no bounding. */
   static final class UnboundedPolicy<K, V> implements Policy<K, V> {
+    final Function<@Nullable V, @Nullable V> transformer;
     final UnboundedLocalCache<K, V> cache;
-    final Function<V, V> transformer;
 
-    UnboundedPolicy(UnboundedLocalCache<K, V> cache, Function<V, V> transformer) {
+    UnboundedPolicy(UnboundedLocalCache<K, V> cache,
+        Function<@Nullable V, @Nullable V> transformer) {
       this.transformer = transformer;
       this.cache = cache;
     }
@@ -1187,7 +1188,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public Policy<K, V> policy() {
       @SuppressWarnings("unchecked")
       var castCache = (UnboundedLocalCache<K, V>) cache;
-      Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
+      Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
       @SuppressWarnings("unchecked")
       var castTransformer = (Function<V, V>) transformer;
       return (policy == null)
@@ -1240,7 +1241,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public Policy<K, V> policy() {
       @SuppressWarnings("unchecked")
       var castCache = (UnboundedLocalCache<K, V>) cache;
-      Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
+      Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
       @SuppressWarnings("unchecked")
       var castTransformer = (Function<V, V>) transformer;
       return (policy == null)

@@ -71,6 +71,7 @@ tasks.withType<JavaCompile>().configureEach {
       checkOptionalEmptiness = true
       suggestSuppressions = true
       checkContracts = true
+      isJSpecifyMode = true
     }
   }
 }

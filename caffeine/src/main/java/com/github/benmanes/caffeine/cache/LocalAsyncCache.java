@@ -434,12 +434,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
       return future;
     }
-    @Override public CompletableFuture<V> computeIfPresent(K key, BiFunction<? super K,
+    @Override public @Nullable CompletableFuture<V> computeIfPresent(K key, BiFunction<? super K,
         ? super CompletableFuture<V>, ? extends CompletableFuture<V>> remappingFunction) {
       requireNonNull(remappingFunction);
 
       @SuppressWarnings({"rawtypes", "unchecked"})
-      CompletableFuture<V>[] result = new CompletableFuture[1];
+      @Nullable CompletableFuture<V>[] result = new CompletableFuture[1];
       long startTime = asyncCache.cache().statsTicker().read();
       asyncCache.cache().compute(key, (k, oldValue) -> {
         result[0] = (oldValue == null) ? null : remappingFunction.apply(k, oldValue);
@@ -796,8 +796,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     public @Nullable V replace(K key, V value) {
       requireNonNull(value);
 
-      @SuppressWarnings({"rawtypes", "unchecked"})
-      var oldValue = (V[]) new Object[1];
+      @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+      @Nullable V[] oldValue = (V[]) new Object[1];
       boolean[] done = { false };
       for (;;) {
         CompletableFuture<V> future = delegate.getIfPresentQuietly(key);

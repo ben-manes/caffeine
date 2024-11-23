@@ -206,10 +206,10 @@ final class CacheFactory {
 
     /** Creates a cache that does not read through on a cache miss. */
     private CacheProxy<K, V> newCacheProxy() {
-      Optional<CacheLoader<K, V>> cacheLoader =
-          Optional.ofNullable(config.getCacheLoaderFactory()).map(Factory::create);
+      var cacheLoaderFactory = config.getCacheLoaderFactory();
+      var cacheLoader = (cacheLoaderFactory == null) ? null : cacheLoaderFactory.create();
       return new CacheProxy<>(cacheName, executor, cacheManager, config, caffeine.build(),
-          dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
+          dispatcher, Optional.ofNullable(cacheLoader), expiryPolicy, ticker, statistics);
     }
 
     /** Creates a cache that reads through on a cache miss. */

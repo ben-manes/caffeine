@@ -254,7 +254,7 @@ abstract class LocalAsyncLoadingCache<K, V>
       long[] startTime = new long[1];
       boolean[] refreshed = new boolean[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
-      CompletableFuture<V>[] oldValueFuture = new CompletableFuture[1];
+      @Nullable CompletableFuture<V>[] oldValueFuture = new CompletableFuture[1];
       var future = asyncCache.cache().refreshes().computeIfAbsent(keyReference, k -> {
         oldValueFuture[0] = asyncCache.cache().getIfPresentQuietly(key);
         V oldValue = Async.getIfReady(oldValueFuture[0]);

@@ -101,8 +101,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     requireNonNull(key);
 
     long[] startTime = new long[1];
-    @SuppressWarnings("unchecked")
-    var oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] oldValue = (V[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
     CompletableFuture<? extends V>[] reloading = new CompletableFuture[1];
     Object keyReference = cache().referenceKey(key);
@@ -179,7 +179,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   }
 
   /** Returns a mapping function that adapts to {@link CacheLoader#load}. */
-  static <K, V> Function<K, V> newMappingFunction(CacheLoader<? super K, V> cacheLoader) {
+  static <K, V> Function<K, @Nullable V> newMappingFunction(CacheLoader<? super K, V> cacheLoader) {
     return key -> {
       try {
         return cacheLoader.load(key);
