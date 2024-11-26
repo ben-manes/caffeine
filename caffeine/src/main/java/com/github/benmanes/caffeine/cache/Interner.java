@@ -21,6 +21,8 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.jspecify.annotations.NullMarked;
+
 import com.github.benmanes.caffeine.cache.References.LookupKeyEqualsReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
 
@@ -34,6 +36,7 @@ import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
  * @param <E> the type of elements
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 public interface Interner<E> {
 

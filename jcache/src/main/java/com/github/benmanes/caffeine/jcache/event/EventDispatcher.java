@@ -35,7 +35,7 @@ import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListener;
 import javax.cache.event.EventType;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.google.errorprone.annotations.Var;
 
@@ -67,8 +67,8 @@ import com.google.errorprone.annotations.Var;
 public final class EventDispatcher<K, V> {
   static final Logger logger = System.getLogger(EventDispatcher.class.getName());
 
-  final ConcurrentMap<Registration<K, V>, ConcurrentMap<K, CompletableFuture<Void>>> dispatchQueues;
-  final ThreadLocal<List<CompletableFuture<Void>>> pending;
+  final ConcurrentMap<Registration<K, V>, ConcurrentMap<K, CompletableFuture<@Nullable Void>>> dispatchQueues;
+  final ThreadLocal<List<CompletableFuture<@Nullable Void>>> pending;
   final Executor executor;
 
   public EventDispatcher(Executor executor) {
@@ -195,7 +195,7 @@ public final class EventDispatcher<K, V> {
    * published.
    */
   public void awaitSynchronous() {
-    List<CompletableFuture<Void>> futures = pending.get();
+    var futures = pending.get();
     if (futures.isEmpty()) {
       return;
     }

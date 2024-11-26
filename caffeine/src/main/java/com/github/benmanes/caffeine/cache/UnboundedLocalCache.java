@@ -50,7 +50,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -374,7 +374,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       }
 
       replaced[0] = (newValue != null);
-      if ((value != null) && (newValue != value)) {
+      if (newValue != value) {
         oldValue[0] = value;
       }
 
@@ -545,7 +545,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     return (o == this) || data.equals(o);
   }
 
@@ -1041,9 +1041,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Policy<K, V> policy() {
-      return (policy == null)
-          ? (policy = new UnboundedPolicy<>(cache, identity()))
-          : policy;
+      if (policy == null) {
+        @SuppressWarnings("NullAway")
+        Function<@Nullable V, @Nullable V> identity = identity();
+        policy = new UnboundedPolicy<>(cache, identity);
+      }
+      return policy;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -1189,8 +1192,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       @SuppressWarnings("unchecked")
       var castCache = (UnboundedLocalCache<K, V>) cache;
       Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
-      @SuppressWarnings("unchecked")
-      var castTransformer = (Function<V, V>) transformer;
+      @SuppressWarnings({"NullAway", "unchecked", "Varifier"})
+      Function<@Nullable V, @Nullable V> castTransformer = (Function<V, V>) transformer;
       return (policy == null)
           ? (policy = new UnboundedPolicy<>(castCache, castTransformer))
           : policy;
@@ -1242,8 +1245,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       @SuppressWarnings("unchecked")
       var castCache = (UnboundedLocalCache<K, V>) cache;
       Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
-      @SuppressWarnings("unchecked")
-      var castTransformer = (Function<V, V>) transformer;
+      @SuppressWarnings({"NullAway", "unchecked", "Varifier"})
+      Function<@Nullable V, @Nullable V> castTransformer = (Function<V, V>) transformer;
       return (policy == null)
           ? (policy = new UnboundedPolicy<>(castCache, castTransformer))
           : policy;

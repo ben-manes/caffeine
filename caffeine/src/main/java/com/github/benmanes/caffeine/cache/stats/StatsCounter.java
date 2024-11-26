@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import java.util.Map;
 
-import org.checkerframework.checker.index.qual.NonNegative;
+import org.jspecify.annotations.NullMarked;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 public interface StatsCounter {
 
   /**
@@ -35,7 +36,7 @@ public interface StatsCounter {
    *
    * @param count the number of hits to record
    */
-  void recordHits(@NonNegative int count);
+  void recordHits(int count);
 
   /**
    * Records cache misses. This should be called when a cache request returns a value that was not
@@ -47,7 +48,7 @@ public interface StatsCounter {
    *
    * @param count the number of misses to record
    */
-  void recordMisses(@NonNegative int count);
+  void recordMisses(int count);
 
   /**
    * Records the successful load of a new entry. This method should be called when a cache request
@@ -57,7 +58,7 @@ public interface StatsCounter {
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    */
-  void recordLoadSuccess(@NonNegative long loadTime);
+  void recordLoadSuccess(long loadTime);
 
   /**
    * Records the failed load of a new entry. This method should be called when a cache request
@@ -68,7 +69,7 @@ public interface StatsCounter {
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    *        prior to discovering the value doesn't exist or an exception being thrown
    */
-  void recordLoadFailure(@NonNegative long loadTime);
+  void recordLoadFailure(long loadTime);
 
   /**
    * Records the eviction of an entry from the cache. This should only been called when an entry is
@@ -78,7 +79,7 @@ public interface StatsCounter {
    * @param weight the weight of the evicted entry
    * @param cause the reason for which the entry was removed
    */
-  void recordEviction(@NonNegative int weight, RemovalCause cause);
+  void recordEviction(int weight, RemovalCause cause);
 
   /**
    * Returns a snapshot of this counter's values. Note that this may be an inconsistent view, as it

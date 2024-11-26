@@ -38,6 +38,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.NullMarked;
+
 /**
  * A skeleton implementation where subclasses provide the serialization strategy. Serialization is
  * not performed if the type is a known immutable, an array of known immutable types, or specially
@@ -45,6 +47,7 @@ import java.util.regex.Pattern;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @SuppressWarnings({"ImmutableMemberCollection", "JavaUtilDate", "JdkObsolete"})
 public abstract class AbstractCopier<A> implements Copier {
   private static final Map<Class<?>, Function<Object, Object>> JAVA_DEEP_COPY = Map.of(Date.class,

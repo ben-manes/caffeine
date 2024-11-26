@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
 
-import org.checkerframework.checker.index.qual.NonNegative;
+import org.jspecify.annotations.NullMarked;
 
 /**
  * Calculates the weights of cache entries. The total weight threshold is used to determine when an
@@ -30,6 +30,7 @@ import org.checkerframework.checker.index.qual.NonNegative;
  * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 public interface Weigher<K, V> {
 
@@ -41,7 +42,6 @@ public interface Weigher<K, V> {
    * @param value the value to weigh
    * @return the weight of the entry; must be non-negative
    */
-  @NonNegative
   int weigh(K key, V value);
 
   /**

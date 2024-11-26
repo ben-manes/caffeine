@@ -1,6 +1,6 @@
 @NullMarked
 @CheckReturnValue
-package com.github.benmanes.caffeine.cache.simulator.parser.cachelib;
+package com.github.benmanes.caffeine.jcache.issues;
 
 import org.jspecify.annotations.NullMarked;
 

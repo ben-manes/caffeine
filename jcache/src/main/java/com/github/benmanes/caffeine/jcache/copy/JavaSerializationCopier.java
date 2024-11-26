@@ -31,6 +31,8 @@ import java.util.function.Function;
 
 import javax.cache.CacheException;
 
+import org.jspecify.annotations.NullMarked;
+
 /**
  * A strategy that uses Java serialization if a fast path approach is not applicable.
  * <p>
@@ -40,6 +42,7 @@ import javax.cache.CacheException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 public class JavaSerializationCopier extends AbstractCopier<byte[]> {
 
   public JavaSerializationCopier() {

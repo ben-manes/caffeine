@@ -26,11 +26,15 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
 /**
  * A scheduler that submits a task to an executor after a given delay.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 public interface Scheduler {
 
@@ -43,7 +47,8 @@ public interface Scheduler {
    * @param unit a {@code TimeUnit} determining how to interpret the {@code delay} parameter
    * @return a scheduled future representing the pending submission of the task
    */
-  Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit);
+  Future<? extends @Nullable Object> schedule(
+      Executor executor, Runnable command, long delay, TimeUnit unit);
 
   /**
    * Returns a scheduler that always returns a successfully completed future.
@@ -112,13 +117,14 @@ final class ExecutorServiceScheduler implements Scheduler, Serializable {
   }
 
   @Override
-  public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
+  public Future<? extends @Nullable Object> schedule(
+      Executor executor, Runnable command, long delay, TimeUnit unit) {
     requireNonNull(executor);
     requireNonNull(command);
     requireNonNull(unit);
 
     if (scheduledExecutorService.isShutdown()) {
-      return DisabledFuture.INSTANCE;
+      return DisabledFuture.instance();
     }
     return scheduledExecutorService.schedule(() -> {
       try {
@@ -143,13 +149,14 @@ final class GuardedScheduler implements Scheduler, Serializable {
   }
 
   @Override
-  public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
+  public Future<? extends @Nullable Object> schedule(
+      Executor executor, Runnable command, long delay, TimeUnit unit) {
     try {
-      Future<?> future = delegate.schedule(executor, command, delay, unit);
-      return (future == null) ? DisabledFuture.INSTANCE : future;
+      var future = delegate.schedule(executor, command, delay, unit);
+      return (future == null) ? DisabledFuture.instance() : future;
     } catch (Throwable t) {
       logger.log(Level.WARNING, "Exception thrown by scheduler; discarded task", t);
-      return DisabledFuture.INSTANCE;
+      return DisabledFuture.instance();
     }
   }
 }
@@ -158,17 +165,23 @@ enum DisabledScheduler implements Scheduler {
   INSTANCE;
 
   @Override
-  public Future<Void> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
+  public Future<? extends @Nullable Object> schedule(
+      Executor executor, Runnable command, long delay, TimeUnit unit) {
     requireNonNull(executor);
     requireNonNull(command);
     requireNonNull(unit);
-    return DisabledFuture.INSTANCE;
+    return DisabledFuture.instance();
   }
 }
 
 @SuppressWarnings("CheckedExceptionNotThrown")
-enum DisabledFuture implements Future<Void> {
+enum DisabledFuture implements Future<@Nullable Void> {
   INSTANCE;
+
+  @SuppressWarnings("NullAway")
+  static Future<? extends @Nullable Object> instance() {
+    return INSTANCE;
+  }
 
   @Override public boolean isDone() {
     return true;
@@ -179,11 +192,11 @@ enum DisabledFuture implements Future<Void> {
   @Override public boolean cancel(boolean mayInterruptIfRunning) {
     return false;
   }
-  @Override public Void get(long timeout, TimeUnit unit) {
+  @Override public @Nullable Void get(long timeout, TimeUnit unit) {
     requireNonNull(unit);
     return null;
   }
-  @Override public Void get() {
+  @Override public @Nullable Void get() {
     return null;
   }
 }

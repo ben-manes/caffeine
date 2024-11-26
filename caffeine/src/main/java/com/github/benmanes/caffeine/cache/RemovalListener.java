@@ -15,7 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * An object that can receive a notification when an entry is removed from a cache. The removal
@@ -32,6 +33,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <V> the most general type of values this listener can listen for; for example
  *        {@code Object} if any value is acceptable
  */
+@NullMarked
 @FunctionalInterface
 public interface RemovalListener<K, V> {
 

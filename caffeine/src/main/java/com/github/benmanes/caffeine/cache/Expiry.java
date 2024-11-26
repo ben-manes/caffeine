@@ -22,7 +22,7 @@ import java.io.Serializable;
 import java.time.Duration;
 import java.util.function.BiFunction;
 
-import org.checkerframework.checker.index.qual.NonNegative;
+import org.jspecify.annotations.NullMarked;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
@@ -42,6 +42,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 public interface Expiry<K, V> {
 
   /**
@@ -76,7 +77,7 @@ public interface Expiry<K, V> {
    * @param currentDuration the entry's current duration, in nanoseconds
    * @return the length of time before the entry expires, in nanoseconds
    */
-  long expireAfterUpdate(K key, V value, long currentTime, @NonNegative long currentDuration);
+  long expireAfterUpdate(K key, V value, long currentTime, long currentDuration);
 
   /**
    * Specifies that the entry should be automatically removed from the cache once the duration has
@@ -94,7 +95,7 @@ public interface Expiry<K, V> {
    * @param currentDuration the entry's current duration, in nanoseconds
    * @return the length of time before the entry expires, in nanoseconds
    */
-  long expireAfterRead(K key, V value, long currentTime, @NonNegative long currentDuration);
+  long expireAfterRead(K key, V value, long currentTime, long currentDuration);
 
   /**
    * Returns an {@code Expiry} that specifies that the entry should be automatically removed from

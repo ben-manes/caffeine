@@ -83,7 +83,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.cache.LinkedDeque.PeekingIterator;
@@ -1756,7 +1756,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
     @Var Reference<? extends V> valueRef;
     while ((valueRef = valueReferenceQueue().poll()) != null) {
-      @SuppressWarnings("unchecked")
+      @SuppressWarnings({"RedundantCast", "unchecked"})
       var ref = (InternalReference<V>) (Object) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
       if ((node != null) && (valueRef == node.getValueReference())) {
@@ -3011,7 +3011,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * {@link #size()} as many usages assume it to be instantaneous and lock-free.
    */
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (o == this) {
       return true;
     } else if (!(o instanceof Map)) {
@@ -3090,7 +3090,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return the computed value
    */
   @SuppressWarnings("GuardedByChecker")
-  <T> T evictionOrder(boolean hottest, Function<V, V> transformer,
+  <T> T evictionOrder(boolean hottest, Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     Comparator<Node<K, V>> comparator = Comparator.comparingInt(node -> {
       K key = node.getKey();
@@ -3125,7 +3125,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return the computed value
    */
   @SuppressWarnings("GuardedByChecker")
-  <T> T expireAfterAccessOrder(boolean oldest, Function<V, V> transformer,
+  <T> T expireAfterAccessOrder(boolean oldest, Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     Iterable<Node<K, V>> iterable;
     if (evicts()) {
@@ -3163,7 +3163,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param mappingFunction the mapping function to compute a value
    * @return the computed value
    */
-  <T> T snapshot(Iterable<Node<K, V>> iterable, Function<V, V> transformer,
+  <T> T snapshot(Iterable<Node<K, V>> iterable, Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     requireNonNull(mappingFunction);
     requireNonNull(transformer);
@@ -3865,7 +3865,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /** A reusable task that performs the maintenance work; used to avoid wrapping by ForkJoinPool. */
-  static final class PerformCleanupTask extends ForkJoinTask<Void> implements Runnable {
+  static final class PerformCleanupTask extends ForkJoinTask<@Nullable Void> implements Runnable {
     private static final long serialVersionUID = 1L;
 
     final WeakReference<BoundedLocalCache<?, ?>> reference;
@@ -3901,10 +3901,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
      */
     // public final void quietlyComplete() {}
 
-    @Override public Void getRawResult() { return null; }
-    @Override public void setRawResult(Void v) {}
-    @Override public void complete(Void value) {}
+    @Override public void setRawResult(@Nullable Void v) {}
+    @Override public void complete(@Nullable Void value) {}
     @Override public void completeExceptionally(Throwable ex) {}
+    @Override public @Nullable Void getRawResult() { return null; }
     @Override public boolean cancel(boolean mayInterruptIfRunning) { return false; }
   }
 
@@ -3967,8 +3967,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @Override
     public Policy<K, V> policy() {
-      var p = policy;
-      return (p == null) ? (policy = new BoundedPolicy<>(cache, identity(), cache.isWeighted)) : p;
+      if (policy == null) {
+        @SuppressWarnings("NullAway")
+        Function<@Nullable V, @Nullable V> identity = identity();
+        policy = new BoundedPolicy<>(cache, identity, cache.isWeighted);
+      }
+      return policy;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -4527,8 +4531,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         var castCache = (BoundedLocalCache<K, V>) cache;
         Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
-        @SuppressWarnings("unchecked")
-        var castTransformer = (Function<V, V>) transformer;
+        @SuppressWarnings({"NullAway", "unchecked", "Varifier"})
+        Function<@Nullable V, @Nullable V> castTransformer = (Function<V, V>) transformer;
         policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
       }
       return policy;
@@ -4579,8 +4583,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         var castCache = (BoundedLocalCache<K, V>) cache;
         Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
-        @SuppressWarnings("unchecked")
-        var castTransformer = (Function<V, V>) transformer;
+        @SuppressWarnings({"NullAway", "unchecked", "Varifier"})
+        Function<@Nullable V, @Nullable V> castTransformer = (Function<V, V>) transformer;
         policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
       }
       return policy;

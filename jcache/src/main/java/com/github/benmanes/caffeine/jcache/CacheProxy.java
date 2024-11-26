@@ -59,8 +59,7 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.checkerframework.checker.nullness.qual.PolyNull;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
@@ -1110,7 +1109,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return a copy of the object if storing by value or the same instance if by reference
    */
   @SuppressWarnings("NullAway")
-  protected final <T> @PolyNull T copyOf(@PolyNull @Nullable T object) {
+  protected final <T> T copyOf(@Nullable T object) {
     if (object == null) {
       return null;
     }
@@ -1125,7 +1124,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return a copy of the value if storing by value or the same instance if by reference
    */
   @SuppressWarnings("NullAway")
-  protected final @PolyNull V copyValue(@PolyNull Expirable<V> expirable) {
+  protected final V copyValue(@Nullable Expirable<V> expirable) {
     if (expirable == null) {
       return null;
     }

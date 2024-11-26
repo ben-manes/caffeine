@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 
-import org.checkerframework.checker.index.qual.NonNegative;
-
 import com.google.errorprone.annotations.Var;
 
 /**
@@ -88,7 +86,7 @@ final class FrequencySketch<E> {
    * @param maximumSize the maximum size of the cache
    */
   @SuppressWarnings("Varifier")
-  public void ensureCapacity(@NonNegative long maximumSize) {
+  public void ensureCapacity(long maximumSize) {
     requireArgument(maximumSize >= 0);
     int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {
@@ -119,7 +117,7 @@ final class FrequencySketch<E> {
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
   @SuppressWarnings("Varifier")
-  public @NonNegative int frequency(E e) {
+  public int frequency(E e) {
     if (isNotInitialized()) {
       return 0;
     }

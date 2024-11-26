@@ -23,7 +23,7 @@ import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.Objects;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Static utility methods and classes pertaining to weak and soft references.
@@ -83,7 +83,7 @@ final class References {
      * @return {@code true} if this object is equivalent by {@link Object#equals} as the argument;
      *         {@code false} otherwise
      */
-    default boolean objectEquals(Object object) {
+    default boolean objectEquals(@Nullable Object object) {
       if (object == this) {
         return true;
       } else if (object instanceof InternalReference<?>) {
@@ -119,7 +119,7 @@ final class References {
     }
 
     @Override
-    public boolean equals(Object object) {
+    public boolean equals(@Nullable Object object) {
       return referenceEquals(object);
     }
 
@@ -160,7 +160,7 @@ final class References {
     }
 
     @Override
-    public boolean equals(Object object) {
+    public boolean equals(@Nullable Object object) {
       return objectEquals(object);
     }
 
@@ -195,7 +195,7 @@ final class References {
     }
 
     @Override
-    public boolean equals(Object object) {
+    public boolean equals(@Nullable Object object) {
       return referenceEquals(object);
     }
 
@@ -231,7 +231,7 @@ final class References {
     }
 
     @Override
-    public boolean equals(Object object) {
+    public boolean equals(@Nullable Object object) {
       return objectEquals(object);
     }
 
@@ -272,7 +272,7 @@ final class References {
     }
 
     @Override
-    public boolean equals(Object object) {
+    public boolean equals(@Nullable Object object) {
       return referenceEquals(object);
     }
 
@@ -313,7 +313,7 @@ final class References {
     }
 
     @Override
-    public boolean equals(Object object) {
+    public boolean equals(@Nullable Object object) {
       return referenceEquals(object);
     }
 

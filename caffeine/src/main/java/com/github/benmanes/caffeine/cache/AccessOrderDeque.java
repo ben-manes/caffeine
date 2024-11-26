@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Deque;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
 

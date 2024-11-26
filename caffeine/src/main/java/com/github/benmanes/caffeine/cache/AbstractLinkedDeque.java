@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.google.errorprone.annotations.Var;
 
@@ -192,12 +192,12 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   public abstract boolean contains(Object o);
 
   @Override
-  public boolean isFirst(E e) {
+  public boolean isFirst(@Nullable E e) {
     return (e != null) && (e == first);
   }
 
   @Override
-  public boolean isLast(E e) {
+  public boolean isLast(@Nullable E e) {
     return (e != null) && (e == last);
   }
 

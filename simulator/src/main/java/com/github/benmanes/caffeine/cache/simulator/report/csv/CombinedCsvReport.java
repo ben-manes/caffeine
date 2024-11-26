@@ -26,6 +26,8 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.univocity.parsers.csv.CsvParser;
@@ -113,7 +115,7 @@ public final class CombinedCsvReport implements Runnable {
       this.size = size;
     }
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       return (o instanceof Label) && (compareTo((Label) o) == 0);
     }
     @Override

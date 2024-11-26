@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import org.jspecify.annotations.NullMarked;
+
 /**
  * The reason why a cached entry was removed.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 public enum RemovalCause {
 
   /**

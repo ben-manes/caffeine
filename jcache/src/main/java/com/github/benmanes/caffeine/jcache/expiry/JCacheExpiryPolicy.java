@@ -23,7 +23,7 @@ import java.util.Objects;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A customized expiration policy.
@@ -60,7 +60,7 @@ public final class JCacheExpiryPolicy implements ExpiryPolicy, Serializable {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (o == this) {
       return true;
     } else if (!(o instanceof ExpiryPolicy)) {

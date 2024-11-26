@@ -22,6 +22,8 @@ import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListener;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * The registration of a {@link CacheEntryListener} for event dispatching.
  *
@@ -61,7 +63,7 @@ public final class Registration<K, V> {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (o == this) {
       return true;
     } else if (!(o instanceof Registration)) {

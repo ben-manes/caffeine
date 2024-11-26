@@ -22,7 +22,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -218,7 +218,7 @@ public final class CampPolicy implements Policy {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       if (this == o) {
         return true;
       } else if (!(o instanceof Sentinel)) {

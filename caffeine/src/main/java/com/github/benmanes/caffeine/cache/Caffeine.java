@@ -36,8 +36,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncEvictionListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
@@ -137,6 +137,7 @@ import com.google.errorprone.annotations.FormatMethod;
  *     normally {@code Object} unless it is constrained by using a method like {@code
  *     #removalListener}
  */
+@NullMarked
 public final class Caffeine<K, V> {
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
   static final Logger logger = System.getLogger(Caffeine.class.getName());
@@ -309,7 +310,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if an initial capacity was already set
    */
   @CanIgnoreReturnValue
-  public Caffeine<K, V> initialCapacity(@NonNegative int initialCapacity) {
+  public Caffeine<K, V> initialCapacity(int initialCapacity) {
     requireState(this.initialCapacity == UNSET_INT,
         "initial capacity was already set to %s", this.initialCapacity);
     requireArgument(initialCapacity >= 0);
@@ -407,7 +408,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a maximum size or weight was already set
    */
   @CanIgnoreReturnValue
-  public Caffeine<K, V> maximumSize(@NonNegative long maximumSize) {
+  public Caffeine<K, V> maximumSize(long maximumSize) {
     requireState(this.maximumSize == UNSET_INT,
         "maximum size was already set to %s", this.maximumSize);
     requireState(this.maximumWeight == UNSET_INT,
@@ -444,7 +445,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a maximum weight or size was already set
    */
   @CanIgnoreReturnValue
-  public Caffeine<K, V> maximumWeight(@NonNegative long maximumWeight) {
+  public Caffeine<K, V> maximumWeight(long maximumWeight) {
     requireState(this.maximumWeight == UNSET_INT,
         "maximum weight was already set to %s", this.maximumWeight);
     requireState(this.maximumSize == UNSET_INT,
@@ -652,7 +653,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the time to live or variable expiration was already set
    */
   @CanIgnoreReturnValue
-  public Caffeine<K, V> expireAfterWrite(@NonNegative long duration, TimeUnit unit) {
+  public Caffeine<K, V> expireAfterWrite(long duration, TimeUnit unit) {
     requireState(expireAfterWriteNanos == UNSET_INT,
         "expireAfterWrite was already set to %s ns", expireAfterWriteNanos);
     requireState(expiry == null, "expireAfterWrite may not be used with variable expiration");
@@ -716,7 +717,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the time to idle or variable expiration was already set
    */
   @CanIgnoreReturnValue
-  public Caffeine<K, V> expireAfterAccess(@NonNegative long duration, TimeUnit unit) {
+  public Caffeine<K, V> expireAfterAccess(long duration, TimeUnit unit) {
     requireState(expireAfterAccessNanos == UNSET_INT,
         "expireAfterAccess was already set to %s ns", expireAfterAccessNanos);
     requireState(expiry == null, "expireAfterAccess may not be used with variable expiration");
@@ -836,7 +837,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the refresh interval was already set
    */
   @CanIgnoreReturnValue
-  public Caffeine<K, V> refreshAfterWrite(@NonNegative long duration, TimeUnit unit) {
+  public Caffeine<K, V> refreshAfterWrite(long duration, TimeUnit unit) {
     requireNonNull(unit);
     requireState(refreshAfterWriteNanos == UNSET_INT,
         "refreshAfterWriteNanos was already set to %s ns", refreshAfterWriteNanos);

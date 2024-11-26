@@ -20,7 +20,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
 import java.io.Serializable;
 import java.time.Duration;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Serializes the configuration of the cache, reconstituting it as a {@link Cache},

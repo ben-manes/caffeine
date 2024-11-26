@@ -33,7 +33,8 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.Scheduler;
@@ -53,6 +54,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<K, V> {
   private static final Factory<Scheduler> DISABLED_SCHEDULER = Scheduler::disabledScheduler;
   private static final Factory<Copier> JAVA_COPIER = JavaSerializationCopier::new;
@@ -606,7 +608,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (o == this) {
       return true;
     } else if (!(o instanceof CaffeineConfiguration<?, ?>)) {

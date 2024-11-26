@@ -7,7 +7,6 @@ bnd = "7.0.0"
 bouncycastle-jdk18on = "1.79"
 cache2k = "2.6.1.Final"
 caffeine = "3.1.8"
-checker-framework = "3.48.2"
 checkstyle = "10.20.1"
 coherence = "24.09"
 commons-collections4 = "4.4"
@@ -58,6 +57,7 @@ jmh = "1.37"
 jmh-plugin = "0.7.2"
 jmh-report = "0.9.6"
 joor = "0.9.15"
+jspecify = "1.0.0"
 json-bind = "1.0"
 jsoup = "1.18.1"
 junit-testng = "1.0.5"
@@ -96,7 +96,7 @@ versions = "0.51.0"
 xz = "1.10"
 ycsb = "0.17.0"
 zero-allocation-hashing = "0.27ea0"
-zstd = "1.5.6-7"
+zstd = "1.5.6-8"
 
 [libraries]
 asm-bom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }
@@ -107,7 +107,6 @@ bcel = { module = "org.apache.bcel:bcel", version.ref = "bcel" }
 bouncycastle-jdk18on = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle-jdk18on" }
 cache2k = { module = "org.cache2k:cache2k-core", version.ref = "cache2k" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
-checker-annotations = { module = "org.checkerframework:checker-qual", version.ref = "checker-framework" }
 checkstyle = { module = "com.puppycrawl.tools:checkstyle", version.ref = "checkstyle" }
 coherence = { module = "com.oracle.coherence.ce:coherence", version.ref = "coherence" }
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commons-collections4" }
@@ -160,6 +159,7 @@ jfreechart = { module = "org.jfree:jfreechart", version.ref = "jfreechart" }
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 jmh = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
 joor = { module = "org.jooq:joor", version.ref = "joor" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 json-bind = { module = "javax.json.bind:javax.json.bind-api", version.ref = "json-bind" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }

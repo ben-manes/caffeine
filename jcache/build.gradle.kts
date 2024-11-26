@@ -79,14 +79,15 @@ tasks.jar {
     "Automatic-Module-Name" to "com.github.benmanes.caffeine.jcache",
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine.jcache",
     "Import-Package" to listOf(
-      "!org.checkerframework.*",
+      "!org.jspecify.annotations.*",
       "!com.google.errorprone.annotations.*",
-      "jakarta.inject.*;resolution:=\"optional\"",
+      "jakarta.inject.*;resolution:=optional",
       "*").joinToString(","),
     "Export-Package" to listOf(
-      "com.github.benmanes.caffeine.jcache.spi",
-      "com.github.benmanes.caffeine.jcache.copy",
-      "com.github.benmanes.caffeine.jcache.configuration").joinToString(","),
+      "com.github.benmanes.caffeine.jcache.spi;uses:=\"!org.jspecify.annotations\"",
+      "com.github.benmanes.caffeine.jcache.copy;uses:=\"!org.jspecify.annotations\"",
+      "com.github.benmanes.caffeine.jcache.configuration;uses:=\"!org.jspecify.annotations\""
+    ).joinToString(","),
     "-exportcontents" to "\${removeall;\${packages;VERSIONED};\${packages;CONDITIONAL}}"))
 }
 

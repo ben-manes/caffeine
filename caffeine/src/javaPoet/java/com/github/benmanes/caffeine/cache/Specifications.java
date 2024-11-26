@@ -20,7 +20,7 @@ import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterSpec;

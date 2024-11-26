@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.guava;
 
 import java.lang.reflect.Method;
 
+import org.jspecify.annotations.NullMarked;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalBulkLoader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalSingleLoader;
@@ -31,6 +33,7 @@ import com.google.common.cache.LoadingCache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 public final class CaffeinatedGuava {
 
   private CaffeinatedGuava() {}

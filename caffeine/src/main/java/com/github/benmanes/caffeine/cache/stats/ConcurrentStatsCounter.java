@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.LongAdder;
 
+import org.jspecify.annotations.NullMarked;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 
@@ -27,6 +29,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 public final class ConcurrentStatsCounter implements StatsCounter {
   private final LongAdder hitCount;
   private final LongAdder missCount;

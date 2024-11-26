@@ -97,7 +97,7 @@ tasks.withType<Javadoc>().configureEach {
     addStringOption("-release", javaVersion.toString())
     addStringOption("-link-modularity-mismatch", "info")
     links(
-      "https://checkerframework.org/api/",
+      "https://jspecify.dev/docs/api/",
       "https://errorprone.info/api/latest/",
       "https://lightbend.github.io/config/latest/api/",
       "https://docs.oracle.com/en/java/javase/$javaVersion/docs/api/",

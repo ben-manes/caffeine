@@ -29,7 +29,7 @@ val javaPoetRuntimeOnly: Configuration = configurations["javaPoetRuntimeOnly"]
 val javaPoetImplementation: Configuration = configurations["javaPoetImplementation"]
 
 dependencies {
-  api(libs.checker.annotations)
+  api(libs.jspecify)
   api(libs.errorprone.annotations)
 
   testImplementation(libs.joor)
@@ -75,6 +75,7 @@ dependencies {
 
   javaPoetImplementation(libs.guava)
   javaPoetImplementation(libs.javapoet)
+  javaPoetImplementation(libs.jspecify)
   javaPoetImplementation(libs.commons.lang3)
 
   javaPoetRuntimeOnly(libs.google.java.format)

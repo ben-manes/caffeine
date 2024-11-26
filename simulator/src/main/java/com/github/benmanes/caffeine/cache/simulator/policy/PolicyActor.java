@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.google.common.collect.ImmutableList;
 
@@ -30,12 +32,12 @@ import com.google.common.collect.ImmutableList;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class PolicyActor {
-  private final CompletableFuture<Void> completed;
+  private final CompletableFuture<@Nullable Void> completed;
   private final Semaphore semaphore;
   private final Policy policy;
   private final Thread parent;
 
-  private CompletableFuture<Void> future;
+  private CompletableFuture<@Nullable Void> future;
 
   /**
    * Creates an actor that executes the policy actions asynchronously over a buffered channel.
@@ -63,7 +65,7 @@ public final class PolicyActor {
   }
 
   /** Return the future that signals the policy's completion. */
-  public CompletableFuture<Void> completed() {
+  public CompletableFuture<@Nullable Void> completed() {
     return completed;
   }
 

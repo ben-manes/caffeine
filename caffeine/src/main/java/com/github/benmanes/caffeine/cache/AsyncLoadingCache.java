@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.jspecify.annotations.NullMarked;
+
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache
  * asynchronously and are stored in the cache until either evicted or manually invalidated.
@@ -29,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
+@NullMarked
 public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
 
   /**

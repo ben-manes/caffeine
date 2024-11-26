@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
 import com.google.errorprone.annotations.Immutable;
 
@@ -59,7 +61,7 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
   @Override public long snapshotAt() {
     return snapshot;
   }
-  @Override public boolean equals(Object o) {
+  @Override public boolean equals(@Nullable Object o) {
     if (o == this) {
       return true;
     } else if (!(o instanceof Map.Entry)) {

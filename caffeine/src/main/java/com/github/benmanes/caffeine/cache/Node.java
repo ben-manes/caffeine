@@ -19,8 +19,7 @@ import static java.util.Locale.US;
 
 import java.lang.ref.ReferenceQueue;
 
-import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
 import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
@@ -64,23 +63,23 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
 
   /** Returns the weight of this entry from the entry's perspective. */
   @GuardedBy("this")
-  public @NonNegative int getWeight() {
+  public int getWeight() {
     return 1;
   }
 
   /** Sets the weight from the entry's perspective. */
   @GuardedBy("this")
-  public void setWeight(@NonNegative int weight) {}
+  public void setWeight(int weight) {}
 
   /** Returns the weight of this entry from the policy's perspective. */
   // @GuardedBy("evictionLock")
-  public @NonNegative int getPolicyWeight() {
+  public int getPolicyWeight() {
     return 1;
   }
 
   /** Sets the weight from the policy's perspective. */
   // @GuardedBy("evictionLock")
-  public void setPolicyWeight(@NonNegative int weight) {}
+  public void setPolicyWeight(int weight) {}
 
   /* --------------- Health --------------- */
 

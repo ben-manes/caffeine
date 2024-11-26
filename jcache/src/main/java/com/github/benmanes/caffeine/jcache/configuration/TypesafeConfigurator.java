@@ -41,7 +41,8 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.jcache.expiry.JCacheExpiryPolicy;
 import com.google.errorprone.annotations.Var;
@@ -59,6 +60,7 @@ import jakarta.inject.Inject;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.MutableStaticState"})
 public final class TypesafeConfigurator {
   static final Logger logger = System.getLogger(TypesafeConfigurator.class.getName());

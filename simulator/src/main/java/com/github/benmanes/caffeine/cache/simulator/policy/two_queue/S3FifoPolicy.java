@@ -21,7 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.LinkedHashSet;
 import java.util.function.IntConsumer;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;

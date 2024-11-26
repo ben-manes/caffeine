@@ -44,7 +44,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -195,7 +195,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     handleCompletion(key, valueFuture, startTime, /* recordMiss= */ false);
   }
 
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"FutureReturnValueIgnored", "SuspiciousMethodCalls"})
   default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
       long startTime, boolean recordMiss) {
     var completed = new AtomicBoolean();
@@ -500,7 +500,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return asyncCache.cache().entrySet();
     }
     @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
-    @Override public boolean equals(Object o) {
+    @Override public boolean equals(@Nullable Object o) {
       return asyncCache.cache().equals(o);
     }
     @Override public int hashCode() {
@@ -1022,7 +1022,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     /** See {@link BoundedLocalCache#equals(Object)} for semantics. */
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       if (o == this) {
         return true;
       } else if (!(o instanceof Map)) {

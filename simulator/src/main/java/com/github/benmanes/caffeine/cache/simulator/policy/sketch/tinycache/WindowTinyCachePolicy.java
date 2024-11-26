@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCache;

@@ -24,6 +24,8 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NullMarked;
+
 /**
  * Computes or retrieves values asynchronously based on a key, for use in populating a
  * {@link AsyncLoadingCache}.
@@ -42,6 +44,7 @@ import java.util.function.Function;
  * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 @SuppressWarnings("PMD.SignatureDeclareThrowsException")
 public interface AsyncCacheLoader<K, V> {

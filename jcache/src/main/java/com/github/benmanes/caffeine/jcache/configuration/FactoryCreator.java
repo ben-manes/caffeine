@@ -17,11 +17,14 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import javax.cache.configuration.Factory;
 
+import org.jspecify.annotations.NullMarked;
+
 /**
  * An object capable of providing factories that produce an instance for a given class name.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 public interface FactoryCreator {
 

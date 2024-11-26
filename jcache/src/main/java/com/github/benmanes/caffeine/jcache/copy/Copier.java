@@ -15,12 +15,15 @@
  */
 package com.github.benmanes.caffeine.jcache.copy;
 
+import org.jspecify.annotations.NullMarked;
+
 /**
  * An object is copied when the cache is configured with <code>storeByValue</code> to guard against
  * mutations of the key or value.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 public interface Copier {
 

@@ -24,7 +24,7 @@ import javax.cache.Caching;
 import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;

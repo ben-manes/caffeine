@@ -23,7 +23,8 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A semi-persistent mapping from keys to values. Cache entries are manually added using
@@ -37,6 +38,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
+@NullMarked
 public interface AsyncCache<K, V> {
 
   /**

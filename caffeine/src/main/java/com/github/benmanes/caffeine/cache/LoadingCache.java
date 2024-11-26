@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.jspecify.annotations.NullMarked;
+
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
@@ -32,6 +34,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
+@NullMarked
 public interface LoadingCache<K, V> extends Cache<K, V> {
 
   /**

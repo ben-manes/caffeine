@@ -24,7 +24,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Computes or retrieves values, based on a key, for use in populating a {@link LoadingCache} or
@@ -43,6 +44,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 @SuppressWarnings({"FunctionalInterfaceMethodChanged", "PMD.SignatureDeclareThrowsException"})
 public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {

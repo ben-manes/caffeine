@@ -15,12 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import org.jspecify.annotations.NullMarked;
+
 /**
  * A time source that returns a time value representing the number of nanoseconds elapsed since some
  * fixed but arbitrary point in time.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 public interface Ticker {
 

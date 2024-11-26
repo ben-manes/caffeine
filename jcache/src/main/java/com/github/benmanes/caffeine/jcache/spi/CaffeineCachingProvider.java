@@ -33,7 +33,8 @@ import javax.cache.Caching;
 import javax.cache.configuration.OptionalFeature;
 import javax.cache.spi.CachingProvider;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 
@@ -54,6 +55,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Component
+@NullMarked
 public final class CaffeineCachingProvider implements CachingProvider {
   private static final ClassLoader DEFAULT_CLASS_LOADER = new JCacheClassLoader();
 

@@ -20,9 +20,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.checkerframework.checker.nullness.qual.PolyNull;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
@@ -38,6 +37,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
+@NullMarked
 public interface Cache<K, V> {
 
   /**
@@ -77,8 +77,7 @@ public interface Cache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
    *         left unestablished
    */
-  @PolyNull
-  V get(K key, Function<? super K, ? extends @PolyNull V> mappingFunction);
+  V get(K key, Function<? super K, ? extends V> mappingFunction);
 
   /**
    * Returns a map of the values associated with the {@code keys} in this cache. The returned map
@@ -180,7 +179,6 @@ public interface Cache<K, V> {
    *
    * @return the estimated number of mappings
    */
-  @NonNegative
   long estimatedSize();
 
   /**

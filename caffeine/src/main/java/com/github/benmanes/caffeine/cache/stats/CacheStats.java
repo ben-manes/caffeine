@@ -17,8 +17,8 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import java.util.Objects;
 
-import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -61,6 +61,7 @@ import com.google.errorprone.annotations.Immutable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Immutable
+@NullMarked
 public final class CacheStats {
   private static final CacheStats EMPTY_STATS = CacheStats.of(0L, 0L, 0L, 0L, 0L, 0L, 0L);
 
@@ -72,10 +73,8 @@ public final class CacheStats {
   private final long evictionCount;
   private final long evictionWeight;
 
-  private CacheStats(@NonNegative long hitCount, @NonNegative long missCount,
-      @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
-      @NonNegative long totalLoadTime, @NonNegative long evictionCount,
-      @NonNegative long evictionWeight) {
+  private CacheStats(long hitCount, long missCount, long loadSuccessCount, long loadFailureCount,
+      long totalLoadTime, long evictionCount, long evictionWeight) {
     if ((hitCount < 0) || (missCount < 0) || (loadSuccessCount < 0) || (loadFailureCount < 0)
         || (totalLoadTime < 0) || (evictionCount < 0) || (evictionWeight < 0)) {
       throw new IllegalArgumentException();
@@ -100,11 +99,10 @@ public final class CacheStats {
    * @param evictionCount the number of entries evicted from the cache
    * @param evictionWeight the sum of weights of entries evicted from the cache
    * @return a {@code CacheStats} representing the specified statistics
+   * @throws IllegalArgumentException if the metric is negative
    */
-  public static CacheStats of(@NonNegative long hitCount, @NonNegative long missCount,
-      @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
-      @NonNegative long totalLoadTime, @NonNegative long evictionCount,
-      @NonNegative long evictionWeight) {
+  public static CacheStats of(long hitCount, long missCount, long loadSuccessCount,
+      long loadFailureCount, long totalLoadTime, long evictionCount, long evictionWeight) {
     // Many parameters of the same type in a row is a bad thing, but this class is not constructed
     // by end users and is too fine-grained for a builder.
     return new CacheStats(hitCount, missCount, loadSuccessCount,
@@ -130,7 +128,7 @@ public final class CacheStats {
    *
    * @return the {@code hitCount + missCount}
    */
-  public @NonNegative long requestCount() {
+  public long requestCount() {
     return saturatedAdd(hitCount, missCount);
   }
 
@@ -139,7 +137,7 @@ public final class CacheStats {
    *
    * @return the number of times {@link Cache} lookup methods have returned a cached value
    */
-  public @NonNegative long hitCount() {
+  public long hitCount() {
     return hitCount;
   }
 
@@ -150,7 +148,7 @@ public final class CacheStats {
    *
    * @return the ratio of cache requests which were hits
    */
-  public @NonNegative double hitRate() {
+  public double hitRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
   }
@@ -164,7 +162,7 @@ public final class CacheStats {
    * @return the number of times {@link Cache} lookup methods have returned an uncached (newly
    *         loaded) value, or null
    */
-  public @NonNegative long missCount() {
+  public long missCount() {
     return missCount;
   }
 
@@ -179,7 +177,7 @@ public final class CacheStats {
    *
    * @return the ratio of cache requests which were misses
    */
-  public @NonNegative double missRate() {
+  public double missRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
   }
@@ -195,7 +193,7 @@ public final class CacheStats {
    *
    * @return the {@code loadSuccessCount + loadFailureCount}
    */
-  public @NonNegative long loadCount() {
+  public long loadCount() {
     return saturatedAdd(loadSuccessCount, loadFailureCount);
   }
 
@@ -208,7 +206,7 @@ public final class CacheStats {
    *
    * @return the number of times {@link Cache} lookup methods have successfully loaded a new value
    */
-  public @NonNegative long loadSuccessCount() {
+  public long loadSuccessCount() {
     return loadSuccessCount;
   }
 
@@ -221,7 +219,7 @@ public final class CacheStats {
    *
    * @return the number of times {@link Cache} lookup methods failed to load a new value
    */
-  public @NonNegative long loadFailureCount() {
+  public long loadFailureCount() {
     return loadFailureCount;
   }
 
@@ -236,7 +234,7 @@ public final class CacheStats {
    *
    * @return the ratio of cache loading attempts which threw exceptions
    */
-  public @NonNegative double loadFailureRate() {
+  public double loadFailureRate() {
     long totalLoadCount = saturatedAdd(loadSuccessCount, loadFailureCount);
     return (totalLoadCount == 0) ? 0.0 : (double) loadFailureCount / totalLoadCount;
   }
@@ -248,7 +246,7 @@ public final class CacheStats {
    *
    * @return the total number of nanoseconds the cache has spent loading new values
    */
-  public @NonNegative long totalLoadTime() {
+  public long totalLoadTime() {
     return totalLoadTime;
   }
 
@@ -262,7 +260,7 @@ public final class CacheStats {
    *
    * @return the average number of nanoseconds spent loading new values
    */
-  public @NonNegative double averageLoadPenalty() {
+  public double averageLoadPenalty() {
     long totalLoadCount = saturatedAdd(loadSuccessCount, loadFailureCount);
     return (totalLoadCount == 0) ? 0.0 : (double) totalLoadTime / totalLoadCount;
   }
@@ -273,7 +271,7 @@ public final class CacheStats {
    *
    * @return the number of times an entry has been evicted
    */
-  public @NonNegative long evictionCount() {
+  public long evictionCount() {
     return evictionCount;
   }
 
@@ -283,7 +281,7 @@ public final class CacheStats {
    *
    * @return the sum of weights of evicted entities
    */
-  public @NonNegative long evictionWeight() {
+  public long evictionWeight() {
     return evictionWeight;
   }
 

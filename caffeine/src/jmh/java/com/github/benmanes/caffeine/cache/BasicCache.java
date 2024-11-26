@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A facade for benchmark implementations.

@@ -20,8 +20,6 @@ import java.util.concurrent.atomic.LongAdder;
 
 import javax.cache.management.CacheStatisticsMXBean;
 
-import org.checkerframework.checker.index.qual.NonNegative;
-
 /**
  * Caffeine JCache statistics.
  *
@@ -82,7 +80,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of hits to record
    */
-  public void recordHits(@NonNegative long count) {
+  public void recordHits(long count) {
     if (enabled) {
       hits.add(count);
     }
@@ -105,7 +103,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of misses to record
    */
-  public void recordMisses(@NonNegative long count) {
+  public void recordMisses(long count) {
     if (enabled) {
       misses.add(count);
     }
@@ -126,7 +124,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of writes to record
    */
-  public void recordPuts(@NonNegative long count) {
+  public void recordPuts(long count) {
     if (enabled && (count != 0)) {
       puts.add(count);
     }
@@ -142,7 +140,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of removals to record
    */
-  public void recordRemovals(@NonNegative long count) {
+  public void recordRemovals(long count) {
     if (enabled) {
       removals.add(count);
     }
@@ -158,7 +156,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of evictions to record
    */
-  public void recordEvictions(@NonNegative long count) {
+  public void recordEvictions(long count) {
     if (enabled) {
       evictions.add(count);
     }

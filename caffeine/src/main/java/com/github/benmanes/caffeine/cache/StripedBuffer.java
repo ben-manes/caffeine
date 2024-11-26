@@ -27,7 +27,7 @@ import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import com.google.errorprone.annotations.Var;
 

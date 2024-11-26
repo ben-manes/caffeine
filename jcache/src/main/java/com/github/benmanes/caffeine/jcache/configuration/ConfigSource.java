@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import java.net.URI;
 
+import org.jspecify.annotations.NullMarked;
+
 import com.typesafe.config.Config;
 
 /**
@@ -24,6 +26,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NullMarked
 @FunctionalInterface
 public interface ConfigSource {
 
