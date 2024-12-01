@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.impl;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -33,7 +35,7 @@ public final class CaffeineCache<K, V> implements BasicCache<K, V> {
   }
 
   @Override
-  public V get(K key) {
+  public @Nullable V get(K key) {
     return cache.getIfPresent(key);
   }
 

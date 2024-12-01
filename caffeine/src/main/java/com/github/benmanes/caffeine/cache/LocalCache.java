@@ -153,7 +153,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
     }
   }
 
-  /** Decorates the remapping function to record statistics if enabled. */
+  /** Decorates the mapping function to record statistics if enabled, recording a miss if called. */
   default <T, R> Function<? super T, ? extends R> statsAware(
       Function<? super T, ? extends R> mappingFunction, boolean recordLoad) {
     if (!isRecordingStats()) {

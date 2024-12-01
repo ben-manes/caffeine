@@ -43,35 +43,38 @@ val downloadCaffeine by tasks.registering {
 tasks.withType<JavaCompile>().configureEach {
   dependsOn(downloadCaffeine)
 
-  options.forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)
-  options.errorprone {
-    if (System.getenv("JDK_EA") == "true") {
-      isEnabled = false
-    }
-    allDisabledChecksAsWarnings = true
-
-    errorproneArgs.add(buildString {
-      append("-XepOpt:Refaster:NamePattern=^")
-      disabledRules().forEach { rule ->
-        append("(?!")
-        append(rule)
-        append(".*)")
+  options.apply {
+    forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)
+    errorprone {
+      if (isEarlyAccess()) {
+        isEnabled = false
       }
-      append(".*")
-    })
-    disabledChecks().forEach { disable(it) }
-    errorChecks().forEach { error(it) }
+      allDisabledChecksAsWarnings = true
 
-    nullaway {
-      if (name.contains("Test") || name.contains("Jmh")) {
-        disable()
+      errorproneArgs.add(buildString {
+        append("-XepOpt:Refaster:NamePattern=^")
+        disabledRules().forEach { rule ->
+          append("(?!")
+          append(rule)
+          append(".*)")
+        }
+        append(".*")
+      })
+      disabledChecks().forEach { disable(it) }
+      errorChecks().forEach { error(it) }
+
+      nullaway {
+        if (name.contains("Test")) {
+          disable()
+        }
+        annotatedPackages.add("com.github.benmanes.caffeine")
+        annotatedPackages.add("com.google.common")
+        handleTestAssertionLibraries = true
+        checkOptionalEmptiness = true
+        suggestSuppressions = true
+        checkContracts = true
+        isJSpecifyMode = true
       }
-      annotatedPackages.add("com.github.benmanes.caffeine")
-      annotatedPackages.add("com.google.common")
-      checkOptionalEmptiness = true
-      suggestSuppressions = true
-      checkContracts = true
-      isJSpecifyMode = true
     }
   }
 }

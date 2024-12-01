@@ -3961,12 +3961,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    public BoundedLocalCache<K, V> cache() {
+    public final BoundedLocalCache<K, V> cache() {
       return cache;
     }
 
     @Override
-    public Policy<K, V> policy() {
+    public final Policy<K, V> policy() {
       if (policy == null) {
         @SuppressWarnings("NullAway")
         Function<@Nullable V, @Nullable V> identity = identity();

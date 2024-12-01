@@ -37,16 +37,19 @@ tasks.withType<JavaCompile>().configureEach {
     languageVersion = javaRuntimeVersion
   }
 
-  options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",
-    "-Xlint:-exports", "-Xlint:-processing", "-Xlint:-removal", "-Xlint:-requires-automatic",
-    "-parameters"))
-  if (isCI()) {
-    options.compilerArgs.add("-Werror")
+  options.apply {
+    javaModuleVersion = provider { version as String }
+    compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",
+      "-Xlint:-exports", "-Xlint:-processing", "-Xlint:-removal", "-Xlint:-requires-automatic",
+      "-parameters"))
+    if (isCI()) {
+      compilerArgs.add("-Werror")
+    }
+    if (javaVersion.canCompileOrRun(21)) {
+      compilerArgs.add("-proc:full")
+    }
+    encoding = "UTF-8"
   }
-  if (javaVersion.canCompileOrRun(21)) {
-    options.compilerArgs.add("-proc:full")
-  }
-  options.encoding = "UTF-8"
 }
 
 tasks.withType<JavaExec>().configureEach {

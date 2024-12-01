@@ -1035,12 +1035,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public UnboundedLocalCache<K, V> cache() {
+    public final UnboundedLocalCache<K, V> cache() {
       return cache;
     }
 
     @Override
-    public Policy<K, V> policy() {
+    public final Policy<K, V> policy() {
       if (policy == null) {
         @SuppressWarnings("NullAway")
         Function<@Nullable V, @Nullable V> identity = identity();

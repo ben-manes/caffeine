@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Random;
 
+import org.jspecify.annotations.Nullable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.GroupThreads;
@@ -94,7 +95,7 @@ public class GetPutBenchmark {
   }
 
   @Benchmark @Group("read_only") @GroupThreads(8)
-  public Boolean readOnly(ThreadState threadState) {
+  public @Nullable Boolean readOnly(ThreadState threadState) {
     return cache.get(ints[threadState.index++ & MASK]);
   }
 
@@ -104,7 +105,7 @@ public class GetPutBenchmark {
   }
 
   @Benchmark @Group("readwrite") @GroupThreads(6)
-  public Boolean readwrite_get(ThreadState threadState) {
+  public @Nullable Boolean readwrite_get(ThreadState threadState) {
     return cache.get(ints[threadState.index++ & MASK]);
   }
 

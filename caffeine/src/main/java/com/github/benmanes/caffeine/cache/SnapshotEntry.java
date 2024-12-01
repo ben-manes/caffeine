@@ -40,10 +40,10 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     this.key = requireNonNull(key);
     this.value = requireNonNull(value);
   }
-  @Override public K getKey() {
+  @Override public final K getKey() {
     return key;
   }
-  @Override public V getValue() {
+  @Override public final V getValue() {
     return value;
   }
   @Override public V setValue(V value) {
@@ -58,10 +58,10 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
   @Override public long refreshableAt() {
     return snapshot + Long.MAX_VALUE;
   }
-  @Override public long snapshotAt() {
+  @Override public final long snapshotAt() {
     return snapshot;
   }
-  @Override public boolean equals(@Nullable Object o) {
+  @Override public final boolean equals(@Nullable Object o) {
     if (o == this) {
       return true;
     } else if (!(o instanceof Map.Entry)) {
@@ -70,10 +70,10 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
     var entry = (Map.Entry<?, ?>) o;
     return key.equals(entry.getKey()) && value.equals(entry.getValue());
   }
-  @Override public int hashCode() {
+  @Override public final int hashCode() {
     return key.hashCode() ^ value.hashCode();
   }
-  @Override public String toString() {
+  @Override public final String toString() {
     return key + "=" + value;
   }
 
@@ -111,7 +111,7 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
       super(key, value, snapshot);
       this.weight = weight;
     }
-    @Override public int weight() {
+    @Override public final int weight() {
       return weight;
     }
   }
@@ -123,7 +123,7 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
       super(key, value, snapshot);
       this.expiresAt = expiresAt;
     }
-    @Override public long expiresAt() {
+    @Override public final long expiresAt() {
       return expiresAt;
     }
   }
@@ -135,7 +135,7 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
       super(key, value, snapshot, weight);
       this.expiresAt = expiresAt;
     }
-    @Override public long expiresAt() {
+    @Override public final long expiresAt() {
       return expiresAt;
     }
   }
@@ -147,7 +147,7 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
       super(key, value, snapshot, expiresAt);
       this.refreshableAt = refreshableAt;
     }
-    @Override public long refreshableAt() {
+    @Override public final long refreshableAt() {
       return refreshableAt;
     }
   }

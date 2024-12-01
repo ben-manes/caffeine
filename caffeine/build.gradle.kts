@@ -176,7 +176,7 @@ tasks.register<Test>("isolatedTest") {
 tasks.register<Test>("lincheckTest") {
   group = "Verification"
   description = "Tests that assert linearizability"
-  enabled = (System.getenv("JDK_EA") != "true")
+  enabled = !isEarlyAccess()
   useTestNG {
     testLogging.events("started")
     includeGroups("lincheck")

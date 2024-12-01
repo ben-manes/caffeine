@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
@@ -55,12 +56,12 @@ public class DelegationBenchmark {
   }
 
   @Benchmark
-  public Integer inherit_get(ThreadState threadState) {
+  public @Nullable Integer inherit_get(ThreadState threadState) {
     return inherit.get(threadState.index++ & MASK);
   }
 
   @Benchmark
-  public Integer delegate_get(ThreadState threadState) {
+  public @Nullable Integer delegate_get(ThreadState threadState) {
     return delegate.get(threadState.index++ & MASK);
   }
 
@@ -76,6 +77,7 @@ public class DelegationBenchmark {
   static final class DelegateMap extends ForwardingMap<Integer, Integer> {
     final Map<Integer, Integer> delegate = new ConcurrentHashMap<>();
 
+    @NullUnmarked
     @Override public @Nullable Integer get(Object key) {
       Integer value = delegate.get(key);
       return (value == null) ? null : (value - 1);

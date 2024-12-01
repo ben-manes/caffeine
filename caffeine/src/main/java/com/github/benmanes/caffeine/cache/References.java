@@ -190,22 +190,22 @@ final class References {
     }
 
     @Override
-    public Object getKeyReference() {
+    public final Object getKeyReference() {
       return this;
     }
 
     @Override
-    public boolean equals(@Nullable Object object) {
+    public final boolean equals(@Nullable Object object) {
       return referenceEquals(object);
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
       return hashCode;
     }
 
     @Override
-    public String toString() {
+    public final String toString() {
       return String.format(US,
           "%s{key=%s, hashCode=%d}", getClass().getSimpleName(), get(), hashCode);
     }

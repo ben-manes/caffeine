@@ -23,25 +23,21 @@ fun Project.defaultJvmArgs(): List<String> {
   return jvmArgs
 }
 
-fun caffeineSystemProperties(): Map<String, Any> {
-  return System.getProperties().stringPropertyNames()
+fun caffeineSystemProperties(): Map<String, Any> =
+  System.getProperties()
+    .stringPropertyNames()
     .filter { it.startsWith("caffeine") }
     .associateWith { System.getProperties().getProperty(it) }
-}
+fun isEarlyAccess(): Boolean = System.getenv("JDK_EA") == "true"
+fun isCI(): Boolean = !System.getenv("CI").isNullOrEmpty()
 
-fun isCI(): Boolean {
-  return !System.getenv("CI").isNullOrEmpty()
+val DisableStrongEncapsulationJvmArgs = buildList {
+  listOf("api", "code", "file", "main", "parser", "processing", "tree", "util").forEach {
+    add("--add-exports")
+    add("jdk.compiler/com.sun.tools.javac.$it=ALL-UNNAMED")
+  }
+  listOf("code", "comp", "parser").forEach {
+    add("--add-opens")
+    add("jdk.compiler/com.sun.tools.javac.$it=ALL-UNNAMED")
+  }
 }
-
-val DisableStrongEncapsulationJvmArgs = listOf(
-  "--add-exports", "jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
-  "--add-exports", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
-  "--add-exports", "jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
-  "--add-exports", "jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED",
-  "--add-exports", "jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
-  "--add-exports", "jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
-  "--add-exports", "jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
-  "--add-exports", "jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED",
-  "--add-opens", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
-  "--add-opens", "jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED",
-  "--add-opens", "jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED")

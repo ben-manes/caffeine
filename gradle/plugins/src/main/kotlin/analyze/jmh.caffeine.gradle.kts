@@ -3,6 +3,8 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
 import org.gradle.plugins.ide.eclipse.model.Library
 import me.champeau.jmh.JmhBytecodeGeneratorTask
 import me.champeau.jmh.JMHTask as JmhTask
+import net.ltgt.gradle.errorprone.errorprone
+import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
   idea
@@ -89,6 +91,12 @@ tasks.withType<JmhTask>().configureEach {
 tasks.withType<JmhBytecodeGeneratorTask>().configureEach {
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = java.toolchain.languageVersion
+  }
+}
+
+tasks.named<JavaCompile>("compileJmhJava").configure {
+  options.errorprone.nullaway {
+    externalInitAnnotations.add("org.openjdk.jmh.annotations.State")
   }
 }
 

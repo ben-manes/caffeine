@@ -56,6 +56,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void setConfigSource_supplier() {
     TypesafeConfigurator.setConfigSource(() -> null);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
@@ -65,6 +66,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void setConfigSource_function() {
     TypesafeConfigurator.setConfigSource((uri, loader) -> null);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
@@ -74,6 +76,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void configSource_null() {
     assertThrows(NullPointerException.class, () -> configSource().get(null, null));
     assertThrows(NullPointerException.class, () -> configSource().get(null, classloader));

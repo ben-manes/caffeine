@@ -29,7 +29,6 @@ jobs:
             api.github.com:443
             auth.docker.io:443
             caffeine.gradle-enterprise.cloud:443
-            checkerframework.org:443
             docs.oracle.com:443
             download.jetbrains.com:443
             download-cdn.jetbrains.com:443
@@ -39,6 +38,7 @@ jobs:
             github.com:443
             guava.dev:443
             jcenter.bintray.com:443
+            jspecify.dev:443
             lightbend.github.io:443
             objects.githubusercontent.com:443
             packages.jetbrains.team:443
@@ -70,6 +70,6 @@ jobs:
           upload-result: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@f09c1c0a94de965c15400f5634aa42fac8fb8f88 # v3.27.5
+        uses: github/codeql-action/upload-sarif@aa578102511db1f4524ed59b8cc2bae4f6e88195 # v3.27.6
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json

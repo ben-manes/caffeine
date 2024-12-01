@@ -250,7 +250,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
       - name: Publish to Codecov
-        uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a # v5.0.7
+        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Publish to Codacy
@@ -343,11 +343,11 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             ${{ env.ALLOWED_ENDPOINTS }}
-            checkerframework.org:443
             docs.oracle.com:443
             errorprone.info:443
-            lightbend.github.io:443
             guava.dev:443
+            jspecify.dev:443
+            lightbend.github.io:443
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
