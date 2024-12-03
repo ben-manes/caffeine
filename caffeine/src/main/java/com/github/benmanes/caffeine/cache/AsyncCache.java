@@ -198,7 +198,8 @@ public interface AsyncCache<K, V> {
    *
    * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
    */
-  ConcurrentMap<K, CompletableFuture<V>> asMap();
+  @NullUnmarked
+  @NonNull ConcurrentMap<@NonNull K, @NonNull CompletableFuture<V>> asMap();
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link Cache}. A mapping is
