@@ -49,7 +49,7 @@ public interface AsyncCache<K, V> {
    *
    * @param key the key whose associated value is to be returned
    * @return the future value to which the specified key is mapped, or {@code null} if this cache
-   *     does not contain a mapping for the key
+   *         does not contain a mapping for the key
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
@@ -93,7 +93,7 @@ public interface AsyncCache<K, V> {
    *
    * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value, optionally using the
-   *     given executor
+   *        given executor
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key or mappingFunction is null, or if the
    *         future returned by the mappingFunction is null
@@ -129,11 +129,11 @@ public interface AsyncCache<K, V> {
    * @param keys the keys whose associated values are to be returned
    * @param mappingFunction the function to asynchronously compute the values
    * @return a future containing an unmodifiable mapping of keys to values for the specified keys in
-   *     this cache
+   *         this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
-   *     if the future returned by the mappingFunction is null
+   *         if the future returned by the mappingFunction is null
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
-   *     left unestablished
+   *         left unestablished
    */
   CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys,
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction);
@@ -157,13 +157,13 @@ public interface AsyncCache<K, V> {
    *
    * @param keys the keys whose associated values are to be returned
    * @param mappingFunction the function to asynchronously compute the values, optionally using the
-   *     given executor
+   *        given executor
    * @return a future containing an unmodifiable mapping of keys to values for the specified keys in
-   *     this cache
+   *         this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
-   *     if the future returned by the mappingFunction is null
+   *         if the future returned by the mappingFunction is null
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
-   *     left unestablished
+   *         left unestablished
    */
   CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys,
       BiFunction<? super Set<? extends K>, ? super Executor,

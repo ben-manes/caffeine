@@ -48,7 +48,7 @@ public interface Cache<K, V> {
    *
    * @param key the key whose associated value is to be returned
    * @return the value to which the specified key is mapped, or {@code null} if this cache does not
-   *     contain a mapping for the key
+   *         contain a mapping for the key
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
@@ -72,12 +72,12 @@ public interface Cache<K, V> {
    * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to compute a value
    * @return the current (existing or computed) value associated with the specified key, or null if
-   *     the computed value is null
+   *         the computed value is null
    * @throws NullPointerException if the specified key or mappingFunction is null
    * @throws IllegalStateException if the computation detectably attempts a recursive update to this
-   *     cache that would otherwise never complete
+   *         cache that would otherwise never complete
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
-   *     left unestablished
+   *         left unestablished
    */
   @NullUnmarked
   V get(@NonNull K key, Function<? super @NonNull K, ? extends @Nullable V> mappingFunction);
@@ -117,9 +117,9 @@ public interface Cache<K, V> {
    * @param mappingFunction the function to compute the values
    * @return an unmodifiable mapping of keys to values for the specified keys in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
-   *     if the map returned by the mappingFunction is null
+   *         if the map returned by the mappingFunction is null
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
-   *     left unestablished
+   *         left unestablished
    */
   Map<K, V> getAll(Iterable<? extends K> keys,
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction);
@@ -146,7 +146,7 @@ public interface Cache<K, V> {
    *
    * @param map the mappings to be stored in this cache
    * @throws NullPointerException if the specified map is null or the specified map contains null
-   *     keys or values
+   *         keys or values
    */
   void putAll(Map<? extends K, ? extends V> map);
 
