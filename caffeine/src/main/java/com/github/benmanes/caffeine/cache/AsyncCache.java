@@ -75,7 +75,7 @@ public interface AsyncCache<K, V> {
    */
   @NullUnmarked
   @NonNull CompletableFuture<V> get(
-      @NonNull K key, @NonNull Function<? super @NonNull K, ? extends V> mappingFunction);
+      @NonNull K key, @NonNull Function<? super @NonNull K, ? extends @Nullable V> mappingFunction);
 
   /**
    * Returns the future associated with the {@code key} in this cache, obtaining that value from
@@ -95,10 +95,10 @@ public interface AsyncCache<K, V> {
    * @param mappingFunction the function to asynchronously compute a value, optionally using the
    *     given executor
    * @return the current (existing or computed) future value associated with the specified key
-   * @throws NullPointerException if the specified key or mappingFunction is null, or if the future
-   *     returned by the mappingFunction is null
-   * @throws RuntimeException or Error if the mappingFunction does when constructing the future, in
-   *     which case the mapping is left unestablished
+   * @throws NullPointerException if the specified key or mappingFunction is null, or if the
+   *         future returned by the mappingFunction is null
+   * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
+   *         in which case the mapping is left unestablished
    */
   @NullUnmarked
   @NonNull CompletableFuture<V> get(
@@ -107,7 +107,7 @@ public interface AsyncCache<K, V> {
           BiFunction<
               ? super @NonNull K,
               ? super @NonNull Executor,
-              ? extends @NonNull CompletableFuture<? extends V>>
+              ? extends @NonNull CompletableFuture<? extends @Nullable V>>
           mappingFunction);
 
   /**

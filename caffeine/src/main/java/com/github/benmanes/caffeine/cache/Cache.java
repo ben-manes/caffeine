@@ -80,7 +80,7 @@ public interface Cache<K, V> {
    *     left unestablished
    */
   @NullUnmarked
-  V get(@NonNull K key, Function<? super @NonNull K, ? extends V> mappingFunction);
+  V get(@NonNull K key, Function<? super @NonNull K, ? extends @Nullable V> mappingFunction);
 
   /**
    * Returns a map of the values associated with the {@code keys} in this cache. The returned map
