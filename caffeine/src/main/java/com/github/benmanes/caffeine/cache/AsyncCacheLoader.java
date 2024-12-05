@@ -24,6 +24,7 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -48,7 +49,7 @@ import org.jspecify.annotations.Nullable;
 @NullMarked
 @FunctionalInterface
 @SuppressWarnings("PMD.SignatureDeclareThrowsException")
-public interface AsyncCacheLoader<K, V> {
+public interface AsyncCacheLoader<K, V extends @Nullable Object> {
 
   /**
    * Asynchronously computes or retrieves the value corresponding to {@code key}.
@@ -63,7 +64,7 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  CompletableFuture<? extends @Nullable V> asyncLoad(K key, Executor executor) throws Exception;
+  CompletableFuture<? extends V> asyncLoad(K key, Executor executor) throws Exception;
 
   /**
    * Asynchronously computes or retrieves the values corresponding to {@code keys}. This method is
@@ -89,7 +90,7 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  default CompletableFuture<? extends Map<? extends K, ? extends V>> asyncLoadAll(
+  default CompletableFuture<? extends Map<? extends K, ? extends @NonNull V>> asyncLoadAll(
       Set<? extends K> keys, Executor executor) throws Exception {
     throw new UnsupportedOperationException();
   }
@@ -115,8 +116,8 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  default CompletableFuture<? extends @Nullable V> asyncReload(
-      K key, V oldValue, Executor executor) throws Exception {
+  default CompletableFuture<? extends V> asyncReload(
+      K key, @NonNull V oldValue, Executor executor) throws Exception {
     return asyncLoad(key, executor);
   }
 
