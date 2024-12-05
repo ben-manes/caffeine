@@ -226,14 +226,20 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
    * @throws NullPointerException if the mappingFunction is null
    */
   @SuppressWarnings("FunctionalInterfaceClash")
-  static <K, V> CacheLoader<K, V> bulk(Function<? super Set<? extends K>,
-      ? extends Map<? extends K, ? extends V>> mappingFunction) {
+  static <K, V extends @Nullable Object> CacheLoader<K, V> bulk(Function<? super Set<? extends K>,
+      ? extends Map<? extends K, ? extends @NonNull V>> mappingFunction) {
     requireNonNull(mappingFunction);
     return new CacheLoader<>() {
-      @Override public @Nullable V load(K key) {
+      /*
+       * If the caller passes a mapping function that may ever return partial results, then calls to
+       * load() may return null. In that case, the caller should type the return value of bulk(...)
+       * as a CacheLoader<Foo, @Nullable Bar>, rather than a CacheLoader<Foo, Bar>.
+       */
+      @SuppressWarnings("NullAway")
+      @Override public V load(K key) {
         return loadAll(Set.of(key)).get(key);
       }
-      @Override public Map<? extends K, ? extends V> loadAll(Set<? extends K> keys) {
+      @Override public Map<? extends K, ? extends @NonNull V> loadAll(Set<? extends K> keys) {
         return mappingFunction.apply(keys);
       }
     };
