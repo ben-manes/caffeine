@@ -101,7 +101,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    * @return the future value associated with {@code key}
    */
   @Override
-  default CompletableFuture<? extends V> asyncLoad(K key, Executor executor) throws Exception {
+  default CompletableFuture<? extends @Nullable V> asyncLoad(K key, Executor executor) throws Exception {
     requireNonNull(key);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {
@@ -193,7 +193,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    *         {@code null} if the mapping is to be removed
    */
   @Override
-  default CompletableFuture<? extends V> asyncReload(
+  default CompletableFuture<? extends @Nullable V> asyncReload(
       K key, V oldValue, Executor executor) throws Exception {
     requireNonNull(key);
     requireNonNull(executor);

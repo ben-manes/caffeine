@@ -25,6 +25,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Computes or retrieves values asynchronously based on a key, for use in populating a
@@ -62,7 +63,7 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  CompletableFuture<? extends V> asyncLoad(K key, Executor executor) throws Exception;
+  CompletableFuture<? extends @Nullable V> asyncLoad(K key, Executor executor) throws Exception;
 
   /**
    * Asynchronously computes or retrieves the values corresponding to {@code keys}. This method is
@@ -114,7 +115,7 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  default CompletableFuture<? extends V> asyncReload(
+  default CompletableFuture<? extends @Nullable V> asyncReload(
       K key, V oldValue, Executor executor) throws Exception {
     return asyncLoad(key, executor);
   }

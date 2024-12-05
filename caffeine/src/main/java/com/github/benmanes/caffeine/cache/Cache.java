@@ -20,7 +20,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -77,7 +79,8 @@ public interface Cache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
    *         left unestablished
    */
-  V get(K key, Function<? super K, ? extends V> mappingFunction);
+  @NullUnmarked
+  V get(@NonNull K key, Function<? super @NonNull K, ? extends @Nullable V> mappingFunction);
 
   /**
    * Returns a map of the values associated with the {@code keys} in this cache. The returned map

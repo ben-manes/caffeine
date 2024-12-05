@@ -23,7 +23,9 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -71,7 +73,9 @@ public interface AsyncCache<K, V> {
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key or mappingFunction is null
    */
-  CompletableFuture<V> get(K key, Function<? super K, ? extends V> mappingFunction);
+  @NullUnmarked
+  @NonNull CompletableFuture<V> get(
+      @NonNull K key, @NonNull Function<? super @NonNull K, ? extends @Nullable V> mappingFunction);
 
   /**
    * Returns the future associated with the {@code key} in this cache, obtaining that value from
@@ -96,8 +100,15 @@ public interface AsyncCache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
    *         in which case the mapping is left unestablished
    */
-  CompletableFuture<V> get(K key, BiFunction<? super K, ? super Executor,
-      ? extends CompletableFuture<? extends V>> mappingFunction);
+  @NullUnmarked
+  @NonNull CompletableFuture<V> get(
+      @NonNull K key,
+      @NonNull
+          BiFunction<
+              ? super @NonNull K,
+              ? super @NonNull Executor,
+              ? extends @NonNull CompletableFuture<? extends @Nullable V>>
+          mappingFunction);
 
   /**
    * Returns the future of a map of the values associated with the {@code keys}, creating or
@@ -170,7 +181,7 @@ public interface AsyncCache<K, V> {
    * @param valueFuture the value to be associated with the specified key
    * @throws NullPointerException if the specified key or value is null
    */
-  void put(K key, CompletableFuture<? extends V> valueFuture);
+  void put(K key, CompletableFuture<? extends @Nullable V> valueFuture);
 
   /**
    * Returns a view of the entries stored in this cache as a thread-safe map. Modifications made to
@@ -187,7 +198,8 @@ public interface AsyncCache<K, V> {
    *
    * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
    */
-  ConcurrentMap<K, CompletableFuture<V>> asMap();
+  @NullUnmarked
+  @NonNull ConcurrentMap<@NonNull K, @NonNull CompletableFuture<V>> asMap();
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link Cache}. A mapping is

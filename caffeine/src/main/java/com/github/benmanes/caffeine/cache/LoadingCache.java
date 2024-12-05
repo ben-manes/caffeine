@@ -19,7 +19,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullUnmarked;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
@@ -62,7 +64,8 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping
    *         is left unestablished
    */
-  V get(K key);
+  @NullUnmarked
+  V get(@NonNull K key);
 
   /**
    * Returns a map of the values associated with the {@code keys}, creating or retrieving those
@@ -110,7 +113,8 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @CanIgnoreReturnValue
-  CompletableFuture<V> refresh(K key);
+  @NullUnmarked
+  @NonNull CompletableFuture<V> refresh(@NonNull K key);
 
   /**
    * Loads a new value for each {@code key}, asynchronously. While the new value is loading the
