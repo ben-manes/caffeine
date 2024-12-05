@@ -139,8 +139,9 @@ public interface AsyncCacheLoader<K, V extends @Nullable Object> {
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
    */
-  static <K, V> AsyncCacheLoader<K, V> bulk(Function<? super Set<? extends K>,
-      ? extends Map<? extends K, ? extends V>> mappingFunction) {
+  static <K, V extends @Nullable Object> AsyncCacheLoader<K, V> bulk(
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends @NonNull V>>
+          mappingFunction) {
     return CacheLoader.bulk(mappingFunction);
   }
 
@@ -162,8 +163,12 @@ public interface AsyncCacheLoader<K, V extends @Nullable Object> {
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
    */
-  static <K, V> AsyncCacheLoader<K, V> bulk(BiFunction<? super Set<? extends K>, ? super Executor,
-      ? extends CompletableFuture<? extends Map<? extends K, ? extends V>>> mappingFunction) {
+  static <K, V extends @Nullable Object> AsyncCacheLoader<K, V> bulk(
+      BiFunction<
+          ? super Set<? extends K>,
+          ? super Executor,
+          ? extends CompletableFuture<? extends Map<? extends K, ? extends @NonNull V>>>
+      mappingFunction) {
     requireNonNull(mappingFunction);
     return new AsyncCacheLoader<>() {
       @Override public CompletableFuture<V> asyncLoad(K key, Executor executor) {
