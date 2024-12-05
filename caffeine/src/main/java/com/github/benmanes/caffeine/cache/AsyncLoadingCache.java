@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache
@@ -34,7 +34,7 @@ import org.jspecify.annotations.NullUnmarked;
  * @param <V> the type of mapped values
  */
 @NullMarked
-public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
+public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncCache<K, V> {
 
   /**
    * Returns the future associated with the {@code key} in this cache, obtaining that value from
@@ -52,8 +52,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does when constructing the
    *         future, in which case the mapping is left unestablished
    */
-  @NullUnmarked
-  @NonNull CompletableFuture<V> get(@NonNull K key);
+  CompletableFuture<V> get(K key);
 
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
@@ -81,7 +80,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *         {@link AsyncCacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing
    *         the future, in which case the mapping is left unestablished
    */
-  CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys);
+  CompletableFuture<Map<K, @NonNull V>> getAll(Iterable<? extends K> keys);
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link LoadingCache}. A
