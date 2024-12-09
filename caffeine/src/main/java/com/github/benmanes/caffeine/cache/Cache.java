@@ -22,7 +22,6 @@ import java.util.function.Function;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -40,7 +39,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
  * @param <V> the type of mapped values
  */
 @NullMarked
-public interface Cache<K, V> {
+public interface Cache<K, V extends @Nullable Object> {
 
   /**
    * Returns the value associated with the {@code key} in this cache, or {@code null} if there is no
@@ -48,7 +47,7 @@ public interface Cache<K, V> {
    *
    * @param key the key whose associated value is to be returned
    * @return the value to which the specified key is mapped, or {@code null} if this cache does not
-   *         contain a mapping for the key
+   *     contain a mapping for the key
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
@@ -72,15 +71,14 @@ public interface Cache<K, V> {
    * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to compute a value
    * @return the current (existing or computed) value associated with the specified key, or null if
-   *         the computed value is null
+   *     the computed value is null
    * @throws NullPointerException if the specified key or mappingFunction is null
    * @throws IllegalStateException if the computation detectably attempts a recursive update to this
-   *         cache that would otherwise never complete
+   *     cache that would otherwise never complete
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
-   *         left unestablished
+   *     left unestablished
    */
-  @NullUnmarked
-  V get(@NonNull K key, Function<? super @NonNull K, ? extends @Nullable V> mappingFunction);
+  V get(K key, Function<? super K, ? extends V> mappingFunction);
 
   /**
    * Returns a map of the values associated with the {@code keys} in this cache. The returned map
@@ -93,7 +91,7 @@ public interface Cache<K, V> {
    * @return an unmodifiable mapping of keys to values for the specified keys found in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
-  Map<K, V> getAllPresent(Iterable<? extends K> keys);
+  Map<K, @NonNull V> getAllPresent(Iterable<? extends K> keys);
 
   /**
    * Returns a map of the values associated with the {@code keys}, creating or retrieving those
@@ -117,12 +115,14 @@ public interface Cache<K, V> {
    * @param mappingFunction the function to compute the values
    * @return an unmodifiable mapping of keys to values for the specified keys in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
-   *         if the map returned by the mappingFunction is null
+   *     if the map returned by the mappingFunction is null
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
-   *         left unestablished
+   *     left unestablished
    */
-  Map<K, V> getAll(Iterable<? extends K> keys,
-      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction);
+  Map<K, @NonNull V> getAll(
+      Iterable<? extends K> keys,
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends @NonNull V>>
+          mappingFunction);
 
   /**
    * Associates the {@code value} with the {@code key} in this cache. If the cache previously
@@ -136,7 +136,7 @@ public interface Cache<K, V> {
    * @param value value to be associated with the specified key
    * @throws NullPointerException if the specified key or value is null
    */
-  void put(K key, V value);
+  void put(K key, @NonNull V value);
 
   /**
    * Copies all of the mappings from the specified map to the cache. The effect of this call is
@@ -146,9 +146,9 @@ public interface Cache<K, V> {
    *
    * @param map the mappings to be stored in this cache
    * @throws NullPointerException if the specified map is null or the specified map contains null
-   *         keys or values
+   *     keys or values
    */
-  void putAll(Map<? extends K, ? extends V> map);
+  void putAll(Map<? extends K, ? extends @NonNull V> map);
 
   /**
    * Discards any cached value for the {@code key}. The behavior of this operation is undefined for
@@ -210,7 +210,7 @@ public interface Cache<K, V> {
    *
    * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
    */
-  ConcurrentMap<K, V> asMap();
+  ConcurrentMap<K, @NonNull V> asMap();
 
   /**
    * Performs any pending maintenance operations needed by the cache. Exactly which activities are
@@ -228,5 +228,5 @@ public interface Cache<K, V> {
    *
    * @return access to inspect and perform advanced operations based on the cache's characteristics
    */
-  Policy<K, V> policy();
+  Policy<K, @NonNull V> policy();
 }
