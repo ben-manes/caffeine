@@ -83,7 +83,7 @@ import com.google.errorprone.annotations.Var;
 public class CacheProxy<K, V> implements Cache<K, V> {
   private static final Logger logger = System.getLogger(CacheProxy.class.getName());
 
-  protected final com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache;
+  protected final com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache;
   protected final Optional<CacheLoader<K, V>> cacheLoader;
   protected final Set<CompletableFuture<?>> inFlight;
   protected final JCacheStatisticsMXBean statistics;
@@ -104,7 +104,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @SuppressWarnings({"PMD.ExcessiveParameterList", "this-escape", "TooManyParameters"})
   public CacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration,
-      com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache,
+      com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, Optional<CacheLoader<K, V>> cacheLoader,
       ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
     this.writer = requireNonNullElse(configuration.getCacheWriter(), DisabledCacheWriter.get());
@@ -213,7 +213,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    */
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
       Set<? extends K> keys, boolean updateAccessTime) {
-    var result = new HashMap<>(cache.getAllPresent(keys));
+    // NullAway does not yet understand the @NonNull annotation in the return type of getAllPresent.
+    @SuppressWarnings("NullAway")
+    var result = new HashMap<K, Expirable<V>>(cache.getAllPresent(keys));
 
     int[] expired = { 0 };
     long[] millis = { 0L };
@@ -1214,6 +1216,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** An iterator to safely expose the cache entries. */
   final class EntryIterator implements Iterator<Cache.Entry<K, V>> {
+    // NullAway does not yet understand the @NonNull annotation in the return type of asMap.
+    @SuppressWarnings("NullAway")
     final Iterator<Map.Entry<K, Expirable<V>>> delegate = cache.asMap().entrySet().iterator();
     Map.@Nullable Entry<K, Expirable<V>> current;
     Map.@Nullable Entry<K, Expirable<V>> cursor;

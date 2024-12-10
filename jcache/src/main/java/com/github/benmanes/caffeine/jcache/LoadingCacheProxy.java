@@ -48,7 +48,7 @@ import com.google.errorprone.annotations.Var;
  */
 @SuppressWarnings("OvershadowingSubclassFields")
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
-  private final LoadingCache<K, Expirable<V>> cache;
+  private final LoadingCache<K, @Nullable Expirable<V>> cache;
 
   @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
   public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,
