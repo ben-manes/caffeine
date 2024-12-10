@@ -21,7 +21,7 @@ import java.util.concurrent.CompletionException;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
@@ -37,7 +37,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @param <V> the type of mapped values
  */
 @NullMarked
-public interface LoadingCache<K, V> extends Cache<K, V> {
+public interface LoadingCache<K, V extends @Nullable Object> extends Cache<K, V> {
 
   /**
    * Returns the value associated with the {@code key} in this cache, obtaining that value from
@@ -64,8 +64,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping
    *         is left unestablished
    */
-  @NullUnmarked
-  V get(@NonNull K key);
+  V get(K key);
 
   /**
    * Returns a map of the values associated with the {@code keys}, creating or retrieving those
@@ -92,7 +91,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    *         {@link CacheLoader#loadAll} returns {@code null}, or returns a map containing null keys
    *         or values. In all cases, the mapping is left unestablished.
    */
-  Map<K, V> getAll(Iterable<? extends K> keys);
+  Map<K, @NonNull V> getAll(Iterable<? extends K> keys);
 
   /**
    * Loads a new value for the {@code key}, asynchronously. While the new value is loading the
@@ -113,8 +112,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @CanIgnoreReturnValue
-  @NullUnmarked
-  @NonNull CompletableFuture<V> refresh(@NonNull K key);
+  CompletableFuture<V> refresh(K key);
 
   /**
    * Loads a new value for each {@code key}, asynchronously. While the new value is loading the
@@ -134,5 +132,5 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
   @CanIgnoreReturnValue
-  CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys);
+  CompletableFuture<Map<K, @NonNull V>> refreshAll(Iterable<? extends K> keys);
 }

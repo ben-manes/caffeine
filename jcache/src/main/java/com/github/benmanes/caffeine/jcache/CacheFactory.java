@@ -218,6 +218,8 @@ final class CacheFactory {
       CacheLoader<K, V> cacheLoader = config.getCacheLoaderFactory().create();
       var adapter = new JCacheLoaderAdapter<>(
           cacheLoader, dispatcher, expiryPolicy, ticker, statistics);
+      // NullAway appears not to understand `V1 extends @Nullable V` in Caffeine.build.
+      @SuppressWarnings("NullAway")
       var cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
           caffeine.build(adapter), dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
       adapter.setCache(cache);

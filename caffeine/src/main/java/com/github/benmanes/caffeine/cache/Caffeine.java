@@ -1056,7 +1056,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
-  public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
+  public <K1 extends K, V1 extends @Nullable V> Cache<K1, V1> build() {
     requireWeightWithWeigher();
     requireNonLoadingCache();
 
@@ -1081,7 +1081,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
-  public <K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
+  public <K1 extends K, V1 extends @Nullable V> LoadingCache<K1, V1> build(
       CacheLoader<? super K1, V1> loader) {
     requireWeightWithWeigher();
 
@@ -1112,7 +1112,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
-  public <K1 extends K, V1 extends V> AsyncCache<K1, V1> buildAsync() {
+  public <K1 extends K, V1 extends @Nullable V> AsyncCache<K1, V1> buildAsync() {
     requireState(valueStrength == null, "Weak or soft values can not be combined with AsyncCache");
     requireState(isStrongKeys() || (evictionListener == null),
         "Weak keys cannot be combined with eviction listener and AsyncLoadingCache");
@@ -1144,7 +1144,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
-  public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
+  public <K1 extends K, V1 extends @Nullable V> AsyncLoadingCache<K1, V1> buildAsync(
       CacheLoader<? super K1, V1> loader) {
     return buildAsync((AsyncCacheLoader<? super K1, V1>) loader);
   }
@@ -1167,7 +1167,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
-  public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
+  public <K1 extends K, V1 extends @Nullable V> AsyncLoadingCache<K1, V1> buildAsync(
       AsyncCacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null,
         "Weak or soft values can not be combined with AsyncLoadingCache");
