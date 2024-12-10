@@ -43,7 +43,7 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JCacheLoaderAdapter<K, V>
-    implements com.github.benmanes.caffeine.cache.CacheLoader<K, Expirable<V>> {
+    implements com.github.benmanes.caffeine.cache.CacheLoader<K, @Nullable Expirable<V>> {
   private static final Logger logger = System.getLogger(JCacheLoaderAdapter.class.getName());
 
   private final JCacheStatisticsMXBean statistics;
