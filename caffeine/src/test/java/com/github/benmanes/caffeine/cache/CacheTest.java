@@ -25,6 +25,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -121,6 +122,7 @@ public final class CacheTest {
   /* --------------- getIfPresent --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getIfPresent_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -148,6 +150,7 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   public void get_nullKey(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.get(null, identity()));
@@ -155,6 +158,7 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   public void get_nullLoader(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.get(context.absentKey(), null));
@@ -162,12 +166,14 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   public void get_nullKeyAndLoader(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.get(null, null));
   }
 
   @CacheSpec
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   public void get_absent_null(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey(), k -> null)).isNull();
@@ -228,6 +234,7 @@ public final class CacheTest {
   /* --------------- getAllPresent --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllPresent_iterable_null(Cache<Int, Int> cache, CacheContext context) {
@@ -345,7 +352,7 @@ public final class CacheTest {
       keys.add(new Key());
     }
 
-    Key key = Iterables.getLast(keys);
+    Key key = requireNonNull(Iterables.getLast(keys));
     Int value = context.absentValue();
     cache.put(key, value);
 
@@ -355,6 +362,7 @@ public final class CacheTest {
 
   /* --------------- getAll --------------- */
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_null(Cache<Int, Int> cache, CacheContext context) {
@@ -378,12 +386,14 @@ public final class CacheTest {
     assertThat(context).stats().hits(0).misses(0);
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_function_null(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.getAll(context.absentKeys(), null));
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_function_nullValue(Cache<Int, Int> cache, CacheContext context) {
@@ -589,13 +599,14 @@ public final class CacheTest {
         return 0; // to put keys in one bucket
       }
     }
+    @SuppressWarnings("NullAway")
     Cache<Object, Int> cache = context.build(key -> null);
 
     var keys = new ArrayList<Key>();
     for (int i = 0; i < Population.FULL.size(); i++) {
       keys.add(intern(new Key()));
     }
-    Key key = Iterables.getLast(keys);
+    Key key = requireNonNull(Iterables.getLast(keys));
     Int value = context.absentValue();
     cache.put(key, value);
 
@@ -643,7 +654,7 @@ public final class CacheTest {
   public void put_replace_sameInstance(Cache<Int, Int> cache, CacheContext context) {
     var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
-      Int value = context.original().get(key);
+      Int value = requireNonNull(context.original().get(key));
       cache.put(key, value);
       assertThat(cache).containsEntry(key, value);
       replaced.put(key, value);
@@ -673,6 +684,7 @@ public final class CacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -680,6 +692,7 @@ public final class CacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullValue(Cache<Int, Int> cache, CacheContext context) {
@@ -687,6 +700,7 @@ public final class CacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullKeyAndValue(Cache<Int, Int> cache, CacheContext context) {
@@ -750,6 +764,7 @@ public final class CacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void putAll_null(Cache<Int, Int> cache, CacheContext context) {
@@ -781,6 +796,7 @@ public final class CacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void invalidate_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -828,6 +844,7 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   public void invalidateAll_null(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.invalidateAll(null));
@@ -860,7 +877,7 @@ public final class CacheTest {
     cache.invalidateAll();
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.original()).exclusively();
-    assertThat(cache).containsExactlyEntriesIn(Maps.asMap(context.original().keySet(), key -> key));
+    assertThat(cache).containsExactlyEntriesIn(Maps.toMap(context.original().keySet(), key -> key));
   }
 
   /* --------------- cleanup --------------- */
@@ -902,6 +919,7 @@ public final class CacheTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.DISABLED,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -1040,6 +1058,7 @@ public final class CacheTest {
   /* --------------- Policy: getIfPresentQuietly --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getIfPresentQuietly_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -1066,6 +1085,7 @@ public final class CacheTest {
   /* --------------- Policy: getEntryIfPresentQuietly --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getEntryIfPresentQuietly_nullKey(Cache<Int, Int> cache, CacheContext context) {
@@ -1085,7 +1105,7 @@ public final class CacheTest {
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getEntryIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
-      var entry = cache.policy().getEntryIfPresentQuietly(key);
+      var entry = requireNonNull(cache.policy().getEntryIfPresentQuietly(key));
       assertThat(context).containsEntry(entry);
     }
   }

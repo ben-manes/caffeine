@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 11, 21, 24, GraalVM ]
+        java: [ 11, 21, 25, GraalVM ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

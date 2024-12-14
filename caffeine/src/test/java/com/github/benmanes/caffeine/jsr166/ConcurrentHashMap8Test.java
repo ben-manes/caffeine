@@ -24,12 +24,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
+@NullUnmarked
 @SuppressWarnings({"EmptyCatch", "IdentityConversion", "PreferredInterfaceType",
   "rawtypes", "try", "unchecked", "UnnecessaryFinal"})
 public class ConcurrentHashMap8Test extends JSR166TestCase {

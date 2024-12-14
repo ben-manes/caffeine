@@ -16,8 +16,11 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.truth.Truth.assertAbout;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
+
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.testing.CollectionSubject;
 import com.google.common.collect.Sets;
@@ -32,9 +35,10 @@ final class LinkedDequeSubject extends CollectionSubject {
   private final LinkedDeque<Object> actual;
 
   @SuppressWarnings("unchecked")
-  private LinkedDequeSubject(FailureMetadata metadata, LinkedDeque<?> subject) {
+  private LinkedDequeSubject(FailureMetadata metadata, @Nullable LinkedDeque<?> subject) {
     super(metadata, subject);
-    this.actual = (LinkedDeque<Object>) subject;
+    this.actual = requireNonNull((LinkedDeque<Object>) subject);
+
   }
 
   public static Factory<LinkedDequeSubject, LinkedDeque<?>> deque() {

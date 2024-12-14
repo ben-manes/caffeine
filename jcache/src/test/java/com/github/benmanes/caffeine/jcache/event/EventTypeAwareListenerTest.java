@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.quality.Strictness.STRICT_STUBS;
 
 import java.io.IOException;
 
@@ -32,22 +33,21 @@ import javax.cache.event.EventType;
 
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
-import org.testng.annotations.BeforeMethod;
+import org.mockito.testng.MockitoSettings;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Test(singleThreaded = true)
 @SuppressWarnings("unchecked")
+@Listeners(MockitoTestNGListener.class)
+@MockitoSettings(strictness = STRICT_STUBS)
 public final class EventTypeAwareListenerTest {
   @Mock Cache<Integer, Integer> cache;
-
-  @BeforeMethod
-  public void before() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
-  }
 
   @Test
   public void closed() throws IOException {

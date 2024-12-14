@@ -46,6 +46,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -79,6 +80,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -90,8 +92,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
@@ -140,6 +145,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
+import com.google.common.collect.Streams;
 import com.google.common.testing.GcFinalization;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -336,13 +342,11 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void rescheduleDrainBuffers() {
-    var evicting = new AtomicBoolean();
     var done = new AtomicBoolean();
-    var evictionListener = new RemovalListener<Int, Int>() {
-      @Override public void onRemoval(Int key, Int value, RemovalCause cause) {
-        evicting.set(true);
-        await().untilTrue(done);
-      }
+    var evicting = new AtomicBoolean();
+    RemovalListener<Int, Int> evictionListener = (key, value, cause) -> {
+      evicting.set(true);
+      await().untilTrue(done);
     };
     var cache = asBoundedLocalCache(Caffeine.newBuilder()
         .executor(CacheExecutor.THREADED.create())
@@ -428,7 +432,8 @@ public final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     reset(context.scheduler());
     cache.drainStatus = REQUIRED;
-    cache.pacer().future = new CompletableFuture<>();
+    var pacer = requireNonNull(cache.pacer());
+    pacer.future = new CompletableFuture<>();
 
     cache.rescheduleCleanUpIfIncomplete();
     verifyNoInteractions(context.scheduler());
@@ -441,7 +446,8 @@ public final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     reset(context.scheduler());
     cache.drainStatus = REQUIRED;
-    cache.pacer().cancel();
+    var pacer = requireNonNull(cache.pacer());
+    pacer.cancel();
 
     var done = new AtomicBoolean();
     cache.evictionLock.lock();
@@ -467,7 +473,8 @@ public final class BoundedLocalCacheTest {
     when(context.scheduler().schedule(any(), any(), anyLong(), any()))
         .thenReturn(new CompletableFuture<>());
     cache.drainStatus = REQUIRED;
-    cache.pacer().cancel();
+    var pacer = requireNonNull(cache.pacer());
+    pacer.cancel();
 
     cache.rescheduleCleanUpIfIncomplete();
     assertThat(cache.pacer().isScheduled()).isTrue();
@@ -482,7 +489,8 @@ public final class BoundedLocalCacheTest {
 
     when(context.scheduler().schedule(any(), any(), anyLong(), any()))
         .thenReturn(new CompletableFuture<>());
-    cache.pacer().future = DisabledFuture.INSTANCE;
+    var pacer = requireNonNull(cache.pacer());
+    pacer.future = DisabledFuture.instance();
     cache.drainStatus = REQUIRED;
 
     cache.rescheduleCleanUpIfIncomplete();
@@ -546,7 +554,7 @@ public final class BoundedLocalCacheTest {
     var expected = new RuntimeException();
     var cache = new BoundedLocalCache<Object, Object>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
-      @Override void maintenance(Runnable task) {
+      @Override void maintenance(@Nullable Runnable task) {
         throw expected;
       }
     };
@@ -662,7 +670,7 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
   public void overflow_update_many(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var updated = Maps.asMap(context.firstMiddleLastKeys(), key -> Int.MAX_VALUE);
+    var updated = Maps.toMap(context.firstMiddleLastKeys(), key -> Int.MAX_VALUE);
     cache.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
     cache.evictionLock.lock();
     try {
@@ -689,8 +697,8 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.ONE)
   public void evict_alreadyRemoved(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var oldEntry = Iterables.get(context.absent().entrySet(), 0);
-    var newEntry = Iterables.get(context.absent().entrySet(), 1);
+    var oldEntry = requireNonNull(Iterables.get(context.absent().entrySet(), 0));
+    var newEntry = requireNonNull(Iterables.get(context.absent().entrySet(), 1));
     var oldValue = cache.put(oldEntry.getKey(), oldEntry.getValue());
     assertThat(oldValue).isNull();
 
@@ -698,7 +706,7 @@ public final class BoundedLocalCacheTest {
     cache.evictionLock.lock();
     try {
       var lookupKey = cache.nodeFactory.newLookupKey(oldEntry.getKey());
-      var node = cache.data.get(lookupKey);
+      var node = requireNonNull(cache.data.get(lookupKey));
       checkStatus(node, Status.ALIVE);
       ConcurrentTestHarness.execute(() -> {
         var value = cache.put(newEntry.getKey(), newEntry.getValue());
@@ -822,10 +830,11 @@ public final class BoundedLocalCacheTest {
     var candidate = cache.evictFromWindow();
     assertThat(candidate).isNotNull();
 
-    var expected = FluentIterable
-        .from(cache.accessOrderProbationDeque())
-        .append(cache.accessOrderProtectedDeque())
-        .transform(Node::getKey).toList();
+    var expected = Stream
+        .concat(cache.accessOrderProbationDeque().stream(),
+            cache.accessOrderProtectedDeque().stream())
+        .map(Node::getKey)
+        .collect(toImmutableList());
     cache.setMaximumSize(0L);
     cache.cleanUp();
 
@@ -903,11 +912,12 @@ public final class BoundedLocalCacheTest {
     Arrays.fill(cache.frequencySketch().table, 0L);
     cache.setMainProtectedWeightedSize(context.maximumSize() - cache.windowWeightedSize());
 
-    var expected = FluentIterable
-        .from(cache.accessOrderWindowDeque())
-        .append(cache.accessOrderProbationDeque())
-        .append(cache.accessOrderProtectedDeque())
-        .transform(Node::getKey).toList();
+    var expected = Streams
+        .concat(cache.accessOrderWindowDeque().stream(),
+            cache.accessOrderProbationDeque().stream(),
+            cache.accessOrderProtectedDeque().stream())
+        .map(Node::getKey)
+        .collect(toImmutableList());
     cache.setMainProtectedMaximum(0L);
     cache.setWindowMaximum(0L);
     cache.setMaximum(0L);
@@ -929,11 +939,12 @@ public final class BoundedLocalCacheTest {
     }
     Arrays.fill(cache.frequencySketch().table, 0L);
 
-    var expected = FluentIterable
-        .from(cache.accessOrderWindowDeque())
-        .append(cache.accessOrderProbationDeque())
-        .append(cache.accessOrderProtectedDeque())
-        .transform(Node::getKey).toList();
+    var expected = Streams
+        .concat(cache.accessOrderWindowDeque().stream(),
+            cache.accessOrderProbationDeque().stream(),
+            cache.accessOrderProtectedDeque().stream())
+        .map(Node::getKey)
+        .collect(toImmutableList());
     cache.setMaximumSize(0);
     cache.evictEntries();
 
@@ -948,8 +959,8 @@ public final class BoundedLocalCacheTest {
   public void evict_retired_candidate(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.evictionLock.lock();
     try {
-      var expected = cache.accessOrderWindowDeque().peekFirst();
-      var key = expected.getKey();
+      var expected = cache.accessOrderWindowDeque().getFirst();
+      var key = requireNonNull(expected.getKey());
 
       ConcurrentTestHarness.execute(() -> {
         var value = cache.remove(key);
@@ -975,8 +986,8 @@ public final class BoundedLocalCacheTest {
   public void evict_retired_victim(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.evictionLock.lock();
     try {
-      var expected = cache.accessOrderProbationDeque().peekFirst();
-      var key = expected.getKey();
+      var expected = cache.accessOrderProbationDeque().getFirst();
+      var key = requireNonNull(expected.getKey());
 
       ConcurrentTestHarness.execute(() -> {
         var value = cache.remove(key);
@@ -998,13 +1009,18 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE)
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   public void evict_zeroWeight_candidate(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    when(context.weigher().weigh(any(), any())).thenAnswer(invocation -> {
+      Int value = invocation.getArgument(1);
+      return Math.abs(value.intValue());
+    });
+
     for (int i = 0; i < context.maximumSize(); i++) {
       assertThat(cache.put(Int.valueOf(i), Int.valueOf(1))).isNull();
     }
 
-    var candidate = cache.accessOrderWindowDeque().peekFirst();
+    var candidate = cache.accessOrderWindowDeque().getFirst();
     cache.setWindowWeightedSize(cache.windowWeightedSize() - candidate.getWeight());
     cache.setWeightedSize(cache.weightedSize() - candidate.getWeight());
     candidate.setPolicyWeight(0);
@@ -1019,13 +1035,18 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE)
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   public void evict_zeroWeight_victim(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    when(context.weigher().weigh(any(), any())).thenAnswer(invocation -> {
+      Int value = invocation.getArgument(1);
+      return Math.abs(value.intValue());
+    });
+
     for (int i = 0; i < context.maximumSize(); i++) {
       assertThat(cache.put(Int.valueOf(i), Int.valueOf(1))).isNull();
     }
 
-    var victim = cache.accessOrderProbationDeque().peekFirst();
+    var victim = cache.accessOrderProbationDeque().getFirst();
     cache.setWeightedSize(cache.weightedSize() - victim.getWeight());
     victim.setPolicyWeight(0);
     victim.setWeight(0);
@@ -1134,7 +1155,9 @@ public final class BoundedLocalCacheTest {
     cache.putAll(Map.of(Int.valueOf(9), Int.valueOf(9), Int.valueOf(1), Int.valueOf(1)));
 
     var lookupKey = cache.nodeFactory.newLookupKey(Int.valueOf(1));
-    assertThat(cache.data.get(lookupKey).inWindow()).isTrue();
+    var node = requireNonNull(cache.data.get(lookupKey));
+    assertThat(node.inWindow()).isTrue();
+
     var oldValue = cache.put(Int.valueOf(1), Int.valueOf(20));
     assertThat(oldValue).isEqualTo(1);
 
@@ -1160,7 +1183,9 @@ public final class BoundedLocalCacheTest {
     }
 
     var lookupKey = cache.nodeFactory.newLookupKey(Int.valueOf(1));
-    assertThat(cache.data.get(lookupKey).inMainProbation()).isTrue();
+    var node = requireNonNull(cache.data.get(lookupKey));
+    assertThat(node.inMainProbation()).isTrue();
+
     var oldValue = cache.put(Int.valueOf(1), Int.valueOf(20));
     assertThat(oldValue).isEqualTo(1);
 
@@ -1190,7 +1215,9 @@ public final class BoundedLocalCacheTest {
     cache.cleanUp();
 
     var lookupKey = cache.nodeFactory.newLookupKey(Int.valueOf(1));
-    assertThat(cache.data.get(lookupKey).inMainProtected()).isTrue();
+    var node = requireNonNull(cache.data.get(lookupKey));
+    assertThat(node.inMainProtected()).isTrue();
+
     var oldValue = cache.put(Int.valueOf(1), Int.valueOf(20));
     assertThat(oldValue).isEqualTo(1);
 
@@ -1216,6 +1243,8 @@ public final class BoundedLocalCacheTest {
     assertThat(initialValue).isNull();
 
     var node = cache.data.get(cache.referenceKey(key));
+    assertThat(node).isNotNull();
+
     @SuppressWarnings("unchecked")
     var ref = (Reference<Int>) node.getValueReference();
     ref.enqueue();
@@ -1233,7 +1262,10 @@ public final class BoundedLocalCacheTest {
       });
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> threadState.contains(evictor.get().getState()));
+      await().until(() -> {
+        var thread = evictor.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
 
       return newValue;
     });
@@ -1268,7 +1300,10 @@ public final class BoundedLocalCacheTest {
 
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> threadState.contains(evictor.get().getState()));
+      await().until(() -> {
+        var thread = evictor.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
 
       return List.of();
     });
@@ -1302,7 +1337,10 @@ public final class BoundedLocalCacheTest {
 
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> threadState.contains(evictor.get().getState()));
+      await().until(() -> {
+        var thread = evictor.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
       return key.negate();
     });
     await().untilTrue(done);
@@ -1333,7 +1371,10 @@ public final class BoundedLocalCacheTest {
 
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> threadState.contains(evictor.get().getState()));
+      await().until(() -> {
+        var thread = evictor.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
       cache.policy().expireAfterAccess().orElseThrow().setExpiresAfter(Duration.ofHours(1));
       return v;
     });
@@ -1364,7 +1405,10 @@ public final class BoundedLocalCacheTest {
 
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> threadState.contains(evictor.get().getState()));
+      await().until(() -> {
+        var thread = evictor.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
       cache.policy().expireAfterWrite().orElseThrow().setExpiresAfter(Duration.ofHours(1));
       return v;
     });
@@ -1395,7 +1439,10 @@ public final class BoundedLocalCacheTest {
 
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> threadState.contains(evictor.get().getState()));
+      await().until(() -> {
+        var thread = evictor.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
       return key.negate();
     });
     await().untilTrue(done);
@@ -1417,7 +1464,7 @@ public final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
     var evictor = new AtomicReference<Thread>();
-    var node = cache.data.get(cache.referenceKey(key));
+    var node = requireNonNull(cache.data.get(cache.referenceKey(key)));
     synchronized (node) {
       context.ticker().advance(Duration.ofHours(1));
       ConcurrentTestHarness.execute(() -> {
@@ -1429,7 +1476,10 @@ public final class BoundedLocalCacheTest {
 
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> threadState.contains(evictor.get().getState()));
+      await().until(() -> {
+        var thread = evictor.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
       node.setVariableTime(context.ticker().read() + TimeUnit.DAYS.toNanos(1));
     }
     await().untilTrue(done);
@@ -1500,7 +1550,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onGet(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
     updateRecency(cache, context, () -> {
-      var value = cache.get(first.getKey());
+      var key = requireNonNull(first.getKey());
+      var value = cache.get(key);
       assertThat(value).isNotNull();
     });
   }
@@ -1510,7 +1561,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onPutIfAbsent(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
     updateRecency(cache, context, () -> {
-      var oldValue = cache.putIfAbsent(first.getKey(), first.getKey());
+      var key = requireNonNull(first.getKey());
+      var oldValue = cache.putIfAbsent(key, key);
       assertThat(oldValue).isNotNull();
     });
   }
@@ -1520,7 +1572,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onPut(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
     updateRecency(cache, context, () -> {
-      var oldValue = cache.put(first.getKey(), first.getKey());
+      var key = requireNonNull(first.getKey());
+      var oldValue = cache.put(key, key);
       assertThat(oldValue).isNotNull();
     });
   }
@@ -1530,7 +1583,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onReplace(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
     updateRecency(cache, context, () -> {
-      var oldValue = cache.replace(first.getKey(), first.getKey());
+      var key = requireNonNull(first.getKey());
+      var oldValue = cache.replace(key, key);
       assertThat(oldValue).isNotNull();
     });
   }
@@ -1540,10 +1594,11 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onReplaceConditionally(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var first = firstBeforeAccess(cache, context);
-    Int value = first.getValue();
+    Int value = requireNonNull(first.getValue());
 
     updateRecency(cache, context, () -> {
-      boolean replaced = cache.replace(first.getKey(), value, value);
+      var key = requireNonNull(first.getKey());
+      boolean replaced = cache.replace(key, value, value);
       assertThat(replaced).isTrue();
     });
   }
@@ -1551,8 +1606,8 @@ public final class BoundedLocalCacheTest {
   private static Node<Int, Int> firstBeforeAccess(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     return context.isZeroWeighted()
-        ? cache.accessOrderWindowDeque().peek()
-        : cache.accessOrderProbationDeque().peek();
+        ? cache.accessOrderWindowDeque().getFirst()
+        : cache.accessOrderProbationDeque().getFirst();
   }
 
   private static void updateRecency(BoundedLocalCache<Int, Int> cache,
@@ -1575,6 +1630,7 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
   public void exceedsMaximumBufferSize_onRead(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    @SuppressWarnings("NullAway")
     var dummy = cache.nodeFactory.newNode(
         new WeakKeyReference<>(null, null), null, null, 1, 0);
     cache.frequencySketch().ensureCapacity(1);
@@ -1916,20 +1972,23 @@ public final class BoundedLocalCacheTest {
 
       var halfWaitTime = Duration.ofNanos(WARN_AFTER_LOCK_WAIT_NANOS / 2);
       await().until(cache.evictionLock::hasQueuedThreads);
+      assertThat(thread.get()).isNotNull();
       thread.get().interrupt();
 
       Uninterruptibles.sleepUninterruptibly(halfWaitTime);
       assertThat(cache.evictionLock.hasQueuedThreads()).isTrue();
-      assertThat(testLogger.get().getAllLoggingEvents()).isEmpty();
+      var threadLogger = requireNonNull(testLogger.get());
+      assertThat(threadLogger.getAllLoggingEvents()).isEmpty();
 
       Uninterruptibles.sleepUninterruptibly(halfWaitTime.plusMillis(500));
-      await().until(() -> !testLogger.get().getAllLoggingEvents().isEmpty());
+      await().until(() -> !threadLogger.getAllLoggingEvents().isEmpty());
 
       assertThat(cache.evictionLock.hasQueuedThreads()).isTrue();
 
       var event = Iterables.getOnlyElement(TestLoggerFactory.getAllLoggingEvents().stream()
           .filter(e -> e.getLevel() == WARN)
           .collect(toImmutableList()));
+      requireNonNull(event);
       assertThat(event.getFormattedMessage()).contains("excessive wait times");
       assertThat(event.getThrowable().orElseThrow()).isInstanceOf(TimeoutException.class);
     } finally {
@@ -1945,7 +2004,7 @@ public final class BoundedLocalCacheTest {
     var initialValue = cache.put(context.absentKey(), context.absentValue());
     assertThat(initialValue).isNull();
 
-    var node = cache.data.get(context.absentKey());
+    var node = requireNonNull(cache.data.get(context.absentKey()));
     node.retire();
 
     var future = new Future<?>[1];
@@ -1959,7 +2018,10 @@ public final class BoundedLocalCacheTest {
 
       var threadState = EnumSet.of(BLOCKED, WAITING);
       await().untilAtomic(writer, is(not(nullValue())));
-      await().until(() -> threadState.contains(writer.get().getState()));
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
 
       return null;
     });
@@ -1979,19 +2041,23 @@ public final class BoundedLocalCacheTest {
     context.ticker().advance(Duration.ofHours(1));
     var result = new AtomicReference<Int>();
     long currentDuration = 1;
+    requireNonNull(node);
 
     synchronized (node) {
       var started = new AtomicBoolean();
-      var thread = new AtomicReference<Thread>();
+      var writer = new AtomicReference<Thread>();
       ConcurrentTestHarness.execute(() -> {
-        thread.set(Thread.currentThread());
+        writer.set(Thread.currentThread());
         started.set(true);
         var value = cache.putIfAbsent(context.firstKey(), context.absentValue());
         result.set(value);
       });
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> threadState.contains(thread.get().getState()));
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
       node.setVariableTime(context.ticker().read() + currentDuration);
     }
 
@@ -2019,15 +2085,16 @@ public final class BoundedLocalCacheTest {
       var value = cache.put(Int.valueOf(i), Int.valueOf(-i));
       assertThat(value).isNull();
     }
-    assertThat(cache.pacer().nextFireTime).isNotEqualTo(0);
-    assertThat(cache.pacer().future).isNotNull();
+    var pacer = requireNonNull(cache.pacer());
+    assertThat(pacer.nextFireTime).isNotEqualTo(0);
+    assertThat(pacer.future).isNotNull();
 
     context.ticker().advance(Duration.ofHours(1));
     cache.cleanUp();
 
     verify(future).cancel(false);
-    assertThat(cache.pacer().nextFireTime).isEqualTo(0);
-    assertThat(cache.pacer().future).isNull();
+    assertThat(pacer.nextFireTime).isEqualTo(0);
+    assertThat(pacer.future).isNull();
   }
 
   @Test(dataProvider = "caches")
@@ -2045,13 +2112,14 @@ public final class BoundedLocalCacheTest {
       var value = cache.put(Int.valueOf(i), Int.valueOf(-i));
       assertThat(value).isNull();
     }
-    assertThat(cache.pacer().nextFireTime).isNotEqualTo(0);
-    assertThat(cache.pacer().future).isNotNull();
+    var pacer = requireNonNull(cache.pacer());
+    assertThat(pacer.nextFireTime).isNotEqualTo(0);
+    assertThat(pacer.future).isNotNull();
 
     cache.clear();
     verify(future).cancel(false);
-    assertThat(cache.pacer().nextFireTime).isEqualTo(0);
-    assertThat(cache.pacer().future).isNull();
+    assertThat(pacer.nextFireTime).isEqualTo(0);
+    assertThat(pacer.future).isNull();
   }
 
   @Test(dataProvider = "caches")
@@ -2076,8 +2144,9 @@ public final class BoundedLocalCacheTest {
         node.setAccessTime(context.ticker().read());
       }
       for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
-        var value = cache.get(node.getKey());
-        assertThat(value).isEqualTo(node.getKey());
+        var key = requireNonNull(node.getKey());
+        var value = cache.get(key);
+        assertThat(value).isEqualTo(key);
       }
       context.ticker().advance(Duration.ofNanos(stepSize));
       cache.cleanUp();
@@ -2108,8 +2177,9 @@ public final class BoundedLocalCacheTest {
       node.setAccessTime(context.ticker().read());
     }
     for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
-      var value = cache.get(node.getKey());
-      assertThat(value).isEqualTo(node.getKey());
+      var key = requireNonNull(node.getKey());
+      var value = cache.get(key);
+      assertThat(value).isEqualTo(key);
     }
     context.ticker().advance(Duration.ofNanos(stepSize));
     cache.cleanUp();
@@ -2133,8 +2203,9 @@ public final class BoundedLocalCacheTest {
     }
 
     for (var node : FluentIterable.from(cache.accessOrderProbationDeque()).skip(5).toList()) {
-      var value = cache.get(node.getKey());
-      assertThat(value).isEqualTo(node.getKey());
+      var key = requireNonNull(node.getKey());
+      var value = cache.get(key);
+      assertThat(value).isEqualTo(key);
     }
     context.ticker().advance(Duration.ofNanos(stepSize));
     cache.cleanUp();
@@ -2227,15 +2298,26 @@ public final class BoundedLocalCacheTest {
     assertThat(oldValue).isNull();
 
     // Remove the entry after the read, but before the refresh, and leave it as retired
-    var node = cache.data.get(context.absentKey());
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.absentKey())));
+    var errors = new ConcurrentLinkedDeque<Throwable>();
     doAnswer(invocation -> {
       ConcurrentTestHarness.execute(() -> {
-        var value = cache.remove(context.absentKey());
-        assertThat(value).isEqualTo(context.absentValue());
+        try {
+          var value = cache.remove(context.absentKey());
+          assertThat(value).isEqualTo(context.absentValue());
+        } catch (Throwable t) {
+          errors.add(t);
+        }
       });
-      await().until(() -> !cache.containsKey(context.absentKey()));
-      assertThat(node.isRetired()).isTrue();
-      return null;
+
+      try {
+        await().until(() -> !cache.containsKey(context.absentKey()));
+        assertThat(node.isRetired()).isTrue();
+        return null;
+      } catch (Throwable t) {
+        errors.add(t);
+        throw t;
+      }
     }).when(stats).recordHits(1);
 
     // Ensure that the refresh operation was skipped
@@ -2245,6 +2327,7 @@ public final class BoundedLocalCacheTest {
       var value = cache.getIfPresent(context.absentKey(), /* recordStats= */ true);
       assertThat(value).isEqualTo(context.absentValue());
       assertThat(refreshEntry.get()).isNull();
+      assertThat(errors).isEmpty();
     } finally {
       cache.evictionLock.unlock();
     }
@@ -2276,7 +2359,7 @@ public final class BoundedLocalCacheTest {
     var localCache = asBoundedLocalCache(cache);
     cache.put(context.absentKey(), context.absentValue());
     var lookupKey = localCache.nodeFactory.newLookupKey(context.absentKey());
-    var node = localCache.data.get(lookupKey);
+    var node = requireNonNull(localCache.data.get(lookupKey));
     var refreshes = localCache.refreshes();
 
     context.ticker().advance(Duration.ofMinutes(2));
@@ -2379,7 +2462,7 @@ public final class BoundedLocalCacheTest {
     assertThat(context).notifications().isEmpty();
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    var event = requireNonNull(Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents()));
     assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
     checkBrokenEqualityMessage(cache, key, event.getFormattedMessage());
     assertThat(event.getLevel()).isEqualTo(ERROR);
@@ -2408,7 +2491,7 @@ public final class BoundedLocalCacheTest {
     assertThat(context).notifications().isEmpty();
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    var event = requireNonNull(Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents()));
     assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
     checkBrokenEqualityMessage(cache, key, event.getFormattedMessage());
     assertThat(event.getLevel()).isEqualTo(ERROR);
@@ -2430,7 +2513,7 @@ public final class BoundedLocalCacheTest {
     assertThat(context).notifications().isEmpty();
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
-    var event = Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents());
+    var event = requireNonNull(Iterables.getOnlyElement(TestLoggerFactory.getLoggingEvents()));
     assertThat(event.getThrowable().orElseThrow()).isInstanceOf(IllegalStateException.class);
     checkBrokenEqualityMessage(cache, key, event.getFormattedMessage());
     assertThat(event.getLevel()).isEqualTo(ERROR);
@@ -2515,12 +2598,11 @@ public final class BoundedLocalCacheTest {
 
     var e = assertThrows(IllegalStateException.class, () -> task.accept(key));
     checkBrokenEqualityMessage(cache, key, e.getMessage());
-
     cache.data.clear();
   }
 
   private static void checkBrokenEqualityMessage(
-      BoundedLocalCache<?, ?> cache, Object key, String msg) {
+      BoundedLocalCache<?, ?> cache, Object key, @Nullable String msg) {
     assertThat(msg).contains("An invalid state was detected");
     assertThat(msg).contains("cache type: " + cache.getClass().getSimpleName());
     assertThat(msg).contains("node type: " + cache.nodeFactory.getClass().getSimpleName());
@@ -2539,9 +2621,9 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void cacheFactory_null() {
-    assertThrows(NullPointerException.class,
-        () -> LocalCacheFactory.loadFactory(null));
+    assertThrows(NullPointerException.class, () -> LocalCacheFactory.loadFactory(null));
   }
 
   @Test
@@ -2638,6 +2720,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void nodeFactory_null() {
     assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(/* className= */ null));
   }
@@ -2712,6 +2795,7 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void cleanupTask_ignore() {
+    @SuppressWarnings("NullAway")
     var task = new PerformCleanupTask(null);
     assertThat(task.getRawResult()).isNull();
     assertThat(task.cancel(false)).isFalse();
@@ -2784,7 +2868,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, expiryTime = Expire.ONE_MINUTE)
   public void expireAfterRead_disabled(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = Iterables.getOnlyElement(cache.data.values());
+    var node = requireNonNull(Iterables.getOnlyElement(cache.data.values()));
     long duration = cache.expireAfterRead(node, node.getKey(), node.getValue(),
         cache.expiry(), context.ticker().read());
     var expiresAt = cache.expiresVariable()
@@ -2837,17 +2921,18 @@ public final class BoundedLocalCacheTest {
 
     @SuppressWarnings("unchecked")
     BadBoundedLocalCache(Caffeine<K, V> builder,
-        AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
+        @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
       super(builder, (AsyncCacheLoader<K, V>) cacheLoader, async);
       throw new IllegalStateException();
     }
   }
   static final class BadLocalCacheFactory implements LocalCacheFactory {
     @Override public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
-        AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
+        @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
       throw new IllegalStateException();
     }
   }
+  @NullUnmarked
   static final class BadNode extends Node<Object, Object> {
     public BadNode() {
       throw new IllegalStateException();

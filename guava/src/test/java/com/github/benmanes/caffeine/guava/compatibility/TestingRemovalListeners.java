@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.guava.compatibility;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.annotations.GwtCompatible;
@@ -28,6 +30,7 @@ import com.google.common.cache.RemovalNotification;
  *
  * @author mike nonemacher
  */
+@NullUnmarked
 @GwtCompatible(emulated = true)
 class TestingRemovalListeners {
 

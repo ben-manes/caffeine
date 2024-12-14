@@ -63,13 +63,13 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: check -x test
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@31d6f3309b31c566758e1314a3d9ef0dff75ecbd # v2024.2.6
+        uses: JetBrains/qodana-action@b46847499776819f38aad1d4298e16e52f17c4c5 # v2024.3.2
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           upload-result: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@aa578102511db1f4524ed59b8cc2bae4f6e88195 # v3.27.6
+        uses: github/codeql-action/upload-sarif@df409f7d9260372bd5f19e5b04e83cb3c43714ae # v3.27.9
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json

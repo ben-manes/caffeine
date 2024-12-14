@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions;
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -76,7 +77,7 @@ public abstract class AbstractLincheckCacheTest {
   /* --------------- Cache --------------- */
 
   @Operation
-  public Integer getIfPresent(@Param(name = "key") int key) {
+  public @Nullable Integer getIfPresent(@Param(name = "key") int key) {
     return cache.getIfPresent(key);
   }
 
@@ -110,7 +111,7 @@ public abstract class AbstractLincheckCacheTest {
   }
 
   @Operation
-  public Integer get_asMap(@Param(name = "key") int key) {
+  public @Nullable Integer get_asMap(@Param(name = "key") int key) {
     return cache.asMap().get(key);
   }
 

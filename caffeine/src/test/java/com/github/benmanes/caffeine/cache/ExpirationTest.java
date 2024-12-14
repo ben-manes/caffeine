@@ -142,7 +142,7 @@ public final class ExpirationTest {
     var delay = ArgumentCaptor.forClass(long.class);
     var task = ArgumentCaptor.forClass(Runnable.class);
     when(context.scheduler().schedule(eq(context.executor()), task.capture(), delay.capture(),
-        eq(TimeUnit.NANOSECONDS))).then(invocation -> DisabledFuture.INSTANCE);
+        eq(TimeUnit.NANOSECONDS))).then(invocation -> DisabledFuture.instance());
 
     cache.put(context.absentKey(), context.absentValue());
 
@@ -556,10 +556,10 @@ public final class ExpirationTest {
     var keys = context.firstMiddleLastKeys();
     context.ticker().advance(Duration.ofMinutes(1));
     cache.getAll(context.firstMiddleLastKeys(),
-        keysToLoad -> Maps.asMap(keysToLoad, identity())).join();
+        keysToLoad -> Maps.toMap(keysToLoad, identity())).join();
 
-    var expected = Maps.asMap(keys, identity());
-    assertThat(cache.getAll(keys, keysToLoad -> Maps.asMap(keysToLoad, identity())).join())
+    var expected = Maps.toMap(keys, identity());
+    assertThat(cache.getAll(keys, keysToLoad -> Maps.toMap(keysToLoad, identity())).join())
         .containsExactlyEntriesIn(expected).inOrder();
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();

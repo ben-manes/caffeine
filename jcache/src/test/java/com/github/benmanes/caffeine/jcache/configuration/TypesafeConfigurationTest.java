@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import static com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator.configSource;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertThrows;
 
 import java.net.URI;
@@ -274,8 +275,9 @@ public final class TypesafeConfigurationTest {
     assertThat(config.getValueType()).isEqualTo(Object.class);
     assertThat(config.getExecutorFactory().create()).isInstanceOf(TestExecutor.class);
     assertThat(config.getSchedulerFactory().create()).isInstanceOf(TestScheduler.class);
-    assertThat(config.getCacheLoaderFactory().create()).isInstanceOf(TestCacheLoader.class);
     assertThat(config.getCacheWriter()).isInstanceOf(TestCacheWriter.class);
+    assertThat(requireNonNull(config.getCacheLoaderFactory()).create())
+        .isInstanceOf(TestCacheLoader.class);
     assertThat(config.isNativeStatisticsEnabled()).isTrue();
     assertThat(config.isStatisticsEnabled()).isTrue();
     assertThat(config.isManagementEnabled()).isTrue();
@@ -292,7 +294,8 @@ public final class TypesafeConfigurationTest {
   }
 
   static void checkListener(CompleteConfiguration<?, ?> config) {
-    var listener = Iterables.getOnlyElement(config.getCacheEntryListenerConfigurations());
+    var listener = requireNonNull(Iterables.getOnlyElement(
+        config.getCacheEntryListenerConfigurations()));
     assertThat(listener.getCacheEntryListenerFactory().create())
         .isInstanceOf(TestCacheEntryListener.class);
     assertThat(listener.getCacheEntryEventFilterFactory().create())

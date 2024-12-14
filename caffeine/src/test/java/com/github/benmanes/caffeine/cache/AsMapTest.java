@@ -28,6 +28,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -1841,7 +1842,9 @@ public final class AsMapTest {
     assertThat(map.keySet().removeAll(context.firstMiddleLastKeys())).isTrue();
     assertThat(map).isEqualTo(expected);
     assertThat(context).removalNotifications().withCause(EXPLICIT)
-        .contains(Maps.asMap(context.firstMiddleLastKeys(), context.original()::get)).exclusively();
+        .contains(Maps.toMap(context.firstMiddleLastKeys(),
+            key -> requireNonNull(context.original().get(key))))
+        .exclusively();
   }
 
   @CheckNoStats
@@ -2017,7 +2020,9 @@ public final class AsMapTest {
     assertThat(map.keySet().retainAll(expected.keySet())).isTrue();
     assertThat(map).isEqualTo(expected);
     assertThat(context).removalNotifications().withCause(EXPLICIT)
-        .contains(Maps.asMap(context.firstMiddleLastKeys(), context.original()::get)).exclusively();
+        .contains(Maps.toMap(context.firstMiddleLastKeys(),
+            key -> requireNonNull(context.original().get(key))))
+        .exclusively();
   }
 
   @CheckNoStats
@@ -2149,6 +2154,7 @@ public final class AsMapTest {
   /* --------------- Values --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void values_toArray_null(Map<Int, Int> map, CacheContext context) {
@@ -2249,7 +2255,8 @@ public final class AsMapTest {
   public void values_removeAll_partial(Map<Int, Int> map, CacheContext context) {
     var expected = new HashMap<>(context.original());
     expected.keySet().removeAll(context.firstMiddleLastKeys());
-    var removed = Maps.asMap(context.firstMiddleLastKeys(), context.original()::get);
+    var removed = Maps.toMap(context.firstMiddleLastKeys(),
+        key -> requireNonNull(context.original().get(key)));
 
     assertThat(map.values().removeAll(removed.values())).isTrue();
     assertThat(map).isEqualTo(expected);
@@ -2418,7 +2425,8 @@ public final class AsMapTest {
   public void values_retainAll_partial(Map<Int, Int> map, CacheContext context) {
     var expected = new HashMap<>(context.original());
     expected.keySet().removeAll(context.firstMiddleLastKeys());
-    var removed = Maps.asMap(context.firstMiddleLastKeys(), context.original()::get);
+    var removed = Maps.toMap(context.firstMiddleLastKeys(),
+        key -> requireNonNull(context.original().get(key)));
 
     assertThat(map.values().retainAll(expected.values())).isTrue();
     assertThat(map).isEqualTo(expected);
@@ -2678,7 +2686,8 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
   public void entrySet_removeAll_partial(Map<Int, Int> map, CacheContext context) {
-    var removed = Maps.asMap(context.firstMiddleLastKeys(), context.original()::get);
+    var removed = Maps.toMap(context.firstMiddleLastKeys(),
+        key -> requireNonNull(context.original().get(key)));
     var expected = new HashMap<>(context.original());
     expected.entrySet().removeAll(removed.entrySet());
 
@@ -2888,7 +2897,8 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
   public void entrySet_retainAll_partial(Map<Int, Int> map, CacheContext context) {
-    var removed = Maps.asMap(context.firstMiddleLastKeys(), context.original()::get);
+    var removed = Maps.toMap(context.firstMiddleLastKeys(),
+        key -> requireNonNull(context.original().get(key)));
     var expected = new HashMap<>(context.original());
     expected.entrySet().removeAll(removed.entrySet());
 

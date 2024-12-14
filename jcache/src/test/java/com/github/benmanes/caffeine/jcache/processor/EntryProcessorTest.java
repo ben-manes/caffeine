@@ -33,6 +33,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 import javax.cache.processor.MutableEntry;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -104,7 +105,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     assertThat(value).isNull();
   }
 
-  private static Object process(MutableEntry<Integer, Integer> entry) {
+  private static @Nullable Object process(MutableEntry<Integer, Integer> entry) {
     var value = 1 + firstNonNull(entry.getValue(), 0);
     entry.setValue(value);
     return null;
@@ -135,7 +136,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   }
 
   final class MapLoader implements CacheLoader<Integer, Integer> {
-    @Override public Integer load(Integer key) {
+    @Override public @Nullable Integer load(Integer key) {
       loads++;
       return map.get(key);
     }

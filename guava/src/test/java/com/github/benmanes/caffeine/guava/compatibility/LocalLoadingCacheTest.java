@@ -25,6 +25,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.CacheLoader;
@@ -41,6 +43,7 @@ import junit.framework.TestCase;
 /**
  * @author Charles Fry
  */
+@NullUnmarked
 @SuppressWarnings("JUnit3FloatingPointComparisonWithoutDelta")
 public class LocalLoadingCacheTest extends TestCase {
   static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0);

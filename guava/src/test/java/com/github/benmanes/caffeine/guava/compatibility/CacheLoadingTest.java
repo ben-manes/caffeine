@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.logging.Logger;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.IdentityLoader;
@@ -69,6 +71,7 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
+@NullUnmarked
 @SuppressWarnings({"CacheLoaderNull", "PreferJavaTimeOverload", "ThreadPriorityCheck"})
 public class CacheLoadingTest extends TestCase {
   static final Logger logger = Logger.getLogger(

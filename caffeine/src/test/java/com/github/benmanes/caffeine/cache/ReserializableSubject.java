@@ -17,6 +17,9 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.asyncCache;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.cache;
+import static java.util.Objects.requireNonNull;
+
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncEvictionListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
@@ -39,9 +42,9 @@ import com.google.common.truth.Subject;
 public final class ReserializableSubject extends Subject {
   private final Object actual;
 
-  private ReserializableSubject(FailureMetadata metadata, Object subject) {
+  private ReserializableSubject(FailureMetadata metadata, @Nullable Object subject) {
     super(metadata, subject);
-    this.actual = subject;
+    this.actual = requireNonNull(subject);
   }
 
   public static Factory<ReserializableSubject, AsyncCache<?, ?>> asyncReserializable() {
@@ -257,7 +260,8 @@ public final class ReserializableSubject extends Subject {
       UnboundedLocalCache<?, ?> original, UnboundedLocalCache<?, ?> copy) {
     check("isRecordingStats").that(copy.isRecordingStats).isEqualTo(original.isRecordingStats);
 
-    if (original.removalListener == null) {
+    if ((original.removalListener == null) || (copy.removalListener == null)) {
+      check("removalListener").that(original.removalListener).isNull();
       check("removalListener").that(copy.removalListener).isNull();
     } else if (copy.removalListener.getClass() != original.removalListener.getClass()) {
       check("removalListener").that(copy.removalListener).isNotNull();

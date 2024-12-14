@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.github.benmanes.caffeine.guava.compatibility.CacheBuilderFactory.DurationSpec;
@@ -50,6 +52,7 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
+@NullUnmarked
 @SuppressWarnings("CollectionToArray")
 public class PopulatedCachesTest extends TestCase {
   // we use integers as keys; make sure the range covers some values that ARE cached by

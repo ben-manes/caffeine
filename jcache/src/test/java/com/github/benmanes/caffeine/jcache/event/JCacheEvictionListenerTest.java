@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.quality.Strictness.STRICT_STUBS;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -29,9 +30,11 @@ import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryRemovedListener;
 
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.testng.MockitoSettings;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -41,6 +44,9 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Test(singleThreaded = true)
+@Listeners(MockitoTestNGListener.class)
+@MockitoSettings(strictness = STRICT_STUBS)
 public final class JCacheEvictionListenerTest {
   JCacheEvictionListener<Integer, Integer> listener;
   JCacheStatisticsMXBean statistics;
@@ -49,8 +55,7 @@ public final class JCacheEvictionListenerTest {
   @Mock Cache<Integer, Integer> cache;
 
   @BeforeMethod
-  public void before() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
+  public void before() {
     statistics = new JCacheStatisticsMXBean();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     listener = new JCacheEvictionListener<>(dispatcher, statistics);

@@ -128,7 +128,7 @@ public final class LinkedDequeTests extends TestCase {
     }
 
     @Override
-    public LinkedValue getPreviousInAccessOrder() {
+    public @Nullable LinkedValue getPreviousInAccessOrder() {
       return prev;
     }
 
@@ -138,7 +138,7 @@ public final class LinkedDequeTests extends TestCase {
     }
 
     @Override
-    public LinkedValue getNextInAccessOrder() {
+    public @Nullable LinkedValue getNextInAccessOrder() {
       return next;
     }
 
@@ -148,22 +148,22 @@ public final class LinkedDequeTests extends TestCase {
     }
 
     @Override
-    public LinkedValue getPreviousInWriteOrder() {
+    public @Nullable LinkedValue getPreviousInWriteOrder() {
       return prev;
     }
 
     @Override
-    public void setPreviousInWriteOrder(LinkedValue prev) {
+    public void setPreviousInWriteOrder(@Nullable LinkedValue prev) {
       this.prev = prev;
     }
 
     @Override
-    public LinkedValue getNextInWriteOrder() {
+    public @Nullable LinkedValue getNextInWriteOrder() {
       return next;
     }
 
     @Override
-    public void setNextInWriteOrder(LinkedValue next) {
+    public void setNextInWriteOrder(@Nullable LinkedValue next) {
       this.next = next;
     }
 

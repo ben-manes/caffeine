@@ -34,6 +34,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
@@ -138,7 +140,8 @@ public final class GuavaCacheFromContext {
     return castedCache;
   }
 
-  static class GuavaCache<K, V> implements Cache<K, V>, Serializable {
+  @SuppressWarnings("NullAway")
+  static class GuavaCache<K, V> implements Cache<K, @Nullable V>, Serializable {
     private static final long serialVersionUID = 1L;
 
     private final com.google.common.cache.Cache<K, V> cache;
@@ -146,10 +149,10 @@ public final class GuavaCacheFromContext {
     private final boolean canSnapshot;
     private final Ticker ticker;
 
-    transient ConcurrentMap<K, V> mapView;
     transient StatsCounter statsCounter;
-    transient Policy<K, V> policy;
-    transient Set<K> keySet;
+    transient @Nullable ConcurrentMap<K, V> mapView;
+    transient @Nullable Policy<K, V> policy;
+    transient @Nullable Set<K> keySet;
 
     GuavaCache(com.google.common.cache.Cache<K, V> cache, CacheContext context) {
       this.canSnapshot = context.expires() || context.refreshes();
@@ -160,12 +163,12 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public V getIfPresent(Object key) {
+    public @Nullable V getIfPresent(Object key) {
       return cache.getIfPresent(key);
     }
 
     @Override
-    public V get(K key, Function<? super K, ? extends V> mappingFunction) {
+    public @Nullable V get(K key, Function<? super K, ? extends V> mappingFunction) {
       requireNonNull(mappingFunction);
       try {
         return cache.get(key, () -> {
@@ -201,7 +204,7 @@ public final class GuavaCacheFromContext {
       keys.forEach(Objects::requireNonNull);
       requireNonNull(mappingFunction);
 
-      Map<K, V> found = getAllPresent(keys);
+      Map<K, @Nullable V> found = getAllPresent(keys);
       Set<K> keysToLoad = Sets.difference(ImmutableSet.copyOf(keys), found.keySet());
       if (keysToLoad.isEmpty()) {
         return found;
@@ -494,6 +497,7 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
+    @SuppressWarnings("NullAway")
     public V get(K key) {
       try {
         return cache.get(key);

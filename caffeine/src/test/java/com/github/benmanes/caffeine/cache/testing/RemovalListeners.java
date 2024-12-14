@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 
@@ -44,7 +46,7 @@ public final class RemovalListeners {
     return new RejectingRemovalListener<>();
   }
 
-  private static void validate(Object key, Object value, RemovalCause cause) {
+  private static void validate(@Nullable Object key, @Nullable Object value, RemovalCause cause) {
     if (cause != RemovalCause.COLLECTED) {
       requireNonNull(key);
       requireNonNull(value);
@@ -60,7 +62,7 @@ public final class RemovalListeners {
     public int rejected;
 
     @Override
-    public void onRemoval(K key, V value, RemovalCause cause) {
+    public void onRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
       validate(key, value, cause);
 
       if (reject) {
@@ -83,7 +85,7 @@ public final class RemovalListeners {
     }
 
     @Override
-    public void onRemoval(K key, V value, RemovalCause cause) {
+    public void onRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
       validate(key, value, cause);
       removed.add(new RemovalNotification<>(key, value, cause));
     }

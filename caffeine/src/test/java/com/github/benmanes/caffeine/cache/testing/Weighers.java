@@ -42,6 +42,9 @@ public final class Weighers {
     return (Weigher<K, V>) RandomWeigher.INSTANCE;
   }
 
+  /** A marker to instruct the validation to not check the entry's weight for data consistency. */
+  public interface SkippedWeigher<K, V> extends Weigher<K, V> {}
+
   static final class ConstantWeigher<K, V> implements Weigher<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -57,7 +60,7 @@ public final class Weighers {
     }
   }
 
-  enum RandomWeigher implements Weigher<Object, Object> {
+  enum RandomWeigher implements SkippedWeigher<Object, Object> {
     INSTANCE;
 
     @Override public int weigh(Object key, Object value) {

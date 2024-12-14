@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.testing;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.truth.Truth.assertAbout;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
 import java.util.Deque;
@@ -24,6 +25,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.IterableSubject;
@@ -34,9 +37,9 @@ import com.google.common.truth.IterableSubject;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class CollectionSubject extends IterableSubject {
-  private final Collection<?> actual;
+  private final @Nullable Collection<?> actual;
 
-  public CollectionSubject(FailureMetadata metadata, Collection<?> subject) {
+  public CollectionSubject(FailureMetadata metadata, @Nullable Collection<?> subject) {
     super(metadata, subject);
     this.actual = subject;
   }
@@ -56,6 +59,7 @@ public class CollectionSubject extends IterableSubject {
 
   /** Fails if the collection does not have less than the given size. */
   public void hasSizeLessThan(long other) {
+    requireNonNull(actual);
     checkArgument(other >= 0, "expectedSize (%s) must be >= 0", other);
     check("size()").that(actual.size()).isLessThan(Math.toIntExact(other));
   }
@@ -83,11 +87,13 @@ public class CollectionSubject extends IterableSubject {
   }
 
   private void checkIterable() {
+    requireNonNull(actual);
     check("iterator().hasNext()").that(actual.iterator().hasNext()).isFalse();
   }
 
   @SuppressWarnings("CollectionToArray")
   private void checkCollection() {
+    requireNonNull(actual);
     check("size()").that(actual).hasSize(0);
     check("isEmpty()").that(actual).isEmpty();
     check("toArray()").that(actual.toArray()).isEmpty();

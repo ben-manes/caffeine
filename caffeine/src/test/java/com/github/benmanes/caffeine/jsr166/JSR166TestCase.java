@@ -99,6 +99,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
 import junit.framework.Test;
@@ -193,6 +194,7 @@ import junit.textui.TestRunner;
  *
  * </ul>
  */
+@NullUnmarked
 @SuppressWarnings({"AnnotateFormatMethod", "ClassEscapesDefinedScope", "CollectionToArray",
     "ConstantField", "EmptyCatch", "EqualsIncompatibleType", "FunctionalInterfaceClash",
     "InterruptedExceptionSwallowed", "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta",

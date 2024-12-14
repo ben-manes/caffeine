@@ -27,6 +27,7 @@ import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertThrows;
 import static org.slf4j.event.Level.WARN;
 
@@ -94,7 +95,7 @@ public final class ExpireAfterWriteTest {
       mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
   public void get(Cache<Int, Int> cache, CacheContext context) {
-    Function<Int, Int> mappingFunction = context.original()::get;
+    Function<Int, Int> mappingFunction = key -> requireNonNull(context.original().get(key));
     context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey(), mappingFunction);
     assertThat(value).isEqualTo(context.original().get(context.firstKey()));
@@ -135,14 +136,14 @@ public final class ExpireAfterWriteTest {
   public void getAll(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     var result1 = cache.getAll(List.of(context.firstKey(), context.absentKey()),
-        keys -> Maps.asMap(keys, identity()));
+        keys -> Maps.toMap(keys, identity()));
     assertThat(result1).containsExactly(
         context.firstKey(), context.firstKey().negate(), context.absentKey(), context.absentKey());
 
     context.ticker().advance(Duration.ofSeconds(45));
     cache.cleanUp();
     var result2 = cache.getAll(List.of(context.firstKey(), context.absentKey()),
-        keys -> Maps.asMap(keys, identity()));
+        keys -> Maps.toMap(keys, identity()));
     assertThat(result2).containsExactly(
         context.firstKey(), context.firstKey(), context.absentKey(), context.absentKey());
     assertThat(cache).hasSize(2);
@@ -395,6 +396,7 @@ public final class ExpireAfterWriteTest {
     assertThat(oldest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_null(CacheContext context,
@@ -406,6 +408,7 @@ public final class ExpireAfterWriteTest {
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_nullResult(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    @SuppressWarnings("NullAway")
     var result = expireAfterWrite.oldest(stream -> null);
     assertThat(result).isNull();
   }
@@ -544,6 +547,7 @@ public final class ExpireAfterWriteTest {
     assertThat(youngest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_null(CacheContext context,
@@ -555,6 +559,7 @@ public final class ExpireAfterWriteTest {
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_nullResult(CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    @SuppressWarnings("NullAway")
     var result = expireAfterWrite.youngest(stream -> null);
     assertThat(result).isNull();
   }

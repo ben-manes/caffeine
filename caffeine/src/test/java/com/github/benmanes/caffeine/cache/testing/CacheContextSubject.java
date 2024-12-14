@@ -39,6 +39,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -65,9 +67,9 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 public final class CacheContextSubject extends Subject {
   private final CacheContext actual;
 
-  CacheContextSubject(FailureMetadata metadata, CacheContext subject) {
+  CacheContextSubject(FailureMetadata metadata, @Nullable CacheContext subject) {
     super(metadata, subject);
-    this.actual = subject;
+    this.actual = requireNonNull(subject);
   }
 
   public static Factory<CacheContextSubject, CacheContext> context() {
@@ -212,9 +214,9 @@ public final class CacheContextSubject extends Subject {
     private final CacheContext actual;
     private final boolean isDirect;
 
-    private StatsSubject(FailureMetadata metadata, CacheContext context) {
+    private StatsSubject(FailureMetadata metadata, @Nullable CacheContext context) {
       super(metadata, context);
-      this.actual = context;
+      this.actual = requireNonNull(context);
       this.isDirect = !context.isRecordingStats()
           || (context.executorType() == CacheExecutor.DIRECT);
     }
@@ -290,6 +292,7 @@ public final class CacheContextSubject extends Subject {
     private static Factory<ListenerSubject, CacheContext> factoryOf(
         RemovalListenerType... removalListenerTypes) {
       return (metadata, context) -> {
+        requireNonNull(context);
         var subject = Arrays.stream(removalListenerTypes)
             .filter(listener -> listener.isConsumingListener(context))
             .collect(toImmutableMap(identity(), listener -> listener.instance(context)));
@@ -356,7 +359,7 @@ public final class CacheContextSubject extends Subject {
       }
 
       @CanIgnoreReturnValue
-      public Exclusive contains(Int key, Int value) {
+      public Exclusive contains(@Nullable Int key, @Nullable Int value) {
         return contains(new SimpleEntry<>(key, value));
       }
 

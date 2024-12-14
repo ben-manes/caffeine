@@ -22,6 +22,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertThrows;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.QueuingRemovalListener;
@@ -39,6 +41,7 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
+@NullUnmarked
 @SuppressWarnings("PreferJavaTimeOverload")
 public class NullCacheTest extends TestCase {
   QueuingRemovalListener<Object, Object> listener;

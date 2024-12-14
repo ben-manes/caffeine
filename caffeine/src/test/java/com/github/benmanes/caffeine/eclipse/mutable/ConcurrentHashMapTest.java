@@ -35,6 +35,7 @@ import org.eclipse.collections.impl.parallel.ParallelIterate;
 import org.eclipse.collections.impl.set.mutable.UnifiedSet;
 import org.eclipse.collections.impl.test.Verify;
 import org.eclipse.collections.impl.tuple.ImmutableEntry;
+import org.jspecify.annotations.NullUnmarked;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,6 +44,7 @@ import org.junit.Test;
  *
  * Ported from Eclipse Collections 11.0.
  */
+@NullUnmarked
 @SuppressWarnings({"all", "CanIgnoreReturnValueSuggester", "IdentityConversion", "unchecked"})
 public abstract class ConcurrentHashMapTest extends ConcurrentHashMapTestCase {
   public static final MutableMap<Integer, MutableBag<Integer>> SMALL_BAG_MUTABLE_MAP =

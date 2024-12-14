@@ -19,7 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import javax.cache.event.CacheEntryCreatedListener;
 
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 /**
@@ -28,7 +28,7 @@ import org.testng.annotations.Test;
 public final class EventTypeFilterTest {
   EventTypeFilter<Integer, Integer> filter;
 
-  @BeforeTest
+  @BeforeClass
   public void before() {
     CacheEntryCreatedListener<Integer, Integer> created = events -> {};
     filter = new EventTypeFilter<>(created, event -> true);

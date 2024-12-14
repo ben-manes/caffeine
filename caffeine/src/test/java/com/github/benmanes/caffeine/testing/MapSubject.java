@@ -18,8 +18,11 @@ package com.github.benmanes.caffeine.testing;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.collection;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.truth.Truth.assertAbout;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
@@ -34,18 +37,19 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  */
 public class MapSubject extends com.google.common.truth.MapSubject {
   @SuppressWarnings("ImmutableMemberCollection")
-  private final Map<?, ?> actual;
+  private final @Nullable Map<?, ?> actual;
 
-  public MapSubject(FailureMetadata metadata, Map<?, ?> subject) {
+  public MapSubject(FailureMetadata metadata, @Nullable Map<?, ?> subject) {
     super(metadata, subject);
     this.actual = subject;
   }
 
+  @SuppressWarnings("NullAway")
   public static Factory<MapSubject, Map<?, ?>> map() {
     return MapSubject::new;
   }
 
-  public static <K, V> MapSubject assertThat(Map<K, V> actual) {
+  public static <K, V> MapSubject assertThat(@Nullable Map<K, V> actual) {
     return assertAbout(map()).that(actual);
   }
 
@@ -56,29 +60,34 @@ public class MapSubject extends com.google.common.truth.MapSubject {
 
   /** Fails if the map does not have less than the given size. */
   public void hasSizeLessThan(long other) {
+    requireNonNull(actual);
     checkArgument(other >= 0, "expectedSize (%s) must be >= 0", other);
     check("size()").that(actual.size()).isLessThan(Math.toIntExact(other));
   }
 
   /** Fails if the map's size is not in {@code range}. */
   public void hasSizeIn(Range<Integer> range) {
+    requireNonNull(actual);
     check("size()").that(actual.size()).isIn(range);
   }
 
   /** Fails if the map does not contain the given keys, where duplicate keys are ignored. */
   @CanIgnoreReturnValue
   public Ordered containsExactlyKeys(Iterable<?> keys) {
+    requireNonNull(actual);
     return check("containsKeys").that(actual.keySet())
         .containsExactlyElementsIn(ImmutableSet.copyOf(keys));
   }
 
   /** Fails if the map does not contain the given value. */
-  public void containsValue(Object value) {
+  public void containsValue(@Nullable Object value) {
+    requireNonNull(actual);
     check("containsValue").that(actual.values()).contains(value);
   }
 
   /** Fails if the map does contain the given value. */
   public void doesNotContainValue(Object value) {
+    requireNonNull(actual);
     check("containsValue").that(actual.values()).doesNotContain(value);
   }
 
@@ -87,6 +96,7 @@ public class MapSubject extends com.google.common.truth.MapSubject {
    * methods.
    */
   public void isExhaustivelyEmpty() {
+    requireNonNull(actual);
     isEqualTo(Map.of());
     hasSize(0);
     isEmpty();

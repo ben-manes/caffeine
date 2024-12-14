@@ -3163,6 +3163,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param mappingFunction the mapping function to compute a value
    * @return the computed value
    */
+  @SuppressWarnings("NullAway")
   <T> T snapshot(Iterable<Node<K, V>> iterable, Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     requireNonNull(mappingFunction);
@@ -3901,10 +3902,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
      */
     // public final void quietlyComplete() {}
 
-    @Override public void setRawResult(@Nullable Void v) {}
     @Override public void complete(@Nullable Void value) {}
-    @Override public void completeExceptionally(Throwable ex) {}
+    @Override public void setRawResult(@Nullable Void value) {}
     @Override public @Nullable Void getRawResult() { return null; }
+    @Override public void completeExceptionally(@Nullable Throwable t) {}
     @Override public boolean cancel(boolean mayInterruptIfRunning) { return false; }
   }
 
@@ -4009,6 +4010,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override public @Nullable V getIfPresentQuietly(K key) {
       return transformer.apply(cache.getIfPresentQuietly(key));
     }
+    @SuppressWarnings("NullAway")
     @Override public @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
       return (node == null) ? null : cache.nodeToCacheEntry(node, transformer);

@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
 import com.google.common.annotations.GwtCompatible;
@@ -35,6 +36,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author mike nonemacher
  */
+@NullUnmarked
 @GwtCompatible(emulated = true)
 public class TestingCacheLoaders {
 

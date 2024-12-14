@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.event;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static javax.cache.event.EventType.CREATED;
 import static javax.cache.event.EventType.EXPIRED;
 import static javax.cache.event.EventType.REMOVED;
@@ -24,6 +25,7 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.quality.Strictness.STRICT_STUBS;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,9 +47,10 @@ import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.testng.MockitoSettings;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.Iterables;
@@ -57,6 +60,9 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Test(singleThreaded = true)
+@Listeners(MockitoTestNGListener.class)
+@MockitoSettings(strictness = STRICT_STUBS)
 public final class EventDispatcherTest {
   @Mock Cache<Integer, Integer> cache;
   @Mock CacheEntryCreatedListener<Integer, Integer> createdListener;
@@ -68,11 +74,6 @@ public final class EventDispatcherTest {
       new ThreadFactoryBuilder().setDaemon(true).build());
   CacheEntryEventFilter<Integer, Integer> allowFilter = event -> true;
   CacheEntryEventFilter<Integer, Integer> rejectFilter = event -> false;
-
-  @BeforeMethod
-  public void beforeMethod() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
-  }
 
   @AfterTest
   public void afterTest() {
@@ -245,7 +246,7 @@ public final class EventDispatcherTest {
       task.run();
     });
     CacheEntryCreatedListener<Integer, Integer> listener = events -> {
-      var event = Iterables.getOnlyElement(events);
+      var event = requireNonNull(Iterables.getOnlyElement(events));
       if (event.getKey().equals(1)) {
         received1.set(true);
         await().untilTrue(run1);

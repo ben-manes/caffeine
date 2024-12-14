@@ -34,6 +34,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,6 +58,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -961,6 +963,7 @@ public final class ExpireAfterVarTest {
   /* --------------- Policy: putIfAbsent --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -971,6 +974,7 @@ public final class ExpireAfterVarTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -981,6 +985,7 @@ public final class ExpireAfterVarTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -1001,6 +1006,7 @@ public final class ExpireAfterVarTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -1062,6 +1068,7 @@ public final class ExpireAfterVarTest {
   /* --------------- Policy: put --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -1072,6 +1079,7 @@ public final class ExpireAfterVarTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -1082,6 +1090,7 @@ public final class ExpireAfterVarTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -1115,6 +1124,7 @@ public final class ExpireAfterVarTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -1162,6 +1172,7 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy: compute --------------- */
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_nullKey(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -1170,6 +1181,7 @@ public final class ExpireAfterVarTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_nullMappingFunction(CacheContext context,
@@ -1227,8 +1239,8 @@ public final class ExpireAfterVarTest {
   @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void compute_recursive(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var mappingFunction = new BiFunction<Int, Int, Int>() {
-      @Override public Int apply(Int key, Int value) {
+    var mappingFunction = new BiFunction<Int, Int, @Nullable Int>() {
+      @Override public @Nullable Int apply(Int key, Int value) {
         return expireAfterVar.compute(key, this, Duration.ofDays(1));
       }
     };
@@ -1243,8 +1255,8 @@ public final class ExpireAfterVarTest {
   public void compute_pingpong(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var key1 = Int.valueOf(1);
     var key2 = Int.valueOf(2);
-    var mappingFunction = new BiFunction<Int, Int, Int>() {
-      @Override public Int apply(Int key, Int value) {
+    var mappingFunction = new BiFunction<Int, Int, @Nullable Int>() {
+      @Override public @Nullable Int apply(Int key, Int value) {
         return expireAfterVar.compute(key.equals(key1) ? key2 : key1, this, Duration.ofDays(1));
       }
     };
@@ -1416,7 +1428,7 @@ public final class ExpireAfterVarTest {
     var replaced = new HashMap<Int, Int>();
     var duration = context.expiryTime().duration().dividedBy(2);
     for (Int key : context.firstMiddleLastKeys()) {
-      Int value = context.original().get(key);
+      Int value = requireNonNull(context.original().get(key));
       Int result = expireAfterVar.compute(key, (k, v) -> value.negate(), duration);
 
       replaced.put(key, value);
@@ -1679,12 +1691,14 @@ public final class ExpireAfterVarTest {
     assertThat(oldest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void oldestFunc_null(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () -> expireAfterVar.oldest(null));
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void oldestFunc_nullResult(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -1819,12 +1833,14 @@ public final class ExpireAfterVarTest {
     assertThat(youngest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void youngestFunc_null(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () -> expireAfterVar.youngest(null));
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void youngestFunc_nullResult(CacheContext context,

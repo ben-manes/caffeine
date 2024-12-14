@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.testing;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -25,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
+import org.jspecify.annotations.Nullable;
 
 import com.google.errorprone.annotations.Immutable;
 
@@ -48,8 +51,8 @@ public final class Int implements Serializable {
   private final int value;
 
   /** Constructs a newly allocated {@code Int} object with the same {@code value}. */
-  public Int(Int value) {
-    this(value.value);
+  public Int(@Nullable Int value) {
+    this(requireNonNull(value).value);
   }
 
   /**

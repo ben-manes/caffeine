@@ -61,12 +61,8 @@ tasks.withType<JavaCompile>().configureEach {
         append(".*")
       })
       disabledChecks().forEach { disable(it) }
-      errorChecks().forEach { error(it) }
 
       nullaway {
-        if (name.contains("Test")) {
-          disable()
-        }
         annotatedPackages.add("com.github.benmanes.caffeine")
         annotatedPackages.add("com.google.common")
         handleTestAssertionLibraries = true
@@ -74,14 +70,12 @@ tasks.withType<JavaCompile>().configureEach {
         suggestSuppressions = true
         checkContracts = true
         isJSpecifyMode = true
+        error()
       }
     }
   }
 }
 
-fun errorChecks() = listOf(
-  "NullAway",
-)
 fun disabledChecks() = listOf(
   "AvoidObjectArrays",
   "AndroidJdkLibsChecker",

@@ -54,11 +54,13 @@ public final class JavaSerializationCopierTest {
         new JavaSerializationCopier(immutableClasses, deepCopyStrategies));
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "copier")
   public void null_object(Copier copier) {
     assertThrows(NullPointerException.class, () -> copy(copier, null));
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "copier")
   public void null_classLoader(Copier copier) {
     assertThrows(NullPointerException.class, () -> copier.copy(1, null));

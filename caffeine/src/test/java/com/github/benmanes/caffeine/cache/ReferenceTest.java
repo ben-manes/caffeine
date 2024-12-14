@@ -30,6 +30,7 @@ import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -204,8 +205,8 @@ public final class ReferenceTest {
 
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(cache.getAll(keys, keysToLoad -> Maps.asMap(keysToLoad, Int::negate)))
-        .containsExactlyEntriesIn(Maps.asMap(keys, Int::negate));
+    assertThat(cache.getAll(keys, keysToLoad -> Maps.toMap(keysToLoad, Int::negate)))
+        .containsExactlyEntriesIn(Maps.toMap(keys, Int::negate));
 
     assertThat(cache).whenCleanedUp().hasSize(keys.size());
     assertThat(context).notifications().withCause(COLLECTED)
@@ -299,7 +300,8 @@ public final class ReferenceTest {
     List<Map.Entry<Int, Int>> collected;
     var keys = context.firstMiddleLastKeys();
     if (context.isStrongValues()) {
-      retained = Maps.toMap(context.firstMiddleLastKeys(), key -> context.original().get(key));
+      retained = Maps.toMap(context.firstMiddleLastKeys(),
+          key -> requireNonNull(context.original().get(key)));
       collected = getExpectedAfterGc(context,
           Maps.filterKeys(context.original(), not(keys::contains)));
     } else {
@@ -335,7 +337,8 @@ public final class ReferenceTest {
     List<Map.Entry<Int, Int>> collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(keys::contains)));
     if (context.isStrongValues()) {
-      retained = Maps.toMap(context.firstMiddleLastKeys(), key -> context.original().get(key));
+      retained = Maps.toMap(context.firstMiddleLastKeys(),
+          key -> requireNonNull(context.original().get(key)));
     } else {
       retained = Map.of();
       for (var key : keys) {
@@ -428,7 +431,7 @@ public final class ReferenceTest {
 
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(cache.getAll(keys)).containsExactlyEntriesIn(Maps.asMap(keys, Int::negate));
+    assertThat(cache.getAll(keys)).containsExactlyEntriesIn(Maps.toMap(keys, Int::negate));
     assertThat(cache).whenCleanedUp().hasSize(keys.size());
 
     assertThat(context).notifications().withCause(COLLECTED)
@@ -504,8 +507,8 @@ public final class ReferenceTest {
 
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(cache.getAll(keys, keysToLoad -> Maps.asMap(keysToLoad, Int::negate)).join())
-        .containsExactlyEntriesIn(Maps.asMap(keys, Int::negate));
+    assertThat(cache.getAll(keys, keysToLoad -> Maps.toMap(keysToLoad, Int::negate)).join())
+        .containsExactlyEntriesIn(Maps.toMap(keys, Int::negate));
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(collected).exclusively();
   }
@@ -589,7 +592,8 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void clear(Map<Int, Int> map, CacheContext context) {
-    var retained = Maps.toMap(context.firstMiddleLastKeys(), key -> context.original().get(key));
+    var retained = Maps.toMap(context.firstMiddleLastKeys(),
+        key -> requireNonNull(context.original().get(key)));
     var collected = getExpectedAfterGc(context, Maps.difference(
         context.original(), retained).entriesOnlyOnLeft());
 

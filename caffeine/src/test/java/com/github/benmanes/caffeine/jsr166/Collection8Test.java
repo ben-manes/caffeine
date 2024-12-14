@@ -45,12 +45,15 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import junit.framework.Test;
 
 /**
  * Contains tests applicable to all jdk8+ Collection implementations.
  * An extension of CollectionTest.
  */
+@NullUnmarked
 @SuppressWarnings({"CatchAndPrintStackTrace", "CollectionAddAllToCollectionBlock",
     "CollectionForEach", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
     "EmptyCatch", "LabelledBreakTarget", "MemberName", "MethodReferenceUsage", "MissingDefault",

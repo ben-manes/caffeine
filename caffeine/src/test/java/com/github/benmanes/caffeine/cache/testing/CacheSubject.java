@@ -21,9 +21,12 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.CleanUpSub
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.truth.Truth.assertAbout;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.Objects;
+
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.google.common.testing.GcFinalization;
@@ -44,9 +47,9 @@ public final class CacheSubject extends Subject {
 
   private final Cache<?, ?> actual;
 
-  CacheSubject(FailureMetadata metadata, Cache<?, ?> subject) {
+  CacheSubject(FailureMetadata metadata, @Nullable Cache<?, ?> subject) {
     super(metadata, subject);
-    this.actual = subject;
+    this.actual = requireNonNull(subject);
   }
 
   public static Factory<CacheSubject, Cache<?, ?>> cache() {
@@ -104,7 +107,7 @@ public final class CacheSubject extends Subject {
   }
 
   /** Fails if the cache does not contain the given value. */
-  public void containsValue(Object value) {
+  public void containsValue(@Nullable Object value) {
     check("cache").about(map()).that(actual.asMap()).containsValue(value);
   }
 
@@ -114,14 +117,16 @@ public final class CacheSubject extends Subject {
   }
 
   /** Fails if the cache does not contain the given entry. */
-  public void containsEntry(Object key, Object value) {
+  public void containsEntry(Object key, @Nullable Object value) {
+    requireNonNull(value);
     check("cache").that(actual.asMap())
         .comparingValuesUsing(EQUALITY)
         .containsEntry(key, value);
   }
 
   /** Fails if the cache contains the given entry. */
-  public void doesNotContainEntry(Object key, Object value) {
+  public void doesNotContainEntry(Object key, @Nullable Object value) {
+    requireNonNull(value);
     check("cache").that(actual.asMap())
         .comparingValuesUsing(EQUALITY)
         .doesNotContainEntry(key, value);
@@ -162,8 +167,8 @@ public final class CacheSubject extends Subject {
 
     private final Cache<?, ?> actual;
 
-    private CleanUpSubject(FailureMetadata metadata, Cache<?, ?> cache) {
-      super(metadata, cache.asMap());
+    private CleanUpSubject(FailureMetadata metadata, @Nullable Cache<?, ?> cache) {
+      super(metadata, requireNonNull(cache).asMap());
       this.actual = cache;
     }
 

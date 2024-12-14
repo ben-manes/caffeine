@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.jcache;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.cache.CacheManager;
@@ -38,6 +37,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.testing.FakeTicker;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.uber.nullaway.annotations.Initializer;
 
 /**
  * A testing harness for simplifying the unit tests.
@@ -97,6 +97,7 @@ public abstract class AbstractJCacheTest {
   }
 
   /** The base configuration used by the test. */
+  @Initializer
   protected abstract CaffeineConfiguration<Integer, Integer> getConfiguration();
 
   /* --------------- Utility methods ------------- */
@@ -134,8 +135,8 @@ public abstract class AbstractJCacheTest {
       @Override public Integer load(Integer key) {
         return key;
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-        return Maps.asMap(ImmutableSet.copyOf(keys), this::load);
+      @Override public ImmutableMap<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        return Maps.toMap(ImmutableSet.copyOf(keys), this::load);
       }
     };
   }

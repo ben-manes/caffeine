@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.testing;
 
 import static com.google.common.truth.Truth.assertAbout;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
 
@@ -27,7 +29,7 @@ import com.google.common.truth.Subject;
  */
 public final class IntSubject extends Subject {
 
-  private IntSubject(FailureMetadata metadata, Int subject) {
+  private IntSubject(FailureMetadata metadata, @Nullable Int subject) {
     super(metadata, subject);
   }
 
@@ -35,7 +37,7 @@ public final class IntSubject extends Subject {
     return IntSubject::new;
   }
 
-  public static IntSubject assertThat(Int actual) {
+  public static IntSubject assertThat(@Nullable Int actual) {
     return assertAbout(integer()).that(actual);
   }
 

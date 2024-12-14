@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
@@ -92,7 +93,6 @@ public final class CacheContext {
   final TrackingExecutor executor;
   final ReferenceType keyStrength;
   final CacheWeigher cacheWeigher;
-  final Expiry<Int, Int> expiry;
   final Map<Int, Int> original;
   final CacheExpiry expiryType;
   final Population population;
@@ -105,6 +105,8 @@ public final class CacheContext {
   final Expire refresh;
   final Loader loader;
   final Stats stats;
+
+  final @Nullable Expiry<Int, Int> expiry;
 
   final boolean isAsyncLoader;
 
@@ -124,7 +126,7 @@ public final class CacheContext {
 
   @Nullable Map<Int, Int> absent;
 
-  @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
+  @SuppressWarnings({"NullAway.Init", "PMD.ExcessiveParameterList", "TooManyParameters"})
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher cacheWeigher,
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
       Expire refresh, ReferenceType keyStrength, ReferenceType valueStrength,
@@ -159,7 +161,7 @@ public final class CacheContext {
     this.compute = compute;
     this.expiryType = expiryType;
     this.expiryTime = cacheSpec.expiryTime();
-    this.expiry = expiryType.createExpiry(expiryTime);
+    this.expiry = (expiryType == CacheExpiry.DISABLED) ? null : expiryType.createExpiry(expiryTime);
   }
 
   /** Returns a thread local interner for explicit caching. */
@@ -214,16 +216,19 @@ public final class CacheContext {
 
   public Int firstKey() {
     assertWithMessage("Invalid usage of context").that(firstKey).isNotNull();
+    requireNonNull(firstKey);
     return firstKey;
   }
 
   public Int middleKey() {
     assertWithMessage("Invalid usage of context").that(middleKey).isNotNull();
+    requireNonNull(middleKey);
     return middleKey;
   }
 
   public Int lastKey() {
     assertWithMessage("Invalid usage of context").that(lastKey).isNotNull();
+    requireNonNull(lastKey);
     return lastKey;
   }
 
@@ -417,6 +422,7 @@ public final class CacheContext {
     return (expiryType != CacheExpiry.DISABLED);
   }
 
+  @NullUnmarked
   public Expiry<Int, Int> expiry() {
     return expiry;
   }

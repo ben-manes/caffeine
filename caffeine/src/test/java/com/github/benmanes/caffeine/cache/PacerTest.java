@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.quality.Strictness.STRICT_STUBS;
 
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -28,8 +29,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.testng.MockitoSettings;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.google.common.primitives.Ints;
@@ -38,6 +41,8 @@ import com.google.common.primitives.Ints;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(singleThreaded = true)
+@Listeners(MockitoTestNGListener.class)
+@MockitoSettings(strictness = STRICT_STUBS)
 public final class PacerTest {
   private static final long ONE_MINUTE_IN_NANOS = TimeUnit.MINUTES.toNanos(1);
   private static final Random random = new Random();
@@ -51,8 +56,7 @@ public final class PacerTest {
   Pacer pacer;
 
   @BeforeMethod
-  public void beforeMethod() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
+  public void beforeMethod() {
     pacer = new Pacer(scheduler);
   }
 
@@ -210,7 +214,7 @@ public final class PacerTest {
 
   @Test
   public void isScheduled_doneFuture() {
-    pacer.future = DisabledFuture.INSTANCE;
+    pacer.future = DisabledFuture.instance();
     assertThat(pacer.isScheduled()).isFalse();
   }
 

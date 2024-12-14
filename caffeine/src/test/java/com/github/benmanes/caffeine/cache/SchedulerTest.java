@@ -35,9 +35,11 @@ import static org.slf4j.event.Level.WARN;
 
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -104,27 +106,28 @@ public final class SchedulerTest {
   public void disabledScheduler() {
     var future = Scheduler.disabledScheduler()
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
-    assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(future).isSameInstanceAs(DisabledFuture.instance());
   }
 
   @Test
-  public void disabledFuture() {
-    assertThat(DisabledFuture.INSTANCE.get(0, TimeUnit.SECONDS)).isNull();
-    assertThat(DisabledFuture.INSTANCE.isCancelled()).isFalse();
-    assertThat(DisabledFuture.INSTANCE.cancel(false)).isFalse();
-    assertThat(DisabledFuture.INSTANCE.cancel(true)).isFalse();
-    assertThat(DisabledFuture.INSTANCE.isDone()).isTrue();
-    assertThat(DisabledFuture.INSTANCE.get()).isNull();
+  public void disabledFuture() throws InterruptedException, ExecutionException, TimeoutException {
+    assertThat(DisabledFuture.instance().get(0, TimeUnit.SECONDS)).isNull();
+    assertThat(DisabledFuture.instance().isCancelled()).isFalse();
+    assertThat(DisabledFuture.instance().cancel(false)).isFalse();
+    assertThat(DisabledFuture.instance().cancel(true)).isFalse();
+    assertThat(DisabledFuture.instance().isDone()).isTrue();
+    assertThat(DisabledFuture.instance().get()).isNull();
   }
 
   @Test
   public void disabledFuture_null() {
-    npeTester.testAllPublicInstanceMethods(DisabledFuture.INSTANCE);
+    npeTester.testAllPublicInstanceMethods(DisabledFuture.instance());
   }
 
   /* --------------- guarded --------------- */
 
   @Test
+  @SuppressWarnings("NullAway")
   public void guardedScheduler_null() {
     assertThrows(NullPointerException.class, () -> Scheduler.guardedScheduler(null));
   }
@@ -140,7 +143,7 @@ public final class SchedulerTest {
     var future = Scheduler.guardedScheduler(scheduler)
         .schedule(executor, command, 1L, TimeUnit.MINUTES);
     verify(scheduledExecutor).schedule(any(Runnable.class), eq(1L), eq(TimeUnit.MINUTES));
-    assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(future).isSameInstanceAs(DisabledFuture.instance());
   }
 
   @Test
@@ -154,7 +157,7 @@ public final class SchedulerTest {
   public void guardedScheduler_exception() {
     var future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new IllegalStateException(); })
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
-    assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(future).isSameInstanceAs(DisabledFuture.instance());
     assertThat(logEvents()
         .withMessage("Exception thrown by scheduler; discarded task")
         .withThrowable(IllegalStateException.class)
@@ -166,6 +169,7 @@ public final class SchedulerTest {
   /* --------------- ScheduledExecutorService --------------- */
 
   @Test
+  @SuppressWarnings("NullAway")
   public void scheduledExecutorService_null() {
     assertThrows(NullPointerException.class, () -> Scheduler.forScheduledExecutorService(null));
   }
@@ -180,7 +184,7 @@ public final class SchedulerTest {
 
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
     var future = scheduler.schedule(executor, command, 1L, TimeUnit.MINUTES);
-    assertThat(future).isNotSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(future).isNotSameInstanceAs(DisabledFuture.instance());
 
     verify(scheduledExecutor).isShutdown();
     verify(scheduledExecutor).schedule(task.capture(), eq(1L), eq(TimeUnit.MINUTES));
@@ -200,7 +204,7 @@ public final class SchedulerTest {
     when(scheduledExecutor.isShutdown()).thenReturn(true);
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
     var future = scheduler.schedule(executor, () -> {}, 1L, TimeUnit.MINUTES);
-    assertThat(future).isSameInstanceAs(DisabledFuture.INSTANCE);
+    assertThat(future).isSameInstanceAs(DisabledFuture.instance());
 
     verify(scheduledExecutor).isShutdown();
     verifyNoMoreInteractions(scheduledExecutor);

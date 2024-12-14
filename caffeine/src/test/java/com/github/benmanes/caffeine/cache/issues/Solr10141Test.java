@@ -66,6 +66,7 @@ public final class Solr10141Test {
     var removals = new AtomicLong();
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
+      assertThat(v).isNotNull();
       assertThat(v.key).isEqualTo(k);
       if (!v.live.compareAndSet(/* expectedValue= */ true, /* newValue= */ false)) {
         throw new RuntimeException(String.format(US,
@@ -143,6 +144,7 @@ public final class Solr10141Test {
     var failed = new ConcurrentLinkedQueue<Throwable>();
 
     RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
+      assertThat(v).isNotNull();
       assertThat(v.key).isEqualTo(k);
       if (!v.live.compareAndSet(/* expectedValue= */ true, /* newValue= */ false)) {
         throw new RuntimeException(String.format(US,

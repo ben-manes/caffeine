@@ -1,9 +1,12 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
+import net.ltgt.gradle.errorprone.errorprone
+import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
   `java-library`
+  id("errorprone.caffeine")
 }
 
 val mockitoAgent: Configuration by configurations.creating
@@ -13,11 +16,12 @@ dependencies {
   testImplementation(libs.guice)
   testImplementation(libs.truth)
   testImplementation(libs.testng)
-  testImplementation(libs.mockito)
   testImplementation(libs.hamcrest)
   testImplementation(libs.awaitility)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.guava.testlib)
+  testImplementation(libs.bundles.mockito)
+  testImplementation(libs.nullaway.annotations)
   testImplementation(libs.bundles.osgi.test.compile)
 
   testImplementation(platform(libs.asm.bom))
@@ -50,5 +54,20 @@ tasks.withType<Test>().configureEach {
     showStackTraces = true
     showExceptions = true
     showCauses = true
+  }
+}
+
+tasks.named<JavaCompile>("compileTestJava").configure {
+  options.errorprone.nullaway {
+    customInitializerAnnotations.addAll(listOf(
+      "org.testng.annotations.BeforeClass",
+      "org.testng.annotations.BeforeMethod"))
+    externalInitAnnotations.addAll(listOf(
+      "org.mockito.testng.MockitoSettings",
+      "picocli.CommandLine.Command"))
+    excludedFieldAnnotations.addAll(listOf(
+      "jakarta.inject.Inject",
+      "org.mockito.Captor",
+      "org.mockito.Mock"))
   }
 }

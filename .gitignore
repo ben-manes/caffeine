@@ -11,6 +11,7 @@ jitwatch.out
 .settings
 .project
 .gradle
+.kotlin
 .vscode
 .idea
 *.iml

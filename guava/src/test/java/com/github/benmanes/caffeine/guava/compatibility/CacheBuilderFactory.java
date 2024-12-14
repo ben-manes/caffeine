@@ -14,9 +14,12 @@
 
 package com.github.benmanes.caffeine.guava.compatibility;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Function;
@@ -37,17 +40,18 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author mike nonemacher
  */
+@NullUnmarked
 class CacheBuilderFactory {
   // Default values contain only 'null', which means don't call the CacheBuilder method (just give
   // the CacheBuilder default).
-  private Set<Integer> concurrencyLevels = Sets.newHashSet((Integer) null);
-  private Set<Integer> initialCapacities = Sets.newHashSet((Integer) null);
-  private Set<Integer> maximumSizes = Sets.newHashSet((Integer) null);
-  private Set<DurationSpec> expireAfterWrites = Sets.newHashSet((DurationSpec) null);
-  private Set<DurationSpec> expireAfterAccesses = Sets.newHashSet((DurationSpec) null);
-  private Set<DurationSpec> refreshes = Sets.newHashSet((DurationSpec) null);
-  private Set<Strength> keyStrengths = Sets.newHashSet((Strength) null);
-  private Set<Strength> valueStrengths = Sets.newHashSet((Strength) null);
+  private Set<Integer> concurrencyLevels = Collections.singleton(null);
+  private Set<Integer> initialCapacities = Collections.singleton(null);
+  private Set<Integer> maximumSizes = Collections.singleton(null);
+  private Set<DurationSpec> expireAfterWrites = Collections.singleton(null);
+  private Set<DurationSpec> expireAfterAccesses = Collections.singleton(null);
+  private Set<DurationSpec> refreshes = Collections.singleton(null);
+  private Set<Strength> keyStrengths = Collections.singleton(null);
+  private Set<Strength> valueStrengths = Collections.singleton(null);
 
   @CanIgnoreReturnValue
   CacheBuilderFactory withConcurrencyLevels(Set<Integer> concurrencyLevels) {

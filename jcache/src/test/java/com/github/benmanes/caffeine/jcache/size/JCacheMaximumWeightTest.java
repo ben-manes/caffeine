@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.size;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -46,7 +47,7 @@ public final class JCacheMaximumWeightTest extends AbstractJCacheTest {
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
     CacheEntryRemovedListener<Integer, Integer> listener = events ->
-        removedWeight.addAndGet(Iterables.getOnlyElement(events).getValue());
+        removedWeight.addAndGet(requireNonNull(Iterables.getOnlyElement(events)).getValue());
     var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setMaximumWeight(OptionalLong.of(MAXIMUM));
     configuration.setWeigherFactory(Optional.of(() -> (key, value) -> value));

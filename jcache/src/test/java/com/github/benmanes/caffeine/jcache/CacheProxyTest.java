@@ -76,7 +76,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"ObjectToString", "unchecked"})
+  @SuppressWarnings({"NullAway", "ObjectToString", "unchecked"})
   public void getConfiguration_immutable() {
     var config = jcache.getConfiguration(CaffeineConfiguration.class);
     var type = UnsupportedOperationException.class;

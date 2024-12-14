@@ -45,6 +45,7 @@ public final class GuavaMapTests extends TestCase {
       return cache.asMap();
     })));
     suite.addTest(MapTestFactory.suite("GuavaLoadingView", synchronousGenerator(() -> {
+      @SuppressWarnings("NullAway")
       Cache<String, String> cache = CaffeinatedGuava.build(
           Caffeine.newBuilder().maximumSize(Long.MAX_VALUE), key -> null);
       return cache.asMap();

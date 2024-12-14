@@ -40,6 +40,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Ticker;
@@ -64,6 +66,7 @@ import junit.framework.TestCase;
 /**
  * Unit tests for Caffeine.
  */
+@NullUnmarked
 @GwtCompatible(emulated = true)
 @SuppressWarnings({"CacheLoaderNull", "CanonicalDuration",
   "PreferJavaTimeOverload", "ThreadPriorityCheck"})

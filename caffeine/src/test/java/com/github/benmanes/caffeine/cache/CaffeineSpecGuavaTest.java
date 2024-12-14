@@ -354,21 +354,25 @@ public class CaffeineSpecGuavaTest extends TestCase {
         .testEquals();
   }
 
+  @SuppressWarnings("NullAway")
   public void testMaximumWeight_withWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumWeight=9000"));
     assertThat(builder.weigher((k, v) -> 42).build(k -> null)).isNotNull();
   }
 
+  @SuppressWarnings("NullAway")
   public void testMaximumWeight_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumWeight=9000"));
     assertThrows(IllegalStateException.class, () -> builder.build(k -> null));
   }
 
+  @SuppressWarnings("NullAway")
   public void testMaximumSize_withWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumSize=9000"));
     assertThat(builder.weigher((k, v) -> 42).build(k -> null)).isNotNull();
   }
 
+  @SuppressWarnings("NullAway")
   public void testMaximumSize_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumSize=9000"));
     assertThat(builder.build(k -> null)).isNotNull();

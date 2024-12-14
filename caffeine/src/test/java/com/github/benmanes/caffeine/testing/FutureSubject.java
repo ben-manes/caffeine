@@ -16,10 +16,13 @@
 package com.github.benmanes.caffeine.testing;
 
 import static com.google.common.truth.Truth.assertAbout;
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
@@ -32,9 +35,9 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class FutureSubject extends Subject {
-  private final CompletableFuture<?> actual;
+  private final @Nullable CompletableFuture<?> actual;
 
-  private FutureSubject(FailureMetadata metadata, CompletableFuture<?> subject) {
+  private FutureSubject(FailureMetadata metadata, @Nullable CompletableFuture<?> subject) {
     super(metadata, subject);
     this.actual = subject;
   }
@@ -43,12 +46,13 @@ public final class FutureSubject extends Subject {
     return FutureSubject::new;
   }
 
-  public static FutureSubject assertThat(CompletableFuture<?> actual) {
+  public static FutureSubject assertThat(@Nullable CompletableFuture<?> actual) {
     return assertAbout(future()).that(actual);
   }
 
   /** Fails if the future is not done. */
   public void isDone() {
+    requireNonNull(actual);
     if (!actual.isDone()) {
       failWithActual("expected to be done", actual);
     }
@@ -56,6 +60,7 @@ public final class FutureSubject extends Subject {
 
   /** Fails if the future is done. */
   public void isNotDone() {
+    requireNonNull(actual);
     if (actual.isDone()) {
       failWithActual("expected to not be done", actual);
     }
@@ -63,6 +68,7 @@ public final class FutureSubject extends Subject {
 
   /** Fails if the future is has not completed exceptionally. */
   public void hasCompletedExceptionally() {
+    requireNonNull(actual);
     if (!actual.isCompletedExceptionally()) {
       failWithActual("expected to be completed exceptionally", actual.join());
     }
@@ -70,6 +76,7 @@ public final class FutureSubject extends Subject {
 
   /** Fails if the future is not successful with the given value. */
   public void succeedsWith(int value) {
+    requireNonNull(actual);
     var result = actual.join();
     if (result instanceof Int) {
       check("future").that(result).isEqualTo(Int.valueOf(value));
@@ -79,18 +86,21 @@ public final class FutureSubject extends Subject {
   }
 
   /** Fails if the future is not successful with the given value. */
-  public void succeedsWith(Object value) {
+  public void succeedsWith(@Nullable Object value) {
+    requireNonNull(actual);
     check("future").that(actual.join()).isEqualTo(value);
   }
 
   /** Fails if the future is not successful with a null value. */
   public void succeedsWithNull() {
+    requireNonNull(actual);
     check("future").that(actual.join()).isNull();
   }
 
   /** Fails if the future is did not fail with the given join() exception. */
   @CanIgnoreReturnValue
   public ThrowableSubject failsWith(Class<? extends RuntimeException> clazz) {
+    requireNonNull(actual);
     try {
       failWithActual("join", actual.join());
       throw new AssertionError();

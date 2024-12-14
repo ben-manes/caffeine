@@ -25,6 +25,7 @@ import org.eclipse.collections.impl.factory.Maps;
 import org.eclipse.collections.impl.list.Interval;
 import org.eclipse.collections.impl.parallel.ParallelIterate;
 import org.eclipse.collections.impl.test.Verify;
+import org.jspecify.annotations.NullUnmarked;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,6 +36,7 @@ import org.junit.Test;
  *
  * Ported from Eclipse Collections 11.0.
  */
+@NullUnmarked
 @SuppressWarnings("CanIgnoreReturnValueSuggester")
 public abstract class ConcurrentHashMapAcceptanceTest {
   private ExecutorService executor;

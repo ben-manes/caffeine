@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.quality.Strictness.STRICT_STUBS;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -26,8 +27,10 @@ import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.EventType;
 
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.testng.annotations.BeforeTest;
+import org.mockito.testng.MockitoSettings;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.testing.IteratorFeature;
@@ -36,14 +39,16 @@ import com.google.common.collect.testing.IteratorTester;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Test(singleThreaded = true)
+@Listeners(MockitoTestNGListener.class)
+@MockitoSettings(strictness = STRICT_STUBS)
 public final class JCacheEntryEventTest {
   @Mock Cache<Integer, Integer> cache;
 
   JCacheEntryEvent<Integer, Integer> event;
 
-  @BeforeTest
-  public void before() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
+  @BeforeMethod
+  public void before() {
     event = new JCacheEntryEvent<>(cache, EventType.CREATED,
         1, /* hasOldValue= */ true, 2, 3);
   }

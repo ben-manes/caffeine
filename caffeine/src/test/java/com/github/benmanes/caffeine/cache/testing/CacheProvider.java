@@ -100,7 +100,7 @@ public final class CacheProvider {
         }
         params[i] = context.cache().asMap();
       } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
-        params[i] = context.cache().policy().eviction().orElse(null);
+        params[i] = context.cache().policy().eviction().orElseThrow();
       } else if (clazz.isAssignableFrom(Policy.VarExpiration.class)) {
         params[i] = context.cache().policy().expireVariably().orElseThrow();
       } else if (clazz.isAssignableFrom(Policy.FixedRefresh.class)) {

@@ -65,6 +65,7 @@ public final class InternerTest extends TestCase {
         .createTestSuite();
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "interners")
   public void intern_null(Interner<Int> interner) {
     assertThrows(NullPointerException.class, () -> interner.intern(null));
@@ -143,6 +144,7 @@ public final class InternerTest extends TestCase {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void factory() {
     assertThat(Interned.FACTORY.newReferenceKey(new Object(), null))
         .isInstanceOf(WeakKeyEqualsReference.class);

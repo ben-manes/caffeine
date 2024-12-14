@@ -27,6 +27,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.slf4j.event.Level.WARN;
@@ -84,6 +85,7 @@ public final class AsyncLoadingCacheTest {
   /* --------------- get --------------- */
 
   @CacheSpec
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   public void get_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.get(null));
@@ -163,6 +165,7 @@ public final class AsyncLoadingCacheTest {
   /* --------------- getAll --------------- */
 
   @CheckNoStats
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
@@ -428,7 +431,7 @@ public final class AsyncLoadingCacheTest {
     var cache = context.buildAsync(loader);
     var bulk = cache.getAll(context.absentKeys());
     for (var key : context.absentKeys()) {
-      var future = cache.getIfPresent(key);
+      var future = requireNonNull(cache.getIfPresent(key));
       future.cancel(true);
       assertThat(future).hasCompletedExceptionally();
     }
@@ -537,6 +540,7 @@ public final class AsyncLoadingCacheTest {
     await().untilAsserted(() -> assertThat(cache).containsEntry(key, key.negate()));
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, compute = Compute.ASYNC)
   public void refresh_nullFuture_load(CacheContext context) {
@@ -552,6 +556,7 @@ public final class AsyncLoadingCacheTest {
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         throw new IllegalStateException();
       }
+      @SuppressWarnings("NullAway")
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
         return null;
@@ -687,6 +692,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void bulk_function_null() {
     Function<Set<? extends Int>, Map<Int, Int>> f = null;
     assertThrows(NullPointerException.class, () -> AsyncCacheLoader.bulk(f));
@@ -710,6 +716,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void bulk_bifunction_null() {
     BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;
     assertThrows(NullPointerException.class, () -> AsyncCacheLoader.bulk(f));

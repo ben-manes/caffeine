@@ -33,6 +33,7 @@ import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.Assert.assertThrows;
 import static org.slf4j.event.Level.TRACE;
@@ -96,6 +97,7 @@ public final class LoadingCacheTest {
   /* --------------- get --------------- */
 
   @CacheSpec
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
   public void get_null(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -160,6 +162,7 @@ public final class LoadingCacheTest {
   /* --------------- getAll --------------- */
 
   @CheckNoEvictions
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_null(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -433,13 +436,14 @@ public final class LoadingCacheTest {
         return 0; // to put keys in one bucket
       }
     }
+    @SuppressWarnings("NullAway")
     LoadingCache<Object, Int> cache = context.build(key -> null);
 
     var keys = intern(new ArrayList<Key>());
     for (int i = 0; i < Population.FULL.size(); i++) {
       keys.add(new Key());
     }
-    Key key = Iterables.getLast(keys);
+    Key key = requireNonNull(Iterables.getLast(keys));
     Int value = context.absentValue();
     cache.put(key, value);
 
@@ -451,6 +455,7 @@ public final class LoadingCacheTest {
   /* --------------- refresh --------------- */
 
   @CheckNoEvictions
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refresh_null(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -958,6 +963,7 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
+      @SuppressWarnings("NullAway")
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         return null;
       }
@@ -972,6 +978,7 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
+      @SuppressWarnings("NullAway")
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
         return null;
@@ -984,6 +991,7 @@ public final class LoadingCacheTest {
   /* --------------- refreshAll --------------- */
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("NullAway")
   @CheckNoEvictions @CheckNoStats
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_null(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -1085,6 +1093,7 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
+      @SuppressWarnings("NullAway")
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         return null;
       }
@@ -1099,6 +1108,7 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
+      @SuppressWarnings("NullAway")
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
         return null;
@@ -1112,7 +1122,7 @@ public final class LoadingCacheTest {
 
   @Test
   public void loadAll() {
-    CacheLoader<Object, ?> loader = key -> key;
+    CacheLoader<Object, Object> loader = key -> key;
     assertThrows(UnsupportedOperationException.class, () -> loader.loadAll(Set.of()));
   }
 
@@ -1153,7 +1163,7 @@ public final class LoadingCacheTest {
 
   @Test
   public void asyncLoadAll() throws Throwable {
-    CacheLoader<Object, ?> loader = key -> key;
+    CacheLoader<Object, Object> loader = key -> key;
     assertThat(loader.asyncLoadAll(Set.of(), Runnable::run))
         .failsWith(CompletionException.class)
         .hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
@@ -1176,6 +1186,7 @@ public final class LoadingCacheTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void bulk_null() {
     assertThrows(NullPointerException.class, () -> CacheLoader.bulk(null));
   }
@@ -1201,9 +1212,9 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE)
   public void refreshes(LoadingCache<Int, Int> cache, CacheContext context) {
-    var key1 = Iterables.get(context.absentKeys(), 0);
+    var key1 = requireNonNull(Iterables.get(context.absentKeys(), 0));
     var key2 = context.original().isEmpty()
-        ? Iterables.get(context.absentKeys(), 1)
+        ? requireNonNull(Iterables.get(context.absentKeys(), 1))
         : context.firstKey();
     var future1 = cache.refresh(key1);
     var future2 = cache.refresh(key2);

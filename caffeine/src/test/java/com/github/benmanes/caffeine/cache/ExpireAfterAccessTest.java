@@ -21,11 +21,13 @@ import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.ass
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertThrows;
 import static org.slf4j.event.Level.WARN;
 
@@ -97,7 +99,7 @@ public final class ExpireAfterAccessTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void get(Cache<Int, Int> cache, CacheContext context) {
-    Function<Int, Int> mappingFunction = context.original()::get;
+    Function<Int, Int> mappingFunction = key -> requireNonNull(context.original().get(key));
     context.ticker().advance(Duration.ofSeconds(30));
     var value1 = cache.get(context.firstKey(), mappingFunction);
     assertThat(value1).isEqualTo(context.original().get(context.firstKey()));
@@ -146,21 +148,21 @@ public final class ExpireAfterAccessTest {
   public void getAll(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     var result1 = cache.getAll(List.of(context.firstKey(), context.middleKey()),
-        keys -> Maps.asMap(keys, identity()));
+        keys -> Maps.toMap(keys, identity()));
     assertThat(result1).containsExactly(context.firstKey(), context.firstKey().negate(),
         context.middleKey(), context.middleKey().negate());
 
     context.ticker().advance(Duration.ofSeconds(45));
     cache.cleanUp();
     var result2 = cache.getAll(List.of(context.firstKey(), context.absentKey()),
-        keys -> Maps.asMap(keys, identity()));
+        keys -> Maps.toMap(keys, identity()));
     assertThat(result2).containsExactly(context.firstKey(), context.firstKey().negate(),
         context.absentKey(), context.absentKey());
 
     context.ticker().advance(Duration.ofSeconds(45));
     cache.cleanUp();
     var result3 = cache.getAll(List.of(context.middleKey(), context.absentKey()),
-        keys -> Maps.asMap(keys, identity()));
+        keys -> Maps.toMap(keys, identity()));
     assertThat(result3).containsExactly(context.middleKey(), context.middleKey(),
         context.absentKey(), context.absentKey());
     assertThat(cache).hasSize(3);
@@ -233,7 +235,9 @@ public final class ExpireAfterAccessTest {
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getIfPresent_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
-    cache.getIfPresent(context.firstKey()).join();
+    assertThat(cache.getIfPresent(context.firstKey()))
+        .succeedsWith(context.original().get(context.firstKey()));
+
     context.ticker().advance(Duration.ofSeconds(45));
     assertThat(cache).containsKey(context.firstKey());
     assertThat(cache).doesNotContainKey(context.lastKey());
@@ -433,6 +437,7 @@ public final class ExpireAfterAccessTest {
     assertThat(oldest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void oldestFunc_null(CacheContext context,
@@ -440,6 +445,7 @@ public final class ExpireAfterAccessTest {
     assertThrows(NullPointerException.class, () -> expireAfterAccess.oldest(null));
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void oldestFunc_nullResult(CacheContext context,
@@ -582,6 +588,7 @@ public final class ExpireAfterAccessTest {
     assertThat(youngest).containsExactlyEntriesIn(context.original());
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void youngestFunc_null(CacheContext context,
@@ -589,6 +596,7 @@ public final class ExpireAfterAccessTest {
     assertThrows(NullPointerException.class, () -> expireAfterAccess.youngest(null));
   }
 
+  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void youngestFunc_nullResult(CacheContext context,

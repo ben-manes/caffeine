@@ -99,6 +99,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
   @Test(dataProvider = "eternal")
   public void get_present(boolean eternal) {
     var expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable).isNotNull();
     if (eternal) {
       expirable.setExpireTimeMillis(Long.MAX_VALUE);
     }
@@ -127,6 +128,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     assertThat(jcacheLoading.get(KEY_1)).isEqualTo(KEY_1);
 
     var expirable = getExpirable(jcacheLoading, KEY_1);
+    assertThat(expirable).isNotNull();
     assertThat(expirable.getExpireTimeMillis())
         .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
   }
@@ -134,11 +136,13 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
   @Test(dataProvider = "eternal")
   public void get_loading_present(boolean eternal) {
     var expirable = getExpirable(jcacheLoading, KEY_1);
+    assertThat(expirable).isNotNull();
     if (eternal) {
       expirable.setExpireTimeMillis(Long.MAX_VALUE);
     }
 
     assertThat(jcacheLoading.get(KEY_1)).isEqualTo(VALUE_1);
+    assertThat(expirable).isNotNull();
     assertThat(expirable.getExpireTimeMillis())
         .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
   }
@@ -161,6 +165,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
   public void getAll_present(boolean eternal) {
     for (Integer key : keys) {
       var expirable = getExpirable(jcacheLoading, key);
+      assertThat(expirable).isNotNull();
       if (eternal) {
         expirable.setExpireTimeMillis(Long.MAX_VALUE);
       }
@@ -170,6 +175,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
 
     for (Integer key : keys) {
       var expirable = getExpirable(jcache, key);
+      assertThat(expirable).isNotNull();
       assertThat(expirable.getExpireTimeMillis())
           .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
     }
@@ -191,6 +197,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
   @Test(dataProvider = "eternal")
   public void invoke_present(boolean eternal) {
     var expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable).isNotNull();
     if (eternal) {
       expirable.setExpireTimeMillis(Long.MAX_VALUE);
     }
@@ -223,6 +230,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
 
     for (Integer key : keys) {
       var expirable = getExpirable(jcache, key);
+      assertThat(expirable).isNotNull();
       assertThat(expirable.getExpireTimeMillis())
           .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
     }
@@ -235,6 +243,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     assertThat(jcache.remove(KEY_1, VALUE_2)).isFalse();
 
     var expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable).isNotNull();
     assertThat(expirable.getExpireTimeMillis())
         .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
   }
@@ -246,6 +255,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     assertThat(jcache.replace(KEY_1, VALUE_2, VALUE_3)).isFalse();
 
     var expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable).isNotNull();
     assertThat(expirable.getExpireTimeMillis())
         .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
   }

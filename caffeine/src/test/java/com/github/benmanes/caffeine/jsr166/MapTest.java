@@ -16,11 +16,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import junit.framework.Test;
 
 /**
  * Contains tests applicable to all Map implementations.
  */
+@NullUnmarked
 @SuppressWarnings({"rawtypes", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses"})
 public class MapTest extends JSR166TestCase {
     final MapImplementation impl;

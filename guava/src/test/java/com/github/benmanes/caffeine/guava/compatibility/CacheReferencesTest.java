@@ -20,6 +20,8 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.lang.ref.WeakReference;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.github.benmanes.caffeine.guava.compatibility.CacheBuilderFactory.Strength;
@@ -127,7 +129,7 @@ public class CacheReferencesTest extends TestCase {
   // a strong reference to that value.
   static final class Key {
     private final int value;
-    private WeakReference<String> toString;
+    private @Nullable WeakReference<String> toString;
 
     Key(int value) {
       this.value = value;

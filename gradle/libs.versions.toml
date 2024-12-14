@@ -7,14 +7,14 @@ bnd = "7.1.0"
 bouncycastle-jdk18on = "1.79"
 cache2k = "2.6.1.Final"
 caffeine = "3.1.8"
-checkstyle = "10.20.2"
+checkstyle = "10.21.0"
 coherence = "24.09"
 commons-collections4 = "4.4"
 commons-compress = "1.27.1"
 commons-io = "2.18.0"
 commons-lang3 = "3.17.0"
 commons-math3 = "3.6.1"
-commons-text = "1.12.0"
+commons-text = "1.13.0"
 concurrentlinkedhashmap = "1.4.2"
 config = "1.4.3"
 coveralls = "2.12.2"
@@ -32,7 +32,7 @@ felix-scr = "2.2.12"
 findsecbugs = "1.13.0"
 flip-tables = "1.1.1"
 forbidden-apis = "3.8"
-google-java-format = "1.25.0"
+google-java-format = "1.25.2"
 guava = "33.3.1-jre"
 guice = "6.0.0"
 h2 = "2.3.232"
@@ -67,8 +67,9 @@ jvm-dependency-conflict-resolution = "2.1.2"
 kotlin = "2.1.0"
 lincheck = "2.34"
 mockito = "5.14.2"
+mockito-testng = "0.5.2"
 nexus-publish = "2.0.0"
-nullaway = "0.12.1"
+nullaway = "0.12.2"
 nullaway-plugin = "2.1.0"
 okhttp-bom = "4.12.0"
 okio-bom = "3.9.1"
@@ -85,7 +86,7 @@ slf4j-test = "3.0.1"
 snakeyaml = "2.3"
 sonarqube = "6.0.1.5171"
 spotbugs = "4.8.6"
-spotbugs-contrib = "7.6.8"
+spotbugs-contrib = "7.6.9"
 spotbugs-plugin = "6.0.26"
 stream = "2.9.8"
 tcache = "2.0.1"
@@ -171,7 +172,9 @@ junit5-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.re
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 lincheck = { module = "org.jetbrains.kotlinx:lincheck-jvm", version.ref = "lincheck" }
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-testng = { module = "org.mockito:mockito-testng", version.ref = "mockito-testng" }
 nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
+nullaway-annotations = { module = "com.uber.nullaway:nullaway-annotations", version.ref = "nullaway" }
 okhttp-bom = { module = "com.squareup.okhttp3:okhttp-bom", version.ref = "okhttp-bom" }
 okio-bom = { module = "com.squareup.okio:okio-bom", version.ref = "okio-bom" }
 osgi-annotations = { module = "org.osgi:org.osgi.service.component.annotations", version.ref = "osgi-annotations" }
@@ -211,6 +214,7 @@ constraints = ["bcel", "bouncycastle-jdk18on", "commons-compress", "commons-text
 errorprone-support = ["errorprone-support", "errorprone-support-refaster"]
 junit = ["junit4", "junit5"]
 junit-engines = ["junit5-vintage", "junit5-testng"]
+mockito = ["mockito", "mockito-testng"]
 osgi-test-compile = ["pax-exam-junit4"]
 osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function",
   "osgi-promise", "pax-exam-container-native", "pax-exam-link-mvn", "pax-url-aether"]

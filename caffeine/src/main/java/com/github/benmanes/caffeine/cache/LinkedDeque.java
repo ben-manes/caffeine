@@ -55,14 +55,14 @@ interface LinkedDeque<E> extends Deque<E> {
    *
    * @param e the linked element
    */
-  boolean isFirst(E e);
+  boolean isFirst(@Nullable E e);
 
   /**
    * Returns if the element is at the back of the deque.
    *
    * @param e the linked element
    */
-  boolean isLast(E e);
+  boolean isLast(@Nullable E e);
 
   /**
    * Moves the element to the front of the deque so that it becomes the first element.

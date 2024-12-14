@@ -20,9 +20,12 @@ import static com.github.benmanes.caffeine.cache.ReserializableSubject.asyncRese
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.cache;
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
 import static com.google.common.truth.Truth.assertAbout;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.Future;
+
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.google.common.truth.FailureMetadata;
@@ -36,9 +39,9 @@ import com.google.common.truth.Subject;
 public final class AsyncCacheSubject extends Subject {
   private final AsyncCache<?, ?> actual;
 
-  private AsyncCacheSubject(FailureMetadata metadata, AsyncCache<?, ?> subject) {
+  private AsyncCacheSubject(FailureMetadata metadata, @Nullable AsyncCache<?, ?> subject) {
     super(metadata, subject);
-    this.actual = subject;
+    this.actual = requireNonNull(subject);
   }
 
   public static Factory<AsyncCacheSubject, AsyncCache<?, ?>> asyncCache() {
@@ -81,7 +84,7 @@ public final class AsyncCacheSubject extends Subject {
   }
 
   /** Fails if the cache does not contain the given value. */
-  public void containsValue(Object value) {
+  public void containsValue(@Nullable Object value) {
     if (value instanceof Future<?>) {
       check("cache").about(map()).that(actual.asMap()).containsValue(value);
     } else {
@@ -90,7 +93,7 @@ public final class AsyncCacheSubject extends Subject {
   }
 
   /** Fails if the cache does not contain the given entry. */
-  public void containsEntry(Object key, Object value) {
+  public void containsEntry(Object key, @Nullable Object value) {
     if (value instanceof Future<?>) {
       check("cache").that(actual.asMap()).containsEntry(key, value);
     } else {

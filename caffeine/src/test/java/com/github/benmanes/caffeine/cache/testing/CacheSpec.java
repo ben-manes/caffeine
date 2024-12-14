@@ -54,6 +54,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.cache.testing.Weighers.SkippedWeigher;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Maps;
@@ -198,12 +199,18 @@ public @interface CacheSpec {
     VALUE(() -> (key, value) -> Math.abs(((Int) value).intValue())),
     /** A flag indicating that the entry is weighted by the value's collection size. */
     COLLECTION(() -> (key, value) -> ((Collection<?>) value).size()),
-    /** A flag indicating that the entry's weight is randomly changing. */
+    /**
+     * A flag indicating that the entry's weight is randomly changing and is skipped by automatic
+     * validation checks.
+     */
     RANDOM(Weighers::random),
-    /** A flag indicating that the entry's weight records interactions. */
+    /**
+     * A flag indicating that the entry's weight records interactions and is skipped by automatic
+     * automatic validation checks.
+     */
     @SuppressWarnings("unchecked")
     MOCKITO(() -> {
-      Weigher<Object, Object> weigher = Mockito.mock();
+      SkippedWeigher<Object, Object> weigher = Mockito.mock();
       when(weigher.weigh(any(), any())).thenReturn(1);
       return weigher;
     });
@@ -267,7 +274,7 @@ public @interface CacheSpec {
   enum CacheExpiry {
     DISABLED {
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
-        return null;
+        throw new AssertionError();
       }
     },
     MOCKITO {
@@ -419,6 +426,7 @@ public @interface CacheSpec {
     },
     /** A loader that always returns null (no mapping). */
     NULL {
+      @SuppressWarnings("NullAway")
       @Override public Int load(Int key) {
         return null;
       }
@@ -461,7 +469,9 @@ public @interface CacheSpec {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @SuppressWarnings({"PMD.ReturnEmptyCollectionRatherThanNull", "ReturnsNullCollection"})
+
+      @SuppressWarnings({"NullAway",
+        "PMD.ReturnEmptyCollectionRatherThanNull", "ReturnsNullCollection"})
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
         return null;
       }

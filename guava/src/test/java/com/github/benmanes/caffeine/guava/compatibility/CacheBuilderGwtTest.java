@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -49,6 +51,7 @@ import junit.framework.TestCase;
  *
  * @author Jon Donovan
  */
+@NullUnmarked
 @GwtCompatible
 @SuppressWarnings("PreferJavaTimeOverload")
 public class CacheBuilderGwtTest extends TestCase {

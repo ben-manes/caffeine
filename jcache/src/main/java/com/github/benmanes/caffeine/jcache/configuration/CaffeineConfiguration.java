@@ -184,7 +184,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   @CanIgnoreReturnValue
   @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setCacheLoaderFactory(
-      Factory<? extends CacheLoader<K, V>> factory) {
+      @Nullable Factory<? extends CacheLoader<K, V>> factory) {
     checkIfReadOnly();
     delegate.setCacheLoaderFactory(factory);
     return this;
@@ -215,7 +215,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   @CanIgnoreReturnValue
   @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setCacheWriterFactory(
-      Factory<? extends CacheWriter<? super K, ? super V>> factory) {
+      @Nullable Factory<? extends CacheWriter<? super K, ? super V>> factory) {
     checkIfReadOnly();
     delegate.setCacheWriterFactory(factory);
     return this;
@@ -230,7 +230,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   @CanIgnoreReturnValue
   @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setExpiryPolicyFactory(
-      Factory<? extends ExpiryPolicy> factory) {
+      @Nullable Factory<? extends ExpiryPolicy> factory) {
     checkIfReadOnly();
     delegate.setExpiryPolicyFactory(factory);
     return this;

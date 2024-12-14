@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.event.Level;
 
 import com.github.valfirst.slf4jtest.LoggingEvent;
@@ -43,7 +44,8 @@ public final class LoggingEvents extends ForwardingList<LoggingEvent> {
   private final List<Predicate<LoggingEvent>> predicates;
   private final ImmutableList<LoggingEvent> events;
 
-  private ImmutableList<LoggingEvent> filteredEvents;
+  private @Nullable ImmutableList<LoggingEvent> filteredEvents;
+
   private boolean exclusive;
 
   private LoggingEvents(Iterable<LoggingEvent> events) {

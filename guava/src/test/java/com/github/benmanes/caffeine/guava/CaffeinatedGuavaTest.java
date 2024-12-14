@@ -105,6 +105,7 @@ final class CaffeinatedGuavaTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   void cacheLoader_null() {
     assertThrows(NullPointerException.class, () -> CaffeinatedGuava.caffeinate(null));
 

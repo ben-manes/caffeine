@@ -82,6 +82,7 @@ public final class StripedBufferTest {
         Thread.yield();
       }
     });
+    assertThat(buffer.table).isNotNull();
     assertThat(buffer.table.length).isAtMost(MAXIMUM_TABLE_SIZE);
   }
 

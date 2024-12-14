@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.Cache;
@@ -32,6 +34,7 @@ import junit.framework.TestCase;
 /**
  * Test Java8 map.compute in concurrent cache context.
  */
+@NullUnmarked
 @SuppressWarnings("PreferJavaTimeOverload")
 public class LocalCacheMapComputeTest extends TestCase {
   final int count = 10000;

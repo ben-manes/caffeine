@@ -15,12 +15,14 @@ package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
@@ -46,7 +48,7 @@ public final class Issue193Test {
   private final AtomicLong counter = new AtomicLong(0);
   private final FakeTicker ticker = new FakeTicker();
 
-  private ListenableFutureTask<Long> loadingTask;
+  private @Nullable ListenableFutureTask<Long> loadingTask;
 
   private final AsyncCacheLoader<String, Long> loader = (key, executor) -> {
     // Fools the cache into thinking there is a future that's not immediately ready.
@@ -54,7 +56,7 @@ public final class Issue193Test {
     loadingTask = ListenableFutureTask.create(counter::getAndIncrement);
     var f = new CompletableFuture<Long>();
     loadingTask.addListener(() -> {
-      f.complete(Futures.getUnchecked(loadingTask));
+      f.complete(Futures.getUnchecked(requireNonNull(loadingTask)));
     }, executor);
     return f;
   };
@@ -63,6 +65,7 @@ public final class Issue193Test {
   /** This ensures that any outstanding async loading is completed as well */
   private long loadGet(AsyncLoadingCache<String, Long> cache, String key) {
     CompletableFuture<Long> future = cache.get(key);
+    requireNonNull(loadingTask);
     if (!loadingTask.isDone()) {
       loadingTask.run();
     }
@@ -73,7 +76,8 @@ public final class Issue193Test {
   public void invalidateDuringRefreshRemovalCheck() {
     var removed = new ArrayList<Long>();
     AsyncLoadingCache<String, Long> cache = Caffeine.newBuilder()
-        .removalListener((String key, Long value, RemovalCause reason) -> removed.add(value))
+        .removalListener(
+            (@Nullable String key, @Nullable Long value, RemovalCause reason) -> removed.add(value))
         .refreshAfterWrite(Duration.ofNanos(10))
         .executor(Runnable::run)
         .ticker(ticker::read)
@@ -87,7 +91,7 @@ public final class Issue193Test {
 
     cache.synchronous().invalidate(testKey); // Invalidate key entirely
     assertThat(cache).doesNotContainKey(testKey); // No value in cache (good)
-    loadingTask.run(); // Completes refresh
+    requireNonNull(loadingTask).run(); // Completes refresh
 
     assertThat(cache).doesNotContainKey(testKey); // Value in cache (bad)
     assertThat(removed).containsExactly(0L, 1L).inOrder(); // 1L was sent to removalListener anyway

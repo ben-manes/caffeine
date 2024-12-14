@@ -29,6 +29,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.quality.Strictness.LENIENT;
 
 import java.lang.ref.ReferenceQueue;
 import java.time.Duration;
@@ -44,15 +45,18 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.testng.MockitoSettings;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
@@ -65,6 +69,8 @@ import it.unimi.dsi.fastutil.longs.LongList;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(singleThreaded = true)
+@MockitoSettings(strictness = LENIENT)
+@Listeners(MockitoTestNGListener.class)
 @SuppressWarnings({"ClassEscapesDefinedScope", "GuardedBy"})
 public final class TimerWheelTest {
   private static final Random random = new Random();
@@ -76,9 +82,8 @@ public final class TimerWheelTest {
   TimerWheel<Long, Long> timerWheel;
 
   @BeforeMethod
-  public void beforeMethod() throws Exception {
+  public void beforeMethod() {
     Reset.setThreadLocalRandom(random.nextInt(), random.nextInt());
-    MockitoAnnotations.openMocks(this).close();
     timerWheel = new TimerWheel<>();
   }
 
@@ -203,17 +208,13 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void getExpirationDelay_empty(long clock) {
-    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
-
     assertThat(timerWheel.getExpirationDelay()).isEqualTo(Long.MAX_VALUE);
   }
 
   @Test(dataProvider = "clock")
   public void getExpirationDelay_firstWheel(long clock) {
-    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
-
     long delay = Duration.ofSeconds(1).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
     assertThat(timerWheel.getExpirationDelay()).isAtMost(SPANS[0]);
@@ -221,9 +222,7 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void getExpirationDelay_lastWheel(long clock) {
-    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
-
     long delay = Duration.ofDays(14).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
     assertThat(timerWheel.getExpirationDelay()).isAtMost(delay);
@@ -586,9 +585,10 @@ public final class TimerWheelTest {
     System.err.printf(US, "%nCurrent state:%n%s%n%n", builder.deleteCharAt(builder.length() - 1));
   }
 
+  @NullUnmarked
   private static final class Timer extends Node<Long, Long> {
-    Node<Long, Long> prev;
-    Node<Long, Long> next;
+    @Nullable Node<Long, Long> prev;
+    @Nullable Node<Long, Long> next;
     long variableTime;
 
     Timer(long accessTime) {
