@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
@@ -258,6 +260,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
 
   @Override
   public boolean offerFirst(E e) {
+    requireNonNull(e);
     if (contains(e)) {
       return false;
     }
@@ -267,6 +270,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
 
   @Override
   public boolean offerLast(E e) {
+    requireNonNull(e);
     if (contains(e)) {
       return false;
     }

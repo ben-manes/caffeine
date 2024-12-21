@@ -65,12 +65,35 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  public void parseTimeUnit_exception() {
-    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parseTimeUnit("key", "value"));
+  public void parseDuration_exception() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseDuration("key", "value"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseTimeUnit("key", "value"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseIsoDuration("key", "value"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseSimpleDuration("key", "value"));
+
+    // ISO
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseDuration("key", "-PT7H3M"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseDuration("key", "p3xyz"));
+
+    // Simple
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseDuration("key", "-1s"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseDuration("key", "xyzs"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseDuration("key", "1xyzs"));
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void parse_exception() {
+    assertThrows(NullPointerException.class, () -> CaffeineSpec.parse(null));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("="));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("=="));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("key="));

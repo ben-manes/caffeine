@@ -15,8 +15,8 @@
  */
 package com.github.benmanes.caffeine.fuzz;
 
-import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
+import com.code_intelligence.jazzer.mutation.annotation.NotNull;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 
 /**
@@ -28,9 +28,9 @@ public final class CaffeineSpecFuzzer {
 
   @FuzzTest(maxDuration = "5m")
   @SuppressWarnings("CheckReturnValue")
-  public void parse(FuzzedDataProvider data) {
+  public void parse(@NotNull String specification) {
     try {
-      CaffeineSpec.parse(data.consumeRemainingAsString());
+      CaffeineSpec.parse(specification);
     } catch (IllegalArgumentException expected) { /* ignored */ }
   }
 }

@@ -38,7 +38,6 @@ final class LinkedDequeSubject extends CollectionSubject {
   private LinkedDequeSubject(FailureMetadata metadata, @Nullable LinkedDeque<?> subject) {
     super(metadata, subject);
     this.actual = requireNonNull((LinkedDeque<Object>) subject);
-
   }
 
   public static Factory<LinkedDequeSubject, LinkedDeque<?>> deque() {

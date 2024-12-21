@@ -22,6 +22,7 @@ import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.time.format.DateTimeParseException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -145,7 +146,7 @@ public final class CaffeineSpec {
   public static CaffeineSpec parse(String specification) {
     var spec = new CaffeineSpec(specification);
     for (String option : specification.split(SPLIT_OPTIONS)) {
-      spec.parseOption(option.trim());
+      spec.parseOption(option.strip());
     }
     return spec;
   }
@@ -162,8 +163,8 @@ public final class CaffeineSpec {
     requireArgument(keyAndValue.length <= 2,
         "key-value pair %s with more than one equals sign", option);
 
-    String key = keyAndValue[0].trim();
-    String value = (keyAndValue.length == 1) ? null : keyAndValue[1].trim();
+    String key = keyAndValue[0].strip();
+    String value = (keyAndValue.length == 1) ? null : keyAndValue[1].strip();
 
     configure(option, key, value);
   }
@@ -298,13 +299,27 @@ public final class CaffeineSpec {
 
     @SuppressWarnings("NullAway")
     boolean isIsoFormat = value.contains("p") || value.contains("P");
-    if (isIsoFormat) {
-      Duration duration = Duration.parse(value);
-      requireArgument(!duration.isNegative(),
-          "key %s invalid format; was %s, but the duration cannot be negative", key, value);
-      return duration;
-    }
+    Duration duration = isIsoFormat
+        ? parseIsoDuration(key, value)
+        : parseSimpleDuration(key, value);
+    requireArgument(!duration.isNegative(),
+        "key %s invalid format; was %s, but the duration cannot be negative", key, value);
+    return duration;
 
+  }
+
+  /** Returns a parsed duration using the ISO-8601 format. */
+  static Duration parseIsoDuration(String key, String value) {
+    try {
+      return Duration.parse(value);
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException(String.format(US,
+          "key %s invalid format; was %s, but the duration cannot be parsed", key, value), e);
+    }
+  }
+
+  /** Returns a parsed duration using the simple time unit format. */
+  static Duration parseSimpleDuration(String key, String value) {
     @SuppressWarnings("NullAway")
     long duration = parseLong(key, value.substring(0, value.length() - 1));
     TimeUnit unit = parseTimeUnit(key, value);

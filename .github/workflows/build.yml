@@ -189,7 +189,7 @@ jobs:
           find . -path */jacoco/*.exec -o -path */results/*.xml
           | tar czf ${{ env.ARTIFACT_NAME }}.tar.gz --files-from -
       - name: Upload test results
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
         with:
           retention-days: 1
@@ -250,7 +250,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
       - name: Publish to Codecov
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Publish to Codacy

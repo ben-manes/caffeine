@@ -33,11 +33,11 @@ jobs:
             services.gradle.org:443
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b # v4.5.0
+        uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b # v4.6.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
       - name: Submit Dependency Graph
-        uses: gradle/actions/dependency-submission@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4.2.1
+        uses: gradle/actions/dependency-submission@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
