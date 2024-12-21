@@ -297,9 +297,6 @@
     <Bug pattern="PREDICTABLE_RANDOM"/>
   </Match>
   <Match>
-    <Class name="~com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7.*"/>
-  </Match>
-  <Match>
     <Class name="com.github.benmanes.caffeine.cache.sketch.CountMinSketch"/>
     <Method name="reset"/>
     <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
@@ -536,6 +533,13 @@
       <Class name="com.github.benmanes.caffeine.cache.ReserializableSubject"/>
     </Or>
     <Bug pattern="BC_UNCONFIRMED_CAST_OF_RETURN_VALUE"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.Reset"/>
+    <Method name="resetThreadLocalRandom"/>
+    <Bug pattern="
+      RFI_SET_ACCESSIBLE,
+      DP_DO_INSIDE_DO_PRIVILEGED"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.testing.Threads"/>

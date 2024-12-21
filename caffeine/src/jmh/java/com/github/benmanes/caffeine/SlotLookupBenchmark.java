@@ -20,7 +20,6 @@ import java.lang.invoke.VarHandle;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.LongStream;
 
-import org.jctools.util.UnsafeAccess;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -55,7 +54,6 @@ public class SlotLookupBenchmark {
   static final VarHandle PROBE;
 
   ThreadLocal<Integer> threadLocal;
-  long probeOffset;
   long[] array;
 
   @Setup
@@ -73,11 +71,6 @@ public class SlotLookupBenchmark {
   @Setup
   public void setupBinarySearch() {
     array = LongStream.range(0, ARENA_SIZE).toArray();
-  }
-
-  @Setup
-  public void setupStriped64() {
-    probeOffset = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomProbe");
   }
 
   @Benchmark
@@ -111,32 +104,6 @@ public class SlotLookupBenchmark {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;
-  }
-
-  @Benchmark
-  public long striped64_unsafe(Blackhole blackhole) {
-    // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
-    int hash = getProbe_unsafe();
-    if (hash == 0) {
-      blackhole.consume(ThreadLocalRandom.current()); // force initialization
-      hash = getProbe_unsafe();
-    }
-    advanceProbe_unsafe(hash);
-    int index = selectSlot(hash);
-    return array[index];
-  }
-
-  @SuppressWarnings("SunApi")
-  private int getProbe_unsafe() {
-    return UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), probeOffset);
-  }
-
-  @SuppressWarnings("SunApi")
-  private void advanceProbe_unsafe(int probe) {
-    probe ^= probe << 13; // xorshift
-    probe ^= probe >>> 17;
-    probe ^= probe << 5;
-    UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), probeOffset, probe);
   }
 
   @Benchmark

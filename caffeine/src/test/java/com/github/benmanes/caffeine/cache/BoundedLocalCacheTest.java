@@ -1061,6 +1061,10 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.FULL)
   public void evict_admit(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // This test require that the JVM is run to allow the internal random fields can be overridden
+    // by adding the JVM argument --add-opens java.base/java.lang=ALL-UNNAMED
+    Reset.resetThreadLocalRandom();
+
     cache.frequencySketch().ensureCapacity(context.maximumSize());
     Int candidate = Int.valueOf(0);
     Int victim = Int.valueOf(1);

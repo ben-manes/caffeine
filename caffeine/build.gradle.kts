@@ -255,11 +255,11 @@ tasks.named<CheckForbiddenApis>("forbiddenApisJavaPoet").configure {
 }
 
 tasks.named<CheckForbiddenApis>("forbiddenApisTest").configure {
-  bundledSignatures.add("jdk-deprecated-18")
+  bundledSignatures.addAll(listOf("jdk-deprecated-18", "jdk-unsafe"))
 }
 
 tasks.named<CheckForbiddenApis>("forbiddenApisJmh").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated-18", "jdk-reflection"))
+  bundledSignatures.addAll(listOf("jdk-deprecated-18", "jdk-reflection", "jdk-unsafe"))
 }
 
 tasks.register<JavaExec>("memoryOverhead") {
@@ -314,7 +314,8 @@ for (scenario in Scenario.all()) {
         } else {
           parallel = "methods"
           excludeGroups("slow", "isolated", "lincheck")
-          jvmArgs("-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled")
+          jvmArgs("-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled",
+            "--add-opens", "java.base/java.lang=ALL-UNNAMED")
           threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
         }
       }

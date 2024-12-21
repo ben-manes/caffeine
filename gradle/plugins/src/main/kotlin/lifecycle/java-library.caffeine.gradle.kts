@@ -40,8 +40,8 @@ tasks.withType<JavaCompile>().configureEach {
   options.apply {
     javaModuleVersion = provider { version as String }
     compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-auxiliaryclass", "-Xlint:-classfile",
-      "-Xlint:-exports", "-Xlint:-processing", "-Xlint:-removal", "-Xlint:-requires-automatic",
-      "-parameters", "-Xmaxerrs", "500", "-Xmaxwarns", "500"))
+      "-Xlint:-exports", "-Xlint:-processing", "-Xlint:-requires-automatic", "-parameters",
+      "-Xmaxerrs", "500", "-Xmaxwarns", "500"))
     if (isCI()) {
       compilerArgs.add("-Werror")
     }

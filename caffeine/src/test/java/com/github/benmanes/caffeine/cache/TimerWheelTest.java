@@ -83,7 +83,6 @@ public final class TimerWheelTest {
 
   @BeforeMethod
   public void beforeMethod() {
-    Reset.setThreadLocalRandom(random.nextInt(), random.nextInt());
     timerWheel = new TimerWheel<>();
   }
 

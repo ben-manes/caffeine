@@ -15,7 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import org.jctools.util.UnsafeAccess;
+import java.lang.reflect.Field;
+import java.lang.reflect.InaccessibleObjectException;
 
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AbstractCacheView;
 
@@ -25,22 +26,27 @@ import com.github.benmanes.caffeine.cache.LocalAsyncCache.AbstractCacheView;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Reset {
-  static final long PROBE = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomProbe");
-  static final long SEED = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomSeed");
-  static final int RANDOM_SEED = 1_033_096_058;
-  static final int RANDOM_PROBE = 0x9e3779b9;
+  private static final int RANDOM_SEED = 1_033_096_058;
+  private static final int RANDOM_PROBE = 0x9e3779b9;
 
   private Reset() {}
 
   /** Forces the eviction jitter to be predictable. */
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   public static void resetThreadLocalRandom() {
-    setThreadLocalRandom(RANDOM_PROBE, RANDOM_SEED);
-  }
+    try {
+      Field probe = Thread.class.getDeclaredField("threadLocalRandomProbe");
+      Field seed = Thread.class.getDeclaredField("threadLocalRandomSeed");
+      probe.setAccessible(true);
+      seed.setAccessible(true);
 
-  @SuppressWarnings("SunApi")
-  public static void setThreadLocalRandom(int probe, int seed) {
-    UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), PROBE, probe);
-    UnsafeAccess.UNSAFE.putLong(Thread.currentThread(), SEED, seed);
+      probe.setInt(Thread.currentThread(), RANDOM_PROBE);
+      seed.setLong(Thread.currentThread(), RANDOM_SEED);
+    } catch (InaccessibleObjectException e) {
+      throw new AssertionError("Requires --add-opens java.base/java.lang=ALL-UNNAMED", e);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new LinkageError("Failed to set ThreadLocalRandom fields", e);
+    }
   }
 
   /** Clears the internal state of the cache and becomes unusable. */
