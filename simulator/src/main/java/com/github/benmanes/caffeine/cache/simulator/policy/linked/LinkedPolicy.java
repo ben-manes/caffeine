@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Set;
@@ -149,7 +150,7 @@ public final class LinkedPolicy implements Policy {
       }
       @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
         policyStats.recordOperation();
-        return sentinel.next;
+        return requireNonNull(sentinel.next);
       }
     },
 
@@ -165,7 +166,7 @@ public final class LinkedPolicy implements Policy {
       @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
         for (;;) {
           policyStats.recordOperation();
-          Node node = sentinel.next;
+          Node node = requireNonNull(sentinel.next);
           if (node.marked) {
             node.moveToTail();
             node.marked = false;
@@ -185,7 +186,7 @@ public final class LinkedPolicy implements Policy {
       @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
         policyStats.recordOperation();
         // Skip over the added entry
-        return sentinel.prev.prev;
+        return requireNonNull(requireNonNull(sentinel.prev).prev);
       }
     },
 
@@ -197,7 +198,7 @@ public final class LinkedPolicy implements Policy {
       }
       @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
         policyStats.recordOperation();
-        return sentinel.next;
+        return requireNonNull(sentinel.next);
       }
     };
 
@@ -234,13 +235,13 @@ public final class LinkedPolicy implements Policy {
     /** Creates a new, unlinked node. */
     public Node(long key, int weight, Node sentinel) {
       this.sentinel = sentinel;
-      this.key = key;
       this.weight = weight;
+      this.key = key;
     }
 
     /** Appends the node to the tail of the list. */
     public void appendToTail() {
-      Node tail = sentinel.prev;
+      Node tail = requireNonNull(sentinel.prev);
       sentinel.prev = this;
       tail.next = this;
       next = sentinel;
@@ -249,6 +250,9 @@ public final class LinkedPolicy implements Policy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       prev = next = null;
@@ -257,13 +261,16 @@ public final class LinkedPolicy implements Policy {
 
     /** Moves the node to the tail. */
     public void moveToTail() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       // unlink
       prev.next = next;
       next.prev = prev;
 
       // link
       next = sentinel;
-      prev = sentinel.prev;
+      prev = requireNonNull(sentinel.prev);
       sentinel.prev = this;
       prev.next = this;
     }

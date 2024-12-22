@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import org.jspecify.annotations.Nullable;
 
@@ -113,7 +114,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
       sizeWarm++;
 
       if (sizeWarm > maxWarm) {
-        Node demoted = headWarm.next;
+        Node demoted = requireNonNull(headWarm.next);
         demoted.remove();
         sizeWarm--;
         demoted.type = QueueType.COLD;
@@ -134,7 +135,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     sizeHot++;
 
     if (sizeHot > maxHot) {
-      Node demoted = headHot.next;
+      Node demoted = requireNonNull(headHot.next);
       demoted.remove();
       sizeHot--;
       demoted.appendToTail(headCold);
@@ -146,7 +147,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
 
   private void evict() {
     if (data.size() > maximumSize) {
-      Node victim = headCold.next;
+      Node victim = requireNonNull(headCold.next);
       data.remove(victim.key);
       victim.remove();
       sizeCold--;
@@ -190,7 +191,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
-      Node tail = head.prev;
+      Node tail = requireNonNull(head.prev);
       head.prev = this;
       tail.next = this;
       next = head;
@@ -199,19 +200,25 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
 
     /** Moves the node to the tail. */
     public void moveToTail(Node head) {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       // unlink
       prev.next = next;
       next.prev = prev;
 
       // link
       next = head;
-      prev = head.prev;
+      prev = requireNonNull(head.prev);
       head.prev = this;
       prev.next = this;
     }
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       prev = next = null;

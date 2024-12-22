@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedHashSet;
 import java.util.function.IntConsumer;
@@ -177,7 +178,7 @@ public final class S3FifoPolicy implements Policy {
   private void evictFromSmall() {
     @Var boolean evicted = false;
     while (!evicted && !dataSmall.isEmpty()) {
-      var victim = sentinelSmall.prev;
+      var victim = requireNonNull(sentinelSmall.prev);
       policyStats.recordOperation();
       if (victim.frequency > moveToMainThreshold) {
         insertMain(victim.key, victim.weight);
@@ -198,7 +199,7 @@ public final class S3FifoPolicy implements Policy {
   private void evictFromMain() {
     @Var boolean evicted = false;
     while (!evicted && !dataMain.isEmpty()) {
-      var victim = sentinelMain.prev;
+      var victim = requireNonNull(sentinelMain.prev);
       policyStats.recordOperation();
       if (victim.frequency > 0) {
         victim.moveToHead(sentinelMain);
@@ -215,7 +216,7 @@ public final class S3FifoPolicy implements Policy {
 
   private void evictFromGhost() {
     if (!dataGhost.isEmpty()) {
-      var victim = sentinelGhost.prev;
+      var victim = requireNonNull(sentinelGhost.prev);
       dataGhost.remove(victim.key);
       sizeGhost -= victim.weight;
       victim.remove();
@@ -244,6 +245,7 @@ public final class S3FifoPolicy implements Policy {
   private static void checkLinks(String label, Long2ObjectMap<Node> data, Node sentinel) {
     var forwards = new LinkedHashSet<Node>();
     for (var node = sentinel.next; node != sentinel; node = node.next) {
+      requireNonNull(node);
       checkState(node == data.get(node.key), "%s: %s != %s", label, node, data.get(node.key));
       checkState(forwards.add(node), "%s: loop detected %s", label, forwards);
     }
@@ -252,6 +254,7 @@ public final class S3FifoPolicy implements Policy {
 
     var backwards = new LinkedHashSet<Node>();
     for (var node = sentinel.prev; node != sentinel; node = node.prev) {
+      requireNonNull(node);
       checkState(node == data.get(node.key), "%s: %s != %s", label, node, data.get(node.key));
       checkState(backwards.add(node), "%s: loop detected %s", label, backwards);
     }
@@ -289,7 +292,7 @@ public final class S3FifoPolicy implements Policy {
       checkState(prev == null);
       checkState(next == null);
 
-      Node head = sentinel.next;
+      Node head = requireNonNull(sentinel.next);
       sentinel.next = this;
       head.prev = this;
       next = head;
@@ -306,7 +309,7 @@ public final class S3FifoPolicy implements Policy {
       next.prev = prev;
 
       // link
-      next = sentinel.next;
+      next = requireNonNull(sentinel.next);
       sentinel.next = this;
       next.prev = this;
       prev = sentinel;

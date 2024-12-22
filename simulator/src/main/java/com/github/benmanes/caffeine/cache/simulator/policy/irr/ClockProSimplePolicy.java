@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -362,7 +364,7 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
     final long key;
     long epoch;
 
-    Status status;
+    @Nullable Status status;
     Node prev;
     Node next;
 

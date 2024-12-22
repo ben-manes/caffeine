@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.List;
@@ -179,7 +180,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   private void demoteProtected() {
     if (sizeProtected > maxProtected) {
-      Node demote = headProtected.next;
+      Node demote = requireNonNull(headProtected.next);
       demote.remove();
       demote.status = Status.PROBATION;
       demote.appendToTail(headProbation);
@@ -202,7 +203,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
       return;
     }
 
-    Node candidate = headWindow.next;
+    Node candidate = requireNonNull(headWindow.next);
     sizeWindow--;
 
     candidate.remove();
@@ -211,7 +212,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (data.size() > maximumSize) {
       Node evict;
-      Node victim = headProbation.next;
+      Node victim = requireNonNull(headProbation.next);
       if (admittor.admit(candidate.key, victim.key)) {
         evict = victim;
       } else if (adapt(candidate)) {
@@ -259,6 +260,9 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
             maxProtected--;
 
             demoteProtected();
+            requireNonNull(headProbation.next);
+            requireNonNull(headProbation.next.next);
+
             candidate = headProbation.next.next;
             candidate.remove();
             candidate.status = Status.WINDOW;
@@ -284,6 +288,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
           sizeWindow--;
           maxProtected++;
           decremented = true;
+          requireNonNull(headWindow.next);
 
           candidate = headWindow.next;
           candidate.remove();
@@ -353,6 +358,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToHead(Node head) {
+      requireNonNull(head.next);
       Node first = head.next;
       head.next = this;
       first.prev = this;
@@ -362,6 +368,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
+      requireNonNull(head.prev);
       Node tail = head.prev;
       head.prev = this;
       tail.next = this;
@@ -371,6 +378,8 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
       prev.next = next;
       next.prev = prev;
       next = prev = null;

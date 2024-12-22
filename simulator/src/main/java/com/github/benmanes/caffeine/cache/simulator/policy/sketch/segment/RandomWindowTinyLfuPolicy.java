@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
@@ -44,11 +47,11 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
+  final @Nullable Node[] window;
+  final @Nullable Node[] main;
   final Admittor admittor;
   final int maximumSize;
   final Random random;
-  final Node[] window;
-  final Node[] main;
 
   int windowSize;
   int mainSize;
@@ -103,7 +106,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
       return;
     }
 
-    Node candidate = window[random.nextInt(window.length)];
+    Node candidate = requireNonNull(window[random.nextInt(window.length)]);
     removeFromTable(window, candidate);
     windowSize--;
 
@@ -112,7 +115,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
     mainSize++;
 
     if (data.size() > maximumSize) {
-      Node victim = main[random.nextInt(main.length)];
+      Node victim = requireNonNull(main[random.nextInt(main.length)]);
       Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       removeFromTable(main, evict);
       data.remove(evict.key);
@@ -123,11 +126,12 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   /** Removes the node from the table and adds the index to the free list. */
-  private static void removeFromTable(Node[] table, Node node) {
-    int last = table.length - 1;
-    table[node.index] = table[last];
-    table[node.index].index = node.index;
-    table[last] = null;
+  private static void removeFromTable(@Nullable Node[] table, Node node) {
+    int index = table.length - 1;
+    var last = requireNonNull(table[index]);
+    table[node.index] = last;
+    last.index = node.index;
+    table[index] = null;
   }
 
   /** A node on the double-linked list. */

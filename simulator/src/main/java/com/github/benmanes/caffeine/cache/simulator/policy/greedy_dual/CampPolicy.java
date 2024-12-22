@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.util.NavigableSet;
 import java.util.Objects;
@@ -157,7 +158,7 @@ public final class CampPolicy implements Policy {
 
   private void evict() {
     var sentinel = priorityQueue.first();
-    var victim = sentinel.next;
+    var victim = requireNonNull(sentinel.next);
     data.remove(victim.key);
     size -= victim.weight;
     victim.remove();
@@ -202,7 +203,7 @@ public final class CampPolicy implements Policy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node node) {
-      var tail = prev;
+      var tail = requireNonNull(prev);
       prev = node;
       tail.next = node;
       node.next = this;
@@ -245,7 +246,7 @@ public final class CampPolicy implements Policy {
   private static class Node {
     final long key;
 
-    Sentinel sentinel;
+    @Nullable Sentinel sentinel;
     @Nullable Node prev;
     @Nullable Node next;
 
@@ -265,6 +266,9 @@ public final class CampPolicy implements Policy {
     /** Removes the node from the list. */
     public void remove() {
       checkState(!(this instanceof Sentinel));
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       prev = next = null;
@@ -272,13 +276,16 @@ public final class CampPolicy implements Policy {
 
     /** Moves the node to the tail. */
     public void moveToTail() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       // unlink
       prev.next = next;
       next.prev = prev;
 
       // link
-      next = sentinel;
-      prev = sentinel.prev;
+      next = requireNonNull(sentinel);
+      prev = requireNonNull(sentinel.prev);
       sentinel.prev = this;
       prev.next = this;
     }

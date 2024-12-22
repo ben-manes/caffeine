@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.adaptive;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import org.jspecify.annotations.Nullable;
 
@@ -124,13 +125,13 @@ public final class CarPolicy implements KeyOnlyPolicy {
       if (!isGhost(node)) {
         if ((sizeT1 + sizeB1) == maximumSize) {
           // Discard the LRU page in B1
-          Node victim = headB1.next;
+          Node victim = requireNonNull(headB1.next);
           data.remove(victim.key);
           victim.remove();
           sizeB1--;
         } else if ((sizeT1 + sizeT2 + sizeB1 + sizeB2) == (2 * maximumSize)) {
           // Discard the LRU page in B2
-          Node victim = headB2.next;
+          Node victim = requireNonNull(headB2.next);
           data.remove(victim.key);
           victim.remove();
           sizeB2--;
@@ -199,7 +200,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
     for (;;) {
       policyStats.recordOperation();
       if (sizeT1 >= Math.max(1,  p)) {
-        Node candidate = headT1.next;
+        Node candidate = requireNonNull(headT1.next);
         if (!candidate.marked) {
           candidate.remove();
           sizeT1--;
@@ -216,7 +217,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
           sizeT2++;
         }
       } else {
-        Node candidate = headT2.next;
+        Node candidate = requireNonNull(headT2.next);
         if (!candidate.marked) {
           candidate.remove();
           sizeT2--;
@@ -275,7 +276,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
-      Node tail = head.prev;
+      Node tail = requireNonNull(head.prev);
       head.prev = this;
       tail.next = this;
       next = head;
@@ -284,6 +285,9 @@ public final class CarPolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       prev = next = null;

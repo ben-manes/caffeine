@@ -146,7 +146,9 @@ public final class Simulator {
         try {
           policy.completed().join();
         } catch (CompletionException e) {
-          Throwables.throwIfUnchecked(e.getCause());
+          if (e.getCause() != null) {
+            Throwables.throwIfUnchecked(e.getCause());
+          }
           e.addSuppressed(error);
           throw e;
         }

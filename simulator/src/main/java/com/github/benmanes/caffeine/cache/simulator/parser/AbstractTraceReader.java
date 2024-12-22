@@ -120,7 +120,7 @@ public abstract class AbstractTraceReader implements TraceReader {
     try {
       var archive = new ArchiveStreamFactory().createArchiveInputStream(input);
       var entries = new AbstractIterator<InputStream>() {
-        @Override protected InputStream computeNext() {
+        @Override protected @Nullable InputStream computeNext() {
           try {
             return (archive.getNextEntry() == null)
                 ? endOfData()

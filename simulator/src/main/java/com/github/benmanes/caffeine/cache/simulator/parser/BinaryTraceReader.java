@@ -29,6 +29,8 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.io.Closeables;
 
@@ -57,7 +59,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
 
   private final class TraceIterator implements Iterator<AccessEvent> {
     final DataInputStream input;
-    AccessEvent next;
+    @Nullable AccessEvent next;
     boolean ready;
 
     TraceIterator(DataInputStream input) {
@@ -85,6 +87,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
+      requireNonNull(next);
       ready = false;
       return next;
     }

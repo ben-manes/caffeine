@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import org.jspecify.annotations.Nullable;
 
@@ -160,7 +161,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     policyStats.recordEviction();
 
     pruneStack();
-    Node victim = headMain.prevMain;
+    Node victim = requireNonNull(headMain.prevMain);
     victim.removeFrom(StackType.MAIN);
     data.remove(victim.key);
     pruneStack();
@@ -182,7 +183,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     missesInSample++;
     sample++;
 
-    Node victim = headFilter.prevFilter;
+    Node victim = requireNonNull(headFilter.prevFilter);
     victim.removeFrom(StackType.FILTER);
     if (victim.isInMain) {
       victim.status = Status.NON_RESIDENT;
@@ -216,7 +217,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
      */
     policyStats.recordEviction();
 
-    Node victim = headFilter.prevFilter;
+    Node victim = requireNonNull(headFilter.prevFilter);
     victim.removeFrom(StackType.FILTER);
     if (victim.isInMain) {
       victim.status = Status.NON_RESIDENT;
@@ -264,7 +265,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
 
   private void pruneStack() {
     for (;;) {
-      Node bottom = headMain.prevMain;
+      Node bottom = requireNonNull(headMain.prevMain);
       if ((bottom == headMain) || (bottom.status == Status.MAIN)) {
         break;
       } else if (bottom.status == Status.FILTER) {
@@ -291,7 +292,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     sample++;
 
     pruneStack();
-    Node victim = headMain.prevMain;
+    Node victim = requireNonNull(headMain.prevMain);
     victim.removeFrom(StackType.MAIN);
     data.remove(victim.key);
     pruneStack();
@@ -364,7 +365,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
 
       switch (stackType) {
         case FILTER: {
-          Node next = headFilter.nextFilter;
+          Node next = requireNonNull(headFilter.nextFilter);
           headFilter.nextFilter = this;
           next.prevFilter = this;
           this.nextFilter = next;
@@ -373,7 +374,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
           break;
         }
         case MAIN: {
-          Node next = headMain.nextMain;
+          Node next = requireNonNull(headMain.nextMain);
           headMain.nextMain = this;
           next.prevMain = this;
           this.nextMain = next;
@@ -391,6 +392,9 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
 
       switch (stackType) {
         case FILTER: {
+          requireNonNull(prevFilter);
+          requireNonNull(nextFilter);
+
           prevFilter.nextFilter = nextFilter;
           nextFilter.prevFilter = prevFilter;
           prevFilter = nextFilter = null;
@@ -398,6 +402,9 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
           break;
         }
         case MAIN: {
+          requireNonNull(prevMain);
+          requireNonNull(nextMain);
+
           prevMain.nextMain = nextMain;
           nextMain.prevMain = prevMain;
           prevMain = nextMain = null;

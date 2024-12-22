@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Arrays;
@@ -121,7 +122,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
     int maxPerLevel = maximumSize / levels;
     for (int i = levels - 1; i > 0; i--) {
       if (sizeQ[i] > maxPerLevel) {
-        Node demote = headQ[i].next;
+        Node demote = requireNonNull(headQ[i].next);
         demote.remove();
         sizeQ[i]--;
 
@@ -136,7 +137,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
     if (data.size() > maximumSize) {
       policyStats.recordEviction();
 
-      Node victim = headQ[0].next;
+      Node victim = requireNonNull(headQ[0].next);
       boolean admit = admittor.admit(candidate.key, victim.key);
       if (admit) {
         evictEntry(victim);
@@ -177,6 +178,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
 
     Node(long key) {
       this.key = key;
+      prev = next = this;
     }
 
     static Node sentinel(int level) {
@@ -189,7 +191,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
-      Node tail = head.prev;
+      Node tail = requireNonNull(head.prev);
       head.prev = this;
       tail.next = this;
       next = head;
@@ -198,6 +200,9 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       prev = next = null;

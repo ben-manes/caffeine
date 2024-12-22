@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -46,7 +48,7 @@ public final class ClairvoyantPolicy implements Policy {
   private final IntSortedSet data;
   private final int maximumSize;
 
-  private Recorder recorder;
+  private @Nullable Recorder recorder;
 
   private int infiniteTimestamp;
   private int tick;

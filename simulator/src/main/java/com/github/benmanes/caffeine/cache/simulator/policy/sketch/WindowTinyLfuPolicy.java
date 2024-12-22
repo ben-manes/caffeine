@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.List;
@@ -146,7 +147,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     sizeProtected++;
     if (sizeProtected > maxProtected) {
-      Node demote = headProtected.next;
+      Node demote = requireNonNull(headProtected.next);
       demote.remove();
       demote.status = Status.PROBATION;
       demote.appendToTail(headProbation);
@@ -169,7 +170,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
       return;
     }
 
-    Node candidate = headWindow.next;
+    Node candidate = requireNonNull(headWindow.next);
     sizeWindow--;
 
     candidate.remove();
@@ -177,7 +178,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
     candidate.appendToTail(headProbation);
 
     if (data.size() > maximumSize) {
-      Node victim = headProbation.next;
+      Node victim = requireNonNull(headProbation.next);
       Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
@@ -231,6 +232,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
+      requireNonNull(head.prev);
       Node tail = head.prev;
       head.prev = this;
       tail.next = this;
@@ -240,6 +242,9 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       next = prev = null;

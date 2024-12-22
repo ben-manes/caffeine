@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.function.Function;
@@ -127,7 +128,7 @@ public enum TraceFormat {
         return filePaths.stream().map(path -> {
           List<String> parts = Splitter.on(':').limit(2).splitToList(path);
           TraceFormat format = (parts.size() == 1) ? TraceFormat.this : named(parts.get(0));
-          return format.factory.apply(Iterables.getLast(parts));
+          return format.factory.apply(requireNonNull(Iterables.getLast(parts)));
         }).collect(toImmutableList());
       }
     };

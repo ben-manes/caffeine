@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Arrays;
@@ -138,7 +139,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
     int maxPerLevel = maxMain / levels;
     for (int i = levels - 1; i > 0; i--) {
       if (sizeMainQ[i] > maxPerLevel) {
-        Node demote = headMainQ[i].next;
+        Node demote = requireNonNull(headMainQ[i].next);
         demote.remove();
         sizeMainQ[i]--;
 
@@ -155,7 +156,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
       return;
     }
 
-    Node candidate = headWindow.next;
+    Node candidate = requireNonNull(headWindow.next);
     candidate.remove();
     sizeWindow--;
 
@@ -164,7 +165,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
     sizeMainQ[0]++;
 
     if (data.size() > maximumSize) {
-      Node victim = headMainQ[0].next;
+      Node victim = requireNonNull(headMainQ[0].next);
       Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
@@ -224,6 +225,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
+      requireNonNull(head.prev);
       Node tail = head.prev;
       head.prev = this;
       tail.next = this;
@@ -233,6 +235,8 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
       prev.next = next;
       next.prev = prev;
       next = prev = null;

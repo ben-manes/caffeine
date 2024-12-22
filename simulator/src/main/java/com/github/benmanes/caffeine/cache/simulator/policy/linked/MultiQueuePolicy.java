@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 
@@ -108,7 +109,8 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
   private void adjust() {
     currentTime++;
     for (int i = 1; i < headQ.length; i++) {
-      Node node = headQ[i].next;
+      Node node = requireNonNull(headQ[i].next);
+      requireNonNull(node.next);
       if (node.next.expireTime < currentTime) {
         node.remove();
         node.queueIndex = (i - 1);
@@ -177,7 +179,7 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
-      Node tail = head.prev;
+      Node tail = requireNonNull(head.prev);
       head.prev = this;
       tail.next = this;
       next = head;
@@ -186,6 +188,9 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       queueIndex = -1;
       prev.next = next;
       next.prev = prev;

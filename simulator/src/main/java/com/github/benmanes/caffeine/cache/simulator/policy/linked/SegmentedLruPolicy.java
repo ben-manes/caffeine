@@ -19,6 +19,8 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -162,7 +164,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
     Node prev;
     Node next;
-    QueueType type;
+    @Nullable QueueType type;
 
     Node() {
       this.key = Long.MIN_VALUE;

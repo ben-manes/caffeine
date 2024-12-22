@@ -91,9 +91,8 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
     policyStats.recordHit();
 
     int newCount = node.freq.count + 1;
-    FrequencyNode freqN = (node.freq.next.count == newCount)
-        ? node.freq.next
-        : new FrequencyNode(newCount, node.freq);
+    var next = requireNonNull(node.freq.next);
+    FrequencyNode freqN = (next.count == newCount) ? next : new FrequencyNode(newCount, node.freq);
     node.remove();
     if (node.freq.isEmpty()) {
       node.freq.remove();
@@ -104,9 +103,8 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
   /** Adds the entry, creating an initial frequency list of 1 if necessary, and evicts if needed. */
   private void onMiss(long key) {
-    FrequencyNode freq1 = (freq0.next.count == 1)
-        ? freq0.next
-        : new FrequencyNode(1, freq0);
+    var next = requireNonNull(freq0.next);
+    FrequencyNode freq1 = (next.count == 1) ? next : new FrequencyNode(1, freq0);
     var node = new Node(freq1, key);
     policyStats.recordMiss();
     data.put(key, node);
@@ -136,17 +134,18 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   Node nextVictim(Node candidate) {
     if (policy == EvictionPolicy.MFU) {
       // highest, never the candidate
-      return freq0.prev.nextNode.next;
+      var prev = requireNonNull(freq0.prev);
+      return requireNonNull(prev.nextNode.next);
     }
 
     // find the lowest that is not the candidate
-    @Var Node victim = freq0.next.nextNode.next;
+    @Var Node victim = requireNonNull(freq0.next).nextNode.next;
     if (victim == candidate) {
       victim = (victim.next == victim.prev)
-          ? victim.freq.next.nextNode.next
+          ? requireNonNull(victim.freq.next).nextNode.next
           : victim.next;
     }
-    return victim;
+    return requireNonNull(victim);
   }
 
   /** Removes the entry. */
@@ -182,6 +181,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
     }
 
     public FrequencyNode(int count, FrequencyNode prev) {
+      requireNonNull(prev.next);
       nextNode = new Node(this);
       this.prev = prev;
       this.next = prev.next;
@@ -196,6 +196,9 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       next = prev = null;
@@ -233,14 +236,17 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void append() {
-      prev = freq.nextNode.prev;
-      next = freq.nextNode;
+      prev = requireNonNull(freq.nextNode.prev);
+      next = requireNonNull(freq.nextNode);
       prev.next = this;
       next.prev = this;
     }
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       next = prev = null;

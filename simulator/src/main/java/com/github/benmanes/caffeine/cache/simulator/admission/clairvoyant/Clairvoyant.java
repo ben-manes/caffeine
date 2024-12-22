@@ -32,6 +32,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
@@ -47,11 +48,13 @@ public final class Clairvoyant implements KeyOnlyAdmittor {
   private final PolicyStats policyStats;
 
   public Clairvoyant(Config config, PolicyStats policyStats) {
-    if (snapshot.get() == null) {
-      snapshot.set(readAccessTimes(new BasicSettings(config)));
+    @Var var readOnlyAccessTimes = snapshot.get();
+    if (readOnlyAccessTimes == null) {
+      readOnlyAccessTimes = readAccessTimes(new BasicSettings(config));
+      snapshot.set(readOnlyAccessTimes);
     }
-    accessTimes = new Long2ObjectOpenHashMap<>(snapshot.get().size());
-    for (var entry : snapshot.get().long2ObjectEntrySet()) {
+    accessTimes = new Long2ObjectOpenHashMap<>(readOnlyAccessTimes.size());
+    for (var entry : readOnlyAccessTimes.long2ObjectEntrySet()) {
       var times = new IntArrayFIFOQueue(entry.getValue().size());
       accessTimes.put(entry.getLongKey(), times);
       entry.getValue().forEach(times::enqueue);
@@ -108,6 +111,6 @@ public final class Clairvoyant implements KeyOnlyAdmittor {
         times.add(++tick[0]);
       });
     }
-    return accessTimes;
+    return Long2ObjectMaps.unmodifiable(accessTimes);
   }
 }

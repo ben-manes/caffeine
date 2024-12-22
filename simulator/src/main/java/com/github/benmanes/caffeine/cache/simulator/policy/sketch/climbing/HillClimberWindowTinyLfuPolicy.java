@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbin
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 
 import java.util.HashSet;
 import java.util.List;
@@ -143,6 +144,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Moves or promotes as if necessary. */
   private void onHit(Node node) {
+    requireNonNull(node.queue);
     switch (node.queue) {
       case WINDOW:
         onWindowHit(node);
@@ -176,7 +178,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   private void demoteProtected() {
     if (protectedSize > maxProtected) {
-      Node demote = headProtected.next;
+      Node demote = requireNonNull(headProtected.next);
       demote.remove();
       demote.queue = PROBATION;
       demote.appendToTail(headProbation);
@@ -198,7 +200,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
       return;
     }
 
-    Node candidate = headWindow.next;
+    Node candidate = requireNonNull(headWindow.next);
     windowSize--;
 
     candidate.remove();
@@ -206,7 +208,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     candidate.appendToTail(headProbation);
 
     if (data.size() > maximumSize) {
-      Node victim = headProbation.next;
+      Node victim = requireNonNull(headProbation.next);
       Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
@@ -247,6 +249,8 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
       maxProtected--;
 
       demoteProtected();
+      requireNonNull(headProbation.next);
+
       Node candidate = headProbation.next;
       candidate.remove();
       candidate.queue = WINDOW;
@@ -274,6 +278,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     for (int i = 0; i < steps; i++) {
       maxWindow--;
       maxProtected++;
+      requireNonNull(headWindow.next);
 
       Node candidate = headWindow.next;
       candidate.remove();
@@ -344,7 +349,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToHead(Node head) {
-      Node first = head.next;
+      Node first = requireNonNull(head.next);
       head.next = this;
       first.prev = this;
       prev = head;
@@ -353,7 +358,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
-      Node tail = head.prev;
+      Node tail = requireNonNull(head.prev);
       head.prev = this;
       tail.next = this;
       next = head;
@@ -362,6 +367,9 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Removes the node from the list. */
     public void remove() {
+      requireNonNull(prev);
+      requireNonNull(next);
+
       prev.next = next;
       next.prev = prev;
       next = prev = null;

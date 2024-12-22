@@ -522,6 +522,7 @@
     <Class name="com.github.benmanes.caffeine.cache.simulator.admission.bloom.MembershipTest"/>
     <Bug pattern="
       UC_USELESS_OBJECT,
+      CRLF_INJECTION_LOGS,
       UPM_UNCALLED_PRIVATE_METHOD,
       WOC_WRITE_ONLY_COLLECTION_LOCAL"/>
   </Match>

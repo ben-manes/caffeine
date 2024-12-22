@@ -46,6 +46,7 @@ public final class PolicyActor {
    * @param policy the cache policy being simulated
    * @param settings the simulation settings
    */
+  @SuppressWarnings("NullAway")
   public PolicyActor(Thread parent, Policy policy, BasicSettings settings) {
     this.semaphore = new Semaphore(settings.actor().mailboxSize());
     this.future = CompletableFuture.completedFuture(null);
@@ -70,6 +71,7 @@ public final class PolicyActor {
   }
 
   /** Submits the command to the mailbox and blocks until accepted. */
+  @SuppressWarnings("NullAway")
   private void submit(Command command) {
     try {
       semaphore.acquire();

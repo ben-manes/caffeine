@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import org.jspecify.annotations.Nullable;
 
@@ -103,7 +104,7 @@ public final class GDWheelPolicy implements Policy {
       int hand = findNextQueue();
       if (hand >= 0) {
         // Evict q at the tail of the C[1]th queue in level 1 Cost Wheel
-        var victim = wheel[0][hand].prev;
+        var victim = requireNonNull(wheel[0][hand].prev);
         policyStats.recordEviction();
         remove(victim);
       } else {
@@ -140,7 +141,7 @@ public final class GDWheelPolicy implements Policy {
       var sentinel = wheel[level][hand];
       if (!sentinel.isEmpty()) {
         // Remove p
-        var node = sentinel.next;
+        var node = requireNonNull(sentinel.next);
         node.remove();
 
         // Cost Remainder ← c(p) mod NQ^(idx-1)
@@ -204,7 +205,7 @@ public final class GDWheelPolicy implements Policy {
       for (var sentinel : costWheel) {
         @Var Node next = sentinel.next;
         while (next != sentinel) {
-          next = next.next;
+          next = requireNonNull(next).next;
           nodes++;
         }
       }
@@ -235,6 +236,7 @@ public final class GDWheelPolicy implements Policy {
 
     /** Appends the node to the head of the list. */
     public void appendToHead(Node node) {
+      requireNonNull(next);
       node.prev = this;
       node.next = next;
       next.prev = node;
@@ -266,6 +268,8 @@ public final class GDWheelPolicy implements Policy {
     /** Removes the node from the list. */
     public void remove() {
       checkState(!(this instanceof Sentinel));
+      requireNonNull(prev);
+      requireNonNull(next);
       prev.next = next;
       next.prev = prev;
       prev = next = null;

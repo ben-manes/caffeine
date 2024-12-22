@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import org.jspecify.annotations.Nullable;
 
@@ -268,6 +269,7 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
 
   private void runHandCold() {
     // runHandCold is used to search for a resident cold page for replacement.
+    requireNonNull(handCold);
     checkState(handCold.isResidentCold());
 
     if (handCold.marked) {
@@ -322,6 +324,7 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
     // What triggers the movement of handHot is that a cold page (== argument "trigger") is found to
     // have been accessed in its test period and thus turns into a hot page, which "maybe"
     // accordingly turns the hot page with the largest recency into a cold page.
+    requireNonNull(handHot);
     checkState(handHot.isHot());
     checkState(trigger.isInTest());
 
@@ -364,6 +367,7 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   }
 
   private void runHandTest() {
+    requireNonNull(handTest);
     checkState(handTest.isInTest());
     terminateTestPeriod(handTest);
     nextHandTest();
@@ -389,10 +393,10 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   private void nextHandCold() {
     if (sizeResCold > 0) {
       if (handCold == null) {
-        handCold = listHead.prev;
+        handCold = requireNonNull(listHead).prev;
       }
       while (!handCold.isResidentCold()) {
-        handCold = handCold.prev;
+        handCold = requireNonNull(handCold).prev;
       }
     } else {
       handCold = null;
@@ -403,7 +407,7 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   private void nextHandHot() {
     if (sizeHot > 0) {
       if (handHot == null) {
-        handHot = listHead.prev;
+        handHot = requireNonNull(listHead).prev;
       }
       while (handHot.isCold()) {
         // Terminate test period of encountered cold pages.
@@ -421,7 +425,7 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   private void nextHandTest() {
     if (sizeInTest > 0) {
       if (handTest == null) {
-        handTest = (handHot == null ? listHead.prev : handHot);
+        handTest = (handHot == null ? requireNonNull(listHead).prev : handHot);
       }
       while (!handTest.isInTest()) {
         handTest = handTest.prev;
@@ -547,6 +551,7 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   private void printClock() {
     System.out.println("** CLOCK-Pro list HEAD (small recency) **");
     System.out.println(listHead);
+    requireNonNull(listHead);
     for (Node n = listHead.next; n != listHead; n = n.next) {
       System.out.println(n);
     }

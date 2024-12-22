@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static com.google.common.base.Preconditions.checkState;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -49,9 +51,10 @@ public final class SievePolicy implements Policy {
   final PolicyStats policyStats;
   final long maximumSize;
 
-  Node head;
-  Node tail;
-  Node hand;
+  @Nullable Node head;
+  @Nullable Node tail;
+  @Nullable Node hand;
+
   long size;
 
   public SievePolicy(Config config) {
@@ -156,8 +159,9 @@ public final class SievePolicy implements Policy {
   static final class Node {
     final long key;
 
-    Node prev;
-    Node next;
+    @Nullable Node prev;
+    @Nullable Node next;
+
     int weight;
     boolean visited;
 

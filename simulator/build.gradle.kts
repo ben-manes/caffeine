@@ -50,11 +50,18 @@ forbiddenApis {
     "jdk-internal", "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
 }
 
-tasks.withType<JavaCompile>().configureEach {
-  options.errorprone {
-    disableWarningsInGeneratedCode = true
-    disable("SystemOut")
-    nullaway.disable()
+tasks.named<JavaCompile>("compileJava").configure {
+  options.apply {
+    compilerArgs.addAll(listOf("-Xlint:-classfile", "-Xlint:-processing"))
+    errorprone {
+      disableWarningsInGeneratedCode = true
+      disable("SystemOut")
+
+      nullaway {
+        externalInitAnnotations.add("picocli.CommandLine.Command")
+        treatGeneratedAsUnannotated = true
+      }
+    }
   }
 }
 

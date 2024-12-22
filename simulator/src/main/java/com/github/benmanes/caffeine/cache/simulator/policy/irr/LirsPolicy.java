@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -144,7 +145,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
       node.status = Status.LIR;
       node.removeFrom(StackType.Q);
 
-      Node bottom = headS.prevS;
+      Node bottom = requireNonNull(headS.prevS);
       sizeHot--;
 
       bottom.status = Status.HIR_RESIDENT;
@@ -211,7 +212,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
       node.status = Status.LIR;
       sizeHot++;
 
-      Node bottom = headS.prevS;
+      Node bottom = requireNonNull(headS.prevS);
       checkState(bottom.status == Status.LIR);
 
       bottom.status = Status.HIR_RESIDENT;
@@ -233,7 +234,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // located above it will not have a chance to change their status from HIR to LIR since their
     // recencies are larger than the new maximum recency of the LIR blocks.
     for (;;) {
-      Node bottom = headS.prevS;
+      Node bottom = requireNonNull(headS.prevS);
       if ((bottom == headS) || (bottom.status == Status.LIR)) {
         break;
       } else if (bottom.status == Status.HIR_NON_RESIDENT) {
@@ -250,7 +251,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     @Var Node node = headNR.prevNR;
     while (sizeNR >  maximumNonResidentSize) {
       policyStats.recordOperation();
-      Node removed = node;
+
+      Node removed = requireNonNull(node);
       node = node.prevNR;
 
       removed.removeFrom(StackType.NR);
@@ -268,7 +270,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     policyStats.recordEviction();
 
     residentSize--;
-    Node bottom = headQ.prevQ;
+    Node bottom = requireNonNull(headQ.prevQ);
     bottom.removeFrom(StackType.Q);
     bottom.status = Status.HIR_NON_RESIDENT;
     if (bottom.isInStack(StackType.S)) {
@@ -312,6 +314,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   private void printLirs() {
     System.out.println("** LIRS stack TOP **");
     for (Node n = headS.nextS; n != headS; n = n.nextS) {
+      requireNonNull(n);
       checkState(n.isInS);
       if (n.status == Status.HIR_NON_RESIDENT) {
         System.out.println("<NR> " + n.key);
@@ -325,6 +328,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
     System.out.println("\n** LIRS queue END **");
     for (Node n = headQ.nextQ; n != headQ; n = n.nextQ) {
+      requireNonNull(n);
       checkState(n.isInQ);
       System.out.println(n.key);
     }
@@ -416,7 +420,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
       switch (stackType) {
         case S: {
-          Node next = headS.nextS;
+          Node next = requireNonNull(headS.nextS);
           headS.nextS = this;
           next.prevS = this;
           this.nextS = next;
@@ -426,7 +430,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           return;
         }
         case Q: {
-          Node next = headQ.nextQ;
+          Node next = requireNonNull(headQ.nextQ);
           headQ.nextQ = this;
           next.prevQ = this;
           this.nextQ = next;
@@ -436,7 +440,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           return;
         }
         case NR: {
-          Node next = headNR.nextNR;
+          Node next = requireNonNull(headNR.nextNR);
           headNR.nextNR = this;
           next.prevNR = this;
           this.nextNR = next;
@@ -454,6 +458,9 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
       switch (stackType) {
         case S: {
+          requireNonNull(prevS);
+          requireNonNull(nextS);
+
           prevS.nextS = nextS;
           nextS.prevS = prevS;
           prevS = nextS = null;
@@ -462,6 +469,9 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           return;
         }
         case Q: {
+          requireNonNull(prevQ);
+          requireNonNull(nextQ);
+
           prevQ.nextQ = nextQ;
           nextQ.prevQ = prevQ;
           prevQ = nextQ = null;
@@ -470,6 +480,9 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           return;
         }
         case NR: {
+          requireNonNull(prevNR);
+          requireNonNull(nextNR);
+
           prevNR.nextNR = nextNR;
           nextNR.prevNR = prevNR;
           prevNR = nextNR = null;

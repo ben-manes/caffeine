@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
@@ -56,13 +58,13 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class SampledPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
+  final @Nullable Node[] table;
   final EvictionPolicy policy;
   final Sample sampleStrategy;
   final Admittor admittor;
   final int maximumSize;
   final int sampleSize;
   final Random random;
-  final Node[] table;
 
   long tick;
 
@@ -134,17 +136,18 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   /** Removes the node from the table and adds the index to the free list. */
   private void removeFromTable(Node node) {
-    int last = data.size() - 1;
-    table[node.index] = table[last];
-    table[node.index].index = node.index;
-    table[last] = null;
+    int index = data.size() - 1;
+    var last = requireNonNull(table[index]);
+    table[node.index] = last;
+    last.index = node.index;
+    table[index] = null;
   }
 
   /** The algorithms to choose a random sample with. */
   public enum Sample {
     GUESS {
       @SuppressWarnings("PMD.AvoidReassigningLoopVariables")
-      @Override public <E> List<E> sample(E[] elements, E candidate,
+      @Override public <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         var sample = new ArrayList<E>(sampleSize);
         policyStats.addOperations(sampleSize);
@@ -158,7 +161,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     },
     RESERVOIR {
-      @Override public <E> List<E> sample(E[] elements, E candidate,
+      @Override public <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         var sample = new ArrayList<E>(sampleSize);
         policyStats.addOperations(elements.length);
@@ -181,7 +184,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     },
     SHUFFLE {
-      @Override public <E> List<E> sample(E[] elements, E candidate,
+      @Override public <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         var sample = new ArrayList<E>(Arrays.asList(elements));
         policyStats.addOperations(elements.length);
@@ -191,7 +194,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     };
 
-    abstract <E> List<E> sample(E[] elements, E candidate,
+    abstract <E> List<E> sample(@Nullable E[] elements, E candidate,
         int sampleSize, Random random, PolicyStats policyStats);
   }
 

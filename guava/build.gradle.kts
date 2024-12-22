@@ -14,6 +14,10 @@ dependencies {
   testImplementation(libs.bundles.slf4j.nop)
 }
 
+tasks.named<JavaCompile>("compileJava").configure {
+  options.compilerArgs.add("-Xlint:-requires-automatic")
+}
+
 tasks.named<JavaCompile>("compileTestJava").configure {
   options.errorprone {
     disable("Varifier")

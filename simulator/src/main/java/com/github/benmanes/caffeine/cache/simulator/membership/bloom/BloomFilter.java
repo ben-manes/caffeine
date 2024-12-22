@@ -46,6 +46,7 @@ public final class BloomFilter implements Membership {
    * Creates a lazily initialized membership sketch, requiring {@link #ensureCapacity} be called
    * when the expected number of insertions and the false positive probability have been determined.
    */
+  @SuppressWarnings("NullAway.Init")
   public BloomFilter() {}
 
   /**

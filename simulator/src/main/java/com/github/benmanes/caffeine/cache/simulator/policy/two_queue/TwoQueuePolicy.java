@@ -15,6 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
+import static java.util.Objects.requireNonNull;
+
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -90,7 +94,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
     @Var Node node = data.get(key);
     if (node != null) {
-      switch (node.type) {
+      switch (requireNonNull(node.type)) {
         case MAIN:
           node.moveToTail(headMain);
           policyStats.recordHit();
@@ -188,7 +192,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
 
     Node prev;
     Node next;
-    QueueType type;
+    @Nullable QueueType type;
 
     Node() {
       this.key = Long.MIN_VALUE;

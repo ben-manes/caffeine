@@ -132,23 +132,32 @@ val generateNodes by tasks.registering(JavaExec::class) {
 tasks.named<JavaCompile>("compileJava").configure {
   dependsOn(generateLocalCaches, generateNodes)
   finalizedBy(compileCodeGenJava)
-  options.errorprone {
-    disable("CheckReturnValue")
+  options.apply {
+    compilerArgs.addAll(listOf("-Xlint:-auxiliaryclass", "-Xlint:-exports"))
+    errorprone {
+      disable("CheckReturnValue")
+    }
   }
 }
 
 tasks.named<JavaCompile>("compileTestJava").configure {
   dependsOn(tasks.jar, compileCodeGenJava)
-  options.errorprone {
-    disable("Varifier")
-    disable("Var")
+  options.apply {
+    compilerArgs.add("-Xlint:-auxiliaryclass")
+    errorprone {
+      disable("Varifier")
+      disable("Var")
+    }
   }
 }
 
 tasks.named<JavaCompile>("compileJmhJava").configure {
-  options.errorprone {
-    disable("Varifier")
-    disable("Var")
+  options.apply {
+    compilerArgs.add("-Xlint:-classfile")
+    errorprone {
+      disable("Varifier")
+      disable("Var")
+    }
   }
 }
 

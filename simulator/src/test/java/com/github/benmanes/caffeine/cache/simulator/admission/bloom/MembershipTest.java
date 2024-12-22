@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.IntStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -46,11 +48,11 @@ import it.unimi.dsi.fastutil.ints.IntList;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class MembershipTest {
-  static final String[] HEADERS = { "Type", "Capacity", "Insertions", "False Positives" };
-  static final double EXPECTED_INSERTIONS_MULTIPLIER = 0.5;
-  static final double FPP = 0.03;
+  private static final Logger logger = LoggerFactory.getLogger(MembershipTest.class);
 
-  static final boolean display = false;
+  private static final String[] HEADERS = { "Type", "Capacity", "Insertions", "False Positives" };
+  private static final double EXPECTED_INSERTIONS_MULTIPLIER = 0.5;
+  private static final double FPP = 0.03;
 
   @SuppressWarnings("Varifier")
   @Test(dataProvider = "filterTypes")
@@ -75,11 +77,8 @@ public final class MembershipTest {
         assertWithMessage(filterType.toString()).that(falsePositiveRate).isLessThan(FPP + 0.2);
       }
       rows.add(row(filterType, capacity, expectedInsertions, falsePositives, falsePositiveRate));
-
     }
-    if (display) {
-      printTable(rows);
-    }
+    printTable(rows);
   }
 
   @Test(dataProvider = "ensureCapacity")
@@ -150,6 +149,6 @@ public final class MembershipTest {
     for (int i = 0; i < rows.size(); i++) {
       data[i] = rows.get(i);
     }
-    System.out.println(FlipTable.of(HEADERS, data));
+    logger.info("\n{}", FlipTable.of(HEADERS, data));
   }
 }
