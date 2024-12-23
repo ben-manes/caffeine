@@ -84,6 +84,7 @@ protobuf = "4.29.2"
 slf4j = "2.0.16"
 slf4j-test = "3.0.1"
 snakeyaml = "2.3"
+sigstore = "1.2.0"
 sonarqube = "6.0.1.5171"
 spotbugs = "4.8.6"
 spotbugs-contrib = "7.6.9"
@@ -237,6 +238,7 @@ jmh-report = { id = "io.morethan.jmhreport", version.ref = "jmh-report" }
 jvm-dependency-conflict-resolution = { id = "org.gradlex.jvm-dependency-conflict-resolution", version.ref = "jvm-dependency-conflict-resolution" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
 nullaway = { id = "net.ltgt.nullaway", version.ref = "nullaway-plugin" }
+sigstore = { id = "dev.sigstore.sign", version.ref = "sigstore" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs-plugin" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

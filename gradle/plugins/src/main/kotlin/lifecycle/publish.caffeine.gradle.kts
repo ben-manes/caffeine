@@ -1,4 +1,5 @@
 plugins {
+  id("dev.sigstore.sign")
   `maven-publish`
   `java-library`
   signing

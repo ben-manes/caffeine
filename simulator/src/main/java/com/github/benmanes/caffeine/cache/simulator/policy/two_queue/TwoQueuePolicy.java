@@ -94,7 +94,8 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
     @Var Node node = data.get(key);
     if (node != null) {
-      switch (requireNonNull(node.type)) {
+      requireNonNull(node.type);
+      switch (node.type) {
         case MAIN:
           node.moveToTail(headMain);
           policyStats.recordHit();

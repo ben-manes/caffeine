@@ -241,10 +241,11 @@ public final class CartPolicy implements KeyOnlyPolicy {
     //   nL = nL − 1
 
     policyStats.recordEviction();
+    requireNonNull(headT2.next);
 
-    while (requireNonNull(headT2.next).marked) {
+    while (headT2.next.marked) {
       policyStats.recordOperation();
-      Node demoted = headT2.next;
+      Node demoted = requireNonNull(headT2.next);
       demoted.marked = false;
       demoted.remove();
       sizeT2--;
@@ -257,10 +258,10 @@ public final class CartPolicy implements KeyOnlyPolicy {
       }
     }
 
-    while ((requireNonNull(headT1.next).filter == FilterType.LONG_TERM)
-        || requireNonNull(headT1.next).marked) {
+    requireNonNull(headT1.next);
+    while ((headT1.next.filter == FilterType.LONG_TERM) || headT1.next.marked) {
       policyStats.recordOperation();
-      Node node = headT1.next;
+      Node node = requireNonNull(headT1.next);
       if (node.marked) {
         node.moveToTail(headT1);
         node.marked = false;
