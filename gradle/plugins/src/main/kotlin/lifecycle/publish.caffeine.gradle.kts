@@ -1,5 +1,5 @@
 plugins {
-  id("dev.sigstore.sign")
+  id("dev.sigstore.sign-base")
   `maven-publish`
   `java-library`
   signing
@@ -72,4 +72,12 @@ signing {
 
 tasks.withType<Sign>().configureEach {
   incompatibleWithConfigurationCache()
+}
+
+if (!System.getenv("ACTIONS_ID_TOKEN_REQUEST_URL").isNullOrEmpty()) {
+  publishing {
+    sigstoreSign {
+      sign(publications = publishing.publications)
+    }
+  }
 }

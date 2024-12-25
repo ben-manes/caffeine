@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.processor;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static javax.cache.expiry.Duration.FIVE_MINUTES;
 
@@ -141,7 +142,8 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
       return map.get(key);
     }
     @Override public ImmutableMap<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-      return Streams.stream(keys).collect(toImmutableMap(identity(), this::load));
+      return Streams.stream(keys).collect(
+          toImmutableMap(identity(), key -> requireNonNull(load(key))));
     }
   }
 }
