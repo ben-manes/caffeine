@@ -57,7 +57,7 @@ public final class FrequencySketchTest {
   @Test(dataProvider = "sketch")
   public void ensureCapacity_larger(FrequencySketch<Integer> sketch) {
     int size = sketch.table.length;
-    sketch.ensureCapacity(2 * size);
+    sketch.ensureCapacity(2L * size);
     assertThat(sketch.table).hasLength(2 * size);
     assertThat(sketch.sampleSize).isEqualTo(10 * 2 * size);
     assertThat(sketch.blockMask).isEqualTo(((2 * size) >> 3) - 1);

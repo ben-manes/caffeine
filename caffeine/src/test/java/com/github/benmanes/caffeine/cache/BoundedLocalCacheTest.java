@@ -805,7 +805,7 @@ public final class BoundedLocalCacheTest {
   public void evict_candidate_lru(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.setMainProtectedMaximum(0);
     cache.setWindowMaximum(context.maximumSize());
-    for (int i = 0; i < context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       var oldValue = cache.put(Int.valueOf(i), Int.valueOf(i));
       assertThat(oldValue).isNull();
     }
@@ -851,7 +851,7 @@ public final class BoundedLocalCacheTest {
     cache.setWindowMaximum(context.maximumSize() / 2);
     cache.setMainProtectedMaximum(0);
 
-    for (int i = 0; i < context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       var value = cache.put(Int.valueOf(i), Int.valueOf(i));
       assertThat(value).isNull();
     }
@@ -876,7 +876,7 @@ public final class BoundedLocalCacheTest {
     cache.setWindowMaximum(context.maximumSize() / 2);
     cache.setMainProtectedMaximum(0);
 
-    for (int i = 0; i < context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       var value = cache.put(Int.valueOf(i), Int.valueOf(i));
       assertThat(value).isNull();
     }
@@ -900,7 +900,7 @@ public final class BoundedLocalCacheTest {
     cache.setMainProtectedMaximum(context.maximumSize() / 2);
     cache.setWindowMaximum(context.maximumSize() / 2);
 
-    for (int i = 0; i < context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       var value = cache.put(Int.valueOf(i), Int.valueOf(i));
       assertThat(value).isNull();
     }
@@ -933,7 +933,7 @@ public final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)
   public void evict_toZero(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    for (int i = 0; i < context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       var value = cache.put(Int.valueOf(i), Int.valueOf(i));
       assertThat(value).isNull();
     }
@@ -1016,7 +1016,7 @@ public final class BoundedLocalCacheTest {
       return Math.abs(value.intValue());
     });
 
-    for (int i = 0; i < context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       assertThat(cache.put(Int.valueOf(i), Int.valueOf(1))).isNull();
     }
 
@@ -1042,7 +1042,7 @@ public final class BoundedLocalCacheTest {
       return Math.abs(value.intValue());
     });
 
-    for (int i = 0; i < context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       assertThat(cache.put(Int.valueOf(i), Int.valueOf(1))).isNull();
     }
 
@@ -1673,7 +1673,7 @@ public final class BoundedLocalCacheTest {
   public void fastpath(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.skipReadBuffer()).isTrue();
 
-    for (int i = 0; i < (context.maximumSize() / 2) - 1; i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize() / 2) - 1; i++) {
       var oldValue = cache.put(Int.valueOf(i), Int.valueOf(-i));
       assertThat(oldValue).isNull();
     }
@@ -1766,7 +1766,7 @@ public final class BoundedLocalCacheTest {
   public void drain_blocksOrderedMap(BoundedLocalCache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     checkDrainBlocks(cache, () -> {
-      var results = eviction.coldest(((int) context.maximumSize()));
+      var results = eviction.coldest(Math.toIntExact(context.maximumSize()));
       assertThat(results).isEmpty();
     });
   }
@@ -2130,8 +2130,8 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
       maximumSize = {Maximum.DISABLED, Maximum.FULL}, weigher = CacheWeigher.DISABLED)
   public void expirationDelay_window(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    int maximum = cache.evicts() ? (int) context.maximumSize() : 100;
-    long stepSize = context.expireAfterAccess().timeNanos() / (2 * maximum);
+    int maximum = cache.evicts() ? Math.toIntExact(context.maximumSize()) : 100;
+    long stepSize = context.expireAfterAccess().timeNanos() / (2L * maximum);
     for (int i = 0; i < maximum; i++) {
       var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
@@ -2166,7 +2166,7 @@ public final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void expirationDelay_probation(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
-    for (int i = 0; i < (int) context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
       assertThat(value).isNull();
@@ -2198,7 +2198,7 @@ public final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void expirationDelay_protected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterAccess().timeNanos() / (2 * context.maximumSize());
-    for (int i = 0; i < (int) context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
       assertThat(value).isNull();
@@ -2231,7 +2231,7 @@ public final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   public void expirationDelay_writeOrder(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long stepSize = context.expireAfterWrite().timeNanos() / (2 * context.maximumSize());
-    for (int i = 0; i < (int) context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);
       assertThat(value).isNull();
@@ -2254,8 +2254,8 @@ public final class BoundedLocalCacheTest {
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void expirationDelay_varTime(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     long startTime = context.ticker().read();
-    int maximum = cache.evicts() ? (int) context.maximumSize() : 100;
-    long stepSize = context.expiryTime().timeNanos() / (2 * maximum);
+    int maximum = cache.evicts() ? Math.toIntExact(context.maximumSize()) : 100;
+    long stepSize = context.expiryTime().timeNanos() / (2L * maximum);
     for (int i = 0; i < maximum; i++) {
       var key = intern(Int.valueOf(i));
       var value = cache.put(key, key);

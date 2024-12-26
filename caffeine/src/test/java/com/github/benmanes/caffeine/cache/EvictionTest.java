@@ -131,7 +131,7 @@ public final class EvictionTest {
       initialCapacity = InitialCapacity.EXCESSIVE)
   public void evict_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     // Enforce full initialization of internal structures
-    for (int i = 0; i < context.maximumSize(); i++) {
+    for (int i = 0; i < Math.toIntExact(context.maximumSize()); i++) {
       cache.put(Int.valueOf(i), List.of());
     }
     cache.invalidateAll();

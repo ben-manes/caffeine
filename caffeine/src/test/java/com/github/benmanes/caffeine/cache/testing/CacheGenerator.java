@@ -217,8 +217,8 @@ public final class CacheGenerator {
       return;
     }
 
-    int maximum = (int) Math.min(context.maximumSize(), context.population.size());
-    int first = BASE + (int) Math.min(0, context.population.size());
+    int maximum = Math.toIntExact(Math.min(context.maximumSize(), context.population.size()));
+    int first = Math.toIntExact(BASE + Math.min(0, context.population.size()));
     int last = BASE + maximum - 1;
     int middle = Math.max(first, BASE + ((last - first) / 2));
 

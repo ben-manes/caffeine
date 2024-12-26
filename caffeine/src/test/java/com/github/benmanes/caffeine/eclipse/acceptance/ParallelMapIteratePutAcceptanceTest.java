@@ -39,7 +39,7 @@ public abstract class ParallelMapIteratePutAcceptanceTest {
       LoggerFactory.getLogger(ParallelMapIteratePutAcceptanceTest.class);
   private static final long SEED = 0x12345678ABCDL;
 
-  private static final long PUT_REPEAT = 100;
+  private static final int PUT_REPEAT = 100;
   private static final int CHUNK_SIZE = 16000;
   private static final int MAX_THREADS = 48;
 
@@ -90,7 +90,7 @@ public abstract class ParallelMapIteratePutAcceptanceTest {
 
   private void runPutTest1(int threadCount, Integer[] contents, Integer[] constContents,
       ExecutorService executorService, boolean warmup) {
-    long ops = ((warmup ? 100_000 : 100_000 * PUT_REPEAT) / contents.length) + 1;
+    int ops = ((warmup ? 100_000 : 100_000 * PUT_REPEAT) / contents.length) + 1;
     Future<?>[] futures = new Future<?>[threadCount];
     for (int i = 0; i < ops; i++) {
       ConcurrentMutableMap<Integer, Integer> map = newMap(constContents.length);

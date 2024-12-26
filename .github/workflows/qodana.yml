@@ -63,7 +63,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: check -x test
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@c9aae269126c597c4332ef4b11f0547262f240b5 # v2024.3.3
+        uses: JetBrains/qodana-action@b60a4b9259f448dd00f2ca4763db5677d69ba868 # v2024.3.4
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:

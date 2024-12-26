@@ -956,7 +956,7 @@ public final class RefreshAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshAfter_negative(Cache<Int, Int> cache,
+  public void setRefreshAfter_negative(
       CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     var duration = Duration.ofMinutes(-2);
     assertThrows(IllegalArgumentException.class, () ->
@@ -965,7 +965,7 @@ public final class RefreshAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshAfter_excessive(Cache<Int, Int> cache,
+  public void setRefreshAfter_excessive(
       CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(ChronoUnit.FOREVER.getDuration());
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.NANOSECONDS)).isEqualTo(Long.MAX_VALUE);

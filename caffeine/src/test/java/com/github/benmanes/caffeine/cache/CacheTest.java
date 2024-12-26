@@ -348,7 +348,7 @@ public final class CacheTest {
     }
 
     var keys = intern(new ArrayList<Key>());
-    for (int i = 0; i < Population.FULL.size(); i++) {
+    for (int i = 0; i < Math.toIntExact(Population.FULL.size()); i++) {
       keys.add(new Key());
     }
 
@@ -603,7 +603,7 @@ public final class CacheTest {
     Cache<Object, Int> cache = context.build(key -> null);
 
     var keys = new ArrayList<Key>();
-    for (int i = 0; i < Population.FULL.size(); i++) {
+    for (int i = 0; i < Math.toIntExact(Population.FULL.size()); i++) {
       keys.add(intern(new Key()));
     }
     Key key = requireNonNull(Iterables.getLast(keys));

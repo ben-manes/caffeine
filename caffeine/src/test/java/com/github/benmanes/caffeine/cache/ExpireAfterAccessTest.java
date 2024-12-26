@@ -414,7 +414,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
   public void oldest_partial(CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    int count = (int) context.initialSize() / 2;
+    int count = Math.toIntExact(context.initialSize() / 2);
     assertThat(expireAfterAccess.oldest(count)).hasSize(count);
   }
 

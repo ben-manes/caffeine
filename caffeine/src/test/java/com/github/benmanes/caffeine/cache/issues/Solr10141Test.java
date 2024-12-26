@@ -107,7 +107,7 @@ public final class Solr10141Test {
         // thread was just reading/writing
         lastBlock.set(block);
 
-        Long k = block;
+        long k = block;
         Val v = cache.getIfPresent(k);
         if (v != null) {
           hits.incrementAndGet();
@@ -172,7 +172,7 @@ public final class Solr10141Test {
       }
 
       void test(Random r) {
-        Long k = (long) r.nextInt(blocksInTest);
+        long k = r.nextInt(blocksInTest);
         Val v = cache.getIfPresent(k);
         if (v != null) {
           assertThat(k).isEqualTo(v.key);
