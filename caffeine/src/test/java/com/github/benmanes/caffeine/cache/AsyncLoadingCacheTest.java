@@ -295,7 +295,7 @@ public final class AsyncLoadingCacheTest {
     var expect = new ImmutableMap.Builder<Int, Int>()
         .putAll(Maps.toMap(context.firstMiddleLastKeys(), Int::negate))
         .putAll(Maps.toMap(context.absentKeys(), Int::negate))
-        .build();
+        .buildOrThrow();
     var result = cache.getAll(expect.keySet()).join();
     assertThat(result).isEqualTo(expect);
 

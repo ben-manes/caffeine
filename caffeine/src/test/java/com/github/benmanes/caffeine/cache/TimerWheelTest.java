@@ -21,7 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Locale.US;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
@@ -29,7 +29,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.quality.Strictness.LENIENT;
 
 import java.lang.ref.ReferenceQueue;
 import java.time.Duration;
@@ -37,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -48,53 +46,29 @@ import java.util.stream.LongStream;
 import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.testng.MockitoSettings;
-import org.mockito.testng.MockitoTestNGListener;
-import org.testng.ITestResult;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.google.common.collect.Streams;
 
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.longs.LongList;
-
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(singleThreaded = true)
-@MockitoSettings(strictness = LENIENT)
-@Listeners(MockitoTestNGListener.class)
 @SuppressWarnings({"ClassEscapesDefinedScope", "GuardedBy"})
 public final class TimerWheelTest {
-  private static final Random random = new Random();
-  private static final long[] CLOCKS = { Long.MIN_VALUE, -SPANS[0] + 1, 0L,
-      0xfffffffc0000000L, Long.MAX_VALUE - SPANS[0] + 1, Long.MAX_VALUE, random.nextLong() };
+  private static final long[] CLOCKS = {Long.MIN_VALUE, -SPANS[0] + 1, 0L, 0xfffffffc0000000L,
+      Long.MAX_VALUE - SPANS[0] + 1, Long.MAX_VALUE, ThreadLocalRandom.current().nextLong()};
 
-  @Captor ArgumentCaptor<Node<Long, Long>> captor;
-  @Mock BoundedLocalCache<Long, Long> cache;
-  TimerWheel<Long, Long> timerWheel;
-
-  @BeforeMethod
-  public void beforeMethod() {
-    timerWheel = new TimerWheel<>();
-  }
-
-  @AfterMethod
-  public void afterMethod(ITestResult testResult) {
-    if (!testResult.isSuccess()) {
-      printTimerWheel();
-    }
-  }
+  // Use printTimerWheel(timerWheel) to debug
 
   @Test(dataProvider = "schedule")
   public void schedule(long clock, long duration, int expired) {
+    ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
 
     timerWheel.nanos = clock;
@@ -111,6 +85,10 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "fuzzySchedule")
   public void schedule_fuzzy(long clock, long duration, long[] times) {
+    ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
@@ -127,11 +105,15 @@ public final class TimerWheelTest {
     for (Node<?, ?> node : captor.getAllValues()) {
       assertThat(node.getVariableTime()).isAtMost(duration);
     }
-    checkTimerWheel(duration);
+    checkTimerWheel(timerWheel, duration);
   }
 
   @Test(dataProvider = "clock")
   public void advance(long clock) {
+    ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
 
     timerWheel.nanos = clock;
@@ -143,6 +125,10 @@ public final class TimerWheelTest {
 
   @Test
   public void advance_overflow() {
+    ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
 
     timerWheel.nanos = -TimeUnit.DAYS.toNanos(365) / 2;
@@ -154,8 +140,10 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void advance_backwards(long clock) {
-    timerWheel.nanos = clock;
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
 
+    timerWheel.nanos = clock;
     for (int i = 0; i < 1_000; i++) {
       long duration = ThreadLocalRandom.current().nextLong(TimeUnit.DAYS.toNanos(10));
       timerWheel.schedule(new Timer(clock + duration));
@@ -169,6 +157,10 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void advance_reschedule(long clock) {
+    ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
@@ -194,6 +186,10 @@ public final class TimerWheelTest {
 
   @Test
   public void advance_exception() {
+    ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     doThrow(new IllegalArgumentException())
         .when(cache).evictEntry(captor.capture(), any(), anyLong());
     var timer = new Timer(timerWheel.nanos + SPANS[1]);
@@ -207,12 +203,16 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void getExpirationDelay_empty(long clock) {
+    var timerWheel = new TimerWheel<Long, Long>();
+
     timerWheel.nanos = clock;
     assertThat(timerWheel.getExpirationDelay()).isEqualTo(Long.MAX_VALUE);
   }
 
   @Test(dataProvider = "clock")
   public void getExpirationDelay_firstWheel(long clock) {
+    var timerWheel = new TimerWheel<Long, Long>();
+
     timerWheel.nanos = clock;
     long delay = Duration.ofSeconds(1).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
@@ -221,6 +221,8 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void getExpirationDelay_lastWheel(long clock) {
+    var timerWheel = new TimerWheel<Long, Long>();
+
     timerWheel.nanos = clock;
     long delay = Duration.ofDays(14).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
@@ -229,6 +231,9 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void getExpirationDelay_hierarchy(long clock) {
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
@@ -250,6 +255,9 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "fuzzySchedule", invocationCount = 25)
   public void getExpirationDelay_fuzzy(long clock, long duration, long[] times) {
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
     for (long timeout : times) {
@@ -263,8 +271,7 @@ public final class TimerWheelTest {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         var timers = getTimers(timerWheel.wheel[i][j]);
-        for (int k = 0; k < timers.size(); k++) {
-          long delay = timers.getLong(k);
+        for (long delay : timers) {
           if (delay < minDelay) {
             minDelay = delay;
             minBucket = j;
@@ -318,7 +325,7 @@ public final class TimerWheelTest {
     return new Object[][] {{ clock, duration, times }};
   }
 
-  private void checkTimerWheel(long duration) {
+  private static void checkTimerWheel(TimerWheel<Long, Long> timerWheel, long duration) {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         for (long timer : getTimers(timerWheel.wheel[i][j])) {
@@ -331,8 +338,8 @@ public final class TimerWheelTest {
     }
   }
 
-  private static LongList getTimers(Node<?, ?> sentinel) {
-    var timers = new LongArrayList();
+  private static List<Long> getTimers(Node<?, ?> sentinel) {
+    var timers = new ArrayList<Long>();
     for (var node = sentinel.getNextInVariableOrder();
          node != sentinel; node = node.getNextInVariableOrder()) {
       timers.add(node.getVariableTime());
@@ -342,6 +349,10 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void reschedule(long clock) {
+    ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
@@ -354,10 +365,10 @@ public final class TimerWheelTest {
     assertThat(timer.getNextInVariableOrder()).isNotSameInstanceAs(startBucket);
 
     timerWheel.advance(cache, clock + TimeUnit.DAYS.toNanos(1));
-    checkEmpty();
+    checkEmpty(timerWheel);
   }
 
-  private void checkEmpty() {
+  private static void checkEmpty(TimerWheel<Long, Long> timerWheel) {
     for (var wheel : timerWheel.wheel) {
       for (var sentinel : wheel) {
         assertThat(sentinel.getNextInVariableOrder()).isSameInstanceAs(sentinel);
@@ -368,6 +379,8 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void deschedule(long clock) {
+    var timerWheel = new TimerWheel<Long, Long>();
+
     var timer = new Timer(clock + 100);
     timerWheel.nanos = clock;
     timerWheel.schedule(timer);
@@ -378,12 +391,15 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void deschedule_notScheduled(long clock) {
+    var timerWheel = new TimerWheel<Long, Long>();
+
     timerWheel.nanos = clock;
     timerWheel.deschedule(new Timer(clock + 100));
   }
 
   @Test(dataProvider = "fuzzySchedule")
   public void deschedule_fuzzy(long clock, long nanos, long[] times) {
+    var timerWheel = new TimerWheel<Long, Long>();
     var timers = new ArrayList<Timer>();
     timerWheel.nanos = clock;
 
@@ -395,11 +411,15 @@ public final class TimerWheelTest {
     for (Timer timer : timers) {
       timerWheel.deschedule(timer);
     }
-    checkTimerWheel(nanos);
+    checkTimerWheel(timerWheel, nanos);
   }
 
   @Test(dataProvider = "clock")
   public void expire_reschedule(long clock) {
+    ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     when(cache.evictEntry(captor.capture(), any(), anyLong())).then(invocation -> {
       Timer timer = invocation.getArgument(0);
       timer.setVariableTime(timerWheel.nanos + 100);
@@ -417,6 +437,9 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "cascade")
   public void cascade(long clock, long duration, long timeout, int span) {
+    BoundedLocalCache<Long, Long> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Long, Long>();
+
     timerWheel.nanos = clock;
     timerWheel.schedule(new Timer(clock + timeout));
     timerWheel.advance(cache, clock + duration);
@@ -445,7 +468,8 @@ public final class TimerWheelTest {
   }
 
   @Test(dataProvider = "iterator")
-  public void iterator_hasNext(Iterable<Node<Long, Long>> iterable) {
+  public void iterator_hasNext(
+      TimerWheel<Long, Long> timerWheel, Iterable<Node<Long, Long>> iterable) {
     var iterator = iterable.iterator();
     assertThat(iterator.hasNext()).isFalse();
 
@@ -465,13 +489,17 @@ public final class TimerWheelTest {
   @DataProvider(name = "iterator")
   @SuppressWarnings({"MethodReferenceUsage", "PMD.LambdaCanBeMethodReference"})
   public Object[][] providesIterators() {
-    Iterable<Node<Long, Long>> descending = () -> timerWheel.descendingIterator();
-    Iterable<Node<Long, Long>> ascending = () -> timerWheel.iterator();
-    return new Object[][] {{ascending}, {descending}};
+    var ascendingTimerWheel = new TimerWheel<Long, Long>();
+    var descendingTimerWheel = new TimerWheel<Long, Long>();
+    Iterable<Node<Long, Long>> ascending = ascendingTimerWheel;
+    Iterable<Node<Long, Long>> descending = descendingTimerWheel::descendingIterator;
+    return new Object[][] {{ascendingTimerWheel, ascending}, {descendingTimerWheel, descending}};
   }
 
   @Test(dataProvider = "clock")
   public void iterator_fixed(long clock) {
+    var timerWheel = new TimerWheel<Long, Long>();
+
     timerWheel.nanos = clock;
     var input = IntStream.range(0, 21).mapToLong(i -> {
       long time = clock + TimeUnit.SECONDS.toNanos(2L << i);
@@ -490,6 +518,8 @@ public final class TimerWheelTest {
 
   @Test(invocationCount = 25)
   public void iterator_random() {
+    var timerWheel = new TimerWheel<Long, Long>();
+
     int range = ThreadLocalRandom.current().nextInt(0, 1000);
     timerWheel.nanos = ThreadLocalRandom.current().nextLong(
         TimeUnit.MILLISECONDS.toNanos(500), TimeUnit.DAYS.toNanos(7));
@@ -504,11 +534,13 @@ public final class TimerWheelTest {
     var ascending = Streams.stream(timerWheel.iterator())
         .limit(range + 1).map(Node::getKey).collect(toImmutableList());
     assertThat(ascending).containsExactlyElementsIn(input);
-    assertThat(ascending).containsExactlyElementsIn(snapshot(/* ascending= */ true)).inOrder();
+    assertThat(ascending).containsExactlyElementsIn(
+        snapshot(timerWheel, /* ascending= */ true)).inOrder();
 
     var descending = Streams.stream(timerWheel.descendingIterator())
         .limit(range + 1).map(Node::getKey).collect(toImmutableList());
-    assertThat(descending).containsExactlyElementsIn(snapshot(/* ascending= */ false)).inOrder();
+    assertThat(descending).containsExactlyElementsIn(
+        snapshot(timerWheel, /* ascending= */ false)).inOrder();
     assertThat(descending).containsExactlyElementsIn(input);
   }
 
@@ -535,7 +567,7 @@ public final class TimerWheelTest {
   }
 
   /** Returns a snapshot roughly ordered by the expiration time. */
-  private List<Long> snapshot(boolean ascending) {
+  private static List<Long> snapshot(TimerWheel<Long, Long> timerWheel, boolean ascending) {
     var snapshot = new ArrayList<Long>();
     int startLevel = ascending ? 0 : timerWheel.wheel.length - 1;
     Function<Node<?, ?>, Node<?, ?>> successor =
@@ -560,7 +592,7 @@ public final class TimerWheelTest {
   }
 
   @SuppressWarnings("SystemOut")
-  private void printTimerWheel() {
+  static void printTimerWheel(TimerWheel<Long, Long> timerWheel) {
     var builder = new StringBuilder();
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       int ticks = (int) (timerWheel.nanos >>> SHIFT[i]);

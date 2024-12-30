@@ -33,7 +33,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
-import org.joor.Reflect;
 import org.mockito.Mockito;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.slf4j.event.Level;
@@ -44,8 +43,6 @@ import org.testng.ISuite;
 import org.testng.ISuiteListener;
 import org.testng.ITestContext;
 import org.testng.ITestResult;
-import org.testng.SuiteRunner;
-import org.testng.TestListenerAdapter;
 import org.testng.TestRunner;
 import org.testng.internal.TestResult;
 
@@ -81,12 +78,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   @Override
   public void onStart(ISuite suite) {
-    if (suite instanceof SuiteRunner) {
-      var invokedMethods = Reflect.on(suite).fields().get("invokedMethods");
-      if ((invokedMethods != null) && (invokedMethods.get() instanceof Collection)) {
-        resultQueues.add(invokedMethods.get());
-      }
-    }
     SLF4JBridgeHandler.removeHandlersForRootLogger();
     SLF4JBridgeHandler.install();
   }
@@ -102,25 +93,13 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       return;
     }
 
-    // Remove unused listener that retains all test results
-    // https://github.com/cbeust/testng/issues/2096#issuecomment-706643074
+    // Remove unused test results
     if (testResult.getTestContext() instanceof TestRunner) {
       var runner = (TestRunner) testResult.getTestContext();
-      runner.getTestListeners().stream()
-          .filter(listener -> listener.getClass() == TestListenerAdapter.class)
-          .flatMap(listener -> Reflect.on(listener).fields().values().stream())
-          .filter(field -> field.get() instanceof Collection)
-          .forEach(field -> resultQueues.add(field.get()));
-
       resultQueues.add(runner.getFailedButWithinSuccessPercentageTests().getAllResults());
       resultQueues.add(runner.getSkippedTests().getAllResults());
       resultQueues.add(runner.getPassedTests().getAllResults());
       resultQueues.add(runner.getFailedTests().getAllResults());
-
-      var invokedMethods = Reflect.on(runner).fields().get("m_invokedMethods");
-      if ((invokedMethods != null) && (invokedMethods.get() instanceof Collection)) {
-        resultQueues.add(invokedMethods.get());
-      }
     }
   }
 

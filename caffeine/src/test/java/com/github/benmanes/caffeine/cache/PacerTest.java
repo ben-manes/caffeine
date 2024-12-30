@@ -20,19 +20,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.quality.Strictness.STRICT_STUBS;
 
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.mockito.Mock;
-import org.mockito.testng.MockitoSettings;
-import org.mockito.testng.MockitoTestNGListener;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Listeners;
+import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
 import com.google.common.primitives.Ints;
@@ -40,29 +35,19 @@ import com.google.common.primitives.Ints;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(singleThreaded = true)
-@Listeners(MockitoTestNGListener.class)
-@MockitoSettings(strictness = STRICT_STUBS)
 public final class PacerTest {
   private static final long ONE_MINUTE_IN_NANOS = TimeUnit.MINUTES.toNanos(1);
-  private static final Random random = new Random();
-  private static final long NOW = random.nextLong();
-
-  @Mock Scheduler scheduler;
-  @Mock Executor executor;
-  @Mock Runnable command;
-  @Mock Future<?> future;
-
-  Pacer pacer;
-
-  @BeforeMethod
-  public void beforeMethod() {
-    pacer = new Pacer(scheduler);
-  }
+  private static final long NOW = ThreadLocalRandom.current().nextLong();
 
   @Test
   public void schedule_initialize() {
-    long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
+    long delay = ThreadLocalRandom.current().nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
     when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
         .then(invocation -> future);
     pacer.schedule(executor, command, NOW, delay);
@@ -74,7 +59,13 @@ public final class PacerTest {
 
   @Test
   public void schedule_initialize_recurse() {
-    long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
+    long delay = ThreadLocalRandom.current().nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
     when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
         .then(invocation -> {
           assertThat(pacer.future).isNull();
@@ -92,8 +83,14 @@ public final class PacerTest {
 
   @Test
   public void schedule_cancel_schedule() {
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
     long fireTime = NOW + Pacer.TOLERANCE;
-    long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
+    long delay = ThreadLocalRandom.current().nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
     when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
         .then(invocation -> future);
 
@@ -116,6 +113,12 @@ public final class PacerTest {
 
   @Test
   public void scheduled_afterNextFireTime_skip() {
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
@@ -130,12 +133,18 @@ public final class PacerTest {
 
   @Test
   public void schedule_beforeNextFireTime_skip() {
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
     long expectedNextFireTime = pacer.nextFireTime;
-    long delay = ONE_MINUTE_IN_NANOS
-        - Math.max(1, random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE)));
+    long delay = ONE_MINUTE_IN_NANOS - Math.max(1,
+        ThreadLocalRandom.current().nextInt(Ints.saturatedCast(Pacer.TOLERANCE)));
     pacer.schedule(executor, command, NOW, delay);
     verifyNoInteractions(scheduler, executor, command, future);
 
@@ -146,10 +155,16 @@ public final class PacerTest {
 
   @Test
   public void schedule_beforeNextFireTime_minimumDelay() {
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
-    long delay = random.nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
+    long delay = ThreadLocalRandom.current().nextInt(Ints.saturatedCast(Pacer.TOLERANCE));
     when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
         .then(invocation -> future);
     pacer.schedule(executor, command, NOW, delay);
@@ -167,10 +182,16 @@ public final class PacerTest {
 
   @Test
   public void schedule_beforeNextFireTime_customDelay() {
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
-    long delay = (Pacer.TOLERANCE + Math.max(1, random.nextInt()));
+    long delay = (Pacer.TOLERANCE + Math.max(1, ThreadLocalRandom.current().nextInt()));
     when(scheduler.schedule(executor, command, delay, TimeUnit.NANOSECONDS))
         .then(invocation -> future);
     pacer.schedule(executor, command, NOW, delay);
@@ -188,6 +209,8 @@ public final class PacerTest {
 
   @Test
   public void cancel_initialize() {
+    var pacer = new Pacer(Mockito.mock());
+
     pacer.cancel();
     assertThat(pacer.nextFireTime).isEqualTo(0);
     assertThat(pacer.isScheduled()).isFalse();
@@ -196,6 +219,9 @@ public final class PacerTest {
 
   @Test
   public void cancel_scheduled() {
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(Mockito.mock());
+
     pacer.nextFireTime = NOW + ONE_MINUTE_IN_NANOS;
     pacer.future = future;
 
@@ -208,18 +234,24 @@ public final class PacerTest {
 
   @Test
   public void isScheduled_nullFuture() {
+    var pacer = new Pacer(Mockito.mock());
+
     pacer.future = null;
     assertThat(pacer.isScheduled()).isFalse();
   }
 
   @Test
   public void isScheduled_doneFuture() {
+    var pacer = new Pacer(Mockito.mock());
+
     pacer.future = DisabledFuture.instance();
     assertThat(pacer.isScheduled()).isFalse();
   }
 
   @Test
   public void isScheduled_inFlight() {
+    var pacer = new Pacer(Mockito.mock());
+
     pacer.future = new CompletableFuture<>();
     assertThat(pacer.isScheduled()).isTrue();
   }

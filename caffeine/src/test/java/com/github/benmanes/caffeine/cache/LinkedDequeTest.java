@@ -19,7 +19,7 @@ import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.Collection;

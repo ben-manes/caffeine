@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.jcache.copy;
 import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaDeepCopyStrategies;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -32,30 +32,30 @@ dependencies {
   api(libs.jspecify)
   api(libs.errorprone.annotations)
 
-  testImplementation(libs.joor)
   testImplementation(libs.ycsb) {
     isTransitive = false
   }
-  testImplementation(libs.picocli)
   testImplementation(libs.jctools)
-  testImplementation(libs.fastutil)
+  testImplementation(libs.mockito)
+  testImplementation(libs.picocli)
   testImplementation(libs.lincheck)
   testImplementation(libs.commons.lang3)
+  testImplementation(libs.guava.testlib)
   testImplementation(libs.bundles.jazzer)
+  testImplementation(libs.bundles.awaitility)
   testImplementation(libs.bundles.slf4j.test)
   testImplementation(libs.commons.collections4)
   testImplementation(libs.commons.collections4) {
-    artifact {
-      classifier = "tests"
-    }
+    artifact { classifier = "tests" }
   }
   testImplementation(sourceSets["codeGen"].output)
+  testImplementation(libs.bundles.osgi.test.compile)
   testImplementation(libs.eclipse.collections.testutils)
 
+  testRuntimeOnly(libs.bundles.osgi.test.runtime)
+
   collections4Sources(libs.commons.collections4) {
-    artifact {
-      classifier = "test-sources"
-    }
+    artifact { classifier = "test-sources" }
   }
 
   jammAgent(libs.jamm) {

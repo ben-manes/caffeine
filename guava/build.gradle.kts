@@ -10,8 +10,11 @@ dependencies {
   api(project(":caffeine"))
   api(libs.guava)
 
-  testImplementation(libs.jctools)
+  testImplementation(libs.guava.testlib)
   testImplementation(libs.bundles.slf4j.nop)
+  testImplementation(libs.bundles.osgi.test.compile)
+
+  testRuntimeOnly(libs.bundles.osgi.test.runtime)
 }
 
 tasks.named<JavaCompile>("compileJava").configure {

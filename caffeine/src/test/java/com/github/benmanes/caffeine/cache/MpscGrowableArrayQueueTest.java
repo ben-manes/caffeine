@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.Truth.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

@@ -8,7 +8,7 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(libs.hibernate.jpamodelgen)
+  annotationProcessor(libs.hibernate.processor)
 
   implementation(libs.bundles.hibernate)
   implementation(libs.bundles.log4j2)

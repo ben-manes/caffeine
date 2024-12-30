@@ -12,25 +12,15 @@ plugins {
 val mockitoAgent: Configuration by configurations.creating
 
 dependencies {
-  testImplementation(libs.guava)
-  testImplementation(libs.guice)
   testImplementation(libs.truth)
   testImplementation(libs.testng)
-  testImplementation(libs.hamcrest)
-  testImplementation(libs.awaitility)
   testImplementation(libs.bundles.junit)
-  testImplementation(libs.guava.testlib)
-  testImplementation(libs.bundles.mockito)
-  testImplementation(libs.nullaway.annotations)
-  testImplementation(libs.bundles.osgi.test.compile)
-
   testImplementation(platform(libs.asm.bom))
   testImplementation(platform(libs.kotlin.bom))
   testImplementation(platform(libs.junit5.bom))
 
   testRuntimeOnly(libs.junit5.launcher)
   testRuntimeOnly(libs.bundles.junit.engines)
-  testRuntimeOnly(libs.bundles.osgi.test.runtime)
 
   mockitoAgent(libs.mockito) {
     isTransitive = false

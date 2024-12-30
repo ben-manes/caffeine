@@ -19,7 +19,7 @@ import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoade
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Collection;
 import java.util.Map;

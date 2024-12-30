@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.guava.compatibility;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntConsumer;

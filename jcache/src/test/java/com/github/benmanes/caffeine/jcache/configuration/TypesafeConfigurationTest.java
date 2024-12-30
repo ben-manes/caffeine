@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.jcache.configuration;
 import static com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator.configSource;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
 import java.net.URISyntaxException;

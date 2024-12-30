@@ -20,7 +20,7 @@ import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoade
 import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.queuingRemovalListener;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.jspecify.annotations.NullUnmarked;
 

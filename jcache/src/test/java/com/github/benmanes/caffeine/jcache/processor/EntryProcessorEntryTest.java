@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.jcache.processor;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Map;
 import java.util.Optional;

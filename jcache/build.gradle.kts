@@ -30,31 +30,31 @@ dependencies {
   api(libs.jcache)
   api(libs.config)
 
+  testImplementation(libs.guice)
+  testImplementation(libs.mockito)
   testImplementation(libs.jcache.guice)
+  testImplementation(libs.guava.testlib)
   testImplementation(libs.bundles.slf4j.nop)
   testImplementation(files(testResourcesJar))
+  testImplementation(libs.bundles.awaitility)
+  testImplementation(libs.nullaway.annotations)
+  testImplementation(libs.bundles.osgi.test.compile)
   testImplementation(libs.jcache.tck)
   testImplementation(libs.jcache.tck) {
-    artifact {
-      classifier = "tests"
-    }
+    artifact { classifier = "tests" }
   }
 
+  testRuntimeOnly(libs.bundles.osgi.test.runtime)
+
   jcacheJavadoc(libs.jcache) {
-    artifact {
-      classifier = "javadoc"
-    }
+    artifact { classifier = "javadoc" }
   }
   jcacheTckTests(libs.jcache.tck) {
-    artifact {
-      classifier = "tests"
-    }
+    artifact { classifier = "tests" }
     isTransitive = false
   }
   jcacheTckSources(libs.jcache.tck) {
-    artifact {
-      classifier = "test-sources"
-    }
+    artifact { classifier = "test-sources" }
     isTransitive = false
   }
 }

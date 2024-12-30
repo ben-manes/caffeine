@@ -20,7 +20,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;

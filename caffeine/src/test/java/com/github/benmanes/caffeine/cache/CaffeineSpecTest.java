@@ -19,7 +19,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.util.ArrayList;

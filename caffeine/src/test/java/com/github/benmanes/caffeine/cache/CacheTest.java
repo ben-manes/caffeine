@@ -27,7 +27,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
@@ -503,7 +503,7 @@ public final class CacheTest {
     var expected = new ImmutableMap.Builder<Int, Int>()
         .putAll(context.original())
         .putAll(context.absent())
-        .build();
+        .buildOrThrow();
     assertThat(cache).containsExactlyEntriesIn(expected);
     assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
     assertThat(result).containsExactlyEntriesIn(Map.of(context.absentKey(), context.absentValue()));

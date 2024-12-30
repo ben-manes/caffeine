@@ -23,7 +23,7 @@ import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalLis
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.util.List;

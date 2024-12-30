@@ -270,7 +270,7 @@ public final class LocalCacheSubject extends Subject {
           .put("probation", mainProbation, bounded.accessOrderProbationDeque())
           .put("protected", bounded.mainProtectedWeightedSize(),
               bounded.accessOrderProtectedDeque())
-          .build();
+          .buildOrThrow();
       checkLinks(bounded, deques);
       check("accessOrderWindowDeque()").about(deque())
           .that(bounded.accessOrderWindowDeque()).isValid();
