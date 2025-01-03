@@ -161,19 +161,18 @@ tasks.named<JavaCompile>("compileJmhJava").configure {
   }
 }
 
-tasks.test.configure {
+val standaloneTest = tasks.register<Test>("standaloneTest") {
+  group = "Verification"
+  description = "Tests that are not part of an explicit suite"
   exclude("com/github/benmanes/caffeine/cache/**")
-  dependsOn(junitTest)
-
   useTestNG {
     threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
-    jvmArgs("-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled")
     excludeGroups("slow", "isolated", "lincheck")
     parallel = "methods"
   }
 }
 
-tasks.register<Test>("isolatedTest") {
+val isolatedTest = tasks.register<Test>("isolatedTest") {
   group = "Verification"
   description = "Tests that must be run in isolation"
   useTestNG {
@@ -182,7 +181,7 @@ tasks.register<Test>("isolatedTest") {
   }
 }
 
-tasks.register<Test>("lincheckTest") {
+val lincheckTest = tasks.register<Test>("lincheckTest") {
   group = "Verification"
   description = "Tests that assert linearizability"
   enabled = !isEarlyAccess()
@@ -194,30 +193,39 @@ tasks.register<Test>("lincheckTest") {
   }
 }
 
-tasks.register<Test>("fuzzTest") {
+val fuzzTest = tasks.register<Test>("fuzzTest") {
   group = "Verification"
   description = "Fuzz tests"
-
-  forkEvery = 1
-  failFast = true
-  useJUnitPlatform()
-  testLogging.events("started")
-  environment("JAZZER_FUZZ", "1")
   include("com/github/benmanes/caffeine/fuzz/**")
+
+  environment("JAZZER_FUZZ", "1")
+  testLogging.events("started")
+  useJUnitPlatform()
+  failFast = true
+  forkEvery = 1
 }
 
 val junitTest = tasks.register<Test>("junitTest") {
   group = "Verification"
   description = "JUnit tests"
+  exclude("com/github/benmanes/caffeine/fuzz/**")
 
   val jar by tasks.existing(Jar::class)
   dependsOn(jar)
 
-  useJUnit()
-  failFast = true
-  maxHeapSize = "2g"
-  exclude("com/github/benmanes/caffeine/fuzz/**")
   systemProperty("caffeine.osgi.jar", relativePath(jar.get().archiveFile.get().asFile.path))
+  maxHeapSize = "2g"
+  failFast = true
+  useJUnit()
+}
+
+tasks.test.configure {
+  exclude("com/github/benmanes/caffeine/**")
+  dependsOn(standaloneTest)
+  dependsOn(isolatedTest)
+  dependsOn(lincheckTest)
+  dependsOn(junitTest)
+  dependsOn(fuzzTest)
 }
 
 tasks.jar {

@@ -493,8 +493,9 @@
   <!-- Tests -->
   <Match>
     <Or>
-      <Package name="~com\.github\.benmanes\.caffeine\.eclipse.*"/>
       <Package name="~com\.github\.benmanes\.caffeine\.jsr166.*"/>
+      <Package name="~com\.github\.benmanes\.caffeine\.eclipse.*"/>
+      <Package name="~com\.github\.benmanes\.caffeine\.openjdk.*"/>
       <Package name="~com\.github\.benmanes\.caffeine\.guava\.compatibility.*"/>
       <Class name="~com\.github\.benmanes\.caffeine\.cache\.QueueSanityTest.*"/>
     </Or>

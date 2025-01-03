@@ -65,7 +65,7 @@ junit5 = "5.11.4"
 jvm-dependency-conflict-resolution = "2.1.2"
 kotlin = "2.1.0"
 lincheck = "2.34"
-mockito = "5.14.2"
+mockito = "5.15.2"
 nexus-publish = "2.0.0"
 nullaway = "0.12.2"
 nullaway-plugin = "2.1.0"
@@ -96,7 +96,7 @@ versions = "0.51.0"
 xz = "1.10"
 ycsb = "0.17.0"
 zero-allocation-hashing = "0.27ea0"
-zstd = "1.5.6-8"
+zstd = "1.5.6-9"
 
 [libraries]
 asm-bom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }

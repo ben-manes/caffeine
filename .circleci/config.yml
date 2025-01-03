@@ -161,6 +161,7 @@ workflows:
                 - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
                 - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
                 - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
+                - caffeine:standaloneTest
                 - caffeine:lincheckTest
                 - caffeine:isolatedTest
                 - caffeine:junitTest

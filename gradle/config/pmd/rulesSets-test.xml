@@ -6,6 +6,7 @@
   <description>PMD rules for Caffeine tests</description>
   <exclude-pattern>.*/guava/compatibility/.*</exclude-pattern>
   <exclude-pattern>.*/eclipse/.*</exclude-pattern>
+  <exclude-pattern>.*/openjdk/.*</exclude-pattern>
   <exclude-pattern>.*/jsr166/.*</exclude-pattern>
 
   <rule ref="category/java/bestpractices.xml">
