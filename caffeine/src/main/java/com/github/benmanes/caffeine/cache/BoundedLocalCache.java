@@ -3338,6 +3338,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     public Spliterator<K> spliterator() {
       return new KeySpliterator<>(cache);
     }
+
+    @Override
+    public Object[] toArray() {
+      return cache.collectKeys() ? super.toArray() : cache.data.keySet().toArray();
+    }
+
+    @Override
+    public <T> T[] toArray(T[] array) {
+      return cache.collectKeys() ? super.toArray(array) : cache.data.keySet().toArray(array);
+    }
   }
 
   /** An adapter to safely externalize the key iterator. */

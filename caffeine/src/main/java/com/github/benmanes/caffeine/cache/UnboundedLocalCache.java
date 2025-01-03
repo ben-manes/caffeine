@@ -676,6 +676,16 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public Spliterator<K> spliterator() {
       return cache.data.keySet().spliterator();
     }
+
+    @Override
+    public Object[] toArray() {
+      return cache.data.keySet().toArray();
+    }
+
+    @Override
+    public <T> T[] toArray(T[] array) {
+      return cache.data.keySet().toArray(array);
+    }
   }
 
   /** An adapter to safely externalize the key iterator. */
@@ -803,6 +813,16 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public Spliterator<V> spliterator() {
       return cache.data.values().spliterator();
+    }
+
+    @Override
+    public Object[] toArray() {
+      return cache.data.values().toArray();
+    }
+
+    @Override
+    public <T> T[] toArray(T[] array) {
+      return cache.data.values().toArray(array);
     }
   }
 
@@ -938,6 +958,16 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public Spliterator<Entry<K, V>> spliterator() {
       return new EntrySpliterator<>(cache);
+    }
+
+    @Override
+    public Object[] toArray() {
+      return cache.data.entrySet().toArray();
+    }
+
+    @Override
+    public <T> T[] toArray(T[] array) {
+      return cache.data.entrySet().toArray(array);
     }
   }
 
