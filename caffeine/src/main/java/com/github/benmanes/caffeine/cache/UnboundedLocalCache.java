@@ -959,16 +959,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public Spliterator<Entry<K, V>> spliterator() {
       return new EntrySpliterator<>(cache);
     }
-
-    @Override
-    public Object[] toArray() {
-      return cache.data.entrySet().toArray();
-    }
-
-    @Override
-    public <T> T[] toArray(T[] array) {
-      return cache.data.entrySet().toArray(array);
-    }
   }
 
   /** An adapter to safely externalize the entry iterator. */

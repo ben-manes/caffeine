@@ -47,6 +47,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.concurrent.CompletableFuture;
@@ -2584,6 +2585,42 @@ public final class AsMapTest {
 
     var func = map.entrySet().toArray(Map.Entry<?, ?>[]::new);
     assertThat(func).asList().containsExactlyElementsIn(context.original().entrySet());
+
+    if (context.isCaffeine()) {
+      for (var entry : array) {
+        assertThat(entry).isInstanceOf(WriteThroughEntry.class);
+      }
+      for (var entry : ints) {
+        assertThat(entry).isInstanceOf(WriteThroughEntry.class);
+      }
+      for (var entry : func) {
+        assertThat(entry).isInstanceOf(WriteThroughEntry.class);
+      }
+    }
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DISABLED, Listener.CONSUMING })
+  public void entrySet_toArray_writeThrough(Map<Int, Int> map, CacheContext context) {
+    var expected = new HashMap<>(context.original());
+    expected.putAll(Maps.toMap(context.firstMiddleLastKeys(), key -> context.absentValue()));
+
+    @SuppressWarnings("unchecked")
+    var array = (Map.Entry<Int, Int>[]) map.entrySet().toArray(new Map.Entry<?, ?>[0]);
+    for (var entry : array) {
+      var value = expected.get(entry.getKey());
+      if (!Objects.equals(entry.getValue(), value)) {
+        entry.setValue(value);
+        assertThat(entry.getValue()).isEqualTo(value);
+      }
+    }
+    assertThat(map).isEqualTo(expected);
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(Maps.toMap(context.firstMiddleLastKeys(),
+            key -> requireNonNull(context.original().get(key))))
+        .exclusively();
   }
 
   @CheckNoStats
@@ -2939,6 +2976,9 @@ public final class AsMapTest {
       assertThat(entries.remove(entry)).isTrue();
       assertThat(entries.remove(entry)).isFalse();
       assertThat(entries).doesNotContain(entry);
+      if (context.isCaffeine()) {
+        assertThat(entry).isInstanceOf(WriteThroughEntry.class);
+      }
     });
     assertThat(map).isExhaustivelyEmpty();
     assertThat(context).removalNotifications().withCause(EXPLICIT)

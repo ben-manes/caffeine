@@ -104,7 +104,7 @@ public final class RefreshAfterWriteTest {
       public CompletableFuture<Int> asyncReload(Int key, Int oldValue, Executor executor) {
         reloads.incrementAndGet();
         await().untilTrue(refresh);
-        return oldValue.add(1).asFuture();
+        return oldValue.add(1).toFuture();
       }
     });
     cache.put(key, original);

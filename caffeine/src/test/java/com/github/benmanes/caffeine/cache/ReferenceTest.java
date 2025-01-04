@@ -523,7 +523,7 @@ public final class ReferenceTest {
     Int key = context.absentKey();
     context.clear();
     GcFinalization.awaitFullGc();
-    cache.put(key, context.absentValue().asFuture());
+    cache.put(key, context.absentValue().toFuture());
 
     assertThat(cache).hasSize(1);
     assertThat(context).notifications().withCause(COLLECTED)

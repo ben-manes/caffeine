@@ -200,7 +200,7 @@ public final class ExpireAfterVarTest {
   @CacheSpec(population = Population.FULL,
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
   public void put_replace(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = context.absentValue().asFuture();
+    var future = context.absentValue().toFuture();
     context.ticker().advance(Duration.ofSeconds(30));
 
     cache.put(context.firstKey(), future);

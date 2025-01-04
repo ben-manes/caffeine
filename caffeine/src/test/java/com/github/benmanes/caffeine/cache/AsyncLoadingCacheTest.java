@@ -503,7 +503,7 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var replaced = new HashMap<Int, Int>();
-    var value = context.absentValue().asFuture();
+    var value = context.absentValue().toFuture();
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, value);
       assertThat(cache.get(key)).succeedsWith(context.absentValue());
@@ -629,7 +629,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.ASYNC, removalListener = Listener.CONSUMING)
   public void refresh_current_sameInstance(CacheContext context) {
-    var future = context.absentValue().asFuture();
+    var future = context.absentValue().toFuture();
     var cache = context.buildAsync((key, executor) -> future);
 
     cache.put(context.absentKey(), future);
@@ -640,7 +640,7 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   public void refresh_current_failed(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
-    var future = context.absentValue().asFuture();
+    var future = context.absentValue().toFuture();
     cache.put(context.absentKey(), future);
 
     future.obtrudeException(new Exception());
@@ -662,7 +662,7 @@ public final class AsyncLoadingCacheTest {
       return key;
     });
 
-    cache.put(context.absentKey(), context.absentValue().asFuture());
+    cache.put(context.absentKey(), context.absentValue().toFuture());
     cache.synchronous().refresh(context.absentKey());
     await().untilTrue(started);
 
@@ -679,14 +679,14 @@ public final class AsyncLoadingCacheTest {
 
   @Test
   public void asyncLoadAll() {
-    AsyncCacheLoader<Int, Int> loader = (key, executor) -> key.negate().asFuture();
+    AsyncCacheLoader<Int, Int> loader = (key, executor) -> key.negate().toFuture();
     assertThrows(UnsupportedOperationException.class, () ->
         loader.asyncLoadAll(Set.of(), Runnable::run));
   }
 
   @Test
   public void asyncReload() throws Exception {
-    AsyncCacheLoader<Int, Int> loader = (key, executor) -> key.negate().asFuture();
+    AsyncCacheLoader<Int, Int> loader = (key, executor) -> key.negate().toFuture();
     var future = loader.asyncReload(Int.valueOf(1), Int.valueOf(2), Runnable::run);
     assertThat(future).succeedsWith(-1);
   }

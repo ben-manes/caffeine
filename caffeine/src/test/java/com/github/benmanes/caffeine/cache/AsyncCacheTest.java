@@ -361,7 +361,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   public void getBiFunc_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
-    var value = cache.get(key, (k, executor) -> context.absentValue().asFuture());
+    var value = cache.get(key, (k, executor) -> context.absentValue().toFuture());
     assertThat(value).succeedsWith(context.absentValue());
     assertThat(context).stats().hits(0).misses(1).success(1).failures(0);
   }
@@ -1071,7 +1071,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
-    var value = context.absentValue().asFuture();
+    var value = context.absentValue().toFuture();
     assertThrows(NullPointerException.class, () -> cache.put(null, value));
   }
 
@@ -1121,7 +1121,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_insert(AsyncCache<Int, Int> cache, CacheContext context) {
-    var value = context.absentValue().asFuture();
+    var value = context.absentValue().toFuture();
     cache.put(context.absentKey(), value);
     assertThat(cache).hasSize(context.initialSize() + 1);
     assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
@@ -1173,7 +1173,7 @@ public final class AsyncCacheTest {
   public void put_replace_differentValue(AsyncCache<Int, Int> cache, CacheContext context) {
     var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
-      var newValue = context.absentValue().asFuture();
+      var newValue = context.absentValue().toFuture();
       cache.put(key, newValue);
       assertThat(cache).containsEntry(key, newValue);
       replaced.put(key, context.original().get(key));

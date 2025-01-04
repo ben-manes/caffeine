@@ -484,7 +484,7 @@ public final class ExpirationTest {
 
     cache.get(context.firstKey(), k -> k).join();
     cache.get(context.middleKey(), k -> context.absentValue()).join();
-    cache.get(context.lastKey(), (k, executor) -> context.absentValue().asFuture()).join();
+    cache.get(context.lastKey(), (k, executor) -> context.absentValue().toFuture()).join();
 
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
@@ -573,7 +573,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_insert(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(1));
-    cache.put(context.firstKey(), intern(context.absentValue().asFuture()));
+    cache.put(context.firstKey(), intern(context.absentValue().toFuture()));
 
     runVariableExpiration(context);
     assertThat(cache).hasSize(1);
@@ -613,7 +613,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_replace(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = context.absentValue().asFuture();
+    var future = context.absentValue().toFuture();
     context.ticker().advance(Duration.ofSeconds(30));
 
     cache.put(context.firstKey(), future);
