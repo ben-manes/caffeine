@@ -22,6 +22,7 @@
  */
 package com.github.benmanes.caffeine.openjdk.map;
 
+import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 
 import java.time.Duration;
@@ -141,11 +142,15 @@ public class LockStep {
           .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
           .maximumSize(Long.MAX_VALUE)
           .build().asMap());
+      assertThat(failed).isEqualTo(0);
+      assertThat(passed).isGreaterThan(0);
     }
 
     @Test
     public void unbounded() {
       test(() -> Caffeine.newBuilder().build().asMap());
+      assertThat(failed).isEqualTo(0);
+      assertThat(passed).isGreaterThan(0);
     }
 
     //--------------------- Infrastructure ---------------------------

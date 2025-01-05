@@ -22,6 +22,7 @@
  */
 package com.github.benmanes.caffeine.openjdk.map;
 
+import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 
 import java.time.Duration;
@@ -62,17 +63,21 @@ public class ToArray {
 
     @Test
     public void bounded() throws Exception {
-      Cache<Integer, Long> cache = Caffeine.newBuilder()
+      testCaffeine(Caffeine.newBuilder()
           .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
           .maximumSize(Long.MAX_VALUE)
-          .build();
-      testMap(cache.asMap());
+          .build());
     }
 
     @Test
     public void unbounded() throws Exception {
-      Cache<Integer, Long> cache = Caffeine.newBuilder().build();
+      testCaffeine(Caffeine.newBuilder().build());
+    }
+
+    private static void testCaffeine(Cache<Integer, Long> cache) {
       testMap(cache.asMap());
+      assertThat(failed).isEqualTo(0);
+      assertThat(passed).isGreaterThan(0);
     }
 
     private static void realMain(String[] args) throws Throwable {

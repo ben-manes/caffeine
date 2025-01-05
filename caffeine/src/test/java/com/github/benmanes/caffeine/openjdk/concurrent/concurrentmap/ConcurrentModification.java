@@ -22,6 +22,7 @@
  */
 package com.github.benmanes.caffeine.openjdk.concurrent.concurrentmap;
 
+import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 
 /*
@@ -114,16 +115,20 @@ public class ConcurrentModification {
 
     @Test
     public void bounded() {
-      Cache<Integer,Integer> cache = Caffeine.newBuilder()
+      testCaffeine(Caffeine.newBuilder()
           .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
           .maximumSize(Long.MAX_VALUE)
-          .build();
-      test(cache.asMap());
+          .build());
     }
 
     @Test
     public void unbounded() {
-      Cache<Integer,Integer> cache = Caffeine.newBuilder().build();
+      testCaffeine(Caffeine.newBuilder().build());
+    }
+
+    private static void testCaffeine(Cache<Integer,Integer> cache) {
       test(cache.asMap());
+      assertThat(failed).isEqualTo(0);
+      assertThat(passed).isGreaterThan(0);
     }
 }
