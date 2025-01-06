@@ -34,7 +34,7 @@ flip-tables = "1.1.1"
 forbidden-apis = "3.8"
 google-java-format = "1.25.2"
 guava = "33.4.0-jre"
-guice = "6.0.0"
+guice = "7.0.0"
 h2 = "2.3.232"
 hamcrest = "3.0"
 hazelcast = "5.5.0"
@@ -46,6 +46,7 @@ jacoco = "0.8.12"
 jakarta-inject = "2.0.1"
 jamm = "0.4.0"
 java-object-layout = "0.17"
+javax-inject = "1"
 javapoet = "1.13.0"
 jazzer = "0.23.0"
 jcache = "1.1.1"
@@ -149,6 +150,7 @@ jakarta-inject = { module = "jakarta.inject:jakarta.inject-api", version.ref = "
 jamm = { module = "com.github.jbellis:jamm", version.ref = "jamm" }
 java-object-layout = { module = "org.openjdk.jol:jol-cli", version.ref = "java-object-layout" }
 javapoet = { module = "com.squareup:javapoet", version.ref = "javapoet" }
+javax-inject = { module = "javax.inject:javax.inject", version.ref = "javax-inject" }
 jazzer = { module = "com.code-intelligence:jazzer", version.ref = "jazzer" }
 jazzer-junit = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }
 jcache = { module = "javax.cache:cache-api", version.ref = "jcache" }
@@ -214,7 +216,7 @@ errorprone-support = ["errorprone-support", "errorprone-support-refaster"]
 jazzer = ["jazzer", "jazzer-junit"]
 junit = ["junit4", "junit5"]
 junit-engines = ["junit5-vintage", "junit5-testng"]
-osgi-test-compile = ["pax-exam-junit4"]
+osgi-test-compile = ["javax-inject", "pax-exam-junit4"]
 osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function",
   "osgi-promise", "pax-exam-container-native", "pax-exam-link-mvn", "pax-url-aether"]
 pmd = ["pmd", "pmd-ant", "pmd-java"]

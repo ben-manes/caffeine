@@ -22,7 +22,6 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
         }
       }
     }
-    force(libs.guice)
     force(libs.commons.collections4)
   }
 }

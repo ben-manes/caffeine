@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.jcache;
+package com.github.benmanes.caffeine.jcache.guice;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -28,7 +28,6 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
 import org.jsr107.ri.annotations.DefaultCacheResolverFactory;
-import org.jsr107.ri.annotations.guice.module.CacheAnnotationsModule;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -57,7 +56,7 @@ public final class JCacheGuiceTest {
 
   @BeforeMethod
   public void beforeMethod() {
-    var module = Modules.override(new CacheAnnotationsModule()).with(new CaffeineJCacheModule());
+    var module = Modules.override(new JakartaCacheModule()).with(new CaffeineJCacheModule());
     Guice.createInjector(module).injectMembers(this);
   }
 
@@ -126,7 +125,7 @@ public final class JCacheGuiceTest {
         var clazz = (Class<T>) Class.forName(className);
         return injector.getProvider(clazz)::get;
       } catch (ClassNotFoundException e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
   }
