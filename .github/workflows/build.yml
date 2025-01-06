@@ -106,6 +106,7 @@ jobs:
           - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
           - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
           - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
+          - caffeine:junitJupiterTest
           - caffeine:standaloneTest
           - caffeine:lincheckTest
           - caffeine:isolatedTest

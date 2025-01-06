@@ -22,6 +22,7 @@ sourceSets {
   }
 }
 
+val jar by tasks.existing(Jar::class)
 val compileJavaPoetJava by tasks.existing
 val jammAgent: Configuration by configurations.creating
 val collections4Sources: Configuration by configurations.creating
@@ -197,30 +198,30 @@ val fuzzTest = tasks.register<Test>("fuzzTest") {
   group = "Verification"
   description = "Fuzz tests"
   include("com/github/benmanes/caffeine/fuzz/**")
-
   environment("JAZZER_FUZZ", "1")
-  testLogging.events("started")
   useJUnitPlatform()
   failFast = true
   forkEvery = 1
 }
 
+val junitJupiterTest = tasks.register<Test>("junitJupiterTest") {
+  group = "Verification"
+  description = "JUnit Jupiter tests"
+  exclude("com/github/benmanes/caffeine/fuzz/**")
+  useJUnitPlatform()
+}
+
 val junitTest = tasks.register<Test>("junitTest") {
   group = "Verification"
-  description = "JUnit tests"
-  exclude("com/github/benmanes/caffeine/fuzz/**")
-
-  val jar by tasks.existing(Jar::class)
-  dependsOn(jar)
-
+  description = "JUnit classic tests"
   systemProperty("caffeine.osgi.jar", relativePath(jar.get().archiveFile.get().asFile.path))
-  maxHeapSize = "2g"
-  failFast = true
+  dependsOn(jar)
   useJUnit()
 }
 
 tasks.test.configure {
   exclude("com/github/benmanes/caffeine/**")
+  dependsOn(junitJupiterTest)
   dependsOn(standaloneTest)
   dependsOn(isolatedTest)
   dependsOn(lincheckTest)

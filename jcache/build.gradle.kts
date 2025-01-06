@@ -45,6 +45,7 @@ dependencies {
   }
 
   testRuntimeOnly(libs.bundles.osgi.test.runtime)
+  testRuntimeOnly(libs.bundles.junit.engines)
 
   jcacheJavadoc(libs.jcache) {
     artifact { classifier = "javadoc" }

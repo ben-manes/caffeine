@@ -39,6 +39,8 @@ dependencies {
   implementation(libs.bundles.slf4j.jdk)
   implementation(libs.univocity.parsers)
   implementation(libs.zero.allocation.hashing)
+
+  testRuntimeOnly(libs.bundles.junit.engines)
 }
 
 application {

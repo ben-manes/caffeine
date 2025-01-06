@@ -20,7 +20,6 @@ dependencies {
   testImplementation(platform(libs.junit5.bom))
 
   testRuntimeOnly(libs.junit5.launcher)
-  testRuntimeOnly(libs.bundles.junit.engines)
 
   mockitoAgent(libs.mockito) {
     isTransitive = false

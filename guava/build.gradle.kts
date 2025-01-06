@@ -15,6 +15,7 @@ dependencies {
   testImplementation(libs.bundles.osgi.test.compile)
 
   testRuntimeOnly(libs.bundles.osgi.test.runtime)
+  testRuntimeOnly(libs.bundles.junit.engines)
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
