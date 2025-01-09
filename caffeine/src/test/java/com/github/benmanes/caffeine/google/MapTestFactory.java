@@ -15,7 +15,8 @@
  */
 package com.github.benmanes.caffeine.google;
 
-import java.util.ArrayList;
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -46,20 +47,17 @@ public final class MapTestFactory {
 
   /** Returns a test suite based on the supplied configuration. */
   public static Stream<TestSuite> makeTests(CacheContext context) {
-    var tests = new ArrayList<TestSuite>(2);
-    CacheGenerator.initialize(context);
+    return context.isSync()
+        ? Stream.of(synchronousTestSuite(context))
+        : Stream.of(synchronousTestSuite(context), asynchronousTestSuite(context));
+  }
 
-    @SuppressWarnings("unchecked")
-    var cache = (Cache<String, String>) context.cache();
-    tests.add(newTestSuite("Cache[" + context + "]", synchronousGenerator(cache)));
+  private static TestSuite synchronousTestSuite(CacheContext template) {
+    return newTestSuite("Cache[" + template + "]", new SyncTestMapGenerator(template));
+  }
 
-    if (context.isAsync()) {
-      @SuppressWarnings("unchecked")
-      var asyncCache = (AsyncCache<String, String>) context.asyncCache();
-      tests.add(newTestSuite("AsyncCache[" + context + "]", asynchronousGenerator(asyncCache)));
-    }
-
-    return tests.stream();
+  private static TestSuite asynchronousTestSuite(CacheContext template) {
+    return newTestSuite("AsyncCache[" + template + "]", new AsyncTestMapGenerator(template));
   }
 
   /** Returns a test suite. */
@@ -75,40 +73,40 @@ public final class MapTestFactory {
         .createTestSuite();
   }
 
-  /** Returns a map generator for synchronous values. */
-  private static TestStringMapGenerator synchronousGenerator(Cache<String, String> cache) {
-    return new TestStringMapGenerator() {
-      @Override protected Map<String, String> create(Map.Entry<String, String>[] entries) {
-        cache.invalidateAll();
-        for (var entry : entries) {
-          cache.put(entry.getKey(), entry.getValue());
-        }
-        return cache.asMap();
+  private static final class SyncTestMapGenerator extends TestStringMapGenerator {
+    final CacheContext template;
+
+    SyncTestMapGenerator(CacheContext template) {
+      this.template = requireNonNull(template);
+    }
+
+    @Override
+    protected Map<String, String> create(Map.Entry<String, String>[] entries) {
+      var context = new CacheContext(template);
+      CacheGenerator.initialize(context);
+
+      @SuppressWarnings("unchecked")
+      var cache = (Cache<String, String>) context.cache();
+      for (var entry : entries) {
+        cache.put(entry.getKey(), entry.getValue());
       }
-    };
+      return cache.asMap();
+    }
   }
 
-  /** Returns a map generator for asynchronous values. */
-  private static TestAsyncMapGenerator asynchronousGenerator(AsyncCache<String, String> cache) {
-    return new TestAsyncMapGenerator() {
-      @Override protected Map<String, CompletableFuture<String>> create(
-          List<Map.Entry<String, CompletableFuture<String>>> entries) {
-        cache.synchronous().invalidateAll();
-        for (var entry : entries) {
-          cache.put(entry.getKey(), entry.getValue());
-        }
-        return cache.asMap();
-      }
-    };
-  }
-
-  private abstract static class TestAsyncMapGenerator
+  private static final class AsyncTestMapGenerator
       implements TestMapGenerator<String, CompletableFuture<String>> {
     static final CompletableFuture<String> JAN = CompletableFuture.completedFuture("January");
     static final CompletableFuture<String> FEB = CompletableFuture.completedFuture("February");
     static final CompletableFuture<String> MARCH = CompletableFuture.completedFuture("March");
     static final CompletableFuture<String> APRIL = CompletableFuture.completedFuture("April");
     static final CompletableFuture<String> MAY = CompletableFuture.completedFuture("May");
+
+    final CacheContext template;
+
+    AsyncTestMapGenerator(CacheContext template) {
+      this.template = requireNonNull(template);
+    }
 
     @Override
     public SampleElements<Map.Entry<String, CompletableFuture<String>>> samples() {
@@ -117,36 +115,39 @@ public final class MapTestFactory {
     }
 
     @Override
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public Map<String, CompletableFuture<String>> create(Object... entries) {
-      var data = new ArrayList<Map.Entry<String, CompletableFuture<String>>>(entries.length);
-      for (Object entry : entries) {
-        data.add((Map.Entry<String, CompletableFuture<String>>) entry);
-      }
-      return create(data);
-    }
+      var context = new CacheContext(template);
+      CacheGenerator.initialize(context);
 
-    protected abstract Map<String, CompletableFuture<String>> create(
-        List<Map.Entry<String, CompletableFuture<String>>> entries);
+      @SuppressWarnings("unchecked")
+      var cache = (AsyncCache<String, String>) context.asyncCache();
+      for (Object item : entries) {
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        var entry = (Map.Entry<String, CompletableFuture<String>>) item;
+        cache.put(entry.getKey(), entry.getValue());
+      }
+      return cache.asMap();
+    }
 
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public final Map.Entry<String, CompletableFuture<String>>[] createArray(int length) {
+    public Map.Entry<String, CompletableFuture<String>>[] createArray(int length) {
       return new Map.Entry[length];
     }
 
     @Override
-    public final String[] createKeyArray(int length) {
+    public String[] createKeyArray(int length) {
       return new String[length];
     }
 
+    @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
-    @Override public final CompletableFuture<String>[] createValueArray(int length) {
+    public CompletableFuture<String>[] createValueArray(int length) {
       return new CompletableFuture[length];
     }
 
     @Override
-    public Iterable<Map.Entry<String, CompletableFuture<String>>> order(
+    public List<Map.Entry<String, CompletableFuture<String>>> order(
         List<Map.Entry<String, CompletableFuture<String>>> insertionOrder) {
       return insertionOrder;
     }

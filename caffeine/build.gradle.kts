@@ -214,6 +214,7 @@ val junitJupiterTest = tasks.register<Test>("junitJupiterTest") {
 val junitTest = tasks.register<Test>("junitTest") {
   group = "Verification"
   description = "JUnit classic tests"
+  maxParallelForks = Runtime.getRuntime().availableProcessors()
   systemProperty("caffeine.osgi.jar", relativePath(jar.get().archiveFile.get().asFile.path))
   dependsOn(jar)
   useJUnit()

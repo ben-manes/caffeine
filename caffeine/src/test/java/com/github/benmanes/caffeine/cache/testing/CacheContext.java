@@ -123,8 +123,17 @@ public final class CacheContext {
   // Generated on-demand
   @Nullable Int absentKey;
   @Nullable Int absentValue;
-
   @Nullable Map<Int, Int> absent;
+
+  /** A copy constructor that does not include the cache instance or any generated fields. */
+  public CacheContext(CacheContext context) {
+    this(context.initialCapacity, context.stats, context.cacheWeigher, context.maximumSize,
+        context.expiryType, context.afterAccess, context.afterWrite, context.refresh,
+        context.keyStrength, context.valueStrength, context.cacheExecutor, context.cacheScheduler,
+        context.removalListenerType, context.evictionListenerType, context.population,
+        context.isAsyncLoader, context.compute, context.loader, context.implementation,
+        context.expiryTime);
+  }
 
   @SuppressWarnings({"NullAway.Init", "PMD.ExcessiveParameterList", "TooManyParameters"})
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher cacheWeigher,
@@ -132,7 +141,7 @@ public final class CacheContext {
       Expire refresh, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, CacheScheduler cacheScheduler, Listener removalListenerType,
       Listener evictionListenerType, Population population, boolean isAsyncLoader, Compute compute,
-      Loader loader, Implementation implementation, CacheSpec cacheSpec) {
+      Loader loader, Implementation implementation, Expire expiryTime) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = cacheWeigher.create();
@@ -160,7 +169,7 @@ public final class CacheContext {
     this.initialSize = -1;
     this.compute = compute;
     this.expiryType = expiryType;
-    this.expiryTime = cacheSpec.expiryTime();
+    this.expiryTime = expiryTime;
     this.expiry = (expiryType == CacheExpiry.DISABLED) ? null : expiryType.createExpiry(expiryTime);
   }
 

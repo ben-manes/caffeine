@@ -72,6 +72,10 @@ runs:
         add-job-summary: never
         cache-read-only: false
         gradle-home-cache-strict-match: true
+        gradle-home-cache-includes: |
+          caches
+          wrapper
+          notifications
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}

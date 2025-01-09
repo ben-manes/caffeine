@@ -62,6 +62,13 @@ public final class AddKey implements NodeRule {
 
   private static void addIfCollectedValue(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getKeyReference")
+        .addComment("The plain read here does not observe a partially constructed or out-of-order "
+            + "write because the release store ensures a happens-before relationship, making all "
+            + "prior writes visible to threads that subsequently read the variable at any access "
+            + "strength. This guarantees that any observed instance is fully constructed. However, "
+            + "because the plain read lacks acquire semantics, it does not guarantee observing the "
+            + "most recent value. The plain read may return either the previous or the newly "
+            + "published instance, depending on the timing of the read relative to the write.")
         .addModifiers(context.publicFinalModifiers())
         .returns(Object.class)
         .addStatement("$1T valueRef = ($1T) $2L.get(this)",

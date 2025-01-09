@@ -170,7 +170,7 @@ public final class CacheGenerator {
         (Compute) combination.get(index++),
         (Loader) combination.get(index++),
         (Implementation) combination.get(index++),
-        cacheSpec);
+        cacheSpec.expiryTime());
   }
 
   /** Returns if the context is a viable configuration. */
