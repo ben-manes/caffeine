@@ -1056,7 +1056,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             expired |= ((now - n.getWriteTime()) >= expiresAfterWriteNanos());
           }
           if (expiresVariable()) {
-            expired |= (n.getVariableTime() <= now);
+            expired |= ((now - node.getVariableTime()) >= 0);
           }
           if (!expired) {
             resurrect[0] = true;

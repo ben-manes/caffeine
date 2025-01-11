@@ -42,6 +42,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import org.mockito.Mockito;
@@ -795,7 +796,7 @@ public @interface CacheSpec {
 
   /* --------------- Scheduler --------------- */
 
-  /** The executors retrieved from a supplier, each resulting in a new combination. */
+  /** The schedulers retrieved from a supplier, each resulting in a new combination. */
   CacheScheduler[] scheduler() default {
     CacheScheduler.DISABLED,
   };
@@ -815,6 +816,29 @@ public @interface CacheSpec {
 
     public Scheduler create() {
       return scheduler.get();
+    }
+  }
+
+  /* --------------- Ticker --------------- */
+
+  /** The starting time retrieved from a supplier, each resulting in a new combination. */
+  StartTime[] startTime() default {
+    StartTime.RANDOM,
+  };
+
+  /** The starting time that the ticker can be configured with. */
+  enum StartTime {
+    RANDOM(() -> ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, Long.MAX_VALUE)),
+    ONE_MINUTE_FROM_MAX(() -> Long.MAX_VALUE - TimeUnit.MINUTES.toNanos(1));
+
+    private final LongSupplier startTime;
+
+    StartTime(LongSupplier startTime) {
+      this.startTime = requireNonNull(startTime);
+    }
+
+    public long create() {
+      return startTime.getAsLong();
     }
   }
 

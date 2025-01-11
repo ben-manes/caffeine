@@ -59,6 +59,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.StartTime;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext.GuavaLoadingCache;
 import com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext.SingleLoader;
@@ -98,6 +99,7 @@ public final class CacheContext {
   final Population population;
   final Maximum maximumSize;
   final Scheduler scheduler;
+  final StartTime startTime;
   final Expire afterAccess;
   final Expire afterWrite;
   final Expire expiryTime;
@@ -132,7 +134,7 @@ public final class CacheContext {
         context.keyStrength, context.valueStrength, context.cacheExecutor, context.cacheScheduler,
         context.removalListenerType, context.evictionListenerType, context.population,
         context.isAsyncLoader, context.compute, context.loader, context.implementation,
-        context.expiryTime);
+        context.startTime, context.expiryTime);
   }
 
   @SuppressWarnings({"NullAway.Init", "PMD.ExcessiveParameterList", "TooManyParameters"})
@@ -141,7 +143,7 @@ public final class CacheContext {
       Expire refresh, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, CacheScheduler cacheScheduler, Listener removalListenerType,
       Listener evictionListenerType, Population population, boolean isAsyncLoader, Compute compute,
-      Loader loader, Implementation implementation, Expire expiryTime) {
+      Loader loader, Implementation implementation, StartTime startTime, Expire expiryTime) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = cacheWeigher.create();
@@ -163,13 +165,14 @@ public final class CacheContext {
     this.population = requireNonNull(population);
     this.loader = requireNonNull(loader);
     this.isAsyncLoader = isAsyncLoader;
-    this.ticker = new SerializableFakeTicker();
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
     this.initialSize = -1;
-    this.compute = compute;
-    this.expiryType = expiryType;
-    this.expiryTime = expiryTime;
+    this.compute = requireNonNull(compute);
+    this.expiryType = requireNonNull(expiryType);
+    this.expiryTime = requireNonNull(expiryTime);
+    this.startTime = requireNonNull(startTime);
+    this.ticker = new SerializableFakeTicker(startTime.create());
     this.expiry = (expiryType == CacheExpiry.DISABLED) ? null : expiryType.createExpiry(expiryTime);
   }
 
@@ -536,9 +539,9 @@ public final class CacheContext {
 
     final long startTime;
 
-    public SerializableFakeTicker() {
-      startTime = ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, Long.MAX_VALUE);
+    public SerializableFakeTicker(long startTime) {
       advance(Duration.ofNanos(startTime));
+      this.startTime = startTime;
     }
   }
 }

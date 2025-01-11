@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.StartTime;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
@@ -98,6 +99,7 @@ public final class CacheGenerator {
     var weigher = Sets.immutableEnumSet(Arrays.asList(cacheSpec.weigher()));
     var executor = Sets.immutableEnumSet(Arrays.asList(cacheSpec.executor()));
     var scheduler = Sets.immutableEnumSet(Arrays.asList(cacheSpec.scheduler()));
+    var startTime = Sets.immutableEnumSet(Arrays.asList(cacheSpec.startTime()));
     var population = Sets.immutableEnumSet(Arrays.asList(cacheSpec.population()));
     var maximumSize = Sets.immutableEnumSet(Arrays.asList(cacheSpec.maximumSize()));
     var implementations = filterTypes(options.implementation(), cacheSpec.implementation());
@@ -135,7 +137,7 @@ public final class CacheGenerator {
     return Sets.cartesianProduct(initialCapacity, statistics, weigher, maximumSize, expiry,
         expireAfterAccess, expireAfterWrite, refreshAfterWrite, keys, values, executor, scheduler,
         removalListener, evictionListener, population, asyncLoader, computations, loaders,
-        implementations);
+        implementations, startTime);
   }
 
   /** Returns the set of options filtered if a specific type is specified. */
@@ -170,6 +172,7 @@ public final class CacheGenerator {
         (Compute) combination.get(index++),
         (Loader) combination.get(index++),
         (Implementation) combination.get(index++),
+        (StartTime) combination.get(index),
         cacheSpec.expiryTime());
   }
 

@@ -73,6 +73,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.StartTime;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
@@ -174,7 +175,8 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void put_replace(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
 
@@ -198,7 +200,8 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void put_replace(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = context.absentValue().toFuture();
     context.ticker().advance(Duration.ofSeconds(30));
@@ -223,7 +226,8 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void put_replace(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
 
@@ -247,7 +251,8 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void putAll_replace(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
 
@@ -272,11 +277,12 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void replace_updated(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(map.replace(context.firstKey(), context.absentValue())).isNotNull();
-    context.ticker().advance(Duration.ofSeconds(30));
+    context.ticker().advance(Duration.ofSeconds(45));
 
     context.cleanUp();
     assertThat(map).isExhaustivelyEmpty();
@@ -311,12 +317,13 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void replaceConditionally_updated(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(map.replace(key, context.original().get(key), context.absentValue())).isTrue();
-    context.ticker().advance(Duration.ofSeconds(30));
+    context.ticker().advance(Duration.ofSeconds(45));
 
     context.cleanUp();
     assertThat(map).isExhaustivelyEmpty();
@@ -1031,7 +1038,8 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void putIfAbsent_insert(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Int key = context.absentKey();
@@ -1049,7 +1057,8 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void putIfAbsent_present(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Int key = context.firstKey();
@@ -1136,7 +1145,8 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void put_insert(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Int key = context.absentKey();
@@ -1154,7 +1164,8 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
-      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void put_replace(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     Int key = context.firstKey();
