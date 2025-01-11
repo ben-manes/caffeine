@@ -25,10 +25,10 @@ import java.util.Objects;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.MethodSpec;
 
 /**
  * Adds the value to the node.
@@ -53,7 +53,7 @@ public final class AddValue implements NodeRule {
     if (context.isStrongValues()) {
       context.addVarHandle("value", ClassName.get(Object.class));
     } else {
-      context.addVarHandle("value", context.valueReferenceType().rawType);
+      context.addVarHandle("value", context.valueReferenceType().rawType());
     }
   }
 

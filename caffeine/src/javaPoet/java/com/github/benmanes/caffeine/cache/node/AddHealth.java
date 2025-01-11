@@ -23,7 +23,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
 import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
-import com.squareup.javapoet.MethodSpec;
+import com.palantir.javapoet.MethodSpec;
 
 /**
  * Adds the health state to the node.

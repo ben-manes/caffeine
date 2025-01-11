@@ -40,13 +40,13 @@ import com.github.benmanes.caffeine.cache.Feature;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -90,7 +90,7 @@ public final class NodeContext {
   }
 
   public boolean isBaseClass() {
-    return superClass.equals(TypeName.OBJECT);
+    return superClass.equals(ClassName.OBJECT);
   }
 
   public Strength keyStrength() {
@@ -132,7 +132,7 @@ public final class NodeContext {
         Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL).build());
     Consumer<CodeBlock.Builder> statement = builder -> builder
         .addStatement("$L = lookup.findVarHandle($T.class, $L.$L, $T.class)", fieldName,
-            ClassName.bestGuess(className), NODE_FACTORY.rawType.simpleName(),
+            ClassName.bestGuess(className), NODE_FACTORY.rawType().simpleName(),
             fieldName, type);
     varHandles.add(statement);
   }

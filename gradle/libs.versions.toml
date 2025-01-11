@@ -47,7 +47,7 @@ jakarta-inject = "2.0.1"
 jamm = "0.4.0"
 java-object-layout = "0.17"
 javax-inject = "1"
-javapoet = "1.13.0"
+javapoet = "0.6.0"
 jazzer = "0.23.0"
 jcache = "1.1.1"
 jcommander = "1.82"
@@ -87,7 +87,7 @@ sigstore = "1.2.0"
 sonarqube = "6.0.1.5171"
 spotbugs = "4.8.6"
 spotbugs-contrib = "7.6.9"
-spotbugs-plugin = "6.0.27"
+spotbugs-plugin = "6.1.0"
 stream = "2.9.8"
 tcache = "2.0.1"
 testng = "7.10.2"
@@ -149,7 +149,7 @@ jacoco-ant = { module = "org.jacoco:org.jacoco.ant", version.ref = "jacoco" }
 jakarta-inject = { module = "jakarta.inject:jakarta.inject-api", version.ref = "jakarta-inject" }
 jamm = { module = "com.github.jbellis:jamm", version.ref = "jamm" }
 java-object-layout = { module = "org.openjdk.jol:jol-cli", version.ref = "java-object-layout" }
-javapoet = { module = "com.squareup:javapoet", version.ref = "javapoet" }
+javapoet = { module = "com.palantir.javapoet:javapoet", version.ref = "javapoet" }
 javax-inject = { module = "javax.inject:javax.inject", version.ref = "javax-inject" }
 jazzer = { module = "com.code-intelligence:jazzer", version.ref = "jazzer" }
 jazzer-junit = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }

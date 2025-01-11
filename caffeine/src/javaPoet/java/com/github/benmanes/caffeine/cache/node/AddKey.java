@@ -22,9 +22,9 @@ import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.MethodSpec;
 
 /**
  * Adds the key to the node.
@@ -57,7 +57,7 @@ public final class AddKey implements NodeRule {
         .addMethod(context.newGetRef("key"));
     context.addVarHandle("key", context.isStrongKeys()
         ? ClassName.get(Object.class)
-        : context.keyReferenceType().rawType);
+        : context.keyReferenceType().rawType());
   }
 
   private static void addIfCollectedValue(NodeContext context) {

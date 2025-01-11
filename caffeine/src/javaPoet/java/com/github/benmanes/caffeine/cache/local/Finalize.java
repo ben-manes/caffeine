@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.local;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.squareup.javapoet.AnnotationSpec;
+import com.palantir.javapoet.AnnotationSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

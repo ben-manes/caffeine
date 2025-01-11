@@ -20,8 +20,8 @@ import static com.github.benmanes.caffeine.cache.Specifications.METHOD_HANDLES;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.CodeBlock;
 
 /**
  * Finishes construction of the node.

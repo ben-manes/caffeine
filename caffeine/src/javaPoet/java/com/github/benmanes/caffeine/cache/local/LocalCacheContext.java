@@ -23,9 +23,9 @@ import javax.lang.model.element.Modifier;
 import com.github.benmanes.caffeine.cache.Feature;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

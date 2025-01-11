@@ -20,7 +20,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpe
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
-import com.squareup.javapoet.MethodSpec;
+import com.palantir.javapoet.MethodSpec;
 
 /**
  * Adds the constructors to the node.

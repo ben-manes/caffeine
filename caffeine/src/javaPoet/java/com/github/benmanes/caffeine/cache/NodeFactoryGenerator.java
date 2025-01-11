@@ -54,11 +54,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
 
 /**
  * Generates the cache entry's specialized type. These entries are optimized for the configuration
@@ -171,7 +171,7 @@ public final class NodeFactoryGenerator {
     if (features.size() == 2) {
       parentFeatures = ImmutableSet.of();
       generateFeatures = features;
-      superClass = TypeName.OBJECT;
+      superClass = ClassName.OBJECT;
     } else {
       // Requires that parentFeatures is in featureByIndex order for super class naming
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));

@@ -22,7 +22,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACT
 
 import javax.lang.model.element.Modifier;
 
-import com.squareup.javapoet.FieldSpec;
+import com.palantir.javapoet.FieldSpec;
 
 /**
  * Adds the constructor to the cache.

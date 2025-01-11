@@ -18,8 +18,8 @@ package com.github.benmanes.caffeine.cache.node;
 import com.github.benmanes.caffeine.cache.Feature;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.TypeName;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.TypeName;
 
 /**
  * Adds the maximum metadata to the node.
