@@ -323,8 +323,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /** Returns if the node's value is currently being computed asynchronously. */
-  final boolean isComputingAsync(Node<?, ?> node) {
-    return isAsync && !Async.isReady((CompletableFuture<?>) node.getValue());
+  final boolean isComputingAsync(@Nullable V value) {
+    return isAsync && !Async.isReady((CompletableFuture<?>) value);
   }
 
   @GuardedBy("evictionLock")
@@ -1003,7 +1003,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Returns if the entry has expired. */
   @SuppressWarnings("ShortCircuitBoolean")
   boolean hasExpired(Node<K, V> node, long now) {
-    if (isComputingAsync(node)) {
+    if (isComputingAsync(node.getValue())) {
       return false;
     }
     return (expiresAfterAccess() && (now - node.getAccessTime() >= expiresAfterAccessNanos()))
@@ -1318,7 +1318,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     ConcurrentMap<Object, CompletableFuture<?>> refreshes;
     if (((now - writeTime) > refreshAfterWriteNanos()) && (keyReference != null)
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
-        && ((writeTime & 1L) == 0L) && !(refreshes = refreshes()).containsKey(keyReference)
+        && !isComputingAsync(oldValue) && ((writeTime & 1L) == 0L)
+        && !(refreshes = refreshes()).containsKey(keyReference)
         && node.isAlive() && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
@@ -1335,8 +1336,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
                 var refresh = cacheLoader.asyncReload(key, future.join(), executor);
                 refreshFuture[0] = requireNonNull(refresh, "Null future");
               } else {
-                // no-op if load is pending
-                return future;
+                // no-op if the future's completion state was modified (e.g. obtrude methods)
+                return null;
               }
             } else {
               @SuppressWarnings("NullAway")
@@ -1930,7 +1931,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       // Ensure that in-flight async computation cannot expire (reset on a completion callback)
-      if (isComputingAsync(node)) {
+      if (isComputingAsync(node.getValue())) {
         synchronized (node) {
           if (!Async.isReady((CompletableFuture<?>) node.getValue())) {
             long expirationTime = expirationTicker().read() + ASYNC_EXPIRY;
@@ -2199,7 +2200,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return null;
     }
 
-    if (!isComputingAsync(node)) {
+    if (!isComputingAsync(value)) {
       @SuppressWarnings("unchecked")
       var castedKey = (K) key;
       setAccessTime(node, now);
@@ -2256,7 +2257,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if ((node == null) || ((value = node.getValue()) == null) || hasExpired(node, now)) {
         iter.remove();
       } else {
-        if (!isComputingAsync(node)) {
+        if (!isComputingAsync(value)) {
           tryExpireAfterRead(node, entry.getKey(), value, expiry(), now);
           setAccessTime(node, now);
         }
@@ -2319,7 +2320,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           // An optimistic fast path to avoid unnecessary locking
           V currentValue = prior.getValue();
           if ((currentValue != null) && !hasExpired(prior, now)) {
-            if (!isComputingAsync(prior)) {
+            if (!isComputingAsync(currentValue)) {
               tryExpireAfterRead(prior, key, currentValue, expiry(), now);
               setAccessTime(prior, now);
             }
@@ -2331,7 +2332,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         // An optimistic fast path to avoid unnecessary locking
         V currentValue = prior.getValue();
         if ((currentValue != null) && !hasExpired(prior, now)) {
-          if (!isComputingAsync(prior)) {
+          if (!isComputingAsync(currentValue)) {
             tryExpireAfterRead(prior, key, currentValue, expiry(), now);
             setAccessTime(prior, now);
           }
@@ -2655,7 +2656,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (node != null) {
       V value = node.getValue();
       if ((value != null) && !hasExpired(node, now)) {
-        if (!isComputingAsync(node)) {
+        if (!isComputingAsync(value)) {
           tryExpireAfterRead(node, key, value, expiry(), now);
           setAccessTime(node, now);
         }
@@ -2749,7 +2750,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return null;
     }
     if (newValue[0] == null) {
-      if (!isComputingAsync(node)) {
+      if (!isComputingAsync(oldValue[0])) {
         tryExpireAfterRead(node, key, oldValue[0], expiry(), now[0]);
         setAccessTime(node, now[0]);
       }

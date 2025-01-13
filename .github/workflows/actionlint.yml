@@ -16,7 +16,7 @@ jobs:
             github.com:443
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: actionlint
-        uses: reviewdog/action-actionlint@af17f9e3640ac863dbcc515d45f5f35d708d0faf # v1.62.0
+        uses: reviewdog/action-actionlint@f3dcc52bc6039e5d736486952379dce3e869e8a2 # v1.63.0
         env:
           SHELLCHECK_OPTS: -e SC2001 -e SC2035 -e SC2046 -e SC2061 -e SC2086 -e SC2156
         with:

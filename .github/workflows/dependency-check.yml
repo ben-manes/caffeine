@@ -61,7 +61,7 @@ jobs:
         with:
           files: build/reports/dependency-check-report.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169 # v3.28.0
+        uses: github/codeql-action/upload-sarif@b6a472f63d85b9c78a3ac5e89422239fc15e9b3c # v3.28.1
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: build/reports/dependency-check-report.sarif

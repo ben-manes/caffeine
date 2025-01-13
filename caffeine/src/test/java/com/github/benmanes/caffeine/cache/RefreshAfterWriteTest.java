@@ -396,6 +396,7 @@ public final class RefreshAfterWriteTest {
         .hasSize(1);
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
@@ -431,6 +432,30 @@ public final class RefreshAfterWriteTest {
     assertThat(refreshed.get()).isTrue();
     assertThat(cache.policy().refreshes()).isEmpty();
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.ASYNC_INCOMPLETE,
+      refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER)
+  public void refreshIfNeeded_slowLoad(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    cache.synchronous().asMap().put(context.absentKey(), context.absentKey());
+
+    context.ticker().advance(Duration.ofHours(1));
+    cache.put(context.absentKey(), new CompletableFuture<>());
+
+    context.ticker().advance(Duration.ofHours(1));
+    var future = requireNonNull(cache.getIfPresent(context.absentKey()));
+    assertThat(future).isNotDone();
+
+    assertThat(cache.synchronous().policy().refreshes()).isEmpty();
+
+    future.complete(context.absentKey().negate());
+    assertThat(cache.synchronous().policy().refreshes()).isEmpty();
+
+    var expectedMap = new HashMap<>(context.original());
+    expectedMap.put(context.absentKey(), future.join());
+    assertThat(cache).containsExactlyEntriesIn(expectedMap);
   }
 
   /* --------------- getIfPresent --------------- */

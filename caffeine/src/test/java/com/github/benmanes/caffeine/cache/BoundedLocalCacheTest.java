@@ -30,6 +30,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
+import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
@@ -2276,6 +2277,7 @@ public final class BoundedLocalCacheTest {
 
   /* --------------- Refresh --------------- */
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches") // Issue #715
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
@@ -2337,6 +2339,7 @@ public final class BoundedLocalCacheTest {
     }
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches", groups = "isolated")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
@@ -2389,6 +2392,48 @@ public final class BoundedLocalCacheTest {
     await().untilAsserted(() -> assertThat(cache).containsEntry(context.absentKey(), newValue));
   }
 
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.ASYNC_INCOMPLETE,
+      refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER)
+  public void refreshIfNeeded_slowLoad_obtrudeToNull(
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) throws Exception {
+    var future = CompletableFuture.completedFuture(context.absentKey());
+    var localCache = asBoundedLocalCache(cache);
+    cache.put(context.absentKey(), future);
+
+    var lookupKey = localCache.nodeFactory.newLookupKey(context.absentKey());
+    var node = requireNonNull(localCache.data.get(lookupKey));
+    var task = new Future<?>[1];
+
+    localCache.refreshes().compute(node.getKeyReference(), (k, v) -> {
+      assertThat(v).isNull();
+
+      context.ticker().advance(Duration.ofHours(1));
+      var reader = new AtomicReference<Thread>();
+      task[0] = ConcurrentTestHarness.submit(() -> {
+        reader.set(Thread.currentThread());
+        var future2 = cache.getIfPresent(context.absentKey());
+        assertThat(future2).isSameInstanceAs(future);
+        assertThat(future2).succeedsWith(null);
+      });
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = reader.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      future.obtrudeValue(null);
+      return null;
+    });
+
+    task[0].get(1, TimeUnit.MINUTES);
+    cache.asMap().remove(context.absentKey(), future); // obtruded values are not discarded
+    await().untilAsserted(() -> assertThat(cache).containsExactlyEntriesIn(context.original()));
+    assertThat(localCache.refreshes()).isEmpty();
+  }
+
+  @CheckNoEvictions
   @Test(dataProvider = "caches", groups = "isolated")
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
       compute = Compute.ASYNC, stats = Stats.DISABLED)
@@ -2911,6 +2956,12 @@ public final class BoundedLocalCacheTest {
 
   static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {
     return (BoundedLocalCache<K, V>) cache.asMap();
+  }
+
+  static <K, V> BoundedLocalCache<K, CompletableFuture<V>> asBoundedLocalCache(
+      AsyncCache<K, V> cache) {
+    var localCache = (LocalAsyncCache<K, V>) cache;
+    return (BoundedLocalCache<K, CompletableFuture<V>>) localCache.cache();
   }
 
   static final class CustomBoundedLocalCache<K, V> extends BoundedLocalCache<K, V> {
