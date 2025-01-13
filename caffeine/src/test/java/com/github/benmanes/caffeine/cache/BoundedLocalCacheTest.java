@@ -2926,6 +2926,30 @@ public final class BoundedLocalCacheTest {
     assertThat(duration).isEqualTo(expiresAt);
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE },
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE)
+  public void expireAfterWrite_writeTime(AsyncCache<Int, Int> cache, CacheContext context) {
+    var localCache = asBoundedLocalCache(cache);
+    localCache.setDrainStatusRelease(PROCESSING_TO_REQUIRED);
+
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(localCache.writeBuffer).isNotEmpty();
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    future.complete(context.absentValue());
+    assertThat(localCache.writeBuffer).isNotEmpty();
+
+    localCache.setDrainStatusRelease(REQUIRED);
+    assertThat(cache.getIfPresent(context.absentKey())).isNotNull();
+    context.ticker().advance(Duration.ofSeconds(45));
+    assertThat(cache.getIfPresent(context.absentKey())).isNotNull();
+    context.ticker().advance(Duration.ofSeconds(15));
+    assertThat(cache.getIfPresent(context.absentKey())).isNull();
+  }
+
   @Test
   public void fixedExpireAfterWrite() {
     int key = 1;
