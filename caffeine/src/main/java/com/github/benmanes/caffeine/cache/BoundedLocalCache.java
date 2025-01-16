@@ -1523,6 +1523,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
+  /** Returns if the entry's write time would exceed the minimum expiration reorder threshold. */
+  boolean exceedsWriteTimeTolerance(Node<K, V> node, long varTime, long now) {
+    long variableTime = node.getVariableTime();
+    long tolerance = EXPIRE_WRITE_TOLERANCE;
+    long writeTime = node.getWriteTime();
+    return
+        (expiresAfterWrite()
+            && ((expiresAfterWriteNanos() <= tolerance) || (Math.abs(now - writeTime) > tolerance)))
+        || (refreshAfterWrite()
+            && ((refreshAfterWriteNanos() <= tolerance) || (Math.abs(now - writeTime) > tolerance)))
+        || (expiresVariable() && (Math.abs(varTime - variableTime) > tolerance));
+  }
+
   /**
    * Performs the post-processing work required after a write.
    *
@@ -2298,8 +2311,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (node == null) {
           node = nodeFactory.newNode(key, keyReferenceQueue(),
               value, valueReferenceQueue(), newWeight, now);
-          setVariableTime(node, expireAfterCreate(key, value, expiry, now));
           long expirationTime = isComputingAsync(value) ? (now + ASYNC_EXPIRY) : now;
+          setVariableTime(node, expireAfterCreate(key, value, expiry, now));
           setAccessTime(node, expirationTime);
           setWriteTime(node, expirationTime);
         }
@@ -2384,11 +2397,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         long expirationTime = isComputingAsync(value) ? (now + ASYNC_EXPIRY) : now;
         if (mayUpdate) {
-          exceedsTolerance =
-              (expiresAfterWrite() && (now - prior.getWriteTime()) > EXPIRE_WRITE_TOLERANCE)
-              || (expiresVariable()
-                  && Math.abs(varTime - prior.getVariableTime()) > EXPIRE_WRITE_TOLERANCE);
-          setWriteTime(prior, expirationTime);
+          exceedsTolerance = exceedsWriteTimeTolerance(prior, varTime, now);
+          if (expired || exceedsTolerance) {
+            setWriteTime(prior, isComputingAsync(value) ? (now + ASYNC_EXPIRY) : now);
+          }
 
           prior.setValue(value, valueReferenceQueue());
           prior.setWeight(newWeight);
@@ -2514,8 +2526,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(key);
     requireNonNull(value);
 
-    long[] now = new long[1];
+    var now = new long[1];
     var oldWeight = new int[1];
+    var exceedsTolerance = new boolean[1];
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings({"unchecked", "Varifier"})
@@ -2538,8 +2551,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         n.setWeight(weight);
 
         long expirationTime = isComputingAsync(value) ? (now[0] + ASYNC_EXPIRY) : now[0];
+        exceedsTolerance[0] = exceedsWriteTimeTolerance(n, varTime, expirationTime);
+        if (exceedsTolerance[0]) {
+          setWriteTime(n, expirationTime);
+        }
         setAccessTime(n, expirationTime);
-        setWriteTime(n, expirationTime);
         setVariableTime(n, varTime);
 
         discardRefresh(k);
@@ -2552,7 +2568,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     int weightedDifference = (weight - oldWeight[0]);
-    if (expiresAfterWrite() || (weightedDifference != 0)) {
+    if (exceedsTolerance[0] || (weightedDifference != 0)) {
       afterWrite(new UpdateTask(node, weightedDifference));
     } else {
       afterRead(node, now[0], /* recordHit= */ false);
@@ -2573,13 +2589,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(oldValue);
     requireNonNull(newValue);
 
-    int weight = weigher.weigh(key, newValue);
+    var now = new long[1];
+    var oldWeight = new int[1];
+    var exceedsTolerance = new boolean[1];
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] prevValue = (V[]) new Object[1];
-    int[] oldWeight = new int[1];
-    long[] now = new long[1];
+
+    int weight = weigher.weigh(key, newValue);
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
         requireIsAlive(key, n);
@@ -2597,8 +2615,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         n.setWeight(weight);
 
         long expirationTime = isComputingAsync(newValue) ? (now[0] + ASYNC_EXPIRY) : now[0];
+        exceedsTolerance[0] = exceedsWriteTimeTolerance(n, varTime, expirationTime);
+        if (exceedsTolerance[0]) {
+          setWriteTime(n, expirationTime);
+        }
         setAccessTime(n, expirationTime);
-        setWriteTime(n, expirationTime);
         setVariableTime(n, varTime);
 
         if (shouldDiscardRefresh) {
@@ -2613,7 +2634,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     int weightedDifference = (weight - oldWeight[0]);
-    if (expiresAfterWrite() || (weightedDifference != 0)) {
+    if (exceedsTolerance[0] || (weightedDifference != 0)) {
       afterWrite(new UpdateTask(node, weightedDifference));
     } else {
       afterRead(node, now[0], /* recordHit= */ false);
@@ -2688,8 +2709,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         weight[1] = weigher.weigh(key, newValue[0]);
         var created = nodeFactory.newNode(key, keyReferenceQueue(),
             newValue[0], valueReferenceQueue(), weight[1], now[0]);
-        setVariableTime(created, expireAfterCreate(key, newValue[0], expiry(), now[0]));
         long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
+        setVariableTime(created, expireAfterCreate(key, newValue[0], expiry(), now[0]));
         setAccessTime(created, expirationTime);
         setWriteTime(created, expirationTime);
         return created;
@@ -2724,15 +2745,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         n.setValue(newValue[0], valueReferenceQueue());
         n.setWeight(weight[1]);
 
+        long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
+        setAccessTime(n, expirationTime);
+        setWriteTime(n, expirationTime);
         setVariableTime(n, varTime);
-        if (isComputingAsync(newValue[0])) {
-          long expirationTime = now[0] + ASYNC_EXPIRY;
-          setAccessTime(n, expirationTime);
-          setWriteTime(n, expirationTime);
-        } else {
-          setAccessTime(n, now[0]);
-          setWriteTime(n, now[0]);
-        }
+
         discardRefresh(k);
         return n;
       }
@@ -2853,6 +2870,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     var weight = new int[2]; // old, new
     var cause = new RemovalCause[1];
+    var exceedsTolerance = new boolean[1];
 
     Node<K, V> node = data.compute(keyRef, (kr, n) -> {
       if (n == null) {
@@ -2925,8 +2943,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         n.setWeight(weight[1]);
 
         long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
+        exceedsTolerance[0] = exceedsWriteTimeTolerance(n, varTime, expirationTime);
+        if (((cause[0] != null) && cause[0].wasEvicted()) || exceedsTolerance[0]) {
+          setWriteTime(n, expirationTime);
+        }
         setAccessTime(n, expirationTime);
-        setWriteTime(n, expirationTime);
         setVariableTime(n, varTime);
 
         discardRefresh(kr);
@@ -2954,7 +2975,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       afterWrite(new AddTask(node, weight[1]));
     } else {
       int weightedDifference = weight[1] - weight[0];
-      if (expiresAfterWrite() || (weightedDifference != 0)) {
+      if (exceedsTolerance[0] || (weightedDifference != 0)) {
         afterWrite(new UpdateTask(node, weightedDifference));
       } else {
         afterRead(node, now[0], /* recordHit= */ false);

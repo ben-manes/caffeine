@@ -187,6 +187,11 @@
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactory"/>
+    <Method name="newInstance"/>
+    <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.SerializationProxy"/>
     <Bug pattern="DESERIALIZATION_GADGET"/>
   </Match>
@@ -516,6 +521,7 @@
       HE_HASHCODE_USE_OBJECT_EQUALS,
       ITC_INHERITANCE_TYPE_CHECKING,
       SIC_INNER_SHOULD_BE_STATIC_ANON,
+      THROWS_METHOD_THROWS_CLAUSE_THROWABLE,
       NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE,
       UTAO_TESTNG_ASSERTION_ODDITIES_NO_ASSERT,
       UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>

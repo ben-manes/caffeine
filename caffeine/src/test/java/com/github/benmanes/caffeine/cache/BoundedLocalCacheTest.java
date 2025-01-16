@@ -90,6 +90,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
@@ -1869,82 +1870,6 @@ public final class BoundedLocalCacheTest {
     }
   }
 
-  /* --------------- Expiration --------------- */
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      initialCapacity = InitialCapacity.FULL, expireAfterWrite = Expire.ONE_MINUTE)
-  public void put_expireTolerance_expireAfterWrite(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    boolean mayCheckReads = context.isStrongKeys() && context.isStrongValues()
-        && (cache.readBuffer != Buffer.<Node<Int, Int>>disabled());
-
-    var initialValue = cache.put(Int.valueOf(1), Int.valueOf(1));
-    assertThat(initialValue).isNull();
-    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
-
-    // If within the tolerance, treat the update as a read
-    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(2));
-    assertThat(oldValue).isEqualTo(1);
-    if (mayCheckReads) {
-      assertThat(cache.readBuffer.reads()).isEqualTo(0);
-      assertThat(cache.readBuffer.writes()).isEqualTo(1);
-    }
-    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
-
-    // If exceeds the tolerance, treat the update as a write
-    context.ticker().advance(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE + 1));
-    var lastValue = cache.put(Int.valueOf(1), Int.valueOf(3));
-    assertThat(lastValue).isEqualTo(2);
-    if (mayCheckReads) {
-      assertThat(cache.readBuffer.reads()).isEqualTo(1);
-      assertThat(cache.readBuffer.writes()).isEqualTo(1);
-    }
-    assertThat(cache.writeBuffer.producerIndex).isEqualTo(4);
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
-      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
-  public void put_expireTolerance_expiry(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
-    assertThat(oldValue).isNull();
-    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
-
-    // If within the tolerance, treat the update as a read
-    oldValue = cache.put(Int.valueOf(1), Int.valueOf(2));
-    assertThat(oldValue).isEqualTo(1);
-    assertThat(cache.readBuffer.reads()).isEqualTo(0);
-    assertThat(cache.readBuffer.writes()).isEqualTo(1);
-    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
-
-    // If exceeds the tolerance, treat the update as a write
-    context.ticker().advance(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE + 1));
-    oldValue = cache.put(Int.valueOf(1), Int.valueOf(3));
-    assertThat(oldValue).isEqualTo(2);
-    assertThat(cache.readBuffer.reads()).isEqualTo(1);
-    assertThat(cache.readBuffer.writes()).isEqualTo(1);
-    assertThat(cache.writeBuffer.producerIndex).isEqualTo(4);
-
-    // If the expiration time reduces by more than the tolerance, treat the update as a write
-    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
-        .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
-    oldValue = cache.put(Int.valueOf(1), Int.valueOf(4));
-    assertThat(oldValue).isEqualTo(3);
-    assertThat(cache.readBuffer.reads()).isEqualTo(1);
-    assertThat(cache.readBuffer.writes()).isEqualTo(1);
-    assertThat(cache.writeBuffer.producerIndex).isEqualTo(6);
-
-    // If the expiration time increases by more than the tolerance, treat the update as a write
-    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
-        .thenReturn(Expire.FOREVER.timeNanos());
-    oldValue = cache.put(Int.valueOf(1), Int.valueOf(4));
-    assertThat(oldValue).isEqualTo(4);
-    assertThat(cache.readBuffer.reads()).isEqualTo(1);
-    assertThat(cache.readBuffer.writes()).isEqualTo(1);
-    assertThat(cache.writeBuffer.producerIndex).isEqualTo(8);
-  }
-
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches", groups = "isolated")
   @CacheSpec(population = Population.EMPTY,
@@ -2036,6 +1961,204 @@ public final class BoundedLocalCacheTest {
         .containsEntry(context.absentKey(), context.absentKey()));
     assertThat(Futures.getUnchecked(future[0])).isNull();
     cache.afterWrite(cache.new RemovalTask(node));
+  }
+
+  /* --------------- Expiration --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      initialCapacity = InitialCapacity.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  public void expireTolerance_expireAfterWrite_put(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpireAfterWriteTolerance(cache, context, cache::put);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      initialCapacity = InitialCapacity.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  public void expireTolerance_expireAfterWrite_replace(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpireAfterWriteTolerance(cache, context, cache::replace);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      initialCapacity = InitialCapacity.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  public void expireTolerance_expireAfterWrite_replaceConditionally(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpireAfterWriteTolerance(cache, context, (key, value) -> {
+      var oldValue = requireNonNull(cache.getIfPresentQuietly(key));
+      assertThat(cache.replace(key, oldValue, value)).isTrue();
+      return oldValue;
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      initialCapacity = InitialCapacity.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  public void expireTolerance_expireAfterWrite_computeIfPresent(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpireAfterWriteTolerance(cache, context, (key, value) -> {
+      var oldValue = requireNonNull(cache.getIfPresentQuietly(key));
+      assertThat(cache.computeIfPresent(key, (k, v) -> value)).isEqualTo(value);
+      return oldValue;
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      initialCapacity = InitialCapacity.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  public void expireTolerance_expireAfterWrite_compute(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpireAfterWriteTolerance(cache, context, (key, value) -> {
+      var oldValue = requireNonNull(cache.getIfPresentQuietly(key));
+      assertThat(cache.compute(key, (k, v) -> value)).isEqualTo(value);
+      return oldValue;
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      initialCapacity = InitialCapacity.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  public void expireTolerance_expireAfterWrite_merge(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpireAfterWriteTolerance(cache, context, (key, value) -> {
+      var oldValue = requireNonNull(cache.getIfPresentQuietly(key));
+      assertThat(cache.merge(key, value, (k, v) -> value)).isEqualTo(value);
+      return oldValue;
+    });
+  }
+
+  private static void checkExpireAfterWriteTolerance(BoundedLocalCache<Int, Int> cache,
+      CacheContext context, BiFunction<Int, Int, Int> write) {
+    boolean mayCheckReads = context.isStrongKeys() && context.isStrongValues()
+        && (cache.readBuffer != Buffer.<Node<Int, Int>>disabled());
+
+    var initialValue = cache.put(Int.valueOf(1), Int.valueOf(1));
+    assertThat(initialValue).isNull();
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
+
+    // If within the tolerance, treat the update as a read
+    var oldValue = write.apply(Int.valueOf(1), Int.valueOf(2));
+    assertThat(oldValue).isEqualTo(1);
+    if (mayCheckReads) {
+      assertThat(cache.readBuffer.reads()).isEqualTo(0);
+      assertThat(cache.readBuffer.writes()).isEqualTo(1);
+    }
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
+
+    // If exceeds the tolerance, treat the update as a write
+    context.ticker().advance(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE + 1));
+    var lastValue = write.apply(Int.valueOf(1), Int.valueOf(3));
+    assertThat(lastValue).isEqualTo(2);
+    if (mayCheckReads) {
+      assertThat(cache.readBuffer.reads()).isEqualTo(1);
+      assertThat(cache.readBuffer.writes()).isEqualTo(1);
+    }
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(4);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void expireTolerance_expiry_put(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpiryWriteTolerance(cache, context, cache::put);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void expireTolerance_expiry_replace(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpiryWriteTolerance(cache, context, cache::replace);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void expireTolerance_expiry_replaceConditionally(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpiryWriteTolerance(cache, context, (key, value) -> {
+      var oldValue = requireNonNull(cache.getIfPresentQuietly(key));
+      assertThat(cache.replace(key, oldValue, value)).isTrue();
+      return oldValue;
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void expireTolerance_expiry_computeIfPresent(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpiryWriteTolerance(cache, context, (key, value) -> {
+      var oldValue = requireNonNull(cache.getIfPresentQuietly(key));
+      assertThat(cache.computeIfPresent(key, (k, v) -> value)).isEqualTo(value);
+      return oldValue;
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void expireTolerance_expiry_compute(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpiryWriteTolerance(cache, context, (key, value) -> {
+      var oldValue = requireNonNull(cache.getIfPresentQuietly(key));
+      assertThat(cache.compute(key, (k, v) -> value)).isEqualTo(value);
+      return oldValue;
+    });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void expireTolerance_expiry_merge(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    checkExpiryWriteTolerance(cache, context, (key, value) -> {
+      var oldValue = requireNonNull(cache.getIfPresentQuietly(key));
+      assertThat(cache.merge(key, value, (k, v) -> value)).isEqualTo(value);
+      return oldValue;
+    });
+  }
+
+  private static void checkExpiryWriteTolerance(BoundedLocalCache<Int, Int> cache,
+      CacheContext context, BiFunction<Int, Int, Int> write) {
+    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
+    assertThat(oldValue).isNull();
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
+
+    // If within the tolerance, treat the update as a read
+    oldValue = write.apply(Int.valueOf(1), Int.valueOf(2));
+    assertThat(oldValue).isEqualTo(1);
+    assertThat(cache.readBuffer.reads()).isEqualTo(0);
+    assertThat(cache.readBuffer.writes()).isEqualTo(1);
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
+
+    // If exceeds the tolerance, treat the update as a write
+    context.ticker().advance(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE + 1));
+    oldValue = write.apply(Int.valueOf(1), Int.valueOf(3));
+    assertThat(oldValue).isEqualTo(2);
+    assertThat(cache.readBuffer.reads()).isEqualTo(1);
+    assertThat(cache.readBuffer.writes()).isEqualTo(1);
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(4);
+
+    // If the expiration time reduces by more than the tolerance, treat the update as a write
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
+    oldValue = write.apply(Int.valueOf(1), Int.valueOf(4));
+    assertThat(oldValue).isEqualTo(3);
+    assertThat(cache.readBuffer.reads()).isEqualTo(1);
+    assertThat(cache.readBuffer.writes()).isEqualTo(1);
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(6);
+
+    // If the expiration time increases by more than the tolerance, treat the update as a write
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Expire.FOREVER.timeNanos());
+    oldValue = write.apply(Int.valueOf(1), Int.valueOf(4));
+    assertThat(oldValue).isEqualTo(4);
+    assertThat(cache.readBuffer.reads()).isEqualTo(1);
+    assertThat(cache.readBuffer.writes()).isEqualTo(1);
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(8);
   }
 
   @Test(dataProvider = "caches")
