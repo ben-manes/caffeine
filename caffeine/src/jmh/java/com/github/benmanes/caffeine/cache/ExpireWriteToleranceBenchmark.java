@@ -93,7 +93,7 @@ public class ExpireWriteToleranceBenchmark {
           .build();
       map = cache.asMap();
     } else {
-      throw new AssertionError("Unknown computingType: " + mapType);
+      throw new AssertionError("Unknown mapType: " + mapType);
     }
 
     ints = new Integer[SIZE];
