@@ -8,6 +8,6 @@ allprojects {
   version(
     major = 3, // incompatible API changes
     minor = 2, // backwards-compatible additions
-    patch = 0, // backwards-compatible bug fixes
+    patch = 1, // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty("release"))
 }
