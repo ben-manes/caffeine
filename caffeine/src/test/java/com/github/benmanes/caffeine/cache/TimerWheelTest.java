@@ -108,6 +108,18 @@ public final class TimerWheelTest {
     checkTimerWheel(timerWheel, duration);
   }
 
+  @Test
+  public void findBucket_expired() {
+    var timerWheel = new TimerWheel<Long, Long>();
+    var clock = ThreadLocalRandom.current().nextLong();
+    var duration = ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, 0);
+
+    timerWheel.nanos = clock;
+    var expected = timerWheel.findBucket(clock);
+    var bucket = timerWheel.findBucket(clock + duration);
+    assertThat(bucket).isSameInstanceAs(expected);
+  }
+
   @Test(dataProvider = "clock")
   public void advance(long clock) {
     ArgumentCaptor<Node<Long, Long>> captor = ArgumentCaptor.captor();

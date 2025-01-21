@@ -31,6 +31,8 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.google.common.base.Predicates.in;
+import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -136,11 +138,90 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void getIfPresent_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    assertThat(cache.getIfPresent(context.absentKey())).isEqualTo(context.absentValue());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry()).expireAfterRead(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  public void get(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void get_absent(LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    var value = cache.get(context.absentKey());
+    assertThat(value).isNotNull();
+
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void get_absent_expired(LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    assertThat(cache.get(context.absentKey())).isEqualTo(context.absentKey().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void get_present(LoadingCache<Int, Int> cache, CacheContext context) {
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
 
+    verify(context.expiry()).expireAfterRead(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void get_present_expired(LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    assertThat(cache.get(context.absentKey())).isEqualTo(context.absentValue());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
     verify(context.expiry()).expireAfterRead(any(), any(), anyLong(), anyLong());
     verifyNoMoreInteractions(context.expiry());
   }
@@ -156,6 +237,31 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
+      loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE})
+  public void getAll_present_expired(LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    assertThat(cache.getAll(context.firstMiddleLastKeys()))
+        .containsExactlyEntriesIn(Maps.toMap(context.firstMiddleLastKeys(),
+            key -> requireNonNull(context.original().get(key))));
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(Maps.toMap(context.firstMiddleLastKeys(), Int::negate))
+        .exclusively();
+    assertThat(cache).containsExactlyEntriesIn(Maps.filterKeys(
+        context.original(), not(in(context.firstMiddleLastKeys()))));
+
+    verify(context.expiry(), times(context.firstMiddleLastKeys().size()))
+        .expireAfterRead(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO,
       loader = {Loader.IDENTITY, Loader.BULK_IDENTITY})
   public void getAll_absent(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -168,6 +274,27 @@ public final class ExpireAfterVarTest {
       verify(context.expiry(), times(context.absent().size()))
           .expireAfterUpdate(any(), any(), anyLong(), anyLong());
     }
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO,
+      loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE})
+  public void getAll_absent_expired(LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    assertThat(cache.getAll(context.absentKeys())).containsExactlyEntriesIn(context.absent());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absent())
+        .exclusively();
+    assertThat(cache).isEmpty();
+
+    verify(context.expiry(), times(context.absent().size()))
+        .expireAfterCreate(any(), any(), anyLong());
     verifyNoMoreInteractions(context.expiry());
   }
 
@@ -225,6 +352,25 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void put_insert_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.put(context.absentKey(), context.absentValue());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE,
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
@@ -247,6 +393,31 @@ public final class ExpireAfterVarTest {
     expected.put(context.firstKey(), context.absentValue());
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(expected).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  public void put_replace_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.put(context.absentKey(), context.absentValue().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.absentKey(), context.absentValue());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue().negate());
+    assertThat(context).removalNotifications().hasSize(2);
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
   }
 
   @Test(dataProvider = "caches")
@@ -289,6 +460,31 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  public void replace_updated_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().replace(context.absentKey(), context.absentValue().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.absentKey(), context.absentValue());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue().negate());
+    assertThat(context).removalNotifications().hasSize(2);
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void replace_expiryFails(Map<Int, Int> map, CacheContext context) {
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
@@ -327,6 +523,32 @@ public final class ExpireAfterVarTest {
 
     context.cleanUp();
     assertThat(map).isExhaustivelyEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  public void replaceConditionally_updated_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().replace(context.absentKey(),
+        context.absentValue(), context.absentValue().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.absentKey(), context.absentValue());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue().negate());
+    assertThat(context).removalNotifications().hasSize(2);
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
   }
 
   @Test(dataProvider = "caches")
@@ -616,6 +838,25 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void computeIfAbsent_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().computeIfAbsent(context.absentKey(), key -> context.absentValue());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void computeIfAbsent_expiryFails(Map<Int, Int> map, CacheContext context) {
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
@@ -673,6 +914,32 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void computeIfPresent_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().computeIfPresent(context.absentKey(), (k, v) -> context.absentValue().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.absentKey(), context.absentValue());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue().negate());
+    assertThat(context).removalNotifications().hasSize(2);
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void computeIfPresent_expiryFails(Map<Int, Int> map, CacheContext context) {
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
@@ -715,6 +982,25 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void compute_absent_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().compute(context.absentKey(), (k, v) -> context.absentValue());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void compute_present_differentValue(Map<Int, Int> map, CacheContext context) {
     map.compute(context.firstKey(), (key, value) -> context.absentValue());
@@ -726,6 +1012,32 @@ public final class ExpireAfterVarTest {
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void compute_present_sameInstance(Map<Int, Int> map, CacheContext context) {
     map.compute(context.firstKey(), (key, value) -> value);
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void compute_present_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().compute(context.absentKey(), (k, v) -> context.absentValue().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.absentKey(), context.absentValue());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue().negate());
+    assertThat(context).removalNotifications().hasSize(2);
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
     verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     verifyNoMoreInteractions(context.expiry());
   }
@@ -746,6 +1058,26 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void merge_absent_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().merge(context.absentKey(), context.absentValue(),
+        (k, v) -> context.absentValue().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void merge_present_differentValue(Map<Int, Int> map, CacheContext context) {
     map.merge(context.firstKey(), context.absentKey(), (key, value) -> context.absentValue());
@@ -762,6 +1094,33 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void merge_present_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().merge(context.absentKey(), context.absentValue(),
+        (k, v) -> context.absentValue().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.absentKey(), context.absentValue());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue().negate());
+    assertThat(context).removalNotifications().hasSize(2);
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
   public void refresh_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.refresh(context.absentKey()).join();
@@ -770,6 +1129,25 @@ public final class ExpireAfterVarTest {
     if (context.isAsync()) {
       verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     }
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void refresh_absent_expired(LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.refresh(context.absentKey());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentKey().negate())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
     verifyNoMoreInteractions(context.expiry());
   }
 
@@ -795,6 +1173,32 @@ public final class ExpireAfterVarTest {
   public void refresh_present(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.refresh(context.firstKey()).join();
 
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void refresh_present_expired(LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.refresh(context.absentKey());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.absentKey(), context.absentValue());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentKey().negate());
+    assertThat(context).removalNotifications().hasSize(2);
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
     verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     verifyNoMoreInteractions(context.expiry());
   }
@@ -1056,6 +1460,25 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void putIfAbsent_insert_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().putIfAbsent(context.absentKey(), context.absentValue());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE,
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
@@ -1072,6 +1495,30 @@ public final class ExpireAfterVarTest {
     context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  public void putIfAbsent_present_expired(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MIN_VALUE);
+    cache.asMap().putIfAbsent(context.absentKey(), context.absentKey().negate());
+
+    context.ticker().advance(Duration.ofSeconds(2));
+    context.cleanUp();
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
+    assertThat(cache).isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry()).expireAfterRead(any(), any(), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
   }
 
   /* --------------- Policy: put --------------- */

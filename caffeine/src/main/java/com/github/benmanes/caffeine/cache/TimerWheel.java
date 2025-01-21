@@ -204,8 +204,12 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @return the sentinel at the head of the bucket
    */
   @SuppressWarnings("Varifier")
-  Node<K, V> findBucket(long time) {
-    long duration = time - nanos;
+  Node<K, V> findBucket(@Var long time) {
+    long duration = Math.max(0L, time - nanos);
+    if (duration <= 0L) {
+      time = nanos;
+    }
+
     int length = wheel.length - 1;
     for (int i = 0; i < length; i++) {
       if (duration < SPANS[i + 1]) {

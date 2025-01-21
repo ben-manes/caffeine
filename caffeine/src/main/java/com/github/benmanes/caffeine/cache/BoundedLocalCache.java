@@ -1430,7 +1430,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   long expireAfterCreate(@Nullable K key, @Nullable V value,
       Expiry<? super K, ? super V> expiry, long now) {
     if (expiresVariable() && (key != null) && (value != null)) {
-      long duration = expiry.expireAfterCreate(key, value, now);
+      long duration = Math.max(0L, expiry.expireAfterCreate(key, value, now));
       return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
     }
     return 0L;
@@ -1450,7 +1450,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Nullable V value, Expiry<? super K, ? super V> expiry, long now) {
     if (expiresVariable() && (key != null) && (value != null)) {
       long currentDuration = Math.max(1, node.getVariableTime() - now);
-      long duration = expiry.expireAfterUpdate(key, value, now, currentDuration);
+      long duration = Math.max(0L, expiry.expireAfterUpdate(key, value, now, currentDuration));
       return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
     }
     return 0L;
@@ -1469,8 +1469,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   long expireAfterRead(Node<K, V> node, @Nullable K key,
       @Nullable V value, Expiry<K, V> expiry, long now) {
     if (expiresVariable() && (key != null) && (value != null)) {
-      long currentDuration = Math.max(1, node.getVariableTime() - now);
-      long duration = expiry.expireAfterRead(key, value, now, currentDuration);
+      long currentDuration = Math.max(0L, node.getVariableTime() - now);
+      long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
       return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
     }
     return 0L;
@@ -1498,7 +1498,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
-    long duration = expiry.expireAfterRead(key, value, now, currentDuration);
+    long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
     if (duration != currentDuration) {
       long expirationTime = isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
       node.casVariableTime(variableTime, expirationTime);
