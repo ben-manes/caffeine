@@ -1,5 +1,5 @@
 name: examples
-permissions: read-all
+permissions: {}
 on: [ push, pull_request ]
 
 env:
@@ -9,6 +9,8 @@ env:
 jobs:
   examples:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
@@ -32,7 +34,10 @@ jobs:
             repo1.maven.org:443
             services.gradle.org:443
             www.graalvm.org:443
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Setup Gradle
         uses: ./.github/actions/run-gradle
         with:

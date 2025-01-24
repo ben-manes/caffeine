@@ -61,7 +61,6 @@ public final class Issue193Test {
     return f;
   };
 
-
   /** This ensures that any outstanding async loading is completed as well */
   private long loadGet(AsyncLoadingCache<String, Long> cache, String key) {
     CompletableFuture<Long> future = cache.get(key);

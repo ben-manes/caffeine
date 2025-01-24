@@ -30,24 +30,29 @@ runs:
   using: composite
   steps:
     - name: Read Gradle JDK toolchain version
+      id: gradle_toolchain
       shell: bash
       run: |
         toolchainVersion=$(grep -oP '(?<=^toolchainVersion=).*' gradle/gradle-daemon-jvm.properties)
-        echo "toolchainVersion=${toolchainVersion}" >> $GITHUB_ENV
-    - name: Set up JDK ${{ env.toolchainVersion }}
+        echo "version=${toolchainVersion}" >> $GITHUB_OUTPUT
+    - name: Set up JDK ${{ steps.gradle_toolchain.outputs.version }}
       uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b # v4.6.0
       with:
-        java-version: ${{ env.toolchainVersion }}
+        java-version: ${{ steps.gradle_toolchain.outputs.version }}
         distribution: temurin
     - name: Prepare JDK toolchain
+      id: java_toolchain
+      env:
+        INPUTS_JAVA: ${{ inputs.java }}
+        INPUTS_GRAAL: ${{ inputs.graal }}
       shell: bash
       run: |
-        if [[ "${{ inputs.java }}" == "GraalVM" ]]; then
-          echo "JAVA_VENDOR=GraalVM Community" >> $GITHUB_ENV
-          echo "JAVA_VERSION=${{ inputs.graal }}" >> $GITHUB_ENV
+        if [[ "$INPUTS_JAVA" == "GraalVM" ]]; then
+          echo "vendor=GraalVM Community" >> $GITHUB_OUTPUT
+          echo "version=$INPUTS_GRAAL" >> $GITHUB_OUTPUT
         else
-          echo "JAVA_VENDOR=Adoptium" >> $GITHUB_ENV
-          echo "JAVA_VERSION=${{ inputs.java }}" >> $GITHUB_ENV
+          echo "vendor=Adoptium" >> $GITHUB_OUTPUT
+          echo "version=$INPUTS_JAVA" >> $GITHUB_OUTPUT
         fi
     - name: Set up JDK
       uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b # v4.6.0
@@ -57,15 +62,18 @@ runs:
           (inputs.early-access == inputs.java && format('{0}-ea', inputs.java) || inputs.java) }}
         distribution: ${{ inputs.java == 'GraalVM' && 'graalvm' || 'temurin' }}
     - name: Prepare JDK ${{ inputs.java }}
+      id: prepare_java
+      env:
+        INPUTS_JAVA: ${{ inputs.java }}
+        JDK_EA: ${{ inputs.early-access == inputs.java }}
       shell: bash
       run: |
-        if [[ "${{ inputs.java }}" == "GraalVM" ]]; then
-          echo "GRAALVM_HOME=$JAVA_HOME" >> $GITHUB_ENV
+        if [[ "$INPUTS_JAVA" == "GraalVM" ]]; then
+          echo "graalvm_home=$JAVA_HOME" >> $GITHUB_OUTPUT
         fi
-        echo "JDK_CI=$JAVA_HOME" >> $GITHUB_ENV
-        echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
-        echo "JAVA_TOOL_OPTIONS=-Dorg.gradle.workers.max=$((2 * $(nproc)))" >> $GITHUB_ENV
-        echo "ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download=false" >> $GITHUB_ENV
+        echo "early_access=$JDK_EA" >> $GITHUB_OUTPUT
+        echo "java_home=$JAVA_HOME" >> $GITHUB_OUTPUT
+        echo "tool_options=-Dorg.gradle.workers.max=$((2 * $(nproc)))" >> $GITHUB_OUTPUT
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
       with:
@@ -79,14 +87,25 @@ runs:
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}
+      env:
+        INPUTS_ARGUMENTS: ${{ inputs.arguments }}
+        INPUTS_ATTEMPT_DELAY: ${{ inputs.attempt-delay }}
+        INPUTS_ATTEMPT_LIMIT: ${{ inputs.attempt-limit }}
+        JDK_CI: ${{ steps.prepare_java.outputs.java_home }}
+        JDK_EA: ${{ steps.prepare_java.outputs.early_access }}
+        JAVA_VENDOR: ${{ steps.java_toolchain.outputs.vendor }}
+        JAVA_VERSION: ${{ steps.java_toolchain.outputs.version }}
+        JAVA_TOOL_OPTIONS: ${{ steps.prepare_java.tool_options }}
+        GRAALVM_HOME: ${{ steps.prepare_java.outputs.graalvm_home }}
+        ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: false
       shell: bash
       run: |
         echo "::add-matcher::.github/problem-matcher.json"
-        for ((i=1; i<=${{ inputs.attempt-limit }}; i++)); do
-          ./gradlew --no-problems-report $(echo "${{ inputs.arguments }}" | tr -d '\n') && break
-          if [ $i -lt ${{ inputs.attempt-limit }} ]; then
-            echo "Attempt $i failed. Retrying in ${{ inputs.attempt-delay }} seconds..."
-            sleep ${{ inputs.attempt-delay }}
+        for ((i=1; i<=$INPUTS_ATTEMPT_LIMIT; i++)); do
+          ./gradlew --no-problems-report $(echo "$INPUTS_ARGUMENTS" | tr -d '\n') && break
+          if [ $i -lt $INPUTS_ATTEMPT_LIMIT ]; then
+            echo "Attempt $i failed. Retrying in $INPUTS_ATTEMPT_DELAY seconds..."
+            sleep $INPUTS_ATTEMPT_DELAY
           else
             echo "All attempts failed."
             exit 1

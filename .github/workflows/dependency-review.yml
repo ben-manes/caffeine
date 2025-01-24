@@ -1,5 +1,5 @@
 name: Dependency Review
-permissions: read-all
+permissions: {}
 on: [pull_request]
 
 jobs:
@@ -18,8 +18,10 @@ jobs:
             api.deps.dev:443
             api.github.com:443
             github.com:443
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Dependency Review
         uses: actions/dependency-review-action@3b139cfc5fae8b618d3eae3675e383bb1769c019 # v4.5.0
         with:

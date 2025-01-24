@@ -1,11 +1,13 @@
 name: Validate Gradle Wrapper
 on: [push, pull_request]
-permissions: read-all
+permissions: {}
 
 jobs:
   validation:
     name: Validation
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
@@ -17,5 +19,8 @@ jobs:
             downloads.gradle-dn.com:443
             github.com:443
             services.gradle.org:443
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: gradle/actions/wrapper-validation@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2

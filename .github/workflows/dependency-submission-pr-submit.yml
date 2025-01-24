@@ -1,5 +1,5 @@
 name: Generate and save dependency graph
-permissions: read-all
+permissions: {}
 on: [ pull_request ]
 
 env:
@@ -31,7 +31,10 @@ jobs:
             repo.maven.apache.org:443
             repo1.maven.org:443
             services.gradle.org:443
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@7a6d8a8234af8eb26422e24e3006232cccaa061b # v4.6.0
         with:

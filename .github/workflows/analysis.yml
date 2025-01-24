@@ -1,5 +1,5 @@
 name: analysis
-permissions: read-all
+permissions: {}
 on: [ push, pull_request ]
 
 env:
@@ -22,6 +22,8 @@ env:
 jobs:
   forbiddenApis:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       JAVA_VERSION: 23
     steps:
@@ -31,7 +33,10 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Forbidden Apis
         uses: ./.github/actions/run-gradle
         with:
@@ -41,6 +46,8 @@ jobs:
 
   pmd:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       JAVA_VERSION: 23
     steps:
@@ -50,7 +57,10 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Pmd
         uses: ./.github/actions/run-gradle
         with:
@@ -60,6 +70,8 @@ jobs:
 
   spotbugs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       JAVA_VERSION: 23
     steps:
@@ -69,7 +81,10 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Spotbugs
         uses: ./.github/actions/run-gradle
         with:

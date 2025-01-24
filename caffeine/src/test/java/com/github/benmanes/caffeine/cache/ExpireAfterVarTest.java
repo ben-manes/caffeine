@@ -260,7 +260,6 @@ public final class ExpireAfterVarTest {
     verifyNoMoreInteractions(context.expiry());
   }
 
-
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO,
       loader = {Loader.IDENTITY, Loader.BULK_IDENTITY})

@@ -1,5 +1,5 @@
 name: Semgrep
-permissions: read-all
+permissions: {}
 on:
   pull_request: {}
   push:
@@ -17,7 +17,10 @@ jobs:
       # Incompatible with Harden Runner
       image: returntocorp/semgrep
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - run: semgrep scan --sarif --output=results.sarif
         env:
           SEMGREP_RULES: >-
@@ -31,7 +34,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@d68b2d4edb4189fd2a5366ac14e72027bd4b37dd # v3.28.2
+        uses: github/codeql-action/upload-sarif@f6091c0113d1dcf9b98e269ee48e8a7e51b7bdd4 # v3.28.5
         if: steps.check_files.outputs.files_exists == 'true'
         continue-on-error: true
         with:

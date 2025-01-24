@@ -1,5 +1,5 @@
 name: Retrieve and submit dependency graph
-permissions: read-all
+permissions: {}
 on:
   workflow_run:
     workflows: ['Generate and save dependency graph']

@@ -1,5 +1,5 @@
 name: benchmarks
-permissions: read-all
+permissions: {}
 on: [ push, pull_request ]
 
 env:
@@ -9,6 +9,8 @@ env:
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         java: [ 11, 21, 25, GraalVM ]
@@ -39,7 +41,10 @@ jobs:
             raw.githubusercontent.com:443
             services.gradle.org:443
             www.graalvm.org:443
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Compute JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
