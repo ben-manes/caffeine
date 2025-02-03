@@ -144,6 +144,7 @@ import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLogger;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
@@ -2630,7 +2631,8 @@ public final class BoundedLocalCacheTest {
     key.increment();
 
     eviction.setMaximum(0);
-    assertThat(Map.copyOf(cache)).isEmpty();
+    var copy = ImmutableMap.copyOf(cache);
+    assertThat(copy).isEmpty();
     assertThat(context).notifications().isEmpty();
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
@@ -2659,7 +2661,8 @@ public final class BoundedLocalCacheTest {
     context.ticker().advance(Duration.ofDays(1));
     cache.cleanUp();
 
-    assertThat(Map.copyOf(cache)).isEmpty();
+    var copy = ImmutableMap.copyOf(cache);
+    assertThat(copy).isEmpty();
     assertThat(context).notifications().isEmpty();
     assertThat(cache.estimatedSize()).isEqualTo(1);
 
@@ -2681,7 +2684,8 @@ public final class BoundedLocalCacheTest {
     key.increment();
 
     cache.clear();
-    assertThat(Map.copyOf(cache)).isEmpty();
+    var copy = ImmutableMap.copyOf(cache);
+    assertThat(copy).isEmpty();
     assertThat(context).notifications().isEmpty();
     assertThat(cache.estimatedSize()).isEqualTo(1);
 

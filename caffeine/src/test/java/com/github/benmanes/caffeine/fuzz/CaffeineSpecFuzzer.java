@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.fuzz;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.code_intelligence.jazzer.junit.DictionaryEntries;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import com.code_intelligence.jazzer.mutation.annotation.NotNull;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
@@ -29,6 +30,8 @@ public final class CaffeineSpecFuzzer {
   // These tests require the environment variable JAZZER_FUZZ=1 to try new input arguments
 
   @FuzzTest(maxDuration = "5m")
+  @DictionaryEntries({"expireAfterAccess", "expireAfterWrite", "initialCapacity", "maximumSize",
+      "maximumWeight", "recordStats", "refreshAfterWrite", "softValues", "weakKeys", "weakValues"})
   public void parse(@NotNull String specification) {
     try {
       assertThat(CaffeineSpec.parse(specification)).isNotNull();

@@ -36,13 +36,13 @@ dependencies {
   testImplementation(libs.ycsb) {
     isTransitive = false
   }
+  testImplementation(libs.jazzer)
   testImplementation(libs.jctools)
   testImplementation(libs.mockito)
   testImplementation(libs.picocli)
   testImplementation(libs.lincheck)
   testImplementation(libs.commons.lang3)
   testImplementation(libs.guava.testlib)
-  testImplementation(libs.bundles.jazzer)
   testImplementation(libs.bundles.awaitility)
   testImplementation(libs.bundles.slf4j.test)
   testImplementation(libs.commons.collections4)

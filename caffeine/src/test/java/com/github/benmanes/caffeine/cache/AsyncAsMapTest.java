@@ -73,6 +73,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
@@ -1387,9 +1388,10 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("unlikely-arg-type")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void equals(AsyncCache<Int, Int> cache, CacheContext context) {
-    var map = Map.copyOf(cache.asMap());
+    var map = ImmutableMap.copyOf(cache.asMap());
     assertThat(cache.asMap().equals(map)).isTrue();
     assertThat(map.equals(cache.asMap())).isTrue();
 
@@ -1408,7 +1410,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void hashCode(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.asMap().hashCode()).isEqualTo(Map.copyOf(cache.asMap()).hashCode());
+    assertThat(cache.asMap().hashCode()).isEqualTo(ImmutableMap.copyOf(cache.asMap()).hashCode());
   }
 
   @CheckNoStats
@@ -1453,8 +1455,8 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void toString(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(parseToString(cache.asMap()))
-        .containsExactlyEntriesIn(parseToString(Map.copyOf(cache.asMap())));
+    var copy = ImmutableMap.copyOf(cache.asMap());
+    assertThat(parseToString(cache.asMap())).containsExactlyEntriesIn(parseToString(copy));
   }
 
   private static Map<String, String> parseToString(Map<Int, CompletableFuture<Int>> map) {
@@ -2508,7 +2510,8 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
   public void entrySet_removeAll_all(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.asMap().entrySet().removeAll(Map.copyOf(cache.asMap()).entrySet())).isTrue();
+    assertThat(cache.asMap().entrySet().removeAll(
+        ImmutableMap.copyOf(cache.asMap()).entrySet())).isTrue();
     assertThat(cache).isEmpty();
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.original()).exclusively();
@@ -2721,7 +2724,8 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
   public void entrySet_retainAll_all(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.asMap().entrySet().retainAll(Map.copyOf(cache.asMap()).entrySet())).isFalse();
+    assertThat(cache.asMap().entrySet().retainAll(
+        ImmutableMap.copyOf(cache.asMap()).entrySet())).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
     assertThat(context).removalNotifications().isEmpty();
   }

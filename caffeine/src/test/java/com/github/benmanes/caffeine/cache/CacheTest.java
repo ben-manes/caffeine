@@ -824,9 +824,8 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL })
   public void invalidateAll_partial(Cache<Int, Int> cache, CacheContext context) {
-    var removals = cache.asMap().entrySet().stream()
-        .filter(entry -> ((entry.getKey().intValue() % 2) == 0))
-        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+    var removals = ImmutableMap.copyOf(Maps.filterKeys(
+        cache.asMap(), key -> (key.intValue() % 2) == 0));
     cache.invalidateAll(removals.keySet());
     assertThat(cache).hasSize(context.initialSize() - removals.size());
     assertThat(context).removalNotifications().withCause(EXPLICIT)

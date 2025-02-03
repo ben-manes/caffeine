@@ -99,6 +99,7 @@ fun disabledRules() = listOf(
   "ImmutableMapRules\\\$ImmutableMapOf\\d*",
   "ImmutableSetMultimapRules\\\$ImmutableSetMultimapBuilder",
   "ImmutableSetRules\\\$ImmutableSetOf\\d*",
+  "ImmutableTableRules\\\$ImmutableTableBuilder",
   "JUnitToAssertJRules",
   "MapRules",
   "NullRules\\\$RequireNonNullElse",

@@ -130,15 +130,15 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * An engineer fixing a regression could add their regression test here and
  * simultaneously test all other implementations.
  */
-@SuppressWarnings({"ClassIsInstance", "FieldCanBeFinal", "InvalidParam", "JdkObsolete",
-    "MultiVariableDeclaration", "NonFinalStaticField", "rawtypes", "ReferenceEquality",
-    "AlmostJavadoc", "BadInstanceof", "BoxedPrimitiveEquality", "CollectionIsEmpty",
-    "CollectionToArray", "CollectorMutability", "EmptyCatch", "IdentifierName",
-    "IdentityConversion", "IdentityHashMapBoxing", "IterableIsEmpty", "JUnitClassModifiers",
-    "JUnitMethodDeclaration", "LexicographicalAnnotationAttributeListing",
-    "ModifyingCollectionWithItself", "NonAtomicVolatileUpdate", "NonStaticImport", "NullAway",
-    "ParameterMissingNullable", "resource", "ReturnValueIgnored", "SelfEquals", "SystemOut",
-    "unchecked", "UndefinedEquals", "UnnecessaryFinal", "unused", "UnusedMethod"})
+@SuppressWarnings({"AlmostJavadoc", "BadInstanceof", "BoxedPrimitiveEquality", "ClassIsInstance",
+    "CollectionIsEmpty", "CollectionToArray", "CollectorMutability", "EmptyCatch",
+    "EntryIterableToImmutableMap", "FieldCanBeFinal", "IdentifierName", "IdentityConversion",
+    "IdentityHashMapBoxing", "InvalidParam", "IterableIsEmpty", "JdkObsolete",
+    "JUnitClassModifiers", "JUnitMethodDeclaration", "ModifyingCollectionWithItself",
+    "MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonFinalStaticField", "NonStaticImport",
+    "NullAway", "ParameterMissingNullable", "rawtypes", "ReferenceEquality", "resource",
+    "ReturnValueIgnored", "SelfEquals", "SystemOut", "unchecked", "UndefinedEquals",
+    "UnnecessaryFinal", "unused", "UnusedMethod"})
 public class MOAT {
     // Collections under test must not be initialized to contain this value,
     // and maps under test must not contain this value as a key.
@@ -1666,7 +1666,7 @@ public class MOAT {
         check(Arrays.equals(m1.entrySet().toArray(), m2.entrySet().toArray()));
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"rawtypes", "unchecked"})
     static void testNavigableMapRemovers(NavigableMap m)
     {
         final Map emptyMap = new HashMap();
