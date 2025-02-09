@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.impl;
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
 import org.cache2k.config.Cache2kConfig;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
 
@@ -34,7 +35,7 @@ public final class Cache2k<K, V> implements BasicCache<K, V> {
   }
 
   @Override
-  public V get(K key) {
+  public @Nullable V get(K key) {
     return cache.peek(key);
   }
 
