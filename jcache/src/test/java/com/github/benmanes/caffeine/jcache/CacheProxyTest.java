@@ -156,7 +156,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   @Test
   public void getWriteExpireTime_exception() {
     when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
-    long time = jcache.getWriteexpireTimeMillis(true);
+    long time = jcache.getWriteExpireTimeMillis(true);
     assertThat(time).isEqualTo(Long.MIN_VALUE);
   }
 

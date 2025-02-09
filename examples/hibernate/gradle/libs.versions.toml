@@ -2,7 +2,7 @@
 caffeine = "3.2.0"
 h2 = "2.3.232"
 hibernate = "7.0.0.Beta3"
-junit = "5.12.0-M1"
+junit = "5.12.0-RC1"
 log4j2 = "3.0.0-beta2"
 truth = "1.4.4"
 versions = "0.52.0"

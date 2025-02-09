@@ -36,7 +36,7 @@ final class MpmcArrayBuffer<E> extends ReadBuffer<E> {
   }
 
   @Override
-  public void drainTo(Consumer<E> consumer) {
+  protected void drainTo(Consumer<E> consumer) {
     reads += queue.drain(consumer);
   }
 

@@ -68,7 +68,7 @@ final class TicketBuffer<E> extends ReadBuffer<E> {
   }
 
   @Override
-  public void drainTo(Consumer<E> consumer) {
+  protected void drainTo(Consumer<E> consumer) {
     for (int i = 0; i < BUFFER_SIZE; i++) {
       int index = (int) (readCounter & BUFFER_MASK);
       AtomicReference<Object> slot = buffer[index];

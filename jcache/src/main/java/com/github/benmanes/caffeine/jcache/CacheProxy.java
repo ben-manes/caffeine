@@ -370,7 +370,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         statistics.recordEvictions(1L);
         expirable = null;
       }
-      @Var long expireTimeMillis = getWriteexpireTimeMillis((expirable == null));
+      @Var long expireTimeMillis = getWriteExpireTimeMillis((expirable == null));
       if ((expirable != null) && (expireTimeMillis == Long.MIN_VALUE)) {
         expireTimeMillis = expirable.getExpireTimeMillis();
       }
@@ -497,7 +497,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
       absent[0] = true;
       V copy = copyOf(value);
-      long expireTimeMillis = getWriteexpireTimeMillis(/* created= */ true);
+      long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
       if (expireTimeMillis == 0) {
         // The TCK asserts that a create is not published in
         // CacheExpiryTest.expire_whenCreated_CreatedExpiryPolicy()
@@ -652,7 +652,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (oldValue.equals(expirable.get())) {
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, expirable.get()));
         dispatcher.publishUpdated(this, key, expirable.get(), copyOf(newValue));
-        @Var long expireTimeMillis = getWriteexpireTimeMillis(/* created= */ false);
+        @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {
           expireTimeMillis = expirable.getExpireTimeMillis();
         }
@@ -746,7 +746,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
 
       publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
-      @Var long expireTimeMillis = getWriteexpireTimeMillis(/* created= */ false);
+      @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
       if (expireTimeMillis == Long.MIN_VALUE) {
         expireTimeMillis = expirable.getExpireTimeMillis();
       }
@@ -891,13 +891,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       case LOADED:
         statistics.recordPuts(1L);
         dispatcher.publishCreated(this, entry.getKey(), entry.getValue());
-        return new Expirable<>(entry.getValue(), getWriteexpireTimeMillis(/* created= */ true));
+        return new Expirable<>(entry.getValue(), getWriteExpireTimeMillis(/* created= */ true));
       case UPDATED: {
         statistics.recordPuts(1L);
         publishToCacheWriter(writer::write, () -> entry);
         requireNonNull(expirable, "Expected a previous value but was null");
         dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), entry.getValue());
-        @Var long expireTimeMillis = getWriteexpireTimeMillis(/* created= */ false);
+        @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {
           expireTimeMillis = expirable.getExpireTimeMillis();
         }
@@ -1197,7 +1197,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return the time when the entry will expire, zero if it should expire immediately,
    *         Long.MIN_VALUE if it should not be changed, or Long.MAX_VALUE if eternal
    */
-  protected final long getWriteexpireTimeMillis(boolean created) {
+  protected final long getWriteExpireTimeMillis(boolean created) {
     try {
       Duration duration = created ? expiry.getExpiryForCreation() : expiry.getExpiryForUpdate();
       if (duration == null) {

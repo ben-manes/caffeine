@@ -56,7 +56,7 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
 
   @Override
   @SuppressWarnings("unchecked")
-  public void drainTo(Consumer<E> consumer) {
+  protected void drainTo(Consumer<E> consumer) {
     long head = readCounter;
     long tail = writeCounterOpaque();
     long size = (tail - head);
