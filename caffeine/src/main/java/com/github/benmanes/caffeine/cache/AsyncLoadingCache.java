@@ -31,7 +31,9 @@ import org.jspecify.annotations.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the type of keys maintained by this cache
- * @param <V> the type of mapped values
+ * @param <V> the type of mapped values. If and only if a cache declares a nullable value type, then
+ *     its loader may return null values, and the cache may return {@code Future} instances with
+ *     null values. (Null values are still never <i>stored</i> in the cache.)
  */
 @NullMarked
 public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncCache<K, V> {

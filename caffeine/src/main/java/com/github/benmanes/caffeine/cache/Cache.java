@@ -36,7 +36,9 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the type of keys maintained by this cache
- * @param <V> the type of mapped values
+ * @param <V> the type of mapped values. If and only if a cache declares a nullable value type, then
+ *     its loader may return null values, and the cache will return those null values to callers.
+ *     (Null values are still never <i>stored</i> in the cache.)
  */
 @NullMarked
 public interface Cache<K, V extends @Nullable Object> {
