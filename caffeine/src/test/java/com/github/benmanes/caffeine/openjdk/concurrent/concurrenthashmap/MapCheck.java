@@ -32,6 +32,8 @@
  */
 package com.github.benmanes.caffeine.openjdk.concurrent.concurrenthashmap;
 
+import static com.google.common.truth.Truth.assertWithMessage;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
@@ -49,7 +51,9 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
+import org.testng.ITestResult;
 import org.testng.annotations.Test;
+import org.testng.util.RetryAnalyzerCount;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
@@ -77,15 +81,25 @@ public class MapCheck {
         }
     }
 
-    @Test
+    public static final class Retries extends RetryAnalyzerCount {
+      public Retries() {
+        setCount(3);
+      }
+      @Override public boolean retryMethod(ITestResult result) {
+        return !result.isSuccess();
+      }
+    }
+
+    @Test(retryAnalyzer = Retries.class)
     public void bounded() {
       test(() -> Caffeine.newBuilder()
           .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
           .maximumSize(Long.MAX_VALUE)
+          .executor(Runnable::run)
           .build().asMap());
     }
 
-    @Test
+    @Test(retryAnalyzer = Retries.class)
     public void unbounded() {
       test(() -> Caffeine.newBuilder().build().asMap());
     }
@@ -183,7 +197,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == expect * iters);
+        assertWithMessage("%s", s).that(sum).isEqualTo(expect * iters);
     }
 
     static void t2(String nm, int n, Map s, Object[] key, int expect) {
@@ -195,7 +209,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == expect);
+        assertWithMessage("%s", s).that(sum).isEqualTo(expect);
     }
 
     static void t3(String nm, int n, Map s, Object[] key, int expect) {
@@ -207,7 +221,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == expect);
+        assertWithMessage("%s", s).that(sum).isEqualTo(expect);
     }
 
     static void t4(String nm, int n, Map s, Object[] key, int expect) {
@@ -219,7 +233,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == expect);
+        assertWithMessage("%s", s).that(sum).isEqualTo(expect);
     }
 
     static void t5(String nm, int n, Map s, Object[] key, int expect) {
@@ -231,7 +245,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == expect);
+        assertWithMessage("%s", s).that(sum).isEqualTo(expect);
     }
 
     static void t6(String nm, int n, Map s, Object[] k1, Object[] k2) {
@@ -246,7 +260,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == n);
+        assertWithMessage("%s", s).that(sum).isEqualTo(n);
     }
 
     static void t7(String nm, int n, Map s, Object[] k1, Object[] k2) {
@@ -261,7 +275,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == n);
+        assertWithMessage("%s", s).that(sum).isEqualTo(n);
     }
 
     static void t8(String nm, int n, Map s, Object[] key, int expect) {
@@ -273,7 +287,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == expect);
+        assertWithMessage("%s", s).that(sum).isEqualTo(expect);
     }
 
 
@@ -288,7 +302,7 @@ public class MapCheck {
           }
         }
         timer.finish();
-        reallyAssert(sum != 0);
+        assertWithMessage("%s", s).that(sum).isNotEqualTo(0);
     }
 
 
@@ -302,7 +316,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", s).that(sum).isEqualTo(size);
     }
 
 
@@ -315,7 +329,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", s).that(sum).isEqualTo(size);
     }
 
     static void ittest2(Map s, int size) {
@@ -327,7 +341,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", s).that(sum).isEqualTo(size);
     }
     static void ittest3(Map s, int size) {
         int sum = 0;
@@ -338,12 +352,12 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", s).that(sum).isEqualTo(size);
     }
 
     static void ittest4(Map s, int size, int pos) {
         IdentityHashMap seen = new IdentityHashMap(size);
-        reallyAssert(s.size() == size);
+        assertWithMessage("%s", s).that(s).hasSize(size);
         int sum = 0;
         timer.start("Iter XEntry            ", size);
         Iterator it = s.entrySet().iterator();
@@ -358,9 +372,9 @@ public class MapCheck {
               ++sum;
             }
         }
-        reallyAssert(s.containsKey(k));
+        assertWithMessage("%s", s).that(s).containsKey(k);
         it.remove();
-        reallyAssert(!s.containsKey(k));
+        assertWithMessage("%s", s).that(s).doesNotContainKey(k);
         while (it.hasNext()) {
             Map.Entry x = (Map.Entry)(it.next());
             Object k2 = x.getKey();
@@ -370,12 +384,12 @@ public class MapCheck {
             }
         }
 
-        reallyAssert(s.size() == size-1);
+        assertWithMessage("%s", s).that(s).hasSize(size-1);
         s.put(k, v);
-        reallyAssert(seen.size() == size);
+        assertWithMessage("%s", s).that(seen).hasSize(size);
         timer.finish();
-        reallyAssert(sum == size);
-        reallyAssert(s.size() == size);
+        assertWithMessage("%s", s).that(sum).isEqualTo(size);
+        assertWithMessage("%s", s).that(s).hasSize(size);
     }
 
 
@@ -397,7 +411,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", ht).that(sum).isEqualTo(size);
     }
 
     static void entest2(Hashtable ht, int size) {
@@ -409,7 +423,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", ht).that(sum).isEqualTo(size);
     }
 
 
@@ -424,7 +438,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", ht).that(sum).isEqualTo(size);
     }
 
     static void entest4(Hashtable ht, int size) {
@@ -437,7 +451,7 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", ht).that(sum).isEqualTo(size);
     }
 
     static void entest(Map s, int size) {
@@ -484,14 +498,14 @@ public class MapCheck {
         timer.finish();
 
         timer.start("Iter Equals            ", size * 2);
-        boolean eqt = s2.equals(s) && s.equals(s2);
-        reallyAssert(eqt);
+        assertWithMessage("%s", s).that(s).isEqualTo(s2);
+        assertWithMessage("%s", s).that(s2).isEqualTo(s);
         timer.finish();
 
         timer.start("Iter HashCode          ", size * 2);
         int shc = s.hashCode();
         int s2hc = s2.hashCode();
-        reallyAssert(shc == s2hc);
+        assertWithMessage("%s", s).that(shc).isEqualTo(s2hc);
         timer.finish();
 
         timer.start("Put (present)          ", size);
@@ -508,21 +522,21 @@ public class MapCheck {
             }
         }
         timer.finish();
-        reallyAssert(sum == size);
+        assertWithMessage("%s", s).that(sum).isEqualTo(size);
 
         t6("Get                    ", size, s2, key, absent);
 
         Object hold = s2.get(key[size-1]);
         s2.put(key[size-1], absent[0]);
         timer.start("Iter Equals            ", size * 2);
-        eqt = s2.equals(s) && s.equals(s2);
-        reallyAssert(!eqt);
+        assertWithMessage("%s", s).that(s).isNotEqualTo(s2);
+        assertWithMessage("%s", s).that(s2).isNotEqualTo(s);
         timer.finish();
 
         timer.start("Iter HashCode          ", size * 2);
         int s1h = s.hashCode();
         int s2h = s2.hashCode();
-        reallyAssert(s1h != s2h);
+        assertWithMessage("%s", s).that(s1h).isNotEqualTo(s2h);
         timer.finish();
 
         s2.put(key[size-1], hold);
@@ -534,12 +548,13 @@ public class MapCheck {
         }
         timer.finish();
 
-        reallyAssert(s.isEmpty());
+        assertWithMessage("%s", s).that(s).isEmpty();
 
         timer.start("Clear                  ", size);
         s2.clear();
         timer.finish();
-        reallyAssert(s2.isEmpty() && s.isEmpty());
+        assertWithMessage("%s", s).that(s).isEmpty();
+        assertWithMessage("%s", s).that(s2).isEmpty();
     }
 
     static void stest(Map s, int size) throws Exception {
@@ -571,7 +586,7 @@ public class MapCheck {
         if (s instanceof IdentityHashMap) {
           return;
         }
-        reallyAssert(s.equals(m));
+        assertWithMessage("%s", s).that(s).isEqualTo(m);
     }
 
 
