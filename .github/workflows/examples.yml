@@ -63,17 +63,11 @@ jobs:
       - name: Memory Overhead
         run: ./gradlew -q caffeine:memoryOverhead
       - name: Stresser (read)
-        run: >
-          timeout 1m ./gradlew -q caffeine:stress --workload=read
-          || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
+        run: ./gradlew -q caffeine:stress --workload=read --duration PT1M
       - name: Stresser (write)
-        run: >
-          timeout 1m ./gradlew -q caffeine:stress --workload=write
-          || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
+        run: ./gradlew -q caffeine:stress --workload=write --duration PT1M
       - name: Stresser (refresh)
-        run: >
-          timeout 1m ./gradlew -q caffeine:stress --workload=refresh
-          || ([[ $? -eq 124 ]] && echo "Timeout reached, but that's OK")
+        run: ./gradlew -q caffeine:stress --workload=refresh --duration PT1M
       - name: Write-behind (rxjava)
         working-directory: examples/write-behind-rxjava
         run: ./gradlew build

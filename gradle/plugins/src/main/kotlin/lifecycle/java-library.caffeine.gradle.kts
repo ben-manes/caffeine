@@ -18,19 +18,16 @@ dependencies {
   annotationProcessor(platform(libs.kotlin.bom))
 }
 
-val javaVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
-val javaVendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.matching(it) }
-val javaRuntimeVersion = maxOf(javaVersion, JavaLanguageVersion.of(21))
 java.toolchain {
-  languageVersion = javaVersion
-  vendor = javaVendor
+  languageVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
+  vendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.matching(it) }
 }
+val javaRuntimeVersion: Provider<JavaLanguageVersion> =
+  java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(21)) }
 
 tasks.withType<JavaCompile>().configureEach {
-  inputs.property("javaVendor", javaVendor.toString())
-  sourceCompatibility = javaVersion.toString()
-  targetCompatibility = javaVersion.toString()
-  options.release = javaVersion.asInt()
+  inputs.property("javaVendor", java.toolchain.vendor.get().toString())
+  options.release = java.toolchain.languageVersion.get().asInt()
 
   javaCompiler = javaToolchains.compilerFor {
     // jdk 17+ is required by compiler plugins, e.g. error-prone
@@ -44,7 +41,7 @@ tasks.withType<JavaCompile>().configureEach {
     if (isCI()) {
       compilerArgs.add("-Werror")
     }
-    if (javaVersion.canCompileOrRun(21)) {
+    if (java.toolchain.languageVersion.get().canCompileOrRun(21)) {
       compilerArgs.add("-proc:full")
     }
     encoding = "UTF-8"
@@ -80,10 +77,10 @@ tasks.jar {
     properties.empty()
     bnd(mapOf(
       "Bundle-License" to "https://www.apache.org/licenses/LICENSE-2.0",
+      "Build-Jdk-Spec" to java.toolchain.languageVersion.get(),
       "Implementation-Title" to project.description,
       "Bundle-Description" to project.description,
       "Implementation-Version" to version,
-      "Build-Jdk-Spec" to javaVersion,
       "-noextraheaders" to true,
       "-reproducible" to true,
       "-snapshot" to "SNAPSHOT"))
@@ -96,14 +93,14 @@ tasks.withType<Javadoc>().configureEach {
     use()
     quiet()
     noTimestamp()
-    addStringOption("-release", javaVersion.toString())
+    addStringOption("-release", java.toolchain.languageVersion.get().toString())
     addStringOption("-link-modularity-mismatch", "info")
     links(
       "https://jspecify.dev/docs/api/",
       "https://errorprone.info/api/latest/",
       "https://lightbend.github.io/config/latest/api/",
-      "https://docs.oracle.com/en/java/javase/$javaVersion/docs/api/",
-      "https://guava.dev/releases/${libs.versions.guava.get()}/api/docs/")
+      "https://guava.dev/releases/${libs.versions.guava.get()}/api/docs/",
+      "https://docs.oracle.com/en/java/javase/${java.toolchain.languageVersion.get()}/docs/api/")
 
     if (project != project(":caffeine")) {
       linksOffline("https://static.javadoc.io/$group/caffeine/$version/",

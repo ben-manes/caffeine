@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Set;
 
@@ -40,28 +41,28 @@ public final class GuavaPolicy implements Policy {
 
   public GuavaPolicy(Config config, Set<Characteristic> characteristics) {
     policyStats = new PolicyStats(name());
+    var builder = CacheBuilder.newBuilder();
     var settings = new BasicSettings(config);
-    CacheBuilder<Long, AccessEvent> builder = CacheBuilder.newBuilder()
-        .removalListener(notification -> policyStats.recordEviction());
     if (characteristics.contains(WEIGHTED)) {
       builder.maximumWeight(settings.maximumSize());
-      builder.weigher((key, value) -> value.weight());
+      builder.weigher((Long key, AccessEvent value) -> value.weight());
     } else {
       builder.maximumSize(settings.maximumSize());
     }
-    cache = builder.build();
+    cache = builder.recordStats().build();
   }
 
   @Override
   public void record(AccessEvent event) {
-    AccessEvent value = cache.getIfPresent(event.key());
+    Long key = event.longKey();
+    var value = cache.getIfPresent(key);
     if (value == null) {
-      cache.put(event.key(), event);
+      cache.put(key, event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
       if (event.weight() != value.weight()) {
-        cache.put(event.key(), event);
+        cache.put(key, event);
       }
     }
   }
@@ -69,5 +70,13 @@ public final class GuavaPolicy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
+  }
+
+  @Override
+  public void finished() {
+    var stats = cache.stats();
+    policyStats.addEvictions(stats.evictionCount());
+    checkState(policyStats.hitCount() == stats.hitCount());
+    checkState(policyStats.missCount() == stats.missCount());
   }
 }

@@ -24,8 +24,8 @@ import java.util.EnumSet;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.CaseFormat;
@@ -48,7 +48,7 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @PolicySpec(name = "product.Hazelcast")
-public final class HazelcastPolicy implements KeyOnlyPolicy {
+public final class HazelcastPolicy implements Policy {
   private final NearCache<Long, Boolean> cache;
   private final PolicyStats policyStats;
   private final int maximumSize;
@@ -78,8 +78,9 @@ public final class HazelcastPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(long key) {
-    Object value = cache.get(key);
+  public void record(AccessEvent event) {
+    Long key = event.longKey();
+    var value = cache.get(key);
     if (value == null) {
       if (cache.size() == maximumSize) {
         policyStats.recordEviction();

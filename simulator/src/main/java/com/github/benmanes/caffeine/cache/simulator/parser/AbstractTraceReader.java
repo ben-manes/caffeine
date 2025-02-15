@@ -67,27 +67,27 @@ public abstract class AbstractTraceReader implements TraceReader {
 
   @SuppressWarnings("PMD.CloseResource")
   protected BufferedInputStream readInput(InputStream input) {
-    @Var BufferedInputStream buffered = null;
+    @Var BufferedInputStream bufferedStream = null;
     try {
-      buffered = new BufferedInputStream(input, BUFFER_SIZE);
+      bufferedStream = new BufferedInputStream(input, BUFFER_SIZE);
       var extractors = List.<UnaryOperator<InputStream>>of(
           AbstractTraceReader::tryXz, AbstractTraceReader::tryCompressed, this::tryArchived);
       for (var extractor : extractors) {
-        buffered.mark(100);
-        InputStream next = extractor.apply(buffered);
+        bufferedStream.mark(100);
+        InputStream next = extractor.apply(bufferedStream);
         if (next == null) {
-          buffered.reset();
-        } else if (next instanceof BufferedInputStream) {
-          buffered = (BufferedInputStream) next;
+          bufferedStream.reset();
+        } else if (next instanceof BufferedInputStream buffered) {
+          bufferedStream = buffered;
         } else {
-          buffered = new BufferedInputStream(next, BUFFER_SIZE);
+          bufferedStream = new BufferedInputStream(next, BUFFER_SIZE);
         }
       }
-      return buffered;
+      return bufferedStream;
     } catch (Throwable t) {
       try {
-        if (buffered != null) {
-          buffered.close();
+        if (bufferedStream != null) {
+          bufferedStream.close();
         }
       } catch (IOException e) {
         t.addSuppressed(e);

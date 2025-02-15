@@ -390,27 +390,19 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     }
 
     public boolean isInStack(StackType stackType) {
-      switch (stackType) {
-        case S:
-          return isInS;
-        case Q:
-          return isInQ;
-        case NR:
-          return isInNR;
-      }
-      throw new IllegalArgumentException();
+      return switch (stackType) {
+        case S -> isInS;
+        case Q -> isInQ;
+        case NR -> isInNR;
+      };
     }
 
     public boolean isStackTop(StackType stackType) {
-      switch (stackType) {
-        case S:
-          return (headS.nextS == this);
-        case Q:
-          return (headQ.nextQ == this);
-        case NR:
-          return (headNR.nextNR == this);
-      }
-      throw new IllegalArgumentException();
+      return switch (stackType) {
+        case S -> (headS.nextS == this);
+        case Q -> (headQ.nextQ == this);
+        case NR -> (headNR.nextNR == this);
+      };
     }
 
     public void moveToTop(StackType stackType) {
@@ -419,7 +411,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
       }
 
       switch (stackType) {
-        case S: {
+        case S -> {
           Node next = requireNonNull(headS.nextS);
           headS.nextS = this;
           next.prevS = this;
@@ -427,9 +419,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           this.prevS = headS;
           isInS = true;
           sizeS++;
-          return;
         }
-        case Q: {
+        case Q -> {
           Node next = requireNonNull(headQ.nextQ);
           headQ.nextQ = this;
           next.prevQ = this;
@@ -437,9 +428,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           this.prevQ = headQ;
           isInQ = true;
           sizeQ++;
-          return;
         }
-        case NR: {
+        case NR -> {
           Node next = requireNonNull(headNR.nextNR);
           headNR.nextNR = this;
           next.prevNR = this;
@@ -447,17 +437,15 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           this.prevNR = headNR;
           isInNR = true;
           sizeNR++;
-          return;
         }
       }
-      throw new IllegalArgumentException();
     }
 
     public void removeFrom(StackType stackType) {
       checkState(isInStack(stackType));
 
       switch (stackType) {
-        case S: {
+        case S -> {
           requireNonNull(prevS);
           requireNonNull(nextS);
 
@@ -466,9 +454,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           prevS = nextS = null;
           isInS = false;
           sizeS--;
-          return;
         }
-        case Q: {
+        case Q -> {
           requireNonNull(prevQ);
           requireNonNull(nextQ);
 
@@ -477,9 +464,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           prevQ = nextQ = null;
           isInQ = false;
           sizeQ--;
-          return;
         }
-        case NR: {
+        case NR -> {
           requireNonNull(prevNR);
           requireNonNull(nextNR);
 
@@ -488,10 +474,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
           prevNR = nextNR = null;
           isInNR = false;
           sizeNR--;
-          return;
         }
       }
-      throw new IllegalArgumentException();
     }
 
     @Override

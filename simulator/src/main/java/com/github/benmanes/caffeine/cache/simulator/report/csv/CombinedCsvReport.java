@@ -116,7 +116,7 @@ public final class CombinedCsvReport implements Runnable {
     }
     @Override
     public boolean equals(@Nullable Object o) {
-      return (o instanceof Label) && (compareTo((Label) o) == 0);
+      return (o instanceof Label label) && (compareTo(label) == 0);
     }
     @Override
     public int hashCode() {

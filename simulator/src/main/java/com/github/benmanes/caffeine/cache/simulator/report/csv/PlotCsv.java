@@ -28,6 +28,7 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 
@@ -43,8 +44,6 @@ import org.jfree.data.Range;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 
-import com.google.auto.value.AutoValue;
-import com.google.auto.value.AutoValue.CopyAnnotations;
 import com.google.common.base.Strings;
 import com.google.errorprone.annotations.Var;
 import com.univocity.parsers.csv.CsvParser;
@@ -211,86 +210,55 @@ public final class PlotCsv implements Runnable {
     return new Color(rgb | a, /* hasalpha= */  true);
   }
 
-  @AutoValue
-  public abstract static class ChartStyle {
-    abstract RectangleInsets axisOffset();
-
-    abstract Color title();
-    abstract Color subtitle();
-    abstract Color background();
-    abstract Color axisLine();
-    abstract Color axisLabel();
-    abstract Color gridLine();
-    abstract Color gridBand();
-    abstract Color legend();
-    abstract Color label();
-
-    abstract Font extraLargeFont();
-    abstract Font regularFont();
-    abstract Font largeFont();
-
-    abstract float brightness();
-    abstract float saturation();
-    abstract float alpha();
-
-    public static ChartStyle forColors(Color background, Color content, Color grid) {
-      return new AutoValue_PlotCsv_ChartStyle.Builder()
-          .axisOffset(new RectangleInsets(20, 20, 20, 20))
-          .extraLargeFont(new Font("Helvetica", BOLD, 18))
-          .regularFont(new Font("Helvetica", PLAIN, 12))
-          .largeFont(new Font("Helvetica", BOLD, 14))
-          .background(background)
-          .axisLabel(content)
-          .axisLine(content)
-          .subtitle(content)
-          .brightness(0.6f)
-          .saturation(0.7f)
-          .legend(content)
-          .label(content)
-          .title(content)
-          .gridLine(grid)
-          .gridBand(grid)
-          .alpha(0.8f)
-          .build();
+  public record ChartStyle(RectangleInsets axisOffset, Font extraLargeFont, Font regularFont,
+      Font largeFont, Color background, Color axisLabel, Color axisLine, Color subtitle,
+      float brightness, float saturation, Color legend, Color label, Color title, Color gridLine,
+      Color gridBand, float alpha) implements Serializable {
+    public ChartStyle {
+      requireNonNull(extraLargeFont);
+      requireNonNull(regularFont);
+      requireNonNull(axisOffset);
+      requireNonNull(background);
+      requireNonNull(largeFont);
+      requireNonNull(axisLabel);
+      requireNonNull(axisLine);
+      requireNonNull(gridLine);
+      requireNonNull(gridBand);
+      requireNonNull(subtitle);
+      requireNonNull(legend);
+      requireNonNull(label);
+      requireNonNull(title);
     }
-
+    public static ChartStyle forColors(Color background, Color content, Color grid) {
+      return new ChartStyle(
+          /* axisOffset= */ new RectangleInsets(20, 20, 20, 20),
+          /* extraLargeFont= */ new Font("Helvetica", BOLD, 18),
+          /* regularFont= */ new Font("Helvetica", PLAIN, 12),
+          /* largeFont= */ new Font("Helvetica", BOLD, 14),
+          /* background= */ background,
+          /* axisLabel= */ content,
+          /* axisLine= */ content,
+          /* subtitle= */ content,
+          /* brightness= */ 0.6f,
+          /* saturation= */ 0.7f,
+          /* legend= */ content,
+          /* label= */ content,
+          /* title= */ content,
+          /* gridLine= */ grid,
+          /* gridBand= */ grid,
+          /* alpha= */ 0.8f);
+    }
     public static ChartStyle light() {
       var grid = new Color(0xeee8d5);
       var content = new Color(0x585858);
       var background = new Color(0xfdf6e3);
       return ChartStyle.forColors(background, content, grid);
     }
-
     public static ChartStyle dark() {
       var grid = new Color(0x073642);
       var content = new Color(0x93a1a1);
       var background = new Color(0x002b36);
       return ChartStyle.forColors(background, content, grid);
-    }
-
-    @AutoValue.Builder @CopyAnnotations
-    public abstract static class Builder {
-      abstract Builder axisOffset(RectangleInsets axisOffset);
-
-      abstract Builder title(Color title);
-      abstract Builder subtitle(Color subtitle);
-      abstract Builder background(Color background);
-      abstract Builder axisLine(Color axisLine);
-      abstract Builder axisLabel(Color axisLabel);
-      abstract Builder gridLine(Color gridLine);
-      abstract Builder gridBand(Color gridBand);
-      abstract Builder legend(Color legend);
-      abstract Builder label(Color label);
-
-      abstract Builder extraLargeFont(Font extraLargeFont);
-      abstract Builder regularFont(Font regularFont);
-      abstract Builder largeFont(Font largeFont);
-
-      abstract Builder brightness(float brightness);
-      abstract Builder saturation(float saturation);
-      abstract Builder alpha(float alpha);
-
-      abstract ChartStyle build();
     }
   }
 }

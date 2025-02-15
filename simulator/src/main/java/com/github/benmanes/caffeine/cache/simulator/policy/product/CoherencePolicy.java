@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.EnumSet;
@@ -29,6 +30,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.CaseFormat;
 import com.google.errorprone.annotations.Var;
+import com.tangosol.net.cache.CacheStatistics;
 import com.tangosol.net.cache.ConfigurableCacheMap.UnitCalculator;
 import com.tangosol.net.cache.LocalCache;
 import com.tangosol.util.MapEvent;
@@ -45,6 +47,7 @@ import com.typesafe.config.Config;
 public final class CoherencePolicy implements Policy {
   private final Map<Long, AccessEvent> map;
   private final PolicyStats policyStats;
+  private final CacheStatistics stats;
 
   @SuppressWarnings("unchecked")
   public CoherencePolicy(CoherenceSettings settings, Eviction policy) {
@@ -64,6 +67,7 @@ public final class CoherencePolicy implements Policy {
     cache.setEvictionType(policy.type);
     cache.addMapListener(new CoherenceListener());
     cache.setUnitCalculator(new AccessEventCalculator());
+    stats = cache.getCacheStatistics();
     map = cache;
   }
 
@@ -77,14 +81,15 @@ public final class CoherencePolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    var value = map.get(event.key());
+    Long key = event.longKey();
+    var value = map.get(key);
     if (value == null) {
-      map.put(event.key(), event);
+      map.put(key, event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
       if (event.weight() != value.weight()) {
-        map.put(event.key(), event);
+        map.put(key, event);
       }
     }
   }
@@ -92,6 +97,12 @@ public final class CoherencePolicy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
+  }
+
+  @Override
+  public void finished() {
+    checkState(policyStats.hitCount() == stats.getCacheHits());
+    checkState(policyStats.missCount() == stats.getCacheMisses());
   }
 
   private final class CoherenceListener implements MapListener<Object, Object> {

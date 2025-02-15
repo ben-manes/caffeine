@@ -207,13 +207,7 @@ public final class GdsfPolicy implements Policy {
 
     @Override
     public boolean equals(@Nullable Object o) {
-      if (o == this) {
-        return true;
-      } else if (!(o instanceof Node)) {
-        return false;
-      }
-      var node = (Node) o;
-      return compareTo(node) == 0;
+      return (o instanceof Node node) && (compareTo(node) == 0);
     }
 
     @Override

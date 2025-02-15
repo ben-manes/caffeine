@@ -6,7 +6,6 @@ import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
   id("application")
-  id("auto-value.caffeine")
   id("java-library.caffeine")
 }
 
@@ -45,6 +44,10 @@ dependencies {
 
 application {
   mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulator"
+}
+
+java.toolchain {
+  languageVersion = maxOf(languageVersion.get(), JavaLanguageVersion.of(21))
 }
 
 forbiddenApis {

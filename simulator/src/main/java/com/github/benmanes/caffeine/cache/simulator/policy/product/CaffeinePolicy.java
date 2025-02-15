@@ -16,14 +16,12 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Set;
 
-import org.jspecify.annotations.Nullable;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -45,30 +43,28 @@ public final class CaffeinePolicy implements Policy {
   public CaffeinePolicy(Config config, Set<Characteristic> characteristics) {
     policyStats = new PolicyStats(name());
     var settings = new BasicSettings(config);
-    Caffeine<Long, AccessEvent> builder = Caffeine.newBuilder()
-        .removalListener((@Nullable Long key, @Nullable AccessEvent value, RemovalCause cause) ->
-            policyStats.recordEviction())
-        .executor(Runnable::run);
+    var builder = Caffeine.newBuilder().executor(Runnable::run);
     if (characteristics.contains(WEIGHTED)) {
       builder.maximumWeight(settings.maximumSize());
-      builder.weigher((key, value) -> value.weight());
+      builder.weigher((Long key, AccessEvent value) -> value.weight());
     } else {
       builder.maximumSize(settings.maximumSize());
       builder.initialCapacity(Ints.saturatedCast(settings.maximumSize()));
     }
-    cache = builder.build();
+    cache = builder.recordStats().build();
   }
 
   @Override
   public void record(AccessEvent event) {
-    AccessEvent value = cache.getIfPresent(event.key());
+    Long key = event.longKey();
+    var value = cache.getIfPresent(key);
     if (value == null) {
-      cache.put(event.key(), event);
+      cache.put(key, event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
       if (event.weight() != value.weight()) {
-        cache.put(event.key(), event);
+        cache.put(key, event);
       }
     }
   }
@@ -76,5 +72,13 @@ public final class CaffeinePolicy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
+  }
+
+  @Override
+  public void finished() {
+    var stats = cache.stats();
+    policyStats.addEvictions(stats.evictionCount());
+    checkState(policyStats.hitCount() == stats.hitCount());
+    checkState(policyStats.missCount() == stats.missCount());
   }
 }

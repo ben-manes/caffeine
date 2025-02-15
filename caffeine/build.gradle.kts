@@ -368,13 +368,16 @@ idea.module {
 abstract class Stress : JavaExec() {
   @Input @Option(option = "workload", description = "The workload type")
   var operation: String = ""
+  @Input @Option(option = "duration", description = "The run duration (e.g. PT30S)")
+  var duration: String = ""
 
   @TaskAction
   override fun exec() {
     if (operation.isNotEmpty()) {
       args("--workload", operation)
-    } else {
-      args("--help")
+    }
+    if (duration.isNotEmpty()) {
+      args("--duration", duration)
     }
     super.exec()
   }

@@ -333,26 +333,23 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
       }
 
       switch (stackType) {
-        case FILTER: {
+        case FILTER -> {
           Node next = requireNonNull(headFilter.nextFilter);
           headFilter.nextFilter = this;
           next.prevFilter = this;
           this.nextFilter = next;
           this.prevFilter = headFilter;
           isInFilter = true;
-          return;
         }
-        case MAIN: {
+        case MAIN -> {
           Node next = requireNonNull(headMain.nextMain);
           headMain.nextMain = this;
           next.prevMain = this;
           this.nextMain = next;
           this.prevMain = headMain;
           isInMain = true;
-          return;
         }
       }
-      throw new IllegalArgumentException();
     }
 
     @SuppressWarnings("PMD.TooFewBranchesForSwitch")
@@ -360,7 +357,7 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
       checkState(isInStack(stackType));
 
       switch (stackType) {
-        case FILTER: {
+        case FILTER -> {
           requireNonNull(prevFilter);
           requireNonNull(nextFilter);
 
@@ -368,9 +365,8 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
           nextFilter.prevFilter = prevFilter;
           prevFilter = nextFilter = null;
           isInFilter = false;
-          return;
         }
-        case MAIN: {
+        case MAIN -> {
           requireNonNull(prevMain);
           requireNonNull(nextMain);
 
@@ -378,10 +374,8 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
           nextMain.prevMain = prevMain;
           prevMain = nextMain = null;
           isInMain = false;
-          return;
         }
       }
-      throw new IllegalArgumentException();
     }
 
     @Override

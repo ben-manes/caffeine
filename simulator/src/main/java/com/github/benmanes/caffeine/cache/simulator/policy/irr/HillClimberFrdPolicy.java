@@ -364,26 +364,23 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
       }
 
       switch (stackType) {
-        case FILTER: {
+        case FILTER -> {
           Node next = requireNonNull(headFilter.nextFilter);
           headFilter.nextFilter = this;
           next.prevFilter = this;
           this.nextFilter = next;
           this.prevFilter = headFilter;
           isInFilter = true;
-          break;
         }
-        case MAIN: {
+        case MAIN -> {
           Node next = requireNonNull(headMain.nextMain);
           headMain.nextMain = this;
           next.prevMain = this;
           this.nextMain = next;
           this.prevMain = headMain;
           isInMain = true;
-          break;
         }
       }
-      throw new IllegalArgumentException();
     }
 
     @SuppressWarnings("PMD.TooFewBranchesForSwitch")
@@ -391,7 +388,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
       checkState(isInStack(stackType));
 
       switch (stackType) {
-        case FILTER: {
+        case FILTER -> {
           requireNonNull(prevFilter);
           requireNonNull(nextFilter);
 
@@ -399,9 +396,8 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
           nextFilter.prevFilter = prevFilter;
           prevFilter = nextFilter = null;
           isInFilter = false;
-          break;
         }
-        case MAIN: {
+        case MAIN -> {
           requireNonNull(prevMain);
           requireNonNull(nextMain);
 
@@ -409,10 +405,8 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
           nextMain.prevMain = prevMain;
           prevMain = nextMain = null;
           isInMain = false;
-          break;
         }
       }
-      throw new IllegalArgumentException();
     }
 
     @Override

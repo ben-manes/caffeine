@@ -65,19 +65,19 @@ public final class Stochastic extends AbstractClimber {
     double previousMissRate = (1 - previousHitRate);
     double gradient = currentMissRate - previousMissRate;
 
-    switch (acceleration) {
-      case NONE:
-        return stepSize * gradient;
-      case MOMENTUM:
+    return switch (acceleration) {
+      case NONE -> stepSize * gradient;
+      case MOMENTUM -> {
         velocity = (beta * velocity) + (1 - beta) * gradient;
-        return stepSize * velocity;
-      case NESTEROV:
+        yield stepSize * velocity;
+      }
+      case NESTEROV -> {
         // http://cs231n.github.io/neural-networks-3/#sgd
         double previousVelocity = velocity;
         velocity = (beta * velocity) + stepSize * gradient;
-        return -(beta * previousVelocity) + ((1 + beta) * velocity);
-    }
-    throw new IllegalStateException("Unknown acceleration type: " + acceleration);
+        yield -(beta * previousVelocity) + ((1 + beta) * velocity);
+      }
+    };
   }
 
   enum Acceleration { NONE, MOMENTUM, NESTEROV }

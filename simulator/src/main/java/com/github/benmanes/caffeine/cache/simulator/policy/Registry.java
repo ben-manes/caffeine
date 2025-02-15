@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.util.Arrays;
@@ -76,7 +77,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.Wind
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.S3FifoPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
-import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
@@ -145,7 +145,7 @@ public final class Registry {
   @SuppressWarnings("InconsistentOverloads")
   private void registerMany(String name, Class<? extends Policy> policyClass,
       Function<Config, Set<Policy>> creator) {
-    factories.put(name.trim().toLowerCase(US), Factory.of(policyClass, creator));
+    factories.put(name.trim().toLowerCase(US), new Factory(policyClass, creator));
   }
 
   private void registerOptimal() {
@@ -235,20 +235,16 @@ public final class Registry {
     registerMany(ExpiringMapPolicy.class, ExpiringMapPolicy::policies);
   }
 
-  @AutoValue
-  abstract static class Factory {
-    abstract Class<? extends Policy> policyClass();
-    abstract Function<Config, Set<Policy>> creator();
-
+  record Factory(Class<? extends Policy> policyClass, Function<Config, Set<Policy>> creator) {
+    Factory {
+      requireNonNull(policyClass);
+      requireNonNull(creator);
+    }
     ImmutableSet<Characteristic> characteristics() {
       var policySpec = policyClass().getAnnotation(PolicySpec.class);
       return (policySpec == null)
           ? ImmutableSet.of()
           : Sets.immutableEnumSet(Arrays.asList(policySpec.characteristics()));
-    }
-
-    static Factory of(Class<? extends Policy> policyClass, Function<Config, Set<Policy>> creator) {
-      return new AutoValue_Registry_Factory(policyClass, creator);
     }
   }
 }

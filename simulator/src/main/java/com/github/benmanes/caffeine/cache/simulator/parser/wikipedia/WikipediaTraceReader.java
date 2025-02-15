@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.wikipedia;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Objects;
 import java.util.stream.LongStream;
 
@@ -23,7 +25,6 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
-import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.Var;
@@ -42,8 +43,8 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
       "wiki/Special:Search", "w/query.php", "wiki/Talk:", "wiki/Special:AutoLogin",
       "Special:UserLogin", "w/api.php", "error:");
   private static final ImmutableList<Replacement> REPLACEMENTS = ImmutableList.of(
-      Replacement.of("%2F", "/"), Replacement.of("%20", " "),
-      Replacement.of("&amp;", "&"), Replacement.of("%3A", ":"));
+      new Replacement("%2F", "/"), new Replacement("%20", " "),
+      new Replacement("&amp;", "&"), new Replacement("%3A", ":"));
 
   public WikipediaTraceReader(String filePath) {
     super(filePath);
@@ -133,13 +134,10 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
     return true;
   }
 
-  @AutoValue
-  abstract static class Replacement {
-    abstract String search();
-    abstract String replace();
-
-    static Replacement of(String search, String replace) {
-      return new AutoValue_WikipediaTraceReader_Replacement(search, replace);
+  record Replacement(String search, String replace) {
+    Replacement {
+      requireNonNull(search);
+      requireNonNull(replace);
     }
   }
 }

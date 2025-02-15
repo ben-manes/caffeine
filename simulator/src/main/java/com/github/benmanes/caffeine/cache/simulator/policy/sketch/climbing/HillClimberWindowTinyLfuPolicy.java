@@ -145,19 +145,11 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   /** Moves or promotes as if necessary. */
   private void onHit(Node node) {
     requireNonNull(node.queue);
+    policyStats.recordHit();
     switch (node.queue) {
-      case WINDOW:
-        onWindowHit(node);
-        policyStats.recordHit();
-        return;
-      case PROBATION:
-        onProbationHit(node);
-        policyStats.recordHit();
-        return;
-      case PROTECTED:
-        onProtectedHit(node);
-        policyStats.recordHit();
-        return;
+      case WINDOW -> onWindowHit(node);
+      case PROBATION -> onProbationHit(node);
+      case PROTECTED -> onProtectedHit(node);
     }
   }
 

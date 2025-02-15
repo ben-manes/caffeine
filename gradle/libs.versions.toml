@@ -1,6 +1,5 @@
 [versions]
 asm = "9.7.1"
-auto-value = "1.11.0"
 awaitility = "4.2.2"
 bcel = "6.10.0"
 bnd = "7.1.0"
@@ -40,7 +39,7 @@ hamcrest = "3.0"
 hazelcast = "5.5.0"
 httpclient = "4.5.14"
 idea = "1.1.10"
-jackrabbit = "1.74.0"
+jackrabbit = "1.76.0"
 jackson = "2.18.2"
 jacoco = "0.8.12"
 jakarta-inject = "2.0.1"
@@ -82,15 +81,15 @@ pmd = "7.10.0"
 protobuf = "4.29.3"
 slf4j = "2.0.16"
 slf4j-test = "3.0.1"
-snakeyaml = "2.3"
+snakeyaml = "2.4"
 sigstore = "1.2.0"
 sonarqube = "6.0.1.5171"
 spotbugs = "4.9.1"
 spotbugs-contrib = "7.6.9"
-spotbugs-plugin = "6.1.4"
+spotbugs-plugin = "6.1.5"
 stream = "2.9.8"
 tcache = "2.0.1"
-testng = "7.10.2"
+testng = "7.11.0"
 truth = "1.4.4"
 univocity-parsers = "2.9.1"
 versions = "0.52.0"
@@ -101,8 +100,6 @@ zstd = "1.5.6-10"
 
 [libraries]
 asm-bom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }
-auto-value-annotations = { module = "com.google.auto.value:auto-value-annotations", version.ref = "auto-value" }
-auto-value-processor = { module = "com.google.auto.value:auto-value", version.ref = "auto-value" }
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 bcel = { module = "org.apache.bcel:bcel", version.ref = "bcel" }
 bouncycastle-jdk18on = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle-jdk18on" }

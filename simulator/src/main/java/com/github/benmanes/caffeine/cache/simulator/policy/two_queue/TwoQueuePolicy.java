@@ -96,11 +96,11 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     if (node != null) {
       requireNonNull(node.type);
       switch (node.type) {
-        case MAIN:
+        case MAIN -> {
           node.moveToTail(headMain);
           policyStats.recordHit();
-          return;
-        case OUT:
+        }
+        case OUT -> {
           node.remove();
           sizeOut--;
 
@@ -111,13 +111,11 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
           sizeMain++;
 
           policyStats.recordMiss();
-          return;
-        case IN:
+        }
+        case IN ->
           // do nothing
           policyStats.recordHit();
-          return;
       }
-      throw new IllegalStateException("Unknown type: " + node.type);
     } else {
       node = new Node(key);
       node.type = QueueType.IN;

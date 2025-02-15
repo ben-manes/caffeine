@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.stream.LongStream;
 
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.TraceSettings;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
@@ -46,32 +45,33 @@ public final class Synthetic {
   /** Returns a sequence of events based on the setting's distribution. */
   public static KeyOnlyTraceReader generate(TraceSettings settings) {
     int events = settings.synthetic().events();
-    switch (settings.synthetic().distribution().toLowerCase(US)) {
-      case "counter":
-        return counter(settings.synthetic().counter().start(), events);
-      case "repeating":
-        return repeating(settings.synthetic().repeating().items(), events);
-      case "uniform":
-        var uniform = settings.synthetic().uniform();
-        return uniform(uniform.lowerBound(), uniform.upperBound(), events);
-      case "exponential":
-        return exponential(settings.synthetic().exponential().mean(), events);
-      case "hotspot":
-        HotspotSettings hotspot = settings.synthetic().hotspot();
-        return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
+    return switch (settings.synthetic().distribution().toLowerCase(US)) {
+      case "counter" ->
+        counter(settings.synthetic().counter().start(), events);
+      case "repeating" ->
+        repeating(settings.synthetic().repeating().items(), events);
+      case "uniform" ->
+        uniform(settings.synthetic().uniform().lowerBound(),
+            settings.synthetic().uniform().upperBound(), events);
+      case "exponential" ->
+        exponential(settings.synthetic().exponential().mean(), events);
+      case "hotspot" -> {
+        var hotspot = settings.synthetic().hotspot();
+        yield hotspot(hotspot.lowerBound(), hotspot.upperBound(),
             hotspot.hotOpnFraction(), hotspot.hotsetFraction(), events);
-      case "zipfian":
-        return zipfian(settings.synthetic().zipfian().items(),
+      }
+      case "zipfian" ->
+        zipfian(settings.synthetic().zipfian().items(),
             settings.synthetic().zipfian().constant(), events);
-      case "scrambled-zipfian":
-        return scrambledZipfian(settings.synthetic().zipfian().items(),
+      case "scrambled-zipfian" ->
+        scrambledZipfian(settings.synthetic().zipfian().items(),
             settings.synthetic().zipfian().constant(), events);
-      case "skewed-zipfian-latest":
-        return skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
-      default:
+      case "skewed-zipfian-latest" ->
+        skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
+      default ->
         throw new IllegalStateException("Unknown distribution: "
             + settings.synthetic().distribution());
-    }
+    };
   }
 
   /**

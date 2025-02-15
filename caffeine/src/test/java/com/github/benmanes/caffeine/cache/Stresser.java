@@ -18,11 +18,14 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Locale.US;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -45,6 +48,7 @@ import picocli.CommandLine.Option;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("SystemOut")
 @Command(mixinStandardHelpOptions = true)
 public final class Stresser implements Runnable {
   private static final String[] STATUS =
@@ -58,26 +62,40 @@ public final class Stresser implements Runnable {
   @Option(names = "--workload", required = true,
       description = "The workload type: ${COMPLETION-CANDIDATES}")
   private Workload workload;
+  @Option(names = "--duration", required = false, description = "The run duration (e.g. PT30S)")
+  private Duration duration;
 
   private BoundedLocalCache<Integer, Integer> local;
   private LoadingCache<Integer, Integer> cache;
+  private ScheduledExecutorService scheduler;
   private Stopwatch stopwatch;
   private Integer[] ints;
 
   @Override
   public void run() {
-    initialize();
-    execute();
+    try {
+      initialize();
+      execute();
+    } finally {
+      scheduler.shutdown();
+    }
   }
 
-  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored"})
+  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored", "PMD.DoNotTerminateVM"})
   private void initialize() {
     var threadFactory = new ThreadFactoryBuilder()
         .setPriority(Thread.MAX_PRIORITY)
         .setDaemon(true)
         .build();
-    Executors.newSingleThreadScheduledExecutor(threadFactory)
-        .scheduleAtFixedRate(this::status, STATUS_INTERVAL, STATUS_INTERVAL, SECONDS);
+    scheduler = Executors.newSingleThreadScheduledExecutor(threadFactory);
+    scheduler.scheduleAtFixedRate(this::status, STATUS_INTERVAL, STATUS_INTERVAL, SECONDS);
+    if (duration != null) {
+      System.out.printf(US, "Executing for %s%n%n", duration);
+      scheduler.schedule(() -> {
+        System.out.println("Done");
+        System.exit(0);
+      }, duration.toNanos(), TimeUnit.NANOSECONDS);
+    }
     cache = Caffeine.newBuilder()
         .maximumSize(workload.maxEntries)
         .recordStats()
@@ -115,7 +133,6 @@ public final class Stresser implements Runnable {
     });
   }
 
-  @SuppressWarnings("SystemOut")
   private void status() {
     var evictionLock = local.evictionLock;
     int pendingWrites;

@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.CaseFormat;
@@ -38,7 +38,7 @@ import net.jodah.expiringmap.ExpiringMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @PolicySpec(name = "product.ExpiringMap")
-public final class ExpiringMapPolicy implements KeyOnlyPolicy {
+public final class ExpiringMapPolicy implements Policy {
   private final Map<Long, Boolean> cache;
   private final PolicyStats policyStats;
   private final int maximumSize;
@@ -61,7 +61,8 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent event) {
+    Long key = event.longKey();
     var value = cache.get(key);
     if (value == null) {
       if (cache.size() == maximumSize) {

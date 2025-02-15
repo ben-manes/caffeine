@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Set;
 import java.util.logging.Level;
@@ -24,6 +25,7 @@ import java.util.logging.Logger;
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
 import org.cache2k.event.CacheEntryEvictedListener;
+import org.cache2k.operation.CacheControl;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -53,7 +55,8 @@ public final class Cache2kPolicy implements Policy {
         (cache, entry) -> policyStats.recordEviction();
     var builder = Cache2kBuilder.of(Long.class, AccessEvent.class)
         .addListener(listener)
-        .strictEviction(true);
+        .strictEviction(true)
+        .eternal(true);
     if (characteristics.contains(WEIGHTED)) {
       builder.weigher((Long key, AccessEvent value) -> value.weight());
       builder.maximumWeight(settings.maximumSize());
@@ -65,14 +68,15 @@ public final class Cache2kPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    AccessEvent value = cache.peek(event.key());
+    Long key = event.longKey();
+    var value = cache.peek(key);
     if (value == null) {
-      cache.put(event.key(), event);
+      cache.put(key, event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
       if (event.weight() != value.weight()) {
-        cache.put(event.key(), event);
+        cache.put(key, event);
       }
     }
   }
@@ -85,5 +89,9 @@ public final class Cache2kPolicy implements Policy {
   @Override
   public void finished() {
     cache.close();
+    var stats = CacheControl.of(cache).sampleStatistics();
+    checkState(policyStats.missCount() == stats.getMissCount());
+    checkState(policyStats.evictionCount() == stats.getEvictedCount());
+    checkState(policyStats.hitCount() == stats.getGetCount() - stats.getMissCount());
   }
 }

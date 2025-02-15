@@ -18,11 +18,14 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.stream.LongStream;
 
 import org.jspecify.annotations.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
+import com.google.errorprone.annotations.Var;
 
 /**
  * The key and metadata for accessing a cache.
@@ -31,6 +34,10 @@ import com.google.errorprone.annotations.Immutable;
  */
 @Immutable
 public class AccessEvent {
+  private static final AtomicReferenceArray<Long> keys = new AtomicReferenceArray<>(
+      LongStream.range(0, 1 << 20).map(i -> 0L).boxed().toArray(Long[]::new));
+  private static final int mask = keys.length() - 1;
+
   private final long key;
 
   private AccessEvent(long key) {
@@ -40,6 +47,17 @@ public class AccessEvent {
   /** Returns the key. */
   public long key() {
     return key;
+  }
+
+  /** Returns the object key. */
+  public Long longKey() {
+    int index = Long.hashCode(key) & mask;
+    @Var Long longKey = keys.get(index);
+    if (longKey != key) {
+      longKey = key;
+      keys.set(index, longKey);
+    }
+    return longKey;
   }
 
   /** Returns the weight of the entry. */
@@ -64,13 +82,8 @@ public class AccessEvent {
 
   @Override
   public boolean equals(@Nullable Object o) {
-    if (o == this) {
-      return true;
-    } else if (!(o instanceof AccessEvent)) {
-      return false;
-    }
-    var event = (AccessEvent) o;
-    return (key() == event.key())
+    return (o instanceof AccessEvent event)
+        && (key() == event.key())
         && (weight() == event.weight())
         && (hitPenalty() == event.hitPenalty())
         && (missPenalty() == event.missPenalty());

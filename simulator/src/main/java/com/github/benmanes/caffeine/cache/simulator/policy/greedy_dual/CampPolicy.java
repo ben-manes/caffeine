@@ -220,13 +220,9 @@ public final class CampPolicy implements Policy {
 
     @Override
     public boolean equals(@Nullable Object o) {
-      if (this == o) {
-        return true;
-      } else if (!(o instanceof Sentinel)) {
-        return false;
-      }
-      var sentinel = (Sentinel) o;
-      return (cost == sentinel.cost) && (priority == sentinel.priority);
+      return (o instanceof Sentinel node)
+          && (priority == node.priority)
+          && (cost == node.cost);
     }
 
     @Override

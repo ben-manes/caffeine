@@ -15,14 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.EnumSet;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.CaseFormat;
@@ -37,7 +38,7 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @PolicySpec(name = "product.TCache")
-public final class TCachePolicy implements KeyOnlyPolicy {
+public final class TCachePolicy implements Policy {
   private final Cache<Long, Boolean> cache;
   private final PolicyStats policyStats;
   private final TCacheFactory factory;
@@ -61,8 +62,9 @@ public final class TCachePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(long key) {
-    Object value = cache.get(key);
+  public void record(AccessEvent event) {
+    Long key = event.longKey();
+    var value = cache.get(key);
     if (value == null) {
       policyStats.recordMiss();
       cache.put(key, Boolean.TRUE);
@@ -78,8 +80,12 @@ public final class TCachePolicy implements KeyOnlyPolicy {
 
   @Override
   public void finished() {
+    var stats = cache.statistics();
     factory.close();
-    policyStats.addEvictions(cache.statistics().getEvictionCount());
+
+    policyStats.addEvictions(stats.getEvictionCount());
+    checkState(policyStats.hitCount() == stats.getHitCount());
+    checkState(policyStats.missCount() == stats.getMissCount());
   }
 
   public static final class TCacheSettings extends BasicSettings {

@@ -22,12 +22,13 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.Var;
 
 import picocli.CommandLine;
@@ -91,7 +92,7 @@ public final class Rewriter implements Runnable {
   }
 
   private static String[] argumentsWithDefaults(String[] args) {
-    var params = Lists.newArrayList(args);
+    var params = new ArrayList<>(Arrays.asList(args));
     if (!params.contains("--inputFormat")) {
       @Var boolean found = false;
       @Var boolean defaultFormat = true;

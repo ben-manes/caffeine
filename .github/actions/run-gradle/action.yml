@@ -77,13 +77,14 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@94baf225fe0a508e581a564467443d0e2379123b # v4.3.0
       with:
-        add-job-summary: never
         cache-read-only: false
+        add-job-summary: on-failure
+        cache-overwrite-existing: true
         gradle-home-cache-strict-match: true
         gradle-home-cache-includes: |
           caches
-          wrapper
           notifications
+          wrapper/dists
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}

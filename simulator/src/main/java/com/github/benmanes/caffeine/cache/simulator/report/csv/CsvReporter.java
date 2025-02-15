@@ -65,10 +65,10 @@ public final class CsvReporter extends TextReporter {
     return Metrics.builder()
         .percentFormatter(value -> String.format(US, "%.2f", 100 * value))
         .doubleFormatter(value -> String.format(US, "%.2f", value))
-        .longFormatter(value -> String.format(US, "%d", value))
+        .longFormatter(Long::toString)
         .objectFormatter(object -> {
-          return (object instanceof Stopwatch)
-              ? Long.toString(((Stopwatch) object).elapsed(TimeUnit.MILLISECONDS))
+          return (object instanceof Stopwatch stopwatch)
+              ? Long.toString(stopwatch.elapsed(TimeUnit.MILLISECONDS))
               : object.toString();
         }).build();
   }

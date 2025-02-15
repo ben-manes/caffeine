@@ -86,22 +86,22 @@ public final class TinyLfu implements KeyOnlyAdmittor {
   /** Returns the frequency histogram. */
   private static Frequency makeSketch(BasicSettings settings) {
     String type = settings.tinyLfu().sketch();
-    switch (type.toLowerCase(US)) {
-      case "count-min-4": {
+    return switch (type.toLowerCase(US)) {
+      case "count-min-4" -> {
         String reset = settings.tinyLfu().countMin4().reset();
-        switch (reset.toLowerCase(US)) {
-          case "climber": return new ClimberResetCountMin4(settings.config());
-          case "periodic": return new PeriodicResetCountMin4(settings.config());
-          case "indicator": return new IndicatorResetCountMin4(settings.config());
-          case "incremental": return new IncrementalResetCountMin4(settings.config());
-          default: throw new IllegalStateException("Unknown reset type: " + reset);
-        }
+        yield switch (reset.toLowerCase(US)) {
+          case "climber" -> new ClimberResetCountMin4(settings.config());
+          case "periodic" -> new PeriodicResetCountMin4(settings.config());
+          case "indicator" -> new IndicatorResetCountMin4(settings.config());
+          case "incremental" -> new IncrementalResetCountMin4(settings.config());
+          default -> throw new IllegalStateException("Unknown reset type: " + reset);
+        };
       }
-      case "tiny-table": return new TinyCacheAdapter(settings.config());
-      case "count-min-64": return new CountMin64TinyLfu(settings.config());
-      case "perfect-table": return new PerfectFrequency(settings.config());
-      case "random-table": return new RandomRemovalFrequencyTable(settings.config());
-      default: throw new IllegalStateException("Unknown sketch type: " + type);
-    }
+      case "tiny-table" -> new TinyCacheAdapter(settings.config());
+      case "count-min-64" -> new CountMin64TinyLfu(settings.config());
+      case "perfect-table" -> new PerfectFrequency(settings.config());
+      case "random-table" -> new RandomRemovalFrequencyTable(settings.config());
+      default -> throw new IllegalStateException("Unknown sketch type: " + type);
+    };
   }
 }

@@ -206,7 +206,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   @SuppressWarnings("Varifier")
   Node<K, V> findBucket(@Var long time) {
     long duration = Math.max(0L, time - nanos);
-    if (duration <= 0L) {
+    if (duration == 0L) {
       time = nanos;
     }
 
