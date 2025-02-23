@@ -233,8 +233,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   }
 
   /** A function executed asynchronously after a bulk load completes. */
-  final class AsyncBulkCompleter<K, V>
-      implements BiFunction<Map<? extends K, ? extends V>, Throwable, Map<? extends K, ? extends V>> {
+  final class AsyncBulkCompleter<K, V> implements BiFunction<
+      Map<? extends K, ? extends V>, Throwable, Map<? extends K, ? extends V>> {
     private final LocalCache<K, CompletableFuture<V>> cache;
     @SuppressWarnings("ImmutableMemberCollection")
     private final Map<K, CompletableFuture<V>> proxies;
@@ -570,8 +570,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    public Map<K, V> getAll(Iterable<? extends K> keys,
-        Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
+    public Map<K, V> getAll(
+        Iterable<? extends K> keys,
+        Function<
+            ? super Set<? extends K>,
+            ? extends Map<? extends K, ? extends V>> mappingFunction) {
       return resolve(asyncCache().getAll(keys, mappingFunction));
     }
 

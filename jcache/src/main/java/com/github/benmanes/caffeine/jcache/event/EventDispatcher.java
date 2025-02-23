@@ -67,7 +67,9 @@ import com.google.errorprone.annotations.Var;
 public final class EventDispatcher<K, V> {
   static final Logger logger = System.getLogger(EventDispatcher.class.getName());
 
-  final ConcurrentMap<Registration<K, V>, ConcurrentMap<K, CompletableFuture<@Nullable Void>>> dispatchQueues;
+  final ConcurrentMap<
+      Registration<K, V>,
+      ConcurrentMap<K, CompletableFuture<@Nullable Void>>> dispatchQueues;
   final ThreadLocal<List<CompletableFuture<@Nullable Void>>> pending;
   final Executor executor;
 

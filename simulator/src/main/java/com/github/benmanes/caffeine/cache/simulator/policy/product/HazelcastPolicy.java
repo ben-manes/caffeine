@@ -82,9 +82,6 @@ public final class HazelcastPolicy implements Policy {
     Long key = event.longKey();
     var value = cache.get(key);
     if (value == null) {
-      if (cache.size() == maximumSize) {
-        policyStats.recordEviction();
-      }
       cache.put(key, /* keyData= */ null, Boolean.TRUE, /* valueDate= */ null);
       policyStats.recordMiss();
     } else {
@@ -102,10 +99,10 @@ public final class HazelcastPolicy implements Policy {
     var stats = cache.getNearCacheStats();
     cache.destroy();
 
+    policyStats.addEvictions(stats.getEvictions());
     checkState(stats.getOwnedEntryCount() <= maximumSize);
     checkState(stats.getHits() == policyStats.hitCount());
     checkState(stats.getMisses() == policyStats.missCount());
-    checkState(stats.getEvictions() == policyStats.evictionCount());
   }
 
   public static final class HazelcastSettings extends BasicSettings {

@@ -4331,7 +4331,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         var asyncValue = (V) CompletableFuture.completedFuture(value);
 
         for (;;) {
-          var priorFuture = (CompletableFuture<V>) cache.getIfPresent(key, /* recordStats= */ false);
+          var priorFuture = (CompletableFuture<V>) cache.getIfPresent(
+              key, /* recordStats= */ false);
           if (priorFuture != null) {
             if (!priorFuture.isDone()) {
               Async.getWhenSuccessful(priorFuture);

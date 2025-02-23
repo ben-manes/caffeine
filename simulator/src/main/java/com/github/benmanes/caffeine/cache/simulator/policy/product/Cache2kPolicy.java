@@ -24,7 +24,6 @@ import java.util.logging.Logger;
 
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
-import org.cache2k.event.CacheEntryEvictedListener;
 import org.cache2k.operation.CacheControl;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -51,10 +50,7 @@ public final class Cache2kPolicy implements Policy {
 
     policyStats = new PolicyStats(name());
     var settings = new BasicSettings(config);
-    CacheEntryEvictedListener<Long, AccessEvent> listener =
-        (cache, entry) -> policyStats.recordEviction();
     var builder = Cache2kBuilder.of(Long.class, AccessEvent.class)
-        .addListener(listener)
         .strictEviction(true)
         .eternal(true);
     if (characteristics.contains(WEIGHTED)) {
@@ -88,10 +84,11 @@ public final class Cache2kPolicy implements Policy {
 
   @Override
   public void finished() {
-    cache.close();
     var stats = CacheControl.of(cache).sampleStatistics();
+    cache.close();
+
+    policyStats.addEvictions(stats.getEvictedCount());
     checkState(policyStats.missCount() == stats.getMissCount());
-    checkState(policyStats.evictionCount() == stats.getEvictedCount());
-    checkState(policyStats.hitCount() == stats.getGetCount() - stats.getMissCount());
+    checkState(policyStats.hitCount() == (stats.getGetCount() - stats.getMissCount()));
   }
 }

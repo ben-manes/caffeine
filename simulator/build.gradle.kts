@@ -59,12 +59,10 @@ tasks.named<JavaCompile>("compileJava").configure {
   options.apply {
     compilerArgs.addAll(listOf("-Xlint:-classfile", "-Xlint:-processing"))
     errorprone {
-      disableWarningsInGeneratedCode = true
       disable("SystemOut")
 
       nullaway {
         externalInitAnnotations.add("picocli.CommandLine.Command")
-        treatGeneratedAsUnannotated = true
       }
     }
   }

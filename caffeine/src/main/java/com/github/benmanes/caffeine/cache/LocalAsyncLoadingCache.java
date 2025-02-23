@@ -63,8 +63,11 @@ abstract class LocalAsyncLoadingCache<K, V>
   }
 
   /** Returns a mapping function that adapts to {@link AsyncCacheLoader#asyncLoad}. */
-  BiFunction<? super K, ? super Executor, ? extends CompletableFuture<? extends V>> newMappingFunction(
-      AsyncCacheLoader<? super K, V> cacheLoader) {
+  BiFunction<
+      ? super K,
+      ? super Executor,
+      ? extends CompletableFuture<? extends V>> newMappingFunction(
+          AsyncCacheLoader<? super K, V> cacheLoader) {
     return (key, executor) -> {
       try {
         return cacheLoader.asyncLoad(key, executor);

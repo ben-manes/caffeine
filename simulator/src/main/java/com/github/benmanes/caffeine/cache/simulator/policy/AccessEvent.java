@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.stream.LongStream;
 
 import org.jspecify.annotations.Nullable;
 
@@ -34,10 +33,6 @@ import com.google.errorprone.annotations.Var;
  */
 @Immutable
 public class AccessEvent {
-  private static final AtomicReferenceArray<Long> keys = new AtomicReferenceArray<>(
-      LongStream.range(0, 1 << 20).map(i -> 0L).boxed().toArray(Long[]::new));
-  private static final int mask = keys.length() - 1;
-
   private final long key;
 
   private AccessEvent(long key) {
@@ -51,13 +46,7 @@ public class AccessEvent {
 
   /** Returns the object key. */
   public Long longKey() {
-    int index = Long.hashCode(key) & mask;
-    @Var Long longKey = keys.get(index);
-    if (longKey != key) {
-      longKey = key;
-      keys.set(index, longKey);
-    }
-    return longKey;
+    return LongInterner.boxed(key);
   }
 
   /** Returns the weight of the entry. */
@@ -117,6 +106,21 @@ public class AccessEvent {
   /** Returns an event for the given key and penalties. */
   public static AccessEvent forKeyAndPenalties(long key, double hitPenalty, double missPenalty) {
     return new PenaltiesAccessEvent(key, hitPenalty, missPenalty);
+  }
+
+  private static final class LongInterner {
+    static final AtomicReferenceArray<Long> cache = new AtomicReferenceArray<>(1 << 20);
+    static final int MASK = cache.length() - 1;
+
+    static Long boxed(long l) {
+      int index = Long.hashCode(l) & MASK;
+      @Var Long boxed = cache.get(index);
+      if ((boxed == null) || (boxed != l)) {
+        boxed = l;
+        LongInterner.cache.set(index, boxed);
+      }
+      return boxed;
+    }
   }
 
   private static final class WeightedAccessEvent extends AccessEvent {

@@ -102,7 +102,8 @@ final class JakartaCacheModule extends AbstractModule {
     }
   }
 
-  private static final class JakartaCacheRemoveEntryInterceptor extends CacheRemoveEntryInterceptor {
+  private static final class JakartaCacheRemoveEntryInterceptor
+      extends CacheRemoveEntryInterceptor {
     @Inject public void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }

@@ -88,8 +88,8 @@ public final class JCacheEntryEventTest {
           1, /* hasOldValue= */ true, 2, 3);
       var tester = new IteratorTester<CacheEntryEvent<? extends Integer, ? extends Integer>>(
           6, IteratorFeature.UNMODIFIABLE, event, IteratorTester.KnownOrder.KNOWN_ORDER) {
-        @Override
-        protected Iterator<CacheEntryEvent<? extends Integer, ? extends Integer>> newTargetIterator() {
+        @Override protected
+            Iterator<CacheEntryEvent<? extends Integer, ? extends Integer>> newTargetIterator() {
           return event.iterator();
         }
       };
