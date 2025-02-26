@@ -44,7 +44,6 @@ public class MapSubject extends com.google.common.truth.MapSubject {
     this.actual = subject;
   }
 
-  @SuppressWarnings("NullAway")
   public static Factory<MapSubject, Map<?, ?>> map() {
     return MapSubject::new;
   }

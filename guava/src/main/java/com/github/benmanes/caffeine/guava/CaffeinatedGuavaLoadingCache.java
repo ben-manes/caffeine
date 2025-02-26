@@ -57,7 +57,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   }
 
   @Override
-  @SuppressWarnings({"NullAway", "PMD.PreserveStackTrace"})
+  @SuppressWarnings("PMD.PreserveStackTrace")
   public V get(K key) throws ExecutionException {
     requireNonNull(key);
     try {
@@ -74,7 +74,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   }
 
   @Override
-  @SuppressWarnings({"CatchingUnchecked", "NullAway",
+  @SuppressWarnings({"CatchingUnchecked",
     "PMD.AvoidCatchingNPE", "PMD.PreserveStackTrace"})
   public V getUnchecked(K key) {
     try {
@@ -117,7 +117,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   }
 
   @Override
-  @SuppressWarnings({"deprecation", "NullAway"})
+  @SuppressWarnings("deprecation")
   public V apply(K key) {
     return cache.get(key);
   }
