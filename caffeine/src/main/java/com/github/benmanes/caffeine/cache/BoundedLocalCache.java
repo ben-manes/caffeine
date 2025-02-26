@@ -3070,7 +3070,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public int hashCode() {
     @Var int hash = 0;
     long now = expirationTicker().read();

@@ -427,7 +427,6 @@ public final class AsyncCacheTest {
     assertThat(result).isExhaustivelyEmpty();
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullLookup(AsyncCache<Int, Int> cache, CacheContext context) {

@@ -40,7 +40,6 @@ public final class GuavaMapTests extends TestCase {
       return cache.asMap();
     })));
     suite.addTest(MapTestFactory.suite("GuavaLoadingView", generator(() -> {
-      @SuppressWarnings("NullAway")
       Cache<String, String> cache = CaffeinatedGuava.build(
           Caffeine.newBuilder().maximumSize(Long.MAX_VALUE),
           key -> { throw new AssertionError(); });

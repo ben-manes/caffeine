@@ -213,8 +213,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    */
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
       Set<? extends K> keys, boolean updateAccessTime) {
-    // NullAway does not yet understand the @NonNull annotation in the return type of getAllPresent.
-    @SuppressWarnings("NullAway")
     var result = new HashMap<K, Expirable<V>>(cache.getAllPresent(keys));
 
     int[] expired = { 0 };

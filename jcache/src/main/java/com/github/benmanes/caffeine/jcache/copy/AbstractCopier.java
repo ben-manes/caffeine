@@ -48,7 +48,7 @@ import org.jspecify.annotations.NullMarked;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NullMarked
-@SuppressWarnings({"ImmutableMemberCollection", "JavaUtilDate", "JdkObsolete"})
+@SuppressWarnings({"ImmutableMemberCollection", "JavaUtilDate"})
 public abstract class AbstractCopier<A> implements Copier {
   private static final Map<Class<?>, Function<Object, Object>> JAVA_DEEP_COPY = Map.of(Date.class,
       o -> ((Date) o).clone(), GregorianCalendar.class, o -> ((GregorianCalendar) o).clone());
