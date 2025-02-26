@@ -165,7 +165,6 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     var future = CompletableFuture.runAsync(() -> {
       try {
         if (replaceExistingValues) {
-          @SuppressWarnings("NullAway")
           Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
           for (var entry : loaded.entrySet()) {
             putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter= */ false);

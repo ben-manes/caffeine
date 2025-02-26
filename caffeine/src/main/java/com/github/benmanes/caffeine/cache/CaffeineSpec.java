@@ -320,7 +320,6 @@ public final class CaffeineSpec {
 
   /** Returns a parsed duration using the simple time unit format. */
   static Duration parseSimpleDuration(String key, String value) {
-    @SuppressWarnings("NullAway")
     long duration = parseLong(key, value.substring(0, value.length() - 1));
     TimeUnit unit = parseTimeUnit(key, value);
     return Duration.ofNanos(unit.toNanos(duration));

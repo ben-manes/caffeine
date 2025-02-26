@@ -103,7 +103,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public @Nullable Expiry<K, V> expiry() {
     return null;
   }
