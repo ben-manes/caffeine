@@ -187,10 +187,7 @@
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
-    <Or>
-      <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactory"/>
-      <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactory$MethodHandleBasedFactory"/>
-    </Or>
+    <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactory"/>
     <Method name="newInstance"/>
     <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
   </Match>
@@ -373,10 +370,6 @@
       <Method name="loadAllAndReplaceExisting"/>
     </Or>
     <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
-    <Bug pattern="AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy$EntryIterator"/>
