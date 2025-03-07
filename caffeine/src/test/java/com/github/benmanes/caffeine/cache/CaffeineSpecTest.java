@@ -155,6 +155,7 @@ public final class CaffeineSpecTest {
     checkRefreshAfterWrite(spec, context, builder, epoch);
 
     assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString()));
+    assertThat(spec).isEqualTo(reflectivelyConstruct(spec.toParsableString()));
     assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString().replaceAll(",", ",,")));
   }
 
@@ -293,6 +294,17 @@ public final class CaffeineSpecTest {
       var duration = epoch.truncate(context.refreshAfterWrite().duration());
       assertThat(spec.refreshAfterWrite).isEqualTo(duration);
       assertThat(builder.refreshAfterWriteNanos).isEqualTo(duration.toNanos());
+    }
+  }
+
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+  static CaffeineSpec reflectivelyConstruct(String spec) {
+    try {
+      var constructor = CaffeineSpec.class.getDeclaredConstructor(String.class);
+      constructor.setAccessible(true);
+      return constructor.newInstance(spec);
+    } catch (ReflectiveOperationException e) {
+      throw new LinkageError(e.getMessage(), e);
     }
   }
 

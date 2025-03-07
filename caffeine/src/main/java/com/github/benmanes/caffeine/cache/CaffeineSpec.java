@@ -92,6 +92,12 @@ public final class CaffeineSpec {
 
   private CaffeineSpec(String specification) {
     this.specification = requireNonNull(specification);
+
+    @SuppressWarnings("StringSplitter")
+    var options = specification.split(SPLIT_OPTIONS);
+    for (String option : options) {
+      parseOption(option.strip());
+    }
   }
 
   /**
@@ -142,13 +148,8 @@ public final class CaffeineSpec {
    * @param specification the string form
    * @return the parsed specification
    */
-  @SuppressWarnings("StringSplitter")
   public static CaffeineSpec parse(String specification) {
-    var spec = new CaffeineSpec(specification);
-    for (String option : specification.split(SPLIT_OPTIONS)) {
-      spec.parseOption(option.strip());
-    }
-    return spec;
+    return new CaffeineSpec(specification);
   }
 
   /** Parses and applies the configuration option. */

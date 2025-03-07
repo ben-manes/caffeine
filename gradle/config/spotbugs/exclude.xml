@@ -656,6 +656,7 @@
     <Or>
       <Class name="com.github.benmanes.caffeine.cache.AsyncTest"/>
       <Class name="com.github.benmanes.caffeine.cache.CacheTest"/>
+      <Class name="com.github.benmanes.caffeine.cache.CaffeineSpecTest"/>
       <Class name="com.github.benmanes.caffeine.cache.BoundedBufferTest"/>
       <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaTest"/>
       <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCacheTest"/>
