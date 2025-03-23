@@ -1,4 +1,5 @@
 /** Cache simulator using tracing data and a family of eviction policy options. */
+import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import net.ltgt.gradle.errorprone.errorprone
@@ -39,6 +40,8 @@ dependencies {
   implementation(libs.univocity.parsers)
   implementation(libs.zero.allocation.hashing)
 
+  compileOnly(libs.spotbugs.annotations)
+
   testRuntimeOnly(libs.bundles.junit.engines)
 }
 
@@ -47,12 +50,16 @@ application {
 }
 
 java.toolchain {
-  languageVersion = maxOf(languageVersion.get(), JavaLanguageVersion.of(21))
+  languageVersion = maxOf(languageVersion.get(), JavaLanguageVersion.of(24))
 }
 
 forbiddenApis {
   bundledSignatures.addAll(listOf("commons-io-unsafe-2.15.1", "jdk-deprecated",
     "jdk-internal", "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
+}
+
+tasks.withType<CheckForbiddenApis>().configureEach {
+  enabled = false // pending JDK 24 support
 }
 
 tasks.named<JavaCompile>("compileJava").configure {

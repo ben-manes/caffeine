@@ -36,11 +36,11 @@ import org.jspecify.annotations.Nullable;
  * overridden as desired.
  * <p>
  * Usage example:
- * <pre>{@code
- *   AsyncCacheLoader<Key, Graph> loader = (key, executor) ->
- *       createExpensiveGraphAsync(key, executor);
- *   AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
- * }</pre>
+ * {@snippet :
+ * AsyncCacheLoader<Key, Graph> loader = (key, executor) ->
+ *     createExpensiveGraphAsync(key, executor);
+ * AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
+ * }
  *
  * @param <K> the type of keys
  * @param <V> the type of values. A loader may return null values if and only if it declares a
@@ -129,11 +129,11 @@ public interface AsyncCacheLoader<K, V extends @Nullable Object> {
    * loaded when retrieving the {@code key} prior to returning to the value to the cache.
    * <p>
    * Usage example:
-   * <pre>{@code
-   *   AsyncCacheLoader<Key, Graph> loader = AsyncCacheLoader.bulk(
-   *       keys -> createExpensiveGraphs(keys));
-   *   AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
-   * }</pre>
+   * {@snippet :
+   * AsyncCacheLoader<Key, Graph> loader = AsyncCacheLoader.bulk(
+   *     keys -> createExpensiveGraphs(keys));
+   * AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
+   * }
    *
    * @param <K> the key type
    * @param <V> the value type
@@ -153,11 +153,11 @@ public interface AsyncCacheLoader<K, V extends @Nullable Object> {
    * mappings loaded when retrieving the {@code key} prior to returning to the value to the cache.
    * <p>
    * Usage example:
-   * <pre>{@code
-   *   AsyncCacheLoader<Key, Graph> loader = AsyncCacheLoader.bulk(
-   *       (keys, executor) -> createExpensiveGraphs(keys, executor));
-   *   AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
-   * }</pre>
+   * {@snippet :
+   * AsyncCacheLoader<Key, Graph> loader = AsyncCacheLoader.bulk(
+   *     (keys, executor) -> createExpensiveGraphs(keys, executor));
+   * AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
+   * }
    *
    * @param <K> the key type
    * @param <V> the value type

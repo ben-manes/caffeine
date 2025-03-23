@@ -19,7 +19,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
-public class Application {
+public final class Application {
   private final Cache<Integer, Integer> cache;
 
   public Application(int maximumSize) {

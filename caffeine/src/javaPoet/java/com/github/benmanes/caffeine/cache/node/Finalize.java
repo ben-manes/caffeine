@@ -28,7 +28,7 @@ import com.palantir.javapoet.CodeBlock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class Finalize implements NodeRule {
+public final class Finalize implements NodeRule {
 
   @Override
   public boolean applies(NodeContext context) {

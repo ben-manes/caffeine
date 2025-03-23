@@ -251,10 +251,10 @@ public interface Policy<K, V> {
      * at the time of creating this computation.
      * <p>
      * Usage example:
-     * <pre>{@code
-     *   List<K> tenColdestKeys = cache.policy().eviction().orElseThrow()
-     *       .coldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }</pre>
+     * {@snippet :
+     * List<K> tenColdestKeys = cache.policy().eviction().orElseThrow()
+     *     .coldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
+     * }
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -318,10 +318,10 @@ public interface Policy<K, V> {
      * at the time of creating this computation.
      * <p>
      * Usage example:
-     * <pre>{@code
-     *   List<K> tenHottestKeys = cache.policy().eviction().orElseThrow()
-     *       .hottest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }</pre>
+     * {@snippet :
+     * List<K> tenHottestKeys = cache.policy().eviction().orElseThrow()
+     *     .hottest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
+     * }
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -454,10 +454,10 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * <pre>{@code
-     *   List<K> tenOldestKeys = cache.policy().expireAfterWrite().orElseThrow()
-     *       .oldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }</pre>
+     * {@snippet :
+     * List<K> tenOldestKeys = cache.policy().expireAfterWrite().orElseThrow()
+     *     .oldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
+     * }
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -498,10 +498,10 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * <pre>{@code
-     *   List<K> tenYoungestKeys = cache.policy().expireAfterWrite().orElseThrow()
-     *       .youngest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }</pre>
+     * {@snippet :
+     * List<K> tenYoungestKeys = cache.policy().expireAfterWrite().orElseThrow()
+     *     .youngest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
+     * }
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -702,10 +702,10 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * <pre>{@code
-     *   List<K> tenOldestKeys = cache.policy().expireAfterVariably().orElseThrow()
-     *       .oldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }</pre>
+     * {@snippet :
+     * List<K> tenOldestKeys = cache.policy().expireAfterVariably().orElseThrow()
+     *     .oldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
+     * }
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -746,10 +746,10 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * <pre>{@code
-     *   List<K> tenYoungestKeys = cache.policy().expireAfterVariably().orElseThrow()
-     *       .youngest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }</pre>
+     * {@snippet :
+     * List<K> tenYoungestKeys = cache.policy().expireAfterVariably().orElseThrow()
+     *     .youngest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
+     * }
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction

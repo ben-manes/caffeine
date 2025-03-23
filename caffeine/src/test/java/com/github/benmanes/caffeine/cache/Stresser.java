@@ -42,9 +42,9 @@ import picocli.CommandLine.Option;
  * A stress test to observe if the cache is able to drain the buffers fast enough under a synthetic
  * load.
  * <p>
- * <pre>{@code
- *   ./gradlew :caffeine:stress --workload=[read, write, refresh]
- * }</pre>
+ * {@snippet :
+ * ./gradlew :caffeine:stress --workload=[read, write, refresh]
+ * }
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

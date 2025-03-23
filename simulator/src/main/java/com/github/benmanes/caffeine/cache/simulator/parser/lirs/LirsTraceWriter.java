@@ -38,7 +38,7 @@ public final class LirsTraceWriter implements TraceWriter {
   }
 
   @Override
-  public void writeEvent(int tick, AccessEvent event) throws IOException {
+  public void writeEvent(AccessEvent event) throws IOException {
     writer.write(Long.toString(event.key()));
     writer.newLine();
   }

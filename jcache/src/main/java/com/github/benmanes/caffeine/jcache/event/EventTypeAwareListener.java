@@ -47,6 +47,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   }
 
   /** Returns if the backing listener consumes this type of event. */
+  @SuppressWarnings("StatementSwitchToExpressionSwitch")
   public boolean isCompatible(EventType eventType) {
     switch (eventType) {
       case CREATED:

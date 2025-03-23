@@ -51,6 +51,7 @@ final class EventTypeFilter<K, V> implements CacheEntryEventFilter<K, V> {
     return isCompatible(event) && filter.evaluate(event);
   }
 
+  @SuppressWarnings("StatementSwitchToExpressionSwitch")
   private boolean isCompatible(CacheEntryEvent<? extends K, ? extends V> event) {
     switch (event.getEventType()) {
       case CREATED:

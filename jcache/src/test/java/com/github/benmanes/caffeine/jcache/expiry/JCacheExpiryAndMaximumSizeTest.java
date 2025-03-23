@@ -46,7 +46,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 @Test(singleThreaded = true)
 @SuppressWarnings("unchecked")
-public class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
+public final class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
   private static final long ONE_MINUTE = TimeUnit.MINUTES.toNanos(1);
   private static final int MAXIMUM = 10;
 

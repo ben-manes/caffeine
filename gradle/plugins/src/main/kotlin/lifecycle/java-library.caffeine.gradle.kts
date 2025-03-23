@@ -23,14 +23,13 @@ java.toolchain {
   vendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.matching(it) }
 }
 val javaRuntimeVersion: Provider<JavaLanguageVersion> =
-  java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(21)) }
+  java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(24)) }
 
 tasks.withType<JavaCompile>().configureEach {
   inputs.property("javaVendor", java.toolchain.vendor.get().toString())
   options.release = java.toolchain.languageVersion.get().asInt()
 
   javaCompiler = javaToolchains.compilerFor {
-    // jdk 17+ is required by compiler plugins, e.g. error-prone
     languageVersion = javaRuntimeVersion
   }
 
@@ -41,9 +40,6 @@ tasks.withType<JavaCompile>().configureEach {
     if (isCI()) {
       compilerArgs.add("-Werror")
     }
-    if (java.toolchain.languageVersion.get().canCompileOrRun(21)) {
-      compilerArgs.add("-proc:full")
-    }
     encoding = "UTF-8"
   }
 }
@@ -51,7 +47,6 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.withType<JavaExec>().configureEach {
   jvmArgs(DisableStrongEncapsulationJvmArgs)
   javaLauncher = javaToolchains.launcherFor {
-    // jdk 17+ is required by dependencies, e.g. google-java-format
     languageVersion = javaRuntimeVersion
   }
 }

@@ -494,6 +494,14 @@
     <Method name="print"/>
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber$Adaptation"/>
+    <Bug pattern="IMC_IMMATURE_CLASS_WRONG_FIELD_ORDER"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.report.csv.CombinedCsvReport"/>
+    <Bug pattern="IMC_IMMATURE_CLASS_WRONG_FIELD_ORDER"/>
+  </Match>
 
   <!-- Tests -->
   <Match>

@@ -56,19 +56,15 @@ import com.univocity.parsers.csv.CsvParserSettings;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class PlotCsv implements Runnable {
-  private final ChartStyle style;
-  private final Path outputFile;
-  private final Path inputFile;
-  private final String metric;
-  private final String title;
+public record PlotCsv(Path inputFile, Path outputFile, String metric,
+    String title, ChartStyle style) implements Runnable {
 
-  public PlotCsv(Path inputFile, Path outputFile, String metric, String title, ChartStyle style) {
-    this.outputFile = requireNonNull(outputFile);
-    this.inputFile = requireNonNull(inputFile);
-    this.metric = requireNonNull(metric);
-    this.title = requireNonNull(title);
-    this.style = requireNonNull(style);
+  public PlotCsv {
+    requireNonNull(outputFile);
+    requireNonNull(inputFile);
+    requireNonNull(metric);
+    requireNonNull(title);
+    requireNonNull(style);
   }
 
   @Override

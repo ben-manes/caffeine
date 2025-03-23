@@ -20,6 +20,8 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -101,14 +103,10 @@ public final class Clairvoyant implements KeyOnlyAdmittor {
     var trace = settings.trace().traceFiles().format()
         .readFiles(settings.trace().traceFiles().paths());
     try (Stream<AccessEvent> events = trace.events()) {
-      int[] tick = { 0 };
+      var tick = new MutableInt();
       events.forEach(event -> {
-        @Var var times = accessTimes.get(event.key());
-        if (times == null) {
-          times = new IntArrayList();
-          accessTimes.put(event.key(), times);
-        }
-        times.add(++tick[0]);
+        var times = accessTimes.computeIfAbsent(event.key(), _ -> new IntArrayList());
+        times.add(tick.incrementAndGet());
       });
     }
     return Long2ObjectMaps.unmodifiable(accessTimes);

@@ -54,7 +54,7 @@ public final class Cache2kPolicy implements Policy {
         .strictEviction(true)
         .eternal(true);
     if (characteristics.contains(WEIGHTED)) {
-      builder.weigher((Long key, AccessEvent value) -> value.weight());
+      builder.weigher((Long _, AccessEvent value) -> value.weight());
       builder.maximumWeight(settings.maximumSize());
     } else {
       builder.entryCapacity(settings.maximumSize());

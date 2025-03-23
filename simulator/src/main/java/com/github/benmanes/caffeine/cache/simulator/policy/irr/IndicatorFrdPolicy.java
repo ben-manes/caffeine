@@ -391,11 +391,9 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
     public FrdSettings(Config config) {
       super(config);
     }
-
     public double percentMain() {
       return config().getDouble("frd.percent-main");
     }
-
     public int period() {
       return config().getInt("frd.period");
     }

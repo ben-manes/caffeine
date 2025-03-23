@@ -25,8 +25,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import junit.framework.Test;
 
 @SuppressWarnings({"EmptyCatch", "ForEachIterable", "MemberName",
-  "ModifyCollectionInEnhancedForLoop", "PreferredInterfaceType", "rawtypes",
-  "ReturnValueIgnored", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses"})
+    "ModifyCollectionInEnhancedForLoop", "PreferredInterfaceType", "rawtypes", "ReturnValueIgnored",
+    "StatementSwitchToExpressionSwitch", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses"})
 public class ConcurrentHashMapTest extends JSR166TestCase {
     public static void main(String[] args) {
         main(suite());

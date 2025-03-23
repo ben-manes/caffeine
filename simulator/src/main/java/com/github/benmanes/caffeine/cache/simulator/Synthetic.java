@@ -177,6 +177,6 @@ public final class Synthetic {
   /** Returns a sequence of items constructed by the generator. */
   private static KeyOnlyTraceReader generate(NumberGenerator generator, long count) {
     requireNonNull(generator);
-    return () -> LongStream.range(0, count).map(ignored -> generator.nextValue().longValue());
+    return () -> LongStream.range(0, count).map(_ -> generator.nextValue().longValue());
   }
 }

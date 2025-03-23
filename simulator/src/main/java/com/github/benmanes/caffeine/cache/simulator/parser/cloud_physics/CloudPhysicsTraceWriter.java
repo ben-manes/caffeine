@@ -36,7 +36,7 @@ public final class CloudPhysicsTraceWriter implements TraceWriter {
   }
 
   @Override
-  public void writeEvent(int tick, AccessEvent event) throws IOException {
+  public void writeEvent(AccessEvent event) throws IOException {
     int key = Hashing.murmur3_128().hashLong(event.key()).asInt();
     writer.writeInt(key);
   }

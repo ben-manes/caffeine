@@ -422,7 +422,6 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     public FrdSettings(Config config) {
       super(config);
     }
-
     public double percentMain() {
       return config().getDouble("frd.percent-main");
     }

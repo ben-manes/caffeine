@@ -15,9 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import static com.google.common.collect.Sets.toImmutableEnumSet;
+import static java.util.Locale.US;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
-import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,6 +28,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.CaseFormat;
+import com.google.common.base.Enums;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import net.jodah.expiringmap.ExpirationPolicy;
@@ -84,18 +87,11 @@ public final class ExpiringMapPolicy implements Policy {
     public ExpiringMapSettings(Config config) {
       super(config);
     }
-    public Set<Eviction> policy() {
-      var policies = EnumSet.noneOf(Eviction.class);
-      for (var policy : config().getStringList("expiring-map.policy")) {
-        if (policy.equalsIgnoreCase("fifo")) {
-          policies.add(Eviction.FIFO);
-        } else if (policy.equalsIgnoreCase("lru")) {
-          policies.add(Eviction.LRU);
-        } else {
-          throw new IllegalArgumentException("Unknown policy: " + policy);
-        }
-      }
-      return policies;
+    public ImmutableSet<Eviction> policy() {
+      return config().getStringList("expiring-map.policy").stream()
+          .map(policy -> Enums.getIfPresent(Eviction.class, policy.toUpperCase(US)).toJavaUtil()
+            .orElseThrow(() -> new IllegalArgumentException("Unknown policy: " + policy)))
+          .collect(toImmutableEnumSet());
     }
   }
 

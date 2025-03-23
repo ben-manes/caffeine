@@ -1226,6 +1226,7 @@ public final class LoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE)
   public void refreshes_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.refreshAll(context.absentKeys());

@@ -30,14 +30,14 @@ import com.google.common.cache.CacheBuilder;
 
 /**
  * <p>
- * <pre>{@code
- *   ./gradlew jmh -PincludePattern=BuilderBenchmark --rerun
- * }</pre>
+ * {@snippet :
+ * ./gradlew jmh -PincludePattern=BuilderBenchmark --rerun
+ * }
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings("MemberName")
+@SuppressWarnings({"MemberName", "StatementSwitchToExpressionSwitch"})
 public class BuilderBenchmark {
   @Param BuilderType type;
   Supplier<?> builder;

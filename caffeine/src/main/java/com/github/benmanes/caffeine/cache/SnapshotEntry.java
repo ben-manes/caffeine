@@ -83,6 +83,7 @@ class SnapshotEntry<K, V> implements CacheEntry<K, V> {
   }
 
   /** Returns a cache entry with the specified metadata. */
+  @SuppressWarnings("StatementSwitchToExpressionSwitch")
   public static <K, V> SnapshotEntry<K, V> forEntry(K key, V value,
       long snapshot, int weight, long expiresAt, long refreshableAt) {
     long unsetTicks = snapshot + Long.MAX_VALUE;

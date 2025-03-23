@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
-import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation.Type.DECREASE_WINDOW;
-import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation.Type.INCREASE_WINDOW;
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.PROBATION;
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.PROTECTED;
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.WINDOW;
@@ -219,10 +217,10 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     double probationSize = maximumSize - windowSize - protectedSize;
     Adaptation adaptation = climber.adapt(windowSize, probationSize, protectedSize, isFull);
-    if (adaptation.type == INCREASE_WINDOW) {
-      increaseWindow(adaptation.amount);
-    } else if (adaptation.type == DECREASE_WINDOW) {
-      decreaseWindow(adaptation.amount);
+    switch (adaptation.type()) {
+      case INCREASE_WINDOW -> increaseWindow(adaptation.amount());
+      case DECREASE_WINDOW -> decreaseWindow(adaptation.amount());
+      case HOLD -> {}
     }
   }
 

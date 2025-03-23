@@ -143,6 +143,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void containsValue_null(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.asMap().containsValue(null));
@@ -150,6 +151,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void containsValue_present(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -160,6 +162,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void containsValue_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().containsValue(context.absentValue().toFuture())).isFalse();
@@ -1907,6 +1910,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void values_contains_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().contains(context.absentValue().toFuture())).isFalse();
@@ -1914,6 +1918,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void values_contains_present(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1957,6 +1962,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_removeAll_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().values().removeAll(Collections.singletonList((Object) null));
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
@@ -1965,6 +1971,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_removeAll_none_empty(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().removeAll(Set.of())).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
@@ -1974,6 +1981,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_removeAll_none_populated(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().removeAll(
         Set.of(context.absentValue().toFuture()))).isFalse();
@@ -1984,6 +1992,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_removeAll_partial(AsyncCache<Int, Int> cache, CacheContext context) {
     var expected = new HashMap<>(context.original());
     expected.keySet().removeAll(context.firstMiddleLastKeys());
@@ -2001,6 +2010,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_removeAll_all(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().removeAll(List.copyOf(cache.asMap().values()))).isTrue();
     assertThat(cache).isEmpty();
@@ -2011,6 +2021,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_removeAll_self(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().removeAll(cache.asMap().values())).isTrue();
     assertThat(cache).isEmpty();
@@ -2021,6 +2032,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_remove_null(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().remove(null)).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
@@ -2029,6 +2041,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_remove_none(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().remove(context.absentValue().toFuture())).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
@@ -2037,6 +2050,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_remove(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = requireNonNull(cache.asMap().get(context.firstKey()));
     assertThat(cache.asMap().values().remove(future)).isTrue();
@@ -2049,6 +2063,7 @@ public final class AsyncAsMapTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_remove_once(AsyncCache<Int, Int> cache, CacheContext context) {
     var expected = new HashMap<>(context.original());
     var future = context.absentValue().toFuture();
@@ -2138,6 +2153,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_retainAll_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().values().retainAll(Collections.singletonList((Object) null));
     assertThat(cache).isEmpty();
@@ -2146,6 +2162,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_retainAll_none_empty(AsyncCache<Int, Int> cache, CacheContext context) {
     boolean modified = cache.asMap().values().retainAll(Set.of());
     assertThat(cache).isEmpty();
@@ -2162,6 +2179,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_retainAll_none_populated(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().retainAll(Set.of(context.absentValue().toFuture()))).isTrue();
     assertThat(cache).isEmpty();
@@ -2172,6 +2190,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_retainAll_partial(AsyncCache<Int, Int> cache, CacheContext context) {
     var expected = new HashMap<>(cache.asMap());
     expected.keySet().removeAll(context.firstMiddleLastKeys());
@@ -2187,6 +2206,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_retainAll_all(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().retainAll(List.copyOf(cache.asMap().values()))).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
@@ -2196,6 +2216,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values_retainAll_self(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().retainAll(cache.asMap().values())).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
@@ -2205,6 +2226,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void values(AsyncCache<Int, Int> cache, CacheContext context) {
     var values = cache.asMap().values();
     assertThat(values).doesNotContain(new Object());
@@ -2366,6 +2388,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("UndefinedEquals")
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.CONSUMING })
   public void entrySet_toArray_writeThrough(AsyncCache<Int, Int> cache, CacheContext context) {

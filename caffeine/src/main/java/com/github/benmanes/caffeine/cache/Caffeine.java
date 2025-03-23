@@ -69,14 +69,14 @@ import com.google.errorprone.annotations.FormatMethod;
  * cache instances created by {@code Caffeine} will not perform any type of eviction.
  * <p>
  * Usage example:
- * <pre>{@code
- *   LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
- *       .maximumSize(10_000)
- *       .expireAfterWrite(Duration.ofMinutes(10))
- *       .removalListener((Key key, Graph graph, RemovalCause cause) ->
- *           System.out.printf("Key %s was removed (%s)%n", key, cause))
- *       .build(key -> createExpensiveGraph(key));
- * }</pre>
+ * {@snippet :
+ * LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
+ *     .maximumSize(10_000)
+ *     .expireAfterWrite(Duration.ofMinutes(10))
+ *     .removalListener((Key key, Graph graph, RemovalCause cause) ->
+ *         System.out.printf("Key %s was removed (%s)%n", key, cause))
+ *     .build(key -> createExpensiveGraph(key));
+ * }
  * <p>
  * The returned cache is implemented as a hash table with similar performance characteristics to
  * {@link ConcurrentHashMap}. The {@code asMap} view (and its collection views) have <i>weakly

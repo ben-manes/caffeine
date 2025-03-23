@@ -77,8 +77,9 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 fun disabledChecks() = listOf(
-  "AvoidObjectArrays",
   "AndroidJdkLibsChecker",
+  "AssignmentExpression",
+  "AvoidObjectArrays",
   "ConstantNaming",
   "IsInstanceLambdaUsage",
   "Java7ApiChecker",
@@ -91,6 +92,9 @@ fun disabledChecks() = listOf(
   "StaticImport",
   "SuppressWarningsWithoutExplanation",
   "UngroupedOverloads",
+
+  // https://github.com/google/error-prone/issues/4914
+  "UnescapedEntity",
 )
 fun disabledRules() = listOf(
   "ImmutableListRules\\\$ImmutableListBuilder",

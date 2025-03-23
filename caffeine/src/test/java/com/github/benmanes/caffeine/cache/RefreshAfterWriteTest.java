@@ -955,6 +955,7 @@ public final class RefreshAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
       refreshAfterWrite = Expire.ONE_MINUTE, population = Population.FULL)
   public void refreshes_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {

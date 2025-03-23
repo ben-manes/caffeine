@@ -57,8 +57,9 @@ import junit.framework.Test;
 @SuppressWarnings({"CatchAndPrintStackTrace", "CollectionAddAllToCollectionBlock",
     "CollectionForEach", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
     "EmptyCatch", "LabelledBreakTarget", "MemberName", "MethodReferenceUsage", "MissingDefault",
-    "MissingFail", "MultiVariableDeclaration", "rawtypes", "ReturnValueIgnored", "SystemOut",
-    "try", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses", "YodaCondition"})
+    "MissingFail", "MultiVariableDeclaration", "rawtypes", "ReturnValueIgnored",
+    "StatementSwitchToExpressionSwitch", "SystemOut", "try", "unchecked", "UnnecessaryFinal",
+    "UnnecessaryParentheses", "YodaCondition"})
 public class Collection8Test extends JSR166TestCase {
     final CollectionImplementation impl;
 

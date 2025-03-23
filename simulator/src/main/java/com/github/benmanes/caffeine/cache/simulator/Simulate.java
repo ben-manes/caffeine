@@ -45,14 +45,14 @@ import picocli.CommandLine.Option;
  * An underscore may be used as a numeric separator and the default configuration may be overridden
  * by using system properties.
  *
- * <pre>{@code
- *   ./gradlew simulator:simulate -q \
- *     -Dcaffeine.simulator.files.paths.0="lirs:gli.trace.gz" \
- *     -Dcaffeine.simulator.policies.0=product.Caffeine \
- *     -Dcaffeine.simulator.policies.1=product.Guava \
- *     --maximumSize=100,500,1_000,1_500,2_000 \
- *     --title=Glimpse
- * }</pre>
+ * {@snippet :
+ * ./gradlew simulator:simulate -q \
+ *   -Dcaffeine.simulator.files.paths.0="lirs:gli.trace.gz" \
+ *   -Dcaffeine.simulator.policies.0=product.Caffeine \
+ *   -Dcaffeine.simulator.policies.1=product.Guava \
+ *   --maximumSize=100,500,1_000,1_500,2_000 \
+ *   --title=Glimpse
+ * }
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

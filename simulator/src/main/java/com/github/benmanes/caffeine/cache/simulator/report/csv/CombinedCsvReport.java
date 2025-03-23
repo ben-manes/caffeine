@@ -22,11 +22,8 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.Map;
-import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Stream;
-
-import org.jspecify.annotations.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -41,17 +38,15 @@ import com.univocity.parsers.csv.CsvWriterSettings;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CombinedCsvReport implements Runnable {
+public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
+    String metric, Path outputFile) implements Runnable {
   private static final String POLICY_KEY = "Policy";
 
-  private final ImmutableSortedMap<Long, Path> inputFiles;
-  private final Path outputFile;
-  private final String metric;
-
-  public CombinedCsvReport(ImmutableMap<Long, Path> inputFiles, String metric, Path outputFile) {
-    this.inputFiles = ImmutableSortedMap.copyOf(inputFiles);
-    this.outputFile = requireNonNull(outputFile);
-    this.metric = metric.replace('_', ' ');
+  @SuppressWarnings("Var")
+  public CombinedCsvReport {
+    inputFiles = ImmutableSortedMap.copyOf(inputFiles);
+    metric = metric.replace('_', ' ');
+    requireNonNull(outputFile);
   }
 
   @Override
@@ -106,24 +101,11 @@ public final class CombinedCsvReport implements Runnable {
     return new CsvWriter(outputFile.toFile(), settings);
   }
 
-  private static final class Label implements Comparable<Label> {
-    final String policy;
-    final long size;
-
-    Label(String policy, long size) {
-      this.policy = requireNonNull(policy);
-      this.size = size;
+  private record Label(String policy, long size) implements Comparable<Label> {
+    Label {
+      requireNonNull(policy);
     }
-    @Override
-    public boolean equals(@Nullable Object o) {
-      return (o instanceof Label label) && (compareTo(label) == 0);
-    }
-    @Override
-    public int hashCode() {
-      return Objects.hash(policy, size);
-    }
-    @Override
-    public int compareTo(Label label) {
+    @Override public int compareTo(Label label) {
       int ordering = policy.compareTo(label.policy);
       return (ordering == 0) ? Long.compare(size, label.size) : ordering;
     }

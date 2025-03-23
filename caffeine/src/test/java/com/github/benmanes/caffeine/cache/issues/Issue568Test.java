@@ -32,7 +32,7 @@ import com.google.common.testing.GcFinalization;
  * @author jhorvitz@google.com (Justin Horvitz)
  */
 @Test(groups = "isolated")
-public class Issue568Test {
+public final class Issue568Test {
 
   /**
    * When an entry is updated then a concurrent reader should observe either the old or new value.

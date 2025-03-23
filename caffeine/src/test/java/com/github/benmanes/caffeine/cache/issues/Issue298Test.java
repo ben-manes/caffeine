@@ -84,7 +84,7 @@ public final class Issue298Test {
   }
 
   @Test
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"FutureReturnValueIgnored", "UndefinedEquals"})
   public void readDuringCreate() {
     // Loaded value and waiting at expireAfterCreate (expire: infinite)
     var initialValue = cache.get(testKey);

@@ -143,5 +143,4 @@ public final class ClimberResetCountMin4 extends CountMin4 {
   public int getPeriod() {
     return period;
   }
-
 }

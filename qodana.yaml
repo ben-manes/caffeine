@@ -13,6 +13,7 @@ exclude:
   - name: DuplicatedCode
   - name: EmptyStatementBody
   - name: IgnoreResultOfCall
+  - name: JavadocDeclaration
   - name: JavadocLinkAsPlainText
   - name: NotNullFieldNotInitialized
   - name: NullableProblems

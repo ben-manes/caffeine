@@ -35,7 +35,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class MapSubject extends com.google.common.truth.MapSubject {
+public final class MapSubject extends com.google.common.truth.MapSubject {
   @SuppressWarnings("ImmutableMemberCollection")
   private final @Nullable Map<?, ?> actual;
 
@@ -53,7 +53,7 @@ public class MapSubject extends com.google.common.truth.MapSubject {
   }
 
   /** Fails if the map does not have the given size. */
-  public final void hasSize(long expectedSize) {
+  public void hasSize(long expectedSize) {
     super.hasSize(Math.toIntExact(expectedSize));
   }
 

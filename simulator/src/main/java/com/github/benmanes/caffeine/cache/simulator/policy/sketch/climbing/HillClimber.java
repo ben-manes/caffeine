@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
 
 /**
  * A hill climbing algorithm to tune the admission window size.
@@ -58,20 +57,11 @@ public interface HillClimber {
   }
 
   /** The adaptation type and its magnitude. */
-  final class Adaptation {
-    public enum Type {
-      HOLD, INCREASE_WINDOW, DECREASE_WINDOW
-    }
-
+  record Adaptation(double amount, Type type) {
     private static final Adaptation HOLD = new Adaptation(0, Type.HOLD);
 
-    public final double amount;
-    public final Type type;
-
-    private Adaptation(double amount, Type type) {
+    public Adaptation {
       checkArgument(amount >= 0, "Step size %s must be positive", amount);
-      this.type = requireNonNull(type);
-      this.amount = amount;
     }
 
     /** Returns the adaption based on the amount, where a negative value decreases the window. */
@@ -105,6 +95,10 @@ public interface HillClimber {
         case INCREASE_WINDOW -> "+" + amount;
         case DECREASE_WINDOW -> "-" + amount;
       };
+    }
+
+    public enum Type {
+      HOLD, INCREASE_WINDOW, DECREASE_WINDOW
     }
   }
 }

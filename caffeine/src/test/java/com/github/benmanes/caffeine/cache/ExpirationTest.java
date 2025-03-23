@@ -49,6 +49,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
@@ -192,7 +193,7 @@ public final class ExpirationTest {
     var actualExpirationPeriods = new HashMap<Int, Duration>();
     var delay = ArgumentCaptor.forClass(long.class);
     var task = ArgumentCaptor.forClass(Runnable.class);
-    Answer<Void> onRemoval = invocation -> {
+    Answer<@Nullable Void> onRemoval = invocation -> {
       Int key = invocation.getArgument(0);
       Duration value = invocation.getArgument(1);
       actualExpirationPeriods.put(key, Duration.ofNanos(context.ticker().read()).minus(value));
@@ -717,6 +718,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1564,6 +1566,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },

@@ -4675,6 +4675,7 @@ final class BLCHeader {
      *
      * @param delayable if draining the read buffer can be delayed
      */
+    @SuppressWarnings("StatementSwitchToExpressionSwitch")
     boolean shouldDrainBuffers(boolean delayable) {
       switch (drainStatusOpaque()) {
         case IDLE:

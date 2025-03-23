@@ -28,9 +28,9 @@ import com.github.benmanes.caffeine.cache.sketch.TinyLfuSketch;
 import site.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
- * <pre>{@code
- *   ./gradlew jmh -PincludePattern=FrequencySketchBenchmark --rerun
- * }</pre>
+ * {@snippet :
+ * ./gradlew jmh -PincludePattern=FrequencySketchBenchmark --rerun
+ * }
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

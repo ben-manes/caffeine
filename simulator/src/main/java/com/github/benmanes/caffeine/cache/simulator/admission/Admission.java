@@ -32,7 +32,7 @@ import com.typesafe.config.Config;
  */
 @SuppressWarnings("ImmutableEnumChecker")
 public enum Admission {
-  ALWAYS((config, policyStats) -> Admittor.always(), ""),
+  ALWAYS((_, _) -> Admittor.always(), ""),
   CLAIRVOYANT(Clairvoyant::new, "_Clairvoyant"),
   TINYLFU(TinyLfu::new, "_TinyLfu");
 

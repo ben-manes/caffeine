@@ -46,7 +46,7 @@ public final class CaffeinePolicy implements Policy {
     var builder = Caffeine.newBuilder().executor(Runnable::run);
     if (characteristics.contains(WEIGHTED)) {
       builder.maximumWeight(settings.maximumSize());
-      builder.weigher((Long key, AccessEvent value) -> value.weight());
+      builder.weigher((Long _, AccessEvent value) -> value.weight());
     } else {
       builder.maximumSize(settings.maximumSize());
       builder.initialCapacity(Ints.saturatedCast(settings.maximumSize()));

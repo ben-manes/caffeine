@@ -245,7 +245,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"CollectionUndefinedEquality", "FutureReturnValueIgnored"})
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();

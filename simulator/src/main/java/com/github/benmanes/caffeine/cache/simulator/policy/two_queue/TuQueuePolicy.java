@@ -54,7 +54,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @PolicySpec(name = "two-queue.TuQueue")
-public class TuQueuePolicy implements KeyOnlyPolicy {
+public final class TuQueuePolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final int maximumSize;
@@ -98,31 +98,30 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
   }
 
   private void onHit(Node node) {
-    if (node.type == QueueType.HOT) {
-      node.moveToTail(headHot);
-    } else if (node.type == QueueType.WARM) {
-      node.moveToTail(headWarm);
-    } else if (node.type == QueueType.COLD) {
-      // If we have a cache hit on a cold buffer, it turns into a warm buffer and goes to the
-      // front of the warm queue. Then as the warm queue lengthens, buffers start slipping from
-      // the end onto the cold queue.
-      node.remove();
-      sizeCold--;
+    requireNonNull(node.type);
+    switch (node.type) {
+      case HOT -> node.moveToTail(headHot);
+      case WARM -> node.moveToTail(headWarm);
+      case COLD -> {
+        // If we have a cache hit on a cold buffer, it turns into a warm buffer and goes to the
+        // front of the warm queue. Then as the warm queue lengthens, buffers start slipping from
+        // the end onto the cold queue.
+        node.remove();
+        sizeCold--;
 
-      node.type = QueueType.WARM;
-      node.appendToTail(headWarm);
-      sizeWarm++;
+        node.type = QueueType.WARM;
+        node.appendToTail(headWarm);
+        sizeWarm++;
 
-      if (sizeWarm > maxWarm) {
-        Node demoted = requireNonNull(headWarm.next);
-        demoted.remove();
-        sizeWarm--;
-        demoted.type = QueueType.COLD;
-        demoted.appendToTail(headCold);
-        sizeCold++;
+        if (sizeWarm > maxWarm) {
+          Node demoted = requireNonNull(headWarm.next);
+          demoted.remove();
+          sizeWarm--;
+          demoted.type = QueueType.COLD;
+          demoted.appendToTail(headCold);
+          sizeCold++;
+        }
       }
-    } else {
-      throw new IllegalStateException();
     }
   }
 
@@ -235,17 +234,14 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
   }
 
   static final class TuQueueSettings extends BasicSettings {
-
     public TuQueueSettings(Config config) {
       super(config);
     }
-
     public double percentHot() {
       double percentHot = config().getDouble("tu-queue.percent-hot");
       checkState(percentHot < 1.0);
       return percentHot;
     }
-
     public double percentWarm() {
       double percentWarm = config().getDouble("tu-queue.percent-warm");
       checkState(percentWarm < 1.0);

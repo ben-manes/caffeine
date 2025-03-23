@@ -45,7 +45,7 @@ public final class GuavaPolicy implements Policy {
     var settings = new BasicSettings(config);
     if (characteristics.contains(WEIGHTED)) {
       builder.maximumWeight(settings.maximumSize());
-      builder.weigher((Long key, AccessEvent value) -> value.weight());
+      builder.weigher((Long _, AccessEvent value) -> value.weight());
     } else {
       builder.maximumSize(settings.maximumSize());
     }

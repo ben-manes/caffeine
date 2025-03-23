@@ -185,12 +185,10 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   /** Records a miss when the hot and cold set are full. */
   private void onFullMiss(Node node) {
-    if (node.status == Status.COLD_NON_RES) {
-      onNonResidentFullMiss(node);
-    } else if (node.status == Status.OUT_OF_CLOCK) {
-      onOutOfClockFullMiss(node);
-    } else {
-      throw new IllegalStateException();
+    switch (node.status) {
+      case COLD_NON_RES -> onNonResidentFullMiss(node);
+      case OUT_OF_CLOCK -> onOutOfClockFullMiss(node);
+      default -> throw new IllegalStateException();
     }
   }
 

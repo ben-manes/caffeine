@@ -91,33 +91,33 @@ final class JakartaCacheModule extends AbstractModule {
   }
 
   private static final class JakartaCachePutInterceptor extends CachePutInterceptor {
-    @Inject public void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
+    @Inject void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }
   }
 
   private static final class JakartaCacheResultInterceptor extends CacheResultInterceptor {
-    @Inject public void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
+    @Inject void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }
   }
 
   private static final class JakartaCacheRemoveEntryInterceptor
       extends CacheRemoveEntryInterceptor {
-    @Inject public void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
+    @Inject void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }
   }
 
   private static final class JakartaCacheRemoveAllInterceptor extends CacheRemoveAllInterceptor {
-    @Inject public void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
+    @Inject void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }
   }
 
   @Singleton
   private static final class JakartaCacheLookup extends CacheLookupUtil {
-    @Inject public JakartaCacheLookup(Injector injector, CacheKeyGenerator defaultCacheKeyGenerator,
+    @Inject JakartaCacheLookup(Injector injector, CacheKeyGenerator defaultCacheKeyGenerator,
         CacheResolverFactory defaultCacheResolverFactory) {
       super(injector, defaultCacheKeyGenerator, defaultCacheResolverFactory);
     }

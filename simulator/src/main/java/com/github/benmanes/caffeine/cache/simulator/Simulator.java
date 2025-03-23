@@ -17,8 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Locale.US;
+import static java.util.stream.Gatherers.windowFixed;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -87,27 +87,15 @@ public final class Simulator {
     long limit = settings.trace().limit();
     int batchSize = settings.actor().batchSize();
     try (Stream<AccessEvent> events = trace.events().skip(skip).limit(limit)) {
-      var batch = new ArrayList<AccessEvent>(batchSize);
-      events.forEach(event -> {
-        batch.add(event);
-        if (batch.size() == batchSize) {
-          var accessEvents = ImmutableList.copyOf(batch);
-          for (var policy : policies) {
-            policy.send(accessEvents);
-          }
-          batch.clear();
+      events.gather(windowFixed(batchSize)).forEach(batch -> {
+        for (var policy : policies) {
+          policy.send(batch);
         }
       });
-
-      var remainder = ImmutableList.copyOf(batch);
-      for (var policy : policies) {
-        policy.send(remainder);
+      var futures = policies.stream().map(policy -> {
         policy.finish();
-      }
-
-      var futures = policies.stream()
-          .map(PolicyActor::completed)
-          .toArray(CompletableFuture<?>[]::new);
+        return policy.completed();
+      }).toArray(CompletableFuture<?>[]::new);
       CompletableFuture.allOf(futures).join();
     }
   }

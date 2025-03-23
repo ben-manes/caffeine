@@ -362,6 +362,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public boolean containsKey(Object key) {
       return asyncCache.cache().containsKey(key);
     }
+    @SuppressWarnings("CollectionUndefinedEquality")
     @Override public boolean containsValue(Object value) {
       return asyncCache.cache().containsValue(value);
     }

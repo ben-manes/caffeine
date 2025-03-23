@@ -27,9 +27,9 @@ import org.openjdk.jmh.annotations.TearDown;
  * A benchmark that evaluates the eviction performance of a cache. The cache is pre-populated for
  * a 100% eviction rate to mimic worst case behavior.
  * <p>
- * <pre>{@code
- *   ./gradlew jmh -PincludePattern=EvictionBenchmark --rerun
- * }</pre>
+ * {@snippet :
+ * ./gradlew jmh -PincludePattern=EvictionBenchmark --rerun
+ * }
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

@@ -108,7 +108,8 @@ public final class MiniSimClimber implements HillClimber {
 
     sample = 0;
     double oldPercent = prevPercent;
-    double newPercent = prevPercent = minIndex < 80 ? minIndex / 100.0 : 0.8;
+    double newPercent = minIndex < 80 ? minIndex / 100.0 : 0.8;
+    prevPercent = newPercent;
     return (newPercent > oldPercent)
         ? Adaptation.increaseWindow((int) ((newPercent - oldPercent) * cacheSize))
         : Adaptation.decreaseWindow((int) ((oldPercent - newPercent) * cacheSize));

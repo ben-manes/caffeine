@@ -46,6 +46,7 @@ import javax.cache.event.CacheEntryListener;
 import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.Test;
@@ -330,7 +331,8 @@ public final class EventDispatcherTest {
   @Test
   public void awaitSynchronous_failure() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
-    var future = new CompletableFuture<Void>();
+    @SuppressWarnings("NullAway")
+    var future = new CompletableFuture<@Nullable Void>();
     future.completeExceptionally(new RuntimeException());
     dispatcher.pending.get().add(future);
 
@@ -354,7 +356,8 @@ public final class EventDispatcherTest {
     int key = 1;
 
     var dispatchQueue = primary.dispatchQueues.values().iterator().next();
-    var queue = new CompletableFuture<Void>();
+    @SuppressWarnings("NullAway")
+    var queue = new CompletableFuture<@Nullable Void>();
     dispatchQueue.put(key, queue);
 
     try (Cache<Integer, Integer> cache = Mockito.mock()) {

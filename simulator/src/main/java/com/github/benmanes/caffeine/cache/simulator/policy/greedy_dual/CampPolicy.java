@@ -142,7 +142,7 @@ public final class CampPolicy implements Policy {
         : priorityQueue.first().priority + roundCost;
     var sentinel = sentinelMapping.computeIfAbsent(roundCost, cost -> {
       // Add a new LRU list for the rounded cost
-      var head = new Sentinel(roundCost);
+      var head = new Sentinel(cost);
       head.lastRequest = requestCount;
       head.priority = priority;
       priorityQueue.add(head);

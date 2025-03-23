@@ -68,6 +68,10 @@ public final class Indicator {
     return sample;
   }
 
+  public int[] getFreqs() {
+    return hinter.freq;
+  }
+
   public double getSkew() {
     return estSkew.estSkew(k);
   }
@@ -107,7 +111,7 @@ public final class Indicator {
     StreamSummary<Long> stream;
 
     public EstSkew() {
-      this.stream = new StreamSummary<>(ssSize);
+      stream = new StreamSummary<>(ssSize);
     }
 
     public void record(long key) {
@@ -115,7 +119,7 @@ public final class Indicator {
     }
 
     public void reset() {
-      this.stream = new StreamSummary<>(ssSize);
+      stream = new StreamSummary<>(ssSize);
     }
 
     public IntStream getTopK(int k) {
@@ -128,10 +132,6 @@ public final class Indicator {
       getTopK(k).forEachOrdered(freq -> regression.addData(Math.log(idx[0]++), Math.log(freq)));
       return -regression.getSlope();
     }
-  }
-
-  public int[] getFreqs() {
-    return hinter.freq;
   }
 
   static final class IndicatorSettings extends BasicSettings {

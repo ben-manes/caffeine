@@ -327,6 +327,7 @@ public final class CaffeineSpec {
   }
 
   /** Returns a parsed {@link TimeUnit} value. */
+  @SuppressWarnings("StatementSwitchToExpressionSwitch")
   static TimeUnit parseTimeUnit(String key, @Nullable String value) {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s omitted", key);
     @SuppressWarnings("NullAway")

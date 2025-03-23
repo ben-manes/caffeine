@@ -217,11 +217,9 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   }
 
   static final class SegmentedLruSettings extends BasicSettings {
-
     public SegmentedLruSettings(Config config) {
       super(config);
     }
-
     public double percentProtected() {
       return config().getDouble("segmented-lru.percent-protected");
     }

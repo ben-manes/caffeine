@@ -24,7 +24,6 @@ import java.util.concurrent.Semaphore;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.google.common.collect.ImmutableList;
 
 /**
  * An actor that proxies to the page replacement policy.
@@ -56,7 +55,7 @@ public final class PolicyActor {
   }
 
   /** Sends the access events for async processing and blocks until accepted into the mailbox. */
-  public void send(ImmutableList<AccessEvent> events) {
+  public void send(List<AccessEvent> events) {
     submit(new Execute(events));
   }
 

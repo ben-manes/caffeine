@@ -31,7 +31,7 @@ public interface TraceWriter extends Closeable {
   default void writeHeader() throws IOException {}
 
   /** Writes the event in the trace format. */
-  void writeEvent(int tick, AccessEvent event) throws IOException;
+  void writeEvent(AccessEvent event) throws IOException;
 
   /** Writes the footer for the trace format. */
   default void writeFooter() throws IOException {}

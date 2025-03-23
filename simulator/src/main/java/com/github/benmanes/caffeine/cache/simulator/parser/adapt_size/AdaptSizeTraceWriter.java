@@ -33,13 +33,15 @@ import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 public final class AdaptSizeTraceWriter implements TraceWriter {
   private final BufferedWriter writer;
 
+  private long tick;
+
   public AdaptSizeTraceWriter(OutputStream output) {
     this.writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8));
   }
 
   @Override
-  public void writeEvent(int tick, AccessEvent event) throws IOException {
-    writer.write(Long.toString(tick));
+  public void writeEvent(AccessEvent event) throws IOException {
+    writer.write(Long.toString(++tick));
     writer.write(" ");
     writer.write(Long.toString(event.key()));
     writer.write(" ");

@@ -71,7 +71,7 @@ public final class ClairvoyantPolicy implements Policy {
     tick++;
     recorder.add(event);
 
-    var times = accessTimes.computeIfAbsent(event.key(), key -> new IntArrayFIFOQueue());
+    var times = accessTimes.computeIfAbsent(event.key(), _ -> new IntArrayFIFOQueue());
     times.enqueue(tick);
   }
 

@@ -1127,6 +1127,7 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  @SuppressWarnings("CollectionUndefinedEquality")
   public void refreshes_nullLookup(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.policy().refreshes().containsValue(null)).isFalse();
     assertThat(cache.policy().refreshes().containsKey(null)).isFalse();

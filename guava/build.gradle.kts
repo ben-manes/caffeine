@@ -19,7 +19,7 @@ dependencies {
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
-  options.compilerArgs.add("-Xlint:-requires-automatic")
+  options.compilerArgs.add("-Xlint:-classfile")
 }
 
 tasks.named<JavaCompile>("compileTestJava").configure {

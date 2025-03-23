@@ -244,15 +244,12 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
   }
 
   static final class TwoQueueSettings extends BasicSettings {
-
     public TwoQueueSettings(Config config) {
       super(config);
     }
-
     public double percentIn() {
       return config().getDouble("two-queue.percent-in");
     }
-
     public double percentOut() {
       return config().getDouble("two-queue.percent-out");
     }
