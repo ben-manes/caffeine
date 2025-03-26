@@ -1135,7 +1135,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       implements LocalLoadingCache<K, V> {
     private static final long serialVersionUID = 1;
 
-    final Function<K, V> mappingFunction;
+    final Function<K, @Nullable V> mappingFunction;
     final CacheLoader<? super K, V> cacheLoader;
     final @Nullable Function<Set<? extends K>, Map<K, V>> bulkMappingFunction;
 
@@ -1152,7 +1152,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public Function<K, V> mappingFunction() {
+    public Function<K, @Nullable V> mappingFunction() {
       return mappingFunction;
     }
 
