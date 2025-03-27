@@ -2792,7 +2792,7 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
-  @SuppressWarnings("MapEntry")
+  @SuppressWarnings({"MapEntry","NullAway"})
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullKey(Map<Int, Int> map, CacheContext context) {
     var value = Iterables.getFirst(context.original().values(), context.absentValue());
@@ -2802,7 +2802,7 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
-  @SuppressWarnings("MapEntry")
+  @SuppressWarnings({"MapEntry","NullAway"})
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullValue(Map<Int, Int> map, CacheContext context) {
     var key = Iterables.getFirst(context.original().keySet(), context.absentKey());
@@ -2812,7 +2812,7 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
-  @SuppressWarnings("MapEntry")
+  @SuppressWarnings({"MapEntry","NullAway"})
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullKeyValue(Map<Int, Int> map, CacheContext context) {
     assertThat(map.entrySet().remove(Maps.immutableEntry(null, null))).isFalse();

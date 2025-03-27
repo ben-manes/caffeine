@@ -49,7 +49,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   AsyncCacheLoader<? super K, V> cacheLoader();
 
   /** Returns the {@link CacheLoader#load} as a mapping function. */
-  Function<K, V> mappingFunction();
+  Function<K, @Nullable V> mappingFunction();
 
   /** Returns the {@link CacheLoader#loadAll} as a mapping function, if implemented. */
   @Nullable Function<Set<? extends K>, Map<K, V>> bulkMappingFunction();
