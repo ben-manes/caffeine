@@ -57,6 +57,7 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import org.eclipse.collections.impl.factory.Sets;
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -2594,7 +2595,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = Iterables.getFirst(cache.asMap().values(), context.absentValue().toFuture());
-    assertThat(cache.asMap().entrySet().remove(Maps.immutableEntry(null, future))).isFalse();
+    assertThat(cache.asMap().entrySet().remove(Maps.<@Nullable Int, CompletableFuture<Int>>immutableEntry(null, future))).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
   }
 
@@ -2604,7 +2605,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     var key = Iterables.getFirst(context.original().keySet(), context.absentKey());
-    assertThat(cache.asMap().entrySet().remove(Maps.immutableEntry(key, null))).isFalse();
+    assertThat(cache.asMap().entrySet().remove(Maps.<Int, @Nullable CompletableFuture<Int>>immutableEntry(key, null))).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
   }
 
@@ -2613,7 +2614,7 @@ public final class AsyncAsMapTest {
   @SuppressWarnings("MapEntry")
   @Test(dataProvider = "caches")
   public void entrySet_remove_nullKeyValue(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.asMap().entrySet().remove(Maps.immutableEntry(null, null))).isFalse();
+    assertThat(cache.asMap().entrySet().remove(Maps.<@Nullable Int, @Nullable CompletableFuture<Int>>immutableEntry(null, null))).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
   }
 
