@@ -73,7 +73,6 @@ public final class EventDispatcher<K, V> {
   final ThreadLocal<List<CompletableFuture<@Nullable Void>>> pending;
   final Executor executor;
 
-  @SuppressWarnings("NullAway")
   public EventDispatcher(Executor executor) {
     this.pending = ThreadLocal.withInitial(ArrayList::new);
     this.dispatchQueues = new ConcurrentHashMap<>();

@@ -201,6 +201,7 @@ public final class ExpirationTest {
       return null;
     };
     doAnswer(onRemoval).when(context.removalListener()).onRemoval(any(), any(), any());
+    // NullAway suppression since it can't infer type argument for Futures.immediateFuture call
     when(context.scheduler().schedule(any(), task.capture(), delay.capture(), any()))
         .thenReturn(Futures.immediateFuture(null));
     var original = new HashMap<Int, Duration>();
@@ -1246,7 +1247,6 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
-  @SuppressWarnings("NullAway")
   public void compute(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.absentValue();
@@ -1391,7 +1391,6 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
-  @SuppressWarnings("NullAway")
   public void merge(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.absentValue();
