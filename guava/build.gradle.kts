@@ -18,10 +18,6 @@ dependencies {
   testRuntimeOnly(libs.bundles.junit.engines)
 }
 
-tasks.named<JavaCompile>("compileJava").configure {
-  options.compilerArgs.add("-Xlint:-classfile")
-}
-
 tasks.named<JavaCompile>("compileTestJava").configure {
   options.errorprone {
     disable("Varifier")

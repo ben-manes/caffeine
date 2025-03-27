@@ -30,6 +30,7 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -1260,7 +1261,7 @@ public final class ExpirationTest {
     var difference = Maps.difference(context.original(), map);
     evicted.putAll(Multimaps.forMap(difference.entriesOnlyOnRight()));
     evicted.putAll(Multimaps.forMap(difference.entriesOnlyOnLeft()));
-    evicted.put(key, context.original().get(key));
+    evicted.put(key, requireNonNull(context.original().get(key)));
 
     assertThat(evicted).hasSize(context.original().size() - map.size() + 1);
     assertThat(context).notifications().withCause(EXPIRED)
@@ -1403,7 +1404,7 @@ public final class ExpirationTest {
     var difference = Maps.difference(context.original(), map);
     evicted.putAll(Multimaps.forMap(difference.entriesOnlyOnRight()));
     evicted.putAll(Multimaps.forMap(difference.entriesOnlyOnLeft()));
-    evicted.put(key, context.original().get(key));
+    evicted.put(key, requireNonNull(context.original().get(key)));
 
     assertThat(evicted).hasSize(context.original().size() - map.size() + 1);
     assertThat(context).notifications().withCause(EXPIRED)
