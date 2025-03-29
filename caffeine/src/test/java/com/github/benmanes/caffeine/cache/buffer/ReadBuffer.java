@@ -65,6 +65,7 @@ public abstract class ReadBuffer<E> {
     }
   }
 
+  @FunctionalInterface
   public interface Consumer<E>
       extends java.util.function.Consumer<E>, MessagePassingQueue.Consumer<E> {}
 }

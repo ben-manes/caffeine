@@ -2500,6 +2500,7 @@ public final class ExpireAfterVarTest {
         .isEqualTo(Duration.ofSeconds(3).toNanos());
   }
 
+  @FunctionalInterface
   interface SerializableBiFunction extends BiFunction<Integer, Integer, Duration>, Serializable {}
 
   static final class ExpirationException extends RuntimeException {

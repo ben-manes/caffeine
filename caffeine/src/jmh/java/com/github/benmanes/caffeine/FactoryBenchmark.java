@@ -130,6 +130,7 @@ public class FactoryBenchmark {
     public Alpha() {}
   }
 
+  @FunctionalInterface
   private interface AlphaConstructor {
     Alpha construct();
   }

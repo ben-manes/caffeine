@@ -9,6 +9,10 @@ plugins {
   id("errorprone.caffeine")
 }
 
+val javaTestVersion: Provider<JavaLanguageVersion> = java.toolchain.languageVersion.map {
+  val version = System.getenv("JAVA_TEST_VERSION")?.toIntOrNull()
+  if (version == null) it else JavaLanguageVersion.of(version)
+}
 val mockitoAgent: Configuration by configurations.creating
 
 dependencies {
@@ -44,6 +48,11 @@ tasks.withType<Test>().configureEach {
     showExceptions = true
     showCauses = true
   }
+  javaLauncher.set(
+    javaToolchains.launcherFor {
+      languageVersion.set(javaTestVersion)
+    }
+  )
 }
 
 tasks.named<JavaCompile>("compileTestJava").configure {

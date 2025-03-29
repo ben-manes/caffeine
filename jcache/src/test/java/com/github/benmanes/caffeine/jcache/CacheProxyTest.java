@@ -211,5 +211,6 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   interface CloseableExpiryPolicy extends ExpiryPolicy, Closeable {}
   interface CloseableCacheLoader extends CacheLoader<Integer, Integer>, Closeable {}
   interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}
+  @SuppressWarnings("PMD.ImplicitFunctionalInterface")
   interface CloseableCacheEntryListener extends CacheEntryListener<Integer, Integer>, Closeable {}
 }

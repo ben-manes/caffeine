@@ -48,6 +48,7 @@ jobs:
     permissions:
       contents: read
     strategy:
+      fail-fast: true
       matrix:
         java: [ 11, 24, 25, GraalVM ]
     env:
@@ -69,10 +70,6 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           arguments: check -x test ${{ env.GRADLE_ARGS }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-      - name: Cancel if failed
-        uses: andymckay/cancel-action@a955d435292c0d409d104b57d8e78435a93a6ef1 # 0.5
-        continue-on-error: true
-        if: failure()
 
   tests:
     name: Tests
@@ -82,6 +79,7 @@ jobs:
     permissions:
       contents: read
     strategy:
+      fail-fast: true
       matrix:
         suite:
           - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineSlowTest
@@ -208,10 +206,6 @@ jobs:
           retention-days: 1
           name: ${{ steps.format_artifact.outputs.name }}-results
           path: ${{ steps.format_artifact.outputs.name }}.tar.gz
-      - name: Cancel if failed
-        uses: andymckay/cancel-action@a955d435292c0d409d104b57d8e78435a93a6ef1 # 0.5
-        continue-on-error: true
-        if: failure()
 
   coverage:
     name: Coverage

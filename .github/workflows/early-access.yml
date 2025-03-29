@@ -1,0 +1,123 @@
+name: Early Access
+permissions: {}
+on:
+  schedule:
+    - cron: '0 0 * * 5'
+
+env:
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+  ALLOWED_ENDPOINTS: >
+    *.actions.githubusercontent.com:443
+    api.adoptium.net:443
+    api.github.com:443
+    caffeine.gradle-enterprise.cloud:443
+    download.java.net:443
+    download.oracle.com:443
+    downloads.gradle.org:443
+    downloads.gradle-dn.com:443
+    gds.oracle.com:443
+    ghcr.io:443
+    github.com:443
+    jdk.java.net:443
+    objects.githubusercontent.com:443
+    oss.sonatype.org:443
+    plugins.gradle.org:443
+    plugins-artifacts.gradle.org:443
+    raw.githubusercontent.com:443
+    repo.gradle.org:443
+    repo.maven.apache.org:443
+    repo1.maven.org:443
+    scans-in.gradle.com:443
+    services.gradle.org:443
+
+jobs:
+  tests:
+    name: Tests
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        suite:
+          - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineSlowTest
+          - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineSlowTest
+          - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineSlowTest
+          - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineSlowTest
+          - caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest
+          - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineSlowTest
+          - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineSlowTest
+          - caffeine:strongKeysAndStrongValuesStatsSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesStatsSyncGuavaSlowTest
+          - caffeine:strongKeysAndWeakValuesStatsSyncGuavaSlowTest
+          - caffeine:strongKeysAndSoftValuesStatsSyncGuavaSlowTest
+          - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesAsyncCaffeineSlowTest
+          - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineTest
+          - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesSyncCaffeineSlowTest
+          - caffeine:strongKeysAndWeakValuesSyncCaffeineSlowTest
+          - caffeine:strongKeysAndSoftValuesSyncCaffeineSlowTest
+          - caffeine:weakKeysAndWeakValuesStatsSyncGuavaSlowTest
+          - caffeine:weakKeysAndSoftValuesStatsSyncGuavaSlowTest
+          - caffeine:strongKeysAndStrongValuesStatsSyncGuavaTest
+          - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest
+          - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest
+          - caffeine:strongKeysAndStrongValuesAsyncCaffeineTest
+          - caffeine:weakKeysAndWeakValuesSyncCaffeineSlowTest
+          - caffeine:weakKeysAndSoftValuesSyncCaffeineSlowTest
+          - caffeine:strongKeysAndStrongValuesSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesStatsSyncGuavaTest
+          - caffeine:strongKeysAndWeakValuesStatsSyncGuavaTest
+          - caffeine:strongKeysAndSoftValuesStatsSyncGuavaTest
+          - caffeine:weakKeysAndStrongValuesAsyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesSyncGuavaSlowTest
+          - caffeine:strongKeysAndWeakValuesSyncGuavaSlowTest
+          - caffeine:strongKeysAndSoftValuesSyncGuavaSlowTest
+          - caffeine:weakKeysAndStrongValuesSyncCaffeineTest
+          - caffeine:strongKeysAndWeakValuesSyncCaffeineTest
+          - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
+          - caffeine:weakKeysAndWeakValuesStatsSyncGuavaTest
+          - caffeine:weakKeysAndSoftValuesStatsSyncGuavaTest
+          - caffeine:weakKeysAndWeakValuesSyncGuavaSlowTest
+          - caffeine:weakKeysAndSoftValuesSyncGuavaSlowTest
+          - caffeine:strongKeysAndStrongValuesSyncGuavaTest
+          - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
+          - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesSyncGuavaTest
+          - caffeine:strongKeysAndWeakValuesSyncGuavaTest
+          - caffeine:strongKeysAndSoftValuesSyncGuavaTest
+          - caffeine:weakKeysAndWeakValuesSyncGuavaTest
+          - caffeine:weakKeysAndSoftValuesSyncGuavaTest
+          - caffeine:junitJupiterTest
+          - caffeine:standaloneTest
+          - caffeine:isolatedTest
+          - caffeine:junitTest
+          - caffeine:fuzzTest
+          - simulator:check
+          - jcache:check
+          - guava:check
+    env:
+      JDK_EA: true
+      JAVA_VERSION: 24
+      JAVA_TEST_VERSION: 25
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Setup Gradle
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_TEST_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Run Tests
+        run: ./gradlew ${{ matrix.suite }}

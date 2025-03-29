@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface Reporter {
 
   /** Writes the report to the output destination. */

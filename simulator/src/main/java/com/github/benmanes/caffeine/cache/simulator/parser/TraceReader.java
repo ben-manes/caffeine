@@ -47,6 +47,7 @@ public interface TraceReader {
   Stream<AccessEvent> events();
 
   /** A trace reader that that does not contain external event metadata. */
+  @FunctionalInterface
   interface KeyOnlyTraceReader extends TraceReader {
 
     @Override default Set<Characteristic> characteristics() {

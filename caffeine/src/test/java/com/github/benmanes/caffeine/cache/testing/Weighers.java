@@ -43,6 +43,7 @@ public final class Weighers {
   }
 
   /** A marker to instruct the validation to not check the entry's weight for data consistency. */
+  @FunctionalInterface
   public interface SkippedWeigher<K, V> extends Weigher<K, V> {}
 
   static final class ConstantWeigher<K, V> implements Weigher<K, V>, Serializable {
