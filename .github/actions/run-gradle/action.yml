@@ -7,14 +7,10 @@ inputs:
   java:
     required: true
     description: The JDK version
-  early-access:
-    default: '25'
+  distribution:
+    default: temurin
     required: false
-    description: The early access release
-  graal:
-    default: '24'
-    required: false
-    description: The GraalVM version
+    description: The Java distribution
   cache-encryption-key:
     required: false
     description: A Gradle cache encryption key
@@ -42,40 +38,34 @@ runs:
           24
           ${{ steps.gradle_toolchain.outputs.version }}
         distribution: temurin
+    - name: Set up JDK
+      uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+      with:
+        java-version: ${{ inputs.java }}
+        distribution: ${{ inputs.distribution }}
     - name: Prepare JDK toolchain
       id: java_toolchain
       env:
         INPUTS_JAVA: ${{ inputs.java }}
-        INPUTS_GRAAL: ${{ inputs.graal }}
+        JDK_EA: ${{ endsWith(inputs.java, '-ea') }}
+        INPUTS_DISTRIBUTION: ${{ inputs.distribution }}
       shell: bash
       run: |
-        if [[ "$INPUTS_JAVA" == "GraalVM" ]]; then
-          echo "vendor=GraalVM Community" >> $GITHUB_OUTPUT
-          echo "version=$INPUTS_GRAAL" >> $GITHUB_OUTPUT
-        else
-          echo "vendor=Adoptium" >> $GITHUB_OUTPUT
-          echo "version=$INPUTS_JAVA" >> $GITHUB_OUTPUT
-        fi
-    - name: Set up JDK
-      uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
-      with:
-        java-version: ${{
-          inputs.java == 'GraalVM' && inputs.graal ||
-          (inputs.early-access == inputs.java && format('{0}-ea', inputs.java) || inputs.java) }}
-        distribution: ${{ inputs.java == 'GraalVM' && 'graalvm' || 'temurin' }}
-    - name: Prepare JDK ${{ inputs.java }}
-      id: prepare_java
-      env:
-        INPUTS_JAVA: ${{ inputs.java }}
-        JDK_EA: ${{ inputs.early-access == inputs.java }}
-      shell: bash
-      run: |
-        if [[ "$INPUTS_JAVA" == "GraalVM" ]]; then
+        declare -A -r VENDORS=(
+          ["temurin"]="Adoptium"
+          ["graalvm"]="GraalVM Community"
+        )
+        version="${INPUTS_JAVA%-ea}"
+        vendor=${VENDORS["$INPUTS_DISTRIBUTION"]}
+
+        if [[ "$INPUTS_DISTRIBUTION" == "graalvm" ]]; then
           echo "graalvm_home=$JAVA_HOME" >> $GITHUB_OUTPUT
         fi
+        echo "distribution=$INPUTS_DISTRIBUTION" >> $GITHUB_OUTPUT
         echo "early_access=$JDK_EA" >> $GITHUB_OUTPUT
         echo "java_home=$JAVA_HOME" >> $GITHUB_OUTPUT
-        echo "tool_options=-Dorg.gradle.workers.max=$((2 * $(nproc)))" >> $GITHUB_OUTPUT
+        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "vendor=$vendor" >> $GITHUB_OUTPUT
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
       with:
@@ -94,18 +84,18 @@ runs:
         INPUTS_ARGUMENTS: ${{ inputs.arguments }}
         INPUTS_ATTEMPT_DELAY: ${{ inputs.attempt-delay }}
         INPUTS_ATTEMPT_LIMIT: ${{ inputs.attempt-limit }}
-        JDK_CI: ${{ steps.prepare_java.outputs.java_home }}
-        JDK_EA: ${{ steps.prepare_java.outputs.early_access }}
+        JDK_CI: ${{ steps.java_toolchain.outputs.java_home }}
+        JDK_EA: ${{ steps.java_toolchain.outputs.early_access }}
         JAVA_VENDOR: ${{ steps.java_toolchain.outputs.vendor }}
         JAVA_VERSION: ${{ steps.java_toolchain.outputs.version }}
-        JAVA_TOOL_OPTIONS: ${{ steps.prepare_java.tool_options }}
-        GRAALVM_HOME: ${{ steps.prepare_java.outputs.graalvm_home }}
+        JDK_DISTRIBUTION: ${{ steps.java_toolchain.outputs.distribution }}
+        GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: false
       shell: bash
       run: |
         echo "::add-matcher::.github/problem-matcher.json"
         for ((i=1; i<=$INPUTS_ATTEMPT_LIMIT; i++)); do
-          ./gradlew --no-problems-report $(echo "$INPUTS_ARGUMENTS" | tr -d '\n') && break
+          ./gradlew --no-problems-report $(eval echo "$INPUTS_ARGUMENTS" | tr -d '\n') && break
           if [ $i -lt $INPUTS_ATTEMPT_LIMIT ]; then
             echo "Attempt $i failed. Retrying in $INPUTS_ATTEMPT_DELAY seconds..."
             sleep $INPUTS_ATTEMPT_DELAY

@@ -32,6 +32,7 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
   inputs.property("javaVendor", java.toolchain.vendor.get().toString())
+  inputs.property("javaDistribution", System.getenv("JDK_DISTRIBUTION")).optional(true)
 
   // Use --debug-jvm to remotely attach to the test task
   jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+EnableDynamicAgentLoading", "-Xshare:off")

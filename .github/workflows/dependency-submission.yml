@@ -4,7 +4,7 @@ on: [ push ]
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  JAVA_VERSION: 21
+  JAVA_VERSION: 24
 
 jobs:
   dependency-submission:

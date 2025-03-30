@@ -1,19 +1,49 @@
 name: benchmarks
 permissions: {}
-on: [ push, pull_request ]
+on:
+  pull_request: {}
+  push:
+    branches: [master]
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  PUBLISH_JDK: 21
+  ALLOWED_ENDPOINTS: >
+    api.adoptium.net:443
+    api.github.com:443
+    caffeine.gradle-enterprise.cloud:443
+    download.java.net:443
+    download.oracle.com:443
+    downloads.gradle.org:443
+    downloads.gradle-dn.com:443
+    gds.oracle.com:443
+    github.com:443
+    jcenter.bintray.com:443
+    objects.githubusercontent.com:443
+    plugins.gradle.org:443
+    plugins-artifacts.gradle.org:443
+    repo.maven.apache.org:443
+    repo1.maven.org:443
+    raw.githubusercontent.com:443
+    services.gradle.org:443
+    www.graalvm.org:443
 
 jobs:
-  benchmarks:
+  compute:
+    name: Compute
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 21, 25, GraalVM ]
+        java: [ 11, 24, 25-ea ]
+        distribution: [ temurin ]
+        include:
+          - java: 24
+            distribution: graalvm
+          - java: 23
+            distribution: semeru
+          - java: 21
+            distribution: dragonwell
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -22,25 +52,7 @@ jobs:
         with:
           disable-sudo: true
           egress-policy: block
-          allowed-endpoints: >
-            api.adoptium.net:443
-            api.github.com:443
-            caffeine.gradle-enterprise.cloud:443
-            download.java.net:443
-            download.oracle.com:443
-            downloads.gradle.org:443
-            downloads.gradle-dn.com:443
-            gds.oracle.com:443
-            github.com:443
-            jcenter.bintray.com:443
-            objects.githubusercontent.com:443
-            plugins.gradle.org:443
-            plugins-artifacts.gradle.org:443
-            repo.maven.apache.org:443
-            repo1.maven.org:443
-            raw.githubusercontent.com:443
-            services.gradle.org:443
-            www.graalvm.org:443
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -49,6 +61,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          distribution: ${{ matrix.distribution }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             caffeine:jmh
@@ -64,13 +77,44 @@ jobs:
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gist_description: Compute JMH Results
-          gist_title: compute_results_${{ matrix.java }}.json
           github_file: ./caffeine/build/reports/jmh/results.json
+          gist_title: compute_results_${{ matrix.distribution }}_${{ matrix.java }}.json
           gist_url: https://gist.githubusercontent.com/ben-manes/511298014cc5629cbc5e57f09fd4c430
+
+  get-put:
+    name: Get/Put
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        java: [ 11, 24, 25-ea ]
+        distribution: [ temurin ]
+        include:
+          - java: 24
+            distribution: graalvm
+          - java: 23
+            distribution: semeru
+          - java: 21
+            distribution: dragonwell
+    env:
+      JAVA_VERSION: ${{ matrix.java }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Get/Put JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          distribution: ${{ matrix.distribution }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             caffeine:jmh
@@ -86,13 +130,44 @@ jobs:
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gist_description: Get/Put JMH Results
-          gist_title: getput_results_${{ matrix.java }}.json
           github_file: ./caffeine/build/reports/jmh/results.json
+          gist_title: getput_results_${{ matrix.distribution }}_${{ matrix.java }}.json
           gist_url: https://gist.githubusercontent.com/ben-manes/b231cf57cf8e144e2247716e777edcf3
+
+  put-remove:
+    name: Put/Remove
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        java: [ 11, 24, 25-ea ]
+        distribution: [ temurin ]
+        include:
+          - java: 24
+            distribution: graalvm
+          - java: 23
+            distribution: semeru
+          - java: 21
+            distribution: dragonwell
+    env:
+      JAVA_VERSION: ${{ matrix.java }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Put/Remove JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          distribution: ${{ matrix.distribution }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             caffeine:jmh
@@ -108,13 +183,44 @@ jobs:
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gist_description: Put/Remove JMH Results
-          gist_title: putremove_results_${{ matrix.java }}.json
           github_file: ./caffeine/build/reports/jmh/results.json
+          gist_title: putremove_results_${{ matrix.distribution }}_${{ matrix.java }}.json
           gist_url: https://gist.githubusercontent.com/ben-manes/1359c399cb717e81976ee635c513340b
+
+  eviction:
+    name: Eviction
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        java: [ 11, 24, 25-ea ]
+        distribution: [ temurin ]
+        include:
+          - java: 24
+            distribution: graalvm
+          - java: 23
+            distribution: semeru
+          - java: 21
+            distribution: dragonwell
+    env:
+      JAVA_VERSION: ${{ matrix.java }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: EvictionBenchmark JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          distribution: ${{ matrix.distribution }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             caffeine:jmh
@@ -130,13 +236,44 @@ jobs:
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gist_description: Eviction JMH Results
-          gist_title: eviction_results_${{ matrix.java }}.json
           github_file: ./caffeine/build/reports/jmh/results.json
+          gist_title: eviction_results_${{ matrix.distribution }}_${{ matrix.java }}.json
           gist_url: https://gist.githubusercontent.com/ben-manes/2f5b54540c2e67edc0d1a7f28a1139f5
+
+  frequency-sketch:
+    name: Frequency Sketch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        java: [ 11, 24, 25-ea ]
+        distribution: [ temurin ]
+        include:
+          - java: 24
+            distribution: graalvm
+          - java: 23
+            distribution: semeru
+          - java: 21
+            distribution: dragonwell
+    env:
+      JAVA_VERSION: ${{ matrix.java }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: FrequencySketch JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          distribution: ${{ matrix.distribution }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             caffeine:jmh
@@ -151,13 +288,44 @@ jobs:
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gist_description: FrequencySketch JMH Results
-          gist_title: freq_results_${{ matrix.java }}.json
           github_file: ./caffeine/build/reports/jmh/results.json
+          gist_title: freq_results_${{ matrix.distribution }}_${{ matrix.java }}.json
           gist_url: https://gist.githubusercontent.com/ben-manes/f93df1b66aa210bc23a1e672ef9bee16
+
+  timer-wheel:
+    name: Timer Wheel
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        java: [ 11, 24, 25-ea ]
+        distribution: [ temurin ]
+        include:
+          - java: 24
+            distribution: graalvm
+          - java: 23
+            distribution: semeru
+          - java: 21
+            distribution: dragonwell
+    env:
+      JAVA_VERSION: ${{ matrix.java }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: TimerWheelBenchmark JMH Benchmark
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ matrix.java }}
+          distribution: ${{ matrix.distribution }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             caffeine:jmh
@@ -172,13 +340,19 @@ jobs:
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gist_description: TimerWheel JMH Results
-          gist_title: timerwheel_results_${{ matrix.java }}.json
           github_file: ./caffeine/build/reports/jmh/results.json
+          gist_title: timerwheel_results_${{ matrix.distribution }}_${{ matrix.java }}.json
           gist_url: https://gist.githubusercontent.com/ben-manes/9abafdbc76fe34c0e63cef386b0b9ac0
+
+  publish:
+    name: Publish
+    needs: [compute, get-put, put-remove, eviction, frequency-sketch, timer-wheel]
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'push'
+      && github.event.repository.fork == false
+    steps:
       - name: Publish JMH benchmarks
-        if: >
-          matrix.java == env.PUBLISH_JDK
-          && github.event_name == 'push'
         run: |
           {
             echo '#### [Compute](https://jmh.morethan.io/?gists=511298014cc5629cbc5e57f09fd4c430)'

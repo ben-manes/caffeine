@@ -20,12 +20,13 @@ dependencies {
 
 java.toolchain {
   languageVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
-  vendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.matching(it) }
+  vendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.of(it) }
 }
 val javaRuntimeVersion: Provider<JavaLanguageVersion> =
   java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(24)) }
 
 tasks.withType<JavaCompile>().configureEach {
+  inputs.property("javaDistribution", System.getenv("JDK_DISTRIBUTION")).optional(true)
   inputs.property("javaVendor", java.toolchain.vendor.get().toString())
   options.release = java.toolchain.languageVersion.get().asInt()
 

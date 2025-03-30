@@ -1,9 +1,29 @@
 name: examples
 permissions: {}
-on: [ push, pull_request ]
+on:
+  pull_request: {}
+  push:
+    branches: [master]
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+  ALLOWED_ENDPOINTS: >
+    api.github.com:443
+    api.adoptium.net:443
+    caffeine.gradle-enterprise.cloud:443
+    download.oracle.com:443
+    downloads.gradle.org:443
+    downloads.gradle-dn.com:443
+    gds.oracle.com:443
+    github.com:443
+    jcenter.bintray.com:443
+    objects.githubusercontent.com:443
+    plugins.gradle.org:443
+    plugins-artifacts.gradle.org:443
+    repo.maven.apache.org:443
+    repo1.maven.org:443
+    services.gradle.org:443
+    www.graalvm.org:443
   JAVA_VERSION: 21
 
 jobs:
@@ -17,23 +37,7 @@ jobs:
         with:
           disable-sudo: true
           egress-policy: block
-          allowed-endpoints: >
-            api.github.com:443
-            api.adoptium.net:443
-            caffeine.gradle-enterprise.cloud:443
-            download.oracle.com:443
-            downloads.gradle.org:443
-            downloads.gradle-dn.com:443
-            gds.oracle.com:443
-            github.com:443
-            jcenter.bintray.com:443
-            objects.githubusercontent.com:443
-            plugins.gradle.org:443
-            plugins-artifacts.gradle.org:443
-            repo.maven.apache.org:443
-            repo1.maven.org:443
-            services.gradle.org:443
-            www.graalvm.org:443
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -43,31 +47,6 @@ jobs:
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-      - name: Simulator
-        run: >
-          ./gradlew simulator:run
-          -Dcaffeine.simulator.report.output=$(pwd)/simulation.md
-          -Dcaffeine.simulator.files.paths.0="corda:trace_vaultservice.gz"
-          -Dcaffeine.simulator.files.paths.1="lirs:loop.trace.gz"
-          -Dcaffeine.simulator.files.paths.2="corda:trace_vaultservice.gz"
-      - name: Publish Simulator Results
-        run: |
-          {
-            echo '### Adaptivity'
-            echo '```'
-            cat $(pwd)/simulation.md
-            echo '```'
-          } >> $GITHUB_STEP_SUMMARY
-      - name: Chart Simulation
-        run: ./gradlew -q simulator:simulate --maximumSize=100,200,300
-      - name: Memory Overhead
-        run: ./gradlew -q caffeine:memoryOverhead
-      - name: Stresser (read)
-        run: ./gradlew -q caffeine:stress --workload=read --duration PT1M
-      - name: Stresser (write)
-        run: ./gradlew -q caffeine:stress --workload=write --duration PT1M
-      - name: Stresser (refresh)
-        run: ./gradlew -q caffeine:stress --workload=refresh --duration PT1M
       - name: Write-behind (rxjava)
         working-directory: examples/write-behind-rxjava
         run: ./gradlew build
@@ -83,25 +62,122 @@ jobs:
       - name: Resilience (failsafe)
         working-directory: examples/resilience-failsafe
         run: ./gradlew build
-      - name: Prepare for Graal Native Image
+
+  graalvm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build snapshot
         uses: ./.github/actions/run-gradle
         env:
           SNAPSHOT: true
         with:
-          java: GraalVM
-          graal: ${{ env.JAVA_VERSION }}
-          arguments: -q caffeine:clean caffeine:jar
+          distribution: graalvm
+          java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: caffeine:jar
       - name: Graal Native Image
         uses: ./.github/actions/run-gradle
         env:
           SNAPSHOT: true
         with:
-          java: GraalVM
-          graal: ${{ env.JAVA_VERSION }}
+          distribution: graalvm
+          java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             --project-dir examples/graal-native
             -Pagent run
             metadataCopy --task run --dir src/main/resources/META-INF/native-image
             nativeRun nativeTest
+
+  simulator:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Simulate
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: >
+            simulator:run
+            -Dcaffeine.simulator.report.output=$GITHUB_WORKSPACE/simulation.md
+            -Dcaffeine.simulator.files.paths.0=corda:trace_vaultservice.gz
+            -Dcaffeine.simulator.files.paths.1=lirs:loop.trace.gz
+            -Dcaffeine.simulator.files.paths.2=corda:trace_vaultservice.gz
+      - name: Chart Simulation
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: simulator:simulate --maximumSize=100,200,300
+      - name: Publish Results
+        run: |
+          {
+            echo '### Adaptivity'
+            echo '```'
+            cat $GITHUB_WORKSPACE/simulation.md
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+
+  stress:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Memory Overhead
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: caffeine:memoryOverhead
+      - name: Stresser (read)
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: caffeine:stress --workload=read --duration PT1M
+      - name: Stresser (write)
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: caffeine:stress --workload=write --duration PT1M
+      - name: Stresser (refresh)
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: caffeine:stress --workload=refresh --duration PT1M

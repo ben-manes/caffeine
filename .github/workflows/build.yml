@@ -49,7 +49,15 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 25, GraalVM ]
+        java: [ 11, 24, 25-ea ]
+        distribution: [ temurin ]
+        include:
+          - java: 24
+            distribution: graalvm
+          - java: 23
+            distribution: semeru
+          - java: 21
+            distribution: dragonwell
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -67,6 +75,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
+          distribution: ${{ matrix.distribution }}
           arguments: check -x test ${{ env.GRADLE_ARGS }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
