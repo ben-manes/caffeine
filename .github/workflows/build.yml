@@ -48,7 +48,6 @@ jobs:
     permissions:
       contents: read
     strategy:
-      fail-fast: true
       matrix:
         java: [ 11, 24, 25, GraalVM ]
     env:
@@ -79,7 +78,6 @@ jobs:
     permissions:
       contents: read
     strategy:
-      fail-fast: true
       matrix:
         suite:
           - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineSlowTest

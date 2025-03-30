@@ -89,6 +89,7 @@ jobs:
           SNAPSHOT: true
         with:
           java: GraalVM
+          graal: ${{ env.JAVA_VERSION }}
           arguments: -q caffeine:clean caffeine:jar
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Graal Native Image
@@ -97,6 +98,7 @@ jobs:
           SNAPSHOT: true
         with:
           java: GraalVM
+          graal: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             --project-dir examples/graal-native

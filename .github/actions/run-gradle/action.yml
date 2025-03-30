@@ -12,7 +12,7 @@ inputs:
     required: false
     description: The early access release
   graal:
-    default: '21'
+    default: '24'
     required: false
     description: The GraalVM version
   cache-encryption-key:
