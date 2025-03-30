@@ -275,13 +275,14 @@ jobs:
           coverage-file: ./build/reports/jacoco/jacocoFullReport/jacocoFullReport.xml
       - name: Publish to SonarQube
         uses: ./.github/actions/run-gradle
+        if: endsWith(github.ref, github.event.repository.default_branch)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           java: ${{ env.PUBLISH_JDK }}
-          arguments: sonar -Dsonar.branch.name=${GITHUB_REF##*/}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: sonar -Dsonar.branch.name=${{ github.ref_name }}
         continue-on-error: true
 
   test-results:
