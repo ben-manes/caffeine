@@ -104,7 +104,7 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
         throws IOException, ClassNotFoundException {
       try {
         return Class.forName(desc.getName(), /* initialize= */ false, getClassLoader());
-      } catch (ClassNotFoundException ex) {
+      } catch (ClassNotFoundException ignored) {
         return super.resolveClass(desc);
       }
     }

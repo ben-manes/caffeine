@@ -86,7 +86,7 @@ public final class JCacheEntryEventTest {
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
           1, /* hasOldValue= */ true, 2, 3);
-      var tester = new IteratorTester<CacheEntryEvent<? extends Integer, ? extends Integer>>(
+      var tester = new IteratorTester<>(
           6, IteratorFeature.UNMODIFIABLE, event, IteratorTester.KnownOrder.KNOWN_ORDER) {
         @Override protected
             Iterator<CacheEntryEvent<? extends Integer, ? extends Integer>> newTargetIterator() {

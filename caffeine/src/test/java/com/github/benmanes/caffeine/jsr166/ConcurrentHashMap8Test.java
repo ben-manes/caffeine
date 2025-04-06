@@ -34,7 +34,7 @@ import junit.framework.TestSuite;
 
 @NullUnmarked
 @SuppressWarnings({"EmptyCatch", "IdentityConversion", "PreferredInterfaceType",
-  "rawtypes", "try", "unchecked", "UnnecessaryFinal"})
+  "rawtypes", "try", "unchecked", "UnnecessaryFinal", "unused"})
 public class ConcurrentHashMap8Test extends JSR166TestCase {
     public static void main(String[] args) {
         main(suite());

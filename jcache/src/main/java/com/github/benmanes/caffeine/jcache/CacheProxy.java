@@ -213,10 +213,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    */
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
       Set<? extends K> keys, boolean updateAccessTime) {
-    var result = new HashMap<K, Expirable<V>>(cache.getAllPresent(keys));
-
     int[] expired = { 0 };
     long[] millis = { 0L };
+    var result = new HashMap<K, Expirable<V>>(cache.getAllPresent(keys));
     result.entrySet().removeIf(entry -> {
       if (!entry.getValue().isEternal() && (millis[0] == 0L)) {
         millis[0] = currentTimeMillis();

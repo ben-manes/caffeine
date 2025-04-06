@@ -51,7 +51,7 @@ public final class JCacheMaximumWeightTest extends AbstractJCacheTest {
     var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setMaximumWeight(OptionalLong.of(MAXIMUM));
     configuration.setWeigherFactory(Optional.of(() -> (key, value) -> value));
-    var listenerConfiguration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+    var listenerConfiguration = new MutableCacheEntryListenerConfiguration<>(
         () -> listener, /* filterFactory= */ null,
         /* isOldValueRequired= */ true, /* isSynchronous= */ true);
     configuration.addCacheEntryListenerConfiguration(listenerConfiguration);

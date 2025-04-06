@@ -382,7 +382,7 @@ public final class LoadingCacheTest {
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_ordered_absent(LoadingCache<Int, Int> cache, CacheContext context) {
-    var keys = new ArrayList<Int>(context.absentKeys());
+    var keys = new ArrayList<>(context.absentKeys());
     Collections.shuffle(keys);
 
     assertThat(cache.getAll(keys).keySet()).containsExactlyElementsIn(keys).inOrder();

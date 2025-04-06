@@ -59,7 +59,7 @@ import junit.framework.Test;
     "EmptyCatch", "LabelledBreakTarget", "MemberName", "MethodReferenceUsage", "MissingDefault",
     "MissingFail", "MultiVariableDeclaration", "rawtypes", "ReturnValueIgnored",
     "StatementSwitchToExpressionSwitch", "SystemOut", "try", "unchecked", "UnnecessaryFinal",
-    "UnnecessaryParentheses", "YodaCondition"})
+    "UnnecessaryParentheses", "unused", "YodaCondition"})
 public class Collection8Test extends JSR166TestCase {
     final CollectionImplementation impl;
 

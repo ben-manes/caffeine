@@ -50,19 +50,11 @@ jobs:
     strategy:
       matrix:
         java: [ 11, 24, 25-ea ]
-        distribution: [ temurin ]
-        include:
-          - java: 24
-            distribution: graalvm
-          - java: 23
-            distribution: semeru
-          - java: 21
-            distribution: dragonwell
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -75,7 +67,6 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          distribution: ${{ matrix.distribution }}
           arguments: check -x test ${{ env.GRADLE_ARGS }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
@@ -177,7 +168,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -223,7 +214,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -304,7 +295,7 @@ jobs:
       checks: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -316,7 +307,7 @@ jobs:
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@170bf24d20d201b842d7a52403b73ed297e6645b # v2.18.0
+        uses: EnricoMi/publish-unit-test-result-action@afb2984f4d89672b2f9d9c13ae23d53779671984 # v2.19.0
         continue-on-error: true
         id: test-results
         with:
@@ -359,7 +350,7 @@ jobs:
       id-token: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
         with:
           disable-sudo: true
           egress-policy: block

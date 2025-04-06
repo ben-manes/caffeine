@@ -11,7 +11,7 @@ plugins {
 
 dependencies {
   errorprone(libs.errorprone) {
-    exclude(group = "com.github.ben-manes.caffeine")
+    exclude(group = libs.caffeine.get().group)
   }
   errorprone(layout.buildDirectory.files("errorprone/caffeine-${libs.versions.caffeine.get()}.jar"))
 

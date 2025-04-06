@@ -129,10 +129,10 @@ public final class GuavaCacheFromContext {
     if (context.loader() == Loader.DISABLED) {
       context.cache = new GuavaCache<>(builder.<Int, Int>build(), context);
     } else if (context.loader().isBulk()) {
-      var loader = new BulkLoader<Int, Int>(context.loader());
+      var loader = new BulkLoader<>(context.loader());
       context.cache = new GuavaLoadingCache<>(builder.build(loader), context);
     } else {
-      var loader = new SingleLoader<Int, Int>(context.loader());
+      var loader = new SingleLoader<>(context.loader());
       context.cache = new GuavaLoadingCache<>(builder.build(loader), context);
     }
     @SuppressWarnings("unchecked")
@@ -334,11 +334,10 @@ public final class GuavaCacheFromContext {
           if (value == null) {
             statsCounter.recordLoadException(loadTime);
             return null;
-          } else {
-            statsCounter.recordLoadSuccess(loadTime);
-            V v = delegate().putIfAbsent(key, value);
-            return (v == null) ? value : v;
           }
+          statsCounter.recordLoadSuccess(loadTime);
+          V v = delegate().putIfAbsent(key, value);
+          return (v == null) ? value : v;
         } catch (RuntimeException | Error e) {
           statsCounter.recordLoadException((ticker.read() - now));
           throw e;
@@ -368,9 +367,8 @@ public final class GuavaCacheFromContext {
             statsCounter.recordLoadException(ticker.read() - now);
             throw e;
           }
-        } else {
-          return null;
         }
+        return null;
       }
       @Override
       @SuppressWarnings("CheckReturnValue")
@@ -387,11 +385,10 @@ public final class GuavaCacheFromContext {
             }
             statsCounter.recordLoadException(ticker.read() - now);
             return null;
-          } else {
-            statsCounter.recordLoadSuccess(ticker.read() - now);
-            put(key, newValue);
-            return newValue;
           }
+          statsCounter.recordLoadSuccess(ticker.read() - now);
+          put(key, newValue);
+          return newValue;
         } catch (RuntimeException | Error e) {
           statsCounter.recordLoadException(ticker.read() - now);
           throw e;

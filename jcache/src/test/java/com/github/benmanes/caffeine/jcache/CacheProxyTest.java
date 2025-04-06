@@ -108,7 +108,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     assertThat(config).isEqualTo(jcacheConfiguration);
     assertThat(config.toString()).isEqualTo(jcacheConfiguration.toString());
 
-    var configuration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+    var configuration = new MutableCacheEntryListenerConfiguration<>(
         /* listenerFactory= */ () -> listener, /* filterFactory= */ () -> event -> true,
         /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     jcache.registerCacheEntryListener(configuration);
@@ -140,7 +140,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   @Test
   public void setAccessExpireTime_eternal() {
     when(expiry.getExpiryForAccess()).thenReturn(Duration.ETERNAL);
-    var expirable = new Expirable<Integer>(KEY_1, 0);
+    var expirable = new Expirable<>(KEY_1, 0);
     jcache.setAccessExpireTime(KEY_1, expirable, 0);
     assertThat(expirable.getExpireTimeMillis()).isEqualTo(Long.MAX_VALUE);
   }
@@ -148,7 +148,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   @Test
   public void setAccessExpireTime_exception() {
     when(expiry.getExpiryForAccess()).thenThrow(IllegalStateException.class);
-    var expirable = new Expirable<Integer>(KEY_1, 0);
+    var expirable = new Expirable<>(KEY_1, 0);
     jcache.setAccessExpireTime(KEY_1, expirable, 0);
     assertThat(expirable.getExpireTimeMillis()).isEqualTo(0);
   }
@@ -196,7 +196,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     doThrow(IOException.class).when(listener).close();
     jcacheLoading.inFlight.add(CompletableFuture.failedFuture(new IllegalStateException()));
 
-    var configuration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+    var configuration = new MutableCacheEntryListenerConfiguration<>(
         /* listenerFactory= */ () -> listener, /* filterFactory= */ () -> event -> true,
         /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     jcacheLoading.registerCacheEntryListener(configuration);

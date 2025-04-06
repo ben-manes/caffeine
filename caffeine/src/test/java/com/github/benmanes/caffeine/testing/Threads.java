@@ -60,7 +60,7 @@ public final class Threads {
 
   public static <A> void runTest(A collection, ImmutableList<BiConsumer<A, Int>> operations) {
     var failures = new ConcurrentLinkedQueue<String>();
-    var thrasher = new Thrasher<A>(collection, failures, operations);
+    var thrasher = new Thrasher<>(collection, failures, operations);
     Threads.executeWithTimeOut(failures, () -> timeTasks(Threads.NTHREADS, thrasher));
     assertThat(failures).isEmpty();
   }
@@ -111,7 +111,7 @@ public final class Threads {
    */
   private static <T> ImmutableList<ImmutableList<T>> shuffle(int samples, Collection<T> baseline) {
     var workingSets = new ArrayList<ImmutableList<T>>(samples);
-    var workingSet = new ArrayList<T>(baseline);
+    var workingSet = new ArrayList<>(baseline);
     for (int i = 0; i < samples; i++) {
       Collections.shuffle(workingSet);
       workingSets.add(ImmutableList.copyOf(workingSet));

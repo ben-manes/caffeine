@@ -200,7 +200,7 @@ import junit.textui.TestRunner;
     "InterruptedExceptionSwallowed", "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta",
     "MemberName", "NonFinalStaticField", "NumericEquality", "rawtypes", "ReferenceEquality",
     "RethrowReflectiveOperationExceptionAsLinkageError", "serial", "SwitchDefault", "SystemOut",
-    "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals", "UnnecessaryFinal"})
+    "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals", "UnnecessaryFinal", "unused"})
 public class JSR166TestCase extends TestCase {
 //    private static final boolean useSecurityManager =
 //        Boolean.getBoolean("jsr166.useSecurityManager");
@@ -2011,9 +2011,8 @@ public class JSR166TestCase extends TestCase {
     }
 
     byte[] serialBytes(Object o) {
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+             ObjectOutputStream oos = new ObjectOutputStream(bos)) {
             oos.writeObject(o);
             oos.flush();
             oos.close();
@@ -2058,20 +2057,21 @@ public class JSR166TestCase extends TestCase {
     @SuppressWarnings("unchecked")
     <T> T serialClonePossiblyFailing(T o)
         throws ReflectiveOperationException, IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(o);
-        oos.flush();
-        oos.close();
-        ObjectInputStream ois = new ObjectInputStream
-            (new ByteArrayInputStream(bos.toByteArray()));
-        T clone = (T) ois.readObject();
-        if (o == clone) {
-          assertImmutable(o);
-        } else {
-          assertSame(o.getClass(), clone.getClass());
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+             ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+          oos.writeObject(o);
+          oos.flush();
+          oos.close();
+          try (var ois = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()))) {
+            T clone = (T) ois.readObject();
+            if (o == clone) {
+              assertImmutable(o);
+            } else {
+              assertSame(o.getClass(), clone.getClass());
+            }
+            return clone;
+          }
         }
-        return clone;
     }
 
     /**

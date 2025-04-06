@@ -248,7 +248,7 @@ public final class BoundedLocalCacheTest {
   @Test
   @SuppressWarnings("PMD.UnusedAssignment")
   public void cleanupTask_allowGc() {
-    var cache = new BoundedLocalCache<Object, Object>(
+    var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var task = cache.drainBuffersTask;
     cache = null;
@@ -292,7 +292,7 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void scheduleAfterWrite() {
-    var cache = new BoundedLocalCache<Object, Object>(
+    var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
       @Override void scheduleDrainBuffers() {}
     };
@@ -310,7 +310,7 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void scheduleAfterWrite_invalidDrainStatus() {
-    var cache = new BoundedLocalCache<Object, Object>(
+    var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
     var invalid = IntStream.generate(ThreadLocalRandom.current()::nextInt).boxed()
@@ -324,7 +324,7 @@ public final class BoundedLocalCacheTest {
   @Test
   public void scheduleDrainBuffers() {
     Executor executor = Mockito.mock();
-    var cache = new BoundedLocalCache<Object, Object>(
+    var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder().executor(executor), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var transitions = Map.of(
         IDLE, PROCESSING_TO_IDLE,
@@ -385,7 +385,7 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void shouldDrainBuffers_invalidDrainStatus() {
-    var cache = new BoundedLocalCache<Object, Object>(
+    var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
     var invalid = IntStream.generate(ThreadLocalRandom.current()::nextInt).boxed()
@@ -555,7 +555,7 @@ public final class BoundedLocalCacheTest {
   @Test @CheckMaxLogLevel(ERROR)
   public void afterWrite_exception() {
     var expected = new RuntimeException();
-    var cache = new BoundedLocalCache<Object, Object>(
+    var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
       @Override void maintenance(@Nullable Runnable task) {
         throw expected;
@@ -1114,7 +1114,7 @@ public final class BoundedLocalCacheTest {
     var writing = new AtomicBoolean();
     var evictedValue = new AtomicReference<Int>();
     var previousValue = new AtomicReference<Int>();
-    var removedValues = new AtomicReference<Int>(Int.valueOf(0));
+    var removedValues = new AtomicReference<>(Int.valueOf(0));
 
     RemovalListener<Int, Int> evictionListener =
         (k, v, cause) -> evictedValue.set(v);

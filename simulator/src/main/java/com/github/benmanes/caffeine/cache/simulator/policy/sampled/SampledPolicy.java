@@ -186,7 +186,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     SHUFFLE {
       @Override public <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
-        var sample = new ArrayList<E>(Arrays.asList(elements));
+        var sample = new ArrayList<>(Arrays.asList(elements));
         policyStats.addOperations(elements.length);
         Collections.shuffle(sample, random);
         sample.remove(candidate);

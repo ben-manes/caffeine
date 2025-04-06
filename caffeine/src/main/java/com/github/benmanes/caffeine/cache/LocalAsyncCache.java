@@ -280,10 +280,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", failure);
         }
         return failure;
-      } else {
-        var failure = fillProxies(result);
-        return addNewEntries(result, failure);
       }
+      var failure = fillProxies(result);
+      return addNewEntries(result, failure);
     }
 
     /** Populates the proxies with the computed result. */

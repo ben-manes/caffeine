@@ -1,5 +1,6 @@
 plugins {
   `java-library`
+  id("ecj.caffeine")
   id("pmd.caffeine")
   id("base.caffeine")
   id("jacoco.caffeine")

@@ -5,14 +5,13 @@
  */
 package com.github.benmanes.caffeine.jsr166;
 
-import java.io.Serializable;
 import java.util.Comparator;
 
 /**
  * A simple element class for collections etc
  */
 @SuppressWarnings({"NonOverridingEquals", "serial"})
-public final class Item extends Number implements Comparable<Item>, Serializable {
+public final class Item extends Number implements Comparable<Item> {
     public final int value;
     public Item(int v) { value = v; }
     public Item(Item i) { value = i.value; }
