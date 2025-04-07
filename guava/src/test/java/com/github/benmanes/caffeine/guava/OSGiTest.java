@@ -47,7 +47,7 @@ public final class OSGiTest {
         junitBundles(),
         bundle("file:" + System.getProperty("caffeine.osgi.jar")),
         bundle("file:" + System.getProperty("caffeine-guava.osgi.jar")),
-        mavenBundle("com.google.guava", "failureaccess", "1.0.1"),
+        mavenBundle("com.google.guava", "failureaccess", "1.0.3"),
         mavenBundle("com.google.guava", "guava", System.getProperty("guava.osgi.version")));
   }
 

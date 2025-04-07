@@ -19,7 +19,10 @@ dependencies {
 }
 
 idea.project.settings {
-  delegateActions.testRunner = PLATFORM
+  delegateActions {
+    delegateBuildRunToGradle = false
+    testRunner = PLATFORM
+  }
   runConfigurations {
     val jvmArgs = listOf(
       "-javaagent:${mockitoAgent.asPath}",

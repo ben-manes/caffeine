@@ -12,7 +12,6 @@ commons-collections4 = "4.5.0-M3"
 commons-compress = "1.27.1"
 commons-io = "2.18.0"
 commons-lang3 = "3.17.0"
-commons-logging = "1.3.5"
 commons-math3 = "3.6.1"
 commons-text = "1.13.0"
 concurrentlinkedhashmap = "1.4.2"
@@ -113,7 +112,6 @@ commons-collections4 = { module = "org.apache.commons:commons-collections4", ver
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
-commons-logging = { module = "commons-logging:commons-logging", version.ref = "commons-logging" }
 commons-math3 = { module = "org.apache.commons:commons-math3", version.ref = "commons-math3" }
 commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
 concurrentlinkedhashmap = { module = "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru", version.ref = "concurrentlinkedhashmap" }
@@ -189,6 +187,7 @@ pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
 protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 slf4j-jdk-platform-logging = { module = "org.slf4j:slf4j-jdk-platform-logging", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
+slf4j-jcl-bridge = { module = "org.slf4j:jcl-over-slf4j", version.ref = "slf4j" }
 slf4j-jul-bridge = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 slf4j-test = { module = "com.github.valfirst:slf4j-test", version.ref = "slf4j-test" }
@@ -215,8 +214,8 @@ errorprone-support = ["errorprone-support", "errorprone-support-refaster"]
 junit = ["junit4", "junit5"]
 junit-engines = ["junit5-vintage", "junit5-testng"]
 osgi-test-compile = ["javax-inject", "pax-exam-junit4"]
-osgi-test-runtime = ["commons-logging", "felix-framework", "felix-scr", "osgi-function",
-  "osgi-promise", "pax-exam-container-native", "pax-exam-link-mvn", "pax-url-aether"]
+osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function", "osgi-promise",
+  "pax-exam-container-native", "pax-exam-link-mvn", "pax-url-aether", "slf4j-jcl-bridge"]
 pmd = ["pmd", "pmd-ant", "pmd-java"]
 slf4j-jdk = ["slf4j-jdk-platform-logging", "slf4j-jdk14"]
 slf4j-nop = ["slf4j-jdk-platform-logging", "slf4j-nop"]

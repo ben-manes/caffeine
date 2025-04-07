@@ -16,7 +16,6 @@ plugins {
 
 configurations.jmh {
   extendsFrom(configurations["testImplementation"])
-  exclude(module = libs.commons.logging.get().name)
   exclude(module = libs.slf4j.test.get().name)
   exclude(module = libs.jazzer.get().name)
 
