@@ -21,15 +21,16 @@ dependencies {
 
 java.toolchain {
   languageVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
-  vendor = System.getenv("JAVA_VENDOR")?.let { JvmVendorSpec.of(it) }
+  vendor = System.getenv("JAVA_VENDOR")?.let(JvmVendorSpec::of)
 }
 val javaRuntimeVersion: Provider<JavaLanguageVersion> =
   java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(24)) }
 
 tasks.withType<JavaCompile>().configureEach {
-  inputs.property("javaDistribution", System.getenv("JDK_DISTRIBUTION")).optional(true)
-  inputs.property("javaVendor", java.toolchain.vendor.get().toString())
-  options.release = java.toolchain.languageVersion.get().asInt()
+  inputs.property("javaDistribution",
+    providers.environmentVariable("JDK_DISTRIBUTION")).optional(true)
+  inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })
+  options.release = java.toolchain.languageVersion.map { it.asInt() }
 
   javaCompiler = javaToolchains.compilerFor {
     languageVersion = javaRuntimeVersion
@@ -39,8 +40,9 @@ tasks.withType<JavaCompile>().configureEach {
     javaModuleVersion = provider { version as String }
     compilerArgs.addAll(listOf("-Xlint:all", "-parameters",
       "-Xmaxerrs", "500", "-Xmaxwarns", "500"))
-    if (isCI()) {
-      compilerArgs.add("-Werror")
+    val failOnWarnings = isCI()
+    compilerArgumentProviders.add {
+      if (failOnWarnings.get()) listOf("-Werror") else emptyList()
     }
     encoding = "UTF-8"
   }

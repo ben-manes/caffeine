@@ -9,9 +9,8 @@ plugins {
   id("errorprone.caffeine")
 }
 
-val javaTestVersion: Provider<JavaLanguageVersion> = java.toolchain.languageVersion.map {
-  val version = System.getenv("JAVA_TEST_VERSION")?.toIntOrNull()
-  if (version == null) it else JavaLanguageVersion.of(version)
+val javaTestVersion: Provider<JavaLanguageVersion> = java.toolchain.languageVersion.flatMap {
+  providers.environmentVariable("JAVA_TEST_VERSION").map(JavaLanguageVersion::of).orElse(it)
 }
 val mockitoAgent: Configuration by configurations.creating
 
@@ -31,16 +30,17 @@ dependencies {
 }
 
 tasks.withType<Test>().configureEach {
-  inputs.property("javaVendor", java.toolchain.vendor.get().toString())
-  inputs.property("javaDistribution", System.getenv("JDK_DISTRIBUTION")).optional(true)
+  inputs.property("javaDistribution",
+    providers.environmentVariable("JDK_DISTRIBUTION")).optional(true)
+  inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })
 
   // Use --debug-jvm to remotely attach to the test task
   jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+EnableDynamicAgentLoading", "-Xshare:off")
   jvmArgs("-javaagent:${mockitoAgent.asPath}")
   jvmArgs(defaultJvmArgs())
-  if (isCI()) {
-    reports.junitXml.includeSystemOutLog = false
-    reports.junitXml.includeSystemErrLog = false
+  reports {
+    junitXml.includeSystemOutLog = isCI().map { !it }
+    junitXml.includeSystemErrLog = isCI().map { !it }
   }
   testLogging {
     events = setOf(SKIPPED, FAILED)

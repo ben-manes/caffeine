@@ -16,7 +16,8 @@ checkstyle {
 }
 
 tasks.withType<Checkstyle>().configureEach {
-  enabled = System.getProperties().containsKey("checkstyle")
+  val isEnabled = providers.systemProperty("checkstyle")
+  onlyIf { isEnabled.isPresent }
   group = "Checkstyle"
   reports {
     xml.required = false

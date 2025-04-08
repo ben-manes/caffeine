@@ -1,5 +1,6 @@
 import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
 import org.gradle.kotlin.dsl.the
 
 val Project.libs
@@ -23,13 +24,10 @@ fun Project.defaultJvmArgs(): List<String> {
   return jvmArgs
 }
 
-fun caffeineSystemProperties(): Map<String, Any> =
-  System.getProperties()
-    .stringPropertyNames()
-    .filter { it.startsWith("caffeine") }
-    .associateWith { System.getProperties().getProperty(it) }
-fun isEarlyAccess(): Boolean = System.getenv("JDK_EA") == "true"
-fun isCI(): Boolean = !System.getenv("CI").isNullOrEmpty()
+fun Project.isEarlyAccess(): Provider<Boolean> =
+  providers.environmentVariable("JDK_EA").map { it == "true" }.orElse(false)
+fun Project.isCI(): Provider<Boolean> =
+  providers.environmentVariable("CI").map { true }.orElse(false)
 
 val DisableStrongEncapsulationJvmArgs = buildList {
   listOf("api", "code", "file", "main", "parser", "processing", "tree", "util").forEach {

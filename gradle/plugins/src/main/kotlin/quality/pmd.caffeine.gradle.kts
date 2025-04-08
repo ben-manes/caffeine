@@ -14,7 +14,8 @@ pmd {
 }
 
 tasks.withType<Pmd>().configureEach {
-  enabled = System.getProperties().containsKey("pmd")
+  val isEnabled = providers.systemProperty("pmd")
+  onlyIf { isEnabled.isPresent }
   group = "PMD"
   reports {
     xml.required = false

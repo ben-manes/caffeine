@@ -11,10 +11,24 @@ plugins {
 }
 
 val mockitoAgent: Configuration by configurations.creating
+val excludes = rootDir.walkTopDown().filter {
+  it.name in listOf("bin", "build", "test-output", ".classpath",
+    ".gradle", ".kotlin", ".project", ".settings")
+}.toSet()
 
 dependencies {
   mockitoAgent(libs.mockito) {
     isTransitive = false
+  }
+}
+
+allprojects {
+  apply(plugin = "idea")
+
+  idea.module {
+    excludeDirs = excludes
+    isDownloadSources = true
+    isDownloadJavadoc = true
   }
 }
 

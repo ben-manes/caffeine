@@ -185,7 +185,8 @@ val isolatedTest = tasks.register<Test>("isolatedTest") {
 val lincheckTest = tasks.register<Test>("lincheckTest") {
   group = "Verification"
   description = "Tests that assert linearizability"
-  enabled = !isEarlyAccess()
+  val isEnabled = isEarlyAccess().map { !it }
+  onlyIf { isEnabled.get() }
   useTestNG {
     testLogging.events("started")
     includeGroups("lincheck")
@@ -310,9 +311,10 @@ for (scenario in Scenario.all()) {
     val task = tasks.register<Test>(testName()) {
       group = "Parameterized Test"
       description = "Runs tests with the given features."
-
-      enabled = (System.getenv("JITPACK") != "true")
       include("com/github/benmanes/caffeine/cache/**")
+
+      val jitpack = providers.environmentVariable("JITPACK")
+      onlyIf { !jitpack.isPresent }
 
       systemProperties(
         "keys" to keys.name,

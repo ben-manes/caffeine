@@ -46,9 +46,7 @@ tasks.withType<JavaCompile>().configureEach {
   options.apply {
     forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)
     errorprone {
-      if (isEarlyAccess()) {
-        isEnabled = false
-      }
+      isEnabled = isEarlyAccess().map { !it }
       allDisabledChecksAsWarnings = true
 
       errorproneArgs.add(buildString {

@@ -99,8 +99,9 @@ tasks.withType<JavaExec>().configureEach {
   outputs.cacheIf { false }
   jvmArgs(defaultJvmArgs())
 
+  val overrides = providers.systemPropertiesPrefixedBy("caffeine")
   doFirst {
-    systemProperties(caffeineSystemProperties())
+    systemProperties(overrides.get())
   }
 }
 

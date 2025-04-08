@@ -75,16 +75,16 @@ tasks.withType<JmhTask>().configureEach {
   description = "Executes a Java microbenchmark"
   incompatibleWithConfigurationCache()
 
-  inputs.property("javaDistribution", System.getenv("JDK_DISTRIBUTION")).optional(true)
+  inputs.property("javaDistribution",
+    providers.environmentVariable("JDK_DISTRIBUTION")).optional(true)
   inputs.property("benchmarkParameters", jmh.benchmarkParameters)
   inputs.property("includes", includes)
   outputs.file(jmh.resultsFile)
   outputs.cacheIf { true }
 
+  val includePattern = providers.gradleProperty("includePattern")
   doFirst {
-    if (!project.hasProperty("includePattern")) {
-      throw GradleException("jmh: includePattern expected")
-    }
+    require(includePattern.isPresent) { "jmh: includePattern expected" }
   }
   finalizedBy(tasks.named("jmhReport"))
 }
@@ -93,6 +93,10 @@ tasks.withType<JmhBytecodeGeneratorTask>().configureEach {
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = java.toolchain.languageVersion
   }
+}
+
+tasks.named<JavaCompile>("jmhCompileGeneratedClasses").configure {
+  options.errorprone.isEnabled = false
 }
 
 tasks.named<JavaCompile>("compileJmhJava").configure {

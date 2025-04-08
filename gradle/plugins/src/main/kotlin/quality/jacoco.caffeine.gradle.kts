@@ -22,7 +22,7 @@ tasks.withType<JacocoReport>().configureEach {
 }
 
 tasks.withType<Test>().configureEach {
-  if (isEarlyAccess()) {
+  if (isEarlyAccess().get()) {
     systemProperty("net.bytebuddy.experimental", true)
     configure<JacocoTaskExtension> {
       isEnabled = false

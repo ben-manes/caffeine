@@ -29,7 +29,8 @@ spotbugs {
 }
 
 tasks.withType<SpotBugsTask>().configureEach {
-  enabled = System.getProperties().containsKey("spotbugs")
+  val isEnabled = providers.systemProperty("spotbugs")
+  onlyIf { isEnabled.isPresent }
   group = "SpotBugs"
   reports {
     create("html") {

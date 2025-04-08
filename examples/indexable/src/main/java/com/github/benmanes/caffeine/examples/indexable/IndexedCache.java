@@ -122,7 +122,7 @@ public final class IndexedCache<K, V> {
     }
 
     store.asMap().computeIfPresent(index.getFirst(), (k, v) -> {
-      indexes.keySet().removeAll(indexes.get(key));
+      indexes.keySet().removeAll(indexes.get(index.getFirst()));
       return null;
     });
   }
