@@ -448,7 +448,7 @@ public interface Policy<K, V> {
     Map<K, V> oldest(int limit);
 
     /**
-     * Returns the computed result from the ordered traversal of the cache entries. The oorder of
+     * Returns the computed result from the ordered traversal of the cache entries. The order of
      * iteration is from the entries most likely to expire (oldest) to the entries least likely to
      * expire (youngest). This order is determined by the expiration policy's best guess at the time
      * of creating this computation.
@@ -696,7 +696,7 @@ public interface Policy<K, V> {
     Map<K, V> oldest(int limit);
 
     /**
-     * Returns the computed result from the ordered traversal of the cache entries. The oorder of
+     * Returns the computed result from the ordered traversal of the cache entries. The order of
      * iteration is from the entries most likely to expire (oldest) to the entries least likely to
      * expire (youngest). This order is determined by the expiration policy's best guess at the time
      * of creating this computation.
