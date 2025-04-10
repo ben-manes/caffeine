@@ -1,5 +1,5 @@
 [Failsafe's][failsafe] retry, timeout, and fallback strategies can be used to make the cache
-operations resiliant to intermittent failures.
+operations resilient to intermittent failures.
 
 ### Retry
 A [retry policy][retry] will retry failed executions a certain number of times, with an optional
