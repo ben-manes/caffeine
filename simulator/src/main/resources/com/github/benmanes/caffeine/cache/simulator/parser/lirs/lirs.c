@@ -1,6 +1,6 @@
 /* lirs.c
  *
- * See Sigmetrics'02 paper "`LIRS: An Efficient Low Inter-reference
+ * See Sigmetrics '02 paper "`LIRS: An Efficient Low Inter-reference
  * Recency Set Replacement Policy to Improve Buffer Cache Performance"
  * for more description. "The paper" is used to refer to this paper in the
  * following.
