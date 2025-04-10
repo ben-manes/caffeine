@@ -13,7 +13,7 @@
 /* however, the above band should be no less than this  */
 #define LOWEST_COLD_ALLOC 2 
 
-/* do you allow the number of cold blocks to be adatively adjusted? */
+/* do you allow the number of cold blocks to be adaptively adjusted? */
 //#define ADAPTIVE_COLD_ALLOC
 
 
