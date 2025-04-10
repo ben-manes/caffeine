@@ -390,7 +390,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     int expectedModCount;
 
     /**
-     * Creates an iterator that can can traverse the deque.
+     * Creates an iterator that can traverse the deque.
      *
      * @param start the initial element to begin traversal from
      */
