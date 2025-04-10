@@ -104,7 +104,7 @@ public final class JmxRegistration {
     }
   }
 
-  /** Returns a sanatized string for use as a management bean name. */
+  /** Returns a sanitized string for use as a management bean name. */
   static String sanitize(String name) {
     return (name == null) ? "" : name.replaceAll("[,:=\n]", ".");
   }
