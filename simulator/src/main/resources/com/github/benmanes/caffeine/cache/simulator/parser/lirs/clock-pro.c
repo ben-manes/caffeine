@@ -798,7 +798,7 @@ FILE *openReadFile(char file_name[])
   fp = fopen(file_name, "r");
 
   if (!fp) {
-    printf("can not find file %s.\n", file_name);
+    printf("cannot find file %s.\n", file_name);
     return NULL;
   }
   
