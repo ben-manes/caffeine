@@ -434,7 +434,7 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
     Set<Map.Entry<Integer, Integer>> chainedEntries = chainedMap.entrySet();
     Assert.assertFalse(chainedEntries.remove(ImmutableEntry.of(5, 5)));
 
-    // map with chaining, attempt to remove non-existent collding entry
+    // map with chaining, attempt to remove non-existent colliding entry
     MutableMap<Integer, Integer> chainedMap2 = mapWithCollisionsOfSize(2);
     Set<Map.Entry<Integer, Integer>> chainedEntries2 = chainedMap2.entrySet();
     Assert.assertFalse(chainedEntries2.remove(ImmutableEntry.of(COLLISION_4, COLLISION_4)));
