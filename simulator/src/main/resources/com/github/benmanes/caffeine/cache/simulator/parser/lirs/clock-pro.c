@@ -42,7 +42,7 @@
  *     
  */
 
-/* Command Line Uasge: only prefix of trace file is required. e.g.
+/* Command Line Usage: only prefix of trace file is required. e.g.
    ./clock-pro my-trace
    It is implied that trace file is "my-trace.trc", parameter file is "my-trace.par"
    output files are "my-trace.cuv", "my-trace.sln" and "my-trace.ref"

@@ -19,7 +19,7 @@
  *
  */
 
-/* Command Line Uasge: only prefix of trace file is required. e.g.
+/* Command Line Usage: only prefix of trace file is required. e.g.
    :/ lirs ABC
 */
 
