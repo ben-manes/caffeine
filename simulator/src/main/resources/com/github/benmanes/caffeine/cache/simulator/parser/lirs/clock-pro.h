@@ -24,7 +24,7 @@
 #define NUM_REFAULT_WINDOW 100
 
 /* This specifies from what virtual time (reference event), we start to collect 
- * misses. You can test a warm cache by changin the "0" to some virtual time you want.
+ * misses. You can test a warm cache by changing the "0" to some virtual time you want.
  */
 #define STAT_START_POINT 0
 
