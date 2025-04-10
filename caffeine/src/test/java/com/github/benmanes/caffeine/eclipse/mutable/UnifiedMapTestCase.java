@@ -429,23 +429,23 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
 
   @Test
   public void entrySet_remove() {
-    // map with chaining, attempt to remove non-existent entry
+    // map with chaining, attempt to remove nonexistent entry
     MutableMap<Integer, Integer> chainedMap = mapWithCollisionsOfSize(3);
     Set<Map.Entry<Integer, Integer>> chainedEntries = chainedMap.entrySet();
     Assert.assertFalse(chainedEntries.remove(ImmutableEntry.of(5, 5)));
 
-    // map with chaining, attempt to remove non-existent colliding entry
+    // map with chaining, attempt to remove nonexistent colliding entry
     MutableMap<Integer, Integer> chainedMap2 = mapWithCollisionsOfSize(2);
     Set<Map.Entry<Integer, Integer>> chainedEntries2 = chainedMap2.entrySet();
     Assert.assertFalse(chainedEntries2.remove(ImmutableEntry.of(COLLISION_4, COLLISION_4)));
 
-    // map with chaining, attempt to remove non-existent colliding entry (key exists, but value does
+    // map with chaining, attempt to remove nonexistent colliding entry (key exists, but value does
     // not)
     MutableMap<Integer, Integer> chainedMap3 = mapWithCollisionsOfSize(3);
     Set<Map.Entry<Integer, Integer>> chainedEntries3 = chainedMap3.entrySet();
     Assert.assertFalse(chainedEntries3.remove(ImmutableEntry.of(COLLISION_2, COLLISION_4)));
 
-    // map with no chaining, attempt to remove non-existent entry
+    // map with no chaining, attempt to remove nonexistent entry
     MutableMap<Integer, String> unchainedMap = newMapWithKeyValue(1, "One");
     Set<Map.Entry<Integer, String>> unchainedEntries = unchainedMap.entrySet();
     Assert.assertFalse(unchainedEntries.remove(ImmutableEntry.of(5, "Five")));
@@ -461,7 +461,7 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
 
   @Test
   public void entrySet_containsAll() {
-    // simple map, test for non-existent entries
+    // simple map, test for nonexistent entries
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 3, "Three");
     Set<Map.Entry<Integer, String>> entries = map.entrySet();
     Assert.assertFalse(entries.containsAll(FastList.newListWith(ImmutableEntry.of(2, "Two"))));
