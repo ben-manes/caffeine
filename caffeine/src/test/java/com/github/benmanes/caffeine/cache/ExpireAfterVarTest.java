@@ -563,7 +563,7 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
-  public void replaceConditionally_expiryFails_asybc(
+  public void replaceConditionally_expiryFails_async(
       AsyncCache<Int, Int> cache, CacheContext context) {
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(ExpirationException.class);
