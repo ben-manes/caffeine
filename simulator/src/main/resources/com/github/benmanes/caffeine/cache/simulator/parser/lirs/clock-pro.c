@@ -627,7 +627,7 @@ void run_HAND_cold()
 	}
       }
 
-      /* normal case: one promtion + one demotion */
+      /* normal case: one promotion + one demotion */
       else {
 	is_matched = run_HAND_hot(hand_cold);
 
