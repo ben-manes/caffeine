@@ -701,8 +701,8 @@ public @interface CacheSpec {
     Loader() {
       bulk = name().contains("BULK");
       asyncLoader = bulk
-          ? new BulkSeriazableAsyncCacheLoader(this)
-          : new SeriazableAsyncCacheLoader(this);
+          ? new BulkSerializableAsyncCacheLoader(this)
+          : new SerializableAsyncCacheLoader(this);
     }
 
     public boolean isBulk() {
@@ -714,13 +714,13 @@ public @interface CacheSpec {
       return asyncLoader;
     }
 
-    private static class SeriazableAsyncCacheLoader
+    private static class SerializableAsyncCacheLoader
         implements AsyncCacheLoader<Int, Int>, Serializable {
       private static final long serialVersionUID = 1L;
 
       final Loader loader;
 
-      SeriazableAsyncCacheLoader(Loader loader) {
+      SerializableAsyncCacheLoader(Loader loader) {
         this.loader = loader;
       }
       @Override
@@ -733,10 +733,10 @@ public @interface CacheSpec {
       }
     }
 
-    private static final class BulkSeriazableAsyncCacheLoader extends SeriazableAsyncCacheLoader {
+    private static final class BulkSerializableAsyncCacheLoader extends SerializableAsyncCacheLoader {
       private static final long serialVersionUID = 1L;
 
-      BulkSeriazableAsyncCacheLoader(Loader loader) {
+      BulkSerializableAsyncCacheLoader(Loader loader) {
         super(loader);
       }
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {

@@ -688,7 +688,7 @@
     <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.testing.CacheSpec$Loader$SeriazableAsyncCacheLoader"/>
+    <Class name="com.github.benmanes.caffeine.cache.testing.CacheSpec$Loader$SerializableAsyncCacheLoader"/>
     <Bug pattern="SE_PRIVATE_READ_RESOLVE_NOT_INHERITED"/>
   </Match>
   <Match>
