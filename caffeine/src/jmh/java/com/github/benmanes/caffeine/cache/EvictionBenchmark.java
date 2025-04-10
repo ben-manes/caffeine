@@ -24,7 +24,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
 /**
- * A benchmark that evaluates the eviction performance of a cache. The cache is pre-populated for
+ * A benchmark that evaluates the eviction performance of a cache. The cache is prepopulated for
  * a 100% eviction rate to mimic worst case behavior.
  * <p>
  * {@snippet :

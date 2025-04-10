@@ -363,7 +363,7 @@ jobs:
             echo -e '\n'
             echo '#### [Get/Put](https://jmh.morethan.io/?gists=b231cf57cf8e144e2247716e777edcf3)'
             echo -n 'A benchmark that evaluates the read/write performance of a cache. The cache '
-            echo -n 'is pre-populated for a 100% hit rate and a Zipf distribution of keys is used '
+            echo -n 'is prepopulated for a 100% hit rate and a Zipf distribution of keys is used '
             echo -n 'to mimic application usage patterns.'
             echo -e '\n'
             echo '#### [Put/Remove](https://jmh.morethan.io/?gists=1359c399cb717e81976ee635c513340b)'
