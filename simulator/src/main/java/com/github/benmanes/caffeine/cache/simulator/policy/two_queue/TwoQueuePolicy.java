@@ -82,12 +82,12 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     //   if X is in Am then
     //     move X to the head of Am
     //   else if (X is in Alout) then
-    //     reclaimfor(X)
+    //     reclaimFor(X)
     //     add X to the head of Am
     //   else if (X is in Alin)
     //     // do nothing
     //   else // X is in no queue
-    //     reclaimfor(X)
+    //     reclaimFor(X)
     //     add X to the head of Alin
     //   end if
 
@@ -104,7 +104,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
           node.remove();
           sizeOut--;
 
-          reclaimfor(node);
+          reclaimFor(node);
 
           node.appendToTail(headMain);
           node.type = QueueType.MAIN;
@@ -120,7 +120,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
       node = new Node(key);
       node.type = QueueType.IN;
 
-      reclaimfor(node);
+      reclaimFor(node);
       node.appendToTail(headIn);
       sizeIn++;
 
@@ -128,7 +128,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     }
   }
 
-  private void reclaimfor(Node node) {
+  private void reclaimFor(Node node) {
     // if there are free page slots then
     //   put X into a free page slot
     // else if (size(Alin) > Kin)
