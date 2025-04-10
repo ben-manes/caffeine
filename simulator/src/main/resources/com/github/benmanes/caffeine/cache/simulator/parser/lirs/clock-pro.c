@@ -414,7 +414,7 @@ void run_clock_pro(FILE *trace_fp, FILE *sln_fp, FILE *refault_fp)
     if ( total_pg_refs%2 ==0 && sln_fp)
 	    fprintf(sln_fp, "%4d %f\n", total_pg_refs,  100.0*num_cold_pages/mem_size);
 
-    /* you might be interested in checking these statistcs : 
+    /* you might be interested in checking these statistics : 
       fprintf(sln_fp, "%4u %2.2f\n", total_pg_refs, (float)clock_size/mem_size);      
       fprintf(sln_fp, "%4d %d\n", total_pg_refs,   ColdIncreaseCredits);
       fprintf(sln_fp, "%4d %d\n", total_pg_refs,  num_cold_pages);
