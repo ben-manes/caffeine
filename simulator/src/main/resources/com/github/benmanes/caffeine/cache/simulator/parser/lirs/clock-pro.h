@@ -51,7 +51,7 @@ typedef struct pf_struct {
   int is_in_clock; 
   int is_in_test;
 
-   /* to simulate the bit set by harware to indicate the page has
+   /* to simulate the bit set by hardware to indicate the page has
       been accessed */  
   char ref_bit;
    
