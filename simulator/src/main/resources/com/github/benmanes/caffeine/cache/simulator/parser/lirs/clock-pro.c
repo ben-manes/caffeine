@@ -280,7 +280,7 @@ void run_clock_pro(FILE *trace_fp, FILE *sln_fp, FILE *refault_fp)
     if (collect_stat == 1)
 	num_pg_flt++;
 
-    /************ initilization *******************/
+    /************ initialization *******************/
     /* fill the clock with (mem_size - MIN_cold_alloc) hot pages at first,
      * then MIN_cold_alloc cold pages.
      */
