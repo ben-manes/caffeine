@@ -49,7 +49,7 @@ public final class JmxRegistrationTest {
     assertThrows(CacheException.class, () -> JmxRegistration.register(server, name, bean));
   }
 
-  @Test(dataProvider = "unegisterExceptions")
+  @Test(dataProvider = "unregisterExceptions")
   public void unregister_error(Class<? extends Throwable> throwableType) throws JMException {
     var name = new ObjectName("");
     MBeanServer server = Mockito.mock();
@@ -72,7 +72,7 @@ public final class JmxRegistrationTest {
     };
   }
 
-  @DataProvider(name = "unegisterExceptions")
+  @DataProvider(name = "unregisterExceptions")
   public Object[] providesUnregisterExceptions() {
     return new Object[] {
         MBeanRegistrationException.class,
