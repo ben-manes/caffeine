@@ -149,7 +149,7 @@ eclipse {
       val regex = ".*cache-tests.*-tests.jar".toRegex()
       entries.filterIsInstance<Library>()
         .filter { regex.matches(it.path) }
-        .forEach { it.sourcePath = fileReference(file(jcacheTckSources.asPath)) }
+        .forEach { it.sourcePath = fileReference(jcacheTckSources.singleFile) }
     }
   }
   synchronizationTasks(testResourcesJar)

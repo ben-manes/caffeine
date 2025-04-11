@@ -17,7 +17,7 @@ val testJar by tasks.registering(Jar::class) {
   archiveClassifier = "test"
 }
 
-val testArtifacts: Configuration by configurations.creating
+val testArtifacts by configurations.registering
 artifacts.add(testArtifacts.name, testJar)
 
 publishing {
