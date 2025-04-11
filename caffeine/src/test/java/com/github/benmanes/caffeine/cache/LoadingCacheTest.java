@@ -990,8 +990,8 @@ public final class LoadingCacheTest {
 
   /* --------------- refreshAll --------------- */
 
-  @Test(dataProvider = "caches")
   @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_null(LoadingCache<Int, Int> cache, CacheContext context) {

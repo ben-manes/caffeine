@@ -297,8 +297,8 @@ public final class CaffeineSpec {
   /** Returns a parsed duration value. */
   static Duration parseDuration(String key, @Nullable String value) {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s omitted", key);
+    requireNonNull(value);
 
-    @SuppressWarnings("NullAway")
     boolean isIsoFormat = value.contains("p") || value.contains("P");
     Duration duration = isIsoFormat
         ? parseIsoDuration(key, value)
@@ -330,7 +330,7 @@ public final class CaffeineSpec {
   @SuppressWarnings("StatementSwitchToExpressionSwitch")
   static TimeUnit parseTimeUnit(String key, @Nullable String value) {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s omitted", key);
-    @SuppressWarnings("NullAway")
+    requireNonNull(value);
     char lastChar = Character.toLowerCase(value.charAt(value.length() - 1));
     switch (lastChar) {
       case 'd':

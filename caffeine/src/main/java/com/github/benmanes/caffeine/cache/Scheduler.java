@@ -178,7 +178,6 @@ enum DisabledScheduler implements Scheduler {
 enum DisabledFuture implements Future<@Nullable Void> {
   INSTANCE;
 
-  @SuppressWarnings("NullAway")
   static Future<? extends @Nullable Object> instance() {
     return INSTANCE;
   }

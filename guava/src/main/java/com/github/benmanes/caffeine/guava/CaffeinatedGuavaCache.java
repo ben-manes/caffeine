@@ -199,8 +199,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     @Override public boolean removeIf(Predicate<? super K> filter) {
       return delegate().removeIf(filter);
     }
-    @SuppressWarnings("NullAway")
-    @Override public boolean remove(Object o) {
+    @Override public boolean remove(@Nullable Object o) {
       return (o != null) && delegate().remove(o);
     }
     @Override protected Set<K> delegate() {
@@ -221,7 +220,6 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   }
 
   final class EntrySetView extends ForwardingSet<Entry<K, V>> {
-    @SuppressWarnings("NullAway")
     @Override public boolean add(Entry<K, V> entry) {
       throw new UnsupportedOperationException();
     }

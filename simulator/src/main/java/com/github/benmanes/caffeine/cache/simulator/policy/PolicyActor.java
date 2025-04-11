@@ -45,7 +45,6 @@ public final class PolicyActor {
    * @param policy the cache policy being simulated
    * @param settings the simulation settings
    */
-  @SuppressWarnings("NullAway")
   public PolicyActor(Thread parent, Policy policy, BasicSettings settings) {
     this.semaphore = new Semaphore(settings.actor().mailboxSize());
     this.future = CompletableFuture.completedFuture(null);

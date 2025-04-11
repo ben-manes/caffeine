@@ -19,7 +19,6 @@ import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapaci
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction; // NOPMD
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction; // NOPMD
 import static java.util.Objects.requireNonNull;
-import static java.util.function.Function.identity;
 
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
@@ -177,14 +176,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     return statsCounter;
   }
 
-  private boolean hasRemovalListener() {
-    return (removalListener != null);
-  }
-
   @Override
-  @SuppressWarnings("NullAway")
   public void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
-    if (!hasRemovalListener()) {
+    if (removalListener == null) {
       return;
     }
     Runnable task = () -> {
@@ -213,13 +207,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public ConcurrentMap<Object, CompletableFuture<?>> refreshes() {
     @Var var pending = refreshes;
     if (pending == null) {
       pending = new ConcurrentHashMap<>();
       if (!REFRESHES.compareAndSet(this, null, pending)) {
-        pending = refreshes;
+        pending = requireNonNull(refreshes);
       }
     }
     return pending;
@@ -402,7 +395,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public void clear() {
-    if (!hasRemovalListener() && ((refreshes == null) || refreshes.isEmpty())) {
+    if ((removalListener == null) && ((refreshes == null) || refreshes.isEmpty())) {
       data.clear();
       return;
     }
@@ -440,10 +433,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public void putAll(Map<? extends K, ? extends V> map) {
-    if (hasRemovalListener()) {
-      map.forEach(this::put);
-    } else {
+    if (removalListener == null) {
       data.putAll(map);
+    } else {
+      map.forEach(this::put);
     }
   }
 
@@ -1061,8 +1054,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public final Policy<K, V> policy() {
       if (policy == null) {
-        @SuppressWarnings("NullAway")
-        Function<@Nullable V, @Nullable V> identity = identity();
+        Function<@Nullable V, @Nullable V> identity = v -> v;
         policy = new UnboundedPolicy<>(cache, identity);
       }
       return policy;
@@ -1211,8 +1203,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       @SuppressWarnings("unchecked")
       var castCache = (UnboundedLocalCache<K, V>) cache;
       Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
-      @SuppressWarnings({"NullAway", "unchecked", "Varifier"})
-      Function<@Nullable V, @Nullable V> castTransformer = (Function<V, V>) transformer;
+      @SuppressWarnings("unchecked")
+      var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
       return (policy == null)
           ? (policy = new UnboundedPolicy<>(castCache, castTransformer))
           : policy;
@@ -1264,8 +1256,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       @SuppressWarnings("unchecked")
       var castCache = (UnboundedLocalCache<K, V>) cache;
       Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
-      @SuppressWarnings({"NullAway", "unchecked", "Varifier"})
-      Function<@Nullable V, @Nullable V> castTransformer = (Function<V, V>) transformer;
+      @SuppressWarnings("unchecked")
+      var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
       return (policy == null)
           ? (policy = new UnboundedPolicy<>(castCache, castTransformer))
           : policy;

@@ -140,7 +140,6 @@ public final class GuavaCacheFromContext {
     return castedCache;
   }
 
-  @SuppressWarnings("NullAway")
   static class GuavaCache<K, V> implements Cache<K, @Nullable V>, Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -204,7 +203,7 @@ public final class GuavaCacheFromContext {
       keys.forEach(Objects::requireNonNull);
       requireNonNull(mappingFunction);
 
-      Map<K, @Nullable V> found = getAllPresent(keys);
+      Map<K, V> found = getAllPresent(keys);
       Set<K> keysToLoad = Sets.difference(ImmutableSet.copyOf(keys), found.keySet());
       if (keysToLoad.isEmpty()) {
         return found;
@@ -291,27 +290,27 @@ public final class GuavaCacheFromContext {
 
     final class AsMapView extends ForwardingConcurrentMap<K, V> {
       @Override
-      public boolean containsKey(Object key) {
+      public boolean containsKey(@Nullable Object key) {
         requireNonNull(key);
         return delegate().containsKey(key);
       }
       @Override
-      public boolean containsValue(Object value) {
+      public boolean containsValue(@Nullable Object value) {
         requireNonNull(value);
         return delegate().containsValue(value);
       }
       @Override
-      public V get(Object key) {
+      public @Nullable V get(@Nullable Object key) {
         requireNonNull(key);
         return delegate().get(key);
       }
       @Override
-      public V remove(Object key) {
+      public @Nullable V remove(@Nullable Object key) {
         requireNonNull(key);
         return delegate().remove(key);
       }
       @Override
-      public boolean remove(Object key, Object value) {
+      public boolean remove(@Nullable Object key, @Nullable Object value) {
         requireNonNull(key);
         return delegate().remove(key, value);
       }
@@ -321,7 +320,7 @@ public final class GuavaCacheFromContext {
         return delegate().replace(key, oldValue, newValue);
       }
       @Override
-      public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+      public @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
         requireNonNull(mappingFunction);
         V value = getIfPresent(key);
         if (value != null) {
@@ -345,7 +344,7 @@ public final class GuavaCacheFromContext {
       }
       @Override
       @SuppressWarnings("CheckReturnValue")
-      public V computeIfPresent(K key,
+      public @Nullable V computeIfPresent(K key,
           BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         requireNonNull(remappingFunction);
         V oldValue;
@@ -372,7 +371,8 @@ public final class GuavaCacheFromContext {
       }
       @Override
       @SuppressWarnings("CheckReturnValue")
-      public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+      public @Nullable V compute(K key,
+          BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         requireNonNull(remappingFunction);
         V oldValue = get(key);
 
@@ -395,7 +395,7 @@ public final class GuavaCacheFromContext {
         }
       }
       @Override
-      public V merge(K key, V value,
+      public @Nullable V merge(K key, V value,
           BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
         requireNonNull(remappingFunction);
         requireNonNull(value);
@@ -435,7 +435,7 @@ public final class GuavaCacheFromContext {
         return cache.asMap();
       }
       final class KeySetView extends ForwardingSet<K> {
-        @Override public boolean remove(Object o) {
+        @Override public boolean remove(@Nullable Object o) {
           requireNonNull(o);
           return delegate().remove(o);
         }
@@ -449,11 +449,11 @@ public final class GuavaCacheFromContext {
       @Override public boolean isRecordingStats() {
         return isRecordingStats;
       }
-      @Override public V getIfPresentQuietly(K key) {
+      @Override public @Nullable V getIfPresentQuietly(K key) {
         checkNotNull(key);
         return cache.asMap().get(key);
       }
-      @Override public CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
+      @Override public @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
         checkNotNull(key);
         V value = cache.asMap().get(key);
         if (value == null) {

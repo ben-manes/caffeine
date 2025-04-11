@@ -28,7 +28,6 @@ import javax.cache.configuration.Configuration;
 import javax.cache.configuration.Factory;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.integration.CacheLoader;
 
 import org.jspecify.annotations.Nullable;
 
@@ -214,16 +213,14 @@ final class CacheFactory {
 
     /** Creates a cache that reads through on a cache miss. */
     private CacheProxy<K, V> newLoadingCacheProxy() {
-      @SuppressWarnings("NullAway")
-      CacheLoader<K, V> cacheLoader = config.getCacheLoaderFactory().create();
+      var cacheLoader = requireNonNull(config.getCacheLoaderFactory()).create();
       var adapter = new JCacheLoaderAdapter<>(
           cacheLoader, dispatcher, expiryPolicy, ticker, statistics);
-      // NullAway appears not to understand `V1 extends @Nullable V` in Caffeine.build.
-      @SuppressWarnings("NullAway")
-      var cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
-          caffeine.build(adapter), dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
-      adapter.setCache(cache);
-      return cache;
+      var cache = caffeine.build(adapter);
+      var jcache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
+          cache, dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
+      adapter.setCache(jcache);
+      return jcache;
     }
 
     /** Configures the maximum size and returns if set. */

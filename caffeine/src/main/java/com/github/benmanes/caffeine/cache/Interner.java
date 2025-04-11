@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.References.LookupKeyEqualsReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
@@ -117,18 +118,19 @@ final class WeakInterner<E> implements Interner<E> {
   }
 }
 
-@SuppressWarnings({"NullAway", "unchecked"})
+@SuppressWarnings("unchecked")
 final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
   static final NodeFactory<Object, Object> FACTORY = new Interned<>();
 
   volatile Reference<?> keyReference;
 
+  @SuppressWarnings("NullAway.Init")
   Interned() {}
 
   Interned(Reference<K> keyReference) {
     this.keyReference = keyReference;
   }
-  @Override public K getKey() {
+  @Override public @Nullable K getKey() {
     return (K) keyReference.get();
   }
   @Override public Object getKeyReference() {
@@ -140,7 +142,7 @@ final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
   @Override public V getValueReference() {
     return (V) Boolean.TRUE;
   }
-  @Override public void setValue(V value, ReferenceQueue<V> referenceQueue) {}
+  @Override public void setValue(V value, @Nullable ReferenceQueue<V> referenceQueue) {}
   @Override public boolean containsValue(Object value) {
     return Objects.equals(value, getValue());
   }

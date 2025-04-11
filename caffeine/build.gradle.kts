@@ -24,10 +24,10 @@ sourceSets {
 
 val jar by tasks.existing(Jar::class)
 val compileJavaPoetJava by tasks.existing
-val jammAgent: Configuration by configurations.creating
+val jammAgent by configurations.registering
 val collections4Sources: Configuration by configurations.creating
-val javaPoetRuntimeOnly: Configuration = configurations["javaPoetRuntimeOnly"]
-val javaPoetImplementation: Configuration = configurations["javaPoetImplementation"]
+val javaPoetImplementation by configurations.existing
+val javaPoetRuntimeOnly by configurations.existing
 
 dependencies {
   api(libs.jspecify)
@@ -294,7 +294,7 @@ tasks.register<JavaExec>("memoryOverhead") {
     "--add-opens", "java.base/java.lang.ref=ALL-UNNAMED",
     "--add-opens", "java.base/java.lang=ALL-UNNAMED",
     "--add-opens", "java.base/java.util=ALL-UNNAMED",
-    "-javaagent:${jammAgent.asPath}")
+    "-javaagent:${jammAgent.get().asPath}")
 }
 
 tasks.register<Stress>("stress") {
@@ -356,7 +356,7 @@ eclipse {
         val regex = ".*collections4.*-tests.jar".toRegex()
         entries.filterIsInstance<Library>()
           .filter { regex.matches(it.path) }
-          .forEach { it.sourcePath = fileReference(file(collections4Sources.asPath)) }
+          .forEach { it.sourcePath = fileReference(collections4Sources.singleFile) }
       }
     }
   }

@@ -31,7 +31,6 @@ import static java.util.Spliterator.DISTINCT;
 import static java.util.Spliterator.IMMUTABLE;
 import static java.util.Spliterator.NONNULL;
 import static java.util.Spliterator.ORDERED;
-import static java.util.function.Function.identity;
 
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
@@ -353,13 +352,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public ConcurrentMap<Object, CompletableFuture<?>> refreshes() {
     @Var var pending = refreshes;
     if (pending == null) {
       pending = new ConcurrentHashMap<>();
       if (!REFRESHES.compareAndSet(this, null, pending)) {
-        pending = refreshes;
+        pending = requireNonNull(refreshes);
       }
     }
     return pending;
@@ -801,7 +799,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       // Evict immediately if only one of the entries is present
       if (victim == null) {
-        @SuppressWarnings("NullAway")
+        requireNonNull(candidate);
         Node<K, V> previous = candidate.getNextInAccessOrder();
         Node<K, V> evict = candidate;
         candidate = previous;
@@ -1021,11 +1019,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return if the entry was evicted
    */
   @GuardedBy("evictionLock")
-  @SuppressWarnings({"GuardedByChecker", "NullAway", "PMD.CollapsibleIfStatements"})
+  @SuppressWarnings({"GuardedByChecker", "PMD.CollapsibleIfStatements"})
   boolean evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
-    @SuppressWarnings("unchecked")
-    var value = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "Varifier"})
+    @Nullable V[] value = (V[]) new Object[1];
     var removed = new boolean[1];
     var resurrect = new boolean[1];
     var actualCause = new RemovalCause[1];
@@ -1332,7 +1330,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               @SuppressWarnings("unchecked")
               var future = (CompletableFuture<V>) oldValue;
               if (Async.isReady(future)) {
-                @SuppressWarnings("NullAway")
+                requireNonNull(cacheLoader);
                 var refresh = cacheLoader.asyncReload(key, future.join(), executor);
                 refreshFuture[0] = requireNonNull(refresh, "Null future");
               } else {
@@ -1340,7 +1338,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
                 return null;
               }
             } else {
-              @SuppressWarnings("NullAway")
+              requireNonNull(cacheLoader);
               var refresh = cacheLoader.asyncReload(key, oldValue, executor);
               refreshFuture[0] = requireNonNull(refresh, "Null future");
             }
@@ -3190,7 +3188,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param mappingFunction the mapping function to compute a value
    * @return the computed value
    */
-  @SuppressWarnings("NullAway")
   <T> T snapshot(Iterable<Node<K, V>> iterable, Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     requireNonNull(mappingFunction);
@@ -3482,12 +3479,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    @SuppressWarnings("NullAway")
     public boolean removeAll(Collection<?> collection) {
       requireNonNull(collection);
       @Var boolean modified = false;
       for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
-        if (collection.contains(iterator.value) && cache.remove(iterator.key, iterator.value)) {
+        var key = requireNonNull(iterator.key);
+        var value = requireNonNull(iterator.value);
+        if (collection.contains(value) && cache.remove(key, value)) {
           modified = true;
         }
         iterator.advance();
@@ -3496,13 +3494,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    @SuppressWarnings("NullAway")
     public boolean remove(Object o) {
       if (o == null) {
         return false;
       }
       for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
-        if (o.equals(iterator.value) && cache.remove(iterator.key, iterator.value)) {
+        var key = requireNonNull(iterator.key);
+        var value = requireNonNull(iterator.value);
+        if (o.equals(value) && cache.remove(key, value)) {
           return true;
         }
         iterator.advance();
@@ -3511,13 +3510,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    @SuppressWarnings("NullAway")
     public boolean removeIf(Predicate<? super V> filter) {
       requireNonNull(filter);
       @Var boolean modified = false;
       for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
-        if (filter.test(iterator.value)) {
-          modified |= cache.remove(iterator.key, iterator.value);
+        var key = requireNonNull(iterator.key);
+        var value = requireNonNull(iterator.value);
+        if (filter.test(value)) {
+          modified |= cache.remove(key, value);
         }
         iterator.advance();
       }
@@ -3525,12 +3525,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    @SuppressWarnings("NullAway")
     public boolean retainAll(Collection<?> collection) {
       requireNonNull(collection);
       @Var boolean modified = false;
       for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
-        if (!collection.contains(iterator.value) && cache.remove(iterator.key, iterator.value)) {
+        var key = requireNonNull(iterator.key);
+        var value = requireNonNull(iterator.value);
+        if (!collection.contains(value) && cache.remove(key, value)) {
           modified = true;
         }
         iterator.advance();
@@ -3783,17 +3784,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       key = null;
     }
 
-    @SuppressWarnings("NullAway")
     K nextKey() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
       removalKey = key;
       advance();
-      return removalKey;
+      return requireNonNull(removalKey);
     }
 
-    @SuppressWarnings("NullAway")
     V nextValue() {
       if (!hasNext()) {
         throw new NoSuchElementException();
@@ -3801,7 +3800,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       removalKey = key;
       V val = value;
       advance();
-      return val;
+      return requireNonNull(val);
     }
 
     @Override
@@ -3809,8 +3808,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      @SuppressWarnings("NullAway")
-      var entry = new WriteThroughEntry<>(cache, key, value);
+      var entry = new WriteThroughEntry<>(cache, requireNonNull(key), requireNonNull(value));
       removalKey = key;
       advance();
       return entry;
@@ -3996,8 +3994,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override
     public final Policy<K, V> policy() {
       if (policy == null) {
-        @SuppressWarnings("NullAway")
-        Function<@Nullable V, @Nullable V> identity = identity();
+        Function<@Nullable V, @Nullable V> identity = v -> v;
         policy = new BoundedPolicy<>(cache, identity, cache.isWeighted);
       }
       return policy;
@@ -4037,7 +4034,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override public @Nullable V getIfPresentQuietly(K key) {
       return transformer.apply(cache.getIfPresentQuietly(key));
     }
-    @SuppressWarnings("NullAway")
     @Override public @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
       return (node == null) ? null : cache.nodeToCacheEntry(node, transformer);
@@ -4371,8 +4367,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             key, asyncValue, expiry, /* onlyIfAbsent= */ false);
         return Async.getWhenSuccessful(oldValueFuture);
       }
-      @SuppressWarnings("NullAway")
-      @Override public V compute(K key,
+      @Override public @Nullable V compute(K key,
           BiFunction<? super K, ? super V, ? extends V> remappingFunction,
           Duration duration) {
         requireNonNull(key);
@@ -4561,8 +4556,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         var castCache = (BoundedLocalCache<K, V>) cache;
         Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
-        @SuppressWarnings({"NullAway", "unchecked", "Varifier"})
-        Function<@Nullable V, @Nullable V> castTransformer = (Function<V, V>) transformer;
+        @SuppressWarnings("unchecked")
+        var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
         policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
       }
       return policy;
@@ -4613,8 +4608,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         var castCache = (BoundedLocalCache<K, V>) cache;
         Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
-        @SuppressWarnings({"NullAway", "unchecked", "Varifier"})
-        Function<@Nullable V, @Nullable V> castTransformer = (Function<V, V>) transformer;
+        @SuppressWarnings("unchecked")
+        var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
         policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
       }
       return policy;

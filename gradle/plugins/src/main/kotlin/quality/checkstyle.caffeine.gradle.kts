@@ -2,7 +2,7 @@ plugins {
   checkstyle
 }
 
-val checkstyleConfig: Configuration by configurations.creating
+val checkstyleConfig by configurations.registering
 
 dependencies {
   checkstyleConfig(libs.checkstyle) {

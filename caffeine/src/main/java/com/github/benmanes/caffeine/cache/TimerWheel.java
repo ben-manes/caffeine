@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
+import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.ReferenceQueue;
 import java.util.ConcurrentModificationException;
@@ -334,14 +335,13 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
     }
 
     @Override
-    @SuppressWarnings("NullAway")
     public Node<K, V> next() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
       current = next;
       next = null;
-      return current;
+      return requireNonNull(current);
     }
 
     @Nullable Node<K, V> computeNext() {

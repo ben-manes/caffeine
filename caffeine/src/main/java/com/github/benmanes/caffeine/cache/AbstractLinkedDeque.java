@@ -99,9 +99,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   /** Unlinks the non-null first element. */
-  @SuppressWarnings("NullAway")
   E unlinkFirst() {
-    E f = first;
+    E f = requireNonNull(first);
     E next = getNext(f);
     setNext(f, null);
 
@@ -116,9 +115,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   /** Unlinks the non-null last element. */
-  @SuppressWarnings("NullAway")
   E unlinkLast() {
-    E l = last;
+    E l = requireNonNull(last);
     E prev = getPrevious(l);
     setPrevious(l, null);
     last = prev;
@@ -235,17 +233,15 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public E getFirst() {
     checkNotEmpty();
-    return peekFirst();
+    return requireNonNull(peekFirst());
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public E getLast() {
     checkNotEmpty();
-    return peekLast();
+    return requireNonNull(peekLast());
   }
 
   @Override
@@ -318,10 +314,9 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public E removeFirst() {
     checkNotEmpty();
-    return pollFirst();
+    return requireNonNull(pollFirst());
   }
 
   @Override
@@ -333,10 +328,9 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public E removeLast() {
     checkNotEmpty();
-    return pollLast();
+    return requireNonNull(pollLast());
   }
 
   @Override
@@ -366,9 +360,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   @Override
   public PeekingIterator<E> iterator() {
     return new AbstractLinkedIterator(first) {
-      @SuppressWarnings("NullAway")
       @Override @Nullable E computeNext() {
-        return getNext(cursor);
+        return getNext(requireNonNull(cursor));
       }
     };
   }
@@ -376,9 +369,8 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   @Override
   public PeekingIterator<E> descendingIterator() {
     return new AbstractLinkedIterator(last) {
-      @SuppressWarnings("NullAway")
       @Override @Nullable E computeNext() {
-        return getPrevious(cursor);
+        return getPrevious(requireNonNull(cursor));
       }
     };
   }
@@ -411,14 +403,13 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     }
 
     @Override
-    @SuppressWarnings("NullAway")
     public E next() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
       previous = cursor;
       cursor = computeNext();
-      return previous;
+      return requireNonNull(previous);
     }
 
     /** Retrieves the next element to traverse to or {@code null} if there are no more elements. */

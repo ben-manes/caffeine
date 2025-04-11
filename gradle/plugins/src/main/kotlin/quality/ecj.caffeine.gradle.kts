@@ -2,7 +2,7 @@ plugins {
   `jvm-ecosystem`
 }
 
-val ecj: Configuration by configurations.creating
+val ecj by configurations.registering
 
 dependencies {
   ecj(libs.ecj)
@@ -17,7 +17,7 @@ sourceSets.configureEach {
     compileClasspath = compileTask.map { it.classpath }
     javaSources = allJava.asFileTree
     dependsOn(compileTask)
-    classpath = ecj
+    classpath = ecj.get()
   }
 }
 

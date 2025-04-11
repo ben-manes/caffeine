@@ -3,7 +3,7 @@ plugins {
   `java-library`
 }
 
-val objectLayout: Configuration by configurations.creating
+val objectLayout by configurations.registering
 dependencies {
   objectLayout(project)
   objectLayout(libs.java.`object`.layout)

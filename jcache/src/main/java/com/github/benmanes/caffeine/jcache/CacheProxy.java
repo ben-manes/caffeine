@@ -859,7 +859,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Returns the updated expirable value after performing the post-processing actions. */
-  @SuppressWarnings({"fallthrough", "NullAway", "PMD.MissingBreakInSwitch"})
+  @SuppressWarnings({"fallthrough", "PMD.MissingBreakInSwitch"})
   private @Nullable Expirable<V> postProcess(@Nullable Expirable<V> expirable,
       EntryProcessorEntry<K, V> entry, @Var long currentTimeMillis) {
     switch (entry.getAction()) {
@@ -879,26 +879,29 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         }
         return expirable;
       case READ: {
-        setAccessExpireTime(entry.getKey(), expirable, 0L);
+        setAccessExpireTime(entry.getKey(), requireNonNull(expirable), 0L);
         return expirable;
       }
       case CREATED:
         this.publishToCacheWriter(writer::write, () -> entry);
         // fall through
-      case LOADED:
+      case LOADED: {
         statistics.recordPuts(1L);
-        dispatcher.publishCreated(this, entry.getKey(), entry.getValue());
-        return new Expirable<>(entry.getValue(), getWriteExpireTimeMillis(/* created= */ true));
+        var value = requireNonNull(entry.getValue());
+        dispatcher.publishCreated(this, entry.getKey(), value);
+        return new Expirable<>(value, getWriteExpireTimeMillis(/* created= */ true));
+      }
       case UPDATED: {
         statistics.recordPuts(1L);
         publishToCacheWriter(writer::write, () -> entry);
         requireNonNull(expirable, "Expected a previous value but was null");
-        dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), entry.getValue());
+        var value = requireNonNull(entry.getValue(), "Expected a new value but was null");
+        dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), value);
         @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {
           expireTimeMillis = expirable.getExpireTimeMillis();
         }
-        return new Expirable<>(entry.getValue(), expireTimeMillis);
+        return new Expirable<>(value, expireTimeMillis);
       }
       case DELETED:
         statistics.recordRemovals(1L);
@@ -1215,7 +1218,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   final class EntryIterator implements Iterator<Cache.Entry<K, V>> {
     // NullAway does not yet understand the @NonNull annotation in the return type of asMap.
     @SuppressWarnings("NullAway")
-    final Iterator<Map.Entry<K, Expirable<V>>> delegate = cache.asMap().entrySet().iterator();
+    Iterator<Map.Entry<K, Expirable<V>>> delegate = cache.asMap().entrySet().iterator();
     Map.@Nullable Entry<K, Expirable<V>> current;
     Map.@Nullable Entry<K, Expirable<V>> cursor;
 
@@ -1237,11 +1240,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      current = cursor;
+      current = requireNonNull(cursor);
       cursor = null;
-      @SuppressWarnings("NullAway")
-      var entry = new EntryProxy<>(copyOf(current.getKey()), copyValue(current.getValue()));
-      return entry;
+      return new EntryProxy<>(copyOf(current.getKey()), copyValue(current.getValue()));
     }
 
     @Override

@@ -100,15 +100,15 @@ public class BasicSettings {
   }
 
   /** Gets the quoted integer at the given path, ignoring comma and underscore separators */
-  @SuppressWarnings("NullAway")
   protected int getFormattedInt(String path) {
-    return parseFormattedNumber(path, config()::getInt, Ints::tryParse);
+    Function<String, @Nullable Integer> tryParse = Ints::tryParse;
+    return parseFormattedNumber(path, config()::getInt, tryParse);
   }
 
   /** Gets the quoted long at the given path, ignoring comma and underscore separators */
-  @SuppressWarnings("NullAway")
   protected long getFormattedLong(String path) {
-    return parseFormattedNumber(path, config()::getLong, Longs::tryParse);
+    Function<String, @Nullable Long> tryParse = Longs::tryParse;
+    return parseFormattedNumber(path, config()::getLong, tryParse);
   }
 
   private <T extends Number> T parseFormattedNumber(String path,

@@ -84,7 +84,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     return get(key, mappingFunction, /* recordStats= */ true);
   }
 
-  @SuppressWarnings({"FutureReturnValueIgnored", "NullAway"})
   default CompletableFuture<V> get(K key, BiFunction<? super K, ? super Executor,
       ? extends CompletableFuture<? extends V>> mappingFunction, boolean recordStats) {
     long startTime = cache().statsTicker().read();
@@ -99,7 +98,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     if (result[0] != null) {
       handleCompletion(key, result[0], startTime, /* recordMiss= */ false);
     }
-    return future;
+    return requireNonNull(future);
   }
 
   @Override
@@ -1364,8 +1363,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         if (!hasNext()) {
           throw new NoSuchElementException();
         }
-        @SuppressWarnings("NullAway")
-        K key = cursor.getKey();
+        K key = requireNonNull(cursor).getKey();
         Entry<K, V> entry = cursor;
         removalKey = key;
         cursor = null;

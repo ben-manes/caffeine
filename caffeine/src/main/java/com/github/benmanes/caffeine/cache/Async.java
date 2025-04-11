@@ -48,9 +48,8 @@ final class Async {
   }
 
   /** Returns the current value or null if either not done or failed. */
-  @SuppressWarnings("NullAway")
   static <V> @Nullable V getIfReady(@Nullable CompletableFuture<V> future) {
-    return isReady(future) ? future.join() : null;
+    return isReady(future) ? requireNonNull(future).join() : null;
   }
 
   /** Returns the value when completed successfully or null if failed. */
