@@ -1019,7 +1019,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return if the entry was evicted
    */
   @GuardedBy("evictionLock")
-  @SuppressWarnings({"GuardedByChecker", "PMD.CollapsibleIfStatements"})
+  @SuppressWarnings("GuardedByChecker")
   boolean evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
     @SuppressWarnings({"unchecked", "Varifier"})
@@ -2853,7 +2853,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param computeIfAbsent if an absent entry can be computed
    * @return the new value associated with the specified key, or null if none
    */
-  @SuppressWarnings("PMD.EmptyControlStatement")
   @Nullable V remap(K key, Object keyRef,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       Expiry<? super K, ? super V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {

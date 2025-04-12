@@ -43,6 +43,7 @@ jobs:
             repo.maven.apache.org:443
             repo1.maven.org:443
             raw.githubusercontent.com:443
+            search.maven.org:443
             services.gradle.org:443
             www.cisa.gov:443
       - name: Checkout

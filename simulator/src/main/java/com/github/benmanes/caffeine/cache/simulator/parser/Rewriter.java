@@ -53,7 +53,6 @@ import picocli.CommandLine.Option;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.ImmutableField")
 @Command(mixinStandardHelpOptions = true)
 public final class Rewriter implements Runnable {
   @Option(names = "--inputFiles", required = true, split = ",", description = "The trace input "

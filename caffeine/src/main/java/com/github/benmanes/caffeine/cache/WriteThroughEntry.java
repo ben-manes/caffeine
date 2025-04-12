@@ -37,7 +37,6 @@ final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
   }
 
   @Override
-  @SuppressWarnings("PMD.LinguisticNaming")
   public V setValue(V value) {
     // See ConcurrentHashMap: "Sets our entry's value and writes through to the map. The value to
     // return is somewhat arbitrary here. Since we do not necessarily track asynchronous changes,

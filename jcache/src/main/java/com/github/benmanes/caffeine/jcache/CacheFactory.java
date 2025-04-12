@@ -101,7 +101,6 @@ final class CacheFactory {
   }
 
   /** Copies the configuration and overlays it on top of the default settings. */
-  @SuppressWarnings("PMD.AccessorMethodGeneration")
   private static <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
       CacheManager cacheManager, Configuration<K, V> configuration) {
     if (configuration instanceof CaffeineConfiguration<?, ?>) {

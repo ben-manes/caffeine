@@ -28,7 +28,6 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 final class GuardedStatsCounter implements StatsCounter {
   static final Logger logger = System.getLogger(GuardedStatsCounter.class.getName());
 

@@ -859,7 +859,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Returns the updated expirable value after performing the post-processing actions. */
-  @SuppressWarnings({"fallthrough", "PMD.MissingBreakInSwitch"})
+  @SuppressWarnings("fallthrough")
   private @Nullable Expirable<V> postProcess(@Nullable Expirable<V> expirable,
       EntryProcessorEntry<K, V> entry, @Var long currentTimeMillis) {
     switch (entry.getAction()) {
@@ -884,7 +884,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
       case CREATED:
         this.publishToCacheWriter(writer::write, () -> entry);
-        // fall through
+        // fallthrough
       case LOADED: {
         statistics.recordPuts(1L);
         var value = requireNonNull(entry.getValue());

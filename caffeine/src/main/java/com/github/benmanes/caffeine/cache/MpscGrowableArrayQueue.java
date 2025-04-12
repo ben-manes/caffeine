@@ -14,6 +14,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
+import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
@@ -159,10 +160,28 @@ abstract class BaseMpscLinkedArrayQueuePad2<E> extends BaseMpscLinkedArrayQueueP
 }
 
 abstract class BaseMpscLinkedArrayQueueConsumerFields<E> extends BaseMpscLinkedArrayQueuePad2<E> {
-  protected long consumerMask;
-  protected long consumerIndex;
-  @SuppressWarnings("NullAway.Init")
   protected @Nullable E[] consumerBuffer;
+  protected long consumerIndex;
+  protected long consumerMask;
+
+  BaseMpscLinkedArrayQueueConsumerFields(int initialCapacity) {
+    if (initialCapacity < 2) {
+      throw new IllegalArgumentException("Initial capacity must be 2 or more");
+    }
+
+    int p2capacity = ceilingPowerOfTwo(initialCapacity);
+    // leave lower bit of mask clear
+    long mask = (p2capacity - 1L) << 1;
+    // need extra element to point at next array
+    @Nullable E[] buffer = allocate(p2capacity + 1);
+    consumerBuffer = buffer;
+    consumerMask = mask;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <E> @Nullable E[] allocate(int capacity) {
+    return (E[]) new Object[capacity];
+  }
 }
 
 @SuppressWarnings({"MultiVariableDeclaration",
@@ -183,17 +202,25 @@ abstract class BaseMpscLinkedArrayQueuePad3<E> extends BaseMpscLinkedArrayQueueC
   byte p096, p097, p098, p099, p100, p101, p102, p103;
   byte p104, p105, p106, p107, p108, p109, p110, p111;
   byte p112, p113, p114, p115, p116, p117, p118, p119;
+
+  BaseMpscLinkedArrayQueuePad3(int initialCapacity) {
+    super(initialCapacity);
+  }
 }
 
 abstract class BaseMpscLinkedArrayQueueColdProducerFields<E>
     extends BaseMpscLinkedArrayQueuePad3<E> {
-  protected long producerMask;
-  protected volatile long producerLimit;
-  @SuppressWarnings("NullAway.Init")
   protected @Nullable E[] producerBuffer;
+  protected volatile long producerLimit;
+  protected long producerMask;
+
+  BaseMpscLinkedArrayQueueColdProducerFields(int initialCapacity) {
+    super(initialCapacity);
+    producerMask = consumerMask;
+    producerBuffer = consumerBuffer;
+  }
 }
 
-@SuppressWarnings("PMD")
 abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdProducerFields<E> {
   static final VarHandle REF_ARRAY;
   static final VarHandle P_INDEX;
@@ -209,20 +236,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    *        chunk size. Must be 2 or more.
    */
   BaseMpscLinkedArrayQueue(int initialCapacity) {
-    if (initialCapacity < 2) {
-      throw new IllegalArgumentException("Initial capacity must be 2 or more");
-    }
-
-    int p2capacity = ceilingPowerOfTwo(initialCapacity);
-    // leave lower bit of mask clear
-    long mask = (p2capacity - 1L) << 1;
-    // need extra element to point at next array
-    E[] buffer = allocate(p2capacity + 1);
-    producerBuffer = buffer;
-    producerMask = mask;
-    consumerBuffer = buffer;
-    consumerMask = mask;
-    soProducerLimit(this, mask); // we know it's all empty to start with
+    super(initialCapacity);
+    soProducerLimit(this, producerMask); // we know it's all empty to start with
   }
 
   @Override
@@ -236,11 +251,9 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   }
 
   @Override
-  @SuppressWarnings("MissingDefault")
+  @SuppressWarnings({"MissingDefault", "PMD.NonExhaustiveSwitch"})
   public boolean offer(E e) {
-    if (e == null) {
-      throw new NullPointerException();
-    }
+    requireNonNull(e);
 
     @Var long mask;
     @Var long pIndex;
@@ -323,7 +336,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * This implementation is correct for single consumer thread use only.
    */
   @Override
-  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
+  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "PMD.ConfusingTernary", "unchecked"})
   public @Nullable E poll() {
     @Nullable E[] buffer = consumerBuffer;
     long index = consumerIndex;
@@ -344,7 +357,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
       }
     }
     if (e == JUMP) {
-      E[] nextBuffer = getNextBuffer(buffer, mask);
+      @Nullable E[] nextBuffer = getNextBuffer(buffer, mask);
       return newBufferPoll(nextBuffer, index);
     }
     soElement(buffer, offset, null);
@@ -358,7 +371,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * This implementation is correct for single consumer thread use only.
    */
   @Override
-  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
+  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType",
+    "PMD.EmptyControlStatement", "unchecked"})
   public E peek() {
     @Nullable E[] buffer = consumerBuffer;
     long index = consumerIndex;
@@ -381,7 +395,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   }
 
   @SuppressWarnings("unchecked")
-  private E[] getNextBuffer(@Nullable E[] buffer, long mask) {
+  private @Nullable E[] getNextBuffer(@Nullable E[] buffer, long mask) {
     long nextArrayOffset = nextArrayOffset(mask);
     var nextBuffer = (E[]) lvElement(buffer, nextArrayOffset);
     soElement(buffer, nextArrayOffset, null);
@@ -392,7 +406,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return modifiedCalcElementOffset(mask + 2, Long.MAX_VALUE);
   }
 
-  private E newBufferPoll(E[] nextBuffer, long index) {
+  private E newBufferPoll(@Nullable E[] nextBuffer, long index) {
     long offsetInNew = newBufferAndOffset(nextBuffer, index);
     E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
     if (n == null) {
@@ -403,7 +417,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return n;
   }
 
-  private E newBufferPeek(E[] nextBuffer, long index) {
+  private E newBufferPeek(@Nullable E[] nextBuffer, long index) {
     long offsetInNew = newBufferAndOffset(nextBuffer, index);
     E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
     if (n == null) {
@@ -412,7 +426,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return n;
   }
 
-  private long newBufferAndOffset(E[] nextBuffer, long index) {
+  private long newBufferAndOffset(@Nullable E[] nextBuffer, long index) {
     consumerBuffer = nextBuffer;
     consumerMask = (nextBuffer.length - 2L) << 1;
     return modifiedCalcElementOffset(index, consumerMask);
@@ -487,7 +501,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
       return null;
     }
     if (e == JUMP) {
-      E[] nextBuffer = getNextBuffer(buffer, mask);
+      @Nullable E[] nextBuffer = getNextBuffer(buffer, mask);
       return newBufferPoll(nextBuffer, index);
     }
     soElement(buffer, offset, null);
@@ -511,7 +525,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   private void resize(long oldMask, @Nullable E[] oldBuffer, long pIndex, E e) {
     int newBufferLength = getNextBufferSize(oldBuffer);
-    E[] newBuffer = allocate(newBufferLength);
+    @Nullable E[] newBuffer = allocate(newBufferLength);
 
     producerBuffer = newBuffer;
     int newMask = (newBufferLength - 2) << 1;
@@ -543,11 +557,6 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     soElement(oldBuffer, offsetInOld, JUMP);
   }
 
-  @SuppressWarnings("unchecked")
-  public static <E> E[] allocate(int capacity) {
-    return (E[]) new Object[capacity];
-  }
-
   /**
    * @return next buffer size(inclusive of next array pointer)
    */
@@ -558,24 +567,31 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    */
   protected abstract long getCurrentBufferCapacity(long mask);
 
+  @SuppressWarnings("PMD.LooseCoupling")
   static long lvProducerIndex(BaseMpscLinkedArrayQueue<?> self) {
     return (long) P_INDEX.getVolatile(self);
   }
+  @SuppressWarnings("PMD.LooseCoupling")
   static long lvConsumerIndex(BaseMpscLinkedArrayQueue<?> self) {
     return (long) C_INDEX.getVolatile(self);
   }
+  @SuppressWarnings("PMD.LooseCoupling")
   static void soProducerIndex(BaseMpscLinkedArrayQueue<?> self, long v) {
     P_INDEX.setRelease(self, v);
   }
+  @SuppressWarnings("PMD.LooseCoupling")
   static boolean casProducerIndex(BaseMpscLinkedArrayQueue<?> self, long expect, long newValue) {
     return P_INDEX.compareAndSet(self, expect, newValue);
   }
+  @SuppressWarnings("PMD.LooseCoupling")
   static void soConsumerIndex(BaseMpscLinkedArrayQueue<?> self, long v) {
     C_INDEX.setRelease(self, v);
   }
+  @SuppressWarnings("PMD.LooseCoupling")
   static boolean casProducerLimit(BaseMpscLinkedArrayQueue<?> self, long expect, long newValue) {
     return P_LIMIT.compareAndSet(self, expect, newValue);
   }
+  @SuppressWarnings("PMD.LooseCoupling")
   static void soProducerLimit(BaseMpscLinkedArrayQueue<?> self, long v) {
     P_LIMIT.setRelease(self, v);
   }

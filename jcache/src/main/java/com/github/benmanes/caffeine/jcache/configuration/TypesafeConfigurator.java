@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import javax.cache.CacheManager;
@@ -61,14 +62,13 @@ import jakarta.inject.Inject;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NullMarked
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.MutableStaticState"})
 public final class TypesafeConfigurator {
   static final Logger logger = System.getLogger(TypesafeConfigurator.class.getName());
 
-  @SuppressWarnings("NonFinalStaticField")
-  static ConfigSource configSource = TypesafeConfigurator::resolveConfig;
-  @SuppressWarnings("NonFinalStaticField")
-  static FactoryCreator factoryCreator = FactoryBuilder::factoryOf;
+  static final AtomicReference<ConfigSource> configSource =
+      new AtomicReference<>(TypesafeConfigurator::resolveConfig);
+  static final AtomicReference<FactoryCreator> factoryCreator =
+      new AtomicReference<>(FactoryBuilder::factoryOf);
 
   private TypesafeConfigurator() {}
 
@@ -125,7 +125,12 @@ public final class TypesafeConfigurator {
   @Inject
   @SuppressWarnings({"deprecation", "UnnecessarilyVisible"})
   public static void setFactoryCreator(FactoryCreator factoryCreator) {
-    TypesafeConfigurator.factoryCreator = requireNonNull(factoryCreator);
+    TypesafeConfigurator.factoryCreator.set(requireNonNull(factoryCreator));
+  }
+
+  /** Returns the strategy for how factory instances are created. */
+  public static FactoryCreator factoryCreator() {
+    return requireNonNull(factoryCreator.get());
   }
 
   /**
@@ -152,12 +157,12 @@ public final class TypesafeConfigurator {
    * @param configSource the strategy for loading the configuration from a uri
    */
   public static void setConfigSource(ConfigSource configSource) {
-    TypesafeConfigurator.configSource = requireNonNull(configSource);
+    TypesafeConfigurator.configSource.set(requireNonNull(configSource));
   }
 
   /** Returns the strategy for loading the configuration. */
   public static ConfigSource configSource() {
-    return TypesafeConfigurator.configSource;
+    return requireNonNull(configSource.get());
   }
 
   /** Returns the configuration by applying the default strategy. */
@@ -254,7 +259,7 @@ public final class TypesafeConfigurator {
     private void addStoreByValue() {
       configuration.setStoreByValue(merged.getBoolean("store-by-value.enabled"));
       if (isSet("store-by-value.strategy")) {
-        configuration.setCopierFactory(factoryCreator.factoryOf(
+        configuration.setCopierFactory(factoryCreator().factoryOf(
             merged.getString("store-by-value.strategy")));
       }
     }
@@ -262,14 +267,16 @@ public final class TypesafeConfigurator {
     /** Adds the executor settings. */
     public void addExecutor() {
       if (isSet("executor")) {
-        configuration.setExecutorFactory(factoryCreator.factoryOf(merged.getString("executor")));
+        configuration.setExecutorFactory(factoryCreator()
+            .factoryOf(merged.getString("executor")));
       }
     }
 
     /** Adds the scheduler settings. */
     public void addScheduler() {
       if (isSet("scheduler")) {
-        configuration.setSchedulerFactory(factoryCreator.factoryOf(merged.getString("scheduler")));
+        configuration.setSchedulerFactory(factoryCreator()
+            .factoryOf(merged.getString("scheduler")));
       }
     }
 
@@ -279,10 +286,10 @@ public final class TypesafeConfigurator {
         Config listener = root.getConfig(path);
 
         Factory<? extends CacheEntryListener<? super K, ? super V>> listenerFactory =
-            factoryCreator.factoryOf(listener.getString("class"));
+            factoryCreator().factoryOf(listener.getString("class"));
         @Var Factory<? extends CacheEntryEventFilter<? super K, ? super V>> filterFactory = null;
         if (listener.hasPath("filter")) {
-          filterFactory = factoryCreator.factoryOf(listener.getString("filter"));
+          filterFactory = factoryCreator().factoryOf(listener.getString("filter"));
         }
         boolean oldValueRequired = listener.getBoolean("old-value-required");
         boolean synchronous = listener.getBoolean("synchronous");
@@ -296,7 +303,7 @@ public final class TypesafeConfigurator {
     private void addReadThrough() {
       configuration.setReadThrough(merged.getBoolean("read-through.enabled"));
       if (isSet("read-through.loader")) {
-        configuration.setCacheLoaderFactory(factoryCreator.factoryOf(
+        configuration.setCacheLoaderFactory(factoryCreator().factoryOf(
             merged.getString("read-through.loader")));
       }
     }
@@ -305,7 +312,7 @@ public final class TypesafeConfigurator {
     private void addWriteThrough() {
       configuration.setWriteThrough(merged.getBoolean("write-through.enabled"));
       if (isSet("write-through.writer")) {
-        configuration.setCacheWriterFactory(factoryCreator.factoryOf(
+        configuration.setCacheWriterFactory(factoryCreator().factoryOf(
             merged.getString("write-through.writer")));
       }
     }

@@ -302,6 +302,8 @@ jobs:
           allowed-endpoints: >
             ${{ env.ALLOWED_ENDPOINTS }}
             badgen.net:443
+            codecov.io:443
+            uploader.codecov.io:443
       - name: Download Tests
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
       - name: Decompress
@@ -336,6 +338,10 @@ jobs:
           gist_description: Test Results
           github_file: badge.svg
           gist_title: badge.svg
+      - name: Publish to Codecov
+        uses: codecov/test-results-action@f2dba722c67b86c6caa034178c6e4d35335f6706 # v1.1.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   publish-snapshot:
     name: Publish Snapshot

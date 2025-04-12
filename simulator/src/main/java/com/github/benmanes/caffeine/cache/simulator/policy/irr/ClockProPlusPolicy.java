@@ -68,7 +68,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author park910113@gmail.com (Chanyoung Park)
  */
 @PolicySpec(name = "irr.ClockProPlus")
-@SuppressWarnings("PMD.ImmutableField")
 public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   // Enable to print out the internal state
   private static final boolean debug = false;
