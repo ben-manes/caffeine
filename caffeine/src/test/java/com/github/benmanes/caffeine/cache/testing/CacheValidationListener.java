@@ -171,7 +171,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
   }
 
-  /** Checks that the cache is in an valid state. */
+  /** Checks that the cache is in a valid state. */
   private static void checkCache(CacheContext context) {
     if (context.cache != null) {
       assertThat(context.cache).isValid();
