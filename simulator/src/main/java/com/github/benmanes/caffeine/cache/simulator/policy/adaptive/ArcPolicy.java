@@ -43,7 +43,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * Self-Tuning, Low Overhead Replacement Cache</a>.
  * <p>
  * This algorithm is patented by IBM (6996676, 7096321, 7058766, 8612689) and Sun (7469320), making
- * its use in applications ambiguous due to Sun's ZFS providing an implementation under the CDDL.
+ * its use in applications is ambiguous due to Sun's ZFS providing an implementation under the CDDL.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
