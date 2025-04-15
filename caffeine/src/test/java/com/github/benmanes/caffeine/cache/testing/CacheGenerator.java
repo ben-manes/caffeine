@@ -217,7 +217,7 @@ public final class CacheGenerator {
   @SuppressWarnings("unchecked")
   private static void populate(CacheContext context, Cache<Int, Int> cache) {
     if (context.population.size() == 0) {
-      // timeWhel clock initialization
+      // timerWheel clock initialization
       cache.cleanUp();
       return;
     }
