@@ -13,6 +13,7 @@ dependencyResolutionManagement {
   }
 }
 
+enableFeaturePreview("STABLE_CONFIGURATION_CACHE")
 apply(from = "$rootDir/gradle/develocity.gradle")
 
 rootProject.name = "caffeine"

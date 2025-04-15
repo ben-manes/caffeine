@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.event;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -38,6 +39,38 @@ import org.testng.annotations.Test;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EventTypeAwareListenerTest {
+
+  @Test(groups = "isolated")
+  @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
+  public void isCompatible_unknownEventType() throws IOException {
+    CacheEntryListener<Integer, Integer> listener = Mockito.mock();
+    try (var forwarder = new EventTypeAwareListener<>(listener);
+         var eventTypes = Mockito.mockStatic(EventType.class)) {
+      var unknown = Mockito.mock(EventType.class);
+      when(unknown.ordinal()).thenReturn(4);
+      eventTypes.when(EventType::values).thenReturn(new EventType[] {
+          EventType.CREATED, EventType.UPDATED, EventType.REMOVED, EventType.EXPIRED, unknown });
+      assertThrows(IllegalStateException.class, () -> forwarder.isCompatible(unknown));
+      verifyNoInteractions(listener);
+    }
+  }
+
+  @Test(groups = "isolated")
+  @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
+  public void dispatch_unknownEventType() throws IOException {
+    CacheEntryListener<Integer, Integer> listener = Mockito.mock();
+    try (var forwarder = new EventTypeAwareListener<>(listener);
+         var eventTypes = Mockito.mockStatic(EventType.class);
+         Cache<Integer, Integer> cache = Mockito.mock()) {
+      var unknown = Mockito.mock(EventType.class);
+      when(unknown.ordinal()).thenReturn(4);
+      eventTypes.when(EventType::values).thenReturn(new EventType[] {
+          EventType.CREATED, EventType.UPDATED, EventType.REMOVED, EventType.EXPIRED, unknown });
+      forwarder.dispatch(new JCacheEntryEvent<>(cache, unknown,
+          /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2));
+      verifyNoInteractions(listener);
+    }
+  }
 
   @Test
   public void closed() throws IOException {

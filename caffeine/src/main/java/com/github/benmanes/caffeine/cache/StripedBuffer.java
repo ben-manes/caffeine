@@ -86,7 +86,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    * again; and for short-lived ones, it does not matter.
    */
 
-  static final VarHandle TABLE_BUSY;
+  static final VarHandle TABLE_BUSY = findVarHandle(StripedBuffer.class, "tableBusy", int.class);
 
   /** Number of CPUS. */
   static final int NCPU = Runtime.getRuntime().availableProcessors();
@@ -271,10 +271,9 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     return z ^ (z >>> 31);
   }
 
-  static {
+  static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
     try {
-      TABLE_BUSY = MethodHandles.lookup()
-          .findVarHandle(StripedBuffer.class, "tableBusy", int.class);
+      return MethodHandles.lookup().findVarHandle(recv, name, type);
     } catch (ReflectiveOperationException e) {
       throw new ExceptionInInitializerError(e);
     }

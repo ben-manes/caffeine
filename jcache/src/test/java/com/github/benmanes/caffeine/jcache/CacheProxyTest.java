@@ -42,6 +42,8 @@ import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.processor.Action;
+import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -130,6 +132,21 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     doThrow(e).when(completionListener).onCompletion();
     jcache.loadAll(keys, /* replaceExistingValues= */ true, completionListener);
     verify(completionListener).onException(e);
+  }
+
+  @Test(groups = "isolated")
+  @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
+  public void postProcess_unknownAction() {
+    try (var actionTypes = Mockito.mockStatic(Action.class)) {
+      var unknown = Mockito.mock(Action.class);
+      when(unknown.ordinal()).thenReturn(6);
+      actionTypes.when(Action::values).thenReturn(new Action[] {
+          Action.NONE, Action.READ, Action.CREATED, Action.UPDATED,
+          Action.LOADED, Action.DELETED, unknown});
+      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+      when(entry.getAction()).thenReturn(unknown);
+      assertThrows(IllegalStateException.class, () -> jcache.postProcess(null, entry, 0));
+    }
   }
 
   @Test

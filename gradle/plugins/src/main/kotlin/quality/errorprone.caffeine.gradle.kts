@@ -78,6 +78,7 @@ fun disabledChecks() = listOf(
   "AndroidJdkLibsChecker",
   "AssignmentExpression",
   "AvoidObjectArrays",
+  "CannotMockMethod",
   "ConstantNaming",
   "IsInstanceLambdaUsage",
   "Java7ApiChecker",

@@ -10,6 +10,7 @@ dependencyResolutionManagement {
   }
 }
 
+enableFeaturePreview("STABLE_CONFIGURATION_CACHE")
 apply(from = "../../gradle/develocity.gradle")
 
 rootProject.name = "indexable"

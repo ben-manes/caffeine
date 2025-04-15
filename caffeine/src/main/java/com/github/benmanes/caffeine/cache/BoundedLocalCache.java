@@ -233,7 +233,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** The number of retries before computing to validate the entry's integrity; pow2 modulus. */
   static final int MAX_PUT_SPIN_WAIT_ATTEMPTS = 1024 - 1;
   /** The handle for the in-flight refresh operations. */
-  static final VarHandle REFRESHES;
+  static final VarHandle REFRESHES = findVarHandle(
+      BoundedLocalCache.class, "refreshes", ConcurrentMap.class);
 
   final @Nullable RemovalListener<K, V> evictionListener;
   final @Nullable AsyncCacheLoader<K, V> cacheLoader;
@@ -278,15 +279,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     if (evicts()) {
       setMaximumSize(builder.getMaximum());
-    }
-  }
-
-  static {
-    try {
-      REFRESHES = MethodHandles.lookup()
-          .findVarHandle(BoundedLocalCache.class, "refreshes", ConcurrentMap.class);
-    } catch (ReflectiveOperationException e) {
-      throw new ExceptionInInitializerError(e);
     }
   }
 
@@ -4650,7 +4642,8 @@ final class BLCHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the drain status. */
   abstract static class DrainStatusRef extends PadDrainStatus {
-    static final VarHandle DRAIN_STATUS;
+    static final VarHandle DRAIN_STATUS = findVarHandle(
+        DrainStatusRef.class, "drainStatus", int.class);
 
     /** A drain is not taking place. */
     static final int IDLE = 0;
@@ -4704,10 +4697,9 @@ final class BLCHeader {
       return DRAIN_STATUS.compareAndSet(this, expect, update);
     }
 
-    static {
+    static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
       try {
-        DRAIN_STATUS = MethodHandles.lookup()
-            .findVarHandle(DrainStatusRef.class, "drainStatus", int.class);
+        return MethodHandles.lookup().findVarHandle(recv, name, type);
       } catch (ReflectiveOperationException e) {
         throw new ExceptionInInitializerError(e);
       }

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueue.findVarHandle;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.Truth.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -211,6 +212,12 @@ public final class MpscGrowableArrayQueueTest {
   public void getNextBufferSize_invalid(MpscGrowableArrayQueue<Integer> queue) {
     var buffer = new Integer[FULL_SIZE + 1];
     assertThrows(IllegalStateException.class, () -> queue.getNextBufferSize(buffer));
+  }
+
+  @Test
+  public void findVarHandle_absent() {
+    assertThrows(ExceptionInInitializerError.class, () ->
+        findVarHandle(BaseMpscLinkedArrayQueueProducerFields.class, "absent", int.class));
   }
 
   /* --------------- Concurrency --------------- */

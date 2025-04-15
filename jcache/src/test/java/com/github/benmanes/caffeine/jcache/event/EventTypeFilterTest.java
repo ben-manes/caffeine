@@ -15,45 +15,59 @@
  */
 package com.github.benmanes.caffeine.jcache.event;
 
-import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+
+import javax.cache.Cache;
 import javax.cache.event.CacheEntryCreatedListener;
+import javax.cache.event.CacheEntryEventFilter;
+import javax.cache.event.CacheEntryListener;
+import javax.cache.event.CacheEntryListenerException;
+import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.event.EventType;
 
-import org.testng.annotations.BeforeClass;
+import org.mockito.Mockito;
 import org.testng.annotations.Test;
+
+import com.google.common.testing.EqualsTester;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EventTypeFilterTest {
-  EventTypeFilter<Integer, Integer> filter;
 
-  @BeforeClass
-  public void before() {
-    CacheEntryCreatedListener<Integer, Integer> created = events -> {};
-    filter = new EventTypeFilter<>(created, event -> true);
-  }
-
-  @Test
-  @SuppressWarnings("TruthIncompatibleType")
-  public void equals_wrongType() {
-    assertThat(filter).isNotEqualTo(1);
-  }
-
-  @Test
-  public void equals_false() {
-    CacheEntryCreatedListener<Integer, Integer> created = events -> {};
-    var other = new EventTypeFilter<>(created, event -> false);
-    assertThat(filter).isNotEqualTo(other);
+  @Test(groups = "isolated")
+  @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
+  public void dispatch_unknownEventType() throws IOException {
+    CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
+    CacheEntryListener<Integer, Integer> listener = Mockito.mock();
+    var filter = new EventTypeFilter<>(listener, underlying);
+    try (var eventTypes = Mockito.mockStatic(EventType.class);
+         Cache<Integer, Integer> cache = Mockito.mock()) {
+      var unknown = Mockito.mock(EventType.class);
+      when(unknown.ordinal()).thenReturn(4);
+      eventTypes.when(EventType::values).thenReturn(new EventType[] {
+          EventType.CREATED, EventType.UPDATED, EventType.REMOVED, EventType.EXPIRED, unknown });
+      var event = new JCacheEntryEvent<>(cache, unknown,
+          /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
+      assertThrows(CacheEntryListenerException.class, () -> filter.evaluate(event));
+      verifyNoInteractions(listener, underlying);
+    }
   }
 
   @Test
   public void equals() {
-    assertThat(filter.equals(filter)).isTrue();
-  }
-
-  @Test
-  public void hash() {
-    assertThat(filter.hashCode()).isEqualTo(filter.hashCode());
+    CacheEntryCreatedListener<Integer, Integer> create = events -> {};
+    CacheEntryUpdatedListener<Integer, Integer> update = events -> {};
+    CacheEntryEventFilter<Integer, Integer> none = event -> false;
+    CacheEntryEventFilter<Integer, Integer> all = event -> true;
+    new EqualsTester()
+        .addEqualityGroup(new EventTypeFilter<>(create, none), new EventTypeFilter<>(create, none))
+        .addEqualityGroup(new EventTypeFilter<>(create, all), new EventTypeFilter<>(create, all))
+        .addEqualityGroup(new EventTypeFilter<>(update, all), new EventTypeFilter<>(update, all))
+        .testEquals();
   }
 }

@@ -101,6 +101,27 @@ tasks.named<Javadoc>("javadoc").configure {
   }
 }
 
+val isolatedTest = tasks.register<Test>("isolatedTest") {
+  group = "Verification"
+  description = "Tests that must be run in isolation"
+  useJUnitPlatform {
+    includeTags("isolated")
+
+    forkEvery = 1
+    maxParallelForks = 2 * Runtime.getRuntime().availableProcessors()
+  }
+}
+
+tasks.test.configure {
+  useJUnitPlatform {
+    excludeTags("isolated")
+  }
+}
+
+tasks.check.configure {
+  dependsOn(isolatedTest)
+}
+
 tasks.withType<Test>().configureEach {
   useJUnitPlatform()
   dependsOn(unzipTestKit)

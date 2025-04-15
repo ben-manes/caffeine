@@ -1148,9 +1148,7 @@ public final class CacheTest {
     int weight = 200;
     long expiresAt = 300;
     long refreshableAt = 400;
-    var tester = new EqualsTester()
-        .addEqualityGroup(1, 1, 1);
-
+    var tester = new EqualsTester();
     for (int i = 0; i < 10; i++) {
       var key = i;
       var value = i + 1;

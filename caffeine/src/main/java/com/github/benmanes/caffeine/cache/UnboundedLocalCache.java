@@ -64,7 +64,8 @@ import com.google.errorprone.annotations.Var;
 @SuppressWarnings("serial")
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   static final Logger logger = System.getLogger(UnboundedLocalCache.class.getName());
-  static final VarHandle REFRESHES;
+  static final VarHandle REFRESHES =
+      findVarHandle(UnboundedLocalCache.class, "refreshes", ConcurrentMap.class);
 
   final @Nullable RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> data;
@@ -87,10 +88,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     this.isAsync = isAsync;
   }
 
-  static {
+  static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
     try {
-      REFRESHES = MethodHandles.lookup()
-          .findVarHandle(UnboundedLocalCache.class, "refreshes", ConcurrentMap.class);
+      return MethodHandles.lookup().findVarHandle(recv, name, type);
     } catch (ReflectiveOperationException e) {
       throw new ExceptionInInitializerError(e);
     }

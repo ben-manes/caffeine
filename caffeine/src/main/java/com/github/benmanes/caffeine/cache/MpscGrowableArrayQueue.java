@@ -222,10 +222,13 @@ abstract class BaseMpscLinkedArrayQueueColdProducerFields<E>
 }
 
 abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdProducerFields<E> {
-  static final VarHandle REF_ARRAY;
-  static final VarHandle P_INDEX;
-  static final VarHandle C_INDEX;
-  static final VarHandle P_LIMIT;
+  static final VarHandle P_INDEX = findVarHandle(
+      BaseMpscLinkedArrayQueueProducerFields.class, "producerIndex", long.class);
+  static final VarHandle C_INDEX = findVarHandle(
+      BaseMpscLinkedArrayQueueConsumerFields.class, "consumerIndex", long.class);
+  static final VarHandle P_LIMIT = findVarHandle(
+      BaseMpscLinkedArrayQueueColdProducerFields.class, "producerLimit", long.class);
+  static final VarHandle REF_ARRAY = MethodHandles.arrayElementVarHandle(Object[].class);
 
   // No post padding here, subclasses must add
 
@@ -641,22 +644,10 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return (index & mask) >> 1;
   }
 
-  static {
+  static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
     try {
-      Lookup pIndexLookup = MethodHandles.privateLookupIn(
-          BaseMpscLinkedArrayQueueProducerFields.class, MethodHandles.lookup());
-      Lookup cIndexLookup = MethodHandles.privateLookupIn(
-          BaseMpscLinkedArrayQueueConsumerFields.class, MethodHandles.lookup());
-      Lookup pLimitLookup = MethodHandles.privateLookupIn(
-          BaseMpscLinkedArrayQueueColdProducerFields.class, MethodHandles.lookup());
-
-      P_INDEX = pIndexLookup.findVarHandle(
-          BaseMpscLinkedArrayQueueProducerFields.class, "producerIndex", long.class);
-      C_INDEX = cIndexLookup.findVarHandle(
-          BaseMpscLinkedArrayQueueConsumerFields.class, "consumerIndex", long.class);
-      P_LIMIT = pLimitLookup.findVarHandle(
-          BaseMpscLinkedArrayQueueColdProducerFields.class, "producerLimit", long.class);
-      REF_ARRAY = MethodHandles.arrayElementVarHandle(Object[].class);
+      Lookup lookup = MethodHandles.privateLookupIn(recv, MethodHandles.lookup());
+      return lookup.findVarHandle(recv, name, type);
     } catch (ReflectiveOperationException e) {
       throw new ExceptionInInitializerError(e);
     }

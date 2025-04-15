@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_REQUIRED;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
+import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.findVarHandle;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ADMIT_HASHDOS_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
@@ -2794,6 +2795,12 @@ public final class BoundedLocalCacheTest {
     var constructor = BLCHeader.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();
+  }
+
+  @Test
+  public void findVarHandle_absent() {
+    assertThrows(ExceptionInInitializerError.class, () ->
+        findVarHandle(BoundedLocalCache.class, "absent", int.class));
   }
 
   @Test

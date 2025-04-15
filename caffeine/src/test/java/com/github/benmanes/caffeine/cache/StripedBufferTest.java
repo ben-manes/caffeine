@@ -17,7 +17,9 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.StripedBuffer.MAXIMUM_TABLE_SIZE;
 import static com.github.benmanes.caffeine.cache.StripedBuffer.NCPU;
+import static com.github.benmanes.caffeine.cache.StripedBuffer.findVarHandle;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,6 +98,12 @@ public final class StripedBufferTest {
 
     buffer.drainTo(e -> {});
     assertThat(buffer.drains).isEqualTo(1);
+  }
+
+  @Test
+  public void findVarHandle_absent() {
+    assertThrows(ExceptionInInitializerError.class, () ->
+        findVarHandle(StripedBuffer.class, "absent", int.class));
   }
 
   @DataProvider(name = "buffers")

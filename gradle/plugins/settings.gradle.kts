@@ -16,4 +16,5 @@ dependencyResolutionManagement {
   }
 }
 
+enableFeaturePreview("STABLE_CONFIGURATION_CACHE")
 apply(from = "../develocity.gradle")

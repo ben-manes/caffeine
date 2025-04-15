@@ -170,7 +170,10 @@ final class BBHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the write counter. */
   abstract static class ReadAndWriteCounterRef extends PadWriteCounter {
-    static final VarHandle READ, WRITE;
+    static final VarHandle READ = findVarHandle(
+        ReadCounterRef.class, "readCounter", long.class);
+    static final VarHandle WRITE = findVarHandle(
+        ReadAndWriteCounterRef.class, "writeCounter", long.class);
 
     volatile long writeCounter;
 
@@ -186,11 +189,9 @@ final class BBHeader {
       return WRITE.weakCompareAndSet(this, expect, update);
     }
 
-    static {
-      var lookup = MethodHandles.lookup();
+    static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
       try {
-        READ = lookup.findVarHandle(ReadCounterRef.class, "readCounter", long.class);
-        WRITE = lookup.findVarHandle(ReadAndWriteCounterRef.class, "writeCounter", long.class);
+        return MethodHandles.lookup().findVarHandle(recv, name, type);
       } catch (ReflectiveOperationException e) {
         throw new ExceptionInInitializerError(e);
       }
