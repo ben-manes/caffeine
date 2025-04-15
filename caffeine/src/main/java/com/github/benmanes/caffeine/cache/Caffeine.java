@@ -413,7 +413,7 @@ public final class Caffeine<K, V> {
         "maximum size was already set to %s", this.maximumSize);
     requireState(this.maximumWeight == UNSET_INT,
         "maximum weight was already set to %s", this.maximumWeight);
-    requireState(this.weigher == null, "maximum size can not be combined with weigher");
+    requireState(this.weigher == null, "maximum size cannot be combined with weigher");
     requireArgument(maximumSize >= 0, "maximum size must not be negative");
     this.maximumSize = maximumSize;
     return this;
@@ -491,7 +491,7 @@ public final class Caffeine<K, V> {
     requireNonNull(weigher);
     requireState(this.weigher == null, "weigher was already set to %s", this.weigher);
     requireState(!strictParsing || this.maximumSize == UNSET_INT,
-        "weigher can not be combined with maximum size");
+        "weigher cannot be combined with maximum size");
 
     @SuppressWarnings("unchecked")
     var self = (Caffeine<K1, V1>) this;
@@ -1113,7 +1113,7 @@ public final class Caffeine<K, V> {
    * @return a cache having the requested features
    */
   public <K1 extends K, V1 extends @Nullable V> AsyncCache<K1, V1> buildAsync() {
-    requireState(valueStrength == null, "Weak or soft values can not be combined with AsyncCache");
+    requireState(valueStrength == null, "Weak or soft values cannot be combined with AsyncCache");
     requireState(isStrongKeys() || (evictionListener == null),
         "Weak keys cannot be combined with eviction listener and AsyncLoadingCache");
     requireWeightWithWeigher();
@@ -1170,7 +1170,7 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends @Nullable V> AsyncLoadingCache<K1, V1> buildAsync(
       AsyncCacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null,
-        "Weak or soft values can not be combined with AsyncLoadingCache");
+        "Weak or soft values cannot be combined with AsyncLoadingCache");
     requireState(isStrongKeys() || (evictionListener == null),
         "Weak keys cannot be combined with eviction listener and AsyncLoadingCache");
     requireWeightWithWeigher();

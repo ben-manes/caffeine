@@ -51,7 +51,7 @@ public final class MpscGrowableArrayQueueLincheckTest {
   /**
    * This test checks that the concurrent queue is linearizable with bounded model checking. Unlike
    * stress testing, this approach can also provide a trace of an incorrect execution. However, it
-   * uses sequential consistency model, so it can not find any low-level bugs (e.g., missing
+   * uses sequential consistency model, so it cannot find any low-level bugs (e.g., missing
    * 'volatile'), and thus, it is recommended to have both test modes.
    */
   @Test(groups = "lincheck")

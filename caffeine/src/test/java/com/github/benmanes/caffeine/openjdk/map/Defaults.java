@@ -539,7 +539,7 @@ public class Defaults {
         assertThrowsNPE(() -> map.merge(KEYS[1], VALUES[1], null));
     }
 
-    /** A function that flipflops between running two other functions. */
+    /** A function that flip-flops between running two other functions. */
     static <T,U,V> BiFunction<T,U,V> twoStep(AtomicBoolean b,
                                              BiFunction<T,U,V> first,
                                              BiFunction<T,U,V> second) {

@@ -1,6 +1,6 @@
 /* lirs.c
  *
- * See Sigmetrics'02 paper "`LIRS: An Efficient Low Inter-reference
+ * See Sigmetrics '02 paper "`LIRS: An Efficient Low Inter-reference
  * Recency Set Replacement Policy to Improve Buffer Cache Performance"
  * for more description. "The paper" is used to refer to this paper in the
  * following.
@@ -19,7 +19,7 @@
  *
  */
 
-/* Command Line Uasge: only prefix of trace file is required. e.g.
+/* Command Line Usage: only prefix of trace file is required. e.g.
    :/ lirs ABC
 */
 
@@ -131,7 +131,7 @@ FILE *openReadFile(char file_name[])
   fp = fopen(file_name, "r");
 
   if (!fp) {
-    printf("can not find file %s.\n", file_name);
+    printf("cannot find file %s.\n", file_name);
     return NULL;
   }
 

@@ -50,7 +50,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 public class MapBinToFromTreeTest {
 
     // Initial capacity of map
-    // Should be >= the map capacity for treeifiying, see HashMap/ConcurrentMap.MIN_TREEIFY_CAPACITY
+    // Should be >= the map capacity for treeifying, see HashMap/ConcurrentMap.MIN_TREEIFY_CAPACITY
     static final int INITIAL_CAPACITY = 64;
 
     // Maximum size of map

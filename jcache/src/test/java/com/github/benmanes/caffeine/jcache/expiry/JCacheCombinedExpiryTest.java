@@ -143,7 +143,7 @@ public final class JCacheCombinedExpiryTest extends AbstractJCacheTest {
   /* --------------- replace --------------- */
 
   @Test
-  public void replac_expired() {
+  public void replace_expired() {
     jcache.put(KEY_1, VALUE_1);
     advancePastExpiry();
 

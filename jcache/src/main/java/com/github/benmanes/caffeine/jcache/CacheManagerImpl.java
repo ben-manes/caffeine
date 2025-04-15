@@ -243,7 +243,7 @@ public final class CacheManagerImpl implements CacheManager {
     if (clazz.isInstance(this)) {
       return clazz.cast(this);
     }
-    throw new IllegalArgumentException("Unwapping to " + clazz
+    throw new IllegalArgumentException("Unwrapping to " + clazz
         + " is not a supported by this implementation");
   }
 

@@ -13,7 +13,7 @@
 /* however, the above band should be no less than this  */
 #define LOWEST_COLD_ALLOC 2 
 
-/* do you allow the number of cold blocks to be adatively adjusted? */
+/* do you allow the number of cold blocks to be adaptively adjusted? */
 //#define ADAPTIVE_COLD_ALLOC
 
 
@@ -24,7 +24,7 @@
 #define NUM_REFAULT_WINDOW 100
 
 /* This specifies from what virtual time (reference event), we start to collect 
- * misses. You can test a warm cache by changin the "0" to some virtual time you want.
+ * misses. You can test a warm cache by changing the "0" to some virtual time you want.
  */
 #define STAT_START_POINT 0
 
@@ -51,7 +51,7 @@ typedef struct pf_struct {
   int is_in_clock; 
   int is_in_test;
 
-   /* to simulate the bit set by harware to indicate the page has
+   /* to simulate the bit set by hardware to indicate the page has
       been accessed */  
   char ref_bit;
    

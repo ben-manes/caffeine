@@ -46,7 +46,7 @@ public interface TraceReader {
   @MustBeClosed
   Stream<AccessEvent> events();
 
-  /** A trace reader that that does not contain external event metadata. */
+  /** A trace reader that does not contain external event metadata. */
   @FunctionalInterface
   interface KeyOnlyTraceReader extends TraceReader {
 

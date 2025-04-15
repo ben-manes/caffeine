@@ -15,7 +15,7 @@
 
 
 /* This specifies from what virtual time (reference event), the counter for 
- * block miss starts to collect. You can test a warm cache by changin the "0"
+ * block miss starts to collect. You can test a warm cache by changing the "0"
  * to some virtual time you desire.*/
 #define STAT_START_POINT 0
 

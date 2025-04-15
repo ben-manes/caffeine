@@ -382,7 +382,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     int expectedModCount;
 
     /**
-     * Creates an iterator that can can traverse the deque.
+     * Creates an iterator that can traverse the deque.
      *
      * @param start the initial element to begin traversal from
      */
@@ -393,7 +393,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
 
     @Override
     public boolean hasNext() {
-      checkForComodification();
+      checkForConcurrentModification();
       return (cursor != null);
     }
 
@@ -420,7 +420,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       if (previous == null) {
         throw new IllegalStateException();
       }
-      checkForComodification();
+      checkForConcurrentModification();
 
       AbstractLinkedDeque.this.remove(previous);
       expectedModCount = modCount;
@@ -431,7 +431,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
      * If the expected modCount value that the iterator believes that the backing deque should have
      * is violated then the iterator has detected concurrent modification.
      */
-    void checkForComodification() {
+    void checkForConcurrentModification() {
       if (modCount != expectedModCount) {
         throw new ConcurrentModificationException();
       }

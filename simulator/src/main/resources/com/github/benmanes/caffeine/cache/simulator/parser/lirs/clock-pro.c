@@ -42,7 +42,7 @@
  *     
  */
 
-/* Command Line Uasge: only prefix of trace file is required. e.g.
+/* Command Line Usage: only prefix of trace file is required. e.g.
    ./clock-pro my-trace
    It is implied that trace file is "my-trace.trc", parameter file is "my-trace.par"
    output files are "my-trace.cuv", "my-trace.sln" and "my-trace.ref"
@@ -280,7 +280,7 @@ void run_clock_pro(FILE *trace_fp, FILE *sln_fp, FILE *refault_fp)
     if (collect_stat == 1)
 	num_pg_flt++;
 
-    /************ initilization *******************/
+    /************ initialization *******************/
     /* fill the clock with (mem_size - MIN_cold_alloc) hot pages at first,
      * then MIN_cold_alloc cold pages.
      */
@@ -414,7 +414,7 @@ void run_clock_pro(FILE *trace_fp, FILE *sln_fp, FILE *refault_fp)
     if ( total_pg_refs%2 ==0 && sln_fp)
 	    fprintf(sln_fp, "%4d %f\n", total_pg_refs,  100.0*num_cold_pages/mem_size);
 
-    /* you might be interested in checking these statistcs : 
+    /* you might be interested in checking these statistics : 
       fprintf(sln_fp, "%4u %2.2f\n", total_pg_refs, (float)clock_size/mem_size);      
       fprintf(sln_fp, "%4d %d\n", total_pg_refs,   ColdIncreaseCredits);
       fprintf(sln_fp, "%4d %d\n", total_pg_refs,  num_cold_pages);
@@ -627,7 +627,7 @@ void run_HAND_cold()
 	}
       }
 
-      /* normal case: one promtion + one demotion */
+      /* normal case: one promotion + one demotion */
       else {
 	is_matched = run_HAND_hot(hand_cold);
 
@@ -798,7 +798,7 @@ FILE *openReadFile(char file_name[])
   fp = fopen(file_name, "r");
 
   if (!fp) {
-    printf("can not find file %s.\n", file_name);
+    printf("cannot find file %s.\n", file_name);
     return NULL;
   }
   

@@ -57,7 +57,7 @@ final class JakartaCacheModule extends AbstractModule {
     bind(CacheResolverFactory.class).to(DefaultCacheResolverFactory.class);
 
     interceptCachePut();
-    incerceptCacheResult();
+    interceptCacheResult();
     interceptCacheRemove();
     interceptCacheRemoveAll();
   }
@@ -76,7 +76,7 @@ final class JakartaCacheModule extends AbstractModule {
     bindInterceptor(Matchers.any(), Matchers.annotatedWith(CacheRemove.class), interceptor);
   }
 
-  private void incerceptCacheResult() {
+  private void interceptCacheResult() {
     var interceptor = new JakartaCacheResultInterceptor();
     requestInjection(interceptor);
     bindInterceptor(Matchers.annotatedWith(CacheResult.class), Matchers.any(), interceptor);
