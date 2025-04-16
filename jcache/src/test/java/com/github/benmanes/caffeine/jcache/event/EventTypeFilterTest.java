@@ -19,8 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
-
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEventFilter;
@@ -41,7 +39,7 @@ public final class EventTypeFilterTest {
 
   @Test(groups = "isolated")
   @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
-  public void dispatch_unknownEventType() throws IOException {
+  public void dispatch_unknownEventType() {
     CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
     CacheEntryListener<Integer, Integer> listener = Mockito.mock();
     var filter = new EventTypeFilter<>(listener, underlying);
