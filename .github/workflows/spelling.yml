@@ -26,7 +26,7 @@ jobs:
           reporter: github-check
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  spelling:
+  check-spelling:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -47,28 +47,27 @@ jobs:
         with:
           persist-credentials: false
       - name: check-spelling
-        id: spelling
         uses: check-spelling/check-spelling@67debf50669c7fc76fc8f5d7f996384535a72b77 # v0.0.24
         with:
+          use_sarif: ${{ (!github.event.pull_request || (github.event.pull_request.head.repo.full_name == github.repository)) && 1 }}
           suppress_push_for_open_pull_request: ${{ github.actor != 'dependabot[bot]' && 1 }}
-          check_file_names: 1
           spell_check_this: check-spelling/spell-check-this@main
-          post_comment: 0
+          experimental_apply_changes_via_bot: 1
+          check_file_names: 1
           use_magic_file: 1
           report-timing: 1
+          post_comment: 0
           warnings: >
             bad-regex, binary-file, deprecated-feature, ignored-expect-variant, large-file,
             limited-references, no-newline-at-eof, noisy-file, non-alpha-in-dictionary,
             token-is-substring, unexpected-line-ending, whitespace-in-dictionary, minified-file,
             unsupported-configuration, no-files-to-check, unclosed-block-ignore-begin,
             unclosed-block-ignore-end
-          experimental_apply_changes_via_bot: 1
-          use_sarif: ${{ (!github.event.pull_request || (github.event.pull_request.head.repo.fork == false)) && 1 }}
-          check_extra_dictionaries: ""
           dictionary_source_prefixes: >
             {
             "cspell": "https://raw.githubusercontent.com/check-spelling/cspell-dicts/v20241114/dictionaries/"
             }
+          check_extra_dictionaries: ""
           extra_dictionaries: |
             cspell:software-terms/softwareTerms.txt
             cspell:java/java.txt

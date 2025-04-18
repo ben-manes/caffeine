@@ -3505,9 +3505,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       requireNonNull(filter);
       @Var boolean modified = false;
       for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
-        var key = requireNonNull(iterator.key);
         var value = requireNonNull(iterator.value);
         if (filter.test(value)) {
+          var key = requireNonNull(iterator.key);
           modified |= cache.remove(key, value);
         }
         iterator.advance();

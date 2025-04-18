@@ -15,73 +15,63 @@
  */
 package com.github.benmanes.caffeine.apache;
 
-import java.time.Duration;
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Stream;
 
 import org.apache.commons.collections4.map.AbstractMapTest;
-import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.testing.CacheContext;
+import com.github.benmanes.caffeine.cache.testing.CacheGenerator;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 
 /**
  * Apache Commons Collections' map tests for the {@link Cache#asMap()} view.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.MissingStaticMethodInNonInstantiatableClass")
-public final class CaffeineMapTest {
+@ParameterizedClass
+@MethodSource("caches")
+final class CaffeineMapTest<K, V> extends AbstractMapTest<ConcurrentMap<K, V>, K, V> {
+  final CacheContext template;
 
-  private CaffeineMapTest() {}
-
-  @Nested
-  static final class BoundedSyncMapTest extends AbstractConcurrentMapTest {
-    @Override public ConcurrentMap<Object, Object> makeObject() {
-      return Caffeine.newBuilder()
-          .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
-          .maximumSize(Long.MAX_VALUE)
-          .build().asMap();
-    }
+  CaffeineMapTest(CacheContext template) {
+    this.template = requireNonNull(template);
   }
-
-  @Nested
-  static final class BoundedAsyncMapTest extends AbstractConcurrentMapTest {
-    @Override public ConcurrentMap<Object, Object> makeObject() {
-      return Caffeine.newBuilder()
-          .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
-          .maximumSize(Long.MAX_VALUE)
-          .buildAsync().synchronous().asMap();
-    }
+  @Override public boolean isAllowNullKey() {
+    return false;
   }
-
-  @Nested
-  static final class UnboundedSyncMapTest extends AbstractConcurrentMapTest {
-    @Override public ConcurrentMap<Object, Object> makeObject() {
-      return Caffeine.newBuilder().build().asMap();
-    }
+  @Override public boolean isAllowNullValueGet() {
+    return false;
   }
-
-  @Nested
-  static final class UnboundedAsyncMapTest extends AbstractConcurrentMapTest {
-    @Override public ConcurrentMap<Object, Object> makeObject() {
-      return Caffeine.newBuilder().buildAsync().synchronous().asMap();
-    }
+  @Override public boolean isAllowNullValuePut() {
+    return false;
   }
-
-  abstract static class AbstractConcurrentMapTest
-      extends AbstractMapTest<ConcurrentMap<Object, Object>, Object, Object> {
-
-    @Override public boolean isAllowNullKey() {
-      return false;
-    }
-    @Override public boolean isAllowNullValueGet() {
-      return false;
-    }
-    @Override public boolean isAllowNullValuePut() {
-      return false;
-    }
-    @Override public boolean isTestSerialization() {
-      return false;
-    }
+  @Override public boolean isTestSerialization() {
+    return false;
+  }
+  @Override public ConcurrentMap<K, V> makeObject() {
+    var context = new CacheContext(template);
+    CacheGenerator.initialize(context);
+    @SuppressWarnings("unchecked")
+    var cache = (Cache<K, V>) context.cache();
+    return cache.asMap();
+  }
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
+      evictionListener = Listener.DISABLED, stats = Stats.ENABLED)
+  static Stream<CacheContext> caches() throws NoSuchMethodException {
+    var cacheSpec = CaffeineMapTest.class.getDeclaredMethod("caches")
+        .getAnnotation(CacheSpec.class);
+    return new CacheGenerator(cacheSpec).generate();
   }
 }

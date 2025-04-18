@@ -33,10 +33,6 @@ allprojects {
 }
 
 idea.project.settings {
-  delegateActions {
-    delegateBuildRunToGradle = false
-    testRunner = PLATFORM
-  }
   runConfigurations {
     val jvmArgs = listOf(
       "-javaagent:${mockitoAgent.asPath}",

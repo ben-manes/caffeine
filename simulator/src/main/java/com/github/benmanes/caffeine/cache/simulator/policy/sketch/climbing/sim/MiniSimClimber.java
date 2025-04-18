@@ -55,7 +55,7 @@ public final class MiniSimClimber implements HillClimber {
     var simulationSettings = new WindowTinyLfuSettings(ConfigFactory
         .parseString("maximum-size = " + (cacheSize / samplingRate))
         .withFallback(config));
-    this.prevPercent = 1 - settings.percentMain().get(0);
+    this.prevPercent = 1 - settings.percentMain().getFirst();
     this.period = settings.minisimPeriod();
     this.minis = new WindowTinyLfuPolicy[101];
     this.prevMisses = new long[minis.length];

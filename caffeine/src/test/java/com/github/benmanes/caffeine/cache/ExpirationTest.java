@@ -529,7 +529,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void get_async(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = cache.get(context.absentKey(), (k, e) -> new CompletableFuture<Int>());
+    var future = cache.get(context.absentKey(), (k, e) -> new CompletableFuture<>());
     context.ticker().advance(Duration.ofMinutes(2));
     cache.synchronous().cleanUp();
 

@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.report;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
@@ -65,7 +64,7 @@ public abstract class TextReporter implements Reporter {
     try {
       var path = Path.of(output);
       Files.createDirectories(path.getParent());
-      Files.write(path, report.getBytes(UTF_8));
+      Files.writeString(path, report);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

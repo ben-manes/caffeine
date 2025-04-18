@@ -58,18 +58,14 @@ public final class RemovalListeners {
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    public boolean reject = true;
     public int rejected;
 
     @Override
     public void onRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
       validate(key, value, cause);
-
-      if (reject) {
-        rejected++;
-        throw new RejectedExecutionException("Rejected eviction of " +
-            new RemovalNotification<>(key, value, cause));
-      }
+      rejected++;
+      throw new RejectedExecutionException("Rejected eviction of " +
+          new RemovalNotification<>(key, value, cause));
     }
   }
 

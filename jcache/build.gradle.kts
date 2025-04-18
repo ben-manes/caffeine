@@ -113,13 +113,10 @@ val isolatedTest = tasks.register<Test>("isolatedTest") {
 }
 
 tasks.test.configure {
+  dependsOn(isolatedTest)
   useJUnitPlatform {
     excludeTags("isolated")
   }
-}
-
-tasks.check.configure {
-  dependsOn(isolatedTest)
 }
 
 tasks.withType<Test>().configureEach {

@@ -610,7 +610,7 @@ public final class ExpireAfterVarTest {
     context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(ExpirationException.class);
-    var future = cache.get(context.absentKey(), (key, executor) -> new CompletableFuture<Int>());
+    var future = cache.get(context.absentKey(), (key, executor) -> new CompletableFuture<>());
     future.complete(context.absentValue());
     assertThat(cache).doesNotContainKey(context.absentKey());
     assertThat(logEvents()
