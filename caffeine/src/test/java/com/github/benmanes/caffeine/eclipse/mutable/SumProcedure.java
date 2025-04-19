@@ -24,7 +24,7 @@ import org.eclipse.collections.impl.parallel.ProcedureFactory;
  */
 @Deprecated
 @SuppressWarnings({"all", "overloads", "unchecked"})
-public class SumProcedure<T>
+final class SumProcedure<T>
     implements Procedure<T>, Function2<Sum, T, Sum>, ProcedureFactory<SumProcedure<T>> {
   private static final long serialVersionUID = 1L;
   private static final SumProcedure<?> NUMBER = new SumProcedure<>();

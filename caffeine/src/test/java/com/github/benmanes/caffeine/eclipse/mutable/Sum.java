@@ -17,7 +17,7 @@ import java.io.Serializable;
  * @deprecated Don't use in new tests
  */
 @Deprecated
-public interface Sum extends Serializable {
+interface Sum extends Serializable {
   Sum add(Object number);
 
   Sum add(Number number);

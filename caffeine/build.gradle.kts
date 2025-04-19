@@ -176,9 +176,9 @@ val standaloneTest = tasks.register<Test>("standaloneTest") {
 val isolatedTest = tasks.register<Test>("isolatedTest") {
   group = "Verification"
   description = "Tests that must be run in isolation"
+  maxHeapSize = "3g"
   useTestNG {
     includeGroups("isolated")
-    maxHeapSize = "3g"
   }
 }
 
@@ -186,12 +186,12 @@ val lincheckTest = tasks.register<Test>("lincheckTest") {
   group = "Verification"
   description = "Tests that assert linearizability"
   val isEnabled = isEarlyAccess().map { !it }
+  testLogging.events("started")
   onlyIf { isEnabled.get() }
+  maxHeapSize = "3g"
+  failFast = true
   useTestNG {
-    testLogging.events("started")
     includeGroups("lincheck")
-    maxHeapSize = "3g"
-    failFast = true
   }
 }
 
@@ -210,6 +210,9 @@ val junitJupiterTest = tasks.register<Test>("junitJupiterTest") {
   description = "JUnit Jupiter tests"
   exclude("com/github/benmanes/caffeine/fuzz/**")
   useJUnitPlatform()
+  systemProperties(
+    "junit.jupiter.execution.parallel.enabled" to "true",
+    "junit.jupiter.execution.parallel.mode.default" to "concurrent")
 }
 
 val junitTest = tasks.register<Test>("junitTest") {

@@ -16,7 +16,7 @@ package com.github.benmanes.caffeine.eclipse.mutable;
  */
 @Deprecated
 @SuppressWarnings({"all", "EqualsBrokenForNull", "EqualsUnsafeCast"})
-public final class IntegerSum implements Sum {
+final class IntegerSum implements Sum {
   private static final long serialVersionUID = 1L;
 
   private int sum = 0;
