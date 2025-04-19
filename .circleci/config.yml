@@ -13,43 +13,11 @@ commands:
         type: integer
     steps:
       - run:
-          name: Workaround for running apt behind the scene
-          command: sudo killall -9 apt-get || true
-      - run:
-          name: Switch to US mirror for faster performances
-          command: sudo sed -i 's/\/\/archive.ubuntu.com/\/\/us.archive.ubuntu.com/g' /etc/apt/sources.list
-      - run:
-          name: Add openjdk-r PPA
-          command: |
-            sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 EB9B1D8886F44E2A
-            sudo add-apt-repository --yes ppa:openjdk-r/ppa
-            sudo apt-get --yes update
-      - run:
-          name: Generate cache version
-          command: |
-            apt-cache policy openjdk-<< parameters.version >>-jdk | grep 'Candidate:' | cut -d' ' -f4 > .openjdk_version
-            cat .openjdk_version
-      - restore_cache:
-          keys:
-            - apt-cache-{{ checksum ".openjdk_version" }}-v1
-      - run:
-          name: Create temp directory if restore cache didn't
-          command: mkdir -p /tmp/archives
-      - run:
-          name: Restore apt cache
-          command: sudo rsync -av /tmp/archives/ /var/cache/apt/archives/
-      - run:
           name: Install openjdk
           command: |
+            sudo apt-get update
             sudo apt-get install --yes openjdk-<< parameters.version >>-jdk
             sudo update-java-alternatives --set java-1.<< parameters.version >>.0-openjdk-arm64
-      - run:
-          name: Prepare to save apt cache
-          command: rsync -av /var/cache/apt/archives/*.deb /tmp/archives/
-      - save_cache:
-          key: apt-cache-{{ checksum ".openjdk_version" }}-v1
-          paths:
-            - /tmp/archives
   restore_gradle_cache:
     parameters:
       cache_key:

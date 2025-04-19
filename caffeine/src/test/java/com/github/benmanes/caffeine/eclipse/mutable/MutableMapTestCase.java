@@ -9,40 +9,24 @@
  */
 package com.github.benmanes.caffeine.eclipse.mutable;
 
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.impl.block.factory.Functions;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.test.Verify;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Abstract JUnit TestCase for {@link MutableMap}s.
  *
  * Ported from Eclipse Collections 11.0.
  */
-public abstract class MutableMapTestCase extends MutableMapIterableTestCase {
-  @Override
-  protected abstract <K, V> MutableMap<K, V> newMap();
-
-  @Override
-  protected abstract <K, V> MutableMap<K, V> newMapWithKeyValue(K key, V value);
-
-  @Override
-  protected abstract <K, V> MutableMap<K, V> newMapWithKeysValues(K key1, V value1, K key2,
-      V value2);
-
-  @Override
-  protected abstract <K, V> MutableMap<K, V> newMapWithKeysValues(K key1, V value1, K key2,
-      V value2, K key3, V value3);
-
-  @Override
-  protected abstract <K, V> MutableMap<K, V> newMapWithKeysValues(K key1, V value1, K key2,
-      V value2, K key3, V value3, K key4, V value4);
+abstract class MutableMapTestCase extends MutableMapIterableTestCase {
 
   @Test
-  public void collectKeysAndValues() {
+  void collectKeysAndValues() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "1", 2, "Two");
     MutableList<Integer> toAdd = FastList.newListWith(2, 3);
     map.collectKeysAndValues(toAdd, Functions.getIntegerPassThru(), String::valueOf);
@@ -51,10 +35,10 @@ public abstract class MutableMapTestCase extends MutableMapIterableTestCase {
   }
 
   @Test
-  public void cloneable() {
+  void cloneable() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 2, "Two");
     MutableMap<Integer, String> clone = map.clone();
-    Assert.assertNotSame(map, clone);
+    assertNotSame(map, clone);
     Verify.assertEqualsAndHashCode(map, clone);
   }
 }

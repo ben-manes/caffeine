@@ -11,6 +11,15 @@ package com.github.benmanes.caffeine.eclipse.mutable;
 
 import static org.eclipse.collections.impl.factory.Iterables.iMap;
 import static org.eclipse.collections.impl.factory.Iterables.mList;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,18 +44,21 @@ import org.eclipse.collections.impl.test.Verify;
 import org.eclipse.collections.impl.tuple.ImmutableEntry;
 import org.eclipse.collections.impl.utility.ArrayIterate;
 import org.eclipse.collections.impl.utility.Iterate;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.benmanes.caffeine.testing.Int;
 
 /**
  * Ported from Eclipse Collections 11.0.
  */
+@ParameterizedClass
+@MethodSource("caches")
 @SuppressWarnings({"all", "CanIgnoreReturnValueSuggester", "CollectionToArray", "deprecation",
     "EqualsBrokenForNull", "EqualsUnsafeCast", "NaturalOrder", "rawtypes", "ReverseOrder",
     "unchecked", "UndefinedEquals"})
-public abstract class UnifiedMapTestCase extends MutableMapTestCase {
+final class UnifiedMapTestCase extends MutableMapTestCase {
   protected static final Integer COLLISION_1 = 0;
   protected static final Integer COLLISION_2 = 17;
   protected static final Integer COLLISION_3 = 34;
@@ -66,7 +78,7 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
           "\u9108\uff63", "\u9109\uff44", "\u910a\uff25", "\u910b\uff06", "\u910c\ufee7"};
 
   @Test
-  public void valuesCollection_toArray() {
+  void valuesCollection_toArray() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One").asUnmodifiable();
     Object[] values = map.values().toArray();
     Verify.assertItemAtIndex("One", 0, values);
@@ -75,53 +87,53 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
     MutableMap<Integer, Integer> chainedMap = mapWithCollisionsOfSize(2);
     Object[] chainedValues = chainedMap.values().toArray();
     Arrays.sort(chainedValues);
-    Assert.assertArrayEquals(new Integer[] {COLLISION_1, COLLISION_2}, chainedValues);
+    assertArrayEquals(new Integer[] {COLLISION_1, COLLISION_2}, chainedValues);
 
     // map containing chain with empty slots
     MutableMap<Integer, Integer> chainedMapWithEmpties = mapWithCollisionsOfSize(3);
     Object[] chainedValuesWithEmpties = chainedMapWithEmpties.values().toArray();
     Arrays.sort(chainedValuesWithEmpties);
-    Assert.assertArrayEquals(new Integer[] {COLLISION_1, COLLISION_2, COLLISION_3},
+    assertArrayEquals(new Integer[] {COLLISION_1, COLLISION_2, COLLISION_3},
         chainedValuesWithEmpties);
   }
 
   @Test
-  public void valuesCollection_toArray_WithEmptyTarget() {
+  void valuesCollection_toArray_WithEmptyTarget() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     String[] values = map.values().toArray(new String[0]);
-    Assert.assertArrayEquals(new String[] {"One"}, values);
+    assertArrayEquals(new String[] {"One"}, values);
 
     Object[] objects = map.values().toArray(new Object[0]);
-    Assert.assertArrayEquals(new String[] {"One"}, objects);
+    assertArrayEquals(new String[] {"One"}, objects);
   }
 
   @Test
-  public void valuesCollection_toArray_withPreSizedTarget() {
+  void valuesCollection_toArray_withPreSizedTarget() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 2, "Two");
     String[] values = map.values().toArray(new String[2]);
     Arrays.sort(values);
-    Assert.assertArrayEquals(new String[] {"One", "Two"}, values);
+    assertArrayEquals(new String[] {"One", "Two"}, values);
 
     String[] target = new String[3];
     target[0] = "HERE";
     target[1] = "HERE";
     target[2] = "HERE";
     String[] array = newMapWithKeyValue(1, "One").values().toArray(target);
-    Assert.assertArrayEquals(new String[] {"One", null, "HERE"}, array);
+    assertArrayEquals(new String[] {"One", null, "HERE"}, array);
   }
 
   @Test
-  public void valuesCollection_toArray_withLargeTarget() {
+  void valuesCollection_toArray_withLargeTarget() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 2, "Two");
     String[] target = new String[3];
     target[2] = "yow!";
     String[] values = map.values().toArray(target);
     ArrayIterate.sort(values, values.length, Comparators.safeNullsHigh(String::compareTo));
-    Assert.assertArrayEquals(new String[] {"One", "Two", null}, values);
+    assertArrayEquals(new String[] {"One", "Two", null}, values);
   }
 
   @Test
-  public void entrySet_clear() {
+  void entrySet_clear() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 2, "Two");
     Set<Map.Entry<Integer, String>> entries = map.entrySet();
     entries.clear();
@@ -130,7 +142,7 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
   }
 
   @Test
-  public void valuesCollection_clear() {
+  void valuesCollection_clear() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 2, "Two", 3, "Three");
     Collection<String> values = map.values();
     values.clear();
@@ -139,18 +151,18 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
   }
 
   @Test
-  public void keySet_toArray_withSmallTarget() {
+  void keySet_toArray_withSmallTarget() {
     MutableMap<Integer, String> map =
         newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
     Integer[] destination = new Integer[2]; // deliberately to small to force the method to allocate
                                             // one of the correct size
     Integer[] result = map.keySet().toArray(destination);
     Arrays.sort(result);
-    Assert.assertArrayEquals(new Integer[] {1, 2, 3, 4}, result);
+    assertArrayEquals(new Integer[] {1, 2, 3, 4}, result);
   }
 
   @Test
-  public void keySet_ToArray_withLargeTarget() {
+  void keySet_ToArray_withLargeTarget() {
     MutableMap<Integer, String> map =
         newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
     Integer[] target = new Integer[6]; // deliberately large to force the extra to be set to null
@@ -158,22 +170,22 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
     target[5] = 42;
     Integer[] result = map.keySet().toArray(target);
     ArrayIterate.sort(result, result.length, Comparators.safeNullsHigh(Integer::compareTo));
-    Assert.assertArrayEquals(new Integer[] {1, 2, 3, 4, 42, null}, result);
+    assertArrayEquals(new Integer[] {1, 2, 3, 4, 42, null}, result);
   }
 
   @Test
-  public void noInstanceOfEquals() {
+  void noInstanceOfEquals() {
     MutableMap<NoInstanceOfInEquals, Integer> map = newMap();
 
     map.put(new NoInstanceOfInEquals(10), 12);
     map.put(new NoInstanceOfInEquals(12), 15);
     map.put(new NoInstanceOfInEquals(14), 18);
 
-    Assert.assertEquals(3, map.size());
+    assertEquals(3, map.size());
   }
 
   @Test
-  public void keySet_hashCode() {
+  void keySet_hashCode() {
     MutableMap<Integer, Integer> map1 = newMapWithKeyValue(1, 0);
     UnifiedSet<Object> set = UnifiedSet.newSet();
     set.add(1);
@@ -185,31 +197,31 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
   }
 
   @Test
-  public void entrySet_toArray() {
+  void entrySet_toArray() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Object[] entries = map.entrySet().toArray();
-    Assert.assertArrayEquals(new Map.Entry[] {ImmutableEntry.of(1, "One")}, entries);
+    assertArrayEquals(new Map.Entry[] {ImmutableEntry.of(1, "One")}, entries);
   }
 
   @Test
-  public void entrySet_toArray_withEmptyTarget() {
+  void entrySet_toArray_withEmptyTarget() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Map.Entry<Integer, String>[] entries = map.entrySet().toArray(new Map.Entry[0]);
-    Assert.assertArrayEquals(new Map.Entry[] {ImmutableEntry.of(1, "One")}, entries);
+    assertArrayEquals(new Map.Entry[] {ImmutableEntry.of(1, "One")}, entries);
 
     Object[] objects = map.entrySet().toArray(new Object[0]);
-    Assert.assertArrayEquals(new Map.Entry[] {ImmutableEntry.of(1, "One")}, objects);
+    assertArrayEquals(new Map.Entry[] {ImmutableEntry.of(1, "One")}, objects);
   }
 
   @Test
-  public void entrySet_toArray_withPreSizedTarget() {
+  void entrySet_toArray_withPreSizedTarget() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Map.Entry<Integer, String>[] entries = map.entrySet().toArray(new Map.Entry[map.size()]);
-    Assert.assertArrayEquals(new Map.Entry[] {ImmutableEntry.of(1, "One")}, entries);
+    assertArrayEquals(new Map.Entry[] {ImmutableEntry.of(1, "One")}, entries);
   }
 
   @Test
-  public void entrySet_toArray_withLargeTarget() {
+  void entrySet_toArray_withLargeTarget() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Map.Entry<Integer, String>[] target = new Map.Entry[4];
     ImmutableEntry<Integer, String> immutableEntry = new ImmutableEntry<>(null, null);
@@ -217,7 +229,7 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
     target[2] = immutableEntry;
     target[3] = immutableEntry;
     Map.Entry<Integer, String>[] entries = map.entrySet().toArray(target);
-    Assert.assertArrayEquals(
+    assertArrayEquals(
         new Map.Entry[] {ImmutableEntry.of(1, "One"), null, immutableEntry, immutableEntry},
         entries);
   }
@@ -234,30 +246,30 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
   }
 
   @Test
-  public void contains_key_and_value() {
+  void contains_key_and_value() {
     for (int i = 1; i < COLLISIONS.size(); i++) {
       MutableMap<Integer, Integer> map = mapWithCollisionsOfSize(i);
 
-      Assert.assertTrue(map.containsKey(COLLISIONS.get(i - 1)));
-      Assert.assertTrue(map.containsValue(COLLISIONS.get(i - 1)));
-      Assert.assertFalse(map.containsKey(COLLISION_10));
-      Assert.assertFalse(map.containsValue(COLLISION_10));
+      assertTrue(map.containsKey(COLLISIONS.get(i - 1)));
+      assertTrue(map.containsValue(COLLISIONS.get(i - 1)));
+      assertFalse(map.containsKey(COLLISION_10));
+      assertFalse(map.containsValue(COLLISION_10));
     }
   }
 
   @Test
-  public void remove() {
+  void remove() {
     for (int i = 1; i < COLLISIONS.size(); i++) {
       MutableMap<Integer, Integer> map = mapWithCollisionsOfSize(i);
-      Assert.assertNull(map.remove(COLLISION_10));
+      assertNull(map.remove(COLLISION_10));
       Integer biggestValue = COLLISIONS.get(i - 1);
-      Assert.assertEquals(biggestValue, map.remove(biggestValue));
+      assertEquals(biggestValue, map.remove(biggestValue));
     }
   }
 
   @Test
   @Override
-  public void removeFromEntrySet() {
+  void removeFromEntrySet() {
     super.removeFromEntrySet();
 
     for (int i = 1; i < COLLISIONS.size(); i++) {
@@ -265,50 +277,50 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
 
       Integer biggestValue = COLLISIONS.get(i - 1);
 
-      Assert.assertTrue(map.entrySet().remove(ImmutableEntry.of(biggestValue, biggestValue)));
-      Assert.assertEquals(mapWithCollisionsOfSize(i - 1), map);
+      assertTrue(map.entrySet().remove(ImmutableEntry.of(biggestValue, biggestValue)));
+      assertEquals(mapWithCollisionsOfSize(i - 1), map);
 
-      Assert.assertFalse(map.entrySet().remove(ImmutableEntry.of(COLLISION_10, COLLISION_10)));
-      Assert.assertEquals(mapWithCollisionsOfSize(i - 1), map);
+      assertFalse(map.entrySet().remove(ImmutableEntry.of(COLLISION_10, COLLISION_10)));
+      assertEquals(mapWithCollisionsOfSize(i - 1), map);
 
-      Assert.assertFalse(map.entrySet().remove(null));
+      assertFalse(map.entrySet().remove(null));
     }
   }
 
   @Test
   @Override
-  public void retainAllFromEntrySet() {
+  void retainAllFromEntrySet() {
     super.retainAllFromEntrySet();
 
     for (int i = 1; i < COLLISIONS.size(); i++) {
       MutableMap<Integer, Integer> map = mapWithCollisionsOfSize(i);
 
-      Assert.assertFalse(map.entrySet().retainAll(
+      assertFalse(map.entrySet().retainAll(
           FastList.newList(map.entrySet()).with(ImmutableEntry.of(COLLISION_10, COLLISION_10))));
 
-      Assert.assertTrue(map.entrySet().retainAll(mapWithCollisionsOfSize(i - 1).entrySet()));
-      Assert.assertEquals(mapWithCollisionsOfSize(i - 1), map);
+      assertTrue(map.entrySet().retainAll(mapWithCollisionsOfSize(i - 1).entrySet()));
+      assertEquals(mapWithCollisionsOfSize(i - 1), map);
     }
 
     for (Integer item : MORE_COLLISIONS) {
       MutableMap<Int, Int> integers =
           mapWithCollisionsOfSize(9).toMap(Int::valueOf, Int::valueOf, newMap());
       Int keyCopy = new Int(item);
-      Assert.assertTrue(integers.entrySet().retainAll(mList(ImmutableEntry.of(keyCopy, keyCopy))));
-      Assert.assertEquals(iMap(keyCopy, keyCopy), integers);
-      Assert.assertNotSame(keyCopy, Iterate.getOnly(integers.entrySet()).getKey());
+      assertTrue(integers.entrySet().retainAll(mList(ImmutableEntry.of(keyCopy, keyCopy))));
+      assertEquals(iMap(keyCopy, keyCopy), integers);
+      assertNotSame(keyCopy, Iterate.getOnly(integers.entrySet()).getKey());
     }
 
     // simple map, collection to retain contains non-entry element
     MutableMap<Integer, String> map4 = newMapWithKeysValues(1, "One", 2, "Two");
     FastList<Object> toRetain = FastList.newListWith(ImmutableEntry.of(1, "One"), "explosion!",
         ImmutableEntry.of(2, "Two"));
-    Assert.assertFalse(map4.entrySet().retainAll(toRetain));
+    assertFalse(map4.entrySet().retainAll(toRetain));
   }
 
   @Override
   @Test
-  public void forEachWith() {
+  void forEachWith() {
     super.forEachWith();
 
     for (int i = 1; i < COLLISIONS.size(); i++) {
@@ -316,92 +328,93 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
       Object sentinel = new Object();
       UnifiedSet<Integer> result = UnifiedSet.newSet();
       map.forEachWith((argument1, argument2) -> {
-        Assert.assertSame(sentinel, argument2);
+        assertSame(sentinel, argument2);
         result.add(argument1);
       }, sentinel);
-      Assert.assertEquals(map.keySet(), result);
+      assertEquals(map.keySet(), result);
     }
   }
 
   @Test
-  public void keySet_retainAll() {
+  void keySet_retainAll() {
     MutableMap<Integer, Integer> map = newMapWithKeyValue(1, 0);
 
     MutableList<Object> retained = Lists.mutable.of();
     retained.add(1);
-    Assert.assertFalse(map.keySet().retainAll(retained));
+    assertFalse(map.keySet().retainAll(retained));
     Verify.assertContains(1, map.keySet());
 
     // a map with a chain containing empty slots
     MutableMap<Integer, Integer> map2 = mapWithCollisionsOfSize(5);
-    Assert.assertFalse(map2.keySet().retainAll(FastList.newListWith(0, 17, 34, 51, 68)));
+    assertFalse(map2.keySet().retainAll(FastList.newListWith(0, 17, 34, 51, 68)));
     Verify.assertContainsAll(map2.keySet(), 0, 17, 34, 51, 68);
 
     // a map with no chaining, nothing retained
     MutableMap<Integer, String> map3 = newMapWithKeyValue(1, "One");
-    Assert.assertTrue(map3.keySet().retainAll(FastList.newListWith(9)));
+    assertTrue(map3.keySet().retainAll(FastList.newListWith(9)));
     Verify.assertEmpty(map3);
 
     Set<Integer> keys = newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four").keySet();
-    Assert.assertTrue(keys.retainAll(FastList.newListWith(1, 2, 3)));
+    assertTrue(keys.retainAll(FastList.newListWith(1, 2, 3)));
     Verify.assertContainsAll(keys, 1, 2, 3);
   }
 
   @Test
-  public void keySet_containsAll() {
+  void keySet_containsAll() {
     MutableMap<Integer, String> map =
         newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
-    Assert.assertFalse(map.keySet().containsAll(FastList.newListWith(5)));
-    Assert.assertTrue(map.keySet().containsAll(FastList.newListWith(1, 2, 4)));
+    assertFalse(map.keySet().containsAll(FastList.newListWith(5)));
+    assertTrue(map.keySet().containsAll(FastList.newListWith(1, 2, 4)));
   }
 
   @Test
-  public void keySet_equals() {
+  void keySet_equals() {
     MutableMap<Integer, String> map =
         newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
-    Assert.assertNotEquals(UnifiedSet.newSetWith(1, 2, 3, 4, 5), map.keySet());
+    assertNotEquals(UnifiedSet.newSetWith(1, 2, 3, 4, 5), map.keySet());
   }
 
-  @Test(expected = UnsupportedOperationException.class)
-  public void keySet_add() {
+  @Test
+  void keySet_add() {
     MutableMap<Integer, String> map =
         newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
-    map.keySet().add(5);
+    assertThrows(UnsupportedOperationException.class, () -> map.keySet().add(5));
   }
 
-  @Test(expected = UnsupportedOperationException.class)
-  public void keySet_addAll() {
+  @Test
+  void keySet_addAll() {
     MutableMap<Integer, String> map =
         newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
-    map.keySet().addAll(UnifiedSet.newSetWith(5, 6));
+    assertThrows(UnsupportedOperationException.class, () ->
+        map.keySet().addAll(UnifiedSet.newSetWith(5, 6)));
   }
 
-  @Test(expected = NoSuchElementException.class)
-  public void keySet_Iterator() {
+  @Test
+  void keySet_Iterator() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Iterator<Integer> iterator = map.keySet().iterator();
     iterator.next();
-    iterator.next();
+    assertThrows(NoSuchElementException.class, () -> iterator.next());
   }
 
-  @Test(expected = NoSuchElementException.class)
-  public void entrySet_Iterator_incrementPastEnd() {
+  @Test
+  void entrySet_Iterator_incrementPastEnd() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Iterator<Map.Entry<Integer, String>> iterator = map.entrySet().iterator();
     iterator.next();
-    iterator.next();
-  }
-
-  @Test(expected = IllegalStateException.class)
-  public void keySet_Iterator_removeBeforeIncrement() {
-    // remove w/o incrementing
-    MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
-    Iterator<Integer> iterator = map.keySet().iterator();
-    iterator.remove();
+    assertThrows(NoSuchElementException.class, () -> iterator.next());
   }
 
   @Test
-  public void valuesCollection_Iterator_remove() {
+  void keySet_Iterator_removeBeforeIncrement() {
+    // remove w/o incrementing
+    MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
+    Iterator<Integer> iterator = map.keySet().iterator();
+    assertThrows(IllegalStateException.class, () -> iterator.remove());
+  }
+
+  @Test
+  void valuesCollection_Iterator_remove() {
     // a map with a chain, remove one
     MutableMap<Integer, Integer> map = mapWithCollisionsOfSize(3);
     Iterator<Integer> iterator = map.iterator();
@@ -418,41 +431,41 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
   }
 
   @Test
-  public void entry_setValue() {
+  void entry_setValue() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Map.Entry<Integer, String> entry = Iterate.getFirst(map.entrySet());
     String value = "Ninety-Nine";
-    Assert.assertEquals("One", entry.setValue(value));
-    Assert.assertEquals(value, entry.getValue());
+    assertEquals("One", entry.setValue(value));
+    assertEquals(value, entry.getValue());
     Verify.assertContainsKeyValue(1, value, map);
   }
 
   @Test
-  public void entrySet_remove() {
+  void entrySet_remove() {
     // map with chaining, attempt to remove nonexistent entry
     MutableMap<Integer, Integer> chainedMap = mapWithCollisionsOfSize(3);
     Set<Map.Entry<Integer, Integer>> chainedEntries = chainedMap.entrySet();
-    Assert.assertFalse(chainedEntries.remove(ImmutableEntry.of(5, 5)));
+    assertFalse(chainedEntries.remove(ImmutableEntry.of(5, 5)));
 
     // map with chaining, attempt to remove nonexistent colliding entry
     MutableMap<Integer, Integer> chainedMap2 = mapWithCollisionsOfSize(2);
     Set<Map.Entry<Integer, Integer>> chainedEntries2 = chainedMap2.entrySet();
-    Assert.assertFalse(chainedEntries2.remove(ImmutableEntry.of(COLLISION_4, COLLISION_4)));
+    assertFalse(chainedEntries2.remove(ImmutableEntry.of(COLLISION_4, COLLISION_4)));
 
     // map with chaining, attempt to remove nonexistent colliding entry (key exists, but value does
     // not)
     MutableMap<Integer, Integer> chainedMap3 = mapWithCollisionsOfSize(3);
     Set<Map.Entry<Integer, Integer>> chainedEntries3 = chainedMap3.entrySet();
-    Assert.assertFalse(chainedEntries3.remove(ImmutableEntry.of(COLLISION_2, COLLISION_4)));
+    assertFalse(chainedEntries3.remove(ImmutableEntry.of(COLLISION_2, COLLISION_4)));
 
     // map with no chaining, attempt to remove nonexistent entry
     MutableMap<Integer, String> unchainedMap = newMapWithKeyValue(1, "One");
     Set<Map.Entry<Integer, String>> unchainedEntries = unchainedMap.entrySet();
-    Assert.assertFalse(unchainedEntries.remove(ImmutableEntry.of(5, "Five")));
+    assertFalse(unchainedEntries.remove(ImmutableEntry.of(5, "Five")));
   }
 
   @Test
-  public void entrySet_contains() {
+  void entrySet_contains() {
     // simple map, test for null key
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Set<Map.Entry<Integer, String>> entries = map.entrySet();
@@ -460,71 +473,74 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
   }
 
   @Test
-  public void entrySet_containsAll() {
+  void entrySet_containsAll() {
     // simple map, test for nonexistent entries
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 3, "Three");
     Set<Map.Entry<Integer, String>> entries = map.entrySet();
-    Assert.assertFalse(entries.containsAll(FastList.newListWith(ImmutableEntry.of(2, "Two"))));
+    assertFalse(entries.containsAll(FastList.newListWith(ImmutableEntry.of(2, "Two"))));
 
-    Assert.assertTrue(entries.containsAll(
+    assertTrue(entries.containsAll(
         FastList.newListWith(ImmutableEntry.of(1, "One"), ImmutableEntry.of(3, "Three"))));
   }
 
-  @Test(expected = UnsupportedOperationException.class)
-  public void entrySet_add() {
+  @Test
+  void entrySet_add() {
     MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
     Set<Map.Entry<Integer, String>> entries = map.entrySet();
-    entries.add(ImmutableEntry.of(2, "Two"));
-  }
-
-  @Test(expected = UnsupportedOperationException.class)
-  public void entrySet_addAll() {
-    MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
-    Set<Map.Entry<Integer, String>> entries = map.entrySet();
-    entries.addAll(FastList.newListWith(ImmutableEntry.of(2, "Two")));
+    assertThrows(UnsupportedOperationException.class, () ->
+        entries.add(ImmutableEntry.of(2, "Two")));
   }
 
   @Test
-  public void entrySet_equals() {
+  void entrySet_addAll() {
+    MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
+    Set<Map.Entry<Integer, String>> entries = map.entrySet();
+    assertThrows(UnsupportedOperationException.class, () ->
+        entries.addAll(FastList.newListWith(ImmutableEntry.of(2, "Two"))));
+  }
+
+  @Test
+  void entrySet_equals() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 2, "Two", 3, "Three");
-    Assert.assertNotEquals(UnifiedSet.newSetWith(ImmutableEntry.of(5, "Five")), map.entrySet());
+    assertNotEquals(UnifiedSet.newSetWith(ImmutableEntry.of(5, "Five")), map.entrySet());
 
     UnifiedSet<ImmutableEntry<Integer, String>> expected = UnifiedSet.newSetWith(
         ImmutableEntry.of(1, "One"), ImmutableEntry.of(2, "Two"), ImmutableEntry.of(3, "Three"));
     Verify.assertEqualsAndHashCode(expected, map.entrySet());
   }
 
-  @Test(expected = UnsupportedOperationException.class)
-  public void valuesCollection_add() {
+  @Test
+  void valuesCollection_add() {
     MutableMap<Integer, String> map =
         newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
-    map.values().add("explosion!");
-  }
-
-  @Test(expected = UnsupportedOperationException.class)
-  public void valuesCollection_addAll() {
-    MutableMap<Integer, String> map =
-        newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
-    map.values().addAll(UnifiedSet.newSetWith("explosion!", "kaboom!"));
-  }
-
-  @Test(expected = NoSuchElementException.class)
-  public void valueCollection_Iterator() {
-    MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
-    Iterator<String> iterator = map.values().iterator();
-    iterator.next();
-    iterator.next();
+    assertThrows(UnsupportedOperationException.class, () -> map.values().add("explosion!"));
   }
 
   @Test
-  public void valueCollection_equals() {
+  void valuesCollection_addAll() {
+    MutableMap<Integer, String> map =
+        newMapWithKeysValues(1, "One", 2, "Two", 3, "Three", 4, "Four");
+    assertThrows(UnsupportedOperationException.class, () ->
+        map.values().addAll(UnifiedSet.newSetWith("explosion!", "kaboom!")));
+  }
+
+  @Test
+  void valueCollection_Iterator() {
+    MutableMap<Integer, String> map = newMapWithKeyValue(1, "One");
+    Iterator<String> iterator = map.values().iterator();
+    iterator.next();
+    assertThrows(NoSuchElementException.class, () -> iterator.next());
+  }
+
+  @Test
+  void valueCollection_equals() {
     MutableMap<Integer, String> map = newMapWithKeysValues(1, "One", 2, "Two", 3, "Three");
-    Assert.assertNotEquals(UnifiedSet.newSetWith("One", "Two", "Three"), map.values());
+    assertNotEquals(UnifiedSet.newSetWith("One", "Two", "Three"), map.values());
   }
 
   @Override
   @Test
-  public void forEachKey() {
+  void forEachKey() {
     super.forEachKey();
 
     UnifiedSet<String> set = UnifiedSet.newSet(5);
@@ -532,26 +548,26 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
     // map with a chain and empty slots
     MutableMap<Integer, Integer> map = mapWithCollisionsOfSize(5);
     map.forEachKey(each -> set.add(each.toString()));
-    Assert.assertEquals(UnifiedSet.newSetWith("0", "17", "34", "51", "68"), set);
+    assertEquals(UnifiedSet.newSetWith("0", "17", "34", "51", "68"), set);
   }
 
   @Override
   @Test
-  public void forEachValue() {
+  void forEachValue() {
     super.forEachValue();
 
     MutableMap<Integer, Integer> map = mapWithCollisionsOfSize(9).withKeyValue(1, 2);
     MutableSet<Integer> result = UnifiedSet.newSet();
     map.forEachValue(each -> {
-      Assert.assertTrue(each == 2 || each.getClass() == Integer.class);
+      assertTrue(each == 2 || each.getClass() == Integer.class);
       result.add(each);
     });
-    Assert.assertEquals(MORE_COLLISIONS.toSet().with(2), result);
+    assertEquals(MORE_COLLISIONS.toSet().with(2), result);
   }
 
   @Override
   @Test
-  public void equalsAndHashCode() {
+  void equalsAndHashCode() {
     super.equalsAndHashCode();
 
     for (int i = 1; i < COLLISIONS.size(); i++) {
@@ -561,22 +577,22 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
       Verify.assertEqualsAndHashCode(expectedMap, map);
       MutableMap<Integer, Integer> clone1 = map.clone();
       clone1.put(COLLISION_10, COLLISION_10);
-      Assert.assertNotEquals(expectedMap, clone1);
+      assertNotEquals(expectedMap, clone1);
       MutableMap<Integer, Integer> clone2 = map.clone();
       clone2.put(null, null);
-      Assert.assertNotEquals(expectedMap, clone2);
+      assertNotEquals(expectedMap, clone2);
 
       expectedMap.put(null, null);
-      Assert.assertNotEquals(expectedMap, map);
+      assertNotEquals(expectedMap, map);
       expectedMap.remove(null);
 
       expectedMap.put(COLLISION_10, COLLISION_10);
-      Assert.assertNotEquals(expectedMap, map);
+      assertNotEquals(expectedMap, map);
     }
   }
 
   @Test
-  public void frequentCollision() {
+  void frequentCollision() {
     String[] expected =
         ArrayAdapter.adapt(FREQUENT_COLLISIONS).subList(0, FREQUENT_COLLISIONS.length - 2)
             .toArray(new String[FREQUENT_COLLISIONS.length - 2]);
@@ -592,17 +608,18 @@ public abstract class UnifiedMapTestCase extends MutableMapTestCase {
       }
     }
 
-    Assert.assertArrayEquals(expected, map.keysView().toArray());
+    assertArrayEquals(expected, map.keysView().toArray());
   }
 
+  @Test
   @Override
-  public void getFirst() {
+  void getFirst() {
     super.getFirst();
 
     MutableMap<String, String> map = newMap();
     map.collectKeysAndValues(Arrays.asList(FREQUENT_COLLISIONS), Functions.identity(),
         Functions.identity());
-    Assert.assertEquals(FREQUENT_COLLISIONS[0], map.getFirst());
+    assertEquals(FREQUENT_COLLISIONS[0], map.getFirst());
   }
 
   private static final class NoInstanceOfInEquals {

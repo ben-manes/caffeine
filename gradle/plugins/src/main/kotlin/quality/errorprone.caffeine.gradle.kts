@@ -81,19 +81,21 @@ fun disabledChecks() = listOf(
   "CannotMockMethod",
   "ConstantNaming",
   "IsInstanceLambdaUsage",
-  "Java7ApiChecker",
   "Java8ApiChecker",
   "LexicographicalAnnotationListing",
   "MissingSummary",
   "MultipleTopLevelClasses",
   "PatternMatchingInstanceof",
   "Slf4jLoggerDeclaration",
+  "StatementSwitchToExpressionSwitch",
   "StaticImport",
   "SuppressWarningsWithoutExplanation",
   "UngroupedOverloads",
 
   // https://github.com/google/error-prone/issues/4914
   "UnescapedEntity",
+  // https://github.com/PicnicSupermarket/error-prone-support/issues/1646
+  "IdentityConversion",
 )
 fun disabledRules() = listOf(
   "ImmutableListRules\\\$ImmutableListBuilder",

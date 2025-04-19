@@ -9,17 +9,19 @@
  */
 package com.github.benmanes.caffeine.eclipse.mutable;
 
+import java.util.List;
+
 import org.eclipse.collections.api.block.function.Function;
 import org.eclipse.collections.impl.list.Interval;
 
 /**
  * Ported from Eclipse Collections 11.0.
  */
-public class NegativeIntervalFunction implements Function<Integer, Iterable<Integer>> {
+final class NegativeIntervalFunction implements Function<Integer, Iterable<Integer>> {
   private static final long serialVersionUID = 1L;
 
   @Override
-  public Iterable<Integer> valueOf(Integer object) {
+  public List<Integer> valueOf(Integer object) {
     return Interval.fromTo(-1, -object);
   }
 }

@@ -9,9 +9,13 @@
  */
 package com.github.benmanes.caffeine.eclipse.acceptance;
 
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.eclipse.collections.api.bag.MutableBag;
 import org.eclipse.collections.api.block.function.Function;
@@ -26,10 +30,9 @@ import org.eclipse.collections.impl.list.Interval;
 import org.eclipse.collections.impl.parallel.ParallelIterate;
 import org.eclipse.collections.impl.test.Verify;
 import org.jspecify.annotations.NullUnmarked;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * JUnit test for {@link ConcurrentHashMap}.
@@ -37,21 +40,10 @@ import org.junit.Test;
  * Ported from Eclipse Collections 11.0.
  */
 @NullUnmarked
+@ParameterizedClass
+@MethodSource("caches")
 @SuppressWarnings("CanIgnoreReturnValueSuggester")
-public abstract class ConcurrentHashMapAcceptanceTest {
-  private ExecutorService executor;
-
-  @Before
-  public void setUp() {
-    executor = Executors.newFixedThreadPool(20);
-  }
-
-  @After
-  public void tearDown() {
-    executor.shutdown();
-  }
-
-  public abstract <K, V> ConcurrentMutableMap<K, V> newMap();
+final class ConcurrentHashMapAcceptanceTest extends CaffeineMapAcceptanceTestCase {
 
   public <K, V> ConcurrentMutableMap<K, V> newMap(Map<K, V> other) {
     ConcurrentMutableMap<K, V> map = newMap();
@@ -76,7 +68,7 @@ public abstract class ConcurrentHashMapAcceptanceTest {
   }
 
   @Test
-  public void parallelGroupByIntoConcurrentHashMap() {
+  void parallelGroupByIntoConcurrentHashMap() {
     MutableMap<Integer, MutableBag<Integer>> actual = newMap();
     ParallelIterate.forEach(Interval.oneTo(1000000), each -> actual
         .getIfAbsentPut(each % 100000, () -> HashBag.<Integer>newBag().asSynchronized()).add(each),
@@ -86,55 +78,55 @@ public abstract class ConcurrentHashMapAcceptanceTest {
   }
 
   @Test
-  public void concurrentPutGetPutAllRemoveContainsKeyContainsValueGetIfAbsentPutTest() {
+  void concurrentPutGetPutAllRemoveContainsKeyContainsValueGetIfAbsentPutTest() {
     ConcurrentMutableMap<Integer, Integer> map1 = newMap();
     ConcurrentMutableMap<Integer, Integer> map2 = newMap();
     ParallelIterate.forEach(Interval.oneTo(1000), each -> {
       map1.put(each, each);
-      Assert.assertEquals(each, map1.get(each));
+      assertEquals(each, map1.get(each));
       map2.putAll(Maps.mutable.of(each, each));
       map1.remove(each);
       map1.putAll(Maps.mutable.of(each, each));
-      Assert.assertEquals(each, map2.get(each));
+      assertEquals(each, map2.get(each));
       map2.remove(each);
-      Assert.assertNull(map2.get(each));
-      Assert.assertFalse(map2.containsValue(each));
-      Assert.assertFalse(map2.containsKey(each));
-      Assert.assertEquals(each, getIfAbsentPut(map2, each, Functions.getIntegerPassThru()));
-      Assert.assertTrue(map2.containsValue(each));
-      Assert.assertTrue(map2.containsKey(each));
-      Assert.assertEquals(each, getIfAbsentPut(map2, each, Functions.getIntegerPassThru()));
+      assertNull(map2.get(each));
+      assertFalse(map2.containsValue(each));
+      assertFalse(map2.containsKey(each));
+      assertEquals(each, getIfAbsentPut(map2, each, Functions.getIntegerPassThru()));
+      assertTrue(map2.containsValue(each));
+      assertTrue(map2.containsKey(each));
+      assertEquals(each, getIfAbsentPut(map2, each, Functions.getIntegerPassThru()));
       map2.remove(each);
-      Assert.assertEquals(each,
+      assertEquals(each,
           map2.getIfAbsentPutWith(each, Functions.getIntegerPassThru(), each));
-      Assert.assertEquals(each,
+      assertEquals(each,
           map2.getIfAbsentPutWith(each, Functions.getIntegerPassThru(), each));
-      Assert.assertEquals(each, getIfAbsentPut(map2, each, Functions.getIntegerPassThru()));
+      assertEquals(each, getIfAbsentPut(map2, each, Functions.getIntegerPassThru()));
     }, 10, executor);
     Verify.assertEqualsAndHashCode(map1, map2);
   }
 
   @Test
-  public void concurrentPutIfAbsentGetIfPresentPutTest() {
+  void concurrentPutIfAbsentGetIfPresentPutTest() {
     ConcurrentMutableMap<Integer, Integer> map1 = newMap();
     ConcurrentMutableMap<Integer, Integer> map2 = newMap();
     ParallelIterate.forEach(Interval.oneTo(1000), each -> {
       map1.put(each, each);
       map1.put(each, each);
-      Assert.assertEquals(each, map1.get(each));
+      assertEquals(each, map1.get(each));
       map2.putAll(Maps.mutable.of(each, each));
       map2.putAll(Maps.mutable.of(each, each));
       map1.remove(each);
-      Assert.assertNull(putIfAbsentGetIfPresent(
+      assertNull(putIfAbsentGetIfPresent(
           map1, each, new KeyTransformer(), new ValueFactory(), null, null));
-      Assert.assertEquals(each, putIfAbsentGetIfPresent(
+      assertEquals(each, putIfAbsentGetIfPresent(
           map1, each, new KeyTransformer(), new ValueFactory(), null, null));
     }, 10, executor);
-    Assert.assertEquals(map1, map2);
+    assertEquals(map1, map2);
   }
 
   @Test
-  public void concurrentClear() {
+  void concurrentClear() {
     ConcurrentMutableMap<Integer, Integer> map = newMap();
     ParallelIterate.forEach(Interval.oneTo(1000), each -> {
       for (int i = 0; i < each; i++) {
@@ -150,27 +142,27 @@ public abstract class ConcurrentHashMapAcceptanceTest {
   }
 
   @Test
-  public void concurrentRemoveAndPutIfAbsent() {
+  void concurrentRemoveAndPutIfAbsent() {
     ConcurrentMutableMap<Integer, Integer> map1 = newMap();
     ParallelIterate.forEach(Interval.oneTo(1000), each -> {
-      Assert.assertNull(map1.put(each, each));
+      assertNull(map1.put(each, each));
       map1.remove(each);
-      Assert.assertNull(map1.get(each));
-      Assert.assertEquals(each, getIfAbsentPut(map1, each, Functions.getIntegerPassThru()));
+      assertNull(map1.get(each));
+      assertEquals(each, getIfAbsentPut(map1, each, Functions.getIntegerPassThru()));
       map1.remove(each);
-      Assert.assertNull(map1.get(each));
-      Assert.assertEquals(each,
+      assertNull(map1.get(each));
+      assertEquals(each,
           map1.getIfAbsentPutWith(each, Functions.getIntegerPassThru(), each));
       map1.remove(each);
-      Assert.assertNull(map1.get(each));
+      assertNull(map1.get(each));
       for (int i = 0; i < each; i++) {
-        Assert.assertNull(map1.putIfAbsent(each + i * 1000, each));
+        assertNull(map1.putIfAbsent(each + i * 1000, each));
       }
       for (int i = 0; i < each; i++) {
-        Assert.assertEquals(each, map1.putIfAbsent(each + i * 1000, each));
+        assertEquals(each, map1.putIfAbsent(each + i * 1000, each));
       }
       for (int i = 0; i < each; i++) {
-        Assert.assertEquals(each, map1.remove(each + i * 1000));
+        assertEquals(each, map1.remove(each + i * 1000));
       }
     }, 10, executor);
   }
@@ -194,33 +186,33 @@ public abstract class ConcurrentHashMapAcceptanceTest {
   }
 
   @Test
-  public void size() {
+  void size() {
     ConcurrentMutableMap<Integer, Integer> map = newMap();
     ParallelIterate.forEach(Interval.oneTo(10_000), each -> map.put(each, each));
-    Assert.assertEquals(10_000, map.size());
-    Assert.assertEquals(10_000, map.keySet().size());
-    Assert.assertEquals(10_000, map.values().size());
-    Assert.assertEquals(10_000, map.entrySet().size());
+    assertEquals(10_000, map.size());
+    assertEquals(10_000, map.keySet().size());
+    assertEquals(10_000, map.values().size());
+    assertEquals(10_000, map.entrySet().size());
   }
 
   @Test
-  public void size_entrySet() {
+  void size_entrySet() {
     ConcurrentMutableMap<Integer, Integer> map = newMap();
     ParallelIterate.forEach(Interval.oneTo(10_000), each -> map.put(each, each));
-    Assert.assertEquals(10_000, map.entrySet().size());
+    assertEquals(10_000, map.entrySet().size());
   }
 
   @Test
-  public void size_keySet() {
+  void size_keySet() {
     ConcurrentMutableMap<Integer, Integer> map = newMap();
     ParallelIterate.forEach(Interval.oneTo(10_000), each -> map.put(each, each));
-    Assert.assertEquals(10_000, map.keySet().size());
+    assertEquals(10_000, map.keySet().size());
   }
 
   @Test
-  public void size_values() {
+  void size_values() {
     ConcurrentMutableMap<Integer, Integer> map = newMap();
     ParallelIterate.forEach(Interval.oneTo(10_000), each -> map.put(each, each));
-    Assert.assertEquals(10_000, map.values().size());
+    assertEquals(10_000, map.values().size());
   }
 }

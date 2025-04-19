@@ -12,7 +12,7 @@ package com.github.benmanes.caffeine.eclipse.mutable;
 /**
  * Ported from Eclipse Collections 11.0.
  */
-public final class Key implements Comparable<Key> {
+final class Key implements Comparable<Key> {
   private final String value;
 
   public Key(String value) {

@@ -65,6 +65,7 @@ tasks.named<JavaCompile>("compileTestJava").configure {
       "org.mockito.testng.MockitoSettings",
       "picocli.CommandLine.Command"))
     excludedFieldAnnotations.addAll(listOf(
+      "org.junit.jupiter.params.Parameter",
       "jakarta.inject.Inject",
       "org.mockito.Captor",
       "org.mockito.Mock"))

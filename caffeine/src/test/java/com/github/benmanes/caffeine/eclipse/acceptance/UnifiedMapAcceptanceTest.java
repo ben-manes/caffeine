@@ -9,6 +9,13 @@
  */
 package com.github.benmanes.caffeine.eclipse.acceptance;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -24,16 +31,19 @@ import java.util.Set;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 import org.eclipse.collections.impl.test.Verify;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Ported from Eclipse Collections 11.0.
  */
+@ParameterizedClass
+@MethodSource("caches")
 @SuppressWarnings({"CatchFail", "deprecation", "rawtypes", "ThreadPriorityCheck", "unchecked"})
-public abstract class UnifiedMapAcceptanceTest {
+final class UnifiedMapAcceptanceTest extends CaffeineMapAcceptanceTestCase {
   private static final Logger LOGGER = LoggerFactory.getLogger(UnifiedMapAcceptanceTest.class);
 
   private static final Comparator<Map.Entry<CollidingInt, String>> ENTRY_COMPARATOR =
@@ -42,10 +52,8 @@ public abstract class UnifiedMapAcceptanceTest {
   private static final Comparator<String> VALUE_COMPARATOR =
       (o1, o2) -> Integer.parseInt(o1.substring(1)) - Integer.parseInt(o2.substring(1));
 
-  public abstract <K, V> MutableMap<K, V> newMap();
-
   @Test
-  public void forEachWithIndexWithChainedValues() {
+  void forEachWithIndexWithChainedValues() {
     MutableMap<CollidingInt, String> map = newMap();
 
     int size = 100000;
@@ -55,7 +63,7 @@ public abstract class UnifiedMapAcceptanceTest {
     int[] intArray = new int[1];
     intArray[0] = -1;
     map.forEachWithIndex((value, index) -> {
-      Assert.assertEquals(index, intArray[0] + 1);
+      assertEquals(index, intArray[0] + 1);
       intArray[0] = index;
     });
   }
@@ -71,7 +79,7 @@ public abstract class UnifiedMapAcceptanceTest {
   // todo: entryset.contains(entry with null value) == true
 
   @Test
-  public void unifiedMapWithCollisions() {
+  void unifiedMapWithCollisions() {
     assertUnifiedMapWithCollisions(0, 2);
     assertUnifiedMapWithCollisions(1, 2);
     assertUnifiedMapWithCollisions(2, 2);
@@ -105,13 +113,13 @@ public abstract class UnifiedMapAcceptanceTest {
     }
 
     for (int i = 0; i < size; i += removeStride) {
-      Assert.assertEquals(createVal(i), map.remove(new CollidingInt(i, shift)));
+      assertEquals(createVal(i), map.remove(new CollidingInt(i, shift)));
     }
     Verify.assertSize(size - size / removeStride, map);
     for (int i = 0; i < size; i++) {
       if (i % removeStride == 0) {
         Verify.assertNotContainsKey(new CollidingInt(i, shift), map);
-        Assert.assertNull(map.get(new CollidingInt(i, shift)));
+        assertNull(map.get(new CollidingInt(i, shift)));
       } else {
         Verify.assertContainsKey(new CollidingInt(i, shift), map);
         Verify.assertContainsKeyValue(new CollidingInt(i, shift), createVal(i), map);
@@ -124,7 +132,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMap() {
+  void unifiedMap() {
     MutableMap<Integer, String> map = newMap();
 
     int size = 100000;
@@ -133,22 +141,22 @@ public abstract class UnifiedMapAcceptanceTest {
     }
     Verify.assertSize(size, map);
     for (int i = 0; i < size; i++) {
-      Assert.assertTrue(map.containsKey(i));
-      Assert.assertEquals(createVal(i), map.get(i));
+      assertTrue(map.containsKey(i));
+      assertEquals(createVal(i), map.get(i));
     }
 
     for (int i = 0; i < size; i += 2) {
-      Assert.assertEquals(createVal(i), map.remove(i));
+      assertEquals(createVal(i), map.remove(i));
     }
     Verify.assertSize(size / 2, map);
     for (int i = 1; i < size; i += 2) {
-      Assert.assertTrue(map.containsKey(i));
-      Assert.assertEquals(createVal(i), map.get(i));
+      assertTrue(map.containsKey(i));
+      assertEquals(createVal(i), map.get(i));
     }
   }
 
   @Test
-  public void unifiedMapClear() {
+  void unifiedMapClear() {
     assertUnifiedMapClear(0);
     assertUnifiedMapClear(1);
     assertUnifiedMapClear(2);
@@ -166,12 +174,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Verify.assertSize(0, map);
     for (int i = 0; i < size; i++) {
       Verify.assertNotContainsKey(new CollidingInt(i, shift), map);
-      Assert.assertNull(map.get(new CollidingInt(i, shift)));
+      assertNull(map.get(new CollidingInt(i, shift)));
     }
   }
 
   @Test
-  public void unifiedMapForEachEntry() {
+  void unifiedMapForEachEntry() {
     assertUnifiedMapForEachEntry(0);
     assertUnifiedMapForEachEntry(1);
     assertUnifiedMapForEachEntry(2);
@@ -187,14 +195,14 @@ public abstract class UnifiedMapAcceptanceTest {
     }
     int[] count = new int[1];
     map.forEachKeyValue((key, value) -> {
-      Assert.assertEquals(createVal(key.getValue()), value);
+      assertEquals(createVal(key.getValue()), value);
       count[0]++;
     });
-    Assert.assertEquals(size, count[0]);
+    assertEquals(size, count[0]);
   }
 
   @Test
-  public void unifiedMapForEachKey() {
+  void unifiedMapForEachKey() {
     assertUnifiedMapForEachKey(0);
     assertUnifiedMapForEachKey(1);
     assertUnifiedMapForEachKey(2);
@@ -214,12 +222,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Collections.sort(keys);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(new CollidingInt(i, shift), keys.get(i));
+      assertEquals(new CollidingInt(i, shift), keys.get(i));
     }
   }
 
   @Test
-  public void unifiedMapForEachValue() {
+  void unifiedMapForEachValue() {
     assertUnifiedMapForEachValue(0);
     assertUnifiedMapForEachValue(1);
     assertUnifiedMapForEachValue(2);
@@ -239,19 +247,19 @@ public abstract class UnifiedMapAcceptanceTest {
     Collections.sort(values, VALUE_COMPARATOR);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(createVal(i), values.get(i));
+      assertEquals(createVal(i), values.get(i));
     }
   }
 
   @Test
-  public void equalsWithNullValue() {
+  void equalsWithNullValue() {
     MutableMap<Integer, Integer> map1 = UnifiedMap.newWithKeysValues(1, null, 2, 2);
     MutableMap<Integer, Integer> map2 = UnifiedMap.newWithKeysValues(2, 2, 3, 3);
-    Assert.assertNotEquals(map1, map2);
+    assertNotEquals(map1, map2);
   }
 
   @Test
-  public void unifiedMapEqualsAndHashCode() {
+  void unifiedMapEqualsAndHashCode() {
     assertUnifiedMapEqualsAndHashCode(0);
     assertUnifiedMapEqualsAndHashCode(1);
     assertUnifiedMapEqualsAndHashCode(2);
@@ -272,36 +280,36 @@ public abstract class UnifiedMapAcceptanceTest {
       map4.put(new CollidingInt(size - i - 1, shift), createVal(size - i - 1));
     }
 
-    Assert.assertEquals(map2, map1);
-    Assert.assertEquals(map1, map2);
-    Assert.assertEquals(map2.hashCode(), map1.hashCode());
-    Assert.assertEquals(map1, map3);
-    Assert.assertEquals(map1.hashCode(), map3.hashCode());
-    Assert.assertEquals(map2, map4);
-    Assert.assertEquals(map4, map2);
-    Assert.assertEquals(map2.hashCode(), map4.hashCode());
+    assertEquals(map2, map1);
+    assertEquals(map1, map2);
+    assertEquals(map2.hashCode(), map1.hashCode());
+    assertEquals(map1, map3);
+    assertEquals(map1.hashCode(), map3.hashCode());
+    assertEquals(map2, map4);
+    assertEquals(map4, map2);
+    assertEquals(map2.hashCode(), map4.hashCode());
 
     Verify.assertSetsEqual(map2.entrySet(), map1.entrySet());
     Verify.assertSetsEqual(map1.entrySet(), map2.entrySet());
-    Assert.assertEquals(map2.entrySet().hashCode(), map1.entrySet().hashCode());
+    assertEquals(map2.entrySet().hashCode(), map1.entrySet().hashCode());
     Verify.assertSetsEqual(map1.entrySet(), map3.entrySet());
-    Assert.assertEquals(map1.entrySet().hashCode(), map3.entrySet().hashCode());
+    assertEquals(map1.entrySet().hashCode(), map3.entrySet().hashCode());
     Verify.assertSetsEqual(map2.entrySet(), map4.entrySet());
     Verify.assertSetsEqual(map4.entrySet(), map2.entrySet());
-    Assert.assertEquals(map2.entrySet().hashCode(), map4.entrySet().hashCode());
+    assertEquals(map2.entrySet().hashCode(), map4.entrySet().hashCode());
 
     Verify.assertSetsEqual(map2.keySet(), map1.keySet());
     Verify.assertSetsEqual(map1.keySet(), map2.keySet());
-    Assert.assertEquals(map2.keySet().hashCode(), map1.keySet().hashCode());
+    assertEquals(map2.keySet().hashCode(), map1.keySet().hashCode());
     Verify.assertSetsEqual(map1.keySet(), map3.keySet());
-    Assert.assertEquals(map1.keySet().hashCode(), map3.keySet().hashCode());
+    assertEquals(map1.keySet().hashCode(), map3.keySet().hashCode());
     Verify.assertSetsEqual(map2.keySet(), map4.keySet());
     Verify.assertSetsEqual(map4.keySet(), map2.keySet());
-    Assert.assertEquals(map2.keySet().hashCode(), map4.keySet().hashCode());
+    assertEquals(map2.keySet().hashCode(), map4.keySet().hashCode());
   }
 
   @Test
-  public void unifiedMapPutAll() {
+  void unifiedMapPutAll() {
     assertUnifiedMapPutAll(0);
     assertUnifiedMapPutAll(1);
     assertUnifiedMapPutAll(2);
@@ -326,7 +334,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapPutAllWithHashMap() {
+  void unifiedMapPutAllWithHashMap() {
     assertUnifiedMapPutAllWithHashMap(0);
     assertUnifiedMapPutAllWithHashMap(1);
     assertUnifiedMapPutAllWithHashMap(2);
@@ -351,7 +359,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapReplace() {
+  void unifiedMapReplace() {
     assertUnifiedMapReplace(0);
     assertUnifiedMapReplace(1);
     assertUnifiedMapReplace(2);
@@ -370,12 +378,12 @@ public abstract class UnifiedMapAcceptanceTest {
     }
     Verify.assertSize(size, map);
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals("Y" + i, map.get(new CollidingInt(i, shift)));
+      assertEquals("Y" + i, map.get(new CollidingInt(i, shift)));
     }
   }
 
   @Test
-  public void unifiedMapContainsValue() {
+  void unifiedMapContainsValue() {
     runUnifiedMapContainsValue(0);
     runUnifiedMapContainsValue(1);
     runUnifiedMapContainsValue(2);
@@ -390,12 +398,12 @@ public abstract class UnifiedMapAcceptanceTest {
       map.put(new CollidingInt(i, shift), createVal(i));
     }
     for (int i = 0; i < size; i++) {
-      Assert.assertTrue(map.containsValue(createVal(i)));
+      assertTrue(map.containsValue(createVal(i)));
     }
   }
 
   @Test
-  public void unifiedMapKeySet() {
+  void unifiedMapKeySet() {
     runUnifiedMapKeySet(0);
     runUnifiedMapKeySet(1);
     runUnifiedMapKeySet(2);
@@ -417,7 +425,7 @@ public abstract class UnifiedMapAcceptanceTest {
     }
 
     for (int i = 0; i < size; i += 2) {
-      Assert.assertTrue(keySet.remove(new CollidingInt(i, shift)));
+      assertTrue(keySet.remove(new CollidingInt(i, shift)));
     }
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, keySet);
@@ -430,7 +438,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapKeySetRetainAll() {
+  void unifiedMapKeySetRetainAll() {
     runUnifiedMapKeySetRetainAll(0);
     runUnifiedMapKeySetRetainAll(1);
     runUnifiedMapKeySetRetainAll(2);
@@ -451,12 +459,12 @@ public abstract class UnifiedMapAcceptanceTest {
     }
     Verify.assertSize(size, map);
     Set<CollidingInt> keySet = map.keySet();
-    Assert.assertTrue(keySet.containsAll(toRetain));
+    assertTrue(keySet.containsAll(toRetain));
 
-    Assert.assertTrue(keySet.retainAll(toRetain));
-    Assert.assertTrue(keySet.containsAll(toRetain));
+    assertTrue(keySet.retainAll(toRetain));
+    assertTrue(keySet.containsAll(toRetain));
 
-    Assert.assertFalse(keySet.retainAll(toRetain)); // a second call should not modify the set
+    assertFalse(keySet.retainAll(toRetain)); // a second call should not modify the set
 
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, keySet);
@@ -469,7 +477,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapKeySetRemoveAll() {
+  void unifiedMapKeySetRemoveAll() {
     runUnifiedMapKeySetRemoveAll(0);
     runUnifiedMapKeySetRemoveAll(1);
     runUnifiedMapKeySetRemoveAll(2);
@@ -491,9 +499,9 @@ public abstract class UnifiedMapAcceptanceTest {
     Verify.assertSize(size, map);
     Set<CollidingInt> keySet = map.keySet();
 
-    Assert.assertTrue(keySet.removeAll(toRemove));
+    assertTrue(keySet.removeAll(toRemove));
 
-    Assert.assertFalse(keySet.removeAll(toRemove)); // a second call should not modify the set
+    assertFalse(keySet.removeAll(toRemove)); // a second call should not modify the set
 
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, keySet);
@@ -506,7 +514,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapKeySetToArray() {
+  void unifiedMapKeySetToArray() {
     runUnifiedMapKeySetToArray(0);
     runUnifiedMapKeySetToArray(1);
     runUnifiedMapKeySetToArray(2);
@@ -527,12 +535,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Arrays.sort(keys);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(new CollidingInt(i, shift), keys[i]);
+      assertEquals(new CollidingInt(i, shift), keys[i]);
     }
   }
 
   @Test
-  public void unifiedMapKeySetIterator() {
+  void unifiedMapKeySetIterator() {
     runUnifiedMapKeySetIterator(0);
     runUnifiedMapKeySetIterator(1);
     runUnifiedMapKeySetIterator(2);
@@ -557,12 +565,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Arrays.sort(keys);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(new CollidingInt(i, shift), keys[i]);
+      assertEquals(new CollidingInt(i, shift), keys[i]);
     }
   }
 
   @Test
-  public void unifiedMapKeySetIteratorRemove() {
+  void unifiedMapKeySetIteratorRemove() {
     runUnifiedMapKeySetIteratorRemove(0, 2);
     runUnifiedMapKeySetIteratorRemove(1, 2);
     runUnifiedMapKeySetIteratorRemove(2, 2);
@@ -597,20 +605,19 @@ public abstract class UnifiedMapAcceptanceTest {
         it.remove();
       }
     }
-    Assert.assertEquals(size, count);
+    assertEquals(size, count);
 
     for (int i = 0; i < size; i++) {
       if (i % removeStride != 0) {
-        Assert.assertTrue(
-            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride,
-            map.containsKey(new CollidingInt(i, shift)));
+        assertTrue(map.containsKey(new CollidingInt(i, shift)),
+            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride);
         Verify.assertContainsKeyValue(new CollidingInt(i, shift), createVal(i), map);
       }
     }
   }
 
   @Test
-  public void unifiedMapKeySetIteratorRemoveFlip() {
+  void unifiedMapKeySetIteratorRemoveFlip() {
     runUnifiedMapKeySetIteratorRemoveFlip(0, 2);
     runUnifiedMapKeySetIteratorRemoveFlip(1, 2);
     runUnifiedMapKeySetIteratorRemoveFlip(2, 2);
@@ -645,13 +652,12 @@ public abstract class UnifiedMapAcceptanceTest {
         it.remove();
       }
     }
-    Assert.assertEquals(size, count);
+    assertEquals(size, count);
 
     for (int i = 0; i < size; i++) {
       if (i % removeStride == 0) {
-        Assert.assertTrue(
-            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride,
-            map.containsKey(new CollidingInt(i, shift)));
+        assertTrue(map.containsKey(new CollidingInt(i, shift)),
+            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride);
         Verify.assertContainsKeyValue(new CollidingInt(i, shift), createVal(i), map);
       }
     }
@@ -660,7 +666,7 @@ public abstract class UnifiedMapAcceptanceTest {
   // entry set tests
 
   @Test
-  public void unifiedMapEntrySet() {
+  void unifiedMapEntrySet() {
     runUnifiedMapEntrySet(0);
     runUnifiedMapEntrySet(1);
     runUnifiedMapEntrySet(2);
@@ -682,7 +688,7 @@ public abstract class UnifiedMapAcceptanceTest {
     }
 
     for (int i = 0; i < size; i += 2) {
-      Assert.assertTrue(entrySet.remove(new Entry(new CollidingInt(i, shift), createVal(i))));
+      assertTrue(entrySet.remove(new Entry(new CollidingInt(i, shift), createVal(i))));
     }
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, entrySet);
@@ -695,7 +701,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapEntrySetRetainAll() {
+  void unifiedMapEntrySetRetainAll() {
     runUnifiedMapEntrySetRetainAll(0);
     runUnifiedMapEntrySetRetainAll(1);
     runUnifiedMapEntrySetRetainAll(2);
@@ -716,12 +722,12 @@ public abstract class UnifiedMapAcceptanceTest {
     }
     Verify.assertSize(size, map);
     Set<Map.Entry<CollidingInt, String>> entrySet = map.entrySet();
-    Assert.assertTrue(entrySet.containsAll(toRetain));
+    assertTrue(entrySet.containsAll(toRetain));
 
-    Assert.assertTrue(entrySet.retainAll(toRetain));
-    Assert.assertTrue(entrySet.containsAll(toRetain));
+    assertTrue(entrySet.retainAll(toRetain));
+    assertTrue(entrySet.containsAll(toRetain));
 
-    Assert.assertFalse(entrySet.retainAll(toRetain)); // a second call should not modify the set
+    assertFalse(entrySet.retainAll(toRetain)); // a second call should not modify the set
 
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, entrySet);
@@ -734,7 +740,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapEntrySetRemoveAll() {
+  void unifiedMapEntrySetRemoveAll() {
     runUnifiedMapEntrySetRemoveAll(0);
     runUnifiedMapEntrySetRemoveAll(1);
     runUnifiedMapEntrySetRemoveAll(2);
@@ -756,9 +762,9 @@ public abstract class UnifiedMapAcceptanceTest {
     Verify.assertSize(size, map);
     Set<Map.Entry<CollidingInt, String>> entrySet = map.entrySet();
 
-    Assert.assertTrue(entrySet.removeAll(toRemove));
+    assertTrue(entrySet.removeAll(toRemove));
 
-    Assert.assertFalse(entrySet.removeAll(toRemove)); // a second call should not modify the set
+    assertFalse(entrySet.removeAll(toRemove)); // a second call should not modify the set
 
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, entrySet);
@@ -771,7 +777,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapEntrySetToArray() {
+  void unifiedMapEntrySetToArray() {
     runUnifiedMapEntrySetToArray(0);
     runUnifiedMapEntrySetToArray(1);
     runUnifiedMapEntrySetToArray(2);
@@ -792,12 +798,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Arrays.sort(entries, ENTRY_COMPARATOR);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(new Entry(new CollidingInt(i, shift), createVal(i)), entries[i]);
+      assertEquals(new Entry(new CollidingInt(i, shift), createVal(i)), entries[i]);
     }
   }
 
   @Test
-  public void unifiedMapEntrySetIterator() {
+  void unifiedMapEntrySetIterator() {
     runUnifiedMapEntrySetIterator(0);
     runUnifiedMapEntrySetIterator(1);
     runUnifiedMapEntrySetIterator(2);
@@ -822,12 +828,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Arrays.sort(entries, ENTRY_COMPARATOR);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(new Entry(new CollidingInt(i, shift), createVal(i)), entries[i]);
+      assertEquals(new Entry(new CollidingInt(i, shift), createVal(i)), entries[i]);
     }
   }
 
   @Test
-  public void unifiedMapEntrySetIteratorSetValue() {
+  void unifiedMapEntrySetIteratorSetValue() {
     runUnifiedMapEntrySetIteratorSetValue(0);
     runUnifiedMapEntrySetIteratorSetValue(1);
     runUnifiedMapEntrySetIteratorSetValue(2);
@@ -856,12 +862,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Arrays.sort(entries, ENTRY_COMPARATOR);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(new Entry(new CollidingInt(i, shift), "Y" + i), entries[i]);
+      assertEquals(new Entry(new CollidingInt(i, shift), "Y" + i), entries[i]);
     }
   }
 
   @Test
-  public void unifiedMapEntrySetIteratorRemove() {
+  void unifiedMapEntrySetIteratorRemove() {
     runUnifiedMapEntrySetIteratorRemove(0, 2);
     runUnifiedMapEntrySetIteratorRemove(1, 2);
     runUnifiedMapEntrySetIteratorRemove(2, 2);
@@ -896,20 +902,19 @@ public abstract class UnifiedMapAcceptanceTest {
         it.remove();
       }
     }
-    Assert.assertEquals(size, count);
+    assertEquals(size, count);
 
     for (int i = 0; i < size; i++) {
       if (i % removeStride != 0) {
-        Assert.assertTrue(
-            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride,
-            map.containsKey(new CollidingInt(i, shift)));
+        assertTrue(map.containsKey(new CollidingInt(i, shift)),
+            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride);
         Verify.assertContainsKeyValue(new CollidingInt(i, shift), createVal(i), map);
       }
     }
   }
 
   @Test
-  public void unifiedMapEntrySetIteratorRemoveFlip() {
+  void unifiedMapEntrySetIteratorRemoveFlip() {
     runUnifiedMapEntrySetIteratorRemoveFlip(0, 2);
     runUnifiedMapEntrySetIteratorRemoveFlip(1, 2);
     runUnifiedMapEntrySetIteratorRemoveFlip(2, 2);
@@ -944,13 +949,12 @@ public abstract class UnifiedMapAcceptanceTest {
         it.remove();
       }
     }
-    Assert.assertEquals(size, count);
+    assertEquals(size, count);
 
     for (int i = 0; i < size; i++) {
       if (i % removeStride == 0) {
-        Assert.assertTrue(
-            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride,
-            map.containsKey(new CollidingInt(i, shift)));
+        assertTrue(map.containsKey(new CollidingInt(i, shift)),
+            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride);
         Verify.assertContainsKeyValue(new CollidingInt(i, shift), createVal(i), map);
       }
     }
@@ -959,7 +963,7 @@ public abstract class UnifiedMapAcceptanceTest {
   // values collection
 
   @Test
-  public void unifiedMapValues() {
+  void unifiedMapValues() {
     runUnifiedMapValues(0);
     runUnifiedMapValues(1);
     runUnifiedMapValues(2);
@@ -975,13 +979,13 @@ public abstract class UnifiedMapAcceptanceTest {
     }
     Verify.assertSize(size, map);
     Collection<String> values = map.values();
-    Assert.assertEquals(size, values.size());
+    assertEquals(size, values.size());
     for (int i = 0; i < size; i++) {
       Verify.assertContains(createVal(i), values);
     }
 
     for (int i = 0; i < size; i += 2) {
-      Assert.assertTrue(values.remove(createVal(i)));
+      assertTrue(values.remove(createVal(i)));
     }
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, values);
@@ -994,7 +998,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapValuesRetainAll() {
+  void unifiedMapValuesRetainAll() {
     runUnifiedMapValuesRetainAll(0);
     runUnifiedMapValuesRetainAll(1);
     runUnifiedMapValuesRetainAll(2);
@@ -1015,12 +1019,12 @@ public abstract class UnifiedMapAcceptanceTest {
     }
     Verify.assertSize(size, map);
     Collection<String> values = map.values();
-    Assert.assertTrue(values.containsAll(toRetain));
+    assertTrue(values.containsAll(toRetain));
 
-    Assert.assertTrue(values.retainAll(toRetain));
-    Assert.assertTrue(values.containsAll(toRetain));
+    assertTrue(values.retainAll(toRetain));
+    assertTrue(values.containsAll(toRetain));
 
-    Assert.assertFalse(values.retainAll(toRetain)); // a second call should not modify the set
+    assertFalse(values.retainAll(toRetain)); // a second call should not modify the set
 
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, values);
@@ -1033,7 +1037,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapValuesRemoveAll() {
+  void unifiedMapValuesRemoveAll() {
     runUnifiedMapValuesRemoveAll(0);
     runUnifiedMapValuesRemoveAll(1);
     runUnifiedMapValuesRemoveAll(2);
@@ -1055,9 +1059,9 @@ public abstract class UnifiedMapAcceptanceTest {
     Verify.assertSize(size, map);
     Collection<String> values = map.values();
 
-    Assert.assertTrue(values.removeAll(toRemove));
+    assertTrue(values.removeAll(toRemove));
 
-    Assert.assertFalse(values.removeAll(toRemove)); // a second call should not modify the set
+    assertFalse(values.removeAll(toRemove)); // a second call should not modify the set
 
     Verify.assertSize(size / 2, map);
     Verify.assertSize(size / 2, values);
@@ -1070,7 +1074,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapValuesToArray() {
+  void unifiedMapValuesToArray() {
     runUnifiedMapValuesToArray(0);
     runUnifiedMapValuesToArray(1);
     runUnifiedMapValuesToArray(2);
@@ -1091,12 +1095,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Arrays.sort(entries, VALUE_COMPARATOR);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(createVal(i), entries[i]);
+      assertEquals(createVal(i), entries[i]);
     }
   }
 
   @Test
-  public void unifiedMapValuesIterator() {
+  void unifiedMapValuesIterator() {
     runUnifiedMapValuesIterator(0);
     runUnifiedMapValuesIterator(1);
     runUnifiedMapValuesIterator(2);
@@ -1121,12 +1125,12 @@ public abstract class UnifiedMapAcceptanceTest {
     Arrays.sort(valuesArray, VALUE_COMPARATOR);
 
     for (int i = 0; i < size; i++) {
-      Assert.assertEquals(createVal(i), valuesArray[i]);
+      assertEquals(createVal(i), valuesArray[i]);
     }
   }
 
   @Test
-  public void unifiedMapValuesIteratorRemove() {
+  void unifiedMapValuesIteratorRemove() {
     runUnifiedMapValuesIteratorRemove(0, 2);
     runUnifiedMapValuesIteratorRemove(1, 2);
     runUnifiedMapValuesIteratorRemove(2, 2);
@@ -1162,20 +1166,19 @@ public abstract class UnifiedMapAcceptanceTest {
         it.remove();
       }
     }
-    Assert.assertEquals(size, count);
+    assertEquals(size, count);
 
     for (int i = 0; i < size; i++) {
       if (i % removeStride != 0) {
-        Assert.assertTrue(
-            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride,
-            map.containsKey(new CollidingInt(i, shift)));
+        assertTrue(map.containsKey(new CollidingInt(i, shift)),
+            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride);
         Verify.assertContainsKeyValue(new CollidingInt(i, shift), createVal(i), map);
       }
     }
   }
 
   @Test
-  public void unifiedMapValuesIteratorRemoveFlip() {
+  void unifiedMapValuesIteratorRemoveFlip() {
     runUnifiedMapValuesIteratorRemoveFlip(0, 2);
     runUnifiedMapValuesIteratorRemoveFlip(1, 2);
     runUnifiedMapValuesIteratorRemoveFlip(2, 2);
@@ -1211,37 +1214,36 @@ public abstract class UnifiedMapAcceptanceTest {
         it.remove();
       }
     }
-    Assert.assertEquals(size, count);
+    assertEquals(size, count);
 
     for (int i = 0; i < size; i++) {
       if (i % removeStride == 0) {
-        Assert.assertTrue(
-            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride,
-            map.containsKey(new CollidingInt(i, shift)));
+        assertTrue(map.containsKey(new CollidingInt(i, shift)),
+            "map contains " + i + "for shift " + shift + " and remove stride " + removeStride);
         Verify.assertContainsKeyValue(new CollidingInt(i, shift), createVal(i), map);
       }
     }
   }
 
-  public void perfTestUnifiedMapGet() {
+  void perfTestUnifiedMapGet() {
     for (int i = 1000000; i > 10; i /= 10) {
       runGetTest(newMap(), "Unified Map", i);
     }
   }
 
-  public void perfTestJdkHashMapGet() {
+  void perfTestJdkHashMapGet() {
     for (int i = 1000000; i > 10; i /= 10) {
       runGetTest(new HashMap<>(), "JDK HashMap", i);
     }
   }
 
-  public void perfTestUnifiedMapCollidingGet() {
+  void perfTestUnifiedMapCollidingGet() {
     runCollidingGetTest(newMap(), "Unified Map", 1);
     runCollidingGetTest(newMap(), "Unified Map", 2);
     runCollidingGetTest(newMap(), "Unified Map", 3);
   }
 
-  public void perfTestJdkHashMapCollidingGet() {
+  void perfTestJdkHashMapCollidingGet() {
     runCollidingGetTest(new HashMap<>(), "JDK HashMap", 1);
     runCollidingGetTest(new HashMap<>(), "JDK HashMap", 2);
     runCollidingGetTest(new HashMap<>(), "JDK HashMap", 3);
@@ -1306,7 +1308,7 @@ public abstract class UnifiedMapAcceptanceTest {
       keys[i] = new CollidingInt(i, shift);
       map.put(keys[i], createVal(i));
     }
-    Assert.assertEquals(size, map.size());
+    assertEquals(size, map.size());
     return keys;
   }
 
@@ -1318,7 +1320,7 @@ public abstract class UnifiedMapAcceptanceTest {
       try {
         Thread.sleep(target - now);
       } catch (InterruptedException ignored) {
-        Assert.fail("why were we interrupted?");
+        fail("why were we interrupted?");
       }
       now = System.currentTimeMillis();
     }
@@ -1374,7 +1376,7 @@ public abstract class UnifiedMapAcceptanceTest {
   }
 
   @Test
-  public void unifiedMapToString() {
+  void unifiedMapToString() {
     MutableMap<Object, Object> map = UnifiedMap.newWithKeysValues(1, "One", 2, "Two");
     Verify.assertContains("1=One", map.toString());
     Verify.assertContains("2=Two", map.toString());

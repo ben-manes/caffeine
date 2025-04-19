@@ -9,6 +9,8 @@
  */
 package com.github.benmanes.caffeine.eclipse.acceptance;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -24,17 +26,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.collections.api.map.ConcurrentMutableMap;
 import org.eclipse.collections.impl.set.mutable.UnifiedSet;
 import org.eclipse.collections.impl.test.Verify;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Ported from Eclipse Collections 11.0.
  */
+@ParameterizedClass
+@MethodSource("caches")
 @SuppressWarnings("ThreadPriorityCheck")
-public abstract class ParallelMapIteratePutAcceptanceTest {
+final class ParallelMapIteratePutAcceptanceTest extends CaffeineMapAcceptanceTestCase {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ParallelMapIteratePutAcceptanceTest.class);
   private static final long SEED = 0x12345678ABCDL;
@@ -43,12 +48,10 @@ public abstract class ParallelMapIteratePutAcceptanceTest {
   private static final int CHUNK_SIZE = 16000;
   private static final int MAX_THREADS = 48;
 
-  @After
-  public void tearDown() {
+  @AfterEach
+  void tearDown() {
     ParallelMapIteratePutAcceptanceTest.fullGc();
   }
-
-  public abstract <K, V> ConcurrentMutableMap<K, V> newMap(int initialCapacity);
 
   @SuppressWarnings("PreferJavaTimeOverload")
   private static void fullGc() {
@@ -63,7 +66,7 @@ public abstract class ParallelMapIteratePutAcceptanceTest {
   }
 
   @Test
-  public void mapIteratePut() {
+  void mapIteratePut() {
     int constSize = 100_000;
     int size = 10_000_000;
     Integer[] contents = new Integer[size];
@@ -107,10 +110,10 @@ public abstract class ParallelMapIteratePutAcceptanceTest {
       UnifiedSet<Integer> setToAdd = UnifiedSet.newSet(constContents.length);
       for (Integer next : map.keySet()) {
         setToRemove.remove(next);
-        Assert.assertTrue(setToAdd.add(next));
+        assertTrue(setToAdd.add(next));
         count++;
       }
-      Assert.assertTrue(count >= constContents.length);
+      assertTrue(count >= constContents.length);
       Verify.assertEmpty(setToRemove);
       for (Future<?> future : futures) {
         try {
