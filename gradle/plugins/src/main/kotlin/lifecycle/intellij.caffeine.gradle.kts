@@ -1,4 +1,6 @@
+import org.jetbrains.gradle.ext.ActionDelegationConfig.TestRunner.PLATFORM
 import org.jetbrains.gradle.ext.runConfigurations
+import org.jetbrains.gradle.ext.delegateActions
 import org.jetbrains.gradle.ext.Application
 import org.jetbrains.gradle.ext.settings
 import org.jetbrains.gradle.ext.TestNG
@@ -31,6 +33,10 @@ allprojects {
 }
 
 idea.project.settings {
+  delegateActions {
+    delegateBuildRunToGradle = false
+    testRunner = PLATFORM
+  }
   runConfigurations {
     val jvmArgs = listOf(
       "-javaagent:${mockitoAgent.asPath}",
