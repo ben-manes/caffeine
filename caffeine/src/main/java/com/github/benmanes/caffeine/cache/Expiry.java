@@ -31,7 +31,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * of an entry may be extended or reduced by subsequent evaluations.
  * <p>
  * Usage example:
- * {@snippet :
+ * {@snippet lang="java" :
  * LoadingCache<Key, Graph> cache = Caffeine.newBuilder()
  *     .expireAfter(Expiry.creating((Key key, Graph graph) ->
  *         Duration.between(Instant.now(), graph.createdOn().plusHours(5))))
@@ -102,7 +102,7 @@ public interface Expiry<K, V> {
    * the cache once the duration has elapsed after the entry's creation. The expiration time is
    * not modified when the entry is updated or read.
    *
-   * {@snippet :
+   * {@snippet lang="java" :
    * Expiry<Key, Graph> expiry = Expiry.creating((key, graph) ->
    *     Duration.between(Instant.now(), graph.createdOn().plusHours(5)));
    * }
@@ -122,7 +122,7 @@ public interface Expiry<K, V> {
    * the cache once the duration has elapsed after the entry's creation or replacement of its value.
    * The expiration time is not modified when the entry is read.
    *
-   * {@snippet :
+   * {@snippet lang="java" :
    * Expiry<Key, Graph> expiry = Expiry.writing((key, graph) ->
    *     Duration.between(Instant.now(), graph.modifiedOn().plusHours(5)));
    * }
@@ -142,7 +142,7 @@ public interface Expiry<K, V> {
    * the cache once the duration has elapsed after the entry's creation, replacement of its value,
    * or after it was last read.
    *
-   * {@snippet :
+   * {@snippet lang="java" :
    * Expiry<Key, Graph> expiry = Expiry.accessing((key, graph) ->
    *     graph.isDirected() ? Duration.ofHours(1) : Duration.ofHours(3));
    * }

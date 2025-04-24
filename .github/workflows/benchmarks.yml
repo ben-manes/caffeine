@@ -9,6 +9,7 @@ env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >
     api.adoptium.net:443
+    api.foojay.io:443
     api.github.com:443
     caffeine.gradle-enterprise.cloud:443
     download.java.net:443
@@ -48,9 +49,9 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
@@ -101,9 +102,9 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
@@ -154,9 +155,9 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
@@ -207,9 +208,9 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
@@ -260,9 +261,9 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
@@ -312,9 +313,9 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout

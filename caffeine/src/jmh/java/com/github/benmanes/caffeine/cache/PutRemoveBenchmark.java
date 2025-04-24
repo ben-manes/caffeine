@@ -40,7 +40,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * relatively rare compared to reads. Thus, this benchmark is only for diagnosing performance
  * concerns and should not be used to compare implementations.
  * <p>
- * {@snippet :
+ * {@snippet lang="shell" :
  * ./gradlew jmh -PincludePattern=PutRemoveBenchmark --rerun
  * }
  *

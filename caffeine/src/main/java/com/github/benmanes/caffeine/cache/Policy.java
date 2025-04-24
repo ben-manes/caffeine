@@ -251,7 +251,7 @@ public interface Policy<K, V> {
      * at the time of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet :
+     * {@snippet lang="java" :
      * List<K> tenColdestKeys = cache.policy().eviction().orElseThrow()
      *     .coldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
      * }
@@ -318,7 +318,7 @@ public interface Policy<K, V> {
      * at the time of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet :
+     * {@snippet lang="java" :
      * List<K> tenHottestKeys = cache.policy().eviction().orElseThrow()
      *     .hottest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
      * }
@@ -454,7 +454,7 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet :
+     * {@snippet lang="java" :
      * List<K> tenOldestKeys = cache.policy().expireAfterWrite().orElseThrow()
      *     .oldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
      * }
@@ -498,7 +498,7 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet :
+     * {@snippet lang="java" :
      * List<K> tenYoungestKeys = cache.policy().expireAfterWrite().orElseThrow()
      *     .youngest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
      * }
@@ -702,7 +702,7 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet :
+     * {@snippet lang="java" :
      * List<K> tenOldestKeys = cache.policy().expireAfterVariably().orElseThrow()
      *     .oldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
      * }
@@ -746,7 +746,7 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet :
+     * {@snippet lang="java" :
      * List<K> tenYoungestKeys = cache.policy().expireAfterVariably().orElseThrow()
      *     .youngest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
      * }

@@ -36,7 +36,7 @@ import org.jspecify.annotations.Nullable;
  * overridden as desired.
  * <p>
  * Usage example:
- * {@snippet :
+ * {@snippet lang="java" :
  * CacheLoader<Key, Graph> loader = key -> createExpensiveGraph(key);
  * LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
  * }
@@ -216,7 +216,7 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
    * retrieving the {@code key} prior to returning to the value to the cache.
    * <p>
    * Usage example:
-   * {@snippet :
+   * {@snippet lang="java" :
    * CacheLoader<Key, Graph> loader = CacheLoader.bulk(keys -> createExpensiveGraphs(keys));
    * LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
    * }

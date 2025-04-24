@@ -12,9 +12,9 @@ jobs:
       security-events: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: >
             api.github.com:443
@@ -40,7 +40,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@45775bd8235c68ba998cffa5171334d58593da47 # v3.28.15
+        uses: github/codeql-action/upload-sarif@60168efe1c415ce0f5521ea06d5c2062adbeed1b # v3.28.17
         if: steps.check_files.outputs.files_exists == 'true'
         with:
             sarif_file: results.sarif

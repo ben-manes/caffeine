@@ -10,6 +10,7 @@ env:
   ALLOWED_ENDPOINTS: >
     *.actions.githubusercontent.com:443
     api.adoptium.net:443
+    api.foojay.io:443
     api.github.com:443
     api.snapcraft.io:443
     caffeine.gradle-enterprise.cloud:443
@@ -54,9 +55,9 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
@@ -168,9 +169,9 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
@@ -214,9 +215,9 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: >
             ${{ env.ALLOWED_ENDPOINTS }}
@@ -239,7 +240,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Download Tests Results
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Combine Jacoco Reports
@@ -295,9 +296,9 @@ jobs:
       checks: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: >
             ${{ env.ALLOWED_ENDPOINTS }}
@@ -305,7 +306,7 @@ jobs:
             codecov.io:443
             uploader.codecov.io:443
       - name: Download Tests
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Publish Test Results
@@ -356,9 +357,9 @@ jobs:
       id-token: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: >
             ${{ env.ALLOWED_ENDPOINTS }}

@@ -69,7 +69,7 @@ import com.google.errorprone.annotations.FormatMethod;
  * cache instances created by {@code Caffeine} will not perform any type of eviction.
  * <p>
  * Usage example:
- * {@snippet :
+ * {@snippet lang="java" :
  * LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
  *     .maximumSize(10_000)
  *     .expireAfterWrite(Duration.ofMinutes(10))

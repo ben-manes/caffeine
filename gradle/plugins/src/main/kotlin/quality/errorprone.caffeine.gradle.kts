@@ -94,8 +94,6 @@ fun disabledChecks() = listOf(
 
   // https://github.com/google/error-prone/issues/4914
   "UnescapedEntity",
-  // https://github.com/PicnicSupermarket/error-prone-support/issues/1646
-  "IdentityConversion",
 )
 fun disabledRules() = listOf(
   "ImmutableListRules\\\$ImmutableListBuilder",

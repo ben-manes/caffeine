@@ -544,11 +544,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis())) {
         dispatcher.publishExpired(this, key, expirable.get());
         statistics.recordEvictions(1L);
-        return null;
+      } else {
+        dispatcher.publishRemoved(this, key, expirable.get());
+        removed[0] = expirable.get();
       }
-
-      dispatcher.publishRemoved(this, key, expirable.get());
-      removed[0] = expirable.get();
       return null;
     });
     return removed[0];

@@ -40,7 +40,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * Implementation here differs from ClockProPolicy only in adjusting coldTarget and tracking for
  * demoted status part. Below is a summary of coldTarget adjusting differences between ClockPro
  * and ClockPro+.
- * {@snippet :
+ * {@snippet lang=none :
  * +-----------------------------------------------------------------------------------+
  * |                  ClockPro ColdTarget Adaption Algorithm Summary                   |
  * +------+----------+-----------------------------------------------------------------+

@@ -43,7 +43,7 @@ import picocli.CommandLine.Option;
  * multiple simulators in parallel for a quick-and-dirty analysis, rather than port their code into
  * Java.
  *
- * {@snippet :
+ * {@snippet lang="shell" :
  * ./gradlew :simulator:rewrite -q \
  *    --inputFormat=? \
  *    --inputFiles=? \

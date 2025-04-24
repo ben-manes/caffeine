@@ -30,7 +30,7 @@ import com.google.common.cache.CacheBuilder;
 
 /**
  * <p>
- * {@snippet :
+ * {@snippet lang="shell" :
  * ./gradlew jmh -PincludePattern=BuilderBenchmark --rerun
  * }
  *

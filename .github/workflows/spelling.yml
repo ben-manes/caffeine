@@ -9,7 +9,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -33,9 +33,9 @@ jobs:
       security-events: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: false
+          disable-sudo-and-containers: false
           egress-policy: block
           allowed-endpoints: >
             api.github.com:443
@@ -91,9 +91,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
-          disable-sudo: true
+          disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: >
             github.com:443
@@ -103,4 +103,4 @@ jobs:
         with:
           persist-credentials: false
       - name: Typos
-        uses: crate-ci/typos@b1a1ef3893ff35ade0cfa71523852a49bfd05d19 # v1.31.1
+        uses: crate-ci/typos@0f0ccba9ed1df83948f0c15026e4f5ccfce46109 # v1.32.0

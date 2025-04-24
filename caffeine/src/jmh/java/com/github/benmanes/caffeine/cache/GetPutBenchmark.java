@@ -35,7 +35,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * A benchmark that evaluates the read/write performance of a cache. The cache is prepopulated for
  * a 100% hit rate and a Zipf distribution of keys is used to mimic application usage patterns.
  * <p>
- * {@snippet :
+ * {@snippet lang="shell" :
  * // JAVA_VERSION=?? for an alternative jdk
  * ./gradlew jmh -PincludePattern=GetPutBenchmark --rerun
  * }
