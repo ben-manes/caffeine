@@ -17,7 +17,9 @@ package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
 import static java.util.Locale.US;
 
+import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -29,8 +31,8 @@ import com.github.benmanes.caffeine.cache.simulator.report.TextReporter;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import com.typesafe.config.Config;
-import com.univocity.parsers.csv.CsvWriter;
-import com.univocity.parsers.csv.CsvWriterSettings;
+
+import de.siegmar.fastcsv.writer.CsvWriter;
 
 /**
  * A plain text report that prints comma-separated values.
@@ -45,19 +47,20 @@ public final class CsvReporter extends TextReporter {
 
   @Override
   protected String assemble(Set<String> headers, List<PolicyStats> results) {
-    var output = new StringWriter();
-    var writer = new CsvWriter(output, new CsvWriterSettings());
-    writer.writeHeaders(headers);
-    for (PolicyStats policyStats : results) {
-      String[] data = headers.stream()
-          .map(policyStats.metrics()::get)
-          .map(metrics()::format)
-          .map(Strings::emptyToNull)
-          .toArray(String[]::new);
-      writer.writeRow(data);
+    try (var output = new StringWriter();
+         var writer = CsvWriter.builder().build(output)) {
+      writer.writeRecord(headers);
+      for (PolicyStats policyStats : results) {
+        writer.writeRecord(headers.stream()
+            .map(policyStats.metrics()::get)
+            .map(metrics()::format)
+            .map(Strings::emptyToNull)
+            .toList());
+      }
+      return output.toString();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
-    writer.close();
-    return output.toString();
   }
 
   @Override

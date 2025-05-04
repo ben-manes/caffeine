@@ -45,9 +45,10 @@ import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 
 import com.google.common.base.Strings;
+import com.google.common.primitives.Doubles;
 import com.google.errorprone.annotations.Var;
-import com.univocity.parsers.csv.CsvParser;
-import com.univocity.parsers.csv.CsvParserSettings;
+
+import de.siegmar.fastcsv.reader.CsvReader;
 
 /**
  * A utility that generates a line chart from the csv format produced by {@link CombinedCsvReport}.
@@ -84,20 +85,18 @@ public record PlotCsv(Path inputFile, Path outputFile, String metric,
   }
 
   private CategoryDataset data() {
-    var settings = new CsvParserSettings();
-    settings.setHeaderExtractionEnabled(true);
-    var parser = new CsvParser(settings);
-
-    var records = parser.parseAllRecords(inputFile.toFile());
-    var headers = parser.getContext().headers();
-    var dataset = new DefaultCategoryDataset();
-    for (var record : records) {
-      for (int i = 1; i < headers.length; i++) {
-        var value = record.getDouble(i);
-        dataset.addValue(value, record.getString(0), headers[i]);
+    try (var reader = CsvReader.builder().ofNamedCsvRecord(inputFile)) {
+      var dataset = new DefaultCategoryDataset();
+      for (var record : reader) {
+        for (var column : record.getHeader().subList(1, record.getHeader().size())) {
+          var value = record.findField(column).map(Doubles::tryParse).orElse(null);
+          dataset.addValue(value, record.getField(0), column);
+        }
       }
+      return dataset;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
-    return dataset;
   }
 
   private void configurePlot(JFreeChart chart) {

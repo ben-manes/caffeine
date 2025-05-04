@@ -22,6 +22,7 @@ dependencies {
   implementation(libs.stream)
   implementation(libs.tcache)
   implementation(libs.cache2k)
+  implementation(libs.fastcsv)
   implementation(libs.picocli)
   implementation(libs.ehcache3)
   implementation(libs.fastutil)
@@ -36,7 +37,6 @@ dependencies {
   implementation(libs.commons.compress)
   implementation(libs.bundles.coherence)
   implementation(libs.bundles.slf4j.jdk)
-  implementation(libs.univocity.parsers)
   implementation(libs.zero.allocation.hashing)
 
   compileOnly(libs.spotbugs.annotations)

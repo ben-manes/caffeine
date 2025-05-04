@@ -19,18 +19,21 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.univocity.parsers.csv.CsvParser;
-import com.univocity.parsers.csv.CsvParserSettings;
-import com.univocity.parsers.csv.CsvWriter;
-import com.univocity.parsers.csv.CsvWriterSettings;
+
+import de.siegmar.fastcsv.reader.CsvReader;
+import de.siegmar.fastcsv.writer.CsvWriter;
 
 /**
  * A utility that combines multiple CSV reports that vary by the maximum cache size into a single
@@ -58,10 +61,13 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
   private Map<Label, String> tabulate() {
     var results = new TreeMap<Label, String>();
     inputFiles.forEach((maximumSize, path) -> {
-      var records = newCsvParser().parseAllRecords(path.toFile());
-      for (var record : records) {
-        var label = new Label(record.getString(POLICY_KEY), maximumSize);
-        results.put(label, record.getValue(metric, ""));
+      try (var reader = CsvReader.builder().ofNamedCsvRecord(path)) {
+        for (var record : reader) {
+          var label = new Label(record.getField(POLICY_KEY), maximumSize);
+          results.put(label, record.findField(metric).orElse(""));
+        }
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
       }
     });
     return results;
@@ -69,36 +75,34 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
 
   /** Writes a combined report with the headers: policy, maximumSize, and the metric. */
   private void writeReport(Map<Label, String> table) {
-    var policies = newCsvParser()
-        .parseAllRecords(inputFiles.values().iterator().next().toFile()).stream()
-        .map(record -> record.getString(POLICY_KEY))
-        .collect(toImmutableList());
     var formatter = NumberFormat.getInstance(US);
     var headers = Stream
         .concat(Stream.of(POLICY_KEY), inputFiles.keySet().stream().map(formatter::format))
-        .toArray(String[]::new);
-    var writer = newWriter(headers);
-    for (var policy : policies) {
-      writer.addValue(POLICY_KEY, policy);
-      for (Long size : inputFiles.keySet()) {
-        writer.addValue(formatter.format(size), table.get(new Label(policy, size)));
+        .collect(toImmutableList());
+    try (var writer = CsvWriter.builder().build(outputFile)) {
+      writer.writeRecord(headers);
+      for (var policy : policies()) {
+        var values = new ArrayList<String>();
+        values.add(policy);
+        for (long size : inputFiles.keySet()) {
+          values.add(table.get(new Label(policy, size)));
+        }
+        writer.writeRecord(values);
       }
-      writer.writeValuesToRow();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
-    writer.close();
   }
 
-  private static CsvParser newCsvParser() {
-    var settings = new CsvParserSettings();
-    settings.setHeaderExtractionEnabled(true);
-    return new CsvParser(settings);
-  }
-
-  private CsvWriter newWriter(String[] headers) {
-    var settings = new CsvWriterSettings();
-    settings.setHeaderWritingEnabled(true);
-    settings.setHeaders(headers);
-    return new CsvWriter(outputFile.toFile(), settings);
+  private ImmutableList<String> policies() {
+    Path input = inputFiles.values().iterator().next();
+    try (var reader = CsvReader.builder().ofNamedCsvRecord(input)) {
+      return reader.stream()
+          .map(record -> record.getField(POLICY_KEY))
+          .collect(toImmutableList());
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   private record Label(String policy, long size) implements Comparable<Label> {

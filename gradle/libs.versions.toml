@@ -25,6 +25,7 @@ errorprone = "2.38.0"
 errorprone-plugin = "4.2.0"
 errorprone-support = "0.23.0"
 expiring-map = "0.5.11"
+fastcsv = "3.6.0"
 fast-filter = "1.0.2"
 fastutil = "8.5.15"
 felix-framework = "7.0.5"
@@ -92,7 +93,6 @@ stream = "2.9.8"
 tcache = "2.0.1"
 testng = "7.11.0"
 truth = "1.4.4"
-univocity-parsers = "2.9.1"
 versions = "0.52.0"
 xz = "1.10"
 ycsb = "0.17.0"
@@ -125,6 +125,7 @@ errorprone-mockito = { module = "org.mockito:mockito-errorprone", version.ref = 
 errorprone-support = { module = "tech.picnic.error-prone-support:error-prone-contrib", version.ref = "errorprone-support" }
 errorprone-support-refaster = { module = "tech.picnic.error-prone-support:refaster-runner", version.ref = "errorprone-support" }
 expiring-map = { module = "net.jodah:expiringmap", version.ref = "expiring-map" }
+fastcsv = { module = "de.siegmar:fastcsv", version.ref = "fastcsv" }
 fast-filter = { module = "io.github.fastfilter:fastfilter", version.ref = "fast-filter" }
 fastutil = { module = "it.unimi.dsi:fastutil-core", version.ref = "fastutil" }
 felix-framework = { module = "org.apache.felix:org.apache.felix.framework", version.ref = "felix-framework" }
@@ -199,7 +200,6 @@ stream = { module = "com.clearspring.analytics:stream", version.ref = "stream" }
 tcache = { module = "com.trivago:triava", version.ref = "tcache" }
 testng = { module = "org.testng:testng", version.ref = "testng" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
-univocity-parsers = { module = "com.univocity:univocity-parsers", version.ref = "univocity-parsers" }
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
 ycsb = { module = "site.ycsb:core", version.ref = "ycsb" }
 zero-allocation-hashing = { module = "net.openhft:zero-allocation-hashing", version.ref = "zero-allocation-hashing" }
