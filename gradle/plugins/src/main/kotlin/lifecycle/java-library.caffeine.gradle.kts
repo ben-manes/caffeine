@@ -66,7 +66,7 @@ tasks.withType<AbstractArchiveTask>().configureEach {
   }
 }
 
-tasks.jar {
+tasks.named<Jar>("jar").configure {
   inputs.property("version", project.version.toString())
   outputs.cacheIf { true }
   metaInf {
@@ -100,11 +100,11 @@ tasks.withType<Javadoc>().configureEach {
       "https://lightbend.github.io/config/latest/api/",
       "https://guava.dev/releases/${libs.versions.guava.get()}/api/docs/",
       "https://docs.oracle.com/en/java/javase/${java.toolchain.languageVersion.get()}/docs/api/")
-
-    if (project != project(":caffeine")) {
+    val caffeine = project(":caffeine")
+    if (project != caffeine) {
       linksOffline("https://static.javadoc.io/$group/caffeine/$version/",
-        relativePath(project(":caffeine").layout.buildDirectory.dir("docs/javadoc")))
-      dependsOn(":caffeine:javadoc")
+        relativePath(caffeine.layout.buildDirectory.dir("docs/javadoc")))
+      inputs.files(caffeine.tasks.named<Javadoc>("javadoc").map { it.outputs.files })
     }
   }
   javadocTool = javaToolchains.javadocToolFor {

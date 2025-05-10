@@ -75,7 +75,7 @@ val unzipJCacheJavaDoc by tasks.registering(Copy::class) {
   into(layout.buildDirectory.dir("jcache-docs"))
 }
 
-tasks.jar {
+tasks.named<Jar>("jar").configure {
   bundle.bnd(mapOf(
     "Automatic-Module-Name" to "com.github.benmanes.caffeine.jcache",
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine.jcache",
@@ -93,7 +93,7 @@ tasks.jar {
 }
 
 tasks.named<Javadoc>("javadoc").configure {
-  dependsOn(unzipJCacheJavaDoc)
+  inputs.files(unzipJCacheJavaDoc.map { it.outputs.files })
   javadocOptions {
     addBooleanOption("Xdoclint:all,-missing", true)
     linksOffline("https://static.javadoc.io/javax.cache/cache-api/${libs.versions.jcache.get()}/",
@@ -112,7 +112,7 @@ val isolatedTest = tasks.register<Test>("isolatedTest") {
   }
 }
 
-tasks.test.configure {
+tasks.named<Test>("test").configure {
   dependsOn(isolatedTest)
   useJUnitPlatform {
     excludeTags("isolated")
@@ -121,13 +121,14 @@ tasks.test.configure {
 
 tasks.withType<Test>().configureEach {
   useJUnitPlatform()
-  dependsOn(unzipTestKit)
+  inputs.files(unzipTestKit.map { it.outputs.files })
   testClassesDirs = files(testClassesDirs, layout.buildDirectory.files("tck"))
 
   project(":caffeine").plugins.withId("java-library") {
     val caffeineJar = project(":caffeine").tasks.named<Jar>("jar")
     val jcacheJar = project(":jcache").tasks.named<Jar>("jar")
-    dependsOn(caffeineJar, jcacheJar)
+    inputs.files(caffeineJar.map { it.outputs.files })
+    inputs.files(jcacheJar.map { it.outputs.files })
 
     systemProperties(mapOf(
       // Test Compatibility Kit

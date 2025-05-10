@@ -64,7 +64,7 @@ public final class TinyCache {
           return true;
         }
         indexing.setChainStart(indexing.getChainStart() + 1);
-      } catch (RuntimeException e) {
+      } catch (RuntimeException _) {
         System.out.println("length: " + cache.length + " Access: " + indexing.getChainStart());
       }
     }

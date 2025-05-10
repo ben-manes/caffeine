@@ -45,6 +45,7 @@ import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
 import com.google.errorprone.annotations.Var;
 
@@ -88,7 +89,7 @@ public record PlotCsv(Path inputFile, Path outputFile, String metric,
     try (var reader = CsvReader.builder().ofNamedCsvRecord(inputFile)) {
       var dataset = new DefaultCategoryDataset();
       for (var record : reader) {
-        for (var column : record.getHeader().subList(1, record.getHeader().size())) {
+        for (var column : Iterables.skip(record.getHeader(), 1)) {
           var value = record.findField(column).map(Doubles::tryParse).orElse(null);
           dataset.addValue(value, record.getField(0), column);
         }

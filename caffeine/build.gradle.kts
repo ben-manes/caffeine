@@ -22,6 +22,7 @@ sourceSets {
   }
 }
 
+val compileJava by tasks.existing
 val jar by tasks.existing(Jar::class)
 val compileJavaPoetJava by tasks.existing
 val jammAgent by configurations.registering
@@ -84,7 +85,7 @@ dependencies {
 
 val compileCodeGenJava by tasks.existing(JavaCompile::class) {
   classpath = sourceSets["main"].runtimeClasspath + sourceSets["main"].output
-  dependsOn(tasks.compileJava)
+  inputs.files(compileJava.map { it.outputs.files })
 
   options.apply {
     compilerArgs.remove("-parameters")
@@ -100,20 +101,16 @@ val compileCodeGenJava by tasks.existing(JavaCompile::class) {
   }
 }
 
-compileJavaPoetJava.configure {
-  finalizedBy(generateLocalCaches, generateNodes)
-}
-
 val generateLocalCaches by tasks.registering(JavaExec::class) {
   mainClass = "com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"
   outputs.dir(layout.buildDirectory.dir("generated-sources/local"))
     .withPropertyName("outputDir")
+  inputs.files(compileJavaPoetJava.map { it.outputs.files })
   inputs.files(sourceSets["javaPoet"].output)
     .withPropertyName("javaPoetOutput")
     .withPathSensitivity(RELATIVE)
   classpath = sourceSets["javaPoet"].runtimeClasspath
   args("build/generated-sources/local")
-  dependsOn(compileJavaPoetJava)
   outputs.cacheIf { true }
 }
 
@@ -121,17 +118,18 @@ val generateNodes by tasks.registering(JavaExec::class) {
   mainClass = "com.github.benmanes.caffeine.cache.NodeFactoryGenerator"
   outputs.dir(layout.buildDirectory.dir("generated-sources/nodes"))
     .withPropertyName("outputDir")
+  inputs.files(compileJavaPoetJava.map { it.outputs.files })
   inputs.files(sourceSets["javaPoet"].output)
     .withPropertyName("javaPoetOutput")
     .withPathSensitivity(RELATIVE)
   classpath = sourceSets["javaPoet"].runtimeClasspath
   args("build/generated-sources/nodes")
-  dependsOn(compileJavaPoetJava)
   outputs.cacheIf { true }
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
-  dependsOn(generateLocalCaches, generateNodes)
+  inputs.files(tasks.named<JavaExec>("generateLocalCaches").map { it.outputs.files })
+  inputs.files(tasks.named<JavaExec>("generateNodes").map { it.outputs.files })
   finalizedBy(compileCodeGenJava)
   options.apply {
     compilerArgs.addAll(listOf("-Xlint:-auxiliaryclass", "-Xlint:-exports"))
@@ -142,7 +140,8 @@ tasks.named<JavaCompile>("compileJava").configure {
 }
 
 tasks.named<JavaCompile>("compileTestJava").configure {
-  dependsOn(tasks.jar, compileCodeGenJava)
+  inputs.files(compileCodeGenJava.map { it.outputs.files })
+  inputs.files(jar.map { it.outputs.files })
   options.apply {
     compilerArgs.add("-Xlint:-auxiliaryclass")
     errorprone {
@@ -218,13 +217,13 @@ val junitJupiterTest = tasks.register<Test>("junitJupiterTest") {
 val junitTest = tasks.register<Test>("junitTest") {
   group = "Verification"
   description = "JUnit classic tests"
+  inputs.files(jar.map { it.outputs.files })
   maxParallelForks = Runtime.getRuntime().availableProcessors()
   systemProperty("caffeine.osgi.jar", relativePath(jar.get().archiveFile.get().asFile.path))
-  dependsOn(jar)
   useJUnit()
 }
 
-tasks.test.configure {
+tasks.named<Test>("test").configure {
   exclude("com/github/benmanes/caffeine/**")
   dependsOn(junitJupiterTest)
   dependsOn(standaloneTest)
@@ -234,9 +233,9 @@ tasks.test.configure {
   dependsOn(fuzzTest)
 }
 
-tasks.jar {
+tasks.named<Jar>("jar").configure {
   from(sourceSets["main"].output + sourceSets["codeGen"].output)
-  dependsOn(compileCodeGenJava)
+  inputs.files(compileCodeGenJava.map { it.outputs.files })
   bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine",
     "Import-Package" to "",
@@ -248,7 +247,9 @@ tasks.jar {
 }
 
 tasks.named<Jar>("sourcesJar").configure {
-  dependsOn(generateLocalCaches, generateNodes)
+  inputs.files(generateLocalCaches.map { it.outputs.files })
+  inputs.files(generateNodes.map { it.outputs.files })
+  from(sourceSets["codeGen"].allSource)
 }
 
 tasks.named<Javadoc>("javadoc").configure {
@@ -304,9 +305,9 @@ tasks.register<Stress>("stress") {
   group = "Cache tests"
   description = "Executes a stress test"
   mainClass = "com.github.benmanes.caffeine.cache.Stresser"
+  inputs.files(tasks.named<JavaCompile>("compileTestJava").map { it.outputs.files })
   classpath = sourceSets["codeGen"].runtimeClasspath + sourceSets["test"].runtimeClasspath
   outputs.upToDateWhen { false }
-  dependsOn(tasks.compileTestJava)
 }
 
 for (scenario in Scenario.all()) {
@@ -344,7 +345,7 @@ for (scenario in Scenario.all()) {
         }
       }
     }
-    tasks.test.configure {
+    tasks.named<Test>("test").configure {
       dependsOn(task)
     }
   }

@@ -17,5 +17,5 @@ sonarqube {
 
 val jacocoFullReport by tasks.existing
 tasks.named("sonarqube").configure {
-  dependsOn(jacocoFullReport)
+  inputs.files(jacocoFullReport.map { it.outputs.files })
 }

@@ -101,7 +101,7 @@ public abstract class AbstractTraceReader implements TraceReader {
   private static @Nullable InputStream tryXz(InputStream input) {
     try {
       return new XZInputStream(input);
-    } catch (IOException e) {
+    } catch (IOException _) {
       return null;
     }
   }
@@ -110,7 +110,7 @@ public abstract class AbstractTraceReader implements TraceReader {
   private static @Nullable InputStream tryCompressed(InputStream input) {
     try {
       return new CompressorStreamFactory().createCompressorInputStream(input);
-    } catch (CompressorException e) {
+    } catch (CompressorException _) {
       return null;
     }
   }
@@ -131,7 +131,7 @@ public abstract class AbstractTraceReader implements TraceReader {
         }
       };
       return new MultiInputStream(archive, entries);
-    } catch (ArchiveException e) {
+    } catch (ArchiveException _) {
       return null;
     }
   }

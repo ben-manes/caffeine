@@ -74,7 +74,7 @@ tasks.withType<Test>().configureEach {
   useJUnitPlatform()
 }
 
-tasks.jar {
+tasks.named<Jar>("jar").configure {
   bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.benmanes.caffeine.simulator",
     "Automatic-Module-Name" to "com.github.benmanes.caffeine.simulator"))
@@ -93,7 +93,8 @@ tasks.register<Simulate>("simulate")
 tasks.register<Rewrite>("rewrite")
 
 tasks.withType<JavaExec>().configureEach {
-  dependsOn(tasks.processResources, tasks.compileJava)
+  inputs.files(tasks.named<ProcessResources>("processResources").map { it.outputs.files })
+  inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
   classpath(sourceSets["main"].runtimeClasspath)
   outputs.upToDateWhen { false }
   outputs.cacheIf { false }

@@ -20,9 +20,9 @@ modes.forEach { (mode, details) ->
     group = "Object Layout"
     description = details
     classpath(objectLayout)
-    dependsOn(tasks.compileJava)
     mainClass = "org.openjdk.jol.Main"
     incompatibleWithConfigurationCache()
+    inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
 
     doFirst {
       var className = findProperty("className") as String?

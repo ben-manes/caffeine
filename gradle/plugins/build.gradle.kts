@@ -55,6 +55,10 @@ dependencies {
   }
 }
 
+tasks.named<Jar>("jar").configure {
+  outputs.cacheIf { true }
+}
+
 tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   checkBuildEnvironmentConstraints = true
   checkConstraints = true

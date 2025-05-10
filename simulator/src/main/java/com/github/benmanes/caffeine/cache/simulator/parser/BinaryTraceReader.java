@@ -75,7 +75,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
         next = readEvent(input);
         ready = true;
         return true;
-      } catch (EOFException e) {
+      } catch (EOFException _) {
         return false;
       } catch (IOException e) {
         throw new UncheckedIOException(e);

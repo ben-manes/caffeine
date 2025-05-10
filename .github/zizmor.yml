@@ -4,3 +4,7 @@ rules:
   dangerous-triggers:
     ignore:
       - dependency-submission-pr-retrieve.yml
+  unpinned-images:
+    ignore:
+      - semgrep.yml
+      - snyk.yml

@@ -29,7 +29,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.report.Metrics;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReporter;
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Strings;
 import com.typesafe.config.Config;
 
 import de.siegmar.fastcsv.writer.CsvWriter;
@@ -54,7 +53,6 @@ public final class CsvReporter extends TextReporter {
         writer.writeRecord(headers.stream()
             .map(policyStats.metrics()::get)
             .map(metrics()::format)
-            .map(Strings::emptyToNull)
             .toList());
       }
       return output.toString();

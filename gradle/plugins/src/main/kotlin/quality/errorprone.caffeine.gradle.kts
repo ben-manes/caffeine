@@ -41,7 +41,7 @@ val downloadCaffeine by tasks.registering {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-  dependsOn(downloadCaffeine)
+  inputs.files(downloadCaffeine.map { it.outputs.files })
 
   options.apply {
     forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)

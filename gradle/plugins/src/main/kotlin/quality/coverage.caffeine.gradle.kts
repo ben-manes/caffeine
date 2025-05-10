@@ -27,7 +27,7 @@ val jacocoFullReport by tasks.registering(JacocoReport::class) {
   description = "Generates an aggregate report"
 
   subprojects {
-    dependsOn(tasks.compileTestJava)
+    inputs.files(tasks.named<JavaCompile>("compileTestJava").map { it.outputs.files })
   }
   reports {
     html.required = true // human readable
@@ -40,8 +40,8 @@ tasks.named("coveralls").configure {
   description = "Uploads the aggregated coverage report to Coveralls"
   val isEnabled = isCI()
   onlyIf { isEnabled.get() }
-  dependsOn(jacocoFullReport)
   incompatibleWithConfigurationCache()
+  inputs.files(jacocoFullReport.map { it.outputs.files })
 }
 
 subprojects {
@@ -49,7 +49,7 @@ subprojects {
     testReport.configure {
       testResults.from(this@configureEach.binaryResultsDirectory)
     }
-    dependsOn(tasks.jar)
+    inputs.files(tasks.named<Jar>("jar").map { it.outputs.files })
 
     // ensure tasks don't overwrite the default report directories used by the 'test' task
     reports.html.outputLocation = file(layout.buildDirectory.file("reports/$name"))
