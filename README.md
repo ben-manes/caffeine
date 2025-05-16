@@ -130,7 +130,7 @@ Snapshots of the development version are available in
 [jsr107]: https://github.com/ben-manes/caffeine/wiki/JCache
 [maven]: https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine
 [releases]: https://github.com/ben-manes/caffeine/releases
-[snapshots]: https://oss.sonatype.org/content/repositories/snapshots/com/github/ben-manes/caffeine/
+[snapshots]: https://central.sonatype.com/service/rest/repository/browse/maven-snapshots/com/github/ben-manes/caffeine/
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
 [tinylfu]: https://dl.acm.org/doi/10.1145/3149371?cid=99659224047
 [adaptive-tinylfu]: https://dl.acm.org/doi/10.1145/3274808.3274816?cid=99659224047
