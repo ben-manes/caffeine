@@ -115,65 +115,73 @@ eclipse.classpath.file.beforeMerged {
 
 abstract class Simulate @Inject constructor(
                         @Internal val projectLayout: ProjectLayout) : JavaExec() {
-  @Input @Option(option = "maximumSize", description = "The maximum sizes")
-  var maximumSize: List<String> = emptyList()
-  @Input @Option(option = "metric", description = "The metric to compare")
-  var metric = "Hit Rate"
-  @Input @Option(option = "theme", description = "The chart theme")
-  var theme = "light"
-  @Input @Option(option = "title", description = "The chart title")
-  var title = ""
-  @OutputDirectory
-  val reportDir = File(projectLayout.buildDirectory.get().asFile, "/reports/$name")
+  @get:Input @get:Option(option = "maximumSize", description = "The maximum sizes")
+  abstract val maximumSize: ListProperty<String>
+  @get:Input @get:Option(option = "metric", description = "The metric to compare")
+  abstract val metric: Property<String>
+  @get:Input @get:Option(option = "theme", description = "The chart theme")
+  abstract val theme: Property<String>
+  @get:Input @get:Option(option = "title", description = "The chart title")
+  abstract val title: Property<String>
+  @get:OutputDirectory
+  val reportDir: Provider<Directory> = projectLayout.buildDirectory.dir("reports/$name")
 
   init {
     group = "Application"
     mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulate"
     description = "Runs multiple simulations and generates an aggregate report"
+    maximumSize.convention(emptyList())
+    metric.convention("Hit Rate")
+    theme.convention("light")
+    title.convention("")
   }
 
   @TaskAction
   override fun exec() {
-    if (maximumSize.isNotEmpty()) {
-      args("--maximumSize", maximumSize.joinToString(","))
+    if (maximumSize.get().isNotEmpty()) {
+      args("--maximumSize", maximumSize.get().joinToString(","))
     }
-    args("--outputDir", reportDir)
-    args("--metric", metric)
-    args("--title", title)
-    args("--theme", theme)
+    args("--outputDir", reportDir.get().asFile)
+    args("--metric", metric.get())
+    args("--title", title.get())
+    args("--theme", theme.get())
     super.exec()
   }
 }
 
 abstract class Rewrite : JavaExec() {
-  @Input @Option(option = "inputFiles", description = "The trace input files")
-  var inputFiles: List<String> = emptyList()
-  @Input @Option(option = "inputFormat", description = "The input format")
-  var inputFormat: String = ""
-  @Input @Option(option = "outputFile", description = "The output file")
-  var outputFile: String = ""
-  @Input @Option(option = "outputFormat", description = "The output format")
-  var outputFormat: String = ""
+  @get:Input @get:Option(option = "inputFiles", description = "The trace input files")
+  abstract val inputFiles: ListProperty<String>
+  @get:Input @get:Option(option = "inputFormat", description = "The input format")
+  abstract val inputFormat: Property<String>
+  @get:Input @get:Option(option = "outputFile", description = "The output file")
+  abstract val outputFile: Property<String>
+  @get:Input @get:Option(option = "outputFormat", description = "The output format")
+  abstract val outputFormat: Property<String>
 
   init {
     group = "Application"
     description = "Rewrite traces into the format used by other simulators"
     mainClass = "com.github.benmanes.caffeine.cache.simulator.parser.Rewriter"
+    inputFiles.convention(emptyList())
+    outputFormat.convention("")
+    inputFormat.convention("")
+    outputFile.convention("")
   }
 
   @TaskAction
   override fun exec() {
-    if (inputFiles.isNotEmpty()) {
-      args("--inputFiles", inputFiles.joinToString(","))
+    if (inputFiles.get().isNotEmpty()) {
+      args("--inputFiles", inputFiles.get().joinToString(","))
     }
-    if (outputFormat.isNotEmpty()) {
-      args("--outputFormat", outputFormat)
+    if (outputFormat.get().isNotEmpty()) {
+      args("--outputFormat", outputFormat.get())
     }
-    if (inputFormat.isNotEmpty()) {
-      args("--inputFormat", inputFormat)
+    if (inputFormat.get().isNotEmpty()) {
+      args("--inputFormat", inputFormat.get())
     }
-    if (outputFile.isNotEmpty()) {
-      args("--outputFile", outputFile)
+    if (outputFile.get().isNotEmpty()) {
+      args("--outputFile", outputFile.get())
     }
     super.exec()
   }

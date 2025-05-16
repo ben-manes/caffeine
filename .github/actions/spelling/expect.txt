@@ -109,7 +109,6 @@ hazelcast
 hikari
 hikaricp
 hirs
-hkp
 hocon
 hotset
 hotspot
@@ -146,8 +145,6 @@ jstack
 jtreg
 kaboom
 kaggle
-keyserver
-killall
 klazz
 kotlin
 Kout

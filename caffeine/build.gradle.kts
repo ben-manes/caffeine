@@ -1,9 +1,9 @@
+import com.google.common.base.CaseFormat
 import com.google.common.collect.Sets
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import kotlin.math.max
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
-import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.Library
 
@@ -17,8 +17,8 @@ sourceSets {
     java.srcDir("src/javaPoet/java")
   }
   create("codeGen") {
-    java.srcDir(layout.buildDirectory.dir("generated-sources/local"))
-    java.srcDir(layout.buildDirectory.dir("generated-sources/nodes"))
+    java.srcDir(layout.buildDirectory.dir("generated/sources/node"))
+    java.srcDir(layout.buildDirectory.dir("generated/sources/local-cache"))
   }
 }
 
@@ -102,29 +102,24 @@ val compileCodeGenJava by tasks.existing(JavaCompile::class) {
 }
 
 val generateLocalCaches by tasks.registering(JavaExec::class) {
-  mainClass = "com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"
-  outputs.dir(layout.buildDirectory.dir("generated-sources/local"))
-    .withPropertyName("outputDir")
-  inputs.files(compileJavaPoetJava.map { it.outputs.files })
-  inputs.files(sourceSets["javaPoet"].output)
-    .withPropertyName("javaPoetOutput")
-    .withPathSensitivity(RELATIVE)
-  classpath = sourceSets["javaPoet"].runtimeClasspath
-  args("build/generated-sources/local")
-  outputs.cacheIf { true }
+  codeGenerationTask("LocalCache")
 }
 
 val generateNodes by tasks.registering(JavaExec::class) {
-  mainClass = "com.github.benmanes.caffeine.cache.NodeFactoryGenerator"
-  outputs.dir(layout.buildDirectory.dir("generated-sources/nodes"))
-    .withPropertyName("outputDir")
+  codeGenerationTask("Node")
+}
+
+fun JavaExec.codeGenerationTask(generator: String) {
+  val directory = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, generator)
+  mainClass = "com.github.benmanes.caffeine.cache.${generator}FactoryGenerator"
+  val outputDir = layout.buildDirectory.dir("generated/sources/$directory")
   inputs.files(compileJavaPoetJava.map { it.outputs.files })
-  inputs.files(sourceSets["javaPoet"].output)
-    .withPropertyName("javaPoetOutput")
-    .withPathSensitivity(RELATIVE)
   classpath = sourceSets["javaPoet"].runtimeClasspath
-  args("build/generated-sources/nodes")
+  outputs.dir(outputDir)
   outputs.cacheIf { true }
+  doFirst {
+    args(outputDir.get().asFile.absolutePath)
+  }
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
@@ -372,18 +367,26 @@ idea.module {
 }
 
 abstract class Stress : JavaExec() {
-  @Input @Option(option = "workload", description = "The workload type")
-  var operation: String = ""
-  @Input @Option(option = "duration", description = "The run duration (e.g. PT30S)")
-  var duration: String = ""
+  @get:Input
+  @get:Option(option = "workload", description = "The workload type")
+  abstract val operation: Property<String>
+
+  @get:Input
+  @get:Option(option = "duration", description = "The run duration (e.g. PT30S)")
+  abstract val duration: Property<String>
+
+  init {
+    operation.convention("")
+    duration.convention("")
+  }
 
   @TaskAction
   override fun exec() {
-    if (operation.isNotEmpty()) {
-      args("--workload", operation)
+    if (operation.get().isNotEmpty()) {
+      args("--workload", operation.get())
     }
-    if (duration.isNotEmpty()) {
-      args("--duration", duration)
+    if (duration.get().isNotEmpty()) {
+      args("--duration", duration.get())
     }
     super.exec()
   }

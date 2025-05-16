@@ -22,9 +22,12 @@ sourceSets.configureEach {
 }
 
 abstract class EclipseJavaCompile : JavaExec() {
-  @InputFiles lateinit var compileClasspath: Provider<FileCollection>
-  @InputFiles lateinit var javaSources: FileCollection
-  @InputFile lateinit var properties: RegularFile
+  @get:InputFiles
+  abstract val compileClasspath: Property<FileCollection>
+  @get:InputFiles
+  abstract val javaSources: ConfigurableFileCollection
+  @get:InputFile
+  abstract val properties: RegularFileProperty
 
   init {
     group = "ECJ"
@@ -35,7 +38,7 @@ abstract class EclipseJavaCompile : JavaExec() {
   override fun exec() {
     val sources = javaSources.filter { it.name != "module-info.java" }.map { it.absolutePath }
     args("-classpath", compileClasspath.get().filter { it.exists() }.asPath)
-    args("-properties", properties.asFile.absolutePath)
+    args("-properties", properties.get().asFile.absolutePath)
     args("-encoding", "UTF-8")
     args("-enableJavadoc")
     args("-failOnWarning")
