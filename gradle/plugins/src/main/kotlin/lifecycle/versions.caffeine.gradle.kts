@@ -1,4 +1,5 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 
 plugins {
   id("com.github.ben-manes.versions")
@@ -9,7 +10,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   checkConstraints = true
   resolutionStrategy {
     componentSelection {
-      all {
+      all(Action<ComponentSelectionWithCurrent> {
         val ignoredGroups = listOf("com.beust", "org.apache.logging.log4j")
         val stable = setOf("com.google.protobuf", "com.hazelcast",
           "javax.json.bind", "org.jetbrains.kotlin", "org.osgi", "org.slf4j")
@@ -20,7 +21,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
         } else if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
           reject("Internal dependency")
         }
-      }
+      })
     }
   }
 }

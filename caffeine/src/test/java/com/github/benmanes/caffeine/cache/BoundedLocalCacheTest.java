@@ -2402,6 +2402,32 @@ public final class BoundedLocalCacheTest {
 
   /* --------------- Refresh --------------- */
 
+  @Test
+  @SuppressWarnings({"CheckReturnValue", "PMD.AvoidCatchingNPE"})
+  public void refreshes_memoize() {
+    // The refresh map is never unset once initialized and a CAS race can cause a thread's attempt
+    // at initialization to fail so it re-reads for the current value. This asserts a non-null value
+    // for NullAway's static analysis. We can test the failed CAS scenario by resetting the field
+    // and catching the NullPointerException, thereby proving that the failed initialization falls
+    // back to a re-read. This error will not happen in practice since the field is not modified
+    // again.
+    var signal = new CompletableFuture<@Nullable Void>().orTimeout(10, TimeUnit.SECONDS);
+    var cache = new BoundedLocalCache<>(
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
+    ConcurrentTestHarness.timeTasks(10, () -> {
+      while (!signal.isDone()) {
+        try {
+          cache.refreshes = null;
+          cache.refreshes();
+        } catch (NullPointerException e) {
+          signal.complete(null);
+          return;
+        }
+      }
+    });
+    signal.join();
+  }
+
   @CheckNoEvictions
   @Test(dataProvider = "caches") // Issue #715
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,

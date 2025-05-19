@@ -1,4 +1,5 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 
 buildscript {
   dependencies {
@@ -68,13 +69,13 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
         "org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
       val stable = setOf("com.fasterxml.jackson", "com.google.protobuf", "com.squareup.okhttp3")
       val isNonStable = "^[0-9,.v-]+(-r)?$".toRegex()
-      all {
+      all(Action<ComponentSelectionWithCurrent> {
         if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
           reject("Internal dependency")
         } else if ((candidate.group in stable) && !isNonStable.matches(candidate.version)) {
           reject("Release candidate")
         }
-      }
+      })
     }
   }
 }

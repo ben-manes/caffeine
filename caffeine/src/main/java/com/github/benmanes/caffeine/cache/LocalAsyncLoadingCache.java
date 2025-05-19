@@ -16,12 +16,12 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
+import static com.github.benmanes.caffeine.cache.Caffeine.hasMethodOverride;
 import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult; // NOPMD
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -110,27 +110,15 @@ abstract class LocalAsyncLoadingCache<K, V>
 
   /** Returns whether the supplied cache loader has bulk load functionality. */
   boolean canBulkLoad(AsyncCacheLoader<?, ?> loader) {
-    try {
-      @Var Class<?> defaultLoaderClass = AsyncCacheLoader.class;
-      if (loader instanceof CacheLoader<?, ?>) {
-        defaultLoaderClass = CacheLoader.class;
-
-        Method classLoadAll = loader.getClass().getMethod("loadAll", Set.class);
-        Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Set.class);
-        if (!classLoadAll.equals(defaultLoadAll)) {
-          return true;
-        }
+    @Var Class<?> defaultLoaderClass = AsyncCacheLoader.class;
+    if (loader instanceof CacheLoader<?, ?>) {
+      defaultLoaderClass = CacheLoader.class;
+      if (hasMethodOverride(defaultLoaderClass, loader, "loadAll", Set.class)) {
+        return true;
       }
-
-      Method classAsyncLoadAll = loader.getClass().getMethod(
-          "asyncLoadAll", Set.class, Executor.class);
-      Method defaultAsyncLoadAll = defaultLoaderClass.getMethod(
-          "asyncLoadAll", Set.class, Executor.class);
-      return !classAsyncLoadAll.equals(defaultAsyncLoadAll);
-    } catch (NoSuchMethodException | SecurityException e) {
-      logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
-      return false;
     }
+    return hasMethodOverride(defaultLoaderClass,
+        loader, "asyncLoadAll", Set.class, Executor.class);
   }
 
   @Override

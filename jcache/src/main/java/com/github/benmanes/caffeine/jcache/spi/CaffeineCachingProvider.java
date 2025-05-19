@@ -57,7 +57,8 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 @Component
 @NullMarked
 public final class CaffeineCachingProvider implements CachingProvider {
-  private static final ClassLoader DEFAULT_CLASS_LOADER = new JCacheClassLoader();
+  private static final ClassLoader DEFAULT_CLASS_LOADER =
+      new JCacheClassLoader(Thread.currentThread().getContextClassLoader());
 
   @GuardedBy("itself")
   final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;
@@ -168,10 +169,10 @@ public final class CaffeineCachingProvider implements CachingProvider {
    * A {@link ClassLoader} that combines {@code Thread.currentThread().getContextClassLoader()}
    * and {@code getClass().getClassLoader()}.
    */
-  private static final class JCacheClassLoader extends ClassLoader {
+  static final class JCacheClassLoader extends ClassLoader {
 
-    public JCacheClassLoader() {
-      super(Thread.currentThread().getContextClassLoader());
+    public JCacheClassLoader(@Nullable ClassLoader parent) {
+      super(parent);
     }
 
     @Override

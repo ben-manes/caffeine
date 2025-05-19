@@ -25,6 +25,8 @@ import static org.slf4j.event.Level.WARN;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -186,6 +188,34 @@ public final class CaffeineTest {
     Iterable<Integer> iterable = List.of(1, 2, 3)::iterator;
     assertThat(Caffeine.calculateHashMapCapacity(iterable)).isEqualTo(16);
     assertThat(Caffeine.calculateHashMapCapacity(List.of(1, 2, 3))).isEqualTo(4);
+  }
+
+  @Test
+  public void hasMethodOverride_absent() {
+    CacheLoader<Object, Object> loader = key -> { throw new AssertionError(); };
+    var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "loadAll", Set.class);
+    assertThat(overridden).isFalse();
+  }
+
+  @Test
+  public void hasMethodOverride_notFound() {
+    CacheLoader<Object, Object> loader = key -> { throw new AssertionError(); };
+    var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "abc_xyz", Set.class);
+    assertThat(overridden).isFalse();
+  }
+
+  @Test
+  public void hasMethodOverride_present() {
+    CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
+      @Override public Object load(Object key) {
+        throw new AssertionError();
+      }
+      @Override public Map<Object, Object> loadAll(Set<? extends Object> keys) {
+        throw new AssertionError();
+      }
+    };
+    var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "loadAll", Set.class);
+    assertThat(overridden).isTrue();
   }
 
   /* --------------- loading --------------- */

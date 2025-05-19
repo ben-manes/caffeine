@@ -1,7 +1,7 @@
 [versions]
 caffeine = "3.2.0"
 failsafe = "3.3.2"
-junit = "5.13.0-M3"
+junit = "5.13.0-RC1"
 truth = "1.4.4"
 versions = "0.52.0"
 

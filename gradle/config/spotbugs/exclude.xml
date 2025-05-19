@@ -722,4 +722,16 @@
     <Class name="com.github.benmanes.caffeine.cache.buffer.TicketBuffer"/>
     <Bug pattern="AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProviderTest"/>
+    <Bug pattern="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED"/>
+  </Match>
+  <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCacheTest"/>
+      <Class name="com.github.benmanes.caffeine.cache.UnboundedLocalCacheTest"/>
+    </Or>
+    <Method name="lambda$refreshes_memoize$0"/>
+    <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+  </Match>
 </FindBugsFilter>

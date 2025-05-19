@@ -22,7 +22,9 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -186,6 +188,13 @@ public final class Caffeine<K, V> {
   }
 
   /** Ensures that the argument expression is true. */
+  static void requireArgument(boolean expression, String message) {
+    if (!expression) {
+      throw new IllegalArgumentException(message);
+    }
+  }
+
+  /** Ensures that the argument expression is true. */
   static void requireArgument(boolean expression) {
     if (!expression) {
       throw new IllegalArgumentException();
@@ -254,6 +263,20 @@ public final class Caffeine<K, V> {
     return duration.isNegative()
         ? (duration.compareTo(MIN_DURATION) <= 0) ? Long.MIN_VALUE : duration.toNanos()
         : (duration.compareTo(MAX_DURATION) >= 0) ? Long.MAX_VALUE : duration.toNanos();
+  }
+
+  /** Returns whether the instance has implemented a method for enhanced functionality. */
+  static boolean hasMethodOverride(Class<?> clazz,
+      Object instance, String methodName, Class<?>... parameterTypes) {
+    try {
+      Method classLoadAll = instance.getClass().getMethod(methodName, parameterTypes);
+      Method defaultLoadAll = clazz.getMethod(methodName, parameterTypes);
+      return !classLoadAll.equals(defaultLoadAll);
+    } catch (NoSuchMethodException | SecurityException e) {
+      logger.log(Level.WARNING, "Cannot determine if {0} overrides {1}({2})",
+          instance.getClass().getSimpleName(), methodName, Arrays.toString(parameterTypes), e);
+      return false;
+    }
   }
 
   /**

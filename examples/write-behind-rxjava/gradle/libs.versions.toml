@@ -1,8 +1,8 @@
 [versions]
 awaitility = "4.3.0"
 caffeine = "3.2.0"
-junit = "5.13.0-M3"
-rxjava = "3.1.10"
+junit = "5.13.0-RC1"
+rxjava = "3.1.11-RC4"
 versions = "0.52.0"
 
 [libraries]

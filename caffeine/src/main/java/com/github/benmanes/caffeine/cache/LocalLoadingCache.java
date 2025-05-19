@@ -16,12 +16,12 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
+import static com.github.benmanes.caffeine.cache.Caffeine.hasMethodOverride;
 import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -217,14 +217,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   }
 
   /** Returns whether the supplied cache loader has bulk load functionality. */
-  static boolean hasLoadAll(CacheLoader<?, ?> loader) {
-    try {
-      Method classLoadAll = loader.getClass().getMethod("loadAll", Set.class);
-      Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Set.class);
-      return !classLoadAll.equals(defaultLoadAll);
-    } catch (NoSuchMethodException | SecurityException e) {
-      logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
-      return false;
-    }
+  static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {
+    return hasMethodOverride(CacheLoader.class, cacheLoader, "loadAll", Set.class);
   }
 }

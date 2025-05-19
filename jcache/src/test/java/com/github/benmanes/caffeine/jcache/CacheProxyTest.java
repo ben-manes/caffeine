@@ -15,6 +15,7 @@ package com.github.benmanes.caffeine.jcache;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -25,9 +26,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryListener;
@@ -38,13 +41,17 @@ import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CompletionListener;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.processor.Action;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.UncheckedTimeoutException;
 
 /**
  * @author github.com/kdombeck (Ken Dombeck)
@@ -126,12 +133,42 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
-  public void load_cacheLoaderException() {
+  public void loadAll_cacheLoaderException() {
     var e = new CacheLoaderException();
     CompletionListener completionListener = Mockito.mock();
     doThrow(e).when(completionListener).onCompletion();
     jcache.loadAll(keys, /* replaceExistingValues= */ true, completionListener);
     verify(completionListener).onException(e);
+  }
+
+  @Test(dataProvider = "getExceptions")
+  public void get_exception(Exception underlying, Class<Exception> thrown, boolean wrapped) {
+    LoadingCache<Object, @Nullable Expirable<Object>> cache = Mockito.mock();
+    when(cache.getIfPresent(any())).thenThrow(underlying);
+    try (var proxy = new LoadingCacheProxy<>("dummy", Runnable::run, cacheManager, Mockito.mock(),
+        cache, Mockito.mock(), Mockito.mock(), expiry, Mockito.mock(), Mockito.mock())) {
+      var actual = assertThrows(thrown, () -> proxy.get(KEY_1));
+      if (wrapped) {
+        assertThat(actual).hasCauseThat().isSameInstanceAs(underlying);
+      } else {
+        assertThat(actual).isSameInstanceAs(underlying);
+      }
+    }
+  }
+
+  @Test(dataProvider = "getExceptions")
+  public void getAll_exception(Exception underlying, Class<Exception> thrown, boolean wrapped) {
+    LoadingCache<Object, @Nullable Expirable<Object>> cache = Mockito.mock();
+    when(cache.getAllPresent(any())).thenThrow(underlying);
+    try (var proxy = new LoadingCacheProxy<>("dummy", Runnable::run, cacheManager, Mockito.mock(),
+        cache, Mockito.mock(), Mockito.mock(), expiry, Mockito.mock(), Mockito.mock())) {
+      var actual = assertThrows(thrown, () -> proxy.getAll(Set.of(KEY_1)));
+      if (wrapped) {
+        assertThat(actual).hasCauseThat().isSameInstanceAs(underlying);
+      } else {
+        assertThat(actual).isSameInstanceAs(underlying);
+      }
+    }
   }
 
   @Test(groups = "isolated")
@@ -223,6 +260,17 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     verify(loader, atLeastOnce()).close();
     verify(writer, atLeastOnce()).close();
     verify(listener, atLeastOnce()).close();
+  }
+
+  @DataProvider(name = "getExceptions")
+  public Object[][] providesGetExceptions() {
+    return new Object[][] {
+      { new IllegalStateException(), IllegalStateException.class, false },
+      { new NullPointerException(), NullPointerException.class, false },
+      { new ClassCastException(), ClassCastException.class, false },
+      { new CacheException(), CacheException.class, false },
+      { new UncheckedTimeoutException(), CacheException.class, true },
+    };
   }
 
   interface CloseableExpiryPolicy extends ExpiryPolicy, Closeable {}

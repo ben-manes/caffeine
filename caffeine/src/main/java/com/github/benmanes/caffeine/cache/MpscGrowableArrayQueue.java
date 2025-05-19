@@ -14,6 +14,8 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
+import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
+import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandles;
@@ -53,9 +55,7 @@ class MpscGrowableArrayQueue<E> extends MpscChunkedArrayQueue<E> {
   @Override
   protected int getNextBufferSize(@Nullable E[] buffer) {
     long maxSize = maxQueueCapacity / 2;
-    if (buffer.length > maxSize) {
-      throw new IllegalStateException();
-    }
+    requireState(maxSize >= buffer.length);
     int newSize = 2 * (buffer.length - 1);
     return newSize + 1;
   }
@@ -105,13 +105,9 @@ abstract class MpscChunkedArrayQueueColdProducerFields<E> extends BaseMpscLinked
 
   MpscChunkedArrayQueueColdProducerFields(int initialCapacity, int maxCapacity) {
     super(initialCapacity);
-    if (maxCapacity < 4) {
-      throw new IllegalArgumentException("Max capacity must be 4 or more");
-    }
-    if (ceilingPowerOfTwo(initialCapacity) >= ceilingPowerOfTwo(maxCapacity)) {
-      throw new IllegalArgumentException(
-          "Initial capacity cannot exceed maximum capacity(both rounded up to a power of 2)");
-    }
+    requireArgument(maxCapacity >= 4, "Max capacity must be 4 or more");
+    requireArgument(ceilingPowerOfTwo(maxCapacity) >= ceilingPowerOfTwo(initialCapacity),
+        "Initial capacity cannot exceed maximum capacity(both rounded up to a power of 2)");
     maxQueueCapacity = ((long) ceilingPowerOfTwo(maxCapacity)) << 1;
   }
 }
@@ -165,10 +161,7 @@ abstract class BaseMpscLinkedArrayQueueConsumerFields<E> extends BaseMpscLinkedA
   protected long consumerMask;
 
   BaseMpscLinkedArrayQueueConsumerFields(int initialCapacity) {
-    if (initialCapacity < 2) {
-      throw new IllegalArgumentException("Initial capacity must be 2 or more");
-    }
-
+    requireArgument(initialCapacity >= 2, "Initial capacity must be 2 or more");
     int p2capacity = ceilingPowerOfTwo(initialCapacity);
     // leave lower bit of mask clear
     long mask = (p2capacity - 1L) << 1;
@@ -412,9 +405,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   private E newBufferPoll(@Nullable E[] nextBuffer, long index) {
     long offsetInNew = newBufferAndOffset(nextBuffer, index);
     E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
-    if (n == null) {
-      throw new IllegalStateException("new buffer must have at least one element");
-    }
+    requireArgument(n != null, "new buffer must have at least one element");
     soElement(nextBuffer, offsetInNew, null);// StoreStore
     soConsumerIndex(this, index + 2);
     return n;
@@ -423,9 +414,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   private E newBufferPeek(@Nullable E[] nextBuffer, long index) {
     long offsetInNew = newBufferAndOffset(nextBuffer, index);
     E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
-    if (n == null) {
-      throw new IllegalStateException("new buffer must have at least one element");
-    }
+    requireArgument(n != null, "new buffer must have at least one element");
     return n;
   }
 
@@ -458,11 +447,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     }
     // Long overflow is impossible, so size is always positive. Integer overflow is possible for the
     // unbounded indexed queues.
-    if (size > Integer.MAX_VALUE) {
-      return Integer.MAX_VALUE;
-    } else {
-      return (int) size;
-    }
+    return (int) Math.min(size, Integer.MAX_VALUE);
   }
 
   @Override
@@ -543,9 +528,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     // ASSERT code
     long cIndex = lvConsumerIndex(this);
     long availableInQueue = availableInQueue(pIndex, cIndex);
-    if (availableInQueue <= 0) {
-      throw new IllegalStateException();
-    }
+    requireState(availableInQueue > 0);
 
     // Invalidate racing CASs
     // We never set the limit beyond the bounds of a buffer
