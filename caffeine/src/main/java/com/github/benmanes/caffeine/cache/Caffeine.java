@@ -269,9 +269,9 @@ public final class Caffeine<K, V> {
   static boolean hasMethodOverride(Class<?> clazz,
       Object instance, String methodName, Class<?>... parameterTypes) {
     try {
-      Method classLoadAll = instance.getClass().getMethod(methodName, parameterTypes);
-      Method defaultLoadAll = clazz.getMethod(methodName, parameterTypes);
-      return !classLoadAll.equals(defaultLoadAll);
+      Method instanceMethod = instance.getClass().getMethod(methodName, parameterTypes);
+      Method classMethod = clazz.getMethod(methodName, parameterTypes);
+      return !instanceMethod.equals(classMethod);
     } catch (NoSuchMethodException | SecurityException e) {
       logger.log(Level.WARNING, "Cannot determine if {0} overrides {1}({2})",
           instance.getClass().getSimpleName(), methodName, Arrays.toString(parameterTypes), e);

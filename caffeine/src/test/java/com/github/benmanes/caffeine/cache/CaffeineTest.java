@@ -192,21 +192,19 @@ public final class CaffeineTest {
 
   @Test
   public void hasMethodOverride_absent() {
-    CacheLoader<Object, Object> loader = key -> { throw new AssertionError(); };
     var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "loadAll", Set.class);
     assertThat(overridden).isFalse();
   }
 
   @Test
   public void hasMethodOverride_notFound() {
-    CacheLoader<Object, Object> loader = key -> { throw new AssertionError(); };
     var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "abc_xyz", Set.class);
     assertThat(overridden).isFalse();
   }
 
   @Test
   public void hasMethodOverride_present() {
-    CacheLoader<Object, Object> loader = new CacheLoader<Object, Object>() {
+    CacheLoader<Object, Object> cacheLoader = new CacheLoader<Object, Object>() {
       @Override public Object load(Object key) {
         throw new AssertionError();
       }
@@ -214,7 +212,8 @@ public final class CaffeineTest {
         throw new AssertionError();
       }
     };
-    var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "loadAll", Set.class);
+    var overridden = Caffeine.hasMethodOverride(
+        CacheLoader.class, cacheLoader, "loadAll", Set.class);
     assertThat(overridden).isTrue();
   }
 

@@ -339,7 +339,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     long mask = consumerMask;
 
     long offset = modifiedCalcElementOffset(index, mask);
-    @Var Object e = lvElement(buffer, offset);// LoadLoad
+    @Var @Nullable Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null) {
       if (index != lvProducerIndex(this)) {
         // poll() == null iff queue is empty, null element is not strong enough indicator, so we
@@ -369,13 +369,13 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   @Override
   @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType",
     "PMD.EmptyControlStatement", "unchecked"})
-  public E peek() {
+  public @Nullable E peek() {
     @Nullable E[] buffer = consumerBuffer;
     long index = consumerIndex;
     long mask = consumerMask;
 
     long offset = modifiedCalcElementOffset(index, mask);
-    @Var Object e = lvElement(buffer, offset);// LoadLoad
+    @Var @Nullable Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null && index != lvProducerIndex(this)) {
       // peek() == null iff queue is empty, null element is not strong enough indicator, so we must
       // check the producer index. If the queue is indeed not empty we spin until element is
@@ -393,9 +393,9 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   @SuppressWarnings("unchecked")
   private @Nullable E[] getNextBuffer(@Nullable E[] buffer, long mask) {
     long nextArrayOffset = nextArrayOffset(mask);
-    var nextBuffer = (E[]) lvElement(buffer, nextArrayOffset);
+    var nextBuffer = (@Nullable E[]) lvElement(buffer, nextArrayOffset);
     soElement(buffer, nextArrayOffset, null);
-    return nextBuffer;
+    return requireNonNull(nextBuffer);
   }
 
   private static long nextArrayOffset(long mask) {
@@ -404,8 +404,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   private E newBufferPoll(@Nullable E[] nextBuffer, long index) {
     long offsetInNew = newBufferAndOffset(nextBuffer, index);
-    E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
-    requireArgument(n != null, "new buffer must have at least one element");
+    @Nullable E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
+    requireNonNull(n, "new buffer must have at least one element");
     soElement(nextBuffer, offsetInNew, null);// StoreStore
     soConsumerIndex(this, index + 2);
     return n;
@@ -413,8 +413,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   private E newBufferPeek(@Nullable E[] nextBuffer, long index) {
     long offsetInNew = newBufferAndOffset(nextBuffer, index);
-    E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
-    requireArgument(n != null, "new buffer must have at least one element");
+    @Nullable E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
+    requireNonNull(n, "new buffer must have at least one element");
     return n;
   }
 
@@ -484,7 +484,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     long mask = consumerMask;
 
     long offset = modifiedCalcElementOffset(index, mask);
-    Object e = lvElement(buffer, offset);// LoadLoad
+    @Nullable Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null) {
       return null;
     }
@@ -498,13 +498,13 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   }
 
   @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
-  public E relaxedPeek() {
+  public @Nullable E relaxedPeek() {
     @Nullable E[] buffer = consumerBuffer;
     long index = consumerIndex;
     long mask = consumerMask;
 
     long offset = modifiedCalcElementOffset(index, mask);
-    Object e = lvElement(buffer, offset);// LoadLoad
+    @Nullable Object e = lvElement(buffer, offset);// LoadLoad
     if (e == JUMP) {
       return newBufferPeek(getNextBuffer(buffer, mask), index);
     }
@@ -614,7 +614,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * @return the element at the offset
    */
   @SuppressWarnings("unchecked")
-  static <E> E lvElement(@Nullable E[] buffer, long offset) {
+  static <E> @Nullable E lvElement(@Nullable E @Nullable[] buffer, long offset) {
     return (E) REF_ARRAY.getVolatile(buffer, (int) offset);
   }
 
