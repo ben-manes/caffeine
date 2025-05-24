@@ -50,11 +50,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [
-          11,
-          24,
-          # 25-ea - https://github.com/actions/setup-java/issues/804
-        ]
+        java: [ 11, 24, 25-ea ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -344,7 +340,7 @@ jobs:
           github_file: badge.svg
           gist_title: badge.svg
       - name: Publish to Codecov
-        uses: codecov/test-results-action@f2dba722c67b86c6caa034178c6e4d35335f6706 # v1.1.0
+        uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
