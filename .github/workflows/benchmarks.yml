@@ -36,11 +36,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [
-          11,
-          24,
-          # 25-ea - https://github.com/actions/setup-java/issues/804
-        ]
+        java: [ 11, 24, 25-ea ]
         distribution: [ temurin ]
         include:
           - java: 24
@@ -93,11 +89,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [
-          11,
-          24,
-          # 25-ea - https://github.com/actions/setup-java/issues/804
-        ]
+        java: [ 11, 24, 25-ea ]
         distribution: [ temurin ]
         include:
           - java: 24
@@ -150,11 +142,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [
-          11,
-          24,
-          # 25-ea - https://github.com/actions/setup-java/issues/804
-        ]
+        java: [ 11, 24, 25-ea ]
         distribution: [ temurin ]
         include:
           - java: 24
@@ -207,11 +195,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [
-          11,
-          24,
-          # 25-ea - https://github.com/actions/setup-java/issues/804
-        ]
+        java: [ 11, 24, 25-ea ]
         distribution: [ temurin ]
         include:
           - java: 24
@@ -264,11 +248,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [
-          11,
-          24,
-          # 25-ea - https://github.com/actions/setup-java/issues/804
-        ]
+        java: [ 11, 24, 25-ea ]
         distribution: [ temurin ]
         include:
           - java: 24
@@ -320,11 +300,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [
-          11,
-          24,
-          # 25-ea - https://github.com/actions/setup-java/issues/804
-        ]
+        java: [ 11, 24, 25-ea ]
         distribution: [ temurin ]
         include:
           - java: 24

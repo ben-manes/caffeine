@@ -1534,22 +1534,60 @@ public final class BoundedLocalCacheTest {
         .contains(null, value).exclusively();
   }
 
-  @CheckNoEvictions
+  @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   public void evictEntry_absent(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var replaced = cache.nodeFactory.newNode(context.firstKey(), cache.keyReferenceQueue(),
-        context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
     var absent = cache.nodeFactory.newNode(context.absentKey(), cache.keyReferenceQueue(),
         context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
-    replaced.die();
-    absent.die();
+
+    // This can occur due to a node being concurrently removed, but the operation is pending in the
+    // write buffer. The stale node is unlinked and treated as if evicted to allow further
+    // evictions, but the removal notification and stats are skipped as already handled.
+    assertThat(cache.evictEntry(absent, SIZE, context.ticker().read())).isTrue();
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(absent.isDead()).isTrue();
+    assertThat(logEvents()
+        .withMessage(msg -> msg.contains("An invalid state was detected"))
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  public void evictEntry_replaced(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var replaced = cache.nodeFactory.newNode(context.firstKey(), cache.keyReferenceQueue(),
+        context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
 
     // This can occur due to a node being concurrently removed, but the operation is pending in the
     // write buffer. The stale node is unlinked and treated as if evicted to allow further
     // evictions, but the removal notification and stats are skipped as already handled.
     assertThat(cache.evictEntry(replaced, SIZE, context.ticker().read())).isTrue();
-    assertThat(cache.evictEntry(absent, SIZE, context.ticker().read())).isTrue();
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(replaced.isDead()).isTrue();
+    assertThat(logEvents()
+        .withMessage(msg -> msg.contains("An invalid state was detected"))
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  public void evictEntry_dead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var dead = cache.nodeFactory.newNode(context.firstKey(), cache.keyReferenceQueue(),
+        context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
+    dead.die();
+
+    // This can occur due to a node being concurrently removed, but the operation is pending in the
+    // write buffer. The stale node is unlinked and treated as if evicted to allow further
+    // evictions, but the removal notification and stats are skipped as already handled.
+    assertThat(cache.evictEntry(dead, SIZE, context.ticker().read())).isTrue();
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 

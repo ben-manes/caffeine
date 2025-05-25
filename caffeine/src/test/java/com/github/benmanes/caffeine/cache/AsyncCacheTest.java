@@ -29,6 +29,8 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,6 +42,7 @@ import static org.slf4j.event.Level.WARN;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +53,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
@@ -68,6 +73,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -1184,6 +1190,83 @@ public final class AsyncCacheTest {
   }
 
   /* --------------- misc --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void remove_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    checkRetryWhenIncomplete(cache, context, map ->
+        map.remove(context.firstKey(), context.absentValue()));
+    assertThat(cache).doesNotContainKey(context.firstKey());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void replace_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    checkRetryWhenIncomplete(cache, context, map ->
+        map.replace(context.firstKey(), context.absentValue()));
+    assertThat(cache).doesNotContainKey(context.firstKey());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void replaceConditionally_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    checkRetryWhenIncomplete(cache, context, map ->
+        map.replace(context.firstKey(), context.absentValue(), context.absentValue()));
+    assertThat(cache).doesNotContainKey(context.firstKey());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void computeIfPresent_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    checkRetryWhenIncomplete(cache, context, map ->
+        map.computeIfPresent(context.firstKey(), (k, v) -> context.absentValue()));
+    assertThat(cache).doesNotContainKey(context.firstKey());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    checkRetryWhenIncomplete(cache, context, map ->
+        map.compute(context.firstKey(), (k, v) -> context.absentValue()));
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void merge_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    checkRetryWhenIncomplete(cache, context, map ->
+        map.merge(context.firstKey(), context.absentValue(), (v1, v2) -> null));
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+  }
+
+  private static void checkRetryWhenIncomplete(AsyncCache<Int, Int> cache,
+      CacheContext context, Consumer<Map<Int, Int>> write) {
+    var done = new AtomicBoolean();
+    var started = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+    var future = new CompletableFuture<Int>() {
+      @Override public boolean isDone() {
+        return done.get() && super.isDone();
+      }
+    };
+    cache.asMap().compute(context.firstKey(), (k, v) -> {
+      ConcurrentTestHarness.execute(() -> {
+        writer.set(Thread.currentThread());
+        started.set(true);
+        write.accept(cache.synchronous().asMap());
+        done.set(true);
+      });
+      await().untilTrue(started);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return future;
+    });
+    future.completeExceptionally(new Exception());
+    await().untilTrue(done);
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, removalListener = Listener.MOCKITO)

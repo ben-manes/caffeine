@@ -36,6 +36,8 @@ import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,12 +54,14 @@ import java.io.Serializable;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 import org.jspecify.annotations.Nullable;
@@ -1520,6 +1524,35 @@ public final class ExpireAfterVarTest {
     verifyNoMoreInteractions(context.expiry());
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  public void putIfAbsent_incomplete(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var done = new AtomicBoolean();
+    var started = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+    var future = new CompletableFuture<Int>();
+
+    cache.put(context.absentKey(), future);
+    ConcurrentTestHarness.execute(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      var result = expireAfterVar.putIfAbsent(context.absentKey(),
+          context.absentValue(), Duration.ofDays(1));
+      assertThat(result).isNull();
+      done.set(true);
+    });
+    await().untilTrue(started);
+    var threadState = EnumSet.of(BLOCKED, WAITING);
+    await().until(() -> {
+      var thread = writer.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+    future.complete(null);
+    await().untilTrue(done);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
   /* --------------- Policy: put --------------- */
 
   @CheckNoStats
@@ -2101,6 +2134,40 @@ public final class ExpireAfterVarTest {
         .withLevel(WARN)
         .exclusively())
         .hasSize(1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  public void compute_incomplete(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var done = new AtomicBoolean();
+    var started = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+    var future = new CompletableFuture<Int>() {
+      @Override public boolean isDone() {
+        return done.get() && super.isDone();
+      }
+    };
+    cache.asMap().compute(context.firstKey(), (k, v) -> {
+      ConcurrentTestHarness.execute(() -> {
+        writer.set(Thread.currentThread());
+        started.set(true);
+        var result = expireAfterVar.compute(context.firstKey(), (k1, v1) ->
+            context.absentValue(), Duration.ofDays(1));
+        assertThat(result).isEqualTo(context.absentValue());
+        done.set(true);
+      });
+      await().untilTrue(started);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return future;
+    });
+    future.completeExceptionally(new Exception());
+    await().untilTrue(done);
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
   }
 
   /* --------------- Policy: oldest --------------- */

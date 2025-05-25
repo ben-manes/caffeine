@@ -62,7 +62,7 @@ public final class UnboundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"CheckReturnValue", "PMD.AvoidCatchingNPE"})
+  @SuppressWarnings("PMD.AvoidCatchingNPE")
   public void refreshes_memoize() {
     // The refresh map is never unset once initialized and a CAS race can cause a thread's attempt
     // at initialization to fail so it re-reads for the current value. This asserts a non-null value
@@ -76,14 +76,14 @@ public final class UnboundedLocalCacheTest {
       while (!signal.isDone()) {
         try {
           cache.refreshes = null;
-          cache.refreshes();
+          assertThat(cache.refreshes()).isNotNull();
         } catch (NullPointerException e) {
           signal.complete(null);
           return;
         }
       }
     });
-    signal.join();
+    assertThat(signal.join()).isNull();
   }
 
   @Test
