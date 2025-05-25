@@ -17,21 +17,28 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.LocalCacheSubject.mapLocal;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.testing.SetTestSuiteBuilder;
 import com.google.common.collect.testing.TestStringSetGenerator;
@@ -136,6 +143,36 @@ public final class InternerTest extends TestCase {
     var interned2 = interner.intern(canonical);
     assertThat(interned2).isSameInstanceAs(canonical);
     assertThat(interner.cache.drainStatus).isEqualTo(BoundedLocalCache.IDLE);
+  }
+
+  @Test
+  public void intern_weak_retry() {
+    var canonical = new Int(1);
+    var other = new Int(1);
+
+    var done = new AtomicBoolean();
+    var started = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+    var interner = (WeakInterner<Int>) Interner.<Int>newWeakInterner();
+
+    var result = interner.cache.compute(canonical, (k, v) -> {
+      ConcurrentTestHarness.execute(() -> {
+        writer.set(Thread.currentThread());
+        started.set(true);
+        var value = interner.intern(other);
+        assertThat(value).isSameInstanceAs(canonical);
+        done.set(true);
+      });
+      await().untilTrue(started);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return true;
+    });
+    assertThat(result).isTrue();
+    assertThat(interner.intern(canonical)).isSameInstanceAs(canonical);
   }
 
   @Test
