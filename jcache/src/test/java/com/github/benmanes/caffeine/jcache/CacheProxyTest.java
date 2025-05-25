@@ -14,8 +14,13 @@
 package com.github.benmanes.caffeine.jcache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
+import static javax.cache.expiry.Duration.ETERNAL;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -23,18 +28,22 @@ import static org.mockito.Mockito.when;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryListener;
-import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
@@ -65,12 +74,15 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   @Override
   protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
     Mockito.reset(listener, expiry, loader, writer);
+    when(expiry.getExpiryForCreation()).thenReturn(ETERNAL);
 
     var configuration = new CaffeineConfiguration<Integer, Integer>();
     configuration.setExecutorFactory(MoreExecutors::directExecutor);
     configuration.setExpiryPolicyFactory(() -> expiry);
     configuration.setCacheLoaderFactory(() -> loader);
     configuration.setCacheWriterFactory(() -> writer);
+    configuration.setTickerFactory(() -> ticker::read);
+    configuration.setStatisticsEnabled(true);
     configuration.setWriteThrough(true);
     configuration.setReadThrough(false);
     return configuration;
@@ -171,6 +183,63 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     }
   }
 
+  @Test
+  public void get_unexpired() {
+    checkReadWhenUnexpired(jcache, currentTime().plus(EXPIRY_DURATION).toMillis(),
+        key -> assertThat(jcache.get(key)).isNull());
+    assertThat(jcache.statistics.getCacheMisses()).isEqualTo(1);
+  }
+
+  @Test
+  public void getLoading_unexpired() {
+    checkReadWhenUnexpired(jcacheLoading, currentTime().plus(EXPIRY_DURATION).toMillis(),
+        key -> assertThat(jcacheLoading.get(key)).isNotNull());
+    assertThat(jcacheLoading.statistics.getCacheMisses()).isEqualTo(1);
+  }
+
+  @Test
+  public void getAll_unexpired() {
+    checkReadWhenUnexpired(jcache, currentTime().plus(EXPIRY_DURATION).toMillis(),
+        key -> assertThat(jcache.getAll(Set.of(key))).isEqualTo(Map.of()));
+    assertThat(jcache.statistics.getCacheMisses()).isEqualTo(1);
+  }
+
+  @Test
+  public void containsKey_unexpired() {
+    checkReadWhenUnexpired(jcache, currentTime().plus(EXPIRY_DURATION).toMillis(),
+        key -> assertThat(jcache.containsKey(key)).isFalse());
+    assertThat(jcache.statistics.getCacheMisses()).isEqualTo(0);
+  }
+
+  private static void checkReadWhenUnexpired(
+      CacheProxy<Integer, Integer> jcache, long expireTimeMillis, Consumer<Integer> read) {
+    var done = new AtomicBoolean();
+    var started = new AtomicBoolean();
+    var reader = new AtomicReference<Thread>();
+    Expirable<Integer> expirable = Mockito.mock();
+    when(expirable.get()).thenReturn(VALUE_1);
+    when(expirable.hasExpired(anyLong())).thenReturn(true);
+    when(expirable.getExpireTimeMillis()).thenReturn(expireTimeMillis);
+    jcache.cache.asMap().put(KEY_1, expirable);
+    jcache.cache.asMap().compute(KEY_1, (key, v) -> {
+      new Thread(() -> {
+        reader.set(Thread.currentThread());
+        started.set(true);
+        read.accept(key);
+        done.set(true);
+      }).start();
+      await().untilTrue(started);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = reader.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return new Expirable<>(VALUE_2, expireTimeMillis);
+    });
+    await().untilTrue(done);
+    assertThat(jcache.statistics.getCacheEvictions()).isEqualTo(0);
+  }
+
   @Test(groups = "isolated")
   @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
   public void postProcess_unknownAction() {
@@ -187,13 +256,21 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
+  public void postProcess_none() {
+    var expirable = new Expirable<>(VALUE_1, currentTime().plus(EXPIRY_DURATION).toMillis());
+    EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+    when(entry.getAction()).thenReturn(Action.NONE);
+    assertThat(jcache.postProcess(expirable, entry, 0L)).isSameInstanceAs(expirable);
+  }
+
+  @Test
   public void copyValue_null() {
     assertThat(jcache.copyValue(null)).isNull();
   }
 
   @Test
   public void setAccessExpireTime_eternal() {
-    when(expiry.getExpiryForAccess()).thenReturn(Duration.ETERNAL);
+    when(expiry.getExpiryForAccess()).thenReturn(ETERNAL);
     var expirable = new Expirable<>(KEY_1, 0);
     jcache.setAccessExpireTime(KEY_1, expirable, 0);
     assertThat(expirable.getExpireTimeMillis()).isEqualTo(Long.MAX_VALUE);
