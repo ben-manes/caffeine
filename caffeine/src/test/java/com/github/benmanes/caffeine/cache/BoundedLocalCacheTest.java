@@ -1591,6 +1591,24 @@ public final class BoundedLocalCacheTest {
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
+  @Test
+  public void demoteFromMain_absent() {
+    var cache = new BoundedLocalCache<>(
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
+      @Override protected long mainProtectedMaximum() {
+        return 100;
+      }
+      @Override protected long mainProtectedWeightedSize() {
+        return 1000;
+      }
+      @Override protected AccessOrderDeque<Node<Object, Object>> accessOrderProtectedDeque() {
+        return new AccessOrderDeque<>();
+      }
+      @Override protected void setMainProtectedWeightedSize(long weightedSize) {}
+    };
+    cache.demoteFromMainProtected();
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   public void updateRecency_onGet(BoundedLocalCache<Int, Int> cache, CacheContext context) {

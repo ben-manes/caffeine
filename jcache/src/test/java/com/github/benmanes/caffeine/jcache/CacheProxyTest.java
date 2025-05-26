@@ -36,7 +36,6 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import javax.cache.Cache;
@@ -215,25 +214,21 @@ public final class CacheProxyTest extends AbstractJCacheTest {
       CacheProxy<Integer, Integer> jcache, long expireTimeMillis, Consumer<Integer> read) {
     var done = new AtomicBoolean();
     var started = new AtomicBoolean();
-    var reader = new AtomicReference<Thread>();
     Expirable<Integer> expirable = Mockito.mock();
     when(expirable.get()).thenReturn(VALUE_1);
     when(expirable.hasExpired(anyLong())).thenReturn(true);
     when(expirable.getExpireTimeMillis()).thenReturn(expireTimeMillis);
     jcache.cache.asMap().put(KEY_1, expirable);
     jcache.cache.asMap().compute(KEY_1, (key, v) -> {
-      new Thread(() -> {
-        reader.set(Thread.currentThread());
+      var reader = new Thread(() -> {
         started.set(true);
         read.accept(key);
         done.set(true);
-      }).start();
+      });
+      reader.start();
       await().untilTrue(started);
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = reader.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
+      await().until(() -> threadState.contains(reader.getState()));
       return new Expirable<>(VALUE_2, expireTimeMillis);
     });
     await().untilTrue(done);

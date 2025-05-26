@@ -34,7 +34,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
@@ -58,9 +58,9 @@ public final class Threads {
 
   private Threads() {}
 
-  public static <A> void runTest(A collection, ImmutableList<BiConsumer<A, Int>> operations) {
+  public static void runTest(ImmutableList<Consumer<Int>> operations) {
     var failures = new ConcurrentLinkedQueue<String>();
-    var thrasher = new Thrasher<>(collection, failures, operations);
+    var thrasher = new Thrasher(failures, operations);
     Threads.executeWithTimeOut(failures, () -> timeTasks(Threads.NTHREADS, thrasher));
     assertThat(failures).isEmpty();
   }
@@ -120,19 +120,16 @@ public final class Threads {
   }
 
   /** Executes operations against the cache to simulate random load. */
-  public static final class Thrasher<A> implements Runnable {
-    private final ImmutableList<BiConsumer<A, Int>> operations;
+  public static final class Thrasher implements Runnable {
+    private final ImmutableList<Consumer<Int>> operations;
     private final ImmutableList<ImmutableList<Int>> sets;
     private final Queue<String> failures;
     private final AtomicInteger index;
-    private final A collection;
 
-    public Thrasher(A collection, Queue<String> failures,
-        ImmutableList<BiConsumer<A, Int>> operations) {
+    public Thrasher(Queue<String> failures, ImmutableList<Consumer<Int>> operations) {
       this.sets = workingSets(Threads.NTHREADS, Threads.ITERATIONS);
       this.index = new AtomicInteger();
       this.operations = operations;
-      this.collection = collection;
       this.failures = failures;
     }
 
@@ -142,7 +139,7 @@ public final class Threads {
       for (Int e : sets.get(id)) {
         var operation = operations.get(ThreadLocalRandom.current().nextInt(operations.size()));
         try {
-          operation.accept(collection, e);
+          operation.accept(e);
         } catch (Throwable t) {
           failures.add(String.format(US, "Failed: key %s on operation %s%n%s",
               e, operation, Throwables.getStackTraceAsString(t)));

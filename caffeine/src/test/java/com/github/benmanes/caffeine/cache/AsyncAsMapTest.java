@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
@@ -28,6 +29,8 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,6 +46,7 @@ import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +55,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -71,6 +77,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
@@ -455,6 +462,34 @@ public final class AsyncAsMapTest {
     assertThat(cache.asMap().putIfAbsent(context.absentKey(), value)).isNull();
     assertThat(cache).containsEntry(context.absentKey(), value);
     assertThat(cache).hasSize(context.initialSize() + 1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void putIfAbsent_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    var done = new AtomicBoolean();
+    var started = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+    var future = new CompletableFuture<Int>();
+
+    cache.put(context.absentKey(), future);
+    ConcurrentTestHarness.execute(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      var result = cache.synchronous().asMap()
+          .putIfAbsent(context.absentKey(), context.absentValue());
+      assertThat(result).isNull();
+      done.set(true);
+    });
+    await().untilTrue(started);
+    var threadState = EnumSet.of(BLOCKED, WAITING);
+    await().until(() -> {
+      var thread = writer.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+    future.complete(null);
+    await().untilTrue(done);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   /* ---------------- remove -------------- */
