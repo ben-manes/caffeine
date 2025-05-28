@@ -1553,6 +1553,51 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
+  @Test(dataProvider = "caches", groups = "isolated")
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  public void putIfAbsent_incomplete_null(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var computeThread = new AtomicReference<Thread>();
+    var threadState = EnumSet.of(BLOCKED, WAITING);
+    var future1 = new CompletableFuture<Int>();
+    var future2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future1);
+    ConcurrentTestHarness.execute(() -> {
+      computeThread.set(Thread.currentThread());
+      var result = cache.asMap().compute(context.absentKey(), (k, f) -> {
+        f.join();
+        return future2;
+      });
+      assertThat(result).isNotNull();
+    });
+    await().until(() -> {
+      var thread = computeThread.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+
+    var putIfAbsentThread = new AtomicReference<Thread>();
+    var endPutIfAbsent = new AtomicBoolean();
+    ConcurrentTestHarness.execute(() -> {
+      putIfAbsentThread.set(Thread.currentThread());
+      var result = expireAfterVar.putIfAbsent(context.absentKey(),
+          context.absentValue(), Duration.ofDays(1));
+      assertThat(result).isNull();
+      endPutIfAbsent.set(true);
+    });
+    await().until(() -> {
+      var thread = putIfAbsentThread.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+    future1.complete(null);
+
+    // LocalAsyncCache, LocalCache, and RemovalListener
+    await().until(() -> future2.getNumberOfDependents() >= 2);
+
+    future2.complete(null);
+    await().untilTrue(endPutIfAbsent);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
   /* --------------- Policy: put --------------- */
 
   @CheckNoStats

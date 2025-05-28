@@ -70,6 +70,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
@@ -489,6 +490,50 @@ public final class AsyncAsMapTest {
     });
     future.complete(null);
     await().untilTrue(done);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @Test(dataProvider = "caches", groups = "isolated")
+  @CacheSpec(population = Population.EMPTY)
+  public void putIfAbsent_incomplete_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var computeThread = new AtomicReference<Thread>();
+    var threadState = EnumSet.of(BLOCKED, WAITING);
+    var future1 = new CompletableFuture<Int>();
+    var future2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future1);
+    ConcurrentTestHarness.execute(() -> {
+      computeThread.set(Thread.currentThread());
+      var result = cache.asMap().compute(context.absentKey(), (k, f) -> {
+        f.join();
+        return future2;
+      });
+      assertThat(result).isNotNull();
+    });
+    await().until(() -> {
+      var thread = computeThread.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+
+    var putIfAbsentThread = new AtomicReference<Thread>();
+    var endPutIfAbsent = new AtomicBoolean();
+    ConcurrentTestHarness.execute(() -> {
+      putIfAbsentThread.set(Thread.currentThread());
+      var result = cache.synchronous().asMap()
+          .putIfAbsent(context.absentKey(), context.absentValue());
+      assertThat(result).isNull();
+      endPutIfAbsent.set(true);
+    });
+    await().until(() -> {
+      var thread = putIfAbsentThread.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+    future1.complete(null);
+
+    // LocalAsyncCache, LocalCache, and RemovalListener
+    await().until(() -> future2.getNumberOfDependents() >= 2);
+
+    future2.complete(null);
+    await().untilTrue(endPutIfAbsent);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
@@ -925,6 +970,50 @@ public final class AsyncAsMapTest {
 
     assertThat(cache).containsEntry(context.absentKey(), value);
     assertThat(cache).hasSize(1 + context.original().size());
+  }
+
+  @Test(dataProvider = "caches", groups = "isolated")
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING)
+  public void computeIfAbsent_incomplete_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var computeThread = new AtomicReference<Thread>();
+    var threadState = EnumSet.of(BLOCKED, WAITING);
+    var future1 = new CompletableFuture<Int>();
+    var future2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future1);
+    ConcurrentTestHarness.execute(() -> {
+      computeThread.set(Thread.currentThread());
+      var result = cache.asMap().compute(context.absentKey(), (k, f) -> {
+        f.join();
+        return future2;
+      });
+      assertThat(result).isNotNull();
+    });
+    await().until(() -> {
+      var thread = computeThread.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+
+    var putIfAbsentThread = new AtomicReference<Thread>();
+    var endPutIfAbsent = new AtomicBoolean();
+    ConcurrentTestHarness.execute(() -> {
+      putIfAbsentThread.set(Thread.currentThread());
+      var result = cache.synchronous().asMap()
+          .computeIfAbsent(context.absentKey(), k -> context.absentValue());
+      assertThat(result).isNotNull();
+      endPutIfAbsent.set(true);
+    });
+    await().until(() -> {
+      var thread = putIfAbsentThread.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+    future1.complete(null);
+
+    // LocalAsyncCache, LocalCache, and RemovalListener
+    await().until(() -> future2.getNumberOfDependents() >= 2);
+
+    future2.complete(null);
+    await().untilTrue(endPutIfAbsent);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   /* ---------------- computeIfPresent -------------- */

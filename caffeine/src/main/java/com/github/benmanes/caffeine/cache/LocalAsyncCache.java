@@ -879,8 +879,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         @SuppressWarnings({"rawtypes", "unchecked"})
         CompletableFuture<V>[] future = new CompletableFuture[1];
         CompletableFuture<V> computed = delegate.compute(key, (k, valueFuture) -> {
-          if ((valueFuture != null) && valueFuture.isDone()
-              && (Async.getIfReady(valueFuture) != null)) {
+          if ((valueFuture != null)
+              && (!valueFuture.isDone() || (Async.getIfReady(valueFuture) != null))) {
             return valueFuture;
           }
 
