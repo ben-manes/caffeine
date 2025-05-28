@@ -25,6 +25,7 @@ import java.util.Objects;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
+import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 import com.palantir.javapoet.FieldSpec;
@@ -47,7 +48,7 @@ public final class AddValue implements NodeRule {
     context.nodeSubtype
         .addField(newValueField(context))
         .addMethod(makeGetValue(context))
-        .addMethod(context.newGetRef("value"))
+        .addMethod(context.newGetRef("value", Visibility.VOLATILE))
         .addMethod(makeSetValue(context))
         .addMethod(makeContainsValue(context));
     if (context.isStrongValues()) {
@@ -71,13 +72,18 @@ public final class AddValue implements NodeRule {
         .returns(vTypeVar);
     String handle = varHandleName("value");
     if (context.valueStrength() == Strength.STRONG) {
-      getter.addStatement("return ($T) $L.get(this)", vTypeVar, handle);
+      getter.addStatement("return ($T) $L.getAcquire(this)", vTypeVar, handle);
       return getter.build();
     }
-
+    getter.addComment("The referent may be observed as null if it is cleared after a write but "
+        + "before it is read. This can occur due to garbage collection or proactive clearing to "
+        + "assist the GC when the reference and its referent reside in different memory regions "
+        + "(e.g., across generations). To preserve linearizability, the loop validates that any "
+        + "observed null was not the result of a stale reference by confirming it matches the "
+        + "current reference.");
     var code = CodeBlock.builder()
         .beginControlFlow("for (;;)")
-            .addStatement("$1T<V> ref = ($1T<V>) $2L.getOpaque(this)", Reference.class, handle)
+            .addStatement("$1T<V> ref = ($1T<V>) $2L.getAcquire(this)", Reference.class, handle)
             .addStatement("V referent = ref.get()")
             .beginControlFlow("if ((referent != null) || (ref == $L.getAcquire(this)))", handle)
                 .addStatement("return referent")
@@ -97,9 +103,9 @@ public final class AddValue implements NodeRule {
     if (context.isStrongValues()) {
       setter.addStatement("$L.setRelease(this, $N)", varHandleName("value"), "value");
     } else {
-      setter.addStatement("$1T<V> ref = ($1T<V>) $2L.get(this)",
+      setter.addStatement("$1T<V> ref = ($1T<V>) $2L.getAcquire(this)",
           Reference.class, varHandleName("value"));
-      setter.addStatement("$L.setRelease(this, new $T($L, $N, referenceQueue))",
+      setter.addStatement("$L.setVolatile(this, new $T($L, $N, referenceQueue))",
           varHandleName("value"), context.valueReferenceType(),
           "getKeyReference()", "value");
       setter.addStatement("ref.clear()");

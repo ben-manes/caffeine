@@ -80,7 +80,7 @@ public final class AddHealth implements NodeRule {
       }
       action.addStatement("$L.set(this, $N)", varHandleName("key"), arg);
     } else {
-      action.addStatement("$1T valueRef = ($1T) $2L.get(this)",
+      action.addStatement("$1T valueRef = ($1T) $2L.getOpaque(this)",
           context.valueReferenceType(), varHandleName("value"));
       if (context.keyStrength() != Strength.STRONG) {
         action.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceType);

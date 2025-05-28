@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import javax.lang.model.element.Modifier;
 
+import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.FieldSpec;
@@ -53,8 +54,9 @@ public final class AddKey implements NodeRule {
         : FieldSpec.builder(context.keyReferenceType(), "key", Modifier.VOLATILE);
     context.nodeSubtype
         .addField(fieldSpec.build())
-        .addMethod(context.newGetter(context.keyStrength(), kTypeVar, "key", Visibility.PLAIN))
-        .addMethod(context.newGetRef("key"));
+        .addMethod(context.newGetter(context.keyStrength(), kTypeVar, "key",
+            (context.keyStrength() == Strength.STRONG) ? Visibility.OPAQUE : Visibility.PLAIN))
+        .addMethod(context.newGetRef("key", Visibility.OPAQUE));
     context.addVarHandle("key", context.isStrongKeys()
         ? ClassName.get(Object.class)
         : context.keyReferenceType().rawType());
@@ -62,16 +64,9 @@ public final class AddKey implements NodeRule {
 
   private static void addIfCollectedValue(NodeContext context) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getKeyReference")
-        .addComment("The plain read here does not observe a partially constructed or out-of-order "
-            + "write because the release store ensures a happens-before relationship, making all "
-            + "prior writes visible to threads that subsequently read the variable at any access "
-            + "strength. This guarantees that any observed instance is fully constructed. However, "
-            + "because the plain read lacks acquire semantics, it does not guarantee observing the "
-            + "most recent value. The plain read may return either the previous or the newly "
-            + "published instance, depending on the timing of the read relative to the write.")
         .addModifiers(context.publicFinalModifiers())
         .returns(Object.class)
-        .addStatement("$1T valueRef = ($1T) $2L.get(this)",
+        .addStatement("$1T valueRef = ($1T) $2L.getAcquire(this)",
             context.valueReferenceType(), varHandleName("value"))
         .addStatement("return valueRef.getKeyReference()")
         .build());
@@ -79,7 +74,7 @@ public final class AddKey implements NodeRule {
     var getKey = MethodSpec.methodBuilder("getKey")
         .addModifiers(context.publicFinalModifiers())
         .returns(kTypeVar)
-        .addStatement("$1T valueRef = ($1T) $2L.get(this)",
+        .addStatement("$1T valueRef = ($1T) $2L.getAcquire(this)",
             context.valueReferenceType(), varHandleName("value"));
     if (context.isStrongKeys()) {
       getKey.addStatement("return ($T) valueRef.getKeyReference()", kTypeVar);
