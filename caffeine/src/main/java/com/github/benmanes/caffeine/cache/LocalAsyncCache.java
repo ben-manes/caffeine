@@ -37,7 +37,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -197,12 +196,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   @SuppressWarnings({"FutureReturnValueIgnored", "SuspiciousMethodCalls"})
   default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
       long startTime, boolean recordMiss) {
-    var completed = new AtomicBoolean();
     valueFuture.whenComplete((value, error) -> {
-      if (!completed.compareAndSet(/* expectedValue= */ false, /* newValue= */ true)) {
-        // Ignore multiple invocations due to ForkJoinPool retrying on delays
-        return;
-      }
       long loadTime = cache().statsTicker().read() - startTime;
       if (value == null) {
         if ((error != null) && !(error instanceof CancellationException)
