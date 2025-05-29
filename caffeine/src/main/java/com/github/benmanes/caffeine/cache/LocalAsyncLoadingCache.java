@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.hasMethodOverride;
-import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult; // NOPMD
+import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;
@@ -165,13 +165,11 @@ abstract class LocalAsyncLoadingCache<K, V>
     }
 
     @Override
-    @SuppressWarnings("PMD.PreserveStackTrace")
     public V get(K key) {
       return resolve(asyncCache.get(key));
     }
 
     @Override
-    @SuppressWarnings("PMD.PreserveStackTrace")
     public Map<K, V> getAll(Iterable<? extends K> keys) {
       return resolve(asyncCache.getAll(keys));
     }

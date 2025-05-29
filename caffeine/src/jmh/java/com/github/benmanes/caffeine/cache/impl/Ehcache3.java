@@ -28,7 +28,7 @@ import com.github.benmanes.caffeine.cache.BasicCache;
 public final class Ehcache3<K, V> implements BasicCache<K, V> {
   private final Cache<K, V> cache;
 
-  @SuppressWarnings({"PMD.CloseResource", "unchecked"})
+  @SuppressWarnings("unchecked")
   public Ehcache3(int maximumSize) {
     var resourcesPools = ResourcePoolsBuilder.newResourcePoolsBuilder()
         .heap(maximumSize, EntryUnit.ENTRIES);

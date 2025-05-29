@@ -129,7 +129,6 @@ public final class TinyCacheWithGhostCache {
     throw new IllegalStateException("Failed to replace");
   }
 
-  @SuppressWarnings("PMD.LocalVariableNamingConventions")
   private void replaceItems(int idx, @Var long value, @Var int start, int delta) {
     @Var long entry;
     start += idx;

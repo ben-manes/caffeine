@@ -56,7 +56,7 @@ public final class AddKey implements NodeRule {
         .addField(fieldSpec.build())
         .addMethod(context.newGetter(context.keyStrength(), kTypeVar, "key",
             (context.keyStrength() == Strength.STRONG) ? Visibility.OPAQUE : Visibility.PLAIN))
-        .addMethod(context.newGetRef("key", Visibility.OPAQUE));
+        .addMethod(newGetKeyRef(context));
     context.addVarHandle("key", context.isStrongKeys()
         ? ClassName.get(Object.class)
         : context.keyReferenceType().rawType());
@@ -84,5 +84,13 @@ public final class AddKey implements NodeRule {
     }
     context.nodeSubtype.addMethod(getKey.build());
     context.suppressedWarnings.add("unchecked");
+  }
+
+  private static MethodSpec newGetKeyRef(NodeContext context) {
+    var getter = MethodSpec.methodBuilder("getKeyReference")
+        .addModifiers(context.publicFinalModifiers())
+        .returns(Object.class);
+    getter.addStatement("return $L.getOpaque(this)", varHandleName("key"));
+    return getter.build();
   }
 }

@@ -44,7 +44,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  */
 @State(Scope.Group)
 @SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing",
-  "MemberName", "PMD.UnitTestShouldUseAfterAnnotation", "PMD.MethodNamingConventions"})
+    "MemberName", "PMD.MethodNamingConventions"})
 public class GetPutBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

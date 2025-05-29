@@ -16,8 +16,8 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
-import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction; // NOPMD
-import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction; // NOPMD
+import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
+import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InvalidObjectException;

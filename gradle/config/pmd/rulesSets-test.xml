@@ -16,6 +16,7 @@
     <exclude name="GuardLogStatement"/>
     <exclude name="LiteralsFirstInComparisons"/>
     <exclude name="UnitTestShouldIncludeAssert"/>
+    <exclude name="UnnecessaryWarningSuppression"/>
     <exclude name="UnitTestContainsTooManyAsserts"/>
     <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
   </rule>

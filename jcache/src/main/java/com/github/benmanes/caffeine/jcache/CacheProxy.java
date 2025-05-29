@@ -101,7 +101,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   private volatile boolean closed;
 
-  @SuppressWarnings({"PMD.ExcessiveParameterList", "this-escape", "TooManyParameters"})
+  @SuppressWarnings({"this-escape", "TooManyParameters"})
   public CacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache,
@@ -973,9 +973,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     cache.invalidateAll();
   }
 
-  @SuppressWarnings({"FutureReturnValueIgnored", "PMD.CloseResource"})
+  @SuppressWarnings("FutureReturnValueIgnored")
   private @Nullable Throwable shutdownExecutor() {
     if (executor instanceof ExecutorService) {
+      @SuppressWarnings("PMD.CloseResource")
       var es = (ExecutorService) executor;
       es.shutdown();
     }

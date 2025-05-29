@@ -326,7 +326,6 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
       throw new IllegalArgumentException();
     }
 
-    @SuppressWarnings("PMD.TooFewBranchesForSwitch")
     public void moveToTop(StackType stackType) {
       if (isInStack(stackType)) {
         removeFrom(stackType);
@@ -352,7 +351,6 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
       }
     }
 
-    @SuppressWarnings("PMD.TooFewBranchesForSwitch")
     public void removeFrom(StackType stackType) {
       checkState(isInStack(stackType));
 

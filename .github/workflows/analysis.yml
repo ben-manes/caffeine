@@ -45,7 +45,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: ecjJavaPoet ecjMain ecjCodeGen ecjJmh ecjTest
 
-  forbiddenApis:
+  forbidden-apis:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -92,6 +92,13 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh pmdTest -Dpmd
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          retention-days: 1
+          name: pmd-reports
+          path: "**/build/reports/pmd/*.html"
 
   spotbugs:
     runs-on: ubuntu-latest
@@ -117,3 +124,10 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             spotbugsJavaPoet spotbugsMain spotbugsCodeGen spotbugsJmh spotbugsTest -Dspotbugs
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          retention-days: 1
+          name: spotbugs-reports
+          path: "**/build/reports/spotbugs/*.html"

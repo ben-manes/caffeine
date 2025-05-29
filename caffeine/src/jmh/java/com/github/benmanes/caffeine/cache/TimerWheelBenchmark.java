@@ -25,6 +25,8 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
+import com.github.benmanes.caffeine.testing.Int;
+
 /**
  * {@snippet lang="shell" :
  * ./gradlew jmh -PincludePattern=TimerWheelBenchmark --rerun
@@ -40,7 +42,7 @@ public class TimerWheelBenchmark {
   private static final long DELTA = TimeUnit.MINUTES.toNanos(5);
   private static final long UPPERBOUND = TimeUnit.DAYS.toNanos(5);
 
-  TimerWheel<Integer, Integer> timerWheel;
+  TimerWheel<Int, Int> timerWheel;
   MockCache cache;
   long[] times;
   Timer timer;
@@ -64,7 +66,7 @@ public class TimerWheelBenchmark {
   }
 
   @Benchmark
-  public Node<Integer, Integer> findBucket(ThreadState threadState) {
+  public Node<Int, Int> findBucket(ThreadState threadState) {
     return timerWheel.findBucket(times[threadState.index++ & MASK]);
   }
 
@@ -101,7 +103,6 @@ public class TimerWheelBenchmark {
   }
 
   @Benchmark
-  @SuppressWarnings("PMD.ForLoopCanBeForeach")
   public int descending() {
     int count = 0;
     for (var i = timerWheel.descendingIterator(); i.hasNext();) {
@@ -111,9 +112,9 @@ public class TimerWheelBenchmark {
     return count;
   }
 
-  static final class Timer extends Node<Integer, Integer> {
-    @Nullable Node<Integer, Integer> prev;
-    @Nullable Node<Integer, Integer> next;
+  static final class Timer extends Node<Int, Int> {
+    @Nullable Node<Int, Int> prev;
+    @Nullable Node<Int, Int> next;
     long time;
 
     Timer(long time) {
@@ -127,25 +128,25 @@ public class TimerWheelBenchmark {
       this.time = time;
     }
     @SuppressWarnings("NullAway")
-    @Override public Node<Integer, Integer> getPreviousInVariableOrder() {
+    @Override public Node<Int, Int> getPreviousInVariableOrder() {
       return prev;
     }
-    @Override public void setPreviousInVariableOrder(@Nullable Node<Integer, Integer> prev) {
+    @Override public void setPreviousInVariableOrder(@Nullable Node<Int, Int> prev) {
       this.prev = prev;
     }
     @SuppressWarnings("NullAway")
-    @Override public Node<Integer, Integer> getNextInVariableOrder() {
+    @Override public Node<Int, Int> getNextInVariableOrder() {
       return next;
     }
-    @Override public void setNextInVariableOrder(@Nullable Node<Integer, Integer> next) {
+    @Override public void setNextInVariableOrder(@Nullable Node<Int, Int> next) {
       this.next = next;
     }
 
-    @Override public Integer getKey() { throw new UnsupportedOperationException(); }
+    @Override public Int getKey() { throw new UnsupportedOperationException(); }
     @Override public Object getKeyReference() { throw new UnsupportedOperationException(); }
-    @Override public Integer getValue() { throw new UnsupportedOperationException(); }
+    @Override public Int getValue() { throw new UnsupportedOperationException(); }
     @Override public Object getValueReference() { throw new UnsupportedOperationException(); }
-    @Override public void setValue(Integer value, @Nullable ReferenceQueue<Integer> queue) {}
+    @Override public void setValue(Int value, @Nullable ReferenceQueue<Int> queue) {}
     @Override public boolean containsValue(Object value) { return false; }
     @Override public boolean isAlive() { return false; }
     @Override public boolean isRetired() { return false; }
@@ -154,7 +155,7 @@ public class TimerWheelBenchmark {
     @Override public void die() {}
   }
 
-  static final class MockCache extends BoundedLocalCache<Integer, Integer> {
+  static final class MockCache extends BoundedLocalCache<Int, Int> {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     MockCache() {
@@ -162,7 +163,7 @@ public class TimerWheelBenchmark {
     }
 
     @Override
-    boolean evictEntry(Node<Integer, Integer> node, RemovalCause cause, long now) {
+    boolean evictEntry(Node<Int, Int> node, RemovalCause cause, long now) {
       return true;
     }
   }

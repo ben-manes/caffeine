@@ -50,10 +50,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @summary Verify assertions in get() javadocs
  * @author Martin Buchholz
  */
-@SuppressWarnings({"AlmostJavadoc", "BooleanParameter", "EmptyCatch", "InconsistentOverloads",
-    "JdkObsolete", "MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonFinalStaticField",
-    "NullAway", "ParameterMissingNullable", "SystemOut", "UnnecessaryParentheses",
-    "UnusedVariable"})
+@SuppressWarnings({"AlmostJavadoc", "BooleanParameter", "EmptyCatch", "identity",
+    "InconsistentOverloads", "JdkObsolete", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
+    "NonFinalStaticField", "NullAway", "ParameterMissingNullable", "SystemOut",
+    "UnnecessaryParentheses", "UnusedVariable"})
 public class Get {
 
     @Test

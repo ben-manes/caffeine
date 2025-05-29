@@ -155,6 +155,11 @@
     <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsMapView"/>
+    <Method name="values"/>
+    <Bug pattern="IMC_IMMATURE_CLASS_COLLECTION_RETURN"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsMapView$EntrySet"/>
     <Or>
       <Method name="removeAll"/>
@@ -319,6 +324,14 @@
   </Match>
 
   <!-- Guava -->
+  <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache$AsMapView"/>
+      <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache$KeySetView"/>
+      <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache$EntrySetView"/>
+    </Or>
+    <Bug pattern="IMC_IMMATURE_CLASS_COLLECTION_RETURN"/>
+  </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache"/>
     <Or>
@@ -563,6 +576,11 @@
       DP_DO_INSIDE_DO_PRIVILEGED"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.testing.LoggingEvents"/>
+    <Method name="delegate"/>
+    <Bug pattern="IMC_IMMATURE_CLASS_COLLECTION_RETURN"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.testing.Threads"/>
     <Bug pattern="CRLF_INJECTION_LOGS"/>
   </Match>
@@ -641,6 +659,11 @@
   <Match>
     <Class name="~com\.github\.benmanes\.caffeine\.cache\.testing\.GuavaCacheFromContext.*"/>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext$GuavaCache$AsMapView$KeySetView"/>
+    <Method name="delegate"/>
+    <Bug pattern="IMC_IMMATURE_CLASS_COLLECTION_RETURN"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.MultiThreadedTest"/>

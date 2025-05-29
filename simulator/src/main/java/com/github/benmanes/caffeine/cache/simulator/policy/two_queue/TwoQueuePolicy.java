@@ -76,7 +76,6 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  @SuppressWarnings("PMD.ConfusingTernary")
   public void record(long key) {
     // On accessing a page X :
     //   if X is in Am then

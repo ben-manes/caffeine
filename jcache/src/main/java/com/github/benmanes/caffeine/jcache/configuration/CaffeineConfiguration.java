@@ -143,7 +143,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setTypes}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setTypes(Class<K> keyType, Class<V> valueType) {
     checkIfReadOnly();
     delegate.setTypes(keyType, valueType);
@@ -157,7 +156,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#addCacheEntryListenerConfiguration}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> addCacheEntryListenerConfiguration(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
     checkIfReadOnly();
@@ -167,7 +165,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#removeCacheEntryListenerConfiguration}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> removeCacheEntryListenerConfiguration(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
     checkIfReadOnly();
@@ -182,7 +179,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setCacheLoaderFactory}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setCacheLoaderFactory(
       @Nullable Factory<? extends CacheLoader<K, V>> factory) {
     checkIfReadOnly();
@@ -213,7 +209,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setCacheWriterFactory}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setCacheWriterFactory(
       @Nullable Factory<? extends CacheWriter<? super K, ? super V>> factory) {
     checkIfReadOnly();
@@ -228,7 +223,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setExpiryPolicyFactory}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setExpiryPolicyFactory(
       @Nullable Factory<? extends ExpiryPolicy> factory) {
     checkIfReadOnly();
@@ -243,7 +237,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setReadThrough}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setReadThrough(boolean isReadThrough) {
     checkIfReadOnly();
     delegate.setReadThrough(isReadThrough);
@@ -257,7 +250,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setWriteThrough}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setWriteThrough(boolean isWriteThrough) {
     checkIfReadOnly();
     delegate.setWriteThrough(isWriteThrough);
@@ -271,7 +263,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setStoreByValue}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setStoreByValue(boolean isStoreByValue) {
     checkIfReadOnly();
     delegate.setStoreByValue(isStoreByValue);
@@ -296,7 +287,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setNativeStatisticsEnabled(boolean enabled) {
     checkIfReadOnly();
     this.nativeStatistics = enabled;
@@ -310,7 +300,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setStatisticsEnabled}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setStatisticsEnabled(boolean enabled) {
     checkIfReadOnly();
     delegate.setStatisticsEnabled(enabled);
@@ -325,7 +314,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   /** See {@link MutableConfiguration#setManagementEnabled}. */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setManagementEnabled(boolean enabled) {
     checkIfReadOnly();
     delegate.setManagementEnabled(enabled);
@@ -348,7 +336,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setCopierFactory(Factory<Copier> factory) {
     checkIfReadOnly();
     copierFactory = requireNonNull(factory);
@@ -371,7 +358,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setSchedulerFactory(Factory<Scheduler> factory) {
     checkIfReadOnly();
     schedulerFactory = requireNonNull(factory);
@@ -394,7 +380,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setTickerFactory(Factory<Ticker> factory) {
     checkIfReadOnly();
     tickerFactory = requireNonNull(factory);
@@ -417,7 +402,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setExecutorFactory(Factory<Executor> factory) {
     checkIfReadOnly();
     executorFactory = requireNonNull(factory);
@@ -442,7 +426,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setRefreshAfterWrite(OptionalLong refreshAfterWriteNanos) {
     checkIfReadOnly();
     this.refreshAfterWriteNanos = refreshAfterWriteNanos.isPresent()
@@ -469,7 +452,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setExpireAfterWrite(OptionalLong expireAfterWriteNanos) {
     checkIfReadOnly();
     this.expireAfterWriteNanos = expireAfterWriteNanos.isPresent()
@@ -496,7 +478,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setExpireAfterAccess(OptionalLong expireAfterAccessNanos) {
     checkIfReadOnly();
     this.expireAfterAccessNanos = expireAfterAccessNanos.isPresent()
@@ -521,7 +502,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings({"PMD.LinguisticNaming", "unchecked"})
+  @SuppressWarnings("unchecked")
   public CaffeineConfiguration<K, V> setExpiryFactory(
       Optional<Factory<? extends Expiry<K, V>>> factory) {
     checkIfReadOnly();
@@ -547,7 +528,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setMaximumSize(OptionalLong maximumSize) {
     checkIfReadOnly();
     this.maximumSize = maximumSize.isPresent()
@@ -574,7 +554,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.LinguisticNaming")
   public CaffeineConfiguration<K, V> setMaximumWeight(OptionalLong maximumWeight) {
     checkIfReadOnly();
     this.maximumWeight = maximumWeight.isPresent()
@@ -599,7 +578,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings({"PMD.LinguisticNaming", "unchecked"})
+  @SuppressWarnings("unchecked")
   public CaffeineConfiguration<K, V> setWeigherFactory(
       Optional<Factory<? extends Weigher<K, V>>> factory) {
     checkIfReadOnly();

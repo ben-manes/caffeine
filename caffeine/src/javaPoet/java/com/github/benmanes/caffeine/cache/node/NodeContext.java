@@ -137,25 +137,6 @@ public final class NodeContext {
     varHandles.add(statement);
   }
 
-  /** Creates an accessor that returns the reference. */
-  public MethodSpec newGetRef(String varName, Visibility visibility) {
-    var getter = MethodSpec.methodBuilder("get" + capitalize(varName) + "Reference")
-        .addModifiers(publicFinalModifiers())
-        .returns(Object.class);
-    switch (visibility) {
-      case OPAQUE:
-        getter.addStatement("return $L.getOpaque(this)", varHandleName(varName));
-        return getter.build();
-      case PLAIN:
-        getter.addStatement("return $L.get(this)", varHandleName(varName));
-        return getter.build();
-      case VOLATILE:
-        getter.addStatement("return $L.getAcquire(this)", varHandleName(varName));
-        return getter.build();
-    }
-    throw new IllegalStateException();
-  }
-
   /** Creates an accessor that returns the unwrapped variable. */
   public MethodSpec newGetter(Strength strength,
       TypeName varType, String varName, Visibility visibility) {

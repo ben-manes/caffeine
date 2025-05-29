@@ -187,8 +187,10 @@ jobs:
       - name: Format Test Artifact Name
         if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
         id: format_artifact
+        env:
+          INPUTS_ARGUMENTS: ${{ matrix.suite }}
         run: |
-          RAW_NAME=${{ matrix.suite }}-$JAVA_VERSION
+          RAW_NAME=$INPUTS_ARGUMENTS-$JAVA_VERSION
           ARTIFACT_NAME=$(echo $RAW_NAME | sed 's/:/-/g')
           echo "name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
       - name: Compress test results
@@ -310,7 +312,7 @@ jobs:
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@afb2984f4d89672b2f9d9c13ae23d53779671984 # v2.19.0
+        uses: EnricoMi/publish-unit-test-result-action@3a74b2957438d0b6e2e61d67b05318aa25c9e6c6 # v2.20.0
         continue-on-error: true
         id: test-results
         with:

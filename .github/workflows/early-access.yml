@@ -120,4 +120,6 @@ jobs:
           java: ${{ env.JAVA_TEST_VERSION }}-ea
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Run Tests
-        run: ./gradlew ${{ matrix.suite }}
+        env:
+          INPUTS_ARGUMENTS: ${{ matrix.suite }}
+        run: ./gradlew "$INPUTS_ARGUMENTS"

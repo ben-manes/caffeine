@@ -50,7 +50,7 @@ import com.google.errorprone.annotations.Var;
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, @Nullable Expirable<V>> cache;
 
-  @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
+  @SuppressWarnings("TooManyParameters")
   public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, @Nullable Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,
@@ -61,7 +61,6 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   @Override
-  @SuppressWarnings("PMD.AvoidCatchingNPE")
   public @Nullable V get(K key) {
     requireNotClosed();
     try {
@@ -123,7 +122,6 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   /** Returns the entries, loading if necessary, and optionally updates their access expiry time. */
-  @SuppressWarnings("PMD.AvoidCatchingNPE")
   private Map<K, V> getAll(Set<? extends K> keys, boolean updateAccessTime) {
     requireNotClosed();
     boolean statsEnabled = statistics.isEnabled();
