@@ -25,7 +25,6 @@ import java.util.Objects;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
-import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 import com.palantir.javapoet.FieldSpec;
@@ -48,8 +47,8 @@ public final class AddValue implements NodeRule {
     context.nodeSubtype
         .addField(newValueField(context))
         .addMethod(makeGetValue(context))
-        .addMethod(context.newGetRef("value", Visibility.VOLATILE))
         .addMethod(makeSetValue(context))
+        .addMethod(makeGetValueRef(context))
         .addMethod(makeContainsValue(context));
     if (context.isStrongValues()) {
       context.addVarHandle("value", ClassName.get(Object.class));
@@ -82,15 +81,30 @@ public final class AddValue implements NodeRule {
         + "observed null was not the result of a stale reference by confirming it matches the "
         + "current reference.");
     var code = CodeBlock.builder()
+        .addStatement("$1T<V> ref = ($1T<V>) $2L.getAcquire(this)", Reference.class, handle)
         .beginControlFlow("for (;;)")
-            .addStatement("$1T<V> ref = ($1T<V>) $2L.getAcquire(this)", Reference.class, handle)
             .addStatement("V referent = ref.get()")
-            .beginControlFlow("if ((referent != null) || (ref == $L.getAcquire(this)))", handle)
+            .beginControlFlow("if (referent != null)")
                 .addStatement("return referent")
             .endControlFlow()
+            .addStatement("$1T<V> current = ($1T<V>) $2L.getAcquire(this)", Reference.class, handle)
+            .beginControlFlow("if (ref == current)")
+                .addStatement("return null")
+            .endControlFlow()
+            .addStatement("ref = current")
         .endControlFlow()
         .build();
+
     return getter.addCode(code).build();
+  }
+
+  /** Creates the getValueReference method. */
+  public static MethodSpec makeGetValueRef(NodeContext context) {
+    return MethodSpec.methodBuilder("getValueReference")
+        .addModifiers(context.publicFinalModifiers())
+        .addStatement("return $L.getAcquire(this)", varHandleName("value"))
+        .returns(Object.class)
+        .build();
   }
 
   /** Creates the setValue method. */
@@ -105,6 +119,7 @@ public final class AddValue implements NodeRule {
     } else {
       setter.addStatement("$1T<V> ref = ($1T<V>) $2L.getAcquire(this)",
           Reference.class, varHandleName("value"));
+      setter.addComment("Can be setRelease in JDK 12+ (see JDK-8205523, JDK-8205523, JDK-8209697)");
       setter.addStatement("$L.setVolatile(this, new $T($L, $N, referenceQueue))",
           varHandleName("value"), context.valueReferenceType(),
           "getKeyReference()", "value");

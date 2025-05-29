@@ -993,17 +993,17 @@ public final class AsyncAsMapTest {
       return (thread != null) && threadState.contains(thread.getState());
     });
 
-    var putIfAbsentThread = new AtomicReference<Thread>();
-    var endPutIfAbsent = new AtomicBoolean();
+    var computeIfAbsentThread = new AtomicReference<Thread>();
+    var endComputeIfAbsent = new AtomicBoolean();
     ConcurrentTestHarness.execute(() -> {
-      putIfAbsentThread.set(Thread.currentThread());
+      computeIfAbsentThread.set(Thread.currentThread());
       var result = cache.synchronous().asMap()
           .computeIfAbsent(context.absentKey(), k -> context.absentValue());
       assertThat(result).isNotNull();
-      endPutIfAbsent.set(true);
+      endComputeIfAbsent.set(true);
     });
     await().until(() -> {
-      var thread = putIfAbsentThread.get();
+      var thread = computeIfAbsentThread.get();
       return (thread != null) && threadState.contains(thread.getState());
     });
     future1.complete(null);
@@ -1012,7 +1012,7 @@ public final class AsyncAsMapTest {
     await().until(() -> future2.getNumberOfDependents() >= 2);
 
     future2.complete(null);
-    await().untilTrue(endPutIfAbsent);
+    await().untilTrue(endComputeIfAbsent);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 

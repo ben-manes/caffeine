@@ -96,6 +96,7 @@ val compileCodeGenJava by tasks.existing(JavaCompile::class) {
       disable("MissingOverride")
       disable("MemberName")
       disable("Varifier")
+      disable("Var")
       nullaway.disable()
     }
   }
