@@ -130,6 +130,7 @@ javadocs
 JBridge
 jcache
 JCP
+jcstress
 JDKs
 jemalloc
 jetbrains

@@ -757,4 +757,16 @@
     <Method name="lambda$refreshes_memoize$0"/>
     <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
   </Match>
+  <Match>
+    <Or>
+      <Class name="~com\.github\.benmanes\.caffeine\.cache.*_jcstress.*"/>
+      <Class name="com.github.benmanes.caffeine.cache.IntermittentNull"/>
+    </Or>
+    <Bug pattern="
+      URF_UNREAD_FIELD,
+      UP_UNUSED_PARAMETER,
+      DLS_DEAD_LOCAL_STORE,
+      DCN_NULLPOINTER_EXCEPTION,
+      THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
+  </Match>
 </FindBugsFilter>

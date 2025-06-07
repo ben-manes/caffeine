@@ -17,7 +17,7 @@ sourceSets.configureEach {
     compileClasspath = compileTask.map { it.classpath }
     inputs.files(compileTask.map { it.outputs.files })
     javaSources = allJava.asFileTree
-    classpath = ecj.get()
+    classpath(ecj)
   }
 }
 

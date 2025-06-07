@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
+import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
 import java.util.Objects;
 
@@ -87,6 +88,7 @@ public final class AddValue implements NodeRule {
             .beginControlFlow("if (referent != null)")
                 .addStatement("return referent")
             .endControlFlow()
+            .addStatement("$T.loadLoadFence()", VarHandle.class)
             .addStatement("$1T<V> current = ($1T<V>) $2L.getAcquire(this)", Reference.class, handle)
             .beginControlFlow("if (ref == current)")
                 .addStatement("return null")
@@ -119,10 +121,10 @@ public final class AddValue implements NodeRule {
     } else {
       setter.addStatement("$1T<V> ref = ($1T<V>) $2L.getAcquire(this)",
           Reference.class, varHandleName("value"));
-      setter.addComment("Can be setRelease in JDK 12+ (see JDK-8205523, JDK-8205523, JDK-8209697)");
-      setter.addStatement("$L.setVolatile(this, new $T($L, $N, referenceQueue))",
+      setter.addStatement("$L.setRelease(this, new $T($L, $N, referenceQueue))",
           varHandleName("value"), context.valueReferenceType(),
           "getKeyReference()", "value");
+      setter.addStatement("$T.storeStoreFence()", VarHandle.class);
       setter.addStatement("ref.clear()");
     }
 

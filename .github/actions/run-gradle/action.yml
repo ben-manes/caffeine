@@ -25,6 +25,16 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Setup shell
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install bash
+        echo "/opt/homebrew/bin/bash" >> $GITHUB_PATH || \
+        echo "/usr/local/bin/bash" >> $GITHUB_PATH
+        brew install grep
+        echo "/opt/homebrew/opt/grep/libexec/gnubin" >> $GITHUB_PATH || \
+        echo "/usr/local/opt/grep/libexec/gnubin" >> $GITHUB_PATH
     - name: Read Gradle JDK toolchain version
       id: gradle_toolchain
       shell: bash
