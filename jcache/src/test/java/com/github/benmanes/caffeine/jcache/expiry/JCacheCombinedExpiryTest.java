@@ -109,7 +109,7 @@ public final class JCacheCombinedExpiryTest extends AbstractJCacheTest {
 
   @Test
   public void putIfAbsent_expired() {
-    jcache.putIfAbsent(KEY_1, VALUE_1);
+    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
     advancePastExpiry();
 
     assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isTrue();

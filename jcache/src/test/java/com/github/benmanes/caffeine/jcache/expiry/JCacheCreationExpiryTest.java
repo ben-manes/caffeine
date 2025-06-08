@@ -245,7 +245,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
   @Test
   public void putIfAbsent_absent() {
-    jcache.putIfAbsent(KEY_1, VALUE_1);
+    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
 
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
     assertThat(expirable).isNotNull();
@@ -255,7 +255,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
   @Test
   public void putIfAbsent_expired() {
-    jcache.putIfAbsent(KEY_1, VALUE_1);
+    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
     advancePastExpiry();
 
     assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isTrue();
@@ -268,7 +268,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
   @Test
   public void putIfAbsent_expired_lazy() {
-    jcache.putIfAbsent(KEY_1, VALUE_1);
+    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
 
     ticker.setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
     assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isTrue();
@@ -276,10 +276,10 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
   @Test
   public void putIfAbsent_present() {
-    jcache.putIfAbsent(KEY_1, VALUE_1);
+    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
     advanceHalfExpiry();
 
-    jcache.putIfAbsent(KEY_1, VALUE_2);
+    assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isFalse();
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
     assertThat(expirable).isNotNull();
     assertThat(expirable.getExpireTimeMillis())

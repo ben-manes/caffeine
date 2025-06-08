@@ -260,7 +260,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       throw new CompletionException(failure);
     }
 
-    @CanIgnoreReturnValue
     public CompletionException error(Throwable error) {
       long loadTime = cache.statsTicker().read() - startTime;
       var failure = handleResponse(/* result= */ null, error);
