@@ -146,8 +146,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           Collections.unmodifiableSet(proxies.keySet()), cache().executor());
       return loader.handle(completer).thenCompose(ignored -> composeResult(futures));
     } catch (Throwable t) {
-      completer.apply(/* result= */ null, t);
-      throw t;
+      throw completer.error(t);
     }
   }
 
@@ -259,6 +258,19 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         throw (Error) failure;
       }
       throw new CompletionException(failure);
+    }
+
+    @CanIgnoreReturnValue
+    public CompletionException error(Throwable error) {
+      long loadTime = cache.statsTicker().read() - startTime;
+      var failure = handleResponse(/* result= */ null, error);
+      cache.statsCounter().recordLoadFailure(loadTime);
+      if (failure instanceof RuntimeException) {
+        throw (RuntimeException) failure;
+      } else if (failure instanceof Error) {
+        throw (Error) failure;
+      }
+      return new CompletionException(failure);
     }
 
     private @Nullable Throwable handleResponse(

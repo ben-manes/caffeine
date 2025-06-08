@@ -1,6 +1,5 @@
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import net.ltgt.gradle.errorprone.errorprone
-import org.gradle.kotlin.dsl.named
 
 plugins {
   id("java-library.caffeine")

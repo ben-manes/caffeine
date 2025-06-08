@@ -770,7 +770,25 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void getAllBifunction_absent_failure(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void getAllBifunction_absent_failure_checkedException(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = cache.getAll(context.absentKeys(),
+        (keys, executor) -> CompletableFuture.failedFuture(new IOException()));
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(IOException.class);
+    assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IOException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllBifunction_absent_failure_runtimeException(
+      AsyncCache<Int, Int> cache, CacheContext context) {
     var future = cache.getAll(context.absentKeys(),
         (keys, executor) -> CompletableFuture.failedFuture(new IllegalStateException()));
     assertThat(future).failsWith(CompletionException.class)
@@ -779,6 +797,23 @@ public final class AsyncCacheTest {
     assertThat(logEvents()
         .withMessage("Exception thrown during asynchronous load")
         .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllBifunction_absent_failure_error(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = cache.getAll(context.absentKeys(),
+        (keys, executor) -> CompletableFuture.failedFuture(new Error()));
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(Error.class);
+    assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(Error.class)
         .withLevel(WARN)
         .exclusively())
         .hasSize(1);

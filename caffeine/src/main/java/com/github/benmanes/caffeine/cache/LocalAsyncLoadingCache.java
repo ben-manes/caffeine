@@ -291,11 +291,7 @@ abstract class LocalAsyncLoadingCache<K, V>
             var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
               var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
               if (successful && (currentValue == oldValueFuture[0])) {
-                if (currentValue == null) {
-                  // If absent then discard the refresh and maybe notifying the listener
-                  discard[0] = (newValue != null);
-                  return null;
-                } else if ((currentValue == newValue) || (currentValue == castedFuture)) {
+                if ((currentValue == newValue) || (currentValue == castedFuture)) {
                   // If the reloaded value is the same instance then no-op
                   return currentValue;
                 } else if (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)) {

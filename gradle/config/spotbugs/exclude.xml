@@ -178,7 +178,10 @@
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter"/>
-    <Method name="apply"/>
+    <Or>
+      <Method name="apply"/>
+      <Method name="error"/>
+    </Or>
     <Bug pattern="ITC_INHERITANCE_TYPE_CHECKING"/>
   </Match>
   <Match>

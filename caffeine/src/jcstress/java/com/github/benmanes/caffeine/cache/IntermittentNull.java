@@ -31,7 +31,7 @@ import com.google.errorprone.annotations.Var;
 /**
  * A stress test that simulates the behavior for {@link java.lang.ref.Reference} reads and writes in
  * weak or soft valued caches. The {@link Node#setValue} proactively clears the underlying referent
- * after updating the entry's value. This is done to assist cross-generational pollution which can
+ * after updating the entry's value. This is done to avoid cross-generational pollution which can
  * cause garbage collectors to unnecessarily promote young dead objects to an old collection and
  * increase pause times. The {@link Node#getValue} compensates by a re-check validation to determine
  * if the observed null referent is due to garbage collection or a stale read. Due to referent being
