@@ -763,7 +763,7 @@
   <Match>
     <Or>
       <Class name="~com\.github\.benmanes\.caffeine\.cache.*_jcstress.*"/>
-      <Class name="com.github.benmanes.caffeine.cache.IntermittentNull"/>
+      <Class name="~com\.github\.benmanes\.caffeine\.cache\.IntermittentNull.*"/>
     </Or>
     <Bug pattern="
       URF_UNREAD_FIELD,

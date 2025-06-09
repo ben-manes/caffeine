@@ -54,6 +54,18 @@ eclipse.classpath {
 
 @CacheableTask
 abstract class JCStress : JavaExec() {
+  @get:Input @get:Optional
+  @get:Option(option = "mode", description = "[sanity, quick, default, tough, stress]")
+  abstract val mode: Property<String>
+  @get:Input @get:Optional
+  @get:Option(option = "time", description = "Time per test iteration (milliseconds)")
+  abstract val time: Property<String>
+  @get:Input @get:Optional
+  @get:Option(option = "iterations", description = "Iterations per test")
+  abstract val iterations: Property<String>
+  @get:Input @get:Optional
+  @get:Option(option = "tests", description = "The tests to execute")
+  abstract val testNames: Property<String>
   @get:OutputDirectory
   val outputDir: Provider<Directory> = project.layout.buildDirectory.dir("jcstress")
 
@@ -65,6 +77,18 @@ abstract class JCStress : JavaExec() {
 
   @TaskAction
   override fun exec() {
+    if (iterations.isPresent) {
+      args("-iters", iterations.get().replace("[_,]".toRegex(), ""))
+    }
+    if (time.isPresent) {
+      args("-time", time.get().replace("[_,]".toRegex(), ""))
+    }
+    if (testNames.isPresent) {
+      args("-t", testNames.get())
+    }
+    if (mode.isPresent) {
+      args("-m", mode.get())
+    }
     args("-r", outputDir.get().asFile.resolve("results"))
     outputDir.get().asFile.mkdirs()
     super.exec()

@@ -317,7 +317,7 @@ jobs:
         id: test-results
         with:
           json_thousands_separator: ','
-          junit_files: '**/TEST-*.xml'
+          files: '**/TEST-*.xml'
           comment_mode: off
           ignore_runs: true
           job_summary: true

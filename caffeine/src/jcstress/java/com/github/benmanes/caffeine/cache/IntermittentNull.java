@@ -24,6 +24,7 @@ import org.openjdk.jcstress.annotations.Expect;
 import org.openjdk.jcstress.annotations.JCStressTest;
 import org.openjdk.jcstress.annotations.Outcome;
 import org.openjdk.jcstress.annotations.State;
+import org.openjdk.jcstress.infra.results.II_Result;
 import org.openjdk.jcstress.infra.results.L_Result;
 
 import com.google.errorprone.annotations.Var;
@@ -39,62 +40,93 @@ import com.google.errorprone.annotations.Var;
  * the correct visibility ordering.
  * <p>
  * {@snippet lang="shell" :
- * // JAVA_VERSION=?? for an alternative jdk
- * ./gradlew caffeine:jcstress --rerun
+ * # use JAVA_VERSION for an alternative jdk
+ * JAVA_VERSION=11 ./gradlew caffeine:jcstress --tests IntermittentNull --rerun
  * }
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@State
-@JCStressTest
-@Outcome(id = "ok", expect = Expect.ACCEPTABLE, desc = "Reference seen and valid")
-@Outcome(id = "null", expect = Expect.FORBIDDEN, desc = "Reference seen but field not visible")
-public class IntermittentNull {
-  private static final VarHandle VALUE;
+@SuppressWarnings("PMD.MissingStaticMethodInNonInstantiatableClass")
+public final class IntermittentNull {
 
-  volatile Value value = new Value("ok");
+  private IntermittentNull() {}
 
-  @Actor
-  public void writer() {
-    var oldValue = (Value) VALUE.getAcquire(this);
-    var newValue = new Value("ok");
-    VALUE.setRelease(this, newValue);
-    VarHandle.storeStoreFence();
-    oldValue.data = null;
-  }
+  @State
+  @JCStressTest
+  @Outcome(id = "ok", expect = Expect.ACCEPTABLE, desc = "Reference seen and valid")
+  @Outcome(id = "null", expect = Expect.FORBIDDEN, desc = "Reference seen but field not visible")
+  public static class Simple {
+    private static final VarHandle VALUE;
 
-  @Actor
-  public void reader(L_Result r) {
-    @Var var value = (Value) VALUE.getAcquire(this);
-    for (;;) {
-      var data = value.data;
-      if (data != null) {
-        r.r1 = data;
-        return;
+    volatile Value value = new Value("ok");
+
+    @Actor
+    public void writer() {
+      var oldValue = (Value) VALUE.getAcquire(this);
+      var newValue = new Value("ok");
+      VALUE.setRelease(this, newValue);
+      VarHandle.storeStoreFence();
+      oldValue.data = null;
+    }
+
+    @Actor
+    public void reader(L_Result r) {
+      @Var var value = (Value) VALUE.getAcquire(this);
+      for (;;) {
+        var data = value.data;
+        if (data != null) {
+          r.r1 = data;
+          return;
+        }
+        VarHandle.loadLoadFence();
+        var current = (Value) VALUE.getAcquire(this);
+        if (value == current) {
+          r.r1 = null;
+          return;
+        }
+        value = current;
       }
-      VarHandle.loadLoadFence();
-      var current = (Value) VALUE.getAcquire(this);
-      if (value == current) {
-        r.r1 = null;
-        return;
+    }
+
+    static {
+      try {
+        VALUE = MethodHandles.lookup().findVarHandle(Simple.class, "value", Value.class);
+      } catch (ReflectiveOperationException e) {
+        throw new ExceptionInInitializerError(e);
       }
-      value = current;
+    }
+
+    static final class Value {
+      @Nullable String data;
+
+      Value(String data) {
+        this.data = data;
+      }
     }
   }
 
-  static {
-    try {
-      VALUE = MethodHandles.lookup().findVarHandle(IntermittentNull.class, "value", Value.class);
-    } catch (ReflectiveOperationException e) {
-      throw new ExceptionInInitializerError(e);
+  @State
+  @JCStressTest
+  @Outcome(id = "1, 1", expect = Expect.ACCEPTABLE, desc = "Reference seen and valid")
+  @Outcome(expect = Expect.FORBIDDEN, desc = "Reference seen but field not visible")
+  public static class Actual {
+    private static final String OK = "ok";
+
+    final Cache<String, String> cache;
+
+    public Actual() {
+      cache = Caffeine.newBuilder().weakValues().build();
+      cache.put(OK, OK);
     }
-  }
 
-  static final class Value {
-    @Nullable String data;
+    @Actor
+    public void writer(II_Result r) {
+      r.r1 = (cache.asMap().put(OK, OK) == null) ? 0 : 1;
+    }
 
-    Value(String data) {
-      this.data = data;
+    @Actor
+    public void reader(II_Result r) {
+      r.r2 = (cache.getIfPresent(OK) == null) ? 0 : 1;
     }
   }
 }
