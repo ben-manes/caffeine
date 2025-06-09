@@ -1,5 +1,5 @@
 [versions]
-caffeine = "3.2.0"
+caffeine = "3.2.1"
 graal = "0.10.6"
 junit = "5.13.1"
 truth = "1.4.4"
