@@ -176,6 +176,27 @@ public final class InternerTest extends TestCase {
   }
 
   @Test
+  public void intern_strong_present() {
+    var result = new AtomicReference<Int>();
+    var writer = new AtomicReference<Thread>();
+    var interner = (StrongInterner<Int>) Interner.<Int>newStrongInterner();
+
+    interner.map.computeIfAbsent(Int.MAX_VALUE, key -> {
+      ConcurrentTestHarness.execute(() -> {
+        writer.set(Thread.currentThread());
+        result.set(interner.intern(new Int(Int.MAX_VALUE)));
+      });
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return Int.MAX_VALUE;
+    });
+    await().untilAsserted(() -> assertThat(result.get()).isSameInstanceAs(Int.MAX_VALUE));
+  }
+
+  @Test
   public void nullPointerExceptions() {
     new NullPointerTester().testAllPublicStaticMethods(Interner.class);
   }
@@ -198,14 +219,17 @@ public final class InternerTest extends TestCase {
   @Test
   public void interned() {
     var node = new Interned<Object, Boolean>(new WeakReference<>(null));
+    assertThat(node.isAlive()).isTrue();
     assertThat(node.getValue()).isTrue();
     assertThat(node.isRetired()).isFalse();
     assertThat(node.getValueReference()).isTrue();
 
     node.retire();
+    assertThat(node.isAlive()).isFalse();
     assertThat(node.isRetired()).isTrue();
 
     node.die();
+    assertThat(node.isAlive()).isFalse();
     assertThat(node.isDead()).isTrue();
   }
 

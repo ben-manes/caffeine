@@ -988,6 +988,23 @@ public final class LoadingCacheTest {
     assertThrows(NullPointerException.class, () -> cache.refresh(context.absentKey()));
   }
 
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, loader = Loader.ASYNC_INCOMPLETE,
+      removalListener = Listener.CONSUMING)
+  public void refresh_discard_failure(LoadingCache<Int, Int> cache, CacheContext context) {
+    var loading = (LocalLoadingCache<Int, Int>) cache;
+    cache.put(context.absentKey(), context.absentValue());
+    var future = cache.refresh(context.absentKey());
+    loading.cache().refreshes().clear();
+    future.complete(null);
+
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).stats().failures(1);
+  }
+
   /* --------------- refreshAll --------------- */
 
   @SuppressWarnings("NullAway")

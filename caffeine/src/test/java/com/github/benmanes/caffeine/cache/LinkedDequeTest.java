@@ -827,6 +827,16 @@ public final class LinkedDequeTest {
   }
 
   @Test(dataProvider = "full")
+  public void comparing_peek(LinkedDeque<LinkedValue> deque) {
+    var ascending = PeekingIterator.comparing(
+        deque.descendingIterator(), deque.iterator(), comparator().reversed());
+    var descending = PeekingIterator.comparing(
+        deque.descendingIterator(), deque.iterator(), comparator());
+    assertThat(ascending.peek()).isEqualTo(deque.peekFirst());
+    assertThat(descending.peek()).isEqualTo(deque.peekLast());
+  }
+
+  @Test(dataProvider = "full")
   public void comparing_uneven(LinkedDeque<LinkedValue> deque) {
     var empty = new AccessOrderDeque<LinkedValue>().iterator();
     var left = PeekingIterator.comparing(deque.iterator(), empty, comparator().reversed());

@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import java.io.UncheckedIOException;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -111,6 +112,7 @@ public final class JavaSerializationCopierTest {
   public void immutable() {
     String text = "test";
     assertThat(copy(new JavaSerializationCopier(), text)).isSameInstanceAs(text);
+    assertThat(copy(new JavaSerializationCopier(), Month.JANUARY)).isSameInstanceAs(Month.JANUARY);
   }
 
   @Test

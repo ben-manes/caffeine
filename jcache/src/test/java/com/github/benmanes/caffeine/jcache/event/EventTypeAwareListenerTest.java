@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.List;
 
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryCreatedListener;
@@ -70,6 +71,18 @@ public final class EventTypeAwareListenerTest {
           /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2));
       verifyNoInteractions(listener);
     }
+  }
+
+  @Test
+  public void suppress() throws IOException {
+    CacheEntryListener<Integer, Integer> delegate = Mockito.mock();
+    try (var listener = new EventTypeAwareListener<>(delegate)) {
+      listener.onCreated(List.of());
+      listener.onUpdated(List.of());
+      listener.onRemoved(List.of());
+      listener.onExpired(List.of());
+    }
+    verifyNoInteractions(delegate);
   }
 
   @Test

@@ -298,7 +298,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   /**
    * We do not inline resize into this method because we do not resize on fill.
    */
-  private int offerSlowPath(long mask, long pIndex, long producerLimit) {
+  int offerSlowPath(long mask, long pIndex, long producerLimit) {
     @Var int result;
     long cIndex = lvConsumerIndex(this);
     long bufferCapacity = getCurrentBufferCapacity(mask);

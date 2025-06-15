@@ -1760,8 +1760,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
     @Var Reference<? extends V> valueRef;
     while ((valueRef = valueReferenceQueue().poll()) != null) {
-      @SuppressWarnings({"RedundantCast", "unchecked"})
-      var ref = (InternalReference<V>) (Object) valueRef;
+      @SuppressWarnings("unchecked")
+      var ref = (InternalReference<V>) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
       if ((node != null) && (valueRef == node.getValueReference())) {
         evictEntry(node, RemovalCause.COLLECTED, 0L);

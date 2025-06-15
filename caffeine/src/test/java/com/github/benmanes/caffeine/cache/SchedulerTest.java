@@ -133,6 +133,12 @@ public final class SchedulerTest {
   }
 
   @Test
+  public void guardedScheduler_twice() {
+    var scheduler = Scheduler.guardedScheduler(Scheduler.systemScheduler());
+    assertThat(scheduler).isSameInstanceAs(Scheduler.guardedScheduler(scheduler));
+  }
+
+  @Test
   public void guardedScheduler_nullFuture() {
     @SuppressWarnings("PMD.CloseResource")
     ScheduledExecutorService scheduledExecutor = Mockito.mock();

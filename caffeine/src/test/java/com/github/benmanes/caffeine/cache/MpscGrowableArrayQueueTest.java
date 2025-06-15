@@ -288,6 +288,32 @@ public final class MpscGrowableArrayQueueTest {
     assertThat(queue).isEmpty();
   }
 
+  @Test
+  public void offer_unknownResult() {
+    var queue = new MpscGrowableArrayQueue<Integer>(2, 8) {
+      @Override protected int offerSlowPath(long mask, long pIndex, long producerLimit) {
+        return -1;
+      }
+    };
+    queue.producerLimit = 0;
+    assertThat(queue.offer(1)).isTrue();
+    assertThat(queue.poll()).isEqualTo(1);
+  }
+
+  @Test
+  public void offer_resizeFails() {
+    var queue = new MpscGrowableArrayQueue<Integer>(2, 8) {
+      @Override protected long availableInQueue(long pIndex, long cIndex) {
+        return -1;
+      }
+      @Override protected int offerSlowPath(long mask, long pIndex, long producerLimit) {
+        return 3;
+      }
+    };
+    queue.producerLimit = 0;
+    assertThrows(IllegalStateException.class, () -> queue.offer(1));
+  }
+
   /* --------------- Providers --------------- */
 
   @DataProvider(name = "empty")

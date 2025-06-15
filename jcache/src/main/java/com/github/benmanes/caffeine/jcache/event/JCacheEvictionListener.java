@@ -56,15 +56,14 @@ public final class JCacheEvictionListener<K, V> implements RemovalListener<K, Ex
 
   @Override
   public void onRemoval(@Nullable K key, @Nullable Expirable<V> expirable, RemovalCause cause) {
-    if (expirable != null) {
-      requireNonNull(key);
-      V value = expirable.get();
-      if (cause == RemovalCause.EXPIRED) {
-        dispatcher.publishExpiredQuietly(cache, key, value);
-      } else {
-        dispatcher.publishRemovedQuietly(cache, key, value);
-      }
-      statistics.recordEvictions(1L);
+    requireNonNull(key);
+    requireNonNull(expirable);
+    V value = expirable.get();
+    if (cause == RemovalCause.EXPIRED) {
+      dispatcher.publishExpiredQuietly(cache, key, value);
+    } else {
+      dispatcher.publishRemovedQuietly(cache, key, value);
     }
+    statistics.recordEvictions(1L);
   }
 }

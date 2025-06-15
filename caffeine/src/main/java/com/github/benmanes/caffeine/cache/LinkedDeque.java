@@ -154,7 +154,7 @@ interface LinkedDeque<E> extends Deque<E> {
           E o1 = first.peek();
           E o2 = second.peek();
           boolean greaterOrEqual = (comparator.compare(o1, o2) >= 0);
-          return greaterOrEqual ? first.peek() : second.peek();
+          return greaterOrEqual ? o1 : o2;
         }
       };
     }

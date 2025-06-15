@@ -15,7 +15,9 @@
  */
 package com.github.benmanes.caffeine.jcache.event;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -37,9 +39,39 @@ import com.google.common.testing.EqualsTester;
  */
 public final class EventTypeFilterTest {
 
+  @Test
+  public void evaluate_compatible() {
+    CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
+    CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
+    var filter = new EventTypeFilter<>(listener, underlying);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      when(underlying.evaluate(any()))
+          .thenReturn(false)
+          .thenReturn(true);
+      var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
+          /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
+      assertThat(filter.evaluate(event)).isFalse();
+      assertThat(filter.evaluate(event)).isTrue();
+      verifyNoInteractions(listener);
+    }
+  }
+
+  @Test
+  public void evaluate_incompatible() {
+    CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
+    CacheEntryListener<Integer, Integer> listener = Mockito.mock();
+    var filter = new EventTypeFilter<>(listener, underlying);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
+          /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
+      assertThat(filter.evaluate(event)).isFalse();
+      verifyNoInteractions(cache, listener, underlying);
+    }
+  }
+
   @Test(groups = "isolated")
   @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
-  public void dispatch_unknownEventType() {
+  public void evaluate_unknownEventType() {
     CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
     CacheEntryListener<Integer, Integer> listener = Mockito.mock();
     var filter = new EventTypeFilter<>(listener, underlying);
@@ -52,7 +84,7 @@ public final class EventTypeFilterTest {
       var event = new JCacheEntryEvent<>(cache, unknown,
           /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
       assertThrows(CacheEntryListenerException.class, () -> filter.evaluate(event));
-      verifyNoInteractions(listener, underlying);
+      verifyNoInteractions(cache, listener, underlying);
     }
   }
 
