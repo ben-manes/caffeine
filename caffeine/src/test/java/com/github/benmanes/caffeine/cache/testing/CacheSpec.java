@@ -593,12 +593,15 @@ public @interface CacheSpec {
       }
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         executor.execute(() -> {});
-        return new CompletableFuture<>();
+        return new CompletableFuture<>() {
+          @Override public Executor defaultExecutor() {
+            return executor;
+          }
+        };
       }
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
-        executor.execute(() -> {});
-        return new CompletableFuture<>();
+        return asyncLoad(key, executor);
       }
     },
     /** A loader that always throws an interrupted exception. */

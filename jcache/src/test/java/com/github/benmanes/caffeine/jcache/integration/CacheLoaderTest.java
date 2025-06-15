@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -92,7 +92,10 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
 
   @Test
   public void loadAll_nullMapping() {
-    when(cacheLoader.loadAll(anyIterable())).thenReturn(Collections.singletonMap(1, null));
+    var mappings = new HashMap<Integer, Integer>();
+    mappings.put(1, null);
+    mappings.put(null, 2);
+    when(cacheLoader.loadAll(anyIterable())).thenReturn(mappings);
     var result = jcacheLoading.getAll(Set.of(1, 2, 3));
     assertThat(result).isEmpty();
   }

@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
@@ -36,8 +37,11 @@ import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.Async.AsyncEvictionListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
+import com.github.benmanes.caffeine.cache.Async.AsyncRemovalListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.testing.Int;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -146,6 +150,22 @@ public final class AsyncTest {
     assertThat(expiry.expireAfterCreate(0, future, 1)).isEqualTo(MAXIMUM_EXPIRY);
     assertThat(expiry.expireAfterUpdate(0, future, 1, 2)).isEqualTo(MAXIMUM_EXPIRY);
     assertThat(expiry.expireAfterRead(0, future, 1, 2)).isEqualTo(MAXIMUM_EXPIRY);
+  }
+
+  @Test
+  public void asyncRemoval_null() {
+    RemovalListener<Int, Int> delegate = Mockito.mock();
+    var listender = new AsyncRemovalListener<>(delegate, Runnable::run);
+    listender.onRemoval(Int.MAX_VALUE, null, RemovalCause.EXPLICIT);
+    verifyNoInteractions(delegate);
+  }
+
+  @Test
+  public void asyncEviction_null() {
+    RemovalListener<Int, Int> delegate = Mockito.mock();
+    var listender = new AsyncEvictionListener<>(delegate);
+    listender.onRemoval(Int.MAX_VALUE, null, RemovalCause.SIZE);
+    verifyNoInteractions(delegate);
   }
 
   @DataProvider(name = "successful")

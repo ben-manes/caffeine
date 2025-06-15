@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
@@ -24,8 +25,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -43,6 +46,9 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.testing.EqualsTester;
 
 /**
  * A test for the specification parser.
@@ -99,6 +105,41 @@ public final class CaffeineSpecTest {
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("key="));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("=value"));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("key=value="));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("\u00A0"));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("\u200B"));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("\u2060"));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("\uFEFF"));
+  }
+
+  @Test
+  public void toBuilder_invalidKeyStrength() {
+    var spec = CaffeineSpec.parse("");
+    spec.keyStrength = Strength.SOFT;
+    assertThrows(IllegalStateException.class, spec::toBuilder);
+  }
+
+  @Test
+  public void equals() {
+    var configurations = Lists.cartesianProduct(IntStream.range(0, 9)
+        .mapToObj(i -> ImmutableList.of(false, true)).collect(toImmutableList()));
+    var hashes = new LinkedHashSet<Integer>();
+    var tester = new EqualsTester();
+    for (var configuration : configurations) {
+      var spec = CaffeineSpec.parse("");
+      spec.refreshAfterWrite = configuration.get(0) ? null : Duration.ofMinutes(1);
+      spec.expireAfterAccess = configuration.get(1) ? null : Duration.ofMinutes(1);
+      spec.expireAfterWrite = configuration.get(2) ? null : Duration.ofMinutes(1);
+      spec.valueStrength = configuration.get(3) ? null : Strength.WEAK;
+      spec.keyStrength = configuration.get(4) ? null : Strength.WEAK;
+      spec.initialCapacity = configuration.get(5) ? UNSET_INT : 1;
+      spec.maximumWeight = configuration.get(6) ? UNSET_INT : 1;
+      spec.maximumSize = configuration.get(7) ? UNSET_INT : 1;
+      spec.recordStats = configuration.get(8);
+      tester.addEqualityGroup(spec);
+      hashes.add(spec.hashCode());
+    }
+    tester.testEquals();
+    assertThat(hashes).hasSize(configurations.size());
   }
 
   @Test(dataProvider = "caches")

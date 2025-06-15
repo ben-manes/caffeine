@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.management;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -61,6 +62,17 @@ public final class JmxRegistrationTest {
   @Test
   public void newObjectName_malformed() {
     assertThrows(CacheException.class, () -> JmxRegistration.newObjectName("a=b"));
+  }
+
+  @Test
+  @SuppressWarnings("NullAway")
+  public void sanitize() {
+    assertThat(JmxRegistration.sanitize(null)).isEmpty();
+    assertThat(JmxRegistration.sanitize("a.b")).isEqualTo("a.b");
+    assertThat(JmxRegistration.sanitize("a,b")).isEqualTo("a.b");
+    assertThat(JmxRegistration.sanitize("a:b")).isEqualTo("a.b");
+    assertThat(JmxRegistration.sanitize("a=b")).isEqualTo("a.b");
+    assertThat(JmxRegistration.sanitize("a\nb")).isEqualTo("a.b");
   }
 
   @DataProvider(name = "registerExceptions")

@@ -204,6 +204,15 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
+  public void getAll_partial() {
+    jcacheLoading.put(KEY_1, VALUE_1);
+    jcacheLoading.put(KEY_2, VALUE_2);
+    when(loader.loadAll(any())).thenReturn(Map.of(KEY_3, VALUE_3));
+    var result = jcacheLoading.getAll(entries.keySet());
+    assertThat(result).containsExactlyEntriesIn(entries);
+  }
+
+  @Test
   public void containsKey_unexpired() {
     checkReadWhenUnexpired(jcache, currentTime().plus(EXPIRY_DURATION).toMillis(),
         key -> assertThat(jcache.containsKey(key)).isFalse());

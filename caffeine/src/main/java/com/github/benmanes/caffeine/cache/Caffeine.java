@@ -146,13 +146,10 @@ public final class Caffeine<K, V> {
   static final Duration MIN_DURATION = Duration.ofNanos(Long.MIN_VALUE);
   static final Duration MAX_DURATION = Duration.ofNanos(Long.MAX_VALUE);
   static final double DEFAULT_LOAD_FACTOR = 0.75;
+  static final int DEFAULT_INITIAL_CAPACITY = 16;
 
   enum Strength { WEAK, SOFT }
   static final int UNSET_INT = -1;
-
-  static final int DEFAULT_INITIAL_CAPACITY = 16;
-  static final int DEFAULT_EXPIRATION_NANOS = 0;
-  static final int DEFAULT_REFRESH_NANOS = 0;
 
   boolean strictParsing = true;
   boolean interner;
@@ -686,7 +683,7 @@ public final class Caffeine<K, V> {
   }
 
   long getExpiresAfterWriteNanos() {
-    return expiresAfterWrite() ? expireAfterWriteNanos : DEFAULT_EXPIRATION_NANOS;
+    return expireAfterWriteNanos;
   }
 
   boolean expiresAfterWrite() {
@@ -750,7 +747,7 @@ public final class Caffeine<K, V> {
   }
 
   long getExpiresAfterAccessNanos() {
-    return expiresAfterAccess() ? expireAfterAccessNanos : DEFAULT_EXPIRATION_NANOS;
+    return expireAfterAccessNanos;
   }
 
   boolean expiresAfterAccess() {
@@ -869,12 +866,12 @@ public final class Caffeine<K, V> {
     return this;
   }
 
-  boolean refreshAfterWrite() {
-    return refreshAfterWriteNanos != UNSET_INT;
+  long getRefreshAfterWriteNanos() {
+    return refreshAfterWriteNanos;
   }
 
-  long getRefreshAfterWriteNanos() {
-    return refreshAfterWrite() ? refreshAfterWriteNanos : DEFAULT_REFRESH_NANOS;
+  boolean refreshAfterWrite() {
+    return refreshAfterWriteNanos != UNSET_INT;
   }
 
   /**

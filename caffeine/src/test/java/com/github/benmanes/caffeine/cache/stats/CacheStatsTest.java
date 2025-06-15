@@ -104,6 +104,17 @@ public final class CacheStatsTest {
     assertThat(CacheStats.empty().minus(max)).isEqualTo(CacheStats.empty());
   }
 
+  @Test
+  public void saturatedAdd() {
+    // Should never allow have negative parameter, but added as a safety check
+    assertThat(CacheStats.saturatedAdd(10, 5)).isEqualTo(15);
+    assertThat(CacheStats.saturatedAdd(10, -5)).isEqualTo(5);
+    assertThat(CacheStats.saturatedAdd(-10, -5)).isEqualTo(-15);
+    assertThat(CacheStats.saturatedAdd(Long.MAX_VALUE, 1)).isEqualTo(Long.MAX_VALUE);
+    assertThat(CacheStats.saturatedAdd(Long.MIN_VALUE, -1)).isEqualTo(Long.MIN_VALUE);
+    assertThat(CacheStats.saturatedAdd(Long.MAX_VALUE, Long.MIN_VALUE)).isEqualTo(-1);
+  }
+
   @SuppressWarnings("PMD.ExcessiveParameterList")
   private static void checkStats(CacheStats stats, long requestCount, long hitCount,
       double hitRate, long missCount, double missRate, long loadSuccessCount,

@@ -42,16 +42,16 @@ import org.jspecify.annotations.Nullable;
  */
 @SuppressWarnings("PMD.CloseResource")
 public final class CacheManagerImpl implements CacheManager {
-  private final WeakReference<ClassLoader> classLoaderReference;
-  private final Map<String, CacheProxy<?, ?>> caches;
-  private final CachingProvider cacheProvider;
-  private final Properties properties;
-  private final Object lock;
-  private final URI uri;
+  final WeakReference<ClassLoader> classLoaderReference;
+  final Map<String, CacheProxy<?, ?>> caches;
+  final CachingProvider cacheProvider;
+  final Properties properties;
+  final Object lock;
+  final URI uri;
 
-  private final boolean runsAsAnOsgiBundle;
+  final boolean runsAsAnOsgiBundle;
 
-  private volatile boolean closed;
+  volatile boolean closed;
 
   public CacheManagerImpl(CachingProvider cacheProvider, boolean runsAsAnOsgiBundle,
       URI uri, ClassLoader classLoader, Properties properties) {
@@ -97,7 +97,7 @@ public final class CacheManagerImpl implements CacheManager {
       requireNonNull(configuration);
 
       CacheProxy<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
-        if ((existing != null) && !existing.isClosed()) {
+        if (existing != null) {
           throw new CacheException("Cache " + cacheName + " already exists");
         } else if (CacheFactory.isDefinedExternally(this, cacheName)) {
           throw new CacheException("Cache " + cacheName + " is configured externally");

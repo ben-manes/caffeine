@@ -16,18 +16,27 @@
 package com.github.benmanes.caffeine.jcache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
+import static org.awaitility.Awaitility.await;
 
 import java.lang.management.ManagementFactory;
+import java.net.URI;
+import java.util.EnumSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.CompleteConfiguration;
+import javax.cache.configuration.MutableConfiguration;
 import javax.cache.spi.CachingProvider;
 import javax.management.ObjectName;
 import javax.management.OperationsException;
 
+import org.mockito.Mockito;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -81,6 +90,43 @@ public final class CacheManagerTest {
   public void enableStatistics_absent() {
     cacheManager.enableStatistics("absent", true);
     assertThat(cacheManager.getCache("absent")).isNull();
+  }
+
+  @Test
+  public void isReadThrough() {
+    var config1 = new MutableConfiguration<>().setReadThrough(false);
+    assertThat(cacheManager.createCache(getClass() + "-1", config1))
+        .isNotInstanceOf(LoadingCacheProxy.class);
+
+    var config2 = new MutableConfiguration<>().setReadThrough(true);
+    assertThat(cacheManager.createCache(getClass() + "-2", config2))
+        .isNotInstanceOf(LoadingCacheProxy.class);
+
+    var config3 = new MutableConfiguration<>()
+        .setCacheLoaderFactory(Mockito::mock)
+        .setReadThrough(true);
+    assertThat(cacheManager.createCache(getClass() + "-3", config3))
+        .isInstanceOf(LoadingCacheProxy.class);
+  }
+
+  @Test
+  public void isClosed() throws InterruptedException, ExecutionException {
+    @SuppressWarnings("PMD.CloseResource")
+    var manager = (CacheManagerImpl) cachingProvider.getCacheManager(
+        URI.create(getClass().getName()), cachingProvider.getDefaultClassLoader());
+    var task = new FutureTask<>(() -> {
+      manager.close();
+    }, /* result= */ null);
+    var thread = new Thread(task);
+    synchronized (manager.lock) {
+      thread.start();
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> threadState.contains(thread.getState()));
+      manager.close();
+      assertThat(manager.isClosed()).isTrue();
+    }
+    task.get();
+    assertThat(manager.isClosed()).isTrue();
   }
 
   private static void checkConfigurationJmx(Cache<?, ?> cache) throws OperationsException {

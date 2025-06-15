@@ -17,10 +17,15 @@ package com.github.benmanes.caffeine.jcache.expiry;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.util.HashSet;
+import java.util.List;
+
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 
 import org.testng.annotations.Test;
+
+import com.google.common.testing.EqualsTester;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -55,17 +60,33 @@ public final class JCacheExpiryPolicyTest {
   }
 
   @Test
-  public void equals_wrongValue() {
-    assertThat(eternal).isNotEqualTo(temporal);
-  }
-
-  @Test
   public void equals() {
-    assertThat(eternal.equals(eternal)).isTrue();
+    var tester = new EqualsTester();
+    var durations = List.of(Duration.ETERNAL, Duration.ONE_DAY, Duration.ONE_HOUR);
+    for (var creation : durations) {
+      for (var update : durations) {
+        for (var read : durations) {
+          tester.addEqualityGroup(
+              new JCacheExpiryPolicy(creation, update, read),
+              new JCacheExpiryPolicy(creation, update, read));
+        }
+      }
+    }
+    tester.testEquals();
   }
 
   @Test
   public void hash() {
-    assertThat(eternal.hashCode()).isNotEqualTo(temporal.hashCode());
+    var hashes = new HashSet<Integer>();
+    var durations = List.of(Duration.ETERNAL, Duration.ONE_DAY, Duration.ONE_HOUR);
+    for (var creation : durations) {
+      for (var update : durations) {
+        for (var read : durations) {
+          var policy = new JCacheExpiryPolicy(creation, update, read);
+          assertThat(hashes).doesNotContain(policy.hashCode());
+          hashes.add(policy.hashCode());
+        }
+      }
+    }
   }
 }

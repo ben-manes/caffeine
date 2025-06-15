@@ -1149,21 +1149,21 @@ public final class CacheTest {
     long expiresAt = 300;
     long refreshableAt = 400;
     var tester = new EqualsTester();
-    for (int i = 0; i < 10; i++) {
-      var key = i;
-      var value = i + 1;
-      var group = List.of(Map.entry(key, value),
-          new SnapshotEntry<>(key, value, snapshot),
-          new WeightedEntry<>(key, value, snapshot, weight),
-          new ExpirableEntry<>(key, value, snapshot, expiresAt),
-          new ExpirableWeightedEntry<>(key, value, snapshot, weight, expiresAt),
-          new RefreshableExpirableEntry<>(key, value, snapshot, expiresAt, refreshableAt),
-          new CompleteEntry<>(key, value, snapshot, weight, expiresAt, refreshableAt));
-      for (var entry : group) {
-        assertWithMessage("%s", entry.getClass())
-            .that(entry.toString()).isEqualTo(key + "=" + value);
+    for (int key = 0; key < 10; key++) {
+      for (int value = 0; value < 10; value++) {
+        var group = List.of(Map.entry(key, value),
+            new SnapshotEntry<>(key, value, snapshot),
+            new WeightedEntry<>(key, value, snapshot, weight),
+            new ExpirableEntry<>(key, value, snapshot, expiresAt),
+            new ExpirableWeightedEntry<>(key, value, snapshot, weight, expiresAt),
+            new RefreshableExpirableEntry<>(key, value, snapshot, expiresAt, refreshableAt),
+            new CompleteEntry<>(key, value, snapshot, weight, expiresAt, refreshableAt));
+        for (var entry : group) {
+          assertWithMessage("%s", entry.getClass())
+              .that(entry.toString()).isEqualTo(key + "=" + value);
+        }
+        tester.addEqualityGroup(group.toArray());
       }
-      tester.addEqualityGroup(group.toArray());
     }
     tester.testEquals();
   }

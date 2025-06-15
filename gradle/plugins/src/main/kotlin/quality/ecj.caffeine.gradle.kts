@@ -42,7 +42,7 @@ abstract class EclipseJavaCompile : JavaExec() {
     args("-encoding", "UTF-8")
     args("-enableJavadoc")
     args("-failOnWarning")
-    args("--release", 23)
+    args("--release", 24)
     args("-proc:none")
     args("-d", "none")
     args(sources)

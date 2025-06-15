@@ -123,7 +123,7 @@ public final class CaffeineSpec {
     if (valueStrength != null) {
       if (valueStrength == Strength.WEAK) {
         builder.weakValues();
-      } else if (valueStrength == Strength.SOFT) {
+      } else {
         builder.softValues();
       }
     }
@@ -160,7 +160,6 @@ public final class CaffeineSpec {
 
     @SuppressWarnings("StringSplitter")
     String[] keyAndValue = option.split(SPLIT_KEY_VALUE, 3);
-    requireArgument(keyAndValue.length >= 1, "blank key-value pair");
     requireArgument(keyAndValue.length <= 2,
         "key-value pair %s with more than one equals sign", option);
 
