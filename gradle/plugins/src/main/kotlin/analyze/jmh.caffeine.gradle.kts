@@ -49,8 +49,8 @@ jmh {
   resultFormat = "json"
 
   val includePattern: String? by project
-  if (includePattern != null) {
-    includes = listOf(includePattern)
+  includePattern?.let {
+    includes = listOf(it)
   }
 
   // Benchmark parameters: Separated by '&' for parameter types, and ',' for multiple values

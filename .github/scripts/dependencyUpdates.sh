@@ -6,9 +6,9 @@ BOLD="\033[1m"
 RESET="\033[0m"
 UNDERLINE="\033[4m"
 
-find . -type f -name "settings.gradle.kts" | while read -r gradle_file; do
+find . -type f -name "build.gradle.kts" | while read -r gradle_file; do
   project_dir=$(dirname "${gradle_file#./}")
-  project=$( [[ "$project_dir" == "." ]] && echo "caffeine" || echo "$project_dir" )
+  project=$( [[ "$project_dir" == "." ]] && echo "root" || echo "$project_dir" )
   echo -e "\n${BOLD}${UNDERLINE}${project}${RESET}"
   echo -e "${BOLD}Evaluating...${RESET}"
 

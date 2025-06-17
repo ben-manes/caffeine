@@ -71,7 +71,12 @@ public final class CaffeineSpecTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void parseDuration_exception() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseTimeUnit("key", ""));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseTimeUnit("key", null));
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseDuration("key", "value"));
     assertThrows(IllegalArgumentException.class,
