@@ -108,14 +108,22 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     try {
       if (testResult.isSuccess()) {
         validate(testResult);
-      } else if (!detailedParams.get()) {
-        detailedParams.set(true);
+      } else {
+        showDetailedTestParameters();
       }
     } catch (Throwable caught) {
+      showDetailedTestParameters();
       testResult.setStatus(FAILURE);
       testResult.setThrowable(new AssertionError(getTestName(method), caught));
     } finally {
       cleanUp(testResult);
+    }
+  }
+
+  /** Shows the test method parameters in the test report. */
+  private static void showDetailedTestParameters() {
+    if (!detailedParams.get()) {
+      detailedParams.set(true);
     }
   }
 

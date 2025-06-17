@@ -597,11 +597,12 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     return Objects.equals(refreshAfterWriteNanos, config.refreshAfterWriteNanos)
         && Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
         && Objects.equals(expireAfterWriteNanos, config.expireAfterWriteNanos)
+        && Objects.equals(schedulerFactory, config.schedulerFactory)
         && Objects.equals(executorFactory, config.executorFactory)
-        && Objects.equals(copierFactory, config.copierFactory)
-        && Objects.equals(tickerFactory, config.tickerFactory)
         && Objects.equals(weigherFactory, config.weigherFactory)
+        && Objects.equals(copierFactory, config.copierFactory)
         && Objects.equals(maximumWeight, config.maximumWeight)
+        && Objects.equals(tickerFactory, config.tickerFactory)
         && Objects.equals(maximumSize, config.maximumSize)
         && delegate.equals(config.delegate);
   }

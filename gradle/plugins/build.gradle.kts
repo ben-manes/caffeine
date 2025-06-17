@@ -30,6 +30,7 @@ dependencies {
   implementation(plugin(libs.plugins.sigstore))
   implementation(plugin(libs.plugins.spotbugs))
   implementation(plugin(libs.plugins.versions))
+  implementation(plugin(libs.plugins.coveralls))
   implementation(plugin(libs.plugins.sonarqube))
   implementation(plugin(libs.plugins.jmh.report))
   implementation(plugin(libs.plugins.errorprone))
@@ -38,9 +39,6 @@ dependencies {
   implementation(plugin(libs.plugins.jmh.asProvider()))
   implementation(plugin(libs.plugins.dependency.check))
   implementation(plugin(libs.plugins.jvm.dependency.conflict.resolution))
-  implementation(plugin(libs.plugins.coveralls)) {
-    exclude(group = "net.sourceforge.nekohtml", module = "nekohtml")
-  }
 
   implementation(platform(libs.asm.bom))
   implementation(platform(libs.okio.bom))

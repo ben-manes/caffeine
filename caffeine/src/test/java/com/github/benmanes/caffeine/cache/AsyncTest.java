@@ -155,16 +155,16 @@ public final class AsyncTest {
   @Test
   public void asyncRemoval_null() {
     RemovalListener<Int, Int> delegate = Mockito.mock();
-    var listender = new AsyncRemovalListener<>(delegate, Runnable::run);
-    listender.onRemoval(Int.MAX_VALUE, null, RemovalCause.EXPLICIT);
+    var listener = new AsyncRemovalListener<>(delegate, Runnable::run);
+    listener.onRemoval(Int.MAX_VALUE, null, RemovalCause.EXPLICIT);
     verifyNoInteractions(delegate);
   }
 
   @Test
   public void asyncEviction_null() {
     RemovalListener<Int, Int> delegate = Mockito.mock();
-    var listender = new AsyncEvictionListener<>(delegate);
-    listender.onRemoval(Int.MAX_VALUE, null, RemovalCause.SIZE);
+    var listener = new AsyncEvictionListener<>(delegate);
+    listener.onRemoval(Int.MAX_VALUE, null, RemovalCause.SIZE);
     verifyNoInteractions(delegate);
   }
 

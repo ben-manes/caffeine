@@ -58,6 +58,12 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+      - name: Downgrade to Gradle 8.14.2 (https://youtrack.jetbrains.com/issue/QD-11954)
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: wrapper --gradle-version 8.14.2
       - name: Build
         uses: ./.github/actions/run-gradle
         with:

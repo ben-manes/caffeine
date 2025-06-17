@@ -122,7 +122,8 @@ tasks.named<Test>("test").configure {
 tasks.withType<Test>().configureEach {
   useJUnitPlatform()
   inputs.files(unzipTestKit.map { it.outputs.files })
-  testClassesDirs = files(testClassesDirs, layout.buildDirectory.files("tck"))
+  testClassesDirs = files(sourceSets["test"].output.classesDirs, layout.buildDirectory.files("tck"))
+  classpath = sourceSets["test"].runtimeClasspath
 
   project(":caffeine").plugins.withId("java-library") {
     val caffeineJar = project(":caffeine").tasks.named<Jar>("jar")

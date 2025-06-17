@@ -32,6 +32,7 @@ import javax.cache.Cache;
 import javax.cache.Caching;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.expiry.Duration;
+import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 
 import org.testng.SkipException;
@@ -86,6 +87,8 @@ public final class TypesafeConfigurationTest {
 
   @Test
   public void configSource_load() {
+    assertThat(configSource().get(URI.create(getClass().getSimpleName()), classloader))
+        .isSameInstanceAs(ConfigFactory.load());
     assertThat(configSource().get(URI.create(getClass().getName()), classloader))
         .isSameInstanceAs(ConfigFactory.load());
     assertThat(configSource().get(URI.create("rmi:/abc"), classloader))
@@ -197,8 +200,8 @@ public final class TypesafeConfigurationTest {
     assertThat(TypesafeConfigurator.cacheNames(ConfigFactory.empty())).isEmpty();
 
     var names = TypesafeConfigurator.cacheNames(ConfigFactory.load());
-    assertThat(names).containsExactly("default", "listeners", "osgi-cache",
-        "invalid-cache", "test-cache", "test-cache-2", "guice");
+    assertThat(names).containsExactly("default", "listeners", "osgi-cache", "invalid-cache",
+        "test-cache", "test-cache-2", "test-cache-3", "test-cache-4", "guice");
   }
 
   @Test
@@ -237,6 +240,30 @@ public final class TypesafeConfigurationTest {
     assertThat(config.getExpiryFactory().orElseThrow().create()).isInstanceOf(TestExpiry.class);
     assertThat(config.getExecutorFactory().create()).isEqualTo(ForkJoinPool.commonPool());
     assertThat(config.getCacheWriter()).isNull();
+  }
+
+  @Test
+  public void testCache3() {
+    Optional<CaffeineConfiguration<Integer, Integer>> config3 =
+        TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-3");
+
+    var config = config3.orElseThrow();
+    assertThat(config.getKeyType()).isAssignableTo(String.class);
+    assertThat(config.getValueType()).isAssignableTo(Integer.class);
+    assertThat(config.getCacheEntryListenerConfigurations()).hasSize(1);
+    assertThat(config.getExpiryPolicyFactory().create()).isInstanceOf(EternalExpiryPolicy.class);
+  }
+
+  @Test
+  public void testCache4() {
+    Optional<CaffeineConfiguration<Integer, Integer>> config4 =
+        TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-4");
+
+    var config = config4.orElseThrow();
+    var expiry = config.getExpiryPolicyFactory().create();
+    assertThat(expiry.getExpiryForCreation()).isEqualTo(Duration.ETERNAL);
+    assertThat(expiry.getExpiryForUpdate()).isEqualTo(Duration.FIVE_MINUTES);
+    assertThat(expiry.getExpiryForAccess()).isEqualTo(Duration.TEN_MINUTES);
   }
 
   @Test

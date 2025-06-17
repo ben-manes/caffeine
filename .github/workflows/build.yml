@@ -245,10 +245,16 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
-      - name: Combine Jacoco Reports
+      - name: Prepare Jacoco Reports
         uses: ./.github/actions/run-gradle
         with:
           arguments: check -x test
+          java: ${{ env.PUBLISH_JDK }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Combine Jacoco Reports
+        uses: ./.github/actions/run-gradle
+        with:
+          arguments: jacocoFullReport
           java: ${{ env.PUBLISH_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Publish to Coveralls
@@ -256,7 +262,7 @@ jobs:
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
-          arguments: coveralls --no-configuration-cache
+          arguments: coverallsJacoco --no-configuration-cache
           java: ${{ env.PUBLISH_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
@@ -341,32 +347,6 @@ jobs:
           gist_description: Test Results
           github_file: badge.svg
           gist_title: badge.svg
-      - name: Prepare XML for Codecov
-        run: |
-          # Wrap the XML files in a <testsuites> root element
-          find . -type f -name 'TEST-*.xml' | while read -r file; do
-            failures=$(awk 'match($0, /failures="[^"]+"/) { print substr($0, RSTART+9, RLENGTH-10); exit }' "$file")
-            errors=$(awk 'match($0, /errors="[^"]+"/) { print substr($0, RSTART+8, RLENGTH-9); exit }' "$file")
-            tests=$(awk 'match($0, /tests="[^"]+"/) { print substr($0, RSTART+7, RLENGTH-8); exit }' "$file")
-            time=$(awk 'match($0, /time="[^"]+"/) { print substr($0, RSTART+6, RLENGTH-7); exit }' "$file")
-            name=$(awk 'match($0, /name="[^"]+"/) { print substr($0, RSTART+6, RLENGTH-7); exit }' "$file")
-
-            name=${name:-caffeine}
-            failures=${failures:-0}
-            errors=${errors:-0}
-            tests=${tests:-0}
-            time=${time:-0}
-
-            tmpfile="${file}.tmp"
-            {
-              echo '<?xml version="1.0" encoding="UTF-8"?>'
-              echo "<testsuites name=\"$name\" tests=\"$tests\" failures=\"$failures\" errors=\"$errors\" time=\"$time\">"
-              # Remove the XML declaration if present
-              awk 'NR==1 && /^<\?xml.*\?>$/ {next} {print}' "$file"
-              echo '</testsuites>'
-            } > "$tmpfile"
-            mv "$tmpfile" "$file"
-          done
       - name: Publish to Codecov
         uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
         with:

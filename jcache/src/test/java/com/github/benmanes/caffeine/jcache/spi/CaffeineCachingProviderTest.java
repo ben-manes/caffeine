@@ -26,6 +26,8 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javax.cache.configuration.OptionalFeature;
+
 import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -210,6 +212,15 @@ public final class CaffeineCachingProviderTest {
           assertThat(cacheManager.getCache("new-cache")).isSameInstanceAs(cache);
         }
       }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("NullAway")
+  public void isSupported() {
+    try (var provider = new CaffeineCachingProvider()) {
+      assertThat(provider.isSupported(OptionalFeature.STORE_BY_REFERENCE)).isTrue();
+      assertThat(provider.isSupported(null)).isFalse();
     }
   }
 

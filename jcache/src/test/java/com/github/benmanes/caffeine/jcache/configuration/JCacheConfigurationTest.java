@@ -15,8 +15,17 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.time.Duration;
+import java.util.Optional;
+import java.util.OptionalLong;
+import java.util.concurrent.ForkJoinPool;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -29,7 +38,14 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.Scheduler;
+import com.github.benmanes.caffeine.cache.Ticker;
+import com.github.benmanes.caffeine.cache.Weigher;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
+import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.testing.EqualsTester;
 
 /**
@@ -60,12 +76,83 @@ public final class JCacheConfigurationTest {
   }
 
   @Test
+  public void setMaximumSize() {
+    var config = new CaffeineConfiguration<>();
+    checkOptionalLongSetting(config::getMaximumSize, config::setMaximumSize);
+  }
+
+  @Test
+  public void setMaximumWeight() {
+    var config = new CaffeineConfiguration<>();
+    checkOptionalLongSetting(config::getMaximumWeight, config::setMaximumWeight);
+  }
+
+  @Test
+  public void setExpireAfterAccess() {
+    var config = new CaffeineConfiguration<>();
+    checkOptionalLongSetting(config::getExpireAfterAccess, config::setExpireAfterAccess);
+  }
+
+  @Test
+  public void setExpireAfterWrite() {
+    var config = new CaffeineConfiguration<>();
+    checkOptionalLongSetting(config::getExpireAfterWrite, config::setExpireAfterWrite);
+  }
+
+  private static void checkOptionalLongSetting(
+      Supplier<OptionalLong> getter, Consumer<OptionalLong> setter) {
+    setter.accept(OptionalLong.of(1_000));
+    assertThat(getter.get()).hasValue(1_000);
+
+    setter.accept(OptionalLong.empty());
+    assertThat(getter.get()).isEmpty();
+  }
+
+  @Test
+  public void setRefreshAfterWrite() {
+    var config = new CaffeineConfiguration<>();
+    config.setRefreshAfterWrite(OptionalLong.of(Duration.ofSeconds(1).toNanos()));
+    assertThat(config.getRefreshAfterWrite()).hasValue(Duration.ofSeconds(1).toNanos());
+
+    config.setRefreshAfterWrite(OptionalLong.empty());
+    assertThat(config.getRefreshAfterWrite()).isEmpty();
+  }
+
+  @Test
   public void equality() {
-    new EqualsTester()
+    var tester = new EqualsTester()
         .addEqualityGroup(cacheConfig,
             new MutableConfiguration<>(new CaffeineConfiguration<>(cacheConfig)))
-        .addEqualityGroup(new CaffeineConfiguration<>(cacheConfig))
-    .testEquals();
+        .addEqualityGroup(new CaffeineConfiguration<>(cacheConfig));
+    var configurations = Lists.cartesianProduct(IntStream.range(0, 10)
+        .mapToObj(i -> ImmutableList.of(true, false)).collect(toImmutableList()));
+    for (var config : configurations) {
+      var absent = OptionalLong.empty();
+      var configuration = new CaffeineConfiguration<>(cacheConfig);
+      configuration.setExpireAfterAccess(config.get(0) ? OptionalLong.of(1_000) : absent);
+      configuration.setExpireAfterWrite(config.get(1) ? OptionalLong.of(2_000) : absent);
+      configuration.setRefreshAfterWrite(config.get(2) ? OptionalLong.of(3_000) : absent);
+      configuration.setMaximumWeight(config.get(3) ? OptionalLong.of(4_000) : absent);
+      configuration.setMaximumSize(config.get(4) ? OptionalLong.of(5_000) : absent);
+      configuration.setWeigherFactory(config.get(5)
+          ? Optional.of(Weigher::singletonWeigher)
+          : Optional.empty());
+      configuration.setTickerFactory(config.get(6)
+          ? Ticker::systemTicker
+          : Ticker::disabledTicker);
+      configuration.setCopierFactory(config.get(7)
+          ? JavaSerializationCopier::new
+          : Copier::identity);
+      configuration.setExecutorFactory(config.get(8)
+          ? ForkJoinPool::commonPool
+          : () -> Runnable::run);
+      configuration.setSchedulerFactory(config.get(9)
+          ? Scheduler::systemScheduler
+          : Scheduler::disabledScheduler);
+      tester.addEqualityGroup(config);
+      tester.addEqualityGroup(new CaffeineConfiguration<>(configuration));
+    }
+    tester.testEquals();
   }
 
   @Test

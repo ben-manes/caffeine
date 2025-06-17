@@ -253,9 +253,9 @@ tasks.named<Javadoc>("javadoc").configure {
   mustRunAfter(compileCodeGenJava)
 }
 
-val test by testing.suites.existing(JvmTestSuite::class)
 tasks.withType<Test>().configureEach {
-  classpath = files(test.map { it.sources.runtimeClasspath })
+  testClassesDirs = files(sourceSets["test"].output.classesDirs)
+  classpath = files(sourceSets["test"].runtimeClasspath)
     .plus(sourceSets["codeGen"].runtimeClasspath)
 }
 

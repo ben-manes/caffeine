@@ -71,7 +71,12 @@ public final class CaffeineSpecTest {
   }
 
   @Test
+  @SuppressWarnings("NullAway")
   public void parseDuration_exception() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseTimeUnit("key", ""));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseTimeUnit("key", null));
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseDuration("key", "value"));
     assertThrows(IllegalArgumentException.class,
@@ -126,14 +131,14 @@ public final class CaffeineSpecTest {
     var tester = new EqualsTester();
     for (var configuration : configurations) {
       var spec = CaffeineSpec.parse("");
-      spec.refreshAfterWrite = configuration.get(0) ? null : Duration.ofMinutes(1);
-      spec.expireAfterAccess = configuration.get(1) ? null : Duration.ofMinutes(1);
-      spec.expireAfterWrite = configuration.get(2) ? null : Duration.ofMinutes(1);
-      spec.valueStrength = configuration.get(3) ? null : Strength.WEAK;
-      spec.keyStrength = configuration.get(4) ? null : Strength.WEAK;
-      spec.initialCapacity = configuration.get(5) ? UNSET_INT : 1;
-      spec.maximumWeight = configuration.get(6) ? UNSET_INT : 1;
-      spec.maximumSize = configuration.get(7) ? UNSET_INT : 1;
+      spec.refreshAfterWrite = configuration.get(0) ? Duration.ofMinutes(1) : null;
+      spec.expireAfterAccess = configuration.get(1) ? Duration.ofMinutes(1) : null;
+      spec.expireAfterWrite = configuration.get(2) ? Duration.ofMinutes(1) : null;
+      spec.valueStrength = configuration.get(3) ? Strength.WEAK : null;
+      spec.keyStrength = configuration.get(4) ? Strength.WEAK : null;
+      spec.initialCapacity = configuration.get(5) ? 1 : UNSET_INT;
+      spec.maximumWeight = configuration.get(6) ? 1 : UNSET_INT ;
+      spec.maximumSize = configuration.get(7) ? 1 : UNSET_INT;
       spec.recordStats = configuration.get(8);
       tester.addEqualityGroup(spec);
       hashes.add(spec.hashCode());
