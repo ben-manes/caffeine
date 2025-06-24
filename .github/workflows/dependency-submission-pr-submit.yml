@@ -1,4 +1,4 @@
-name: Generate and save dependency graph
+name: Generate dependency graph (pull request)
 permissions: {}
 on: [ pull_request ]
 
@@ -8,6 +8,7 @@ env:
 
 jobs:
   dependency-submission:
+    name: Generate Dependency Graph
     runs-on: ubuntu-latest
     permissions:
       contents: read

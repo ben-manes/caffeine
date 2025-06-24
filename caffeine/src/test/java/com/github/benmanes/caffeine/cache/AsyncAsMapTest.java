@@ -74,6 +74,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
@@ -961,8 +962,27 @@ public final class AsyncAsMapTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(stats = CacheSpec.Stats.ENABLED,
-      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  @CacheSpec(stats = Stats.ENABLED)
+  public void computeIfAbsent_present_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().computeIfAbsent(context.absentKey(), key -> null)).isEqualTo(future);
+    future.complete(null);
+    assertThat(context).stats().hits(1).misses(0).success(0).failures(1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(stats = Stats.ENABLED)
+  public void computeIfAbsent_present_failed(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().computeIfAbsent(context.absentKey(), key -> null)).isEqualTo(future);
+    future.completeExceptionally(new IllegalStateException());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(stats = Stats.ENABLED, removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void computeIfAbsent_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     var value = context.absentValue().toFuture();
     assertThat(cache.asMap().computeIfAbsent(context.absentKey(), key -> value)).isEqualTo(value);

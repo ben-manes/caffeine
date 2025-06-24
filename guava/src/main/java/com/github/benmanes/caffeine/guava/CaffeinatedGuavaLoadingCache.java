@@ -45,8 +45,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 @SuppressWarnings("serial")
 final class CaffeinatedGuavaLoadingCache<K, V>
     extends CaffeinatedGuavaCache<K, V> implements LoadingCache<K, V> {
-  private static final ThreadLocal<Boolean> nullBulkLoad =
-      ThreadLocal.withInitial(() -> Boolean.FALSE);
+  private static final ThreadLocal<Boolean> nullBulkLoad = ThreadLocal.withInitial(() -> false);
   private static final long serialVersionUID = 1L;
 
   private final com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache;

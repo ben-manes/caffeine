@@ -130,10 +130,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * An engineer fixing a regression could add their regression test here and
  * simultaneously test all other implementations.
  */
-@SuppressWarnings({"AlmostJavadoc", "BadInstanceof", "BoxedPrimitiveEquality", "ClassIsInstance",
-    "CollectionIsEmpty", "CollectionToArray", "CollectorMutability", "EmptyCatch",
-    "EntryIterableToImmutableMap", "FieldCanBeFinal", "IdentifierName", "IdentityConversion",
-    "IdentityHashMapBoxing", "InvalidParam", "IterableIsEmpty", "JdkObsolete",
+@SuppressWarnings({"AlmostJavadoc", "BadInstanceof", "BooleanLiteral", "BoxedPrimitiveEquality",
+    "ClassIsInstance", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
+    "EmptyCatch", "EntryIterableToImmutableMap", "FieldCanBeFinal", "IdentifierName",
+    "IdentityConversion", "IdentityHashMapBoxing", "InvalidParam", "IterableIsEmpty", "JdkObsolete",
     "JUnitClassModifiers", "JUnitMethodDeclaration", "ModifyingCollectionWithItself",
     "MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonFinalStaticField", "NonStaticImport",
     "NullAway", "ParameterMissingNullable", "rawtypes", "ReferenceEquality", "resource",

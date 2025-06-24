@@ -1,4 +1,4 @@
-name: Dependency Submission
+name: Submit Dependency Graph (direct push)
 permissions: {}
 on: [ push ]
 
@@ -8,6 +8,7 @@ env:
 
 jobs:
   dependency-submission:
+    name: Submit Dependency Graph
     runs-on: ubuntu-latest
     permissions:
       contents: write

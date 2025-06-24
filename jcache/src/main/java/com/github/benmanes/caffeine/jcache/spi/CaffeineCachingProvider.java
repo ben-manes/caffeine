@@ -169,7 +169,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
    * A {@link ClassLoader} that combines {@code Thread.currentThread().getContextClassLoader()}
    * and {@code getClass().getClassLoader()}.
    */
-  static final class JCacheClassLoader extends ClassLoader {
+  static class JCacheClassLoader extends ClassLoader {
 
     public JCacheClassLoader(@Nullable ClassLoader parent) {
       super(parent);
@@ -188,7 +188,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
         }
       }
 
-      ClassLoader classClassLoader = getClass().getClassLoader();
+      ClassLoader classClassLoader = getClassClassLoader();
       if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
         try {
           return classClassLoader.loadClass(name);
@@ -220,7 +220,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
         }
       }
 
-      ClassLoader classClassLoader = getClass().getClassLoader();
+      ClassLoader classClassLoader = getClassClassLoader();
       if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
         URL resource = classClassLoader.getResource(name);
         if (resource != null) {
@@ -246,11 +246,11 @@ public final class CaffeineCachingProvider implements CachingProvider {
       var resources = new ArrayList<URL>();
 
       ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-      if (contextClassLoader != null && contextClassLoader != DEFAULT_CLASS_LOADER) {
+      if ((contextClassLoader != null) && contextClassLoader != DEFAULT_CLASS_LOADER) {
         resources.addAll(Collections.list(contextClassLoader.getResources(name)));
       }
 
-      ClassLoader classClassLoader = getClass().getClassLoader();
+      ClassLoader classClassLoader = getClassClassLoader();
       if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
         resources.addAll(Collections.list(classClassLoader.getResources(name)));
       }
@@ -263,6 +263,10 @@ public final class CaffeineCachingProvider implements CachingProvider {
       }
 
       return Collections.enumeration(resources);
+    }
+
+    @Nullable ClassLoader getClassClassLoader() {
+      return getClass().getClassLoader();
     }
   }
 

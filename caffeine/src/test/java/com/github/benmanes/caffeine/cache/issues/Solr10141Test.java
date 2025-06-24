@@ -80,13 +80,10 @@ public final class Solr10141Test {
         .removalListener(listener)
         .maximumSize(maxEntries)
         .build();
-
     var lastBlock = new AtomicLong();
     var maxObservedSize = new AtomicLong();
     var failed = new ConcurrentLinkedQueue<Throwable>();
-
     ConcurrentTestHarness.timeTasks(nThreads, new Runnable() {
-
       @Override public void run() {
         try {
           var r = new Random(rnd.nextLong());
@@ -157,9 +154,7 @@ public final class Solr10141Test {
         .maximumSize(Integer.MAX_VALUE)
         .removalListener(listener)
         .build();
-
     ConcurrentTestHarness.timeTasks(nThreads, new Runnable() {
-
       @Override public void run() {
         try {
           var r = new Random(rnd.nextLong());
@@ -170,7 +165,6 @@ public final class Solr10141Test {
           failed.add(e);
         }
       }
-
       void test(Random r) {
         long k = r.nextInt(blocksInTest);
         Val v = cache.getIfPresent(k);

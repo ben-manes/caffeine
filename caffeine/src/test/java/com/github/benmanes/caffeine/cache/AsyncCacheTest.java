@@ -47,11 +47,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -1132,8 +1134,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_insert_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
-    var failedFuture = CompletableFuture.completedFuture((Int) null);
-    failedFuture.completeExceptionally(new IllegalStateException());
+    var failedFuture = CompletableFuture.<Int>failedFuture(new IllegalStateException());
 
     cache.put(context.absentKey(), failedFuture);
     assertThat(cache).hasSize(context.initialSize());
@@ -1160,7 +1161,52 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void put_insert_failure_after_noLog(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future1 = new CompletableFuture<Int>();
+    var future2 = new CompletableFuture<Int>();
+    var future3 = new CompletableFuture<Int>();
+    cache.put(Iterables.get(context.absentKeys(), 0), future1);
+    cache.put(Iterables.get(context.absentKeys(), 1), future2);
+    cache.put(Iterables.get(context.absentKeys(), 3), future3);
+    future1.complete(null);
+    future2.completeExceptionally(new TimeoutException());
+    future3.completeExceptionally(new CancellationException());
+    assertThat(cache).doesNotContainKey(Iterables.get(context.absentKeys(), 0));
+    assertThat(cache).doesNotContainKey(Iterables.get(context.absentKeys(), 1));
+    assertThat(cache).doesNotContainKey(Iterables.get(context.absentKeys(), 2));
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(logEvents()).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void put_insert_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = CompletableFuture.completedFuture((Int) null);
+
+    cache.put(context.absentKey(), future);
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(logEvents()).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_insert(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache).hasSize(context.initialSize() + 1);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
+    assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
+
+    future.complete(context.absentValue());
+    assertThat(cache).hasSize(context.initialSize() + 1);
+    assertThat(context).stats().hits(1).misses(0).success(1).failures(0);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void put_insert_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
     var value = context.absentValue().toFuture();
     cache.put(context.absentKey(), value);
     assertThat(cache).hasSize(context.initialSize() + 1);

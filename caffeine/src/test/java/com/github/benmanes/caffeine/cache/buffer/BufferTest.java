@@ -45,7 +45,7 @@ public final class BufferTest {
   public void offer(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
-        int added = buffer.offer(Boolean.TRUE);
+        int added = buffer.offer(true);
         assertThat(added).isAnyOf(ReadBuffer.SUCCESS, ReadBuffer.FAILED, ReadBuffer.FULL);
         Thread.yield();
       }
@@ -57,7 +57,7 @@ public final class BufferTest {
   @Test(dataProvider = "buffers")
   public void drain(ReadBuffer<Boolean> buffer) {
     for (int i = 0; i < 2 * ReadBuffer.BUFFER_SIZE; i++) {
-      int added = buffer.offer(Boolean.TRUE);
+      int added = buffer.offer(true);
       assertThat(added).isAnyOf(ReadBuffer.SUCCESS, ReadBuffer.FULL);
     }
     buffer.drain();
@@ -71,7 +71,7 @@ public final class BufferTest {
   public void recordAndDrain(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
-        int result = buffer.offer(Boolean.TRUE);
+        int result = buffer.offer(true);
         if (result == ReadBuffer.FULL) {
           buffer.drain();
         }

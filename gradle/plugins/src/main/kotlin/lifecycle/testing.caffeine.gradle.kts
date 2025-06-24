@@ -20,12 +20,22 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(platform(libs.asm.bom))
   testImplementation(platform(libs.kotlin.bom))
-  testImplementation(platform(libs.junit5.bom))
+  testImplementation(platform(libs.junit.jupiter.bom))
 
-  testRuntimeOnly(libs.junit5.launcher)
+  testRuntimeOnly(libs.junit.jupiter.launcher)
 
   mockitoAgent(libs.mockito) {
     isTransitive = false
+  }
+}
+
+configurations.all {
+  val junitJupiterGroups = listOf("org.junit", "org.junit.jupiter", "org.junit.vintage")
+  resolutionStrategy.eachDependency {
+    if ((requested.group in junitJupiterGroups)
+        && (java.toolchain.languageVersion.get().asInt() < 17)) {
+      useVersion("5.13.2")
+    }
   }
 }
 

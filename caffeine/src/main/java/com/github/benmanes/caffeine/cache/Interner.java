@@ -110,7 +110,7 @@ final class WeakInterner<E> implements Interner<E> {
         return canonical;
       }
 
-      var value = cache.putIfAbsent(sample, Boolean.TRUE);
+      var value = cache.putIfAbsent(sample, true);
       if (value == null) {
         return sample;
       }
@@ -118,7 +118,7 @@ final class WeakInterner<E> implements Interner<E> {
   }
 }
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"BooleanLiteral", "unchecked"})
 final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
   static final NodeFactory<Object, Object> FACTORY = new Interned<>();
 

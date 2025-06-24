@@ -21,8 +21,8 @@ configurations.jmh {
 
   resolutionStrategy {
     if (java.toolchain.languageVersion.get().asInt() < 17) {
-      force("com.oracle.coherence.ce:coherence:22.06.10")
-      force("com.hazelcast:hazelcast:5.3.8")
+      force("${libs.coherence.get().module}:22.06.10")
+      force("${libs.hazelcast.get().module}:5.3.8")
     }
   }
 }

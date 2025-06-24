@@ -42,10 +42,10 @@ dependencies {
 
   implementation(platform(libs.asm.bom))
   implementation(platform(libs.okio.bom))
-  implementation(platform(libs.junit5.bom))
   implementation(platform(libs.kotlin.bom))
   implementation(platform(libs.okhttp.bom))
   implementation(platform(libs.jackson.bom))
+  implementation(platform(libs.junit.jupiter.bom))
   implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 
   libs.bundles.constraints.get().forEach { library ->

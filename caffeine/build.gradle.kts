@@ -84,6 +84,14 @@ dependencies {
   javaPoetRuntimeOnly(libs.google.java.format)
 }
 
+configurations.all {
+  resolutionStrategy {
+    if (java.toolchain.languageVersion.get().asInt() < 17) {
+      force("${libs.eclipse.collections.testutils.get().module}:12.0.0")
+    }
+  }
+}
+
 val compileCodeGenJava by tasks.existing(JavaCompile::class) {
   classpath = sourceSets["main"].runtimeClasspath + sourceSets["main"].output
   inputs.files(compileJava.map { it.outputs.files })

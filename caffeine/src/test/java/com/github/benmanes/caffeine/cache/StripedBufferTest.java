@@ -68,7 +68,7 @@ public final class StripedBufferTest {
     var buffer = new FakeBuffer<Boolean>(Buffer.FAILED);
     ConcurrentTestHarness.timeTasks(10 * NCPU, () -> {
       for (int i = 0; i < 1000; i++) {
-        assertThat(buffer.offer(Boolean.TRUE)).isAnyOf(Buffer.SUCCESS, Buffer.FULL, Buffer.FAILED);
+        assertThat(buffer.offer(true)).isAnyOf(Buffer.SUCCESS, Buffer.FULL, Buffer.FAILED);
         Thread.yield();
       }
     });

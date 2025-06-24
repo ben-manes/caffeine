@@ -1,9 +1,10 @@
-name: spelling
+name: Spelling
 permissions: {}
 on: [ push, pull_request ]
 
 jobs:
   misspell:
+    name: Misspell
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,6 +28,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   check-spelling:
+    name: Check Spelling
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -88,6 +90,7 @@ jobs:
             cspell:python/common/extra.txt
 
   typos:
+    name: Typos
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner

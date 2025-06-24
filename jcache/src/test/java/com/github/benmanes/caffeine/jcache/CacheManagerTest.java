@@ -20,10 +20,12 @@ import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.management.ManagementFactory;
 import java.net.URI;
 import java.util.EnumSet;
+import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 
@@ -41,6 +43,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.typesafe.config.ConfigFactory;
@@ -93,6 +96,12 @@ public final class CacheManagerTest {
   }
 
   @Test
+  public void maximumWeight_noWeigher() {
+    var config = new CaffeineConfiguration<>().setMaximumWeight(OptionalLong.of(1_000));
+    assertThrows(IllegalStateException.class, () -> cacheManager.createCache("absent", config));
+  }
+
+  @Test
   public void isReadThrough() {
     var config1 = new MutableConfiguration<>().setReadThrough(false);
     assertThat(cacheManager.createCache(getClass() + "-1", config1))
@@ -114,9 +123,7 @@ public final class CacheManagerTest {
     @SuppressWarnings("PMD.CloseResource")
     var manager = (CacheManagerImpl) cachingProvider.getCacheManager(
         URI.create(getClass().getName()), cachingProvider.getDefaultClassLoader());
-    var task = new FutureTask<>(() -> {
-      manager.close();
-    }, /* result= */ null);
+    var task = new FutureTask<>(manager::close, /* result= */ null);
     var thread = new Thread(task);
     synchronized (manager.lock) {
       thread.start();
@@ -135,8 +142,8 @@ public final class CacheManagerTest {
     assertThat(configuration.isManagementEnabled()).isTrue();
     assertThat(configuration.isStatisticsEnabled()).isTrue();
 
-    String name = "javax.cache:Cache=%s,CacheManager=%s,type=CacheStatistics";
-    ManagementFactory.getPlatformMBeanServer().getObjectInstance(
-        new ObjectName(String.format(US, name, cache.getName(), PROVIDER_NAME)));
+    ManagementFactory.getPlatformMBeanServer().getObjectInstance( new ObjectName(
+        String.format(US, "javax.cache:Cache=%s,CacheManager=%s,type=CacheStatistics",
+            cache.getName(), PROVIDER_NAME)));
   }
 }

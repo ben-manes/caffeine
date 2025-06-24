@@ -65,7 +65,7 @@ public final class Ehcache3Policy implements Policy {
     Long key = event.longKey();
     var value = cache.get(key);
     if (value == null) {
-      cache.put(key, Boolean.TRUE);
+      cache.put(key, true);
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();

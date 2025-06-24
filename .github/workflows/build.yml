@@ -1,4 +1,4 @@
-name: build
+name: Build
 permissions: {}
 on:
   pull_request: {}
@@ -257,6 +257,12 @@ jobs:
           arguments: jacocoFullReport
           java: ${{ env.PUBLISH_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Upload Jacoco Full Report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          retention-days: 1
+          name: jacoco-report
+          path: ./build/reports/jacoco/jacocoFullReport
       - name: Publish to Coveralls
         uses: ./.github/actions/run-gradle
         env:
@@ -291,7 +297,7 @@ jobs:
         with:
           java: ${{ env.PUBLISH_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: sonar -Dsonar.branch.name=${{ github.ref_name }}
+          arguments: sonar -Dsonar.branch.name=${{ github.ref_name }} --no-parallel
         continue-on-error: true
 
   test-results:

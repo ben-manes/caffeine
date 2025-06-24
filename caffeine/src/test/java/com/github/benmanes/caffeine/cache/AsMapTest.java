@@ -48,6 +48,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
@@ -1640,6 +1642,41 @@ public final class AsMapTest {
     assertThat(cache).containsEntry(key, newValue);
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
+  public void merge_async_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    var waiting = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+    var future = new CompletableFuture<Int>() {
+      @Override public boolean isDone() {
+        waiting.set(true);
+        return super.isDone();
+      }
+    };
+    var result = new AtomicReference<CompletableFuture<Int>>();
+    cache.synchronous().put(context.absentKey(), context.absentValue());
+    cache.asMap().compute(context.absentKey(), (key, value) -> {
+      result.set(CompletableFuture.supplyAsync(() -> {
+        writer.set(Thread.currentThread());
+        return cache.synchronous().asMap().merge(context.absentKey(),
+            context.absentKey(), (v1, v2) -> new Int(v1.intValue() * v2.intValue()));
+      }, ConcurrentTestHarness.executor));
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      waiting.set(false);
+      return future;
+    });
+
+    await().untilTrue(waiting);
+    future.complete(null);
+    assertThat(result.get()).succeedsWith(context.absentKey());
+  }
+
   /* --------------- equals / hashCode --------------- */
 
   @CheckNoStats
@@ -2019,6 +2056,34 @@ public final class AsMapTest {
     }
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void keySet_removeIf_absent(Map<Int, Int> map, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      assertThat(map.keySet().removeIf(key -> key.equals(context.firstKey()))).isFalse();
+    }, ConcurrentTestHarness.executor);
+
+    map.compute(context.firstKey(), (k, v) -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return null;
+    });
+    assertThat(future).succeedsWithNull();
+  }
+
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
@@ -2105,6 +2170,35 @@ public final class AsMapTest {
     assertThat(map.keySet().retainAll(map.keySet())).isFalse();
     assertThat(map).isEqualTo(context.original());
     assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void keySet_retainAll_absent(Map<Int, Int> map, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    map.put(context.absentKey(), context.absentValue());
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      assertThat(map.keySet().retainAll(context.original().keySet())).isFalse();
+    }, ConcurrentTestHarness.executor);
+
+    map.compute(context.absentKey(), (k, v) -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return null;
+    });
+    assertThat(future).succeedsWithNull();
   }
 
   @CacheSpec
@@ -2362,6 +2456,48 @@ public final class AsMapTest {
         .contains(context.original()).exclusively();
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void values_removeAll_absent(Map<Int, Int> map, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      var value = requireNonNull(context.original().get(context.firstKey()));
+      assertThat(map.values().removeAll(ImmutableSet.of(value))).isFalse();
+    }, ConcurrentTestHarness.executor);
+
+    map.compute(context.firstKey(), (k, v) -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return null;
+    });
+    assertThat(future).succeedsWithNull();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void values_removeAll_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.synchronous().asMap().values()
+        .removeAll(context.absent().values())).isFalse();
+    future.complete(null);
+
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
@@ -2443,6 +2579,18 @@ public final class AsMapTest {
   }
 
   @CacheSpec
+  @Test(dataProvider = "caches")
+  public void values_remove_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.synchronous().asMap().values().remove(context.absentKey())).isFalse();
+    future.complete(null);
+
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void values_removeIf_null(Map<Int, Int> map, CacheContext context) {
@@ -2503,6 +2651,19 @@ public final class AsMapTest {
       assertThat(map).isExhaustivelyEmpty();
       assertThat(context).removalNotifications().withCause(EXPLICIT).contains(context.original());
     }
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void values_removeIf_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.synchronous().asMap().values().removeIf(value -> false)).isFalse();
+    future.complete(context.absentValue());
+
+    assertThat(cache).containsExactlyEntriesIn(new ImmutableMap.Builder<Int, Int>()
+        .putAll(context.original()).put(context.absentKey(), context.absentValue()).build());
+    assertThat(context).removalNotifications().isEmpty();
   }
 
   @CacheSpec
@@ -2624,6 +2785,35 @@ public final class AsMapTest {
   public void values_retainAll_self(Map<Int, Int> map, CacheContext context) {
     assertThat(map.values().retainAll(map.values())).isFalse();
     assertThat(map).isEqualTo(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec(keys = ReferenceType.WEAK)
+  @Test(dataProvider = "caches")
+  public void values_retainAll_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.synchronous().asMap().values()
+        .retainAll(context.original().values())).isFalse();
+    future.complete(null);
+
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void values_forEach_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+
+    var values = new HashSet<Int>();
+    cache.synchronous().asMap().values()
+        .forEach(value -> assertThat(values.add(value)).isTrue());
+    future.complete(null);
+
+    assertThat(values).containsExactlyElementsIn(context.original().values());
+    assertThat(cache).containsExactlyEntriesIn(context.original());
     assertThat(context).removalNotifications().isEmpty();
   }
 
@@ -2971,6 +3161,49 @@ public final class AsMapTest {
   }
 
   @CacheSpec
+  @Test(dataProvider = "caches")
+  public void entrySet_removeAll_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.synchronous().asMap().entrySet()
+        .removeAll(context.absent().entrySet())).isFalse();
+    future.complete(null);
+
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void entrySet_removeAll_absent(Map<Int, Int> map, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      var mapping = ImmutableMap.of(context.firstKey(),
+          requireNonNull(context.original().get(context.firstKey())));
+      assertThat(map.entrySet().removeAll(mapping.entrySet())).isFalse();
+    }, ConcurrentTestHarness.executor);
+
+    map.compute(context.firstKey(), (k, v) -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return null;
+    });
+    assertThat(future).succeedsWithNull();
+  }
+
+  @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_remove_null(Map<Int, Int> map, CacheContext context) {
@@ -3022,6 +3255,35 @@ public final class AsMapTest {
     }
     assertThat(map).isEqualTo(context.original());
     assertThat(context).notifications().isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  public void entrySet_remove_absent(Map<Int, Int> map, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      var entry = Map.entry(context.firstKey(), context.original().get(context.firstKey()));
+      assertThat(map.entrySet().remove(entry)).isFalse();
+    }, ConcurrentTestHarness.executor);
+
+    map.compute(context.firstKey(), (k, v) -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return context.absentValue();
+    });
+    assertThat(future).succeedsWithNull();
   }
 
   @CheckNoStats
@@ -3192,6 +3454,35 @@ public final class AsMapTest {
     assertThat(map.entrySet().retainAll(map.entrySet())).isFalse();
     assertThat(map).isEqualTo(context.original());
     assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CacheSpec(implementation = Implementation.Caffeine)
+  @Test(dataProvider = "caches")
+  public void entrySet_retainAll_absent(Map<Int, Int> map, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    map.put(context.absentKey(), context.absentValue());
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      assertThat(map.entrySet().retainAll(context.original().entrySet())).isFalse();
+    }, ConcurrentTestHarness.executor);
+
+    map.compute(context.absentKey(), (k, v) -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      return null;
+    });
+    assertThat(future).succeedsWithNull();
   }
 
   @CacheSpec

@@ -82,7 +82,7 @@ public final class HazelcastPolicy implements Policy {
     Long key = event.longKey();
     var value = cache.get(key);
     if (value == null) {
-      cache.put(key, /* keyData= */ null, Boolean.TRUE, /* valueDate= */ null);
+      cache.put(key, /* keyData= */ null, true, /* valueDate= */ null);
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();

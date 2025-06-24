@@ -774,7 +774,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         future = (future == null)
             ? delegate.get(castedKey)
             : delegate.getIfPresentQuietly(castedKey);
-        if ((future == null) || future.isCompletedExceptionally()) {
+        if (!Async.isReady(future)) {
           return false;
         }
 
@@ -986,7 +986,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
         CompletableFuture<V> mergedValueFuture = delegate.merge(
             key, newValueFuture, (oldValueFuture, valueFuture) -> {
-          if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
+          if (!oldValueFuture.isDone()) {
             return oldValueFuture;
           }
 

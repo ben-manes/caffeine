@@ -1,4 +1,4 @@
-name: examples
+name: Examples
 permissions: {}
 on:
   pull_request: {}
@@ -29,6 +29,7 @@ env:
 
 jobs:
   examples:
+    name: Examples
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -80,6 +81,7 @@ jobs:
           arguments:  build --project-dir examples/resilience-failsafe
 
   graalvm:
+    name: GraalVM Native Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -116,6 +118,7 @@ jobs:
             nativeRun nativeTest
 
   simulator:
+    name: Simulator
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -157,6 +160,7 @@ jobs:
           } >> $GITHUB_STEP_SUMMARY
 
   stress:
+    name: Stress Tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
