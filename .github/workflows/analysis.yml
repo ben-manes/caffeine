@@ -1,4 +1,4 @@
-name: analysis
+name: Static analysis for Java
 permissions: {}
 on: [ push, pull_request ]
 
@@ -22,6 +22,7 @@ env:
 
 jobs:
   ecj:
+    name: Eclipse Compiler for Java
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,6 +47,7 @@ jobs:
           arguments: ecjJavaPoet ecjMain ecjCodeGen ecjJmh ecjTest ecjJcstress
 
   forbidden-apis:
+    name: Forbidden APIs
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -70,6 +72,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   pmd:
+    name: PMD
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -101,6 +104,7 @@ jobs:
           path: "**/build/reports/pmd/*.html"
 
   spotbugs:
+    name: Spotbugs
     runs-on: ubuntu-latest
     permissions:
       contents: read

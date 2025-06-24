@@ -1,4 +1,4 @@
-name: Retrieve and submit dependency graph
+name: Submit dependency graph (pull request)
 permissions: {}
 on:
   workflow_run:
@@ -11,6 +11,7 @@ env:
 
 jobs:
   submit-dependency-graph:
+    name: Submit Dependency Graph
     runs-on: ubuntu-latest
     permissions:
       contents: write

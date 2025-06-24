@@ -745,7 +745,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * position and the eviction policy's victim starts at the LRU position. The candidates are
    * evaluated in promotion order while an eviction is required, and if exhausted then additional
    * entries are retrieved from the window space. Likewise, if the victim selection exhausts the
-   * probation space then additional entries are retrieved the protected space. The queues are
+   * probation space then additional entries are retrieved from the protected space. The queues are
    * consumed in LRU order and the evicted entry is the one with a lower relative frequency, where
    * the preference is to retain the main space's victims versus the window space's candidates on a
    * tie.

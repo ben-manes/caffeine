@@ -64,7 +64,7 @@ public class ReadBufferBenchmark {
 
   @Benchmark @Group @GroupThreads(8)
   public void record(RecordCounter counters) {
-    switch (buffer.offer(Boolean.TRUE)) {
+    switch (buffer.offer(true)) {
       case ReadBuffer.FAILED:
         counters.recordFailed++;
         break;

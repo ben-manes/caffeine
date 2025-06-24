@@ -27,6 +27,8 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,6 +37,7 @@ import static org.slf4j.event.Level.WARN;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +48,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -65,6 +69,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -411,6 +416,36 @@ public final class AsyncLoadingCacheTest {
 
     var result = cache.getAll(keys).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.ASYNC_BULK_EXCEPTIONAL)
+  public void getAll_present_inserted(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    var future = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      return cache.getAll(ImmutableSet.of(context.absentKey())).join();
+    }, ConcurrentTestHarness.executor);
+
+    cache.asMap().computeIfAbsent(context.absentKey(), key -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+
+      return CompletableFuture.completedFuture(context.absentValue());
+    });
+
+    assertThat(future).succeedsWith(ImmutableMap.of(context.absentKey(), context.absentValue()));
   }
 
   @Test(dataProvider = "caches")

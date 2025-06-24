@@ -70,7 +70,7 @@ public final class TCachePolicy implements Policy {
     var value = cache.get(key);
     if (value == null) {
       policyStats.recordMiss();
-      cache.put(key, Boolean.TRUE);
+      cache.put(key, true);
     } else {
       policyStats.recordHit();
     }

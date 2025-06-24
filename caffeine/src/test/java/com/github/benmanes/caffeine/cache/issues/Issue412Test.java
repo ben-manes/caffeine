@@ -80,7 +80,7 @@ public final class Issue412Test {
     int index = random.nextInt();
     for (int i = 0; i < (10 * ints.length); i++) {
       Integer key = ints[index++ & mask];
-      cache.put(key, Boolean.TRUE);
+      cache.put(key, true);
       cache.invalidate(key);
     }
   }

@@ -4,6 +4,7 @@ on: [pull_request]
 
 jobs:
   dependency-review:
+    name: Dependency Review
     runs-on: ubuntu-latest
     permissions:
       contents: read

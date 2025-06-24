@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 
 import javax.cache.configuration.OptionalFeature;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -85,6 +86,21 @@ public final class CaffeineCachingProviderTest {
   public void loadClass_notFound() {
     runWithClassloader(context -> {
       assertThrows(ClassNotFoundException.class, () -> {
+        Thread.currentThread().setContextClassLoader(null);
+        var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null) {
+          @Override @Nullable ClassLoader getClassClassLoader() {
+            return null;
+          }
+        };
+        jcacheClassLoader.loadClass("a.b.c");
+      });
+    });
+  }
+
+  @Test
+  public void loadClass_notFound_parent() {
+    runWithClassloader(context -> {
+      assertThrows(ClassNotFoundException.class, () -> {
         var parent = new ClassLoader() {
           @Override public Class<?> loadClass(String name) throws ClassNotFoundException {
             throw new ClassNotFoundException(name);
@@ -103,7 +119,6 @@ public final class CaffeineCachingProviderTest {
       assertThat(jcacheClassLoader.getResource("")).isNotNull();
     });
   }
-
 
   @Test
   public void resource_found_context() {
@@ -134,7 +149,12 @@ public final class CaffeineCachingProviderTest {
   @Test
   public void resource_notFound() {
     runWithClassloader(context -> {
-      var jcacheClassLoader = new JCacheClassLoader(new ClassLoader() {});
+      Thread.currentThread().setContextClassLoader(null);
+      var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null) {
+        @Override @Nullable ClassLoader getClassClassLoader() {
+          return null;
+        }
+      };
       assertThat(jcacheClassLoader.getResource("a.b.c")).isNull();
     });
   }
@@ -191,7 +211,12 @@ public final class CaffeineCachingProviderTest {
   public void resources_notFound() {
     runWithClassloader(context -> {
       try {
-        var jcacheClassLoader = new JCacheClassLoader(context);
+        Thread.currentThread().setContextClassLoader(null);
+        var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null) {
+          @Override @Nullable ClassLoader getClassClassLoader() {
+            return null;
+          }
+        };
         var resources = jcacheClassLoader.getResources("a.b.c");
         assertThat(Collections.list(resources)).isEmpty();
       } catch (IOException e) {

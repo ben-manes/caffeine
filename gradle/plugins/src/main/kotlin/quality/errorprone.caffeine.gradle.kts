@@ -48,6 +48,7 @@ tasks.withType<JavaCompile>().configureEach {
     errorprone {
       isEnabled = isEarlyAccess().map { !it }
       allDisabledChecksAsWarnings = true
+      allSuggestionsAsWarnings = true
 
       errorproneArgs.add(buildString {
         append("-XepOpt:Refaster:NamePattern=^")

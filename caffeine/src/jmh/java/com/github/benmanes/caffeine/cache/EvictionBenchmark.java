@@ -59,7 +59,7 @@ public class EvictionBenchmark {
   public void setup() {
     cache = cacheType.create(size);
     for (int i = 0; i < size; i++) {
-      cache.put(Integer.MIN_VALUE + i, Boolean.TRUE);
+      cache.put(Integer.MIN_VALUE + i, true);
     }
   }
 
@@ -70,6 +70,6 @@ public class EvictionBenchmark {
 
   @Benchmark
   public void evict(ThreadState threadState) {
-    cache.put(threadState.key++, Boolean.TRUE);
+    cache.put(threadState.key++, true);
   }
 }

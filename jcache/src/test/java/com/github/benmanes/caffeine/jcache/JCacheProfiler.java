@@ -66,7 +66,7 @@ public final class JCacheProfiler {
 
   private void run(Cache<Integer, Boolean> cache) {
     for (int i = 0; i < KEYS; i++) {
-      cache.put(i, Boolean.TRUE);
+      cache.put(i, true);
     }
     Runnable task = () -> {
       for (int i = random.nextInt(); ; i++) {
@@ -74,7 +74,7 @@ public final class JCacheProfiler {
         if (READ) {
           requireNonNull(cache.get(key));
         } else {
-          cache.put(key, Boolean.TRUE);
+          cache.put(key, true);
         }
         count.increment();
       }

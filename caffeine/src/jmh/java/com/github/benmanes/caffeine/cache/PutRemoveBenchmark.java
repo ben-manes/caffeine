@@ -79,7 +79,7 @@ public class PutRemoveBenchmark {
 
     // Enforce full initialization of internal structures
     for (int i = 0; i < 2 * SIZE; i++) {
-      cache.put(i, Boolean.TRUE);
+      cache.put(i, true);
     }
     cache.clear();
 
@@ -87,7 +87,7 @@ public class PutRemoveBenchmark {
     NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextValue().intValue();
-      cache.put(ints[i], Boolean.TRUE);
+      cache.put(ints[i], true);
     }
   }
 
@@ -98,7 +98,7 @@ public class PutRemoveBenchmark {
 
   @Benchmark @Group @GroupThreads(4)
   public void put(ThreadState threadState) {
-    cache.put(ints[threadState.index++ & MASK], Boolean.TRUE);
+    cache.put(ints[threadState.index++ & MASK], true);
   }
 
   @Benchmark @Group @GroupThreads(4)

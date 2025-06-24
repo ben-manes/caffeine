@@ -44,8 +44,8 @@ public class ComputeBenchmark {
   static final int MASK = SIZE - 1;
   static final int ITEMS = SIZE / 3;
   static final Integer COMPUTE_KEY = SIZE / 2;
-  static final Function<Integer, Boolean> mappingFunction = any -> Boolean.TRUE;
-  static final CacheLoader<Integer, Boolean> cacheLoader = CacheLoader.from(key -> Boolean.TRUE);
+  static final Function<Integer, Boolean> mappingFunction = any -> true;
+  static final CacheLoader<Integer, Boolean> cacheLoader = CacheLoader.from(key -> true);
 
   @Param({"ConcurrentHashMap", "Caffeine", "Guava"})
   String computeType;

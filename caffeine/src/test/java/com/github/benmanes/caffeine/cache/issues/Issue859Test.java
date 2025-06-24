@@ -66,7 +66,7 @@ public final class Issue859Test {
         .build();
     for (int i = 0; i < NUMBER_OF_KEYS; i++) {
       var key = i;
-      executor.execute(() -> cache.put(key, Boolean.TRUE));
+      executor.execute(() -> cache.put(key, true));
     }
 
     // The scheduler maintains a weak reference to the cache, so it must be held strongly until the

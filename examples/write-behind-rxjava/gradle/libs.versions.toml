@@ -1,7 +1,7 @@
 [versions]
 awaitility = "4.3.0"
 caffeine = "3.2.1"
-junit = "5.13.1"
+junit = "6.0.0-M1"
 rxjava = "3.1.11-RC4"
 versions = "0.52.0"
 

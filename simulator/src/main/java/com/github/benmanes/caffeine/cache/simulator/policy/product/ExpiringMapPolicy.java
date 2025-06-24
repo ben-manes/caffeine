@@ -71,7 +71,7 @@ public final class ExpiringMapPolicy implements Policy {
       if (cache.size() == maximumSize) {
         policyStats.recordEviction();
       }
-      cache.put(key, Boolean.TRUE);
+      cache.put(key, true);
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();

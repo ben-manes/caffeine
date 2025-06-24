@@ -76,7 +76,7 @@ public class GetPutBenchmark {
 
     // Enforce full initialization of internal structures
     for (int i = 0; i < 2 * SIZE; i++) {
-      cache.put(i, Boolean.TRUE);
+      cache.put(i, true);
     }
     cache.clear();
     cache.cleanUp();
@@ -85,7 +85,7 @@ public class GetPutBenchmark {
     NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextValue().intValue();
-      cache.put(ints[i], Boolean.TRUE);
+      cache.put(ints[i], true);
     }
   }
 
@@ -101,7 +101,7 @@ public class GetPutBenchmark {
 
   @Benchmark @Group("write_only") @GroupThreads(8)
   public void writeOnly(ThreadState threadState) {
-    cache.put(ints[threadState.index++ & MASK], Boolean.TRUE);
+    cache.put(ints[threadState.index++ & MASK], true);
   }
 
   @Benchmark @Group("readwrite") @GroupThreads(6)
@@ -111,6 +111,6 @@ public class GetPutBenchmark {
 
   @Benchmark @Group("readwrite") @GroupThreads(2)
   public void readwrite_put(ThreadState threadState) {
-    cache.put(ints[threadState.index++ & MASK], Boolean.TRUE);
+    cache.put(ints[threadState.index++ & MASK], true);
   }
 }

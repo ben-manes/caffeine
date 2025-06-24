@@ -1,4 +1,4 @@
-name: gitleaks
+name: Gitleaks
 permissions: {}
 on:
   pull_request: {}
@@ -13,7 +13,7 @@ env:
 
 jobs:
   scan:
-    name: gitleaks
+    name: Gitleaks
     runs-on: ubuntu-latest
     permissions:
       contents: read

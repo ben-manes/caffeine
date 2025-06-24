@@ -45,7 +45,7 @@ public final class CacheProfiler extends ProfilerHook {
 
     // Ensure full initialization of internal structures
     for (int i = 0; i < 2 * SIZE; i++) {
-      cache.put(i, Boolean.TRUE);
+      cache.put(i, true);
     }
     cache.clear();
 
@@ -53,7 +53,7 @@ public final class CacheProfiler extends ProfilerHook {
     NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextValue().intValue();
-      cache.put(ints[i], Boolean.TRUE);
+      cache.put(ints[i], true);
     }
 
     reads = true;
@@ -84,7 +84,7 @@ public final class CacheProfiler extends ProfilerHook {
     int index = random.nextInt();
     for (;;) {
       Integer key = ints[index++ & MASK];
-      cache.put(key, Boolean.TRUE);
+      cache.put(key, true);
       calls.increment();
     }
   }

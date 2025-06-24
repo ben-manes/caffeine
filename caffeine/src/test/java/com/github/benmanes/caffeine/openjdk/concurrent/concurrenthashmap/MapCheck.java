@@ -63,8 +63,9 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @run main/timeout=240 MapCheck
  * @summary Times and checks basic map operations
  */
-@SuppressWarnings({"CatchingUnchecked", "NonFinalStaticField", "NullAway", "rawtypes", "resource",
-    "SystemOut", "unchecked", "UnnecessarilyFullyQualified", "UnnecessaryParentheses", "unused"})
+@SuppressWarnings({"BooleanLiteral", "CatchingUnchecked", "NonFinalStaticField", "NullAway",
+    "rawtypes", "resource", "SystemOut", "unchecked", "UnnecessarilyFullyQualified",
+    "UnnecessaryParentheses", "unused"})
 public class MapCheck {
 
     static final int absentSize = 1 << 17;

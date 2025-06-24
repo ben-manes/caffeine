@@ -59,7 +59,7 @@ public class ConcurrentRemoveIf {
     static final int SIZE = 1000;
     static final int HALF_SIZE = SIZE / 2;
 
-    @DataProvider()
+    @DataProvider
     public static Object[][] concurrentMapViewRemoveIfActions() {
         List<Object[]> rows = new ArrayList<>();
 
