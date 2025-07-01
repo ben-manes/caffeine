@@ -53,6 +53,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -2024,6 +2025,14 @@ public final class AsyncAsMapTest {
     assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
   }
 
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
+    var spliterator = cache.asMap().keySet().spliterator();
+    assertThat(spliterator.characteristics()).isEqualTo(Spliterator.DISTINCT | Spliterator.NONNULL | Spliterator.CONCURRENT);
+  }
+
   /* ---------------- Values -------------- */
 
   @CheckNoStats
@@ -2477,6 +2486,14 @@ public final class AsyncAsMapTest {
   public void valueSpliterator_estimateSize(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().values().spliterator();
     assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void valueSpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
+    var spliterator = cache.asMap().values().spliterator();
+    assertThat(spliterator.characteristics()).isEqualTo(Spliterator.NONNULL | Spliterator.CONCURRENT);
   }
 
   /* ---------------- Entry Set -------------- */
@@ -3033,6 +3050,14 @@ public final class AsyncAsMapTest {
   public void entrySpliterator_estimateSize(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().entrySet().spliterator();
     assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
+    var spliterator = cache.asMap().entrySet().spliterator();
+    assertThat(spliterator.characteristics()).isEqualTo(Spliterator.DISTINCT | Spliterator.NONNULL | Spliterator.CONCURRENT);
   }
 
   /* ---------------- WriteThroughEntry -------------- */

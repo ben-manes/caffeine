@@ -3630,9 +3630,9 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySpliterator_estimateSize(Map<Int, Int> map, CacheContext context){
-        var spliterator = map.entrySet().spliterator();
-        assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
+  public void entrySpliterator_estimateSize(Map<Int, Int> map, CacheContext context) {
+    var spliterator = map.entrySet().spliterator();
+    assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
   }
 
   @CacheSpec
