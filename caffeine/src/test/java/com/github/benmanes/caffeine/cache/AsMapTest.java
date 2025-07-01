@@ -55,6 +55,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -2309,6 +2310,18 @@ public final class AsMapTest {
     assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
   }
 
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySpliterator_characteristics(Map<Int, Int> map, CacheContext context) {
+    var spliterator = map.keySet().spliterator();
+    if (context.isGuava()) {
+      assertThat(spliterator.characteristics()).isEqualTo(Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.SUBSIZED);
+    } else {
+      assertThat(spliterator.characteristics()).isEqualTo(Spliterator.DISTINCT | Spliterator.NONNULL | Spliterator.CONCURRENT);
+    }
+  }
+
   /* --------------- Values --------------- */
 
   @CheckNoStats
@@ -2925,6 +2938,18 @@ public final class AsMapTest {
   public void valueSpliterator_estimateSize(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.values().spliterator();
     assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void valueSpliterator_characteristics(Map<Int, Int> map, CacheContext context) {
+    var spliterator = map.values().spliterator();
+    if (context.isGuava()) {
+      assertThat(spliterator.characteristics()).isEqualTo(Spliterator.SIZED | Spliterator.SUBSIZED);
+    } else {
+      assertThat(spliterator.characteristics()).isEqualTo(Spliterator.NONNULL | Spliterator.CONCURRENT);
+    }
   }
 
   /* --------------- Entry Set --------------- */
@@ -3605,9 +3630,21 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySpliterator_estimateSize(Map<Int, Int> map, CacheContext context) {
+  public void entrySpliterator_estimateSize(Map<Int, Int> map, CacheContext context){
+        var spliterator = map.entrySet().spliterator();
+        assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySpliterator_characteristics(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.entrySet().spliterator();
-    assertThat(spliterator.estimateSize()).isEqualTo(context.initialSize());
+    if (context.isGuava()) {
+      assertThat(spliterator.characteristics()).isEqualTo(Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.SUBSIZED);
+    } else {
+      assertThat(spliterator.characteristics()).isEqualTo(Spliterator.DISTINCT | Spliterator.NONNULL | Spliterator.CONCURRENT);
+    }
   }
 
   /* --------------- WriteThroughEntry --------------- */
