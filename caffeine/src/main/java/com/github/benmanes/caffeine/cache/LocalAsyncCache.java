@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -1124,24 +1125,68 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @Override
       public Iterator<K> iterator() {
-        return new Iterator<>() {
-          final Iterator<Entry<K, V>> iterator = entrySet().iterator();
+        return new KeyIterator<>(new EntryIterator());
+      }
 
-          @Override
-          public boolean hasNext() {
-            return iterator.hasNext();
-          }
+      @Override
+      public Spliterator<K> spliterator() {
+        return new KeySpliterator<>(new EntrySpliterator());
+      }
+    }
 
-          @Override
-          public K next() {
-            return iterator.next().getKey();
-          }
 
-          @Override
-          public void remove() {
-            iterator.remove();
-          }
-        };
+    private static final class KeyIterator<K, V> implements Iterator<K> {
+      private final Iterator<Entry<K, V>> iterator;
+
+      KeyIterator(Iterator<Entry<K, V>> iterator) {
+        this.iterator = requireNonNull(iterator);
+      }
+
+      @Override
+      public boolean hasNext() {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public K next() {
+        return iterator.next().getKey();
+      }
+
+      @Override
+      public void remove() {
+        iterator.remove();
+      }
+    }
+
+    private static final class KeySpliterator<K, V> implements Spliterator<K> {
+      private final Spliterator<Entry<K, V>> spliterator;
+
+      KeySpliterator(Spliterator<Entry<K, V>> iterator) {
+        this.spliterator = requireNonNull(iterator);
+      }
+
+      @Override
+      public boolean tryAdvance(Consumer<? super K> action) {
+        requireNonNull(action);
+        return spliterator.tryAdvance(entry -> {
+          action.accept(entry.getKey());
+        });
+      }
+
+      @Override
+      public @Nullable Spliterator<K> trySplit() {
+        Spliterator<Entry<K, V>> split = spliterator.trySplit();
+        return (split == null) ? null : new KeySpliterator<>(split);
+      }
+
+      @Override
+      public long estimateSize() {
+        return spliterator.estimateSize();
+      }
+
+      @Override
+      public int characteristics() {
+        return DISTINCT | NONNULL | CONCURRENT;
       }
     }
 
@@ -1231,24 +1276,67 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @Override
       public Iterator<V> iterator() {
-        return new Iterator<>() {
-          final Iterator<Entry<K, V>> iterator = entrySet().iterator();
+        return new ValueIterator<>(new EntryIterator());
+      }
 
-          @Override
-          public boolean hasNext() {
-            return iterator.hasNext();
-          }
+      @Override
+      public Spliterator<V> spliterator() {
+        return new ValueSpliterator<>(new EntrySpliterator());
+      }
+    }
 
-          @Override
-          public V next() {
-            return iterator.next().getValue();
-          }
+    private static final class ValueIterator<K, V> implements Iterator<V> {
+      private final Iterator<Entry<K, V>> iterator;
 
-          @Override
-          public void remove() {
-            iterator.remove();
-          }
-        };
+      ValueIterator(Iterator<Entry<K, V>> iterator) {
+        this.iterator = requireNonNull(iterator);
+      }
+
+      @Override
+      public boolean hasNext() {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public V next() {
+        return iterator.next().getValue();
+      }
+
+      @Override
+      public void remove() {
+        iterator.remove();
+      }
+    }
+
+    private static final class ValueSpliterator<K, V> implements Spliterator<V> {
+      private final Spliterator<Entry<K, V>> spliterator;
+
+      ValueSpliterator(Spliterator<Entry<K, V>> iterator) {
+        this.spliterator = requireNonNull(iterator);
+      }
+
+      @Override
+      public boolean tryAdvance(Consumer<? super V> action) {
+        requireNonNull(action);
+        return spliterator.tryAdvance(entry -> {
+          action.accept(entry.getValue());
+        });
+      }
+
+      @Override
+      public @Nullable Spliterator<V> trySplit() {
+        Spliterator<Entry<K, V>> split = spliterator.trySplit();
+        return (split == null) ? null : new ValueSpliterator<>(split);
+      }
+
+      @Override
+      public long estimateSize() {
+        return spliterator.estimateSize();
+      }
+
+      @Override
+      public int characteristics() {
+        return NONNULL | CONCURRENT;
       }
     }
 
@@ -1340,6 +1428,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       public Iterator<Entry<K, V>> iterator() {
         return new EntryIterator();
       }
+
+      @Override
+      public Spliterator<Entry<K, V>> spliterator() {
+        return new EntrySpliterator();
+      }
     }
 
     private final class EntryIterator implements Iterator<Entry<K, V>> {
@@ -1348,7 +1441,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Nullable K removalKey;
 
       EntryIterator() {
-        iterator = delegate.entrySet().iterator();
+        this.iterator = delegate.entrySet().iterator();
       }
 
       @Override
@@ -1380,6 +1473,58 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         requireState(removalKey != null);
         delegate.remove(removalKey);
         removalKey = null;
+      }
+    }
+
+    private final class EntrySpliterator implements Spliterator<Entry<K, V>> {
+      final Spliterator<Entry<K, CompletableFuture<V>>> spliterator;
+
+      EntrySpliterator() {
+        this(delegate.entrySet().spliterator());
+      }
+
+      EntrySpliterator(Spliterator<Entry<K, CompletableFuture<V>>> spliterator) {
+        this.spliterator = requireNonNull(spliterator);
+      }
+
+      @Override
+      public void forEachRemaining(Consumer<? super Entry<K, V>> action) {
+        requireNonNull(action);
+        spliterator.forEachRemaining(entry -> {
+          V value = Async.getIfReady(entry.getValue());
+          if (value != null) {
+            var e = new WriteThroughEntry<>(AsMapView.this, entry.getKey(), value);
+            action.accept(e);
+          }
+        });
+      }
+
+      @Override
+      public boolean tryAdvance(Consumer<? super Entry<K, V>> action) {
+        requireNonNull(action);
+        return spliterator.tryAdvance(entry -> {
+          V value = Async.getIfReady(entry.getValue());
+          if (value != null) {
+            var e = new WriteThroughEntry<>(AsMapView.this, entry.getKey(), value);
+            action.accept(e);
+          }
+        });
+      }
+
+      @Override
+      public @Nullable Spliterator<Entry<K, V>> trySplit() {
+      Spliterator<Entry<K, CompletableFuture<V>>> split = spliterator.trySplit();
+      return (split == null) ? null : new EntrySpliterator(split);
+      }
+
+      @Override
+      public long estimateSize() {
+        return spliterator.estimateSize();
+      }
+
+      @Override
+      public int characteristics() {
+        return DISTINCT | CONCURRENT | NONNULL;
       }
     }
   }

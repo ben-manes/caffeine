@@ -666,7 +666,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Spliterator<K> spliterator() {
-      return cache.data.keySet().spliterator();
+      return new KeySpliterator<>(cache);
     }
 
     @Override
@@ -709,6 +709,47 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       }
       cache.remove(current);
       current = null;
+    }
+  }
+
+  /** An adapter to safely externalize the key spliterator. */
+  static final class KeySpliterator<K, V> implements Spliterator<K> {
+    final Spliterator<K> spliterator;
+
+    KeySpliterator(UnboundedLocalCache<K, V> cache) {
+      this(cache.data.keySet().spliterator());
+    }
+
+    KeySpliterator(Spliterator<K> spliterator) {
+      this.spliterator = requireNonNull(spliterator);
+    }
+
+    @Override
+    public void forEachRemaining(Consumer<? super K> action) {
+      requireNonNull(action);
+      spliterator.forEachRemaining(action);
+    }
+
+    @Override
+    public boolean tryAdvance(Consumer<? super K> action) {
+      requireNonNull(action);
+      return spliterator.tryAdvance(action);
+    }
+
+    @Override
+    public @Nullable KeySpliterator<K, V> trySplit() {
+      Spliterator<K> split = spliterator.trySplit();
+      return (split == null) ? null : new KeySpliterator<>(split);
+    }
+
+    @Override
+    public long estimateSize() {
+      return spliterator.estimateSize();
+    }
+
+    @Override
+    public int characteristics() {
+      return DISTINCT | CONCURRENT | NONNULL;
     }
   }
 
@@ -799,12 +840,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Iterator<V> iterator() {
-      return new ValuesIterator<>(cache);
+      return new ValueIterator<>(cache);
     }
 
     @Override
     public Spliterator<V> spliterator() {
-      return cache.data.values().spliterator();
+      return new ValueSpliterator<>(cache);
     }
 
     @Override
@@ -819,12 +860,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the value iterator. */
-  static final class ValuesIterator<K, V> implements Iterator<V> {
+  static final class ValueIterator<K, V> implements Iterator<V> {
     final UnboundedLocalCache<K, V> cache;
     final Iterator<Entry<K, V>> iterator;
     @Nullable Entry<K, V> entry;
 
-    ValuesIterator(UnboundedLocalCache<K, V> cache) {
+    ValueIterator(UnboundedLocalCache<K, V> cache) {
       this.iterator = cache.data.entrySet().iterator();
       this.cache = cache;
     }
@@ -847,6 +888,47 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       }
       cache.remove(entry.getKey());
       entry = null;
+    }
+  }
+
+  /** An adapter to safely externalize the value spliterator. */
+  static final class ValueSpliterator<K, V> implements Spliterator<V> {
+    final Spliterator<V> spliterator;
+
+    ValueSpliterator(UnboundedLocalCache<K, V> cache) {
+      this(cache.data.values().spliterator());
+    }
+
+    ValueSpliterator(Spliterator<V> spliterator) {
+      this.spliterator = requireNonNull(spliterator);
+    }
+
+    @Override
+    public void forEachRemaining(Consumer<? super V> action) {
+      requireNonNull(action);
+      spliterator.forEachRemaining(action);
+    }
+
+    @Override
+    public boolean tryAdvance(Consumer<? super V> action) {
+      requireNonNull(action);
+      return spliterator.tryAdvance(action);
+    }
+
+    @Override
+    public @Nullable ValueSpliterator<K, V> trySplit() {
+      Spliterator<V> split = spliterator.trySplit();
+      return (split == null) ? null : new ValueSpliterator<>(split);
+    }
+
+    @Override
+    public long estimateSize() {
+      return spliterator.estimateSize();
+    }
+
+    @Override
+    public int characteristics() {
+      return CONCURRENT | NONNULL;
     }
   }
 
@@ -1030,7 +1112,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public int characteristics() {
-      return spliterator.characteristics();
+      return DISTINCT | CONCURRENT | NONNULL;
     }
   }
 
