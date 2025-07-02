@@ -32,6 +32,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
+import static java.util.Spliterator.CONCURRENT;
+import static java.util.Spliterator.DISTINCT;
+import static java.util.Spliterator.NONNULL;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -83,6 +86,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -2030,7 +2034,29 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void keySpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().keySet().spliterator();
-    assertThat(spliterator.characteristics()).isEqualTo(Spliterator.DISTINCT | Spliterator.NONNULL | Spliterator.CONCURRENT);
+    assertThat(spliterator.characteristics()).isEqualTo(DISTINCT | NONNULL | CONCURRENT);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keyStream_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.asMap().keySet().stream().toArray(Int[]::new)).asList()
+        .containsExactlyElementsIn(context.original().keySet());
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void keyStream_toArray_async_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    var expected = new ImmutableList.Builder<Int>()
+        .addAll(cache.asMap().keySet())
+        .add(context.absentKey())
+        .build();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().keySet().stream().toArray(Int[]::new)).asList()
+        .containsExactlyElementsIn(expected);
+    future.complete(null);
   }
 
   /* ---------------- Values -------------- */
@@ -2494,6 +2520,29 @@ public final class AsyncAsMapTest {
   public void valueSpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().values().spliterator();
     assertThat(spliterator.characteristics()).isEqualTo(Spliterator.NONNULL | Spliterator.CONCURRENT);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void valueStream_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.asMap().values().stream().toArray(CompletableFuture<?>[]::new)).asList()
+        .containsExactlyElementsIn(ImmutableList.copyOf(cache.asMap().values()));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void valueStream_toArray_async_incomplete(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    var expected = new ImmutableList.Builder<CompletableFuture<Int>>()
+        .addAll(cache.asMap().values())
+        .add(future)
+        .build();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().values().stream().toArray(CompletableFuture<?>[]::new)).asList()
+        .containsExactlyElementsIn(expected);
+    future.complete(null);
   }
 
   /* ---------------- Entry Set -------------- */
@@ -3057,7 +3106,30 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void entrySpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().entrySet().spliterator();
-    assertThat(spliterator.characteristics()).isEqualTo(Spliterator.DISTINCT | Spliterator.NONNULL | Spliterator.CONCURRENT);
+    assertThat(spliterator.characteristics()).isEqualTo(DISTINCT | NONNULL | CONCURRENT);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entryStream_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).asList()
+        .containsExactlyElementsIn(ImmutableList.copyOf(cache.asMap().entrySet()));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void entryStream_toArray_async_incomplete(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    var expected = new ImmutableMap.Builder<Int, CompletableFuture<Int>>()
+        .put(context.absentKey(), future)
+        .putAll(cache.asMap())
+        .build();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).asList()
+        .containsExactlyElementsIn(expected.entrySet());
+    future.complete(null);
   }
 
   /* ---------------- WriteThroughEntry -------------- */

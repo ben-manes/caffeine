@@ -1120,6 +1120,25 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      implementation = Implementation.Caffeine)
+  public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.keySet().stream().toArray()).isEmpty();
+    assertThat(map.keySet().stream().toArray(Int[]::new)).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void keyStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(cache.asMap().keySet().stream().toArray()).isEmpty();
+    assertThat(cache.asMap().keySet().stream().toArray(Int[]::new)).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
       stats = Stats.ENABLED, removalListener = Listener.DISABLED)
@@ -1138,6 +1157,25 @@ public final class ReferenceTest {
   public void values_contains(Map<Int, Int> map, CacheContext context) {
     Int value = new Int(context.original().get(context.firstKey()));
     assertThat(map.values().contains(value)).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      implementation = Implementation.Caffeine)
+  public void valueStream_toArray(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.values().stream().toArray()).isEmpty();
+    assertThat(map.values().stream().toArray(Int[]::new)).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void valueStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(cache.asMap().values().stream().toArray()).isEmpty();
+    assertThat(cache.asMap().values().stream().toArray(Int[]::new)).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -1189,6 +1227,25 @@ public final class ReferenceTest {
     assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
     assertThat(map.entrySet().equals(expected.entrySet())).isTrue();
     assertThat(expected.entrySet().equals(map.entrySet())).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      implementation = Implementation.Caffeine)
+  public void entryStream_toArray(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.entrySet().stream().toArray()).isEmpty();
+    assertThat(map.entrySet().stream().toArray(Int[]::new)).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void entryStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(cache.asMap().entrySet().stream().toArray()).isEmpty();
+    assertThat(cache.asMap().entrySet().stream().toArray(Int[]::new)).isEmpty();
   }
 
   @Test(dataProvider = "caches")

@@ -1134,7 +1134,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
     }
 
-
     private static final class KeyIterator<K, V> implements Iterator<K> {
       private final Iterator<Entry<K, V>> iterator;
 

@@ -9,8 +9,8 @@ val jcstress = sourceSets.register("jcstress") {
   java.srcDir("src/jcstress/java")
 }
 
-val jcstressRuntimeClasspath by configurations.existing
 val jcstressImplementation by configurations.existing
+val jcstressRuntimeClasspath by configurations.existing
 val jcstressAnnotationProcessor by configurations.existing
 
 dependencies {

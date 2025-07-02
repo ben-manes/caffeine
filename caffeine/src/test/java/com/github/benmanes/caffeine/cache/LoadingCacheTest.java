@@ -580,7 +580,7 @@ public final class LoadingCacheTest {
     future2.orTimeout(0, TimeUnit.SECONDS);
     await().until(future2::isDone);
     await().until(() -> cache.policy().refreshes().isEmpty());
-    assertThat(cache).containsExactlyEntriesIn(context.original());
+    await().untilAsserted(() -> assertThat(cache).containsExactlyEntriesIn(context.original()));
     assertThat(logEvents()).isEmpty();
   }
 

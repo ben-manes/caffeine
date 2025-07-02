@@ -55,7 +55,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -169,7 +169,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -212,12 +212,11 @@ jobs:
     name: Coverage
     runs-on: ubuntu-latest
     needs: tests
-    if: (github.event_name == 'push') && (github.event.repository.fork == false)
     permissions:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -265,6 +264,7 @@ jobs:
           path: ./build/reports/jacoco/jacocoFullReport
       - name: Publish to Coveralls
         uses: ./.github/actions/run-gradle
+        if: (github.event_name == 'push') && (github.event.repository.fork == false)
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
@@ -274,15 +274,18 @@ jobs:
         continue-on-error: true
       - name: Publish to Codecov
         uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        if: (github.event_name == 'push') && (github.event.repository.fork == false)
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Publish to Codacy
         uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1.3.0
+        if: (github.event_name == 'push') && (github.event.repository.fork == false)
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         continue-on-error: true
       - name: Publish to DeepSource
         uses: deepsourcelabs/test-coverage-action@e02a039827236fa21a95866e7cd0b1c52ca61e76 # v1.1.2
+        if: (github.event_name == 'push') && (github.event.repository.fork == false)
         continue-on-error: true
         with:
           key: java
@@ -290,7 +293,10 @@ jobs:
           coverage-file: ./build/reports/jacoco/jacocoFullReport/jacocoFullReport.xml
       - name: Publish to SonarQube
         uses: ./.github/actions/run-gradle
-        if: endsWith(github.ref, github.event.repository.default_branch)
+        if: >
+          github.event_name == 'push'
+          && github.event.repository.fork == false
+          && endsWith(github.ref, github.event.repository.default_branch)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -304,13 +310,12 @@ jobs:
     name: Test Results
     runs-on: ubuntu-latest
     needs: tests
-    if: github.event_name == 'push'
     permissions:
       contents: read
       checks: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
           disable-sudo: true
           egress-policy: block
@@ -344,7 +349,8 @@ jobs:
       - name: Upload badge to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
         if: >
-          github.event.repository.fork == false
+          github.event_name == 'push'
+          && github.event.repository.fork == false
           && steps.test-badge.outcome == 'success'
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
@@ -355,6 +361,10 @@ jobs:
           gist_title: badge.svg
       - name: Publish to Codecov
         uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
+        if: >
+          github.event_name == 'push'
+          && github.event.repository.fork == false
+          && endsWith(github.ref, github.event.repository.default_branch)
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -371,7 +381,7 @@ jobs:
       id-token: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
           disable-sudo-and-containers: true
           egress-policy: block
