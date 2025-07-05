@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
+import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
@@ -51,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -94,6 +96,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.NullPointerTester;
@@ -358,6 +361,19 @@ public final class CacheTest {
 
     var result = cache.getAllPresent(keys);
     assertThat(result).containsExactly(key, value);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllPresent_async_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    var keys = Sets.union(context.original().keySet(), ImmutableSet.of(context.absentKey()));
+    assertThat(cache.synchronous().getAllPresent(keys))
+        .containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(context.initialSize()).misses(1).success(0).failures(0);
+    future.complete(context.absentValue());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   /* --------------- getAll --------------- */

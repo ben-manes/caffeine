@@ -15,16 +15,15 @@
  */
 package com.github.benmanes.caffeine.lincheck;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
+import static org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
 
 import java.util.Map;
 
-import org.jetbrains.kotlinx.lincheck.LinChecker;
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.annotations.Param;
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions;
+import org.jetbrains.lincheck.datastructures.IntGen;
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
+import org.jetbrains.lincheck.datastructures.Operation;
+import org.jetbrains.lincheck.datastructures.Param;
+import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Test;
 
@@ -58,20 +57,20 @@ public abstract class AbstractLincheckCacheTest {
    */
   @Test(groups = "lincheck")
   public void modelCheckingTest() {
-    var options = new ModelCheckingOptions()
+    new ModelCheckingOptions()
         .iterations(100)                // the number of different scenarios
         .invocationsPerIteration(1_000) // how deeply each scenario is tested
-        .hangingDetectionThreshold(5 * DEFAULT_HANGING_DETECTION_THRESHOLD);
-    LinChecker.check(getClass(), options);
+        .hangingDetectionThreshold(5 * DEFAULT_HANGING_DETECTION_THRESHOLD)
+        .check(getClass());
   }
 
   /** This test checks linearizability with stress testing. */
   @Test(groups = "lincheck")
   public void stressTest() {
-    var options = new StressOptions()
-        .iterations(100)                  // the number of different scenarios
-        .invocationsPerIteration(10_000); // how deeply each scenario is tested
-    LinChecker.check(getClass(), options);
+    new StressOptions()
+        .iterations(100)                 // the number of different scenarios
+        .invocationsPerIteration(10_000) // how deeply each scenario is tested
+        .check(getClass());
   }
 
   /* --------------- Cache --------------- */

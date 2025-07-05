@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Objects;
 import java.util.stream.LongStream;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -111,7 +111,7 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
     // Replace the html entities that we want to search for inside paths
     @Var String cleansed = url.substring(index + 1);
     for (var replacement : REPLACEMENTS) {
-      cleansed = StringUtils.replace(cleansed, replacement.search(), replacement.replace());
+      cleansed = Strings.CS.replace(cleansed, replacement.search(), replacement.replace());
     }
     return cleansed;
   }

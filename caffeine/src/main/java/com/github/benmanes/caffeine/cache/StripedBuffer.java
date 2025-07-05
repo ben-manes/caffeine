@@ -48,7 +48,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    *
    * Table entries are of class Buffer and should be padded to reduce cache contention. Padding is
    * overkill for most atomics because they are usually irregularly scattered in memory and thus
-   * don't interfere much with each other. But Atomic objects residing in arrays will tend to be
+   * don't interfere much with each other. But atomic objects residing in arrays will tend to be
    * placed adjacent to each other, and so will most often share cache lines (with a huge negative
    * performance impact) without this precaution.
    *

@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -60,6 +61,12 @@ public final class CacheWriterTest extends AbstractJCacheTest {
   }
 
   @Test
+  public void putAll_empty() {
+    jcache.putAll(Map.of());
+    verifyNoInteractions(writer);
+  }
+
+  @Test
   public void putAll_fails() {
     doThrow(CacheWriterException.class).when(writer).writeAll(any());
     var map = new HashMap<Integer, Integer>();
@@ -76,6 +83,14 @@ public final class CacheWriterTest extends AbstractJCacheTest {
 
     assertThrows(CacheWriterException.class, () -> jcache.putAll(map));
     assertThat(map).containsExactly(KEY_1, VALUE_1);
+  }
+
+  @Test
+  public void replace_fails() {
+    jcache.put(KEY_1, VALUE_1);
+
+    doThrow(CacheWriterException.class).when(writer).write(any());
+    assertThrows(CacheWriterException.class, () -> jcache.replace(KEY_1, VALUE_1, VALUE_2));
   }
 
   @Test

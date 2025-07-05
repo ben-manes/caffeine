@@ -31,6 +31,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -101,6 +102,10 @@ public abstract class AbstractJCacheTest {
   protected abstract CaffeineConfiguration<Integer, Integer> getConfiguration();
 
   /* --------------- Utility methods ------------- */
+
+  protected static JCacheStatisticsMXBean getStatistics(CacheProxy<Integer, Integer> cache) {
+    return cache.statistics;
+  }
 
   protected static @Nullable Expirable<Integer> getExpirable(
       CacheProxy<Integer, Integer> cache, Integer key) {

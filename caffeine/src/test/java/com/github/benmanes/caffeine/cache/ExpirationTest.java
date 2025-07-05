@@ -53,6 +53,7 @@ import java.util.concurrent.TimeUnit;
 import org.jspecify.annotations.Nullable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
+import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -749,6 +750,21 @@ public final class ExpirationTest {
 
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void putIfAbsent(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(Duration.ofSeconds(30));
+    assertThat(map.putIfAbsent(context.firstKey(), context.absentValue()))
+        .isEqualTo(context.original().get(context.firstKey()));
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(map.putIfAbsent(context.firstKey(), context.absentValue())).isNull();
   }
 
   @Test(dataProvider = "caches")
@@ -1522,6 +1538,30 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  public void keySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
+    map.keySet().spliterator().forEachRemaining(key -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  public void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
+    assertThat(map.keySet().spliterator().tryAdvance(key -> Assert.fail())).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX},
       implementation = Implementation.Caffeine)
   public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1610,6 +1650,30 @@ public final class ExpirationTest {
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().values().contains(future)).isTrue();
     future.complete(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  public void valueSpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
+    map.values().spliterator().forEachRemaining(value -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  public void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
+    assertThat(map.values().spliterator().tryAdvance(value -> Assert.fail())).isFalse();
   }
 
   @Test(dataProvider = "caches")
@@ -1713,6 +1777,30 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  public void entrySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
+    map.entrySet().spliterator().forEachRemaining(entry -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  public void entrySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
+    assertThat(map.entrySet().spliterator().tryAdvance(entry -> Assert.fail())).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX},
       implementation = Implementation.Caffeine)
   public void entryStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1790,6 +1878,10 @@ public final class ExpirationTest {
     context.cleanUp();
     assertThat(map.equals(context.absent())).isTrue();
     assertThat(context.absent().equals(map)).isTrue();
+
+    // AbstractMap may be non-symmetric if the size is equal but the iterator is empty
+    context.ticker().advance(Duration.ofMinutes(1));
+    assertThat(map.equals(context.absent()) && context.absent().equals(map)).isFalse();
   }
 
   @Test(dataProvider = "caches")

@@ -17,11 +17,13 @@ package com.github.benmanes.caffeine.jcache.expiry;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.integration.CompletionListenerFuture;
 import javax.cache.processor.EntryProcessorResult;
 
 import org.testng.annotations.BeforeMethod;
@@ -181,6 +183,30 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     }
   }
 
+  /* --------------- loadAll --------------- */
+
+  @Test(dataProvider = "eternal")
+  public void loadAll_present(boolean eternal) throws InterruptedException, ExecutionException {
+    for (Integer key : keys) {
+      var expirable = getExpirable(jcacheLoading, key);
+      assertThat(expirable).isNotNull();
+      if (eternal) {
+        expirable.setExpireTimeMillis(Long.MAX_VALUE);
+      }
+    }
+
+    var listener = new CompletionListenerFuture();
+    jcacheLoading.loadAll(keys, /* replaceExistingValues= */ false, listener);
+    listener.get();
+
+    for (Integer key : keys) {
+      var expirable = getExpirable(jcache, key);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
+  }
+
   /* --------------- invoke --------------- */
 
   @Test
@@ -239,7 +265,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
   /* --------------- conditional remove --------------- */
 
   @Test
-  public void removeConditionally() {
+  public void removeConditionally_mismatch() {
     assertThat(jcache.remove(KEY_1, VALUE_2)).isFalse();
 
     var expirable = getExpirable(jcache, KEY_1);
@@ -248,15 +274,51 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
         .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
   }
 
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  public void removeConditionally_stats() {
+    jcache.getCacheManager().enableStatistics(jcache.getName(), true);
+    ticker.setAutoIncrementStep(1, TimeUnit.SECONDS);
+    assertThat(jcache.remove(KEY_1, VALUE_1)).isTrue();
+    assertThat(getStatistics(jcache).getAverageRemoveTime()).isGreaterThan(0);
+  }
+
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  public void removeConditionally_noStats() {
+    jcache.getCacheManager().enableStatistics(jcache.getName(), false);
+    ticker.setAutoIncrementStep(1, TimeUnit.SECONDS);
+    assertThat(jcache.remove(KEY_1, VALUE_1)).isTrue();
+    assertThat(getStatistics(jcache).getAverageRemoveTime()).isEqualTo(0);
+  }
+
   /* --------------- conditional replace --------------- */
 
   @Test
-  public void replaceConditionally() {
+  public void replaceConditionally_mismatch() {
     assertThat(jcache.replace(KEY_1, VALUE_2, VALUE_3)).isFalse();
 
     var expirable = getExpirable(jcache, KEY_1);
     assertThat(expirable).isNotNull();
     assertThat(expirable.getExpireTimeMillis())
         .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+  }
+
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  public void replaceConditionally_stats() {
+    jcache.getCacheManager().enableStatistics(jcache.getName(), true);
+    ticker.setAutoIncrementStep(1, TimeUnit.SECONDS);
+    assertThat(jcache.replace(KEY_1, VALUE_1, VALUE_2)).isTrue();
+    assertThat(getStatistics(jcache).getAveragePutTime()).isGreaterThan(0);
+  }
+
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  public void replaceConditionally_noStats() {
+    jcache.getCacheManager().enableStatistics(jcache.getName(), false);
+    ticker.setAutoIncrementStep(1, TimeUnit.SECONDS);
+    assertThat(jcache.replace(KEY_1, VALUE_1, VALUE_2)).isTrue();
+    assertThat(getStatistics(jcache).getAveragePutTime()).isEqualTo(0);
   }
 }

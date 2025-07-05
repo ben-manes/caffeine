@@ -19,6 +19,10 @@ import static com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigur
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,10 +39,12 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 
+import org.mockito.Mockito;
 import org.testng.SkipException;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator.Configurator;
 import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
 import com.google.common.collect.Iterables;
 import com.typesafe.config.Config;
@@ -60,8 +66,10 @@ public final class TypesafeConfigurationTest {
   @Test
   @SuppressWarnings("NullAway")
   public void setConfigSource_supplier() {
-    TypesafeConfigurator.setConfigSource(() -> null);
+    Config config = Mockito.mock();
+    TypesafeConfigurator.setConfigSource(() -> config);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
+    assertThat(configSource().get(Mockito.mock(), Mockito.mock())).isSameInstanceAs(config);
 
     assertThrows(NullPointerException.class, () ->
         TypesafeConfigurator.setConfigSource((Supplier<Config>) null));
@@ -202,6 +210,22 @@ public final class TypesafeConfigurationTest {
     var names = TypesafeConfigurator.cacheNames(ConfigFactory.load());
     assertThat(names).containsExactly("default", "listeners", "osgi-cache", "invalid-cache",
         "test-cache", "test-cache-2", "test-cache-3", "test-cache-4", "guice");
+  }
+
+  @Test
+  public void isSet_customized_null() {
+    Config root = Mockito.mock();
+    Config merged = Mockito.mock();
+    Config customized = Mockito.mock();
+    when(merged.hasPath(anyString())).thenReturn(true);
+    when(customized.withFallback(any())).thenReturn(merged);
+    when(customized.getIsNull(anyString())).thenReturn(true);
+    when(customized.hasPathOrNull(anyString())).thenReturn(true);
+    when(root.getConfig(anyString())).thenReturn(customized);
+
+    var configurator = new Configurator<Object, Object>(root, "cache");
+    configurator.addExecutor();
+    verify(customized).hasPathOrNull(anyString());
   }
 
   @Test

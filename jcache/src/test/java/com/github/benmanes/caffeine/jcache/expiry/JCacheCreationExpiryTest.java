@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.expiry;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -390,5 +391,21 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
       assertThat(expirable.getExpireTimeMillis())
           .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
     }
+  }
+
+  @Test
+  public void iterator() {
+    jcache.put(KEY_1, VALUE_1);
+    var expirable1 = requireNonNull(getExpirable(jcache, KEY_1));
+    advanceHalfExpiry();
+
+    jcache.put(KEY_2, VALUE_2);
+    var expirable2 = requireNonNull(getExpirable(jcache, KEY_2));
+    assertThat(jcache).hasSize(2);
+
+    advanceHalfExpiry();
+    assertThat(jcache).hasSize(1);
+    expirable2.setExpireTimeMillis(expirable1.getExpireTimeMillis());
+    assertThat(jcache).hasSize(0);
   }
 }

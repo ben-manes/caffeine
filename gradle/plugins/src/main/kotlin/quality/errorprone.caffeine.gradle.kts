@@ -5,6 +5,7 @@ import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
+  `java-library`
   id("net.ltgt.nullaway")
   id("net.ltgt.errorprone")
 }
@@ -62,8 +63,12 @@ tasks.withType<JavaCompile>().configureEach {
       disabledChecks().forEach { disable(it) }
 
       nullaway {
+        if (java.toolchain.languageVersion.get().canCompileOrRun(17)) {
+          annotatedPackages.add("org.junit.jupiter")
+        }
         annotatedPackages.add("com.github.benmanes.caffeine")
         annotatedPackages.add("com.google.common")
+        annotatedPackages.add("com.google.inject")
         handleTestAssertionLibraries = true
         checkOptionalEmptiness = true
         suggestSuppressions = true

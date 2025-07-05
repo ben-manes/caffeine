@@ -17,12 +17,11 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Queue;
 
-import org.jetbrains.kotlinx.lincheck.LinChecker;
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
-import org.jetbrains.kotlinx.lincheck.annotations.Param;
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions;
+import org.jetbrains.lincheck.datastructures.IntGen;
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
+import org.jetbrains.lincheck.datastructures.Operation;
+import org.jetbrains.lincheck.datastructures.Param;
+import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.testng.annotations.Test;
 
 /**
@@ -56,18 +55,18 @@ public final class MpscGrowableArrayQueueLincheckTest {
    */
   @Test(groups = "lincheck")
   public void modelCheckingTest() {
-    var options = new ModelCheckingOptions()
-        .iterations(100)                  // the number of different scenarios
-        .invocationsPerIteration(10_000); // how deeply each scenario is tested
-    LinChecker.check(getClass(), options);
+    new ModelCheckingOptions()
+        .iterations(100)                 // the number of different scenarios
+        .invocationsPerIteration(10_000) // how deeply each scenario is tested
+        .check(getClass());
   }
 
   /** This test checks that the concurrent queue is linearizable with stress testing. */
   @Test(groups = "lincheck")
   public void stressTest() {
-    var options = new StressOptions()
-        .iterations(100)                  // the number of different scenarios
-        .invocationsPerIteration(10_000); // how deeply each scenario is tested
-    LinChecker.check(getClass(), options);
+    new StressOptions()
+        .iterations(100)                 // the number of different scenarios
+        .invocationsPerIteration(10_000) // how deeply each scenario is tested
+        .check(getClass());
   }
 }

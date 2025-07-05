@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.jcache.spi;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -40,6 +42,8 @@ import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider.JCacheCla
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineCachingProviderTest {
+
+  /* --------------- loadClass --------------- */
 
   @Test
   public void loadClass_found_context() {
@@ -98,27 +102,71 @@ public final class CaffeineCachingProviderTest {
   }
 
   @Test
-  public void loadClass_notFound_parent() {
+  public void loadClass_notFound_class() throws ClassNotFoundException {
+    ClassLoader classloader = Mockito.mock();
+    when(classloader.loadClass(anyString())).thenThrow(ClassNotFoundException.class);
     runWithClassloader(context -> {
       assertThrows(ClassNotFoundException.class, () -> {
-        var parent = new ClassLoader() {
-          @Override public Class<?> loadClass(String name) throws ClassNotFoundException {
-            throw new ClassNotFoundException(name);
+        Thread.currentThread().setContextClassLoader(classloader);
+        var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null) {
+          @Override @Nullable ClassLoader getClassClassLoader() {
+            return classloader;
           }
         };
-        var jcacheClassLoader = new JCacheClassLoader(parent);
         jcacheClassLoader.loadClass("a.b.c");
       });
     });
   }
 
   @Test
-  public void resource_found_class() {
+  public void loadClass_notFound_parent_context() throws ClassNotFoundException {
+    ClassLoader classloader = Mockito.mock();
+    when(classloader.loadClass(anyString())).thenThrow(ClassNotFoundException.class);
     runWithClassloader(context -> {
-      var jcacheClassLoader = new JCacheClassLoader(context);
-      assertThat(jcacheClassLoader.getResource("")).isNotNull();
+      assertThrows(ClassNotFoundException.class, () -> {
+        Thread.currentThread().setContextClassLoader(classloader);
+        var jcacheClassLoader = new JCacheClassLoader(classloader);
+        jcacheClassLoader.loadClass("a.b.c");
+      });
     });
   }
+
+  @Test
+  public void loadClass_notFound_parent_class() throws ClassNotFoundException {
+    ClassLoader classloader = Mockito.mock();
+    when(classloader.loadClass(anyString())).thenThrow(ClassNotFoundException.class);
+    runWithClassloader(context -> {
+      assertThrows(ClassNotFoundException.class, () -> {
+        Thread.currentThread().setContextClassLoader(null);
+        var jcacheClassLoader = new JCacheClassLoader(classloader) {
+          @Override @Nullable ClassLoader getClassClassLoader() {
+            return classloader;
+          }
+        };
+        jcacheClassLoader.loadClass("a.b.c");
+      });
+    });
+  }
+
+  @Test
+  public void loadClass_notFound_parent() {
+    runWithClassloader(context -> {
+      assertThrows(ClassNotFoundException.class, () -> {
+        try (var provider = new CaffeineCachingProvider()) {
+          Thread.currentThread().setContextClassLoader(provider.getDefaultClassLoader());
+          var parent = new ClassLoader() {
+            @Override public Class<?> loadClass(String name) throws ClassNotFoundException {
+              throw new ClassNotFoundException(name);
+            }
+          };
+          var jcacheClassLoader = new JCacheClassLoader(parent);
+          jcacheClassLoader.loadClass("a.b.c");
+        }
+      });
+    });
+  }
+
+  /* --------------- resource --------------- */
 
   @Test
   public void resource_found_context() {
@@ -130,6 +178,14 @@ public final class CaffeineCachingProviderTest {
     } finally {
       Thread.currentThread().setContextClassLoader(classLoader);
     }
+  }
+
+  @Test
+  public void resource_found_class() {
+    runWithClassloader(context -> {
+      var jcacheClassLoader = new JCacheClassLoader(context);
+      assertThat(jcacheClassLoader.getResource("")).isNotNull();
+    });
   }
 
   @Test
@@ -160,17 +216,56 @@ public final class CaffeineCachingProviderTest {
   }
 
   @Test
-  public void resources_found_class() throws IOException {
-    var classLoader = Thread.currentThread().getContextClassLoader();
-    Thread.currentThread().setContextClassLoader(null);
-    try {
-      var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null);
-      var resources = jcacheClassLoader.getResources("");
-      assertThat(Collections.list(resources)).isNotEmpty();
-    } finally {
-      Thread.currentThread().setContextClassLoader(classLoader);
-    }
+  public void resource_notFound_class() {
+    ClassLoader classloader = Mockito.mock();
+    runWithClassloader(context -> {
+      Thread.currentThread().setContextClassLoader(classloader);
+      var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null) {
+        @Override @Nullable ClassLoader getClassClassLoader() {
+          return classloader;
+        }
+      };
+      assertThat(jcacheClassLoader.getResource("a.b.c")).isNull();
+    });
   }
+
+  @Test
+  public void resource_notFound_parent_context() {
+    ClassLoader classloader = Mockito.mock();
+    runWithClassloader(context -> {
+      Thread.currentThread().setContextClassLoader(classloader);
+      var jcacheClassLoader = new JCacheClassLoader(classloader);
+      assertThat(jcacheClassLoader.getResource("a.b.c")).isNull();
+    });
+  }
+
+  @Test
+  public void resource_notFound_parent_class() {
+    ClassLoader classloader = Mockito.mock();
+    runWithClassloader(context -> {
+      Thread.currentThread().setContextClassLoader(null);
+      var jcacheClassLoader = new JCacheClassLoader(classloader) {
+        @Override @Nullable ClassLoader getClassClassLoader() {
+          return classloader;
+        }
+      };
+      assertThat(jcacheClassLoader.getResource("a.b.c")).isNull();
+    });
+  }
+
+  @Test
+  public void resource_notFound_parent() {
+    runWithClassloader(context -> {
+      try (var provider = new CaffeineCachingProvider()) {
+        Thread.currentThread().setContextClassLoader(provider.getDefaultClassLoader());
+        ClassLoader classloader = Mockito.mock();
+        var jcacheClassLoader = new JCacheClassLoader(classloader);
+        assertThat(jcacheClassLoader.getResource("a.b.c")).isNull();
+      }
+    });
+  }
+
+  /* --------------- resources --------------- */
 
   @Test
   public void resources_found_context() throws IOException {
@@ -184,6 +279,19 @@ public final class CaffeineCachingProviderTest {
       });
       var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null);
       assertThat(Collections.list(jcacheClassLoader.getResources("a.b.c"))).isEqualTo(resources);
+    } finally {
+      Thread.currentThread().setContextClassLoader(classLoader);
+    }
+  }
+
+  @Test
+  public void resources_found_class() throws IOException {
+    var classLoader = Thread.currentThread().getContextClassLoader();
+    Thread.currentThread().setContextClassLoader(null);
+    try {
+      var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null);
+      var resources = jcacheClassLoader.getResources("");
+      assertThat(Collections.list(resources)).isNotEmpty();
     } finally {
       Thread.currentThread().setContextClassLoader(classLoader);
     }
@@ -224,6 +332,80 @@ public final class CaffeineCachingProviderTest {
       }
     });
   }
+
+  @Test
+  public void resources_notFound_class() throws IOException {
+    ClassLoader classloader = Mockito.mock();
+    when(classloader.getResources(anyString())).thenReturn(Collections.emptyEnumeration());
+    runWithClassloader(context -> {
+      try {
+        Thread.currentThread().setContextClassLoader(classloader);
+        var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null) {
+          @Override @Nullable ClassLoader getClassClassLoader() {
+            return classloader;
+          }
+        };
+        var resources = jcacheClassLoader.getResources("a.b.c");
+        assertThat(Collections.list(resources)).isEmpty();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    });
+  }
+
+  @Test
+  public void resources_notFound_parent_context() throws IOException {
+    ClassLoader classloader = Mockito.mock();
+    when(classloader.getResources(anyString())).thenReturn(Collections.emptyEnumeration());
+    runWithClassloader(context -> {
+      try {
+        Thread.currentThread().setContextClassLoader(classloader);
+        var jcacheClassLoader = new JCacheClassLoader(classloader);
+        var resources = jcacheClassLoader.getResources("a.b.c");
+        assertThat(Collections.list(resources)).isEmpty();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    });
+  }
+
+  @Test
+  public void resources_notFound_parent_class() throws IOException {
+    ClassLoader classloader = Mockito.mock();
+    when(classloader.getResources(anyString())).thenReturn(Collections.emptyEnumeration());
+    runWithClassloader(context -> {
+      try {
+        Thread.currentThread().setContextClassLoader(null);
+        var jcacheClassLoader = new JCacheClassLoader(classloader) {
+          @Override @Nullable ClassLoader getClassClassLoader() {
+            return classloader;
+          }
+        };
+        var resources = jcacheClassLoader.getResources("a.b.c");
+        assertThat(Collections.list(resources)).isEmpty();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    });
+  }
+
+  @Test
+  public void resources_notFound_parent() throws IOException {
+    ClassLoader classloader = Mockito.mock();
+    when(classloader.getResources(anyString())).thenReturn(Collections.emptyEnumeration());
+    runWithClassloader(context -> {
+      try (var provider = new CaffeineCachingProvider()) {
+        Thread.currentThread().setContextClassLoader(provider.getDefaultClassLoader());
+        var jcacheClassLoader = new JCacheClassLoader(classloader);
+        var resources = jcacheClassLoader.getResources("a.b.c");
+        assertThat(Collections.list(resources)).isEmpty();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    });
+  }
+
+  /* --------------- Miscellaneous --------------- */
 
   @Test
   public void osgi_getCache() {

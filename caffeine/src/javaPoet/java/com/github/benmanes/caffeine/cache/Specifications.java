@@ -20,8 +20,6 @@ import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 
-import org.jspecify.annotations.Nullable;
-
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.ParameterSpec;
 import com.palantir.javapoet.ParameterizedTypeName;
@@ -84,7 +82,7 @@ public final class Specifications {
   public static final ParameterizedTypeName ASYNC_CACHE_LOADER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "AsyncCacheLoader"), TypeVariableName.get("? super K"), vTypeVar);
   public static final ParameterSpec ASYNC_CACHE_LOADER_PARAM = ParameterSpec
-      .builder(ASYNC_CACHE_LOADER, "cacheLoader").addAnnotation(Nullable.class).build();
+      .builder(ASYNC_CACHE_LOADER, "cacheLoader").build();
 
   public static final TypeName REMOVAL_LISTENER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "RemovalListener"), kTypeVar, vTypeVar);

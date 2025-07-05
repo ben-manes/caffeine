@@ -28,6 +28,7 @@ import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
@@ -52,6 +53,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.References.LookupKeyEqualsReference;
 import com.github.benmanes.caffeine.cache.References.LookupKeyReference;
@@ -375,6 +377,28 @@ public final class ReferenceTest {
     assertThat(context.cache()).whenCleanedUp().isEmpty();
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(collected).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true, maximumSize = Maximum.FULL)
+  public void coldest(CacheContext context, Eviction<Int, Int> eviction) {
+    context.clear();
+    var coldest = eviction.coldest(stream -> {
+      GcFinalization.awaitFullGc();
+      return stream.collect(toImmutableList());
+    });
+    assertThat(coldest).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true, maximumSize = Maximum.FULL)
+  public void hottest(CacheContext context, Eviction<Int, Int> eviction) {
+    context.clear();
+    var hottest = eviction.hottest(stream -> {
+      GcFinalization.awaitFullGc();
+      return stream.collect(toImmutableList());
+    });
+    assertThat(hottest).isEmpty();
   }
 
   /* --------------- LoadingCache --------------- */
@@ -744,13 +768,25 @@ public final class ReferenceTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void replaceConditionally(Map<Int, Int> map, CacheContext context) {
+  public void replaceConditionally_found(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     Int value = context.original().get(key);
 
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.replace(key, value, context.absentValue())).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, values = ReferenceType.WEAK,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  public void replaceConditionally_collectedValue(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.replace(key, context.absentValue(), context.absentValue())).isFalse();
   }
 
   @Test(dataProvider = "caches")
@@ -1119,6 +1155,22 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void keySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    map.keySet().spliterator().forEachRemaining(key -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.keySet().spliterator().tryAdvance(key -> Assert.fail())).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       implementation = Implementation.Caffeine)
   public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1157,6 +1209,22 @@ public final class ReferenceTest {
   public void values_contains(Map<Int, Int> map, CacheContext context) {
     Int value = new Int(context.original().get(context.firstKey()));
     assertThat(map.values().contains(value)).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void valueSpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    map.values().spliterator().forEachRemaining(value -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.values().spliterator().tryAdvance(value -> Assert.fail())).isFalse();
   }
 
   @Test(dataProvider = "caches")
@@ -1227,6 +1295,22 @@ public final class ReferenceTest {
     assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
     assertThat(map.entrySet().equals(expected.entrySet())).isTrue();
     assertThat(expected.entrySet().equals(map.entrySet())).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void entrySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    map.entrySet().spliterator().forEachRemaining(entry -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void entrySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.entrySet().spliterator().tryAdvance(entry -> Assert.fail())).isFalse();
   }
 
   @Test(dataProvider = "caches")

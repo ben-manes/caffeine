@@ -20,21 +20,25 @@ import static javax.cache.expiry.Duration.ETERNAL;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -43,11 +47,13 @@ import javax.cache.CacheException;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryListener;
+import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CompletionListener;
+import javax.cache.integration.CompletionListenerFuture;
 
 import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
@@ -58,6 +64,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.processor.Action;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedTimeoutException;
 
@@ -82,7 +89,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     configuration.setCacheWriterFactory(() -> writer);
     configuration.setTickerFactory(() -> ticker::read);
     configuration.setStatisticsEnabled(true);
-    configuration.setWriteThrough(true);
+    configuration.setWriteThrough(false);
     configuration.setReadThrough(false);
     return configuration;
   }
@@ -141,6 +148,39 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     assertThat(config2.getCacheEntryListenerConfigurations()).hasSize(1);
     assertThat(config2.getCacheEntryListenerConfigurations().toString())
         .isEqualTo(List.of(configuration).toString());
+  }
+
+  @Test
+  public void loadAll() throws InterruptedException, ExecutionException {
+    jcache.put(KEY_1, VALUE_1);
+    when(loader.loadAll(anyIterable()))
+        .thenReturn(ImmutableMap.of(KEY_2, VALUE_2, KEY_3, VALUE_3));
+
+    var listener = new CompletionListenerFuture();
+    jcache.loadAll(keys, /* replaceExistingValues= */ false, listener);
+    listener.get();
+    assertThat(jcache).containsExactlyElementsIn(entries.entrySet());
+  }
+
+  @Test
+  public void loadAll_empty() throws InterruptedException, ExecutionException {
+    var listener = new CompletionListenerFuture();
+    jcache.loadAll(keys, /* replaceExistingValues= */ false, listener);
+    listener.get();
+    assertThat(jcache).isEmpty();
+  }
+
+  @Test
+  public void loadAll_nullMapping() throws InterruptedException, ExecutionException {
+    var result = new HashMap<Integer, Integer>();
+    result.put(null, VALUE_1);
+    result.put(KEY_1, null);
+
+    var listener = new CompletionListenerFuture();
+    when(loader.loadAll(anyIterable())).thenReturn(result);
+    jcache.loadAll(keys, /* replaceExistingValues= */ false, listener);
+    listener.get();
+    assertThat(jcache).isEmpty();
   }
 
   @Test
@@ -213,6 +253,26 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
+  public void containsKey_eternal() {
+    jcache.put(KEY_1, VALUE_1);
+    var expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable).isNotNull();
+    assertThat(expirable.isEternal()).isTrue();
+    assertThat(jcache.containsKey(KEY_1)).isTrue();
+  }
+
+  @Test
+  public void containsKey_notExpired() {
+    when(expiry.getExpiryForCreation()).thenReturn(Duration.FIVE_MINUTES);
+    jcache.put(KEY_1, VALUE_1);
+
+    var expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable).isNotNull();
+    assertThat(expirable.isEternal()).isFalse();
+    assertThat(jcache.containsKey(KEY_1)).isTrue();
+  }
+
+  @Test
   public void containsKey_unexpired() {
     checkReadWhenUnexpired(jcache, currentTime().plus(EXPIRY_DURATION).toMillis(),
         key -> assertThat(jcache.containsKey(key)).isFalse());
@@ -242,6 +302,32 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     });
     await().untilTrue(done);
     assertThat(jcache.statistics.getCacheEvictions()).isEqualTo(0);
+  }
+
+  @Test
+  public void putAll_empty() {
+    jcache.putAll(Map.of());
+    verifyNoInteractions(writer);
+  }
+
+  @Test
+  public void remove_eternal() {
+    jcache.put(KEY_1, VALUE_1);
+    var expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable).isNotNull();
+    assertThat(expirable.isEternal()).isTrue();
+    assertThat(jcache.remove(KEY_1)).isTrue();
+  }
+
+  @Test
+  public void remove_notExpired() {
+    when(expiry.getExpiryForCreation()).thenReturn(Duration.FIVE_MINUTES);
+    jcache.put(KEY_1, VALUE_1);
+
+    var expirable = getExpirable(jcache, KEY_1);
+    assertThat(expirable).isNotNull();
+    assertThat(expirable.isEternal()).isFalse();
+    assertThat(jcache.remove(KEY_1)).isTrue();
   }
 
   @Test(groups = "isolated")
@@ -321,6 +407,28 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
     var item = jcache.iterator().next();
     assertThrows(IllegalArgumentException.class, () -> item.unwrap(String.class));
+  }
+
+  @Test
+  @SuppressWarnings("NullAway")
+  public void close_alreadyClosed() {
+    var cache = new CacheProxy<Integer, Integer>("mock", Mockito.mock(), cacheManager,
+        Mockito.mock(), Mockito.mock(), Mockito.mock(), Mockito.mock(), Mockito.mock(),
+        Mockito.mock(), Mockito.mock()) {
+      int isClosed;
+      @Override public boolean isClosed() {
+        isClosed++;
+        return (isClosed > 1);
+      }
+      public boolean isReallyClosed() {
+        return super.isClosed();
+      }
+    };
+    try (cache) {
+      cache.close();
+      assertThat(cache.isClosed).isEqualTo(2);
+      assertThat(cache.isReallyClosed()).isFalse();
+    }
   }
 
   @Test
