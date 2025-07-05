@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.findVa
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ADMIT_HASHDOS_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.QUEUE_TRANSFER_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WARN_AFTER_LOCK_WAIT_NANOS;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
 import static com.github.benmanes.caffeine.cache.Node.WINDOW;
@@ -102,6 +103,7 @@ import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
+import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -598,6 +600,141 @@ public final class BoundedLocalCacheTest {
 
     assertThat(maximum).isEqualTo(context.maximumWeightOrSize());
     assertThat(cache.drainStatus).isEqualTo(IDLE);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySpliterator_forEachRemaining_notAlive(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      if ((node.getKeyReference().hashCode() % 2) == 0) {
+        node.retire();
+      } else {
+        node.die();
+      }
+    }
+    cache.keySet().spliterator().forEachRemaining(key -> Assert.fail());
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void keySpliterator_tryAdvance_notAlive(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      if ((node.getKeyReference().hashCode() % 2) == 0) {
+        node.retire();
+      } else {
+        node.die();
+      }
+    }
+    cache.keySet().spliterator().tryAdvance(key -> Assert.fail());
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void valueSpliterator_forEachRemaining_notAlive(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      if ((node.getKeyReference().hashCode() % 2) == 0) {
+        node.retire();
+      } else {
+        node.die();
+      }
+    }
+    cache.values().spliterator().forEachRemaining(value -> Assert.fail());
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void valueSpliterator_tryAdvance_notAlive(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      if ((node.getKeyReference().hashCode() % 2) == 0) {
+        node.retire();
+      } else {
+        node.die();
+      }
+    }
+    cache.values().spliterator().tryAdvance(value -> Assert.fail());
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySpliterator_forEachRemaining_notAlive(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      if ((node.getKeyReference().hashCode() % 2) == 0) {
+        node.retire();
+      } else {
+        node.die();
+      }
+    }
+    cache.entrySet().spliterator().forEachRemaining(entry -> Assert.fail());
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void entrySpliterator_tryAdvance_notAlive(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      if ((node.getKeyReference().hashCode() % 2) == 0) {
+        node.retire();
+      } else {
+        node.die();
+      }
+    }
+    cache.entrySet().spliterator().tryAdvance(entry -> Assert.fail());
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void nodeToCacheEntry_notAlive(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      if ((node.getKeyReference().hashCode() % 2) == 0) {
+        node.retire();
+      } else {
+        node.die();
+      }
+      assertThat(cache.nodeToCacheEntry(node, identity())).isNull();
+    }
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  public void nodeToCacheEntry_collectedKey(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    var weakKey = (Reference<?>) node.getKeyReference();
+    weakKey.clear();
+    assertThat(cache.nodeToCacheEntry(node, identity())).isNull();
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  public void nodeToCacheEntry_collectedValue(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    var weakValue = (Reference<?>) node.getValueReference();
+    weakValue.clear();
+    assertThat(cache.nodeToCacheEntry(node, identity())).isNull();
   }
 
   /* --------------- Eviction --------------- */
@@ -1505,7 +1642,7 @@ public final class BoundedLocalCacheTest {
     var value = candidate.getValue();
 
     @SuppressWarnings("unchecked")
-    var keyReference = (WeakKeyReference<Int>) candidate.getKeyReference();
+    var keyReference = (Reference<Int>) candidate.getKeyReference();
     keyReference.clear();
 
     var oldValue = cache.put(context.absentKey(), context.absentValue());
@@ -1524,7 +1661,7 @@ public final class BoundedLocalCacheTest {
     var value = victim.getValue();
 
     @SuppressWarnings("unchecked")
-    var keyReference = (WeakKeyReference<Int>) victim.getKeyReference();
+    var keyReference = (Reference<Int>) victim.getKeyReference();
     keyReference.clear();
 
     cache.setMaximumSize(cache.size() - 1);
@@ -1607,6 +1744,38 @@ public final class BoundedLocalCacheTest {
       @Override protected void setMainProtectedWeightedSize(long weightedSize) {}
     };
     cache.demoteFromMainProtected();
+  }
+
+  @Test
+  public void demoteFromMain_threshold() {
+    var accessOrderProbationDeque = new AccessOrderDeque<Node<Object, Object>>();
+    var accessOrderProtectedDeque = new AccessOrderDeque<Node<Object, Object>>();
+    var cache = new BoundedLocalCache<>(
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
+      @Override protected long mainProtectedMaximum() {
+        return 1;
+      }
+      @Override protected long mainProtectedWeightedSize() {
+        return 100_000;
+      }
+      @Override protected AccessOrderDeque<Node<Object, Object>> accessOrderProbationDeque() {
+        return accessOrderProbationDeque;
+      }
+      @Override protected AccessOrderDeque<Node<Object, Object>> accessOrderProtectedDeque() {
+        return accessOrderProtectedDeque;
+      }
+      @Override protected void setMainProtectedWeightedSize(long weightedSize) {
+        assertThat(weightedSize).isEqualTo(mainProtectedWeightedSize() - QUEUE_TRANSFER_THRESHOLD);
+      }
+    };
+
+    for (int i = 0; i < 10 * QUEUE_TRANSFER_THRESHOLD; i++) {
+      assertThat(accessOrderProtectedDeque.add(new PSMS<>())).isTrue();
+    }
+    assertThat(accessOrderProtectedDeque).hasSize(10 * QUEUE_TRANSFER_THRESHOLD);
+    cache.demoteFromMainProtected();
+    assertThat(accessOrderProbationDeque).hasSize(QUEUE_TRANSFER_THRESHOLD);
+    assertThat(accessOrderProtectedDeque).hasSize(9 * QUEUE_TRANSFER_THRESHOLD);
   }
 
   @Test(dataProvider = "caches")
@@ -2019,6 +2188,190 @@ public final class BoundedLocalCacheTest {
         .containsEntry(context.absentKey(), context.absentKey()));
     assertThat(Futures.getUnchecked(future[0])).isNull();
     cache.afterWrite(cache.new RemovalTask(node));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL)
+  public void isPendingEviction(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var key : context.original().keySet()) {
+      assertThat(cache.isPendingEviction(key)).isFalse();
+    }
+    assertThat(cache.isPendingEviction(context.absentKey())).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void isPendingEviction_async(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    var localCache = (LocalAsyncCache<Int, Int>) cache;
+    assertThat(localCache.cache().isPendingEviction(context.absentKey())).isFalse();
+    future.complete(context.absentValue());
+    assertThat(localCache.cache().isPendingEviction(context.absentKey())).isFalse();
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  public void isPendingEviction_collected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
+    node.setValue(/* value= */ null, cache.valueReferenceQueue());
+    assertThat(cache.isPendingEviction(context.firstKey())).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expiryTime = Expire.ONE_MINUTE, population = Population.FULL)
+  public void isPendingEviction_expired(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(1));
+    for (var key : context.original().keySet()) {
+      assertThat(cache.isPendingEviction(key)).isTrue();
+    }
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  public void remove_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
+    var weakKey = (Reference<?>) node.getKeyReference();
+    var writer = new AtomicReference<Thread>();
+    var started = new AtomicBoolean();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(started);
+      assertThat(cache.remove(node.getKey())).isNull();
+    }, ConcurrentTestHarness.executor);
+    synchronized (node) {
+      started.set(true);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      weakKey.clear();
+    }
+    assertThat(future).succeedsWithNull();
+    assertThat(context).notifications().withCause(COLLECTED)
+        .contains(null, context.original().get(context.firstKey()))
+        .exclusively();
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  public void removeConditionally_collectedKey(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
+    var weakKey = (Reference<?>) node.getKeyReference();
+    var writer = new AtomicReference<Thread>();
+    var started = new AtomicBoolean();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(started);
+      assertThat(cache.remove(node.getKey(), node.getValue())).isFalse();
+    }, ConcurrentTestHarness.executor);
+    synchronized (node) {
+      started.set(true);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      weakKey.clear();
+    }
+    assertThat(future).succeedsWithNull();
+    assertThat(context).notifications().withCause(COLLECTED)
+        .contains(null, context.original().get(context.firstKey()))
+        .exclusively();
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  public void replace_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
+    var weakKey = (Reference<?>) node.getKeyReference();
+    var writer = new AtomicReference<Thread>();
+    var started = new AtomicBoolean();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(started);
+      assertThat(cache.replace(node.getKey(), node.getValue())).isNull();
+    }, ConcurrentTestHarness.executor);
+    synchronized (node) {
+      started.set(true);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      weakKey.clear();
+    }
+    assertThat(future).succeedsWithNull();
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  public void replaceConditionally_collectedKey(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
+    var weakKey = (Reference<?>) node.getKeyReference();
+    var writer = new AtomicReference<Thread>();
+    var started = new AtomicBoolean();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(started);
+      assertThat(cache.replace(node.getKey(), node.getValue(), context.absentValue())).isFalse();
+    }, ConcurrentTestHarness.executor);
+    synchronized (node) {
+      started.set(true);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      weakKey.clear();
+    }
+    assertThat(future).succeedsWithNull();
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  public void computeIfAbsent_collectedKey(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
+    var weakKey = (Reference<?>) node.getKeyReference();
+    var writer = new AtomicReference<Thread>();
+    var started = new AtomicBoolean();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(started);
+      var result = cache.doComputeIfAbsent(node.getKey(), node.getKeyReference(),
+          key -> context.absentValue(), /* now= */ new long[1], /* recordStats= */ false);
+      assertThat(result).isEqualTo(context.absentValue());
+    }, ConcurrentTestHarness.executor);
+    synchronized (node) {
+      started.set(true);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+      weakKey.clear();
+    }
+    assertThat(future).succeedsWithNull();
   }
 
   /* --------------- Expiration --------------- */
@@ -2482,6 +2835,15 @@ public final class BoundedLocalCacheTest {
       }
     });
     signal.join();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  public void refresh_collected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    @SuppressWarnings("NullAway")
+    var key = cache.nodeFactory.newReferenceKey(/* key= */ null, /* referenceQueue= */ null);
+    cache.refreshes().put(key, context.absentValue().toFuture());
+    assertThat(context.cache().policy().refreshes()).isEmpty();
   }
 
   @CheckNoEvictions
@@ -3134,8 +3496,8 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.SINGLETON, expiryTime = Expire.ONE_MINUTE)
   public void expireAfterRead_disabled(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(Iterables.getOnlyElement(cache.data.values()));
-    long duration = cache.expireAfterRead(node, node.getKey(), node.getValue(),
-        cache.expiry(), context.ticker().read());
+    long duration = cache.expireAfterRead(node, requireNonNull(node.getKey()),
+        requireNonNull(node.getValue()), cache.expiry(), context.ticker().read());
     var expiresAt = cache.expiresVariable()
         ? context.ticker().read() + context.expiryTime().timeNanos()
         : 0;

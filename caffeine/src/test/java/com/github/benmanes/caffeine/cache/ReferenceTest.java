@@ -1119,6 +1119,22 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void keySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    map.keySet().spliterator().forEachRemaining(key -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.keySet().spliterator().tryAdvance(key -> Assert.fail())).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       implementation = Implementation.Caffeine)
   public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1157,6 +1173,22 @@ public final class ReferenceTest {
   public void values_contains(Map<Int, Int> map, CacheContext context) {
     Int value = new Int(context.original().get(context.firstKey()));
     assertThat(map.values().contains(value)).isFalse();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void valueSpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    map.values().spliterator().forEachRemaining(value -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.values().spliterator().tryAdvance(value -> Assert.fail())).isFalse();
   }
 
   @Test(dataProvider = "caches")
@@ -1227,6 +1259,22 @@ public final class ReferenceTest {
     assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
     assertThat(map.entrySet().equals(expected.entrySet())).isTrue();
     assertThat(expected.entrySet().equals(map.entrySet())).isTrue();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void entrySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    map.entrySet().spliterator().forEachRemaining(entry -> Assert.fail());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  public void entrySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.entrySet().spliterator().tryAdvance(entry -> Assert.fail())).isFalse();
   }
 
   @Test(dataProvider = "caches")

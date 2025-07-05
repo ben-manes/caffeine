@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -53,13 +52,15 @@ public final class StripedBufferTest {
     var buffer = new FakeBuffer<Integer>(Buffer.FAILED);
     assertThat(buffer.offer(ELEMENT)).isEqualTo(Buffer.SUCCESS);
 
+    var success = false;
     for (int i = 0; i < 64; i++) {
       int result = buffer.offer(ELEMENT);
-      if (result == Buffer.SUCCESS) {
-        return;
-      }
+      success |= (result == Buffer.SUCCESS);
     }
-    Assert.fail();
+    assertThat(success).isTrue();
+    assertThat(buffer.reads()).isEqualTo(0);
+    assertThat(buffer.writes()).isGreaterThan(1);
+    assertThat(buffer.table).asList().contains(null);
   }
 
   @Test
@@ -101,6 +102,20 @@ public final class StripedBufferTest {
   }
 
   @Test
+  public void counts() {
+    var buffer = new FakeBuffer<Integer>(Buffer.SUCCESS);
+    for (int i = 0; i < 64; i++) {
+      assertThat(buffer.offer(ELEMENT)).isEqualTo(Buffer.SUCCESS);
+    }
+    assertThat(buffer.writes()).isEqualTo(64);
+    assertThat(buffer.reads()).isEqualTo(0);
+    assertThat(buffer.size()).isEqualTo(64);
+    buffer.drainTo(e -> {});
+    assertThat(buffer.reads()).isEqualTo(64);
+    assertThat(buffer.size()).isEqualTo(0);
+  }
+
+  @Test
   public void findVarHandle_absent() {
     assertThrows(ExceptionInInitializerError.class, () ->
         findVarHandle(StripedBuffer.class, "absent", int.class));
@@ -118,28 +133,33 @@ public final class StripedBufferTest {
 
   static final class FakeBuffer<E> extends StripedBuffer<E> {
     final int result;
+
     int drains;
+    int writes;
+    int reads;
 
     FakeBuffer(int result) {
       this.result = result;
+      this.writes = 1;
     }
 
     @Override protected Buffer<E> create(E e) {
       return new Buffer<>() {
         @Override public int offer(E e) {
+          if (result == Buffer.SUCCESS) {
+            writes++;
+          }
           return result;
         }
         @Override public void drainTo(Consumer<E> consumer) {
+          reads = writes;
           drains++;
         }
-        @Override public long size() {
-          return 0L;
-        }
         @Override public long reads() {
-          return 0L;
+          return reads;
         }
         @Override public long writes() {
-          return 0L;
+          return writes;
         }
       };
     }

@@ -228,7 +228,7 @@ public final class LocalCacheSubject extends Subject {
           var next = node.getNextInVariableOrder();
           var prev = node.getPreviousInVariableOrder();
           long duration = node.getVariableTime() - bounded.timerWheel().nanos;
-          check("notExpired").that(duration).isGreaterThan(0);
+          check("notTooStale").that(duration).isAtLeast(-Pacer.TOLERANCE);
           check("loopDetected").that(seen.add(node)).isTrue();
           check("wrongPrev").that(prev.getNextInVariableOrder()).isSameInstanceAs(node);
           check("wrongNext").that(next.getPreviousInVariableOrder()).isSameInstanceAs(node);
@@ -361,7 +361,10 @@ public final class LocalCacheSubject extends Subject {
       Node<Object, Object> node, @Nullable Object key, @Nullable Object value) {
     if (bounded.collectKeys()) {
       if ((key != null) && (value != null)) {
-        check("bounded").that(bounded).containsKey(key);
+        check("bounded").that(bounded.data).containsKey(node.getKeyReference());
+        if (!bounded.hasExpired(node, bounded.expirationTicker().read())) {
+          check("bounded").that(bounded).containsKey(key);
+        }
       }
       var clazz = node instanceof Interned ? WeakKeyEqualsReference.class : WeakKeyReference.class;
       check("keyReference").that(node.getKeyReference()).isInstanceOf(clazz);

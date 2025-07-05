@@ -823,6 +823,30 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  public void getAllBifunction_absent_failure_timeout(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = cache.getAll(context.absentKeys(),
+        (keys, executor) -> CompletableFuture.failedFuture(new TimeoutException()));
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(TimeoutException.class);
+    assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
+    assertThat(logEvents()).isEmpty();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllBifunction_absent_failure_canceled(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = cache.getAll(context.absentKeys(),
+        (keys, executor) -> CompletableFuture.failedFuture(new CancellationException()));
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(CancellationException.class);
+    assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
+    assertThat(logEvents()).isEmpty();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
   public void getAllBifunction_absent_throwsCheckedException(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var error = assertThrows(CompletionException.class, () -> {
