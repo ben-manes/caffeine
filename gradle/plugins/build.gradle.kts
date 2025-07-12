@@ -26,6 +26,7 @@ dependencies {
 
   implementation(plugin(libs.plugins.bnd))
   implementation(plugin(libs.plugins.idea))
+  implementation(plugin(libs.plugins.revapi))
   implementation(plugin(libs.plugins.nullaway))
   implementation(plugin(libs.plugins.sigstore))
   implementation(plugin(libs.plugins.spotbugs))

@@ -5,6 +5,7 @@ import org.gradle.plugins.ide.eclipse.model.Library
 
 plugins {
   id("java-library.caffeine")
+  id("revapi.caffeine")
 }
 
 sourceSets {

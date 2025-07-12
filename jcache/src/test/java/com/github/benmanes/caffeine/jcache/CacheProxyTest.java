@@ -156,17 +156,17 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     when(loader.loadAll(anyIterable()))
         .thenReturn(ImmutableMap.of(KEY_2, VALUE_2, KEY_3, VALUE_3));
 
-    var listener = new CompletionListenerFuture();
-    jcache.loadAll(keys, /* replaceExistingValues= */ false, listener);
-    listener.get();
+    var completionListener = new CompletionListenerFuture();
+    jcache.loadAll(keys, /* replaceExistingValues= */ false, completionListener);
+    completionListener.get();
     assertThat(jcache).containsExactlyElementsIn(entries.entrySet());
   }
 
   @Test
   public void loadAll_empty() throws InterruptedException, ExecutionException {
-    var listener = new CompletionListenerFuture();
-    jcache.loadAll(keys, /* replaceExistingValues= */ false, listener);
-    listener.get();
+    var completionListener = new CompletionListenerFuture();
+    jcache.loadAll(keys, /* replaceExistingValues= */ false, completionListener);
+    completionListener.get();
     assertThat(jcache).isEmpty();
   }
 
@@ -176,10 +176,10 @@ public final class CacheProxyTest extends AbstractJCacheTest {
     result.put(null, VALUE_1);
     result.put(KEY_1, null);
 
-    var listener = new CompletionListenerFuture();
+    var completionListener = new CompletionListenerFuture();
     when(loader.loadAll(anyIterable())).thenReturn(result);
-    jcache.loadAll(keys, /* replaceExistingValues= */ false, listener);
-    listener.get();
+    jcache.loadAll(keys, /* replaceExistingValues= */ false, completionListener);
+    completionListener.get();
     assertThat(jcache).isEmpty();
   }
 

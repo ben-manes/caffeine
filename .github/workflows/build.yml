@@ -224,10 +224,8 @@ jobs:
             ${{ env.ALLOWED_ENDPOINTS }}
             artifacts.codacy.com:443
             api.codacy.com:443
-            app.deepsource.com:443
             codecov.io:443
             coveralls.io:443
-            deepsource.io:443
             fastly.com:443
             nodejs.org:443
             raw.githubusercontent.com
@@ -283,14 +281,6 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         continue-on-error: true
-      - name: Publish to DeepSource
-        uses: deepsourcelabs/test-coverage-action@e02a039827236fa21a95866e7cd0b1c52ca61e76 # v1.1.2
-        if: (github.event_name == 'push') && (github.event.repository.fork == false)
-        continue-on-error: true
-        with:
-          key: java
-          dsn: ${{ secrets.DEEPSOURCE_DSN }}
-          coverage-file: ./build/reports/jacoco/jacocoFullReport/jacocoFullReport.xml
       - name: Publish to SonarQube
         uses: ./.github/actions/run-gradle
         if: >

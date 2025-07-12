@@ -103,6 +103,31 @@ jobs:
           name: pmd-reports
           path: "**/build/reports/pmd/*.html"
 
+  revapi:
+    name: Revapi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      JAVA_VERSION: 24
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        with:
+          disable-sudo-and-containers: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Revapi
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          arguments: revapi --no-configuration-cache
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
   spotbugs:
     name: Spotbugs
     runs-on: ubuntu-latest
