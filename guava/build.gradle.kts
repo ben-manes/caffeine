@@ -4,6 +4,7 @@ import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
   id("java-library.caffeine")
+  id("revapi.caffeine")
 }
 
 dependencies {

@@ -3194,6 +3194,43 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void refreshIfNeeded_skip_casWriteTime(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = Mockito.spy(requireNonNull(cache.data.get(
+        cache.nodeFactory.newLookupKey(context.firstKey()))));
+    when(node.casWriteTime(anyLong(), anyLong())).thenReturn(false);
+    int executedTasks = context.executor().submitted();
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.refreshIfNeeded(node, context.ticker().read())).isNull();
+    assertThat(context.executor().submitted()).isEqualTo(executedTasks);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void refreshIfNeeded_skip_notAlive(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var retired = requireNonNull(cache.data.get(
+        cache.nodeFactory.newLookupKey(context.firstKey())));
+    var dead = requireNonNull(cache.data.get(
+        cache.nodeFactory.newLookupKey(context.lastKey())));
+    int executedTasks = context.executor().submitted();
+    retired.retire();
+    dead.die();
+    retired.setValue(context.absentValue(), cache.valueReferenceQueue());
+    dead.setValue(context.absentValue(), cache.valueReferenceQueue());
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.refreshIfNeeded(retired, context.ticker().read())).isNull();
+    assertThat(cache.refreshIfNeeded(dead, context.ticker().read())).isNull();
+    assertThat(context.executor().submitted()).isEqualTo(executedTasks);
+
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
       loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
   public void refreshIfNeeded_replaced(BoundedLocalCache<Int, Int> cache, CacheContext context) {

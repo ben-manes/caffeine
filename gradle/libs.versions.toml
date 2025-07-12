@@ -82,6 +82,7 @@ pax-url = "3.0.1"
 picocli = "4.7.7"
 pmd = "7.15.0"
 protobuf = "4.31.1"
+revapi = "1.8.0"
 slf4j = "2.0.17"
 slf4j-test = "3.0.1"
 snakeyaml = "2.4"
@@ -210,8 +211,8 @@ zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 [bundles]
 awaitility = ["awaitility", "hamcrest"]
 coherence = ["coherence", "json-bind"]
-constraints = ["bcel", "bouncycastle-jdk18on", "commons-compress", "commons-text",
-  "h2", "httpclient", "guava", "jcommander", "jgit", "jsoup", "protobuf"]
+constraints = ["bcel", "bouncycastle-jdk18on", "commons-compress", "commons-lang3",
+  "commons-text", "h2", "httpclient", "guava", "jcommander", "jgit", "jsoup", "protobuf"]
 errorprone-support = ["errorprone-support", "errorprone-support-refaster"]
 junit = ["junit4", "junit-jupiter"]
 junit-engines = ["junit-jupiter-vintage", "junit-jupiter-testng"]
@@ -235,6 +236,7 @@ jmh-report = { id = "io.morethan.jmhreport", version.ref = "jmh-report" }
 jvm-dependency-conflict-resolution = { id = "org.gradlex.jvm-dependency-conflict-resolution", version.ref = "jvm-dependency-conflict-resolution" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
 nullaway = { id = "net.ltgt.nullaway", version.ref = "nullaway-plugin" }
+revapi = { id = "org.revapi.revapi-gradle-plugin", version.ref = "revapi" }
 sigstore = { id = "dev.sigstore.sign", version.ref = "sigstore" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs-plugin" }
