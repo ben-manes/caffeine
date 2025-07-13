@@ -14,8 +14,8 @@ sourceSets {
   }
 }
 
-val jcacheJavadoc: Configuration by configurations.creating
-val jcacheTckTests: Configuration by configurations.creating
+val jcacheJavadoc by configurations.registering
+val jcacheTckTests by configurations.registering
 val jcacheTckSources: Configuration by configurations.creating
 
 val testResourcesJar by tasks.registering(Jar::class) {
@@ -64,7 +64,7 @@ dependencies {
 val unzipTestKit by tasks.registering(Copy::class) {
   group = "Build"
   description = "Unzips the JCache TCK"
-  from(jcacheTckTests.map { zipTree(it) })
+  from(jcacheTckTests.map { zipTree(it.singleFile) })
   into(layout.buildDirectory.dir("tck"))
   outputs.cacheIf { true }
 }
@@ -72,7 +72,7 @@ val unzipTestKit by tasks.registering(Copy::class) {
 val unzipJCacheJavaDoc by tasks.registering(Copy::class) {
   group = "Build"
   description = "Unzips the JCache JavaDoc"
-  from(jcacheJavadoc.map { zipTree(it) })
+  from(jcacheJavadoc.map { zipTree(it.singleFile) })
   into(layout.buildDirectory.dir("jcache-docs"))
 }
 

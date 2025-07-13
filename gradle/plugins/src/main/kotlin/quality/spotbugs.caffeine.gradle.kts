@@ -29,7 +29,7 @@ spotbugs {
 }
 
 tasks.withType<SpotBugsTask>().configureEach {
-  val isEnabled = providers.systemProperty("spotbugs")
+  val isEnabled = providers.gradleProperty("spotbugs")
   onlyIf { isEnabled.isPresent }
   group = "SpotBugs"
   reports {

@@ -16,11 +16,14 @@
 package com.github.benmanes.caffeine.cache.simulator.report;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.UncheckedIOException;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -54,17 +57,8 @@ public abstract class TextReporter implements Reporter {
   public void print(List<PolicyStats> results) {
     var sortedStats = getSortedStats(results);
     var headers = getHeaders(sortedStats);
-
-    String report = assemble(headers, sortedStats);
-    String output = settings.report().output();
-    if (output.equalsIgnoreCase("console")) {
-      System.out.println(report);
-      return;
-    }
-    try {
-      var path = Path.of(output);
-      Files.createDirectories(path.getParent());
-      Files.writeString(path, report);
+    try (var writer = makeWriter()) {
+      write(writer, headers, sortedStats);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -94,11 +88,25 @@ public abstract class TextReporter implements Reporter {
         .collect(toImmutableSet());
   }
 
+  private Writer makeWriter() throws IOException {
+    String output = settings.report().output();
+    if (output.equalsIgnoreCase("console")) {
+      return new PrintWriter(System.out, /* autoFlush= */ true, UTF_8);
+    }
+    var path = Path.of(output);
+    var parent = path.getParent();
+    if (parent != null) {
+      Files.createDirectories(parent);
+    }
+    return Files.newBufferedWriter(path);
+  }
+
   /** Returns the configuration for how to work with metrics. */
   protected abstract Metrics metrics();
 
-  /** Assembles an aggregated report. */
-  protected abstract String assemble(Set<String> headers, List<PolicyStats> results);
+  /** Writes an aggregated report. */
+  protected abstract void write(Writer writer,
+      Set<String> headers, List<PolicyStats> results) throws IOException;
 
   /** Returns a comparator that sorts by the specified column. */
   private Comparator<PolicyStats> comparator(String sortBy) {

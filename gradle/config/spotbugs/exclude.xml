@@ -502,11 +502,6 @@
     <Method name="equals"/>
     <Bug pattern="FE_FLOATING_POINT_EQUALITY"/>
   </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.report.TextReporter"/>
-    <Method name="print"/>
-    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
-  </Match>
 
   <!-- Tests -->
   <Match>

@@ -68,7 +68,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: forbiddenApis -DforbiddenApis
+          arguments: forbiddenApis -PforbiddenApis
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   pmd:
@@ -94,7 +94,7 @@ jobs:
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh pmdTest pmdJcstress -Dpmd
+          arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh pmdTest pmdJcstress -Ppmd
       - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -125,7 +125,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: revapi -Drevapi --no-configuration-cache
+          arguments: revapi -Prevapi --no-configuration-cache
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   spotbugs:
@@ -153,7 +153,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             spotbugsJavaPoet spotbugsMain spotbugsCodeGen
-            spotbugsJmh spotbugsTest spotbugsJcstress -Dspotbugs
+            spotbugsJmh spotbugsTest spotbugsJcstress -Pspotbugs
       - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

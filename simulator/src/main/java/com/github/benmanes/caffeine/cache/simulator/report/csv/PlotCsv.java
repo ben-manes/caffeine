@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.awt.Font.BOLD;
 import static java.awt.Font.PLAIN;
 import static java.util.Objects.requireNonNull;
@@ -117,6 +118,7 @@ public record PlotCsv(Path inputFile, Path outputFile, String metric,
   private static Range calculateRange(CategoryPlot plot) {
     @Var double upperBound = 0;
     @Var double lowerBound = 100;
+    checkState(plot.getDataset().getRowCount() > 0, "No data points to plot");
     for (int series = 0; series < plot.getDataset().getRowCount(); series++) {
       for (int item = 0; item < plot.getDataset().getColumnCount(); item++) {
         var value = plot.getDataset().getValue(series, item);

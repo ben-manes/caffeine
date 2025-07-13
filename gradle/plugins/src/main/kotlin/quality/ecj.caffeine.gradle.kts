@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
+
 plugins {
   `jvm-ecosystem`
 }
@@ -21,31 +23,41 @@ sourceSets.configureEach {
   }
 }
 
-abstract class EclipseJavaCompile : JavaExec() {
-  @get:InputFiles
+@CacheableTask
+abstract class EclipseJavaCompile @Inject constructor(
+                                  @Internal val projectLayout: ProjectLayout) : JavaExec() {
+  @get:InputFiles @get:CompileClasspath
   abstract val compileClasspath: Property<FileCollection>
-  @get:InputFiles
+  @get:InputFiles @get:PathSensitive(RELATIVE)
   abstract val javaSources: ConfigurableFileCollection
-  @get:InputFile
+  @get:InputFile @get:PathSensitive(RELATIVE)
   abstract val properties: RegularFileProperty
+  @get:OutputFile
+  val report: Provider<RegularFile> = projectLayout.buildDirectory.file("reports/$name/report.txt")
 
   init {
     group = "ECJ"
     mainClass = "org.eclipse.jdt.internal.compiler.batch.Main"
-  }
-
-  @TaskAction
-  override fun exec() {
-    val sources = javaSources.filter { it.name != "module-info.java" }.map { it.absolutePath }
-    args("-classpath", compileClasspath.get().filter { it.exists() }.asPath)
-    args("-properties", properties.get().asFile.absolutePath)
-    args("-encoding", "UTF-8")
-    args("-enableJavadoc")
-    args("-failOnWarning")
-    args("--release", 24)
-    args("-proc:none")
-    args("-d", "none")
-    args(sources)
-    super.exec()
+    argumentProviders.add {
+      val sources = javaSources.filter { it.name != "module-info.java" }.map { it.absolutePath }
+      buildList {
+        addAll(listOf(
+          "-classpath", compileClasspath.get().filter { it.exists() }.asPath,
+          "-properties", properties.get().asFile.absolutePath,
+          "-log", report.get().asFile.absolutePath,
+          "-encoding", "UTF-8",
+          "-enableJavadoc",
+          "-failOnWarning",
+          "--release", "24",
+          "-proc:none",
+          "-d", "none"))
+        addAll(sources)
+      }
+    }
+    doLast {
+      report.get().asFile.useLines { lines ->
+        lines.filter { it.isNotBlank() && !it.trimStart().startsWith("#") }.forEach { println(it) }
+      }
+    }
   }
 }

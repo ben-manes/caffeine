@@ -14,7 +14,7 @@ pmd {
 }
 
 tasks.withType<Pmd>().configureEach {
-  val isEnabled = providers.systemProperty("pmd")
+  val isEnabled = providers.gradleProperty("pmd")
   onlyIf { isEnabled.isPresent }
   group = "PMD"
   reports {

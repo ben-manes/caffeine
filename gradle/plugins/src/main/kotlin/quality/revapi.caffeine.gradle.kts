@@ -23,7 +23,7 @@ val revapiTasks = listOf(
 
 revapiTasks.forEach { taskClass ->
   tasks.withType(taskClass.java).configureEach {
-    enabled = System.getProperties().containsKey("revapi")
+    enabled = rootProject.hasProperty("revapi")
     if (enabled) {
       incompatibleWithConfigurationCache()
     }

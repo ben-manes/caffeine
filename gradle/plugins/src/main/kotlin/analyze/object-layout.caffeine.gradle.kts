@@ -23,16 +23,14 @@ modes.forEach { (mode, details) ->
     mainClass = "org.openjdk.jol.Main"
     incompatibleWithConfigurationCache()
     inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
-
-    doFirst {
+    argumentProviders.add {
       var className = findProperty("className") as String?
-      if (className == null) {
-        throw GradleException(
-          "Usage: $name -PclassName=com.github.benmanes.caffeine.cache.[CLASS_NAME]")
-      } else if (!className.startsWith("com") && !className.startsWith("java")) {
-        className = "com.github.benmanes.caffeine.cache.$className"
+      var base = "com.github.benmanes.caffeine.cache"
+      require(className != null) { "Usage: $name -PclassName=$base.[CLASS_NAME]" }
+      if (!className.startsWith("com") && !className.startsWith("java")) {
+        className = "$base.$className"
       }
-      args(name, className)
+      listOf(name, className)
     }
   }
 }

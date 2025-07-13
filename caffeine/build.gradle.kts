@@ -124,13 +124,11 @@ fun JavaExec.codeGenerationTask(generator: String) {
   val directory = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, generator)
   mainClass = "com.github.benmanes.caffeine.cache.${generator}FactoryGenerator"
   val outputDir = layout.buildDirectory.dir("generated/sources/$directory")
+  argumentProviders.add { listOf(outputDir.get().asFile.absolutePath) }
   inputs.files(compileJavaPoetJava.map { it.outputs.files })
   classpath = sourceSets["javaPoet"].runtimeClasspath
   outputs.dir(outputDir)
   outputs.cacheIf { true }
-  doFirst {
-    args(outputDir.get().asFile.absolutePath)
-  }
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
@@ -301,14 +299,18 @@ tasks.register<JavaExec>("memoryOverhead") {
   description = "Evaluates cache overhead"
   mainClass = "com.github.benmanes.caffeine.cache.MemoryBenchmark"
   classpath(sourceSets["jmh"].runtimeClasspath + sourceSets["codeGen"].runtimeClasspath)
-  jvmArgs(
-    "--add-opens", "java.base/java.util.concurrent.atomic=ALL-UNNAMED",
-    "--add-opens", "java.base/java.util.concurrent.locks=ALL-UNNAMED",
-    "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED",
-    "--add-opens", "java.base/java.lang.ref=ALL-UNNAMED",
-    "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-    "--add-opens", "java.base/java.util=ALL-UNNAMED",
-    "-javaagent:${jammAgent.get().asPath}")
+  val javaAgent = jammAgent.map { it.asPath }
+  jvmArgumentProviders.add {
+    listOf(
+      "--add-opens", "java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+      "--add-opens", "java.base/java.util.concurrent.locks=ALL-UNNAMED",
+      "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED",
+      "--add-opens", "java.base/java.lang.ref=ALL-UNNAMED",
+      "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+      "--add-opens", "java.base/java.util=ALL-UNNAMED",
+      "-javaagent:${javaAgent.get()}"
+    )
+  }
 }
 
 tasks.register<Stress>("stress") {
@@ -393,17 +395,16 @@ abstract class Stress : JavaExec() {
   init {
     operation.convention("")
     duration.convention("")
-  }
-
-  @TaskAction
-  override fun exec() {
-    if (operation.get().isNotEmpty()) {
-      args("--workload", operation.get())
+    argumentProviders.add {
+      buildList {
+        if (operation.get().isNotEmpty()) {
+          addAll(listOf("--workload", operation.get()))
+        }
+        if (duration.get().isNotEmpty()) {
+          addAll(listOf("--duration", duration.get()))
+        }
+      }
     }
-    if (duration.get().isNotEmpty()) {
-      args("--duration", duration.get())
-    }
-    super.exec()
   }
 }
 

@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.report.table;
 
 import static java.util.Locale.US;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.List;
 import java.util.Set;
 
@@ -39,7 +41,8 @@ public final class TableReporter extends TextReporter {
   }
 
   @Override
-  protected String assemble(Set<String> headers, List<PolicyStats> results) {
+  protected void write(Writer writer,
+      Set<String> headers, List<PolicyStats> results) throws IOException {
     String[][] data = new String[results.size()][headers.size()];
     for (int i = 0; i < results.size(); i++) {
       PolicyStats policyStats = results.get(i);
@@ -48,7 +51,7 @@ public final class TableReporter extends TextReporter {
           .map(metrics()::format)
           .toArray(String[]::new);
     }
-    return FlipTable.of(headers.toArray(new String[0]), data);
+    writer.write(FlipTable.of(headers.toArray(new String[0]), data));
   }
 
   @Override

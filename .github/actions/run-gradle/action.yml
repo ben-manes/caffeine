@@ -68,6 +68,7 @@ runs:
 
         if [[ "$INPUTS_DISTRIBUTION" == "graalvm" ]]; then
           echo "graalvm_home=$JAVA_HOME" >> $GITHUB_OUTPUT
+          echo "graalvm=true" >> $GITHUB_OUTPUT
         fi
         echo "distribution=$INPUTS_DISTRIBUTION" >> $GITHUB_OUTPUT
         echo "early_access=$JDK_EA" >> $GITHUB_OUTPUT
@@ -98,6 +99,7 @@ runs:
         JAVA_VERSION: ${{ steps.java_toolchain.outputs.version }}
         JDK_DISTRIBUTION: ${{ steps.java_toolchain.outputs.distribution }}
         GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}
+        GRAALVM: ${{ steps.java_toolchain.outputs.graalvm }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: false
       shell: bash
       run: |

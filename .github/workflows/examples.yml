@@ -105,15 +105,13 @@ jobs:
           arguments: caffeine:jar
       - name: Graal Native Image
         uses: ./.github/actions/run-gradle
-        env:
-          SNAPSHOT: true
         with:
           distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             --project-dir examples/graal-native
-            -Pagent run
+            -Pagent -PSNAPSHOT run
             metadataCopy --task run --dir src/main/resources/META-INF/native-image
             nativeRun nativeTest
 

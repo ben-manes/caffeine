@@ -16,7 +16,7 @@ checkstyle {
 }
 
 tasks.withType<Checkstyle>().configureEach {
-  val isEnabled = providers.systemProperty("checkstyle")
+  val isEnabled = providers.gradleProperty("checkstyle")
   onlyIf { isEnabled.isPresent }
   group = "Checkstyle"
   reports {

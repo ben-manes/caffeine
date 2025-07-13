@@ -89,20 +89,25 @@ tasks.withType<Javadoc>().configureEach {
 tasks.named<JavaExec>("run").configure {
   description = "Runs a single simulation and generates a report"
 }
-tasks.register<Simulate>("simulate")
-tasks.register<Rewrite>("rewrite")
 
-tasks.withType<JavaExec>().configureEach {
-  inputs.files(tasks.named<ProcessResources>("processResources").map { it.outputs.files })
-  inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
-  classpath(sourceSets["main"].runtimeClasspath)
-  outputs.upToDateWhen { false }
-  outputs.cacheIf { false }
-  jvmArgs(defaultJvmArgs())
+val runTasks = listOf(
+  tasks.named<JavaExec>("run"),
+  tasks.register<Rewrite>("rewrite"),
+  tasks.register<Simulate>("simulate"))
 
-  val overrides = providers.systemPropertiesPrefixedBy("caffeine")
-  doFirst {
-    systemProperties(overrides.get())
+runTasks.forEach { task ->
+  task.configure {
+    inputs.files(tasks.named<ProcessResources>("processResources").map { it.outputs.files })
+    inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
+    classpath(sourceSets["main"].runtimeClasspath)
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
+    jvmArgs(defaultJvmArgs())
+
+    val overrides = providers.systemPropertiesPrefixedBy("caffeine")
+    doFirst {
+      systemProperties(overrides.get())
+    }
   }
 }
 
@@ -134,18 +139,17 @@ abstract class Simulate @Inject constructor(
     metric.convention("Hit Rate")
     theme.convention("light")
     title.convention("")
-  }
-
-  @TaskAction
-  override fun exec() {
-    if (maximumSize.get().isNotEmpty()) {
-      args("--maximumSize", maximumSize.get().joinToString(","))
+    argumentProviders.add {
+      buildList {
+        if (maximumSize.get().isNotEmpty()) {
+          addAll(listOf("--maximumSize", maximumSize.get().joinToString(",")))
+        }
+        addAll(listOf("--outputDir", reportDir.get().asFile.path))
+        addAll(listOf("--metric", metric.get()))
+        addAll(listOf("--title", title.get()))
+        addAll(listOf("--theme", theme.get()))
+      }
     }
-    args("--outputDir", reportDir.get().asFile)
-    args("--metric", metric.get())
-    args("--title", title.get())
-    args("--theme", theme.get())
-    super.exec()
   }
 }
 
@@ -167,22 +171,21 @@ abstract class Rewrite : JavaExec() {
     outputFormat.convention("")
     inputFormat.convention("")
     outputFile.convention("")
-  }
-
-  @TaskAction
-  override fun exec() {
-    if (inputFiles.get().isNotEmpty()) {
-      args("--inputFiles", inputFiles.get().joinToString(","))
+    argumentProviders.add {
+      buildList {
+        if (inputFiles.get().isNotEmpty()) {
+          addAll(listOf("--inputFiles", inputFiles.get().joinToString(",")))
+        }
+        if (outputFormat.get().isNotEmpty()) {
+          addAll(listOf("--outputFormat", outputFormat.get()))
+        }
+        if (inputFormat.get().isNotEmpty()) {
+          addAll(listOf("--inputFormat", inputFormat.get()))
+        }
+        if (outputFile.get().isNotEmpty()) {
+          addAll(listOf("--outputFile", outputFile.get()))
+        }
+      }
     }
-    if (outputFormat.get().isNotEmpty()) {
-      args("--outputFormat", outputFormat.get())
-    }
-    if (inputFormat.get().isNotEmpty()) {
-      args("--inputFormat", inputFormat.get())
-    }
-    if (outputFile.get().isNotEmpty()) {
-      args("--outputFile", outputFile.get())
-    }
-    super.exec()
   }
 }

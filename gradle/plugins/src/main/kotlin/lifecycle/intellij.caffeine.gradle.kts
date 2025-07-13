@@ -10,7 +10,7 @@ plugins {
   id("org.jetbrains.gradle.plugin.idea-ext")
 }
 
-val mockitoAgent: Configuration by configurations.creating
+val mockitoAgent by configurations.registering
 val excludes = rootDir.walkTopDown().filter {
   it.name in listOf("bin", "build", "test-output", ".classpath",
     ".gradle", ".kotlin", ".project", ".settings")
@@ -38,17 +38,20 @@ idea.project.settings {
     testRunner = PLATFORM
   }
   runConfigurations {
-    val jvmArgs = listOf(
-      "-javaagent:${mockitoAgent.asPath}",
-      "-XX:+EnableDynamicAgentLoading",
-      "-XX:SoftRefLRUPolicyMSPerMB=0",
-      "-XX:+UseParallelGC",
-      "-Xshare:off").joinToString(" ")
+    val params = mockitoAgent.map {
+      listOf(
+        "-XX:+EnableDynamicAgentLoading",
+        "-XX:SoftRefLRUPolicyMSPerMB=0",
+        "-javaagent:${it.asPath}",
+        "-XX:+UseParallelGC",
+        "-Xshare:off"
+      ).joinToString(" ")
+    }
     defaults(TestNG::class.java) {
-      vmParameters = jvmArgs
+      vmParameters = params.get()
     }
     defaults(JUnit::class.java) {
-      vmParameters = jvmArgs
+      vmParameters = params.get()
     }
     register("Simulator", Application::class.java) {
       mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulator"

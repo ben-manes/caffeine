@@ -54,7 +54,7 @@ graalvmNative {
 }
 
 fun caffeine(): Any {
-  if (System.getenv("SNAPSHOT") == "true") {
+  if (hasProperty("SNAPSHOT")) {
     return fileTree("../../caffeine/build/libs").also {
       require(!it.files.isEmpty()) { "Caffeine snapshot jar not found" }
     }

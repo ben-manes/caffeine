@@ -73,24 +73,25 @@ abstract class JCStress : JavaExec() {
     jvmArgs("-XX:+UnlockDiagnosticVMOptions", "-XX:+WhiteBoxAPI", "-XX:-RestrictContended")
     workingDir(outputDir.map { it.asFile })
     mainClass = "org.openjdk.jcstress.Main"
-  }
-
-  @TaskAction
-  override fun exec() {
-    if (iterations.isPresent) {
-      args("-iters", iterations.get().replace("[_,]".toRegex(), ""))
+    argumentProviders.add {
+      buildList {
+        if (iterations.isPresent) {
+          addAll(listOf("-iters", iterations.get().replace("[_,]".toRegex(), "")))
+        }
+        if (time.isPresent) {
+          addAll(listOf("-time", time.get().replace("[_,]".toRegex(), "")))
+        }
+        if (testNames.isPresent) {
+          addAll(listOf("-t", testNames.get()))
+        }
+        if (mode.isPresent) {
+          addAll(listOf("-m", mode.get()))
+        }
+        addAll(listOf("-r", outputDir.get().asFile.resolve("results").path))
+      }
     }
-    if (time.isPresent) {
-      args("-time", time.get().replace("[_,]".toRegex(), ""))
+    doFirst {
+      outputDir.get().asFile.mkdirs()
     }
-    if (testNames.isPresent) {
-      args("-t", testNames.get())
-    }
-    if (mode.isPresent) {
-      args("-m", mode.get())
-    }
-    args("-r", outputDir.get().asFile.resolve("results"))
-    outputDir.get().asFile.mkdirs()
-    super.exec()
   }
 }
