@@ -23,6 +23,9 @@ val revapiTasks = listOf(
 
 revapiTasks.forEach { taskClass ->
   tasks.withType(taskClass.java).configureEach {
-    incompatibleWithConfigurationCache()
+    enabled = System.getProperties().containsKey("revapi")
+    if (enabled) {
+      incompatibleWithConfigurationCache()
+    }
   }
 }

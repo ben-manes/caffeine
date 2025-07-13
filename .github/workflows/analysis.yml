@@ -125,7 +125,7 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: revapi --no-configuration-cache
+          arguments: revapi -Drevapi --no-configuration-cache
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   spotbugs:
