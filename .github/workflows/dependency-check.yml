@@ -60,7 +60,7 @@ jobs:
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: dependencyCheckAggregate --no-configuration-cache
+          arguments: dependencyCheckAggregate --no-configuration-cache --no-parallel
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0

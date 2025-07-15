@@ -16,7 +16,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
-          disable-sudo-and-containers: true
+          disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
             api.codacy.com:443
@@ -41,6 +41,7 @@ jobs:
           output: results.sarif
           gh-code-scanning-compat: true
           max-allowed-issues: 2147483647
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0

@@ -414,12 +414,12 @@ data class Scenario(val implementation: Implementation,
   companion object {
     fun all(): List<Scenario> {
       return Sets.cartesianProduct(
-        Slow.values().toSet(),
-        Stats.values().toSet(),
-        Compute.values().toSet(),
-        KeyStrength.values().toSet(),
-        ValueStrength.values().toSet(),
-        Implementation.values().toSet(),
+        Slow.entries.toSet(),
+        Stats.entries.toSet(),
+        Compute.entries.toSet(),
+        KeyStrength.entries.toSet(),
+        ValueStrength.entries.toSet(),
+        Implementation.entries.toSet(),
       ).map { features ->
         Scenario(
           slow = features[0] as Slow,
