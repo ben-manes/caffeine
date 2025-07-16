@@ -28,7 +28,7 @@ import com.google.common.io.BaseEncoding;
 
 /**
  * A reader for the Tencent Photo Cache trace files provided by
- * <a href="http://iotta.snia.org/tracetypes/4">SNIA</a>.
+ * <a href="https://iotta.snia.org/tracetypes/4">SNIA</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

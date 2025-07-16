@@ -26,7 +26,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic
 
 /**
  * A reader for the SNIA MSR Cambridge trace files provided by
- * <a href="http://iotta.snia.org/traces/388">SNIA</a>.
+ * <a href="https://iotta.snia.org/traces/388">SNIA</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

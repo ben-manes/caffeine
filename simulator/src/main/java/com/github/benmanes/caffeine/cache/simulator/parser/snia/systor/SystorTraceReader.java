@@ -27,7 +27,7 @@ import com.google.common.math.IntMath;
 
 /**
  * A reader for the SNIA SYSTOR '17 trace files provided by
- * <a href="http://iotta.snia.org/traces/4964">SNIA</a>. This reader uses the response time as the
+ * <a href="https://iotta.snia.org/traces/4964">SNIA</a>. This reader uses the response time as the
  * miss penalty (converted to milliseconds).
  *
  * @author himelbrand@gmail.com (Omri Himelbrand)

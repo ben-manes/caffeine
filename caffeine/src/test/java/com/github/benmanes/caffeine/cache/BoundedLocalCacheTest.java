@@ -2517,7 +2517,7 @@ public final class BoundedLocalCacheTest {
     var future = CompletableFuture.runAsync(() -> {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
-      var result = cache.remap(node.getKey(), node.getKeyReference(),
+      var result = cache.remap(context.firstKey(), node.getKeyReference(),
           (k, v) -> context.absentValue(), context.expiry(),
           /* now= */ new long[1], /* computeIfAbsent= */ true);
       assertThat(result).isEqualTo(context.absentValue());

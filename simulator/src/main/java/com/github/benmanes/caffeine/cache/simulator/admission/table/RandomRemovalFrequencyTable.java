@@ -42,7 +42,7 @@ public final class RandomRemovalFrequencyTable implements Frequency {
 
   /** a placeholder for TinyTable */
   private final Long2IntMap table;
-  /** used to dropped items at random */
+  /** used to drop items at random */
   private final Random random;
   /** sum of total items */
   private final int maxSum;

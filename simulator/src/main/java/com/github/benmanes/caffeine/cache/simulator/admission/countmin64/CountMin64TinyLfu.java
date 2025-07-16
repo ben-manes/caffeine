@@ -24,8 +24,8 @@ import com.typesafe.config.Config;
  * that a counter may not exceed a maximum and any time the sum of events reach a predefined values
  * we divide all counters by 2 in what is called a reset operation.
  * <p>
- * For more details see <a href="http://www.cs.technion.ac.il/~gilga/TinyLFU_PDP2014.pdf">TinyLFU: A
- * Highly Efficient Cache Admission Policy</a>.
+ * For more details see <a href="https://dl.acm.org/doi/10.1109/PDP.2014.34">TinyLFU: A Highly
+ * Efficient Cache Admission Policy</a>.
  * <p>
  * The CountMinSketch parameters are described in <a href=
  * "https://github.com/twitter/algebird/blob/develop/algebird-core/src/main/scala/com/twitter/algebird/CountMinSketch.scala">

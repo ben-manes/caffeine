@@ -54,7 +54,7 @@ jmh {
   }
 
   // Benchmark parameters: Separated by '&' for parameter types, and ',' for multiple values
-  val params = findProperty("benchmarkParameters") as String?
+  val params = findProperty("benchmarkParameters") as? String
   if (params != null) {
     for (token in params.split("&")) {
       val param = token.split("=")

@@ -41,10 +41,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * Greedy Dual Size Frequency (GDSF) algorithm.
  * <p>
  * The algorithm is explained by the authors in
- * <a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.304.6514&rep=rep1&type=pdf">
+ * <a href="https://eclass.uoa.gr/modules/document/file.php/D245/2015/HPL-98-69R1_GDS.pdf">
  * Improving Web Servers and Proxies Performance with GDSF Caching Policies</a> and
- * <a href="http://web.cs.iastate.edu/~ciardo/pubs/2001HPCN-GreedyDualFreqSize.pdf">Role of Aging,
- * Frequency, and Size in Web Cache Replacement Policies</a>.
+ * <a href="https://dl.acm.org/doi/10.5555/645565.658748">Role of Aging, Frequency, and Size in Web
+ * Cache Replacement Policies</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

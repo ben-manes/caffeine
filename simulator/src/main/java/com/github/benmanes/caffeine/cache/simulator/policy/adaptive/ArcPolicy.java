@@ -37,8 +37,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * on the workload patterns and effectiveness of the cache.
  * <p>
  * This implementation is based on the pseudocode provided by the authors in their paper
- * <a href="http://www.cs.cmu.edu/~15-440/READINGS/megiddo-computer2004.pdf">Outperforming LRU with
- * an Adaptive Replacement Cache Algorithm</a> and is further described in their paper,
+ * <a href="https://ieeexplore.ieee.org/document/1297303">Outperforming LRU with an Adaptive
+ * Replacement Cache Algorithm</a> and is further described in their paper,
  * <a href="https://www.usenix.org/event/fast03/tech/full_papers/megiddo/megiddo.pdf">ARC: A
  * Self-Tuning, Low Overhead Replacement Cache</a>.
  * <p>

@@ -328,11 +328,6 @@
 
   <!-- Guava -->
   <Match>
-    <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache$AsMapView"/>
-    <Method name="values"/>
-    <Bug pattern="IMC_IMMATURE_CLASS_COLLECTION_RETURN"/>
-  </Match>
-  <Match>
     <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache"/>
     <Or>
       <Method name="getAll"/>

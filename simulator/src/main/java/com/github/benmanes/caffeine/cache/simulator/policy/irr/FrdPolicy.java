@@ -45,8 +45,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * table. This simplification should have no effect on the algorithm or its performance.
  * <p>
  * The algorithm is explained by the authors in
- * <a href="http://storageconference.us/2017/Papers/FilteringBasedBufferCacheAlgorithm.pdf">FRD: A
- * Filtering based Buffer Cache Algorithm that Considers both Frequency and Reuse Distance</a>.
+ * <a href="https://msstconference.org/MSST-history/2017/Papers/FilteringBasedBufferCacheAlgorithm.pdf">
+ * FRD: A Filtering based Buffer Cache Algorithm that Considers both Frequency and Reuse Distance
+ * </a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

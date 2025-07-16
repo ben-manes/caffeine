@@ -155,7 +155,7 @@ public final class TypesafeConfigurator {
    * The configuration is retrieved on-demand, allowing for it to be reloaded, and it is assumed
    * that the source caches it as needed.
    *
-   * @param configSource the strategy for loading the configuration from a uri
+   * @param configSource the strategy for loading the configuration from a URI
    */
   public static void setConfigSource(ConfigSource configSource) {
     TypesafeConfigurator.configSource.set(requireNonNull(configSource));

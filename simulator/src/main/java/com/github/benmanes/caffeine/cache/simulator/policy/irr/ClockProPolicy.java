@@ -42,9 +42,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * in the test period. This policy is adaptive by adjusting the percentage of hot and cold entries
  * that may reside in the cache. It uses non-resident (ghost) entries to retain additional history,
  * which are removed during the test hand's scan. The algorithm is explained by the authors in
- * <a href="http://www.ece.eng.wayne.edu/~sjiang/pubs/papers/jiang05_CLOCK-Pro.pdf">CLOCK-Pro: An
- * Effective Improvement of the CLOCK Replacement</a> and
- * <a href="http://www.slideshare.net/huliang64/clockpro">Clock-Pro: An Effective Replacement in OS
+ * <a href="https://www.usenix.org/legacy/publications/library/proceedings/usenix05/tech/general/full_papers/jiang/jiang.pdf">
+ * CLOCK-Pro: An Effective Improvement of the CLOCK Replacement</a> and
+ * <a href="https://www.slideshare.net/huliang64/clockpro">Clock-Pro: An Effective Replacement in OS
  * Kernel</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -92,26 +92,22 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
   //  - decreases when test page is removed
   private int coldTarget;
   // {min,max}ResColdSize are boundary of coldTarget.
-  private int minResColdSize;
-  private int maxResColdSize;
+  private final int minResColdSize;
+  private final int maxResColdSize;
 
   public ClockProPolicy(Config config) {
     var settings = new ClockProSettings(config);
-    this.maxSize = Math.toIntExact(settings.maximumSize());
-    this.maxNonResSize = (int) (maxSize * settings.nonResidentMultiplier());
-    this.minResColdSize = (int) (maxSize * settings.percentMinCold());
-    if (minResColdSize < settings.lowerBoundCold()) {
-      minResColdSize = settings.lowerBoundCold();
-    }
-    this.maxResColdSize = (int) (maxSize * settings.percentMaxCold());
-    if (maxResColdSize > maxSize - minResColdSize) {
-      maxResColdSize = maxSize - minResColdSize;
-    }
-    this.policyStats = new PolicyStats(name());
-    this.data = new Long2ObjectOpenHashMap<>();
-    this.coldTarget = minResColdSize;
-    this.listHead = this.handHot = this.handCold = this.handTest = null;
-    this.sizeFree = maxSize;
+    maxSize = Math.toIntExact(settings.maximumSize());
+    maxNonResSize = (int) (maxSize * settings.nonResidentMultiplier());
+    minResColdSize = Math.max(settings.lowerBoundCold(),
+        (int) (maxSize * settings.percentMinCold()));
+    maxResColdSize = Math.min(maxSize - minResColdSize,
+        (int) (maxSize * settings.percentMaxCold()));
+    policyStats = new PolicyStats(name());
+    data = new Long2ObjectOpenHashMap<>();
+    coldTarget = minResColdSize;
+    listHead = handHot = handCold = handTest = null;
+    sizeFree = maxSize;
     checkState(minResColdSize <= maxResColdSize);
   }
 

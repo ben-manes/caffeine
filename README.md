@@ -2,9 +2,9 @@
 [![Test Count](https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4/raw/badge.svg)](https://github.com/ben-manes/caffeine/actions?query=workflow%3Abuild+branch%3Amaster)
 [![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg?color=31c653)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.ben-manes.caffeine/caffeine?color=31c653&label=maven%20central)](https://central.sonatype.com/artifact/com.github.ben-manes.caffeine/caffeine)
-[![JavaDoc](https://www.javadoc.io/badge/com.github.ben-manes.caffeine/caffeine.svg?color=31c653)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
-[![License](https://img.shields.io/:license-apache-31c653.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
-[![Stack Overflow](https://img.shields.io/:stack%20overflow-caffeine-31c653.svg)](http://stackoverflow.com/questions/tagged/caffeine)
+[![JavaDoc](https://www.javadoc.io/badge/com.github.ben-manes.caffeine/caffeine.svg?color=31c653)](https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
+[![License](https://img.shields.io/:license-apache-31c653.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+[![Stack Overflow](https://img.shields.io/:stack%20overflow-caffeine-31c653.svg)](https://stackoverflow.com/questions/tagged/caffeine)
 [![Revved up by Develocity](https://img.shields.io/badge/Revved%20up%20by-Develocity-06A0CE?logo=Gradle&labelColor=02303A)](https://caffeine.gradle-enterprise.cloud/scans)
 <a href="https://github.com/ben-manes/caffeine/wiki">
 <img align="right" height="90px" src="https://raw.githubusercontent.com/ben-manes/caffeine/master/wiki/logo.png">
@@ -114,7 +114,7 @@ Snapshots of the development version are available in
 
 [benchmarks]: https://github.com/ben-manes/caffeine/wiki/Benchmarks
 [users-guide]: https://github.com/ben-manes/caffeine/wiki
-[javadoc]: http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine
+[javadoc]: https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine
 [guava-cache]: https://github.com/google/guava/wiki/CachesExplained
 [clhm]: https://github.com/ben-manes/concurrentlinkedhashmap
 [population]: https://github.com/ben-manes/caffeine/wiki/Population
@@ -135,16 +135,16 @@ Snapshots of the development version are available in
 [tinylfu]: https://dl.acm.org/doi/10.1145/3149371?cid=99659224047
 [adaptive-tinylfu]: https://dl.acm.org/doi/10.1145/3274808.3274816?cid=99659224047
 [size-tinylfu]: https://dl.acm.org/doi/10.1145/3507920?cid=99659224047
-[modern-cache-1]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
-[modern-cache-2]: http://highscalability.com/blog/2019/2/25/design-of-a-modern-cachepart-deux.html
+[modern-cache-1]: https://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
+[modern-cache-2]: https://highscalability.com/blog/2019/2/25/design-of-a-modern-cachepart-deux.html
 [modern-cache-slides]: https://docs.google.com/presentation/d/1NlDxyXsUG1qlVHMl4vsUUBQfAJ2c2NsFPNPr2qymIBs
-[HighScalability]: http://highscalability.com
+[HighScalability]: https://highscalability.com
 [spring]: https://docs.spring.io/spring/docs/current/spring-framework-reference/integration.html#cache-store-configuration-caffeine
 [scala-cache]: https://github.com/cb372/scalacache
 [scaffeine]: https://github.com/blemale/scaffeine
 [kafka]: https://kafka.apache.org
 [hbase]: https://hbase.apache.org
-[cassandra]: http://cassandra.apache.org
+[cassandra]: https://cassandra.apache.org
 [solr]: https://solr.apache.org/
 [infinispan]: https://infinispan.org
 [neo4j]: https://github.com/neo4j/neo4j

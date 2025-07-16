@@ -25,7 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic
 
 /**
  * A reader for the trace files provided by
- * <a href="http://www.scarabresearch.com/">Scarab Research</a>.
+ * <a href="https://www.scarabresearch.com/">Scarab Research</a>.
  *
  * @author phraktle@gmail.com (Viktor Szathmáry)
  */

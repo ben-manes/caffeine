@@ -37,8 +37,8 @@ import com.typesafe.config.Config;
  * SGC may be enhanced using momentum, either classical or Nesterov's. For details see
  * <ul>
  *   <li>https://towardsdatascience.com/10-gradient-descent-optimisation-algorithms-86989510b5e9
- *   <li>http://ruder.io/optimizing-gradient-descent/index.html#momentum
- *   <li>http://cs231n.github.io/neural-networks-3/#sgd
+ *   <li>https://www.ruder.io/optimizing-gradient-descent/#momentum
+ *   <li>https://cs231n.github.io/neural-networks-3/#sgd
  * </ul>
  *
  * @author ben.manes@gmail.com (Ben Manes)

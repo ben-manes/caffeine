@@ -19,8 +19,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.Var;
 
 /**
- * This is a hash function and parser tp simplify parsing the hash value, it split it to . This
- * class provide hash utilities, and parse the items.
+ * This is a hash function and parser to simplify parsing the hash value and split it into
+ * components. This class provides hash utilities and parses the items.
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */

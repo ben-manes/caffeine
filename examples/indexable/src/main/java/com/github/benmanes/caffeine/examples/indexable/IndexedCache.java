@@ -34,10 +34,10 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Striped;
 
 /**
- * A cache abstraction that allows the entry to looked up by alternative keys. This approach mirrors
- * a database table where a row is stored by its primary key, it contains all of the columns that
- * identify it, and the unique indexes are additional mappings defined by the column mappings. This
- * class similarly stores the in the value once in the cache by its primary key and maintains a
+ * A cache abstraction that allows the entry to be looked up by alternative keys. This approach
+ * mirrors a database table where a row is stored by its primary key, it contains all of the columns
+ * that identify it, and the unique indexes are additional mappings defined by the column mappings.
+ * This class similarly stores the value once in the cache by its primary key and maintains a
  * secondary mapping for lookups by using indexing functions to derive the keys.
  *
  * @author ben.manes@gmail.com (Ben Manes)

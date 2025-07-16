@@ -110,26 +110,22 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   //  - decreases when demoted cold page gets a hit
   private int coldTarget;
   // {min,max}ResColdSize are boundary of coldTarget.
-  private int minResColdSize;
-  private int maxResColdSize;
+  private final int minResColdSize;
+  private final int maxResColdSize;
 
   public ClockProPlusPolicy(Config config) {
     var settings = new ClockProPlusSettings(config);
-    this.maxSize = Math.toIntExact(settings.maximumSize());
-    this.maxNonResSize = (int) (maxSize * settings.nonResidentMultiplier());
-    this.minResColdSize = (int) (maxSize * settings.percentMinCold());
-    if (minResColdSize < settings.lowerBoundCold()) {
-      minResColdSize = settings.lowerBoundCold();
-    }
-    this.maxResColdSize = (int) (maxSize * settings.percentMaxCold());
-    if (maxResColdSize > maxSize - minResColdSize) {
-      maxResColdSize = maxSize - minResColdSize;
-    }
-    this.policyStats = new PolicyStats(name());
-    this.data = new Long2ObjectOpenHashMap<>();
-    this.coldTarget = minResColdSize;
-    this.listHead = this.handHot = this.handCold = this.handTest = null;
-    this.sizeFree = maxSize;
+    maxSize = Math.toIntExact(settings.maximumSize());
+    maxNonResSize = (int) (maxSize * settings.nonResidentMultiplier());
+    minResColdSize = Math.max(settings.lowerBoundCold(),
+        (int) (maxSize * settings.percentMinCold()));
+    maxResColdSize = Math.min(maxSize - minResColdSize,
+        (int) (maxSize * settings.percentMaxCold()));
+    policyStats = new PolicyStats(name());
+    data = new Long2ObjectOpenHashMap<>();
+    coldTarget = minResColdSize;
+    listHead = handHot = handCold = handTest = null;
+    sizeFree = maxSize;
     checkState(minResColdSize <= maxResColdSize);
   }
 

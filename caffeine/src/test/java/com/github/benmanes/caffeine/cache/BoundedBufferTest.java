@@ -52,7 +52,7 @@ public final class BoundedBufferTest {
   public void offer(BoundedBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 100; i++) {
-        assertThat(buffer.offer(true)).isAnyOf(Buffer.SUCCESS, Buffer.FULL, Buffer.FAILED);
+        assertThat(buffer.offer(true)).isAnyOf(SUCCESS, FULL, FAILED);
       }
     });
     assertThat(buffer.writes()).isGreaterThan(0);
@@ -62,7 +62,7 @@ public final class BoundedBufferTest {
   @Test(dataProvider = "buffer")
   public void drain(BoundedBuffer<Boolean> buffer) {
     for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
-      assertThat(buffer.offer(true)).isAnyOf(Buffer.SUCCESS, Buffer.FULL);
+      assertThat(buffer.offer(true)).isAnyOf(SUCCESS, FULL);
     }
     long[] read = new long[1];
     buffer.drainTo(e -> read[0]++);
@@ -77,7 +77,7 @@ public final class BoundedBufferTest {
     var reads = new AtomicInteger();
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 1000; i++) {
-        boolean shouldDrain = (buffer.offer(true) == Buffer.FULL);
+        boolean shouldDrain = (buffer.offer(true) == FULL);
         if (shouldDrain && lock.tryLock()) {
           buffer.drainTo(e -> reads.incrementAndGet());
           lock.unlock();
@@ -97,7 +97,7 @@ public final class BoundedBufferTest {
     buffer.writeCounter = Long.MAX_VALUE;
     buffer.readCounter = Long.MAX_VALUE;
 
-    assertThat(buffer.offer(true)).isEqualTo(Buffer.SUCCESS);
+    assertThat(buffer.offer(true)).isEqualTo(SUCCESS);
     var data = new ArrayList<>();
     buffer.drainTo(data::add);
 

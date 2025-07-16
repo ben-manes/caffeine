@@ -187,7 +187,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * was within a short time window. This is done to avoid overwhelming the write buffer.
    *
    * [1] BP-Wrapper: A Framework Making Any Replacement Algorithms (Almost) Lock Contention Free
-   * http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-09-1.pdf
+   * https://web.njit.edu/~dingxn/papers/BP-Wrapper.pdf
    * [2] TinyLFU: A Highly Efficient Cache Admission Policy
    * https://dl.acm.org/citation.cfm?id=3149371
    * [3] Adaptive Software Cache Management

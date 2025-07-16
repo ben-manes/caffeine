@@ -24,7 +24,7 @@ import com.google.common.math.IntMath;
 
 /**
  * A reader for the trace files provided by the
- * <a href="http://traces.cs.umass.edu/index.php/Storage/Storage">UMass Trace Repository</a>.
+ * <a href="https://traces.cs.umass.edu/index.php/Storage/Storage">UMass Trace Repository</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

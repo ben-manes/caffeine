@@ -33,7 +33,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 /**
  * An adaption of the 2Q algorithm used by OpenBSD and memcached. Unlike the original 2Q algorithm,
  * non-resident entries are not retained in the TU-Q policy. For details see OpenBSD description at
- * <a href="http://www.tedunangst.com/flak/post/2Q-buffer-cache-algorithm">2Q buffer cache
+ * <a href="https://www.tedunangst.com/flak/post/2Q-buffer-cache-algorithm">2Q buffer cache
  * algorithm</a> and memcached's at <a href="https://github.com/memcached/memcached/pull/97">[Work
  * In Progress] LRU rework</a>.
  * <p>

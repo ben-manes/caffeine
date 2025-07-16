@@ -37,7 +37,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * recommending 20% and 50% of the maximum size, respectively.
  * <p>
  * This implementation is based on the pseudocode provided by the authors in their paper
- * <a href="http://www.vldb.org/conf/1994/P439.PDF">2Q: A Low Overhead High Performance Buffer
+ * <a href="https://www.vldb.org/conf/1994/P439.PDF">2Q: A Low Overhead High Performance Buffer
  * Management Replacement Algorithm</a>. For consistency with other policies, this version places
  * the next item to be removed at the head and most recently added at the tail of the queue.
  *

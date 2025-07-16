@@ -17,7 +17,7 @@ fun Project.defaultJvmArgs(): List<String> {
       "-XX:+UnlockExperimentalVMOptions", "-Dgraal.ShowConfiguration=info",
       "-XX:+EnableJVMCI", "-XX:+UseJVMCICompiler", "-XX:+EagerJVMCI")
   }
-  val arguments = rootProject.findProperty("jvmArgs") as String?
+  val arguments = rootProject.findProperty("jvmArgs") as? String
   if (arguments != null) {
     jvmArgs += arguments.split(",")
   }

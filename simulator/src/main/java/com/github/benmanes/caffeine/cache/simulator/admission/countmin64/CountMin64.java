@@ -23,7 +23,7 @@ import com.google.errorprone.annotations.Var;
 /**
  * Count-Min Sketch data structure with optional conservative addition.
  * <p>
- * This is a derived from <code>CountMinSketch</code> and <code>ConservativeAddSketch</code>
+ * This is derived from <code>CountMinSketch</code> and <code>ConservativeAddSketch</code>
  * provided by <a href="https://github.com/addthis/stream-lib">StreamLib</a>.
  */
 final class CountMin64 {
@@ -99,7 +99,7 @@ final class CountMin64 {
   private int hash(long item, int i) {
     @Var long hash = hashA[i] * item;
     // A super fast way of computing x mod 2^p-1
-    // See http://www.cs.princeton.edu/courses/archive/fall09/cos521/Handouts/universalclasses.pdf
+    // See https://www.cs.princeton.edu/courses/archive/fall09/cos521/Handouts/universalclasses.pdf
     // page 149, right after Proposition 7.
     hash += hash >> 32;
     hash &= PRIME_MODULUS;

@@ -22,7 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTr
 
 /**
  * A reader for the Tencent Block Storage trace files provided by
- * <a href="http://iotta.snia.org/tracetypes/4">SNIA</a>.
+ * <a href="https://iotta.snia.org/tracetypes/4">SNIA</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

@@ -47,12 +47,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * immediate removal, when a non-resident size limit is reached, instead of searching the stack.
  * <p>
  * The algorithm is explained by the authors in
- * <a href="http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-02-6.pdf">LIRS: An
- * Efficient Low Inter-reference Recency Set Replacement Policy to Improve Buffer Cache
- * Performance</a> and
- * <a href="http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-05-11.pdf">Making LRU
- * Friendly to Weak Locality Workloads: A Novel Replacement Algorithm to Improve Buffer Cache
- * Performance</a>.
+ * <a href="https://ranger.uta.edu/~sjiang/pubs/papers/jiang02_LIRS.pdf">LIRS: An Efficient Low
+ * Inter-reference Recency Set Replacement Policy to Improve Buffer Cache Performance</a> and
+ * <a href="https://ranger.uta.edu/~sjiang/pubs/papers/jiang05_LIRS.pdf">Making LRU Friendly to
+ * Weak Locality Workloads: A Novel Replacement Algorithm to Improve Buffer Cache Performance</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

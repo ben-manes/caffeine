@@ -24,4 +24,4 @@ cache.asMap().compute(key, (k, v) -> {
 ```
 
 [rxjava]: https://github.com/ReactiveX/RxJava
-[buffer]: http://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Observable.html#buffer-long-java.util.concurrent.TimeUnit-
+[buffer]: https://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Observable.html#buffer-long-java.util.concurrent.TimeUnit-
