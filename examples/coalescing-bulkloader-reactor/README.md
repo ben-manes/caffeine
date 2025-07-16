@@ -7,7 +7,7 @@ The [bufferTimeout][] operator accumulates requests until reaching a maximum siz
 Since each request consists of a key and its pending result, when the subscriber is notified it
 performs the batch load and completes the key's future with its corresponding value.
 
-It some scenarios it may be desirable to only aggregate cache refreshes rather than imposing delays
+In some scenarios it may be desirable to only aggregate cache refreshes rather than imposing delays
 on callers awaiting explicit loads. An automated reload initiated by `refreshAfterWrite` will occur
 on the first stale request for an entry. While the key is being refreshed the previous value
 continues to be returned, in contrast to eviction which forces retrievals to wait until the value
@@ -53,7 +53,7 @@ while the optimistic reloads are instead submitted to the sink. It's worth notin
     return loadAll(Set.of(key)).get(key);
   }
 
-  @Override public abstract Map<K, V> loadAll(Set<? extends K> key) {
+  @Override public Map<K, V> loadAll(Set<? extends K> keys) {
     return mappingFunction.apply(keys);
   }
 

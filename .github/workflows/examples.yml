@@ -25,7 +25,7 @@ env:
     repo1.maven.org:443
     services.gradle.org:443
     www.graalvm.org:443
-  JAVA_VERSION: 21
+  JAVA_VERSION: 24
 
 jobs:
   examples:
@@ -35,7 +35,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -87,7 +87,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -103,17 +103,22 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: caffeine:jar
-      - name: Graal Native Image
+      - name: Graal Native Image (Profile)
         uses: ./.github/actions/run-gradle
         with:
           distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
-            --project-dir examples/graal-native
-            -Pagent -PSNAPSHOT run
+            --project-dir examples/graal-native -Pagent -PSNAPSHOT run
             metadataCopy --task run --dir src/main/resources/META-INF/native-image
-            nativeRun nativeTest
+      - name: Graal Native Image (Run)
+        uses: ./.github/actions/run-gradle
+        with:
+          distribution: graalvm
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: --project-dir examples/graal-native nativeRun nativeTest
 
   simulator:
     name: Simulator
@@ -122,7 +127,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -164,7 +169,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block

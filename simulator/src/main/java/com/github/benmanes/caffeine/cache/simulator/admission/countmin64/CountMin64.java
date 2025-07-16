@@ -23,7 +23,7 @@ import com.google.errorprone.annotations.Var;
 /**
  * Count-Min Sketch data structure with optional conservative addition.
  * <p>
- * This is a derived from <code>CountMinSketch</code> and <code>ConservativeAddSketch</code>
+ * This is derived from <code>CountMinSketch</code> and <code>ConservativeAddSketch</code>
  * provided by <a href="https://github.com/addthis/stream-lib">StreamLib</a>.
  */
 final class CountMin64 {

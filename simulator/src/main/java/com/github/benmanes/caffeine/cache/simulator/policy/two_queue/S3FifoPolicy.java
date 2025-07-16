@@ -42,7 +42,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * probationary FIFO queue to evaluate whether a recent arrival should be admitted into the main
  * region based on a frequency threshold. A rejected candidate is placed into a ghost cache, where a
  * cache miss that hits in the ghost cache will cause the entry to be immediately promoted into the
- * main region. The small and main regions uses an n-bit clock eviction policy.
+ * main region. The small and main regions use an n-bit clock eviction policy.
  * <p>
  * This implementation is based on the code provided by the authors in their
  * <a href="https://github.com/cacheMon/libCacheSim">repository</a> and the pseudo code in their

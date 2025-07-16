@@ -22,7 +22,7 @@ import com.google.errorprone.annotations.Var;
 
 /**
  * This is the TinyCache sketch that is based on TinySet and TinyTable. It is adopted for fast
- * operation and bounded memory footprint. When a set is full, a victim is selected at random from
+ * operations and bounded memory footprint. When a set is full, a victim is selected at random from
  * the full set. (basically some sort of random removal cache).
  *
  * @author gilga1983@gmail.com (Gil Einziger)

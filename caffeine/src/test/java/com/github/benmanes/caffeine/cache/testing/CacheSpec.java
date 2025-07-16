@@ -586,7 +586,7 @@ public @interface CacheSpec {
         throw new ExecutionException(null);
       }
     },
-    /** An async loader that returns a incomplete future. */
+    /** An async loader that returns an incomplete future. */
     ASYNC_INCOMPLETE {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
