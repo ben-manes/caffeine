@@ -463,6 +463,7 @@ public class CacheExpirationTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("EffectivelyPrivate")
   private static class WatchedCreatorLoader extends CacheLoader<String, Integer> {
     boolean wasCalled = false; // must be set in load()
     int valuePrefix = VALUE_PREFIX;

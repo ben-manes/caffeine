@@ -218,7 +218,7 @@ public final class GDWheelPolicy implements Policy {
     return policyStats;
   }
 
-  private static final class Sentinel extends Node {
+  static final class Sentinel extends Node {
     final int wheelIndex;
     final int queueIndex;
 
@@ -252,7 +252,7 @@ public final class GDWheelPolicy implements Policy {
     }
   }
 
-  private static class Node {
+  static class Node {
     final long key;
 
     double cost;
@@ -285,7 +285,7 @@ public final class GDWheelPolicy implements Policy {
     }
   }
 
-  private static final class GDWheelSettings extends BasicSettings {
+  static final class GDWheelSettings extends BasicSettings {
     public GDWheelSettings(Config config) {
       super(config);
     }

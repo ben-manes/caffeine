@@ -150,7 +150,7 @@ public abstract class AbstractTraceReader implements TraceReader {
   private static final class MultiInputStream extends FilterInputStream {
     private final InputStream parent;
 
-    public MultiInputStream(InputStream parent, Iterator<InputStream> children) {
+    MultiInputStream(InputStream parent, Iterator<InputStream> children) {
       super(new SequenceInputStream(Iterators.asEnumeration(children)));
       this.parent = parent;
     }

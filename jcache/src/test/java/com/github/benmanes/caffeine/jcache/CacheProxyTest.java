@@ -420,7 +420,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
         isClosed++;
         return (isClosed > 1);
       }
-      public boolean isReallyClosed() {
+      boolean isReallyClosed() {
         return super.isClosed();
       }
     };

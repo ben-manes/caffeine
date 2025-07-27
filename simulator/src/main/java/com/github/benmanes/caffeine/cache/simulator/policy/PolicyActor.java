@@ -133,6 +133,6 @@ public final class PolicyActor {
         Thread.currentThread().setName(name);
       }
     }
-    protected abstract void execute();
+    abstract void execute();
   }
 }

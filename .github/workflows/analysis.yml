@@ -101,7 +101,7 @@ jobs:
         with:
           retention-days: 1
           name: pmd-reports
-          path: "**/build/reports/pmd/*.html"
+          path: '**/build/reports/pmd/*.html'
 
   revapi:
     name: Revapi
@@ -160,4 +160,4 @@ jobs:
         with:
           retention-days: 1
           name: spotbugs-reports
-          path: "**/build/reports/spotbugs/*.html"
+          path: '**/build/reports/spotbugs/*.html'

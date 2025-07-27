@@ -196,10 +196,10 @@ import junit.textui.TestRunner;
  */
 @NullUnmarked
 @SuppressWarnings({"AnnotateFormatMethod", "BooleanLiteral", "ClassEscapesDefinedScope",
-    "CollectionToArray", "ConstantField", "EmptyCatch", "EqualsIncompatibleType",
-    "FunctionalInterfaceClash", "InterruptedExceptionSwallowed", "JavaUtilDate",
-    "JUnit3FloatingPointComparisonWithoutDelta", "MemberName", "NonFinalStaticField",
-    "NumericEquality", "rawtypes", "ReferenceEquality",
+    "CollectionToArray", "ConstantField", "EffectivelyPrivate", "EmptyCatch",
+    "EqualsIncompatibleType", "FunctionalInterfaceClash", "InterruptedExceptionSwallowed",
+    "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta", "MemberName",
+    "NonFinalStaticField", "NumericEquality", "rawtypes", "ReferenceEquality",
     "RethrowReflectiveOperationExceptionAsLinkageError", "serial", "SwitchDefault", "SystemOut",
     "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals", "UnnecessaryFinal", "unused"})
 public class JSR166TestCase extends TestCase {

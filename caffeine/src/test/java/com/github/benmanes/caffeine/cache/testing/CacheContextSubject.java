@@ -419,14 +419,13 @@ public final class CacheContextSubject extends Subject {
       this.listener = listener;
       this.instance = instance;
     }
-    public boolean isConsumingListener(CacheContext context) {
+    boolean isConsumingListener(CacheContext context) {
       return listener.apply(context) == Listener.CONSUMING;
     }
-    public RemovalListener<Int, Int> instance(CacheContext context) {
+    RemovalListener<Int, Int> instance(CacheContext context) {
       return instance.apply(context);
     }
-    @Override
-    public String toString() {
+    @Override public String toString() {
       return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name());
     }
   }

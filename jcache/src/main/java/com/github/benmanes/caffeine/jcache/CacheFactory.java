@@ -160,7 +160,7 @@ final class CacheFactory {
     }
 
     /** Creates a configured cache. */
-    public CacheProxy<K, V> build() {
+    CacheProxy<K, V> build() {
       @Var boolean evicts = false;
       evicts |= configureMaximumSize();
       evicts |= configureMaximumWeight();
@@ -288,7 +288,7 @@ final class CacheFactory {
   private static final class ExpiryAdapter<K, V> implements Expiry<K, Expirable<V>> {
     private final Expiry<K, V> expiry;
 
-    public ExpiryAdapter(Expiry<K, V> expiry) {
+    ExpiryAdapter(Expiry<K, V> expiry) {
       this.expiry = requireNonNull(expiry);
     }
     @Override public long expireAfterCreate(K key, Expirable<V> expirable, long currentTime) {
@@ -307,7 +307,7 @@ final class CacheFactory {
   private static final class ExpirableToExpiry<K, V> implements Expiry<K, Expirable<V>> {
     private final Ticker ticker;
 
-    public ExpirableToExpiry(Ticker ticker) {
+    ExpirableToExpiry(Ticker ticker) {
       this.ticker = requireNonNull(ticker);
     }
     @Override public long expireAfterCreate(K key, Expirable<V> expirable, long currentTime) {

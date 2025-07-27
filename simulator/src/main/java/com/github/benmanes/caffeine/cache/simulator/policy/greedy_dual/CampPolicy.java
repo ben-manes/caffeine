@@ -186,7 +186,7 @@ public final class CampPolicy implements Policy {
     checkState(priorityQueue.containsAll(sentinelMapping.values()));
   }
 
-  private static final class Sentinel extends Node implements Comparable<Sentinel> {
+  static final class Sentinel extends Node implements Comparable<Sentinel> {
     long lastRequest;
     int priority;
 
@@ -239,7 +239,7 @@ public final class CampPolicy implements Policy {
     }
   }
 
-  private static class Node {
+  static class Node {
     final long key;
 
     @Nullable Sentinel sentinel;
@@ -295,7 +295,7 @@ public final class CampPolicy implements Policy {
     }
   }
 
-  private static final class CampSettings extends BasicSettings {
+  static final class CampSettings extends BasicSettings {
     public CampSettings(Config config) {
       super(config);
     }

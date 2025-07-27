@@ -125,14 +125,14 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test(dataProvider = "copier")
-  @SuppressWarnings({"JavaUtilDate", "UndefinedEquals"})
+  @SuppressWarnings({"JavaUtilDate", "PMD.ReplaceJavaUtilDate", "UndefinedEquals"})
   public void deepCopy_date(Copier copier) {
     var date = new Date();
     assertThat(copy(copier, date)).isEqualTo(date);
   }
 
   @Test(dataProvider = "copier")
-  @SuppressWarnings("JavaUtilDate")
+  @SuppressWarnings({"JavaUtilDate", "PMD.ReplaceJavaUtilDate"})
   public void deepCopy_calendar(Copier copier) {
     var calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), US);
     calendar.setTime(new Date());

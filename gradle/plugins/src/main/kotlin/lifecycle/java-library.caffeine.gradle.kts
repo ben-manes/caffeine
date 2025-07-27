@@ -55,17 +55,6 @@ tasks.withType<JavaExec>().configureEach {
   }
 }
 
-tasks.withType<AbstractArchiveTask>().configureEach {
-  isPreserveFileTimestamps = false
-  isReproducibleFileOrder = true
-  filePermissions {
-    unix("rw-r--r--")
-  }
-  dirPermissions {
-    unix("rwxr-xr-x")
-  }
-}
-
 tasks.named<Jar>("jar").configure {
   inputs.property("version", project.version.toString())
   outputs.cacheIf { true }

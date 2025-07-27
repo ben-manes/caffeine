@@ -185,7 +185,7 @@ public final class GdsfPolicy implements Policy {
     checkState(priorityQueue.containsAll(data.values()), "Data != PriorityQueue");
   }
 
-  private static final class Node implements Comparable<Node> {
+  static final class Node implements Comparable<Node> {
     final long key;
 
     double priority;
