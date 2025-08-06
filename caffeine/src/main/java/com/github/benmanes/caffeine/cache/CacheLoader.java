@@ -36,10 +36,7 @@ import org.jspecify.annotations.Nullable;
  * overridden as desired.
  * <p>
  * Usage example:
- * {@snippet lang="java" :
- * CacheLoader<Key, Graph> loader = key -> createExpensiveGraph(key);
- * LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
- * }
+ * {@snippet class=com.github.benmanes.caffeine.Snippets region=loader_basic lang=java}
  *
  * @param <K> the type of keys
  * @param <V> the type of values. A loader may return null values if and only if it declares a
@@ -49,7 +46,8 @@ import org.jspecify.annotations.Nullable;
  */
 @NullMarked
 @FunctionalInterface
-@SuppressWarnings({"FunctionalInterfaceMethodChanged", "PMD.SignatureDeclareThrowsException"})
+@SuppressWarnings({"FunctionalInterfaceMethodChanged",
+    "JavadocDeclaration", "JavadocReference", "PMD.SignatureDeclareThrowsException"})
 public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLoader<K, V> {
 
   /**
@@ -216,10 +214,7 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
    * retrieving the {@code key} prior to returning to the value to the cache.
    * <p>
    * Usage example:
-   * {@snippet lang="java" :
-   * CacheLoader<Key, Graph> loader = CacheLoader.bulk(keys -> createExpensiveGraphs(keys));
-   * LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
-   * }
+   * {@snippet class=com.github.benmanes.caffeine.Snippets region=loader_bulk lang=java}
    *
    * @param <K> the key type
    * @param <V> the value type

@@ -232,10 +232,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
       if ((parentClassLoader != null)
           && (parentClassLoader != classClassLoader)
           && (parentClassLoader != contextClassLoader)) {
-        URL resource = parentClassLoader.getResource(name);
-        if (resource != null) {
-          return resource;
-        }
+        return parentClassLoader.getResource(name);
       }
 
       return null;

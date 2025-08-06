@@ -90,7 +90,8 @@ tasks.named<Jar>("jar").configure {
       "com.github.benmanes.caffeine.jcache.copy;uses:=\"!org.jspecify.annotations\"",
       "com.github.benmanes.caffeine.jcache.configuration;uses:=\"!org.jspecify.annotations\""
     ).joinToString(","),
-    "-exportcontents" to "\${removeall;\${packages;VERSIONED};\${packages;CONDITIONAL}}"))
+    "-exportcontents" to $$"${removeall;${packages;VERSIONED};${packages;CONDITIONAL}}"
+  ))
 }
 
 tasks.named<Javadoc>("javadoc").configure {

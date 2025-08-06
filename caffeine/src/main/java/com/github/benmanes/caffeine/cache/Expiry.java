@@ -31,18 +31,14 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * of an entry may be extended or reduced by subsequent evaluations.
  * <p>
  * Usage example:
- * {@snippet lang="java" :
- * LoadingCache<Key, Graph> cache = Caffeine.newBuilder()
- *     .expireAfter(Expiry.creating((Key key, Graph graph) ->
- *         Duration.between(Instant.now(), graph.createdOn().plusHours(5))))
- *     .build(key -> createExpensiveGraph(key));
- * }
+ * {@snippet class=com.github.benmanes.caffeine.Snippets region=expiry lang=java}
  *
  * @param <K> the type of keys
  * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NullMarked
+@SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
 public interface Expiry<K, V> {
 
   /**
@@ -102,10 +98,7 @@ public interface Expiry<K, V> {
    * the cache once the duration has elapsed after the entry's creation. The expiration time is
    * not modified when the entry is updated or read.
    *
-   * {@snippet lang="java" :
-   * Expiry<Key, Graph> expiry = Expiry.creating((key, graph) ->
-   *     Duration.between(Instant.now(), graph.createdOn().plusHours(5)));
-   * }
+   * {@snippet class=com.github.benmanes.caffeine.Snippets region=expiry_creating lang=java}
    *
    * @param <K> the key type
    * @param <V> the value type
@@ -122,10 +115,7 @@ public interface Expiry<K, V> {
    * the cache once the duration has elapsed after the entry's creation or replacement of its value.
    * The expiration time is not modified when the entry is read.
    *
-   * {@snippet lang="java" :
-   * Expiry<Key, Graph> expiry = Expiry.writing((key, graph) ->
-   *     Duration.between(Instant.now(), graph.modifiedOn().plusHours(5)));
-   * }
+   * {@snippet class=com.github.benmanes.caffeine.Snippets region=expiry_writing lang=java}
    *
    * @param <K> the key type
    * @param <V> the value type
@@ -142,10 +132,7 @@ public interface Expiry<K, V> {
    * the cache once the duration has elapsed after the entry's creation, replacement of its value,
    * or after it was last read.
    *
-   * {@snippet lang="java" :
-   * Expiry<Key, Graph> expiry = Expiry.accessing((key, graph) ->
-   *     graph.isDirected() ? Duration.ofHours(1) : Duration.ofHours(3));
-   * }
+   * {@snippet class=com.github.benmanes.caffeine.Snippets region=expiry_accessing lang=java}
    *
    * @param <K> the key type
    * @param <V> the value type

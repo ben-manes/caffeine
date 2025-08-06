@@ -530,6 +530,10 @@
       UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.Snippets"/>
+    <Bug pattern="UP_UNUSED_PARAMETER"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.Stresser"/>
     <Bug pattern="DM_EXIT"/>
   </Match>

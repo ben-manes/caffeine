@@ -75,24 +75,28 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
   private int sizeCold;
   private int sizeNonResident;
 
-  // To know the order of entries, epoch is used. The epoch is incremented by 1 when a new entry is
-  // inserted, or when an existing entry has been re-accessed and moved to the head. The epoch is
-  // used to determine whether an entry's test period has expired or not. Use int64 type or
-  // consider handling integer overflow.
-  //
-  // For example, integer overflow can be handled by:
-  //  // Newer returns true if x is newer epoch than y, otherwise return false. This method is safe
-  //  // from integer overflow when 1) epoch data type is signed numeric type, and 2) can represent
-  //  // a number greater than the maximum number of cache entries * 2.
-  //  private boolean newer(long x, long y) {
-  //    if ((x ^ y) < 0 && epoch < 0) {
-  //      // If the signs of x and y are different and the current epoch
-  //      // is negative, the negative epoch is always newer.
-  //      return !(x > y);
-  //    } else {
-  //      return x > y;
-  //    }
-  //  }
+  /**
+   * To know the order of entries, epoch is used. The epoch is incremented by 1 when a new entry is
+   * inserted, or when an existing entry has been re-accessed and moved to the head. The epoch is
+   * used to determine whether an entry's test period has expired or not. Use int64 type or
+   * consider handling integer overflow.
+   *
+   * For example, integer overflow can be handled by:
+   * {@snippet lang="java":
+   * // Newer returns true if x is newer epoch than y, otherwise return false. This method is safe
+   * // from integer overflow when 1) epoch data type is signed numeric type, and 2) can represent
+   * // a number greater than the maximum number of cache entries * 2.
+   * private boolean newer(long x, long y) {
+   *   if ((x ^ y) < 0 && epoch < 0) {
+   *     // If the signs of x and y are different and the current epoch
+   *     // is negative, the negative epoch is always newer.
+   *     return !(x > y);
+   *   } else {
+   *     return x > y;
+   *   }
+   * }
+   * }
+   */
   private long epoch;
 
   // Target number of resident cold entries (adaptive):

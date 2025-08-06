@@ -46,7 +46,7 @@ import com.google.errorprone.annotations.Var;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.MissingStaticMethodInNonInstantiatableClass")
+@SuppressWarnings({"JavadocDeclaration", "PMD.MissingStaticMethodInNonInstantiatableClass"})
 public final class IntermittentNull {
 
   private IntermittentNull() {}

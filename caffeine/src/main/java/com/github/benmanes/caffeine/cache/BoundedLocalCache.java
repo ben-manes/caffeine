@@ -356,6 +356,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /** Invalidate the in-flight refresh. */
+  @SuppressWarnings("RedundantCollectionOperation")
   void discardRefresh(Object keyReference) {
     var pending = refreshes;
     if ((pending != null) && pending.containsKey(keyReference)) {
@@ -1011,7 +1012,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return if the entry was evicted
    */
   @GuardedBy("evictionLock")
-  @SuppressWarnings("GuardedByChecker")
+  @SuppressWarnings({"GuardedByChecker", "SynchronizationOnLocalVariableOrMethodParameter"})
   boolean evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
     @SuppressWarnings({"unchecked", "Varifier"})
@@ -1848,6 +1849,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param node the entry in the page replacement policy
    */
   @GuardedBy("evictionLock")
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   void makeDead(Node<K, V> node) {
     synchronized (node) {
       if (node.isDead()) {
@@ -2081,7 +2083,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @GuardedBy("evictionLock")
-  @SuppressWarnings("GuardedByChecker")
+  @SuppressWarnings({"GuardedByChecker", "SynchronizationOnLocalVariableOrMethodParameter"})
   void removeNode(Node<K, V> node, long now) {
     K key = node.getKey();
     var cause = new RemovalCause[1];
@@ -2419,6 +2421,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public @Nullable V remove(Object key) {
     @SuppressWarnings({"rawtypes", "unchecked"})
     Node<K, V>[] node = new Node[1];
@@ -2459,6 +2462,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public boolean remove(Object key, Object value) {
     requireNonNull(key);
     if (value == null) {
@@ -2508,6 +2512,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public @Nullable V replace(K key, V value) {
     requireNonNull(key);
     requireNonNull(value);
@@ -2570,6 +2575,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh) {
     requireNonNull(key);
     requireNonNull(oldValue);
@@ -2671,6 +2677,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /** Returns the current value from a computeIfAbsent invocation. */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Nullable V doComputeIfAbsent(K key, Object keyRef,
       Function<? super K, ? extends @Nullable V> mappingFunction, long[/* 1 */] now,
       boolean recordStats) {
@@ -2837,6 +2844,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param computeIfAbsent if an absent entry can be computed
    * @return the new value associated with the specified key, or null if none
    */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Nullable V remap(K key, Object keyRef,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       Expiry<? super K, ? super V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {
@@ -3992,7 +4000,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
-  @SuppressWarnings({"NullableOptional", "OptionalAssignedToNull"})
+  @SuppressWarnings({"NullableOptional",
+    "OptionalAssignedToNull", "OptionalUsedAsFieldOrParameterType"})
   static final class BoundedPolicy<K, V> implements Policy<K, V> {
     final Function<@Nullable V, @Nullable V> transformer;
     final BoundedLocalCache<K, V> cache;
@@ -4025,7 +4034,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
       if ((refreshes == null) || refreshes.isEmpty()) {
-        @SuppressWarnings("ImmutableMapOf")
+        @SuppressWarnings({"ImmutableMapOf", "RedundantUnmodifiable"})
         Map<K, CompletableFuture<V>> emptyMap = Collections.unmodifiableMap(Collections.emptyMap());
         return emptyMap;
       } else if (cache.collectKeys()) {

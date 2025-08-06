@@ -1178,7 +1178,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
       if ((refreshes == null) || refreshes.isEmpty()) {
-        @SuppressWarnings("ImmutableMapOf")
+        @SuppressWarnings({"ImmutableMapOf", "RedundantUnmodifiable"})
         Map<K, CompletableFuture<V>> emptyMap = Collections.unmodifiableMap(Collections.emptyMap());
         return emptyMap;
       }

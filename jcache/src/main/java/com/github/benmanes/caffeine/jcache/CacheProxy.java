@@ -80,6 +80,7 @@ import com.google.errorprone.annotations.Var;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class CacheProxy<K, V> implements Cache<K, V> {
   private static final Logger logger = System.getLogger(CacheProxy.class.getName());
 

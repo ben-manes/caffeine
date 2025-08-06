@@ -287,7 +287,7 @@ tasks.named<CheckForbiddenApis>("forbiddenApisJavaPoet").configure {
 }
 
 tasks.named<CheckForbiddenApis>("forbiddenApisTest").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated-18", "jdk-unsafe"))
+  bundledSignatures.addAll(listOf("jdk-deprecated-18"))
 }
 
 tasks.named<CheckForbiddenApis>("forbiddenApisJmh").configure {

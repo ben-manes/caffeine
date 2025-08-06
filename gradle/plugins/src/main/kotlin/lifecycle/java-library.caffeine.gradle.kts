@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
+
 plugins {
   `java-library`
   id("ecj.caffeine")
@@ -76,13 +78,17 @@ tasks.named<Jar>("jar").configure {
 }
 
 tasks.withType<Javadoc>().configureEach {
-  isFailOnError = false
+  val snippetPath = layout.projectDirectory.dir("src/test/java")
+  inputs.dir(snippetPath)
+    .withPathSensitivity(RELATIVE)
+    .withPropertyName("snippetPath")
   javadocOptions {
     use()
     quiet()
     noTimestamp()
-    addStringOption("-release", java.toolchain.languageVersion.get().toString())
     addStringOption("-link-modularity-mismatch", "info")
+    addStringOption("-snippet-path", snippetPath.asFile.absolutePath)
+    addStringOption("-release", java.toolchain.languageVersion.get().toString())
     links(
       "https://jspecify.dev/docs/api/",
       "https://errorprone.info/api/latest/",
@@ -93,7 +99,7 @@ tasks.withType<Javadoc>().configureEach {
     if (project != caffeine) {
       linksOffline("https://static.javadoc.io/$group/caffeine/$version/",
         relativePath(caffeine.layout.buildDirectory.dir("docs/javadoc")))
-      inputs.files(caffeine.tasks.named<Javadoc>("javadoc").map { it.outputs.files })
+      dependsOn(":caffeine:javadoc")
     }
   }
   javadocTool = javaToolchains.javadocToolFor {

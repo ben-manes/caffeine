@@ -31,6 +31,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   private final boolean hasEntry;
   private final K key;

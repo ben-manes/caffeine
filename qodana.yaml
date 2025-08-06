@@ -7,24 +7,12 @@ licenseRules:
   - keys: [ Apache-2.0 ]
     allowed: [ LGPL-3.0-only ]
 exclude:
-  - name: CommentedOutCode
   - name: ConstantValue
   - name: DataFlowIssue
-  - name: DuplicatedCode
   - name: EmptyStatementBody
   - name: IgnoreResultOfCall
-  - name: JavadocDeclaration
-  - name: JavadocLinkAsPlainText
   - name: NotNullFieldNotInitialized
   - name: NullableProblems
-  - name: OptionalUsedAsFieldOrParameterType
   - name: PackageDirectoryMismatch
-  - name: RedundantCollectionOperation
-  - name: RedundantUnmodifiable
-  - name: ReturnNull
-  - name: SynchronizationOnLocalVariableOrMethodParameter
-  - name: SystemOutErr
-  - name: TrivialIf
   - name: UnnecessaryReturn
-  - name: UnreachableCode
   - name: UnstableApiUsage

@@ -158,7 +158,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
    */
   static <K, V> CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
     if (futures.isEmpty()) {
-      @SuppressWarnings("ImmutableMapOf")
+      @SuppressWarnings({"ImmutableMapOf", "RedundantUnmodifiable"})
       Map<K, V> emptyMap = Collections.unmodifiableMap(Collections.emptyMap());
       return CompletableFuture.completedFuture(emptyMap);
     }
@@ -1109,6 +1109,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
+      @SuppressWarnings("RedundantCollectionOperation")
       public boolean remove(Object o) {
         return delegate.keySet().remove(o);
       }

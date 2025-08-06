@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.Var;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
+@SuppressWarnings("JavadocLinkAsPlainText")
 final class TinySetIndexing {
   // for performance - for functions that need to know both the start and the end of the chain.
   private int chainStart;

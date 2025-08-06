@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Caffeine.toNanosSaturated;
 
 import java.time.Duration;
-import java.util.ConcurrentModificationException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -75,9 +74,9 @@ public interface Policy<K, V> {
    * @return the entry mapping for the specified key, or {@code null} if this cache contains no
    *         mapping for the key
    * @throws NullPointerException if the specified key is null
+   * @since 3.0.6
    */
   default @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
-    // This method was added & implemented in version 3.0.6
     throw new UnsupportedOperationException();
   }
 
@@ -238,9 +237,9 @@ public interface Policy<K, V> {
      *        disregard the limit)
      * @return a snapshot view of the cache from the coldest entry to the hottest
      * @throws IllegalArgumentException if the limit specified is negative
+     * @since 3.0.4
      */
     default Map<K, V> coldestWeighted(long weightLimit) {
-      // This method was added & implemented in version 3.0.4
       throw new UnsupportedOperationException();
     }
 
@@ -251,10 +250,7 @@ public interface Policy<K, V> {
      * at the time of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet lang="java" :
-     * List<K> tenColdestKeys = cache.policy().eviction().orElseThrow()
-     *     .coldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }
+     * {@snippet class=com.github.benmanes.caffeine.Snippets region=eviction_coldest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -265,11 +261,12 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
-     * @throws ConcurrentModificationException if the computation detectably reads or writes an
-     *         entry in this cache
+     * @throws java.util.ConcurrentModificationException if the computation detectably reads or
+     *         writes an entry in this cache
+     * @since 3.0.6
      */
+    @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
     default <T> T coldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
-      // This method was added & implemented in version 3.0.6
       throw new UnsupportedOperationException();
     }
 
@@ -305,9 +302,9 @@ public interface Policy<K, V> {
      *        disregard the limit)
      * @return a snapshot view of the cache from the hottest entry to the coldest
      * @throws IllegalArgumentException if the limit specified is negative
+     * @since 3.0.4
      */
     default Map<K, V> hottestWeighted(long weightLimit) {
-      // This method was added & implemented in version 3.0.4
       throw new UnsupportedOperationException();
     }
 
@@ -318,10 +315,7 @@ public interface Policy<K, V> {
      * at the time of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet lang="java" :
-     * List<K> tenHottestKeys = cache.policy().eviction().orElseThrow()
-     *     .hottest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }
+     * {@snippet class=com.github.benmanes.caffeine.Snippets region=eviction_hottest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -332,11 +326,12 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
-     * @throws ConcurrentModificationException if the computation detectably reads or writes an
-     *         entry in this cache
+     * @throws java.util.ConcurrentModificationException if the computation detectably reads or
+     *         writes an entry in this cache
+     * @since 3.0.6
      */
+    @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
     default <T> T hottest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
-      // This method was added & implemented in version 3.0.6
       throw new UnsupportedOperationException();
     }
   }
@@ -454,10 +449,7 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet lang="java" :
-     * List<K> tenOldestKeys = cache.policy().expireAfterWrite().orElseThrow()
-     *     .oldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }
+     * {@snippet class=com.github.benmanes.caffeine.Snippets region=expireFixed_oldest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -468,9 +460,10 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
+     * @since 3.0.6
      */
+    @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
     default <T> T oldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
-      // This method was added & implemented in version 3.0.6
       throw new UnsupportedOperationException();
     }
 
@@ -498,10 +491,7 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet lang="java" :
-     * List<K> tenYoungestKeys = cache.policy().expireAfterWrite().orElseThrow()
-     *     .youngest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }
+     * {@snippet class=com.github.benmanes.caffeine.Snippets region=expireFixed_youngest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -512,9 +502,10 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
+     * @since 3.0.6
      */
+    @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
     default <T> T youngest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
-      // This method was added & implemented in version 3.0.6
       throw new UnsupportedOperationException();
     }
   }
@@ -670,11 +661,11 @@ public interface Policy<K, V> {
      *         this cache that would otherwise never complete
      * @throws RuntimeException or Error if the remappingFunction does so, in which case the mapping
      *         is unchanged
+     * @since 3.0.6
      */
     default @Nullable V compute(K key,
         BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
         Duration duration) {
-      // This method was added & implemented in version 3.0.6
       throw new UnsupportedOperationException();
     }
 
@@ -702,10 +693,7 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet lang="java" :
-     * List<K> tenOldestKeys = cache.policy().expireAfterVariably().orElseThrow()
-     *     .oldest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }
+     * {@snippet class=com.github.benmanes.caffeine.Snippets region=expireVar_oldest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -716,9 +704,10 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
+     * @since 3.0.6
      */
+    @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
     default <T> T oldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
-      // This method was added & implemented in version 3.0.6
       throw new UnsupportedOperationException();
     }
 
@@ -746,10 +735,7 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet lang="java" :
-     * List<K> tenYoungestKeys = cache.policy().expireAfterVariably().orElseThrow()
-     *     .youngest(stream -> stream.map(Map.Entry::getKey).limit(10).toList());
-     * }
+     * {@snippet class=com.github.benmanes.caffeine.Snippets region=expireVar_youngest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -760,9 +746,10 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
+     * @since 3.0.6
      */
+    @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
     default <T> T youngest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
-      // This method was added & implemented in version 3.0.6
       throw new UnsupportedOperationException();
     }
   }

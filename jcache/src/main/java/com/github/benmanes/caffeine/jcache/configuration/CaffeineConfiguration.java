@@ -426,6 +426,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public CaffeineConfiguration<K, V> setRefreshAfterWrite(OptionalLong refreshAfterWriteNanos) {
     checkIfReadOnly();
     this.refreshAfterWriteNanos = refreshAfterWriteNanos.isPresent()
@@ -452,6 +453,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public CaffeineConfiguration<K, V> setExpireAfterWrite(OptionalLong expireAfterWriteNanos) {
     checkIfReadOnly();
     this.expireAfterWriteNanos = expireAfterWriteNanos.isPresent()
@@ -478,6 +480,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public CaffeineConfiguration<K, V> setExpireAfterAccess(OptionalLong expireAfterAccessNanos) {
     checkIfReadOnly();
     this.expireAfterAccessNanos = expireAfterAccessNanos.isPresent()
@@ -502,7 +505,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "unchecked"})
   public CaffeineConfiguration<K, V> setExpiryFactory(
       Optional<Factory<? extends Expiry<K, V>>> factory) {
     checkIfReadOnly();
@@ -528,6 +531,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public CaffeineConfiguration<K, V> setMaximumSize(OptionalLong maximumSize) {
     checkIfReadOnly();
     this.maximumSize = maximumSize.isPresent()
@@ -554,6 +558,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public CaffeineConfiguration<K, V> setMaximumWeight(OptionalLong maximumWeight) {
     checkIfReadOnly();
     this.maximumWeight = maximumWeight.isPresent()
@@ -578,7 +583,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the {@link CaffeineConfiguration} to permit fluent-style method calls
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "unchecked"})
   public CaffeineConfiguration<K, V> setWeigherFactory(
       Optional<Factory<? extends Weigher<K, V>>> factory) {
     checkIfReadOnly();

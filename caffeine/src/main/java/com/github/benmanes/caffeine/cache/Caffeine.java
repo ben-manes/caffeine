@@ -71,14 +71,7 @@ import com.google.errorprone.annotations.FormatMethod;
  * cache instances created by {@code Caffeine} will not perform any type of eviction.
  * <p>
  * Usage example:
- * {@snippet lang="java" :
- * LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
- *     .maximumSize(10_000)
- *     .expireAfterWrite(Duration.ofMinutes(10))
- *     .removalListener((Key key, Graph graph, RemovalCause cause) ->
- *         System.out.printf("Key %s was removed (%s)%n", key, cause))
- *     .build(key -> createExpensiveGraph(key));
- * }
+ * {@snippet class=com.github.benmanes.caffeine.Snippets region=builder lang=java}
  * <p>
  * The returned cache is implemented as a hash table with similar performance characteristics to
  * {@link ConcurrentHashMap}. The {@code asMap} view (and its collection views) have <i>weakly
@@ -140,6 +133,7 @@ import com.google.errorprone.annotations.FormatMethod;
  *     #removalListener}
  */
 @NullMarked
+@SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
 public final class Caffeine<K, V> {
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
   static final Logger logger = System.getLogger(Caffeine.class.getName());

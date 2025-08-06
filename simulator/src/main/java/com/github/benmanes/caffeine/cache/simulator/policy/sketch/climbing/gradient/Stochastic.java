@@ -43,6 +43,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("JavadocLinkAsPlainText")
 public final class Stochastic extends AbstractClimber {
   private final Acceleration acceleration;
   private final int stepSize;

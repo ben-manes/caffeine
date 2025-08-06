@@ -101,6 +101,7 @@ fun disabledChecks() = listOf(
   // https://github.com/google/error-prone/issues/4914
   "UnescapedEntity",
 )
+@Suppress("CanConvertToMultiDollarString")
 fun disabledRules() = listOf(
   "ImmutableListRules\\\$ImmutableListBuilder",
   "ImmutableListRules\\\$ImmutableListOf\\d*",
