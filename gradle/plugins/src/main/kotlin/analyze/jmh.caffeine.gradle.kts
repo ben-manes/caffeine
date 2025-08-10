@@ -75,8 +75,7 @@ tasks.withType<JmhTask>().configureEach {
   description = "Executes a Java microbenchmark"
   incompatibleWithConfigurationCache()
 
-  inputs.property("javaDistribution",
-    providers.environmentVariable("JDK_DISTRIBUTION")).optional(true)
+  inputs.property("javaDistribution", javaDistribution()).optional(true)
   inputs.property("benchmarkParameters", jmh.benchmarkParameters)
   inputs.property("includes", includes)
   outputs.file(jmh.resultsFile)

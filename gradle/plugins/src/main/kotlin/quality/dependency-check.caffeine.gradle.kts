@@ -6,5 +6,5 @@ dependencyCheck {
   failOnError = false
   scanBuildEnv = true
   formats = listOf("HTML", "SARIF")
-  nvd.apiKey = System.getenv("NVD_API_KEY")
+  nvd.apiKey = rootProject.findProperty("nvdApiKey") as? String
 }

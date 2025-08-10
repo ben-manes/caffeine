@@ -1,6 +1,4 @@
 /** Cache simulator using tracing data and a family of eviction policy options. */
-import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
-import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 
@@ -102,19 +100,13 @@ runTasks.forEach { task ->
     classpath(sourceSets["main"].runtimeClasspath)
     outputs.upToDateWhen { false }
     outputs.cacheIf { false }
-    jvmArgs(defaultJvmArgs())
 
+    val defaultJvmArguments = defaultJvmArgs()
+    jvmArgumentProviders.add { defaultJvmArguments.get() }
     val overrides = providers.systemPropertiesPrefixedBy("caffeine")
     doFirst {
       systemProperties(overrides.get())
     }
-  }
-}
-
-eclipse.classpath.file.beforeMerged {
-  if (this is EclipseClasspath) {
-    val absolutePath = layout.buildDirectory.dir("generated/sources/annotationProcessor/java/main")
-    entries.add(SourceFolder(relativePath(absolutePath), "bin/main"))
   }
 }
 

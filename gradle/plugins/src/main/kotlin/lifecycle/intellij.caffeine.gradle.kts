@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.jetbrains.gradle.ext.ActionDelegationConfig.TestRunner.PLATFORM
 import org.jetbrains.gradle.ext.runConfigurations
 import org.jetbrains.gradle.ext.delegateActions
@@ -7,6 +8,7 @@ import org.jetbrains.gradle.ext.TestNG
 import org.jetbrains.gradle.ext.JUnit
 
 plugins {
+  base
   id("org.jetbrains.gradle.plugin.idea-ext")
 }
 
@@ -56,6 +58,43 @@ idea.project.settings {
     register("Simulator", Application::class.java) {
       mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulator"
       moduleName = "caffeine.simulator.main"
+    }
+  }
+}
+
+val checkNoGeneratedImports by tasks.registering(CheckNoGeneratedImportsTask::class) {
+  gradleScripts.from(project.fileTree(project.projectDir) {
+    include("**/*.gradle.kts")
+    exclude("**/build/**")
+    exclude("**/bin/**")
+  })
+  relativeDir = project.rootDir
+}
+
+tasks.check.configure {
+  dependsOn(checkNoGeneratedImports)
+}
+
+/** IntelliJ may unnecessarily auto-import generated script classes. */
+abstract class CheckNoGeneratedImportsTask : DefaultTask() {
+  @get:Input
+  abstract val relativeDir: Property<File>
+  @get:InputFiles @get:PathSensitive(RELATIVE)
+  abstract val gradleScripts: ConfigurableFileCollection
+
+  init {
+    group = "Verification"
+    description = "Runs checks for gradle script accessor imports"
+  }
+
+  @TaskAction
+  fun run() {
+    val forbidden = gradleScripts.files.filter { file ->
+      file.useLines { lines -> lines.take(10).any { it.contains("gradle.kotlin.dsl.accessors") } }
+    }
+    check(forbidden.isEmpty()) {
+      "Forbidden Gradle accessor imports found:\n" +
+        forbidden.joinToString("\n") { "- ${it.relativeTo(relativeDir.get())}" }
     }
   }
 }

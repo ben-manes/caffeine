@@ -40,8 +40,7 @@ import com.google.errorprone.annotations.Var;
  * the correct visibility ordering.
  * <p>
  * {@snippet lang="shell" :
- * # use JAVA_VERSION for an alternative jdk
- * JAVA_VERSION=11 ./gradlew caffeine:jcstress --tests IntermittentNull --rerun
+ * ./gradlew caffeine:jcstress -PjavaVersion=21 --tests IntermittentNull --rerun
  * }
  *
  * @author ben.manes@gmail.com (Ben Manes)

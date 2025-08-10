@@ -36,8 +36,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * a 100% hit rate and a Zipf distribution of keys is used to mimic application usage patterns.
  * <p>
  * {@snippet lang="shell" :
- * // JAVA_VERSION=?? for an alternative jdk
- * ./gradlew jmh -PincludePattern=GetPutBenchmark --rerun
+ * ./gradlew jmh -PincludePattern=GetPutBenchmark -PjavaVersion=21 --rerun
  * }
  *
  * @author ben.manes@gmail.com (Ben Manes)

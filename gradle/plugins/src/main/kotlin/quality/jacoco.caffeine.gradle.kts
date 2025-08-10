@@ -4,7 +4,6 @@ import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
   jacoco
-  `java-library`
 }
 
 jacoco {

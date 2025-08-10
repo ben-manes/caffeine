@@ -254,15 +254,24 @@ jobs:
           arguments: jacocoFullReport
           java: ${{ env.PUBLISH_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0
+        with:
+          files: ./build/reports/jacoco/jacocoFullReport/jacocoFullReport.xml
       - name: Upload Jacoco Full Report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: steps.check_files.outputs.files_exists == 'true'
         with:
           retention-days: 1
           name: jacoco-report
           path: ./build/reports/jacoco/jacocoFullReport
       - name: Publish to Coveralls
         uses: ./.github/actions/run-gradle
-        if: (github.event_name == 'push') && (github.event.repository.fork == false)
+        if: >
+          (github.event_name == 'push')
+          && (github.event.repository.fork == false)
+          && (steps.check_files.outputs.files_exists == 'true')
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
@@ -272,12 +281,18 @@ jobs:
         continue-on-error: true
       - name: Publish to Codecov
         uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
-        if: (github.event_name == 'push') && (github.event.repository.fork == false)
+        if: >
+          (github.event_name == 'push')
+          && (github.event.repository.fork == false)
+          && (steps.check_files.outputs.files_exists == 'true')
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Publish to Codacy
         uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1.3.0
-        if: (github.event_name == 'push') && (github.event.repository.fork == false)
+        if: >
+          (github.event_name == 'push')
+          && (github.event.repository.fork == false)
+          && (steps.check_files.outputs.files_exists == 'true')
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         continue-on-error: true
@@ -286,6 +301,7 @@ jobs:
         if: >
           github.event_name == 'push'
           && github.event.repository.fork == false
+          && (steps.check_files.outputs.files_exists == 'true')
           && endsWith(github.ref, github.event.repository.default_branch)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

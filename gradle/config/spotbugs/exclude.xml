@@ -15,6 +15,7 @@
       CLI_CONSTANT_LIST_INDEX,
       CNC_COLLECTION_NAMING_CONFUSION,
       CT_CONSTRUCTOR_THROW,
+      CWO_CLOSED_WITHOUT_OPENED,
       DMI_RANDOM_USED_ONLY_ONCE,
       EI_EXPOSE_REP, EI_EXPOSE_REP2,
       ENMI_EQUALS_ON_ENUM,
@@ -97,6 +98,11 @@
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
     <Method name="snapshot"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
+    <Method name="scheduleAfterWrite"/>
+    <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache$KeySetView"/>

@@ -1,7 +1,7 @@
 import org.gradle.api.plugins.JavaPluginExtension
 
 plugins {
-  id("jacoco.caffeine")
+  jacoco
   id("com.github.nbaztec.coveralls-jacoco")
 }
 
@@ -26,7 +26,7 @@ val jacocoFullReport by tasks.registering(JacocoReport::class) {
   description = "Generates an aggregate report"
 
   subprojects {
-    inputs.files(tasks.named<JavaCompile>("compileTestJava").map { it.outputs.files })
+    inputs.files(tasks.withType<JavaCompile>().map { it.outputs.files })
   }
   reports {
     html.required = true // human-readable

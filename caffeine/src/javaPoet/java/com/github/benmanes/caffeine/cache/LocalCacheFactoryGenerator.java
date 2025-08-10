@@ -108,7 +108,7 @@ public final class LocalCacheFactoryGenerator {
 
   @SuppressWarnings("SystemOut")
   private void reformat() throws IOException {
-    if (Boolean.parseBoolean(System.getenv("JDK_EA"))) {
+    if (Runtime.version().pre().isPresent()) {
       return; // may be incompatible for EA builds
     }
     try (Stream<Path> stream = Files.walk(directory)) {

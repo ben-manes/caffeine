@@ -10,13 +10,17 @@ plugins {
   id("net.ltgt.errorprone")
 }
 
-dependencies {
-  errorprone(libs.errorprone) {
+sourceSets.configureEach {
+  configurations.named(annotationProcessorConfigurationName) {
     exclude(group = libs.caffeine.get().group)
+    dependencies.add(project.dependencies.create(
+      layout.buildDirectory.files("errorprone/caffeine-${libs.versions.caffeine.get()}.jar")))
   }
-  errorprone(layout.buildDirectory.files("errorprone/caffeine-${libs.versions.caffeine.get()}.jar"))
+}
 
+dependencies {
   errorprone(libs.nullaway)
+  errorprone(libs.errorprone)
   errorprone(libs.errorprone.mockito)
   errorprone(libs.bundles.errorprone.support)
 }

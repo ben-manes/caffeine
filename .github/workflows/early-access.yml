@@ -100,7 +100,6 @@ jobs:
           - jcache:check
           - guava:check
     env:
-      JDK_EA: true
       JAVA_VERSION: 24
       JAVA_TEST_VERSION: 25
     steps:
@@ -121,5 +120,5 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Run Tests
         env:
-          INPUTS_ARGUMENTS: ${{ matrix.suite }}
-        run: ./gradlew "$INPUTS_ARGUMENTS"
+          TEST_SUITE: ${{ matrix.suite }}
+        run: ./gradlew -PearlyAccess=true -PjavaTestVersion="$JAVA_TEST_VERSION" "$TEST_SUITE"

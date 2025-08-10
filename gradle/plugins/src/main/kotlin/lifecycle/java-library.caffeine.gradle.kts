@@ -22,16 +22,17 @@ dependencies {
 }
 
 java.toolchain {
-  languageVersion = JavaLanguageVersion.of(System.getenv("JAVA_VERSION")?.toIntOrNull() ?: 11)
-  vendor = System.getenv("JAVA_VENDOR")?.let(JvmVendorSpec::of)
+  languageVersion = javaVersion().map { it.toIntOrNull() }.orElse(11).map(JavaLanguageVersion::of)
+  if (javaVendor().isPresent) {
+    vendor = javaVendor().map(JvmVendorSpec::of)
+  }
 }
 val javaRuntimeVersion: Provider<JavaLanguageVersion> =
   java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(24)) }
 
 tasks.withType<JavaCompile>().configureEach {
-  inputs.property("javaDistribution",
-    providers.environmentVariable("JDK_DISTRIBUTION")).optional(true)
   inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })
+  inputs.property("javaDistribution", javaDistribution()).optional(true)
   options.release = java.toolchain.languageVersion.map { it.asInt() }
 
   javaCompiler = javaToolchains.compilerFor {
@@ -84,7 +85,6 @@ tasks.withType<Javadoc>().configureEach {
     .withPropertyName("snippetPath")
   javadocOptions {
     use()
-    quiet()
     noTimestamp()
     addStringOption("-link-modularity-mismatch", "info")
     addStringOption("-snippet-path", snippetPath.asFile.absolutePath)
@@ -99,7 +99,7 @@ tasks.withType<Javadoc>().configureEach {
     if (project != caffeine) {
       linksOffline("https://static.javadoc.io/$group/caffeine/$version/",
         relativePath(caffeine.layout.buildDirectory.dir("docs/javadoc")))
-      dependsOn(":caffeine:javadoc")
+      inputs.files(caffeine.tasks.withType<Javadoc>().map { it.outputs.files })
     }
   }
   javadocTool = javaToolchains.javadocToolFor {

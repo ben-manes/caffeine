@@ -94,12 +94,12 @@ runs:
         INPUTS_ATTEMPT_DELAY: ${{ inputs.attempt-delay }}
         INPUTS_ATTEMPT_LIMIT: ${{ inputs.attempt-limit }}
         JDK_CI: ${{ steps.java_toolchain.outputs.java_home }}
-        JDK_EA: ${{ steps.java_toolchain.outputs.early_access }}
-        JAVA_VENDOR: ${{ steps.java_toolchain.outputs.vendor }}
-        JAVA_VERSION: ${{ steps.java_toolchain.outputs.version }}
-        JDK_DISTRIBUTION: ${{ steps.java_toolchain.outputs.distribution }}
         GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}
-        GRAALVM: ${{ steps.java_toolchain.outputs.graalvm }}
+        ORG_GRADLE_PROJECT_graalvm: ${{ steps.java_toolchain.outputs.graalvm }}
+        ORG_GRADLE_PROJECT_javaVendor: ${{ steps.java_toolchain.outputs.vendor }}
+        ORG_GRADLE_PROJECT_javaVersion: ${{ steps.java_toolchain.outputs.version }}
+        ORG_GRADLE_PROJECT_earlyAccess: ${{ steps.java_toolchain.outputs.early_access }}
+        ORG_GRADLE_PROJECT_javaDistribution: ${{ steps.java_toolchain.outputs.distribution }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: false
       shell: bash
       run: |

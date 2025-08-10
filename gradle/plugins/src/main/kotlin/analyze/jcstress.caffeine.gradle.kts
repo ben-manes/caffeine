@@ -16,13 +16,13 @@ val jcstressAnnotationProcessor by configurations.existing
 dependencies {
   jcstressAnnotationProcessor(libs.jcstress)
 
-  jcstressImplementation(libs.errorprone)
   jcstressImplementation(libs.jcstress)
   jcstressImplementation(libs.jspecify)
+  jcstressImplementation(libs.errorprone.annotations)
+  jcstressImplementation(files(tasks.jar.map { it.archiveFile }))
 }
 
 val compileJcstressJava by tasks.existing(JavaCompile::class) {
-  inputs.files(tasks.jar.map { it.archiveFile })
   options.apply {
     compilerArgs.add("-Xlint:-processing")
     errorprone.excludedPaths = ".*_jcstress.*"

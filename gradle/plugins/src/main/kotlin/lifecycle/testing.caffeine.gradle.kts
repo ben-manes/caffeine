@@ -10,7 +10,7 @@ plugins {
 }
 
 val javaTestVersion: Provider<JavaLanguageVersion> = java.toolchain.languageVersion.flatMap {
-  providers.environmentVariable("JAVA_TEST_VERSION").map(JavaLanguageVersion::of).orElse(it)
+  javaTestVersion().map(JavaLanguageVersion::of).orElse(it)
 }
 val mockitoAgent by configurations.registering
 
@@ -40,15 +40,15 @@ configurations.all {
 }
 
 tasks.withType<Test>().configureEach {
-  inputs.property("javaDistribution",
-    providers.environmentVariable("JDK_DISTRIBUTION")).optional(true)
+  inputs.property("javaDistribution", javaDistribution()).optional(true)
   inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })
 
   // Use --debug-jvm to remotely attach to the test task
+  val defaultJvmArguments = defaultJvmArgs()
   val javaAgent = mockitoAgent.map { it.asPath }
+  jvmArgumentProviders.add { defaultJvmArguments.get() }
   jvmArgumentProviders.add { listOf("-javaagent:${javaAgent.get()}") }
   jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+EnableDynamicAgentLoading", "-Xshare:off")
-  jvmArgs(defaultJvmArgs())
   reports {
     junitXml.includeSystemOutLog = isCI().map { !it }
     junitXml.includeSystemErrLog = isCI().map { !it }

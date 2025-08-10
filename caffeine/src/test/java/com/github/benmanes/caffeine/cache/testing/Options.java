@@ -19,6 +19,7 @@ import static java.util.Locale.US;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import java.util.Optional;
+import java.util.Properties;
 
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
@@ -31,42 +32,56 @@ import com.google.common.base.Enums;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 final class Options {
+  private static final Options SYSTEM_PROPERTY_OPTIONS = new Options(System.getProperties());
 
-  private Options() {}
+  private final Optional<Implementation> implementation;
+  private final Optional<ReferenceType> values;
+  private final Optional<ReferenceType> keys;
+  private final Optional<Compute> compute;
+  private final Optional<Stats> stats;
 
-  /** Returns the test options from system property configuration. */
+  private Options(Properties properties) {
+    implementation = Optional.ofNullable(Enums.getIfPresent(Implementation.class,
+        capitalize(properties.getProperty("implementation", "").toLowerCase(US))).orNull());
+    compute = Optional.ofNullable(Enums.getIfPresent(Compute.class,
+        properties.getProperty("compute", "").toUpperCase(US)).orNull());
+    keys = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
+        properties.getProperty("keys", "").toUpperCase(US)).orNull());
+    values = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
+        properties.getProperty("values", "").toUpperCase(US)).orNull());
+    stats = Optional.ofNullable(Enums.getIfPresent(Stats.class,
+        properties.getProperty("stats", "").toUpperCase(US)).orNull());
+  }
+
+  /** Returns the test options from the system properties. */
   public static Options fromSystemProperties() {
-    return new Options();
+    return SYSTEM_PROPERTY_OPTIONS;
   }
 
-  /** Compute indicates if an async or sync cache variation should be use, or both if unset. */
-  Optional<Compute> compute() {
-    return Optional.ofNullable(Enums.getIfPresent(Compute.class,
-        System.getProperty("compute", "").toUpperCase(US)).orNull());
-  }
-
-  /** Implementation variation to use, or all if unset. */
+  /** The implementation, or all if unset. */
   Optional<Implementation> implementation() {
-    return Optional.ofNullable(Enums.getIfPresent(Implementation.class,
-        capitalize(System.getProperty("implementation", "").toLowerCase(US))).orNull());
+    return implementation;
   }
 
-  /** Indicates if statistics should be used, both if unset */
-  Optional<Stats> stats() {
-    return Optional.ofNullable(Enums.getIfPresent(Stats.class,
-        System.getProperty("stats", "").toUpperCase(US)).orNull());
-  }
-
-  /** The key reference combination to use, or all if unset. */
+  /** The reference type, or all if unset. */
   Optional<ReferenceType> keys() {
-    return Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
-        System.getProperty("keys", "").toUpperCase(US)).orNull());
+    return keys;
   }
 
-  /** The value reference combination to use, or all if unset. */
+  /** The reference type, or all if unset. */
   Optional<ReferenceType> values() {
-    return Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
-        System.getProperty("values", "").toUpperCase(US)).orNull());
+    return values;
+  }
+
+  /** The computation type, or all if unset. */
+  Optional<Compute> compute() {
+    return compute;
+  }
+
+  /** The statistics type, or all if unset. */
+  Optional<Stats> stats() {
+    return stats;
   }
 }
