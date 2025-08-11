@@ -347,7 +347,7 @@ for (scenario in Scenario.all()) {
         } else {
           parallel = "methods"
           excludeGroups("slow", "isolated", "lincheck")
-          jvmArgs("-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled",
+          jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
             "--add-opens", "java.base/java.lang=ALL-UNNAMED")
           threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
         }

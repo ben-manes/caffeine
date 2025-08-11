@@ -52,6 +52,7 @@ tasks.withType<Test>().configureEach {
   reports {
     junitXml.includeSystemOutLog = isCI().map { !it }
     junitXml.includeSystemErrLog = isCI().map { !it }
+    html.required = isCI().map { !it }
   }
   testLogging {
     events = setOf(SKIPPED, FAILED)
