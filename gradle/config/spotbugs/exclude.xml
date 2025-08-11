@@ -648,6 +648,11 @@
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.testing.RemovalListeners$ConsumingRemovalListener"/>
+    <Method name="removed"/>
+    <Bug pattern="IMC_IMMATURE_CLASS_COLLECTION_RETURN"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.MultiThreadedTest"/>
     <Bug pattern="NPMC_NON_PRODUCTIVE_METHOD_CALL"/>
   </Match>

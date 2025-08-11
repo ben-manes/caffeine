@@ -24,6 +24,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.testng.ITestResult.FAILURE;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -33,9 +34,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.mockito.Mockito;
 import org.slf4j.bridge.SLF4JBridgeHandler;
-import org.slf4j.event.Level;
 import org.testng.Assert;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
@@ -57,8 +58,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
+import com.github.valfirst.slf4jtest.TestLogger;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
-import com.google.common.collect.ImmutableList;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -66,7 +67,8 @@ import com.google.common.collect.ImmutableList;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheValidationListener implements ISuiteListener, IInvokedMethodListener {
-  private static final ImmutableList<Level> TRACE_LEVELS = ImmutableList.copyOf(Level.values());
+  private static final Field ALL_LOGGING_EVENTS = FieldUtils.getDeclaredField(
+      TestLogger.class, "allLoggingEvents", /* forceAccess= */ true);
   private static final Object[] EMPTY_PARAMS = {};
 
   private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
@@ -84,8 +86,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
-    TestLoggerFactory.getAllTestLoggers().values()
-        .forEach(logger -> logger.setEnabledLevels(TRACE_LEVELS));
+    TestLoggerFactory.getAllLoggingEvents().clear();
     TestLoggerFactory.clear();
 
     if (beforeCleanup.get()
@@ -234,6 +235,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     TestLoggerFactory.clear();
     resetMocks(testResult);
     resetCache(testResult);
+    clearLogger();
 
     boolean briefParams = !detailedParams.get();
     if (testResult.isSuccess() && briefParams) {
@@ -274,6 +276,20 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
           Reset.destroy(context.cache());
         }
       }
+    }
+  }
+
+  private static void clearLogger() {
+    if (ALL_LOGGING_EVENTS == null) {
+      return;
+    }
+    try {
+      for (var logger : TestLoggerFactory.getAllTestLoggers().values()) {
+        var allLoggingEvents = (Collection<?>) ALL_LOGGING_EVENTS.get(logger);
+        allLoggingEvents.clear();
+      }
+    } catch (IllegalAccessException | SecurityException expected) {
+      /* ignored */
     }
   }
 

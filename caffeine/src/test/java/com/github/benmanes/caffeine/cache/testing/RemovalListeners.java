@@ -18,10 +18,11 @@ package com.github.benmanes.caffeine.cache.testing;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.Collection;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
 
+import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -73,11 +74,15 @@ public final class RemovalListeners {
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    @SuppressWarnings("PMD.LooseCoupling")
-    private final CopyOnWriteArrayList<RemovalNotification<K, V>> removed;
+    @SuppressWarnings("serial")
+    private final Collection<RemovalNotification<K, V>> removed;
 
     public ConsumingRemovalListener() {
-      this.removed = new CopyOnWriteArrayList<>();
+      this.removed = new MpscUnboundedArrayQueue<>(8);
+    }
+
+    public ConsumingRemovalListener(Collection<RemovalNotification<K, V>> removed) {
+      this.removed = requireNonNull(removed);
     }
 
     @Override
@@ -86,8 +91,12 @@ public final class RemovalListeners {
       removed.add(new RemovalNotification<>(key, value, cause));
     }
 
-    public List<RemovalNotification<K, V>> removed() {
+    public Collection<RemovalNotification<K, V>> removed() {
       return removed;
+    }
+
+    private Object writeReplace() {
+      return new ConsumingRemovalListener<>(new CopyOnWriteArrayList<>(removed));
     }
   }
 }

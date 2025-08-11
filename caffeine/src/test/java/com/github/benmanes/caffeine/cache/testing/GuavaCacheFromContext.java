@@ -705,7 +705,8 @@ public final class GuavaCacheFromContext {
     private static final long serialVersionUID = 1L;
 
     CacheMissException() {
-      super(null, null, /* enableSuppression= */ false, /* writableStackTrace= */ false);
+      super(/* message= */ null, /* cause= */ null,
+          /* enableSuppression= */ false, /* writableStackTrace= */ false);
     }
   }
 }

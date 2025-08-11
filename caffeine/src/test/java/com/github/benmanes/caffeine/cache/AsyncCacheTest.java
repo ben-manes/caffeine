@@ -75,6 +75,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.cache.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableSet;
@@ -301,8 +302,8 @@ public final class AsyncCacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   public void getBiFunc_throwsError(AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThrows(UnknownError.class, () ->
-        cache.get(context.absentKey(), (key, executor) -> { throw new UnknownError(); }));
+    assertThrows(ExpectedError.class, () ->
+        cache.get(context.absentKey(), (key, executor) -> { throw ExpectedError.INSTANCE; }));
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
     assertThat(cache).doesNotContainKey(context.absentKey());
   }
@@ -809,13 +810,13 @@ public final class AsyncCacheTest {
   public void getAllBifunction_absent_failure_error(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var future = cache.getAll(context.absentKeys(),
-        (keys, executor) -> CompletableFuture.failedFuture(new Error()));
+        (keys, executor) -> CompletableFuture.failedFuture(ExpectedError.INSTANCE));
     assertThat(future).failsWith(CompletionException.class)
-        .hasCauseThat().isInstanceOf(Error.class);
+        .hasCauseThat().isInstanceOf(ExpectedError.class);
     assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
     assertThat(logEvents()
         .withMessage("Exception thrown during asynchronous load")
-        .withThrowable(Error.class)
+        .withThrowable(ExpectedError.class)
         .withLevel(WARN)
         .exclusively())
         .hasSize(1);
@@ -878,8 +879,8 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_throwsError(
       AsyncCache<Int, Int> cache, CacheContext context) {
-    assertThrows(UnknownError.class, () ->
-        cache.getAll(context.absentKeys(), (keys, executor) -> { throw new UnknownError(); }));
+    assertThrows(ExpectedError.class, () ->
+        cache.getAll(context.absentKeys(), (keys, executor) -> { throw ExpectedError.INSTANCE; }));
     int misses = context.absentKeys().size();
     assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
     assertThat(cache).doesNotContainKey(context.absentKey());
@@ -1397,5 +1398,10 @@ public final class AsyncCacheTest {
 
   private static final class LoadAllException extends RuntimeException {
     private static final long serialVersionUID = 1L;
+
+    LoadAllException() {
+      super(/* message= */ null, /* cause= */ null,
+          /* enableSuppression= */ false, /* writableStackTrace= */ false);
+    }
   }
 }

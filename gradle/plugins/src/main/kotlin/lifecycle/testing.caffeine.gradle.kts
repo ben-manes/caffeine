@@ -49,6 +49,16 @@ tasks.withType<Test>().configureEach {
   jvmArgumentProviders.add { defaultJvmArguments.get() }
   jvmArgumentProviders.add { listOf("-javaagent:${javaAgent.get()}") }
   jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+EnableDynamicAgentLoading", "-Xshare:off")
+
+  // Use -Pjfr to generate a profile
+  if (rootProject.hasProperty("jfr")) {
+    val jfr = layout.buildDirectory.file("jfr/$name.jfr").get().asFile
+    jvmArgs("-XX:StartFlightRecording=filename=${jfr.absolutePath}")
+    val relativeDir = gradle.startParameter.currentDir
+    doFirst { jfr.parentFile.mkdirs() }
+    doLast { println("Java Flight Recording stored at: ${jfr.relativeTo(relativeDir)}") }
+  }
+
   reports {
     junitXml.includeSystemOutLog = isCI().map { !it }
     junitXml.includeSystemErrLog = isCI().map { !it }

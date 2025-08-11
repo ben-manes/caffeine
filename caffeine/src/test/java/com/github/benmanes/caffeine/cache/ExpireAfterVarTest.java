@@ -2617,5 +2617,10 @@ public final class ExpireAfterVarTest {
 
   static final class ExpirationException extends RuntimeException {
     private static final long serialVersionUID = 1L;
+
+    public ExpirationException() {
+      super(/* message= */ null, /* cause= */ null,
+          /* enableSuppression= */ false, /* writableStackTrace= */ false);
+    }
   }
 }

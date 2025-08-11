@@ -528,10 +528,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache).isEmpty();
   }
 
-  private static final class LoadAllException extends RuntimeException {
-    private static final long serialVersionUID = 1L;
-  }
-
   /* --------------- put --------------- */
 
   @Test(dataProvider = "caches")
@@ -778,5 +774,14 @@ public final class AsyncLoadingCacheTest {
     assertThat(loader.asyncLoadAll(Int.setOf(1, 2), Runnable::run))
         .succeedsWith(Int.mapOf(1, 1, 2, 2));
     assertThat(loader.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
+  }
+
+  private static final class LoadAllException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    LoadAllException() {
+      super(/* message= */ null, /* cause= */ null,
+          /* enableSuppression= */ false, /* writableStackTrace= */ false);
+    }
   }
 }

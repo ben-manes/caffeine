@@ -87,6 +87,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.cache.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
@@ -1047,7 +1048,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void computeIfAbsent_error(Map<Int, Int> map, CacheContext context) {
     assertThrows(ExpectedError.class, () ->
-        map.computeIfAbsent(context.absentKey(), key -> { throw new ExpectedError(); }));
+        map.computeIfAbsent(context.absentKey(), key -> { throw ExpectedError.INSTANCE; }));
     assertThat(map).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
     assertThat(map.computeIfAbsent(context.absentKey(), key -> key)).isEqualTo(context.absentKey());
@@ -1146,7 +1147,7 @@ public final class AsMapTest {
 
       @Override public Int apply(Int key, Int value) {
         if (recursed) {
-          throw new StackOverflowError();
+          throw ExpectedError.STACK_OVERFLOW;
         }
         recursed = true;
         return map.computeIfPresent(key, this);
@@ -1168,7 +1169,7 @@ public final class AsMapTest {
 
       @Override public Int apply(Int key, Int value) {
         if (++recursed == 2) {
-          throw new StackOverflowError();
+          throw ExpectedError.STACK_OVERFLOW;
         }
         return map.computeIfPresent(context.lastKey(), this);
       }
@@ -1180,8 +1181,8 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void computeIfPresent_error(Map<Int, Int> map, CacheContext context) {
-    assertThrows(ExpectedError.class, () ->
-        map.computeIfPresent(context.firstKey(), (key, value) -> { throw new ExpectedError(); }));
+    assertThrows(ExpectedError.class, () -> map.computeIfPresent(context.firstKey(),
+        (key, value) -> { throw ExpectedError.INSTANCE; }));
     assertThat(map).isEqualTo(context.original());
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
     assertThat(map.computeIfPresent(context.firstKey(), (k, v) -> k.negate()))
@@ -1526,7 +1527,7 @@ public final class AsMapTest {
 
       @Override public Int apply(Int oldValue, Int value) {
         if (++recursed == 2) {
-          throw new StackOverflowError();
+          throw ExpectedError.STACK_OVERFLOW;
         }
         return map.merge(context.lastKey(), context.original().get(context.lastKey()), this);
       }
@@ -1541,7 +1542,7 @@ public final class AsMapTest {
   public void merge_error(Map<Int, Int> map, CacheContext context) {
     assertThrows(ExpectedError.class, () ->
         map.merge(context.firstKey(), context.original().get(context.firstKey()),
-            (oldValue, value) -> { throw new ExpectedError(); }));
+            (oldValue, value) -> { throw ExpectedError.INSTANCE; }));
     assertThat(map).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
   }
@@ -3754,10 +3755,5 @@ public final class AsMapTest {
     assertThat(entry.equals(other)).isFalse();
     assertThat(entry.hashCode()).isNotEqualTo(other.hashCode());
     assertThat(entry.toString()).isNotEqualTo(other.toString());
-  }
-
-  @SuppressWarnings("PMD.DoNotExtendJavaLangError")
-  static final class ExpectedError extends Error {
-    private static final long serialVersionUID = 1L;
   }
 }

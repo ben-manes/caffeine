@@ -82,6 +82,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.cache.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
@@ -1087,7 +1088,7 @@ public final class AsyncAsMapTest {
 
       @Override public CompletableFuture<Int> apply(Int key, CompletableFuture<Int> value) {
         if (recursed) {
-          throw new StackOverflowError();
+          throw ExpectedError.STACK_OVERFLOW;
         }
         recursed = true;
         return cache.asMap().computeIfPresent(key, this);
@@ -1109,7 +1110,7 @@ public final class AsyncAsMapTest {
 
       @Override public CompletableFuture<Int> apply(Int key, CompletableFuture<Int> value) {
         if (++recursed == 2) {
-          throw new StackOverflowError();
+          throw ExpectedError.STACK_OVERFLOW;
         }
         return cache.asMap().computeIfPresent(context.lastKey(), this);
       }
@@ -1419,7 +1420,7 @@ public final class AsyncAsMapTest {
           @Override public CompletableFuture<Int> apply(
               CompletableFuture<Int> oldValue, CompletableFuture<Int> value) {
             if (++recursed == 2) {
-              throw new StackOverflowError();
+              throw ExpectedError.STACK_OVERFLOW;
             }
             var lastValue = cache.asMap().get(context.lastKey());
             return cache.asMap().merge(context.lastKey(), lastValue, this);

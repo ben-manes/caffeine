@@ -90,6 +90,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.cache.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -207,8 +208,8 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   public void get_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
-    assertThrows(UnknownError.class, () ->
-        cache.get(context.absentKey(), key -> { throw new UnknownError(); }));
+    assertThrows(ExpectedError.class, () ->
+        cache.get(context.absentKey(), key -> { throw ExpectedError.INSTANCE; }));
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
   }
 
@@ -472,8 +473,8 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   public void getAll_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
-    assertThrows(UnknownError.class, () ->
-        cache.getAll(context.absentKeys(), keys -> { throw new UnknownError(); }));
+    assertThrows(ExpectedError.class, () ->
+        cache.getAll(context.absentKeys(), keys -> { throw ExpectedError.INSTANCE; }));
     int misses = context.absentKeys().size();
     assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
   }

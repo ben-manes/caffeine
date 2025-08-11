@@ -39,6 +39,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
+import org.awaitility.core.ConditionTimeoutException;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -254,20 +255,19 @@ public final class CacheContextSubject extends Subject {
     @CanIgnoreReturnValue
     private StatsSubject awaitStatistic(String label,
         ToLongFunction<CacheStats> supplier, long expectedValue) {
-      if (isDirect) {
-        checkStatistic(label, supplier, expectedValue);
-      } else if (supplier.applyAsLong(actual.stats()) != expectedValue) {
-        await().pollInSameThread().untilAsserted(() ->
-            checkStatistic(label, supplier, expectedValue));
+      if (!actual.isRecordingStats() || (supplier.applyAsLong(actual.stats()) == expectedValue)) {
+        return this;
+      } else if (!isDirect) {
+        try {
+          await().pollInSameThread().until(() ->
+              supplier.applyAsLong(actual.stats()) == expectedValue);
+          return this;
+        } catch (ConditionTimeoutException expected) { /* ignored */ }
       }
-      return this;
-    }
-
-    private void checkStatistic(String label,
-        ToLongFunction<CacheStats> supplier, long expectedValue) {
       var stats = actual.stats();
       check(label).withMessage("%s", stats)
           .that(supplier.applyAsLong(stats)).isEqualTo(expectedValue);
+      return this;
     }
   }
 
