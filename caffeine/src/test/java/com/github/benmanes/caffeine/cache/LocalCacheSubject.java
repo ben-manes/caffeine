@@ -22,6 +22,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -43,7 +45,6 @@ import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalManu
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.cache.testing.Weighers.SkippedWeigher;
 import com.google.common.collect.ImmutableTable;
-import com.google.common.collect.Sets;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -211,7 +212,7 @@ public final class LocalCacheSubject extends Subject {
       await().pollInSameThread().until(() -> doesTimerWheelMatch(bounded));
     }
 
-    var seen = Sets.newIdentityHashSet();
+    var seen = Collections.newSetFromMap(new IdentityHashMap<>(bounded.size()));
     for (int i = 0; i < bounded.timerWheel().wheel.length; i++) {
       for (int j = 0; j < bounded.timerWheel().wheel[i].length; j++) {
         var sentinel = bounded.timerWheel().wheel[i][j];
@@ -242,7 +243,7 @@ public final class LocalCacheSubject extends Subject {
   private static boolean doesTimerWheelMatch(BoundedLocalCache<Object, Object> bounded) {
     bounded.evictionLock.lock();
     try {
-      var seen = Sets.newIdentityHashSet();
+      var seen = Collections.newSetFromMap(new IdentityHashMap<>(bounded.size()));
       for (int i = 0; i < bounded.timerWheel().wheel.length; i++) {
         for (int j = 0; j < bounded.timerWheel().wheel[i].length; j++) {
           var sentinel = bounded.timerWheel().wheel[i][j];
@@ -299,7 +300,8 @@ public final class LocalCacheSubject extends Subject {
 
     int totalSize = 0;
     long totalWeightedSize = 0;
-    Set<Node<Object, Object>> seen = Sets.newIdentityHashSet();
+    Set<Node<Object, Object>> seen = Collections.newSetFromMap(
+        new IdentityHashMap<>(bounded.size()));
     for (var cell : deques.cellSet()) {
       var deque = requireNonNull(cell.getValue());
       long weightedSize = scanLinks(bounded, deque, seen);
@@ -322,7 +324,8 @@ public final class LocalCacheSubject extends Subject {
       Collection<LinkedDeque<Node<Object, Object>>> deques) {
     bounded.evictionLock.lock();
     try {
-      Set<Node<Object, Object>> seen = Sets.newIdentityHashSet();
+      Set<Node<Object, Object>> seen = Collections.newSetFromMap(
+          new IdentityHashMap<>(bounded.size()));
       for (var deque : deques) {
         scanLinks(bounded, deque, seen);
       }
