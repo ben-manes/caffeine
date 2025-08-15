@@ -38,12 +38,44 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
-        run: snyk test --sarif-file-output=snyk.sarif --all-sub-projects -- --no-configuration-cache
+        run: snyk test --sarif-file-output=results.sarif --all-sub-projects -- --no-configuration-cache
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0
         with:
-          files: snyk.sarif
+          files: results.sarif
+      - name: Install jq
+        run: apt-get update && apt-get install -y jq
+      - name: Merge project runs
+        run: |
+          jq '
+            {
+              "$schema": ."$schema",
+              "version": .version,
+              "runs": [
+                {
+                  "tool": {
+                    "driver": {
+                      name: .runs[0].tool.driver.name,
+                      semanticVersion: .runs[0].tool.driver.semanticVersion,
+                      version: .runs[0].tool.driver.version,
+                      informationUri: .runs[0].tool.driver.informationUri,
+                      properties: .runs[0].tool.driver.properties,
+                      rules: (
+                        [ .runs[].tool.driver.rules // [] ]
+                        | add
+                        | unique_by(.id)
+                      )
+                    }
+                  },
+                  "results": (
+                    [ .runs[].results // [] ]
+                    | add
+                  )
+                }
+              ]
+            }
+          ' results.sarif > snyk.sarif
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@76621b61decf072c1cee8dd1ce2d2a82d33c17ed # v3.29.8
         if: steps.check_files.outputs.files_exists == 'true'

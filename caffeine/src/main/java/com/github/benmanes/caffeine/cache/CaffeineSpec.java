@@ -274,7 +274,12 @@ public final class CaffeineSpec {
   /** Returns a parsed int value. */
   static int parseInt(String key, @Nullable String value) {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s was omitted", key);
+    requireNonNull(value);
     try {
+      if (!value.startsWith("-_") && !value.startsWith("+_")
+          && !value.startsWith("_") && !value.endsWith("_")) {
+        return Integer.parseInt(value.replace("_", ""));
+      }
       return Integer.parseInt(value);
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException(String.format(US,
@@ -285,7 +290,12 @@ public final class CaffeineSpec {
   /** Returns a parsed long value. */
   static long parseLong(String key, @Nullable String value) {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s was omitted", key);
+    requireNonNull(value);
     try {
+      if (!value.startsWith("+_") && !value.startsWith("-_")
+          && !value.startsWith("_") && !value.endsWith("_")) {
+        return Long.parseLong(value.replace("_", ""));
+      }
       return Long.parseLong(value);
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException(String.format(US,

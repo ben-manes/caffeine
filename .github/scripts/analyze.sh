@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux
 
-./gradlew \
+./gradlew --console colored \
     forbiddenApis -PforbiddenApis \
     ecjJavaPoet ecjMain ecjCodeGen ecjJmh ecjTest ecjJcstress \
     pmdJavaPoet pmdMain pmdCodeGen pmdJmh pmdTest pmdJcstress -Ppmd \

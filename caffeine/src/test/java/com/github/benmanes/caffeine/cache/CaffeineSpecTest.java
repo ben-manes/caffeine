@@ -18,15 +18,19 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static java.math.BigInteger.ONE;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.math.BigInteger;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -61,13 +65,50 @@ public final class CaffeineSpecTest {
   static final long UNSET_LONG = UNSET_INT;
 
   @Test
-  public void parseInt_exception() {
-    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parseInt("key", "value"));
+  public void parseInt() {
+    parseNumber(CaffeineSpec::parseInt);
+
+    assertThat(CaffeineSpec.parseInt("key", Integer.toString(Integer.MAX_VALUE)))
+        .isEqualTo(Integer.MAX_VALUE);
+    assertThat(CaffeineSpec.parseInt("key", Integer.toString(Integer.MIN_VALUE)))
+        .isEqualTo(Integer.MIN_VALUE);
+    assertThrows(IllegalArgumentException.class, () ->
+        CaffeineSpec.parseInt("key", Long.toString(Integer.MAX_VALUE + 1L)));
+    assertThrows(IllegalArgumentException.class, () ->
+        CaffeineSpec.parseInt("key", Long.toString(Integer.MIN_VALUE - 1L)));
   }
 
   @Test
-  public void parseLong_exception() {
-    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parseLong("key", "value"));
+  public void parseLong() {
+    parseNumber(CaffeineSpec::parseLong);
+
+    assertThat(CaffeineSpec.parseLong("key", Long.toString(Integer.MAX_VALUE)))
+        .isEqualTo(Integer.MAX_VALUE);
+    assertThat(CaffeineSpec.parseLong("key", Long.toString(Integer.MIN_VALUE)))
+        .isEqualTo(Integer.MIN_VALUE);
+    assertThat(CaffeineSpec.parseLong("key", Long.toString(Integer.MAX_VALUE + 1L)))
+        .isEqualTo(Integer.MAX_VALUE + 1L);
+    assertThat(CaffeineSpec.parseLong("key", Long.toString(Integer.MIN_VALUE - 1L)))
+        .isEqualTo(Integer.MIN_VALUE - 1L);
+    assertThat(CaffeineSpec.parseLong("key", Long.toString(Long.MAX_VALUE)))
+        .isEqualTo(Long.MAX_VALUE);
+    assertThat(CaffeineSpec.parseLong("key", Long.toString(Long.MIN_VALUE)))
+        .isEqualTo(Long.MIN_VALUE);
+    assertThrows(IllegalArgumentException.class, () ->
+        CaffeineSpec.parseLong("key", BigInteger.valueOf(Long.MAX_VALUE).add(ONE).toString()));
+    assertThrows(IllegalArgumentException.class, () ->
+        CaffeineSpec.parseLong("key", BigInteger.valueOf(Long.MIN_VALUE).subtract(ONE).toString()));
+  }
+
+  private static void parseNumber(BiFunction<String, String, Number> parser) {
+    var invalid = List.of("_52", "52_", "-_52", "+_52", "52-", "52+", "52_-", "52_+", "value");
+    for (var value : invalid) {
+      assertThrows(IllegalArgumentException.class, () -> parser.apply("key", value));
+    }
+    var valid = List.of("5_2", "5_______2", "52", "-52", "+52", "052", "0_52");
+    for (var value : valid) {
+      assertThat(CaffeineSpec.parseInt("key", value)).isEqualTo(value.startsWith("-") ? -52 : 52);
+    }
   }
 
   @Test

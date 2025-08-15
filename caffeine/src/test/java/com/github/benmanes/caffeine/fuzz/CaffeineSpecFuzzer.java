@@ -30,8 +30,9 @@ public final class CaffeineSpecFuzzer {
   // These tests require the environment variable JAZZER_FUZZ=1 to try new input arguments
 
   @FuzzTest(maxDuration = "5m")
-  @DictionaryEntries({"expireAfterAccess", "expireAfterWrite", "initialCapacity", "maximumSize",
-      "maximumWeight", "recordStats", "refreshAfterWrite", "softValues", "weakKeys", "weakValues"})
+  @DictionaryEntries({"=", "+52", "+5_2", "+_52", ",", "-52", "-5_2", "-_52", "52_", "5_2", "_52",
+      "expireAfterAccess", "expireAfterWrite", "initialCapacity", "maximumSize", "maximumWeight",
+      "recordStats", "refreshAfterWrite", "softValues", "weakKeys", "weakValues"})
   public void parse(@NotNull String specification) {
     try {
       assertThat(CaffeineSpec.parse(specification)).isNotNull();

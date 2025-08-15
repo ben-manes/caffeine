@@ -1065,8 +1065,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         discardRefresh(keyReference);
         removed[0] = true;
         node.retire();
+        return null;
       }
-      return null;
     });
 
     // The entry is no longer eligible for eviction
@@ -2450,8 +2450,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         discardRefresh(lookupKey);
         node[0] = n;
         n.retire();
+        return null;
       }
-      return null;
     });
 
     if (cause[0] != null) {
