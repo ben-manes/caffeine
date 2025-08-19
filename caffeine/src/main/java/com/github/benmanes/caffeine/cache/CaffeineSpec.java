@@ -276,11 +276,7 @@ public final class CaffeineSpec {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s was omitted", key);
     requireNonNull(value);
     try {
-      if (!value.startsWith("-_") && !value.startsWith("+_")
-          && !value.startsWith("_") && !value.endsWith("_")) {
-        return Integer.parseInt(value.replace("_", ""));
-      }
-      return Integer.parseInt(value);
+      return Integer.parseInt(normalizeNumericLiteral(value));
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException(String.format(US,
           "key %s value was set to %s, must be an integer", key, value), e);
@@ -292,15 +288,18 @@ public final class CaffeineSpec {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s was omitted", key);
     requireNonNull(value);
     try {
-      if (!value.startsWith("+_") && !value.startsWith("-_")
-          && !value.startsWith("_") && !value.endsWith("_")) {
-        return Long.parseLong(value.replace("_", ""));
-      }
-      return Long.parseLong(value);
+      return Long.parseLong(normalizeNumericLiteral(value));
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException(String.format(US,
           "key %s value was set to %s, must be a long", key, value), e);
     }
+  }
+
+  /** Returns the value after adjusting for underscores in a numeric literal. */
+  static String normalizeNumericLiteral(String value) {
+    boolean strip = !value.startsWith("+_") && !value.startsWith("-_")
+        && !value.startsWith("_") && !value.endsWith("_");
+    return strip ? value.replace("_", "") : value;
   }
 
   /** Returns a parsed duration value. */
@@ -315,7 +314,6 @@ public final class CaffeineSpec {
     requireArgument(!duration.isNegative(),
         "key %s invalid format; was %s, but the duration cannot be negative", key, value);
     return duration;
-
   }
 
   /** Returns a parsed duration using the ISO-8601 format. */
