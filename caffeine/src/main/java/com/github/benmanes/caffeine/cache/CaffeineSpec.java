@@ -297,9 +297,9 @@ public final class CaffeineSpec {
 
   /** Returns the value after adjusting for underscores in a numeric literal. */
   static String normalizeNumericLiteral(String value) {
-    boolean strip = !value.startsWith("+_") && !value.startsWith("-_")
-        && !value.startsWith("_") && !value.endsWith("_");
-    return strip ? value.replace("_", "") : value;
+    boolean invalid = value.startsWith("+_") || value.startsWith("-_")
+        || value.startsWith("_") || value.endsWith("_");
+    return invalid ? value : value.replace("_", "");
   }
 
   /** Returns a parsed duration value. */

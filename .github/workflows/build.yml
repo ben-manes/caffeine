@@ -50,7 +50,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 25-ea ]
+        java: [ 11, 24, 26-ea ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -61,7 +61,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - name: Compile
@@ -175,7 +175,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - name: Run tests (${{ env.JAVA_VERSION }})
@@ -234,7 +234,7 @@ jobs:
             storage.googleapis.com:443
             uploader.codecov.io:443
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -280,7 +280,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
       - name: Publish to Codecov
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        uses: codecov/codecov-action@fdcc8476540edceab3de004e990f80d881c6cc00 # v5.5.0
         if: >
           (github.event_name == 'push')
           && (github.event.repository.fork == false)
@@ -402,7 +402,7 @@ jobs:
             oauth2.sigstore.dev:443
             ossrh-staging-api.central.sonatype.com:443
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - name: Publish Snapshot

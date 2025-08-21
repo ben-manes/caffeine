@@ -21,6 +21,10 @@ testing.suites {
   }
 }
 
+java.toolchain {
+  nativeImageCapable.unset()
+}
+
 graalvmNative {
   binaries {
     all {

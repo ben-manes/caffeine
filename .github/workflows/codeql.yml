@@ -49,7 +49,7 @@ jobs:
             uploads.github.com:443
             services.gradle.org:443
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - name: Setup Gradle
@@ -59,13 +59,13 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Initialize CodeQL (Actions)
-        uses: github/codeql-action/init@76621b61decf072c1cee8dd1ce2d2a82d33c17ed # v3.29.8
+        uses: github/codeql-action/init@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
         if: ${{ matrix.language == 'actions' }}
         with:
           languages: actions
           dependency-caching: true
       - name: Initialize CodeQL (Java)
-        uses: github/codeql-action/init@76621b61decf072c1cee8dd1ce2d2a82d33c17ed # v3.29.8
+        uses: github/codeql-action/init@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
         if: ${{ matrix.language == 'java' }}
         with:
           queries: >
@@ -83,6 +83,6 @@ jobs:
           config: |
             threat-models: local
       - name: Autobuild
-        uses: github/codeql-action/autobuild@76621b61decf072c1cee8dd1ce2d2a82d33c17ed # v3.29.8
+        uses: github/codeql-action/autobuild@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@76621b61decf072c1cee8dd1ce2d2a82d33c17ed # v3.29.8
+        uses: github/codeql-action/analyze@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11

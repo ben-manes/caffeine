@@ -49,7 +49,6 @@ tasks.withType<JavaCompile>().configureEach {
   inputs.files(downloadCaffeine.map { it.outputs.files })
 
   options.apply {
-    forkOptions.jvmArgs!!.addAll(DisableStrongEncapsulationJvmArgs)
     errorprone {
       isEnabled = isEarlyAccess().map { !it }
       allDisabledChecksAsWarnings = true

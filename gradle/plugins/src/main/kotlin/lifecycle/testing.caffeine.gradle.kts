@@ -73,7 +73,10 @@ tasks.withType<Test>().configureEach {
   }
   javaLauncher.set(
     javaToolchains.launcherFor {
-      languageVersion.set(javaTestVersion)
+      vendor = java.toolchain.vendor
+      languageVersion = javaTestVersion
+      implementation = java.toolchain.implementation
+      nativeImageCapable = java.toolchain.nativeImageCapable
     }
   )
 }

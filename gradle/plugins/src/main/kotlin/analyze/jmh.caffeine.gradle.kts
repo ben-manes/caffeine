@@ -90,7 +90,10 @@ tasks.withType<JmhTask>().configureEach {
 
 tasks.withType<JmhBytecodeGeneratorTask>().configureEach {
   javaLauncher = javaToolchains.launcherFor {
+    vendor = java.toolchain.vendor
+    implementation = java.toolchain.implementation
     languageVersion = java.toolchain.languageVersion
+    nativeImageCapable = java.toolchain.nativeImageCapable
   }
 }
 

@@ -30,7 +30,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 25-ea ]
+        java: [ 11, 24, 26-ea ]
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     env:
       JAVA_VERSION: ${{ matrix.java }}
@@ -42,7 +42,7 @@ jobs:
           disable-sudo-and-containers: true
           egress-policy: block
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - name: JCStress

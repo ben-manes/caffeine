@@ -15,10 +15,10 @@ plugins {
 }
 
 sourceSets {
-  create("javaPoet") {
+  register("javaPoet") {
     java.srcDir("src/javaPoet/java")
   }
-  create("codeGen") {
+  register("codeGen") {
     java.srcDir(layout.buildDirectory.dir("generated/sources/node"))
     java.srcDir(layout.buildDirectory.dir("generated/sources/local-cache"))
   }
@@ -52,9 +52,9 @@ dependencies {
   testImplementation(libs.commons.collections4) {
     artifact { classifier = "tests" }
   }
-  testImplementation(sourceSets["codeGen"].output)
   testImplementation(libs.bundles.osgi.test.compile)
   testImplementation(libs.eclipse.collections.testutils)
+  testImplementation(sourceSets.named("codeGen").map { it.output })
 
   testRuntimeOnly(libs.bundles.osgi.test.runtime)
 
@@ -94,7 +94,7 @@ configurations.all {
 }
 
 val compileCodeGenJava by tasks.existing(JavaCompile::class) {
-  classpath = sourceSets["main"].runtimeClasspath + sourceSets["main"].output
+  classpath = files(sourceSets.named("main").map { it.runtimeClasspath + it.output })
   inputs.files(compileJava.map { it.outputs.files })
 
   options.apply {
@@ -125,8 +125,8 @@ fun JavaExec.codeGenerationTask(generator: String) {
   mainClass = "com.github.benmanes.caffeine.cache.${generator}FactoryGenerator"
   val outputDir = layout.buildDirectory.dir("generated/sources/$directory")
   argumentProviders.add { listOf(outputDir.get().asFile.absolutePath) }
+  classpath(sourceSets.named("javaPoet").map { it.runtimeClasspath })
   inputs.files(compileJavaPoetJava.map { it.outputs.files })
-  classpath = sourceSets["javaPoet"].runtimeClasspath
   outputs.dir(outputDir)
   outputs.cacheIf { true }
 }
@@ -238,7 +238,8 @@ tasks.named<Test>("test").configure {
 }
 
 tasks.named<Jar>("jar").configure {
-  from(sourceSets["main"].output + sourceSets["codeGen"].output)
+  from(sourceSets.named("main").map { it.output })
+  from(sourceSets.named("codeGen").map { it.output })
   inputs.files(compileCodeGenJava.map { it.outputs.files })
   bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine",
@@ -253,7 +254,7 @@ tasks.named<Jar>("jar").configure {
 tasks.named<Jar>("sourcesJar").configure {
   inputs.files(generateLocalCaches.map { it.outputs.files })
   inputs.files(generateNodes.map { it.outputs.files })
-  from(sourceSets["codeGen"].allSource)
+  from(sourceSets.named("codeGen").map { it.allSource })
 }
 
 tasks.named<Javadoc>("javadoc").configure {
@@ -261,13 +262,14 @@ tasks.named<Javadoc>("javadoc").configure {
 }
 
 tasks.withType<Test>().configureEach {
-  testClassesDirs = files(sourceSets["test"].output.classesDirs)
-  classpath = files(sourceSets["test"].runtimeClasspath)
-    .plus(sourceSets["codeGen"].runtimeClasspath)
+  testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs })
+  classpath = files(sourceSets.named("test").map { it.runtimeClasspath },
+    sourceSets.named("codeGen").map { it.runtimeClasspath })
 }
 
 tasks.named<CheckForbiddenApis>("forbiddenApisCodeGen").configure {
-  classpath = sourceSets["main"].output + sourceSets["codeGen"].output
+  classpath = files(sourceSets.named("main").map { it.output },
+    sourceSets.named("codeGen").map { it.output })
   bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
     "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
 }
@@ -294,7 +296,8 @@ tasks.register<JavaExec>("memoryOverhead") {
   group = "Benchmarks"
   description = "Evaluates cache overhead"
   mainClass = "com.github.benmanes.caffeine.cache.MemoryBenchmark"
-  classpath(sourceSets["jmh"].runtimeClasspath + sourceSets["codeGen"].runtimeClasspath)
+  classpath(sourceSets.named("jmh").map { it.runtimeClasspath },
+    sourceSets.named("codeGen").map { it.runtimeClasspath })
   val javaAgent = jammAgent.map { it.asPath }
   jvmArgumentProviders.add {
     listOf(
@@ -314,7 +317,8 @@ tasks.register<Stress>("stress") {
   description = "Executes a stress test"
   mainClass = "com.github.benmanes.caffeine.cache.Stresser"
   inputs.files(tasks.named<JavaCompile>("compileTestJava").map { it.outputs.files })
-  classpath = sourceSets["codeGen"].runtimeClasspath + sourceSets["test"].runtimeClasspath
+  classpath(sourceSets.named("codeGen").map { it.runtimeClasspath },
+    sourceSets.named("test").map { it.runtimeClasspath })
   outputs.upToDateWhen { false }
 }
 

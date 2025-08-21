@@ -33,7 +33,7 @@ tasks.withType<SpotBugsTask>().configureEach {
   onlyIf { isEnabled.isPresent }
   group = "SpotBugs"
   reports {
-    create("html") {
+    register("html") {
       required = true
     }
   }

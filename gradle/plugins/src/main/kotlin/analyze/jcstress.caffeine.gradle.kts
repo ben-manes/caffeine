@@ -45,7 +45,12 @@ tasks.register<JCStress>("jcstress") {
   classpath(jcstressRuntimeClasspath, jcstressJar.map { it.archiveFile })
   inputs.files(compileJcstressJava.map { it.outputs.files },
     jcstressJar.map { it.archiveFile }, tasks.jar.map { it.archiveFile })
-  javaLauncher = javaToolchains.launcherFor { languageVersion = java.toolchain.languageVersion }
+  javaLauncher = javaToolchains.launcherFor {
+    vendor = java.toolchain.vendor
+    implementation = java.toolchain.implementation
+    languageVersion = java.toolchain.languageVersion
+    nativeImageCapable = java.toolchain.nativeImageCapable
+  }
 }
 
 eclipse.classpath {

@@ -97,7 +97,7 @@ runTasks.forEach { task ->
   task.configure {
     inputs.files(tasks.named<ProcessResources>("processResources").map { it.outputs.files })
     inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
-    classpath(sourceSets["main"].runtimeClasspath)
+    classpath(sourceSets.named("main").map { it.runtimeClasspath })
     outputs.upToDateWhen { false }
     outputs.cacheIf { false }
 

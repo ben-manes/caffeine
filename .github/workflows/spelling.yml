@@ -18,7 +18,7 @@ jobs:
             api.github.com:443
             github.com:443
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - name: Misspell
@@ -45,7 +45,7 @@ jobs:
             github.com:443
             raw.githubusercontent.com:443
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - name: check-spelling
@@ -103,8 +103,8 @@ jobs:
             objects.githubusercontent.com:443
             release-assets.githubusercontent.com:443
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - name: Typos
-        uses: crate-ci/typos@52bd719c2c91f9d676e2aa359fc8e0db8925e6d8 # v1.35.3
+        uses: crate-ci/typos@a4c3e43aea0a9e9b9e6578d2731ebd9a27e8f6cd # v1.35.5

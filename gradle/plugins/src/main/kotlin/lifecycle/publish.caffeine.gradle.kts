@@ -22,7 +22,7 @@ artifacts.add(testArtifacts.name, testJar)
 
 publishing {
   publications {
-    create<MavenPublication>("mavenJava") {
+    register<MavenPublication>("mavenJava") {
       from(components["java"])
       artifact(testJar)
 

@@ -9,7 +9,7 @@ plugins {
 }
 
 sourceSets {
-  create("testResources") {
+  register("testResources") {
     resources.srcDir("src/test/resources-extra")
   }
 }
@@ -19,7 +19,7 @@ val jcacheTckTests by configurations.registering
 val jcacheTckSources: Configuration by configurations.creating
 
 val testResourcesJar by tasks.registering(Jar::class) {
-  from(sourceSets["testResources"].output)
+  from(sourceSets.named("testResources").map { it.output })
   archiveClassifier = "test-resources"
   outputs.cacheIf { true }
 }
@@ -124,8 +124,9 @@ tasks.named<Test>("test").configure {
 tasks.withType<Test>().configureEach {
   useJUnitPlatform()
   inputs.files(unzipTestKit.map { it.outputs.files })
-  testClassesDirs = files(sourceSets["test"].output.classesDirs, layout.buildDirectory.files("tck"))
-  classpath = sourceSets["test"].runtimeClasspath
+  testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs },
+    layout.buildDirectory.files("tck"))
+  classpath = files(sourceSets.named("test").map { it.runtimeClasspath })
 
   project(":caffeine").plugins.withId("java-library") {
     val caffeineJar = project(":caffeine").tasks.named<Jar>("jar")

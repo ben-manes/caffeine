@@ -1,6 +1,6 @@
 version: "1.0"
 projectJDK: "21"
-linter: jetbrains/qodana-jvm-community:2025.1
+linter: jetbrains/qodana-jvm-community:2025.2
 profile:
   name: qodana.recommended
 licenseRules:

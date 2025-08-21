@@ -59,7 +59,8 @@ subprojects {
 listOf(project(":caffeine"), project(":guava"), project(":jcache")).forEach { coveredProject ->
   coveredProject.plugins.withId("java-library") {
     val extension = coveredProject.the<JavaPluginExtension>()
-    coverallsJacoco.reportSourceSets += extension.sourceSets["main"].allSource.srcDirs
+    coverallsJacoco.reportSourceSets += files(
+      extension.sourceSets.named("main").map { it.allSource.srcDirs })
     jacocoFullReport.configure {
       sourceSets(extension.sourceSets["main"])
       mustRunAfter(coveredProject.tasks.withType<Test>())
