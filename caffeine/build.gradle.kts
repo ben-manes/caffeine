@@ -28,7 +28,7 @@ val compileJava by tasks.existing
 val jar by tasks.existing(Jar::class)
 val compileJavaPoetJava by tasks.existing
 val jammAgent by configurations.registering
-val collections4Sources: Configuration by configurations.creating
+val collections4Sources by configurations.registering
 val javaPoetImplementation by configurations.existing
 val javaPoetRuntimeOnly by configurations.existing
 
@@ -223,8 +223,11 @@ val junitTest = tasks.register<Test>("junitTest") {
   description = "JUnit classic tests"
   inputs.files(jar.map { it.outputs.files })
   maxParallelForks = Runtime.getRuntime().availableProcessors()
-  systemProperty("caffeine.osgi.jar", relativePath(jar.get().archiveFile.get().asFile.path))
+
   useJUnit()
+  val relativeDir = projectDir
+  var jarFile = jar.flatMap { it.archiveFile }.map { it.asFile }
+  doFirst { systemProperty("caffeine.osgi.jar", jarFile.get().relativeTo(relativeDir).path) }
 }
 
 tasks.named<Test>("test").configure {
@@ -372,7 +375,8 @@ eclipse {
         val regex = ".*collections4.*-tests.jar".toRegex()
         entries.filterIsInstance<Library>()
           .filter { regex.matches(it.path) }
-          .forEach { it.sourcePath = fileReference(collections4Sources.singleFile) }
+          .forEach { it.sourcePath = fileReference(
+            file(collections4Sources.map { sources -> sources.singleFile })) }
       }
     }
   }

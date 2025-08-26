@@ -16,7 +16,7 @@ sourceSets {
 
 val jcacheJavadoc by configurations.registering
 val jcacheTckTests by configurations.registering
-val jcacheTckSources: Configuration by configurations.creating
+val jcacheTckSources by configurations.registering
 
 val testResourcesJar by tasks.registering(Jar::class) {
   from(sourceSets.named("testResources").map { it.output })
@@ -134,25 +134,31 @@ tasks.withType<Test>().configureEach {
     inputs.files(caffeineJar.map { it.outputs.files })
     inputs.files(jcacheJar.map { it.outputs.files })
 
-    systemProperties(mapOf(
-      // Test Compatibility Kit
-      "java.net.preferIPv4Stack" to "true",
-      "org.jsr107.tck.management.agentId" to "CaffeineMBeanServer",
-      "javax.cache.Cache" to "com.github.benmanes.caffeine.jcache.CacheProxy",
-      "javax.cache.Cache.Entry" to "com.github.benmanes.caffeine.jcache.EntryProxy",
-      "javax.cache.CacheManager" to "com.github.benmanes.caffeine.jcache.CacheManagerImpl",
-      "javax.management.builder.initial" to
-        "com.github.benmanes.caffeine.jcache.management.JCacheMBeanServerBuilder",
+    val caffeineJarFile = caffeineJar.flatMap { it.archiveFile }.map { it.asFile }
+    val jcacheJarFile = jcacheJar.flatMap { it.archiveFile }.map { it.asFile }
+    val relativeDir = projectDir
+    val versions = libs.versions
+    doFirst {
+      systemProperties(mapOf(
+        // Test Compatibility Kit
+        "java.net.preferIPv4Stack" to "true",
+        "org.jsr107.tck.management.agentId" to "CaffeineMBeanServer",
+        "javax.cache.Cache" to "com.github.benmanes.caffeine.jcache.CacheProxy",
+        "javax.cache.Cache.Entry" to "com.github.benmanes.caffeine.jcache.EntryProxy",
+        "javax.cache.CacheManager" to "com.github.benmanes.caffeine.jcache.CacheManagerImpl",
+        "javax.management.builder.initial" to
+          "com.github.benmanes.caffeine.jcache.management.JCacheMBeanServerBuilder",
 
-      // OSGi tests
-      "config.osgi.version" to libs.versions.config.get(),
-      "jcache.osgi.version" to libs.versions.jcache.get(),
-      "felixScr.version" to libs.versions.felix.scr.get(),
-      "osgiUtil.promise" to libs.versions.osgi.promise.get(),
-      "osgiUtil.function" to libs.versions.osgi.function.get(),
-      "osgiService.component" to libs.versions.osgi.annotations.get(),
-      "caffeine.osgi.jar" to relativePath(caffeineJar.get().archiveFile.get().asFile.path),
-      "caffeine-jcache.osgi.jar" to relativePath(jcacheJar.get().archiveFile.get().asFile.path)))
+        // OSGi tests
+        "config.osgi.version" to versions.config.get(),
+        "jcache.osgi.version" to versions.jcache.get(),
+        "felixScr.version" to versions.felix.scr.get(),
+        "osgiUtil.promise" to versions.osgi.promise.get(),
+        "osgiUtil.function" to versions.osgi.function.get(),
+        "osgiService.component" to versions.osgi.annotations.get(),
+        "caffeine.osgi.jar" to caffeineJarFile.get().relativeTo(relativeDir).path,
+        "caffeine-jcache.osgi.jar" to jcacheJarFile.get().relativeTo(relativeDir).path))
+    }
   }
 }
 
@@ -172,7 +178,8 @@ eclipse {
       val regex = ".*cache-tests.*-tests.jar".toRegex()
       entries.filterIsInstance<Library>()
         .filter { regex.matches(it.path) }
-        .forEach { it.sourcePath = fileReference(jcacheTckSources.singleFile) }
+        .forEach { it.sourcePath = fileReference(
+          file(jcacheTckSources.map { sources -> sources.singleFile })) }
     }
   }
   synchronizationTasks(testResourcesJar)

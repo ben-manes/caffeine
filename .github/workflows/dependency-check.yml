@@ -33,6 +33,8 @@ jobs:
             api.foojay.io:443
             api.github.com:443
             caffeine.gradle-enterprise.cloud:443
+            central.sonatype.org:443
+            dependency-check.github.io:443
             downloads.gradle.org:443
             downloads.gradle-dn.com:443
             github.com:443
@@ -45,9 +47,11 @@ jobs:
             plugins-artifacts.gradle.org:443
             repo.maven.apache.org:443
             repo1.maven.org:443
+            repository.sonatype.org:443
             raw.githubusercontent.com:443
             search.maven.org:443
             services.gradle.org:443
+            static.nvd.nist.gov:443
             www.cisa.gov:443
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -56,6 +60,7 @@ jobs:
       - name: Run dependency-check
         uses: ./.github/actions/run-gradle
         continue-on-error: true
+        timeout-minutes: 30
         env:
           ORG_GRADLE_PROJECT_nvdApiKey: ${{ secrets.NVD_API_KEY }}
         with:

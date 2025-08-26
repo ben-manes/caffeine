@@ -39,11 +39,16 @@ tasks.withType<Test>().configureEach {
     inputs.files(caffeineJar.map { it.outputs.files })
     inputs.files(guavaJar.map { it.outputs.files })
 
-    systemProperties(mapOf(
-      "guava.osgi.version" to libs.versions.guava.get(),
-      "caffeine.osgi.jar" to relativePath(caffeineJar.get().archiveFile.get().asFile.path),
-      "caffeine-guava.osgi.jar" to relativePath(guavaJar.get().archiveFile.get().asFile.path),
-    ))
+    val caffeineJarFile = caffeineJar.flatMap { it.archiveFile }.map { it.asFile }
+    val guavaJarFile = guavaJar.flatMap { it.archiveFile }.map { it.asFile }
+    val relativeDir = projectDir
+    val versions = libs.versions
+    doFirst {
+      systemProperties(mapOf(
+        "caffeine-guava.osgi.jar" to guavaJarFile.get().relativeTo(relativeDir).path,
+        "caffeine.osgi.jar" to caffeineJarFile.get().relativeTo(relativeDir).path,
+        "guava.osgi.version" to versions.guava.get()))
+    }
   }
 }
 
