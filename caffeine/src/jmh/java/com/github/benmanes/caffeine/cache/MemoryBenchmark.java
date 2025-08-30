@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.stream.IntStream;
 
 import org.github.jamm.MemoryMeter;
+import org.openjdk.jol.info.GraphLayout;
 
 import com.google.common.base.Functions;
 import com.google.common.cache.CacheBuilder;
@@ -39,8 +40,10 @@ import com.jakewharton.fliptables.FlipTable;
  * references if the benchmark is executed with a heap under 32GB. This can mean that object
  * padding may or may not have a visible effect.
  * <p>
- * This benchmark requires a JavaAgent to evaluate the object sizes and can be executed using
- * <code>gradle -q memoryOverhead</code>.
+ * This benchmark requires a JavaAgent to evaluate the object sizes and can be executed using:
+ * {@snippet lang="shell" :
+ * ./gradlew memoryOverhead -q --rerun
+ * }
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -208,29 +211,52 @@ public final class MemoryBenchmark {
     caffeine.cleanUp();
     guava.cleanUp();
 
-    int leftPadded = Math.max((36 - label.length()) / 2 - 1, 1);
+    var header = new String[] {
+        "Cache",
+        "Baseline (MemoryMeter)", "Per Entry (MemoryMeter)",
+        "Baseline (ObjectLayout)", "Per Entry (ObjectLayout)"
+    };
+    var data = new String[][]
+        {evaluate("Caffeine", caffeine.asMap()), evaluate("Guava", guava.asMap())};
+    String result = FlipTable.of(header, data);
+
+    int leftPadded = Math.max((116 - label.length()) / 2 - 1, 1);
     System.out.printf(US, " %2$-" + leftPadded + "s %s%n", label, " ");
-    String result = FlipTable.of(new String[] { "Cache", "Baseline", "Per Entry" }, new String[][] {
-        evaluate("Caffeine", caffeine.asMap()),
-        evaluate("Guava", guava.asMap())
-    });
     System.out.println(result);
   }
 
   private String[] evaluate(String label, Map<Integer, Integer> map) {
-    long base = meter.measureDeep(map);
-    map.putAll(workingSet);
+    long baseMeter = meter.measureDeep(map);
+    long baseFootprint = GraphLayout.parseInstance(map).totalSize();
 
-    long populated = meter.measureDeep(map);
-    long entryOverhead = 2 * FUZZY_SIZE * meter.measureDeep(workingSet.keySet().iterator().next());
-    long perEntry = LongMath.divide(populated - entryOverhead - base,
+    map.putAll(workingSet);
+    long populatedMeter = meter.measureDeep(map);
+    long populatedFootprint = GraphLayout.parseInstance(map).totalSize();
+
+    long entryOverheadMeter = 2 * FUZZY_SIZE
+        * meter.measureDeep(workingSet.keySet().iterator().next());
+    long entryOverheadFootprint = 2 * FUZZY_SIZE
+        * GraphLayout.parseInstance(workingSet.keySet().iterator().next()).totalSize();
+
+    long perEntryMeter = LongMath.divide(
+        populatedMeter - entryOverheadMeter - baseMeter,
         FUZZY_SIZE, RoundingMode.HALF_EVEN);
-    perEntry += ((perEntry & 1) == 0) ? 0 : 1;
-    long aligned = ((perEntry % 8) == 0) ? perEntry : ((1 + perEntry / 8) * 8);
+    long perEntryFootprint = LongMath.divide(
+        populatedFootprint - entryOverheadFootprint - baseFootprint,
+        FUZZY_SIZE, RoundingMode.HALF_EVEN);
+    perEntryMeter += ((perEntryMeter & 1) == 0) ? 0 : 1;
+    perEntryFootprint += ((perEntryFootprint & 1) == 0) ? 0 : 1;
+    long alignedMeter = ((perEntryMeter % 8) == 0) ? perEntryMeter : ((1 + perEntryMeter / 8) * 8);
+    long alignedFootprint = ((perEntryFootprint % 8) == 0)
+        ? perEntryFootprint
+        : ((1 + perEntryFootprint / 8) * 8);
+
     return new String[] {
         label,
-        String.format(US, "%,d bytes", base),
-        String.format(US, "%,d bytes (%,d aligned)", perEntry, aligned)
+        String.format(US, "%,d bytes", baseMeter),
+        String.format(US, "%,d bytes (%,d aligned)", perEntryMeter, alignedMeter),
+        String.format(US, "%,d bytes", baseFootprint),
+        String.format(US, "%,d bytes (%,d aligned)", perEntryFootprint, alignedFootprint)
     };
   }
 

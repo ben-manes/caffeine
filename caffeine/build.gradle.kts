@@ -75,6 +75,7 @@ dependencies {
   jmh(libs.flip.tables)
   jmh(libs.expiring.map)
   jmh(libs.bundles.coherence)
+  jmh(libs.java.`object`.layout)
   jmh(libs.concurrentlinkedhashmap)
 
   javaPoetImplementation(libs.guava)
@@ -310,7 +311,10 @@ tasks.register<JavaExec>("memoryOverhead") {
       "--add-opens", "java.base/java.lang.ref=ALL-UNNAMED",
       "--add-opens", "java.base/java.lang=ALL-UNNAMED",
       "--add-opens", "java.base/java.util=ALL-UNNAMED",
-      "-javaagent:${javaAgent.get()}"
+      "-Djdk.attach.allowAttachSelf=true",
+      "-XX:+EnableDynamicAgentLoading",
+      "-javaagent:${javaAgent.get()}",
+      "-Djol.magicFieldOffset=true",
     )
   }
 }
