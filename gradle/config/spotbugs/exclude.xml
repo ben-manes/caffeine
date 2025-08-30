@@ -331,19 +331,6 @@
       FORMAT_STRING_MANIPULATION,
       UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.BLCHeader$DrainStatusRef"/>
-    <Field name="drainStatus"/>
-    <Bug pattern="SPP_FIELD_COULD_BE_STATIC"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.SerializationProxy"/>
-    <OR>
-      <Field name="maximumSize"/>
-      <Field name="maximumWeight"/>
-    </OR>
-    <Bug pattern="SPP_FIELD_COULD_BE_STATIC"/>
-  </Match>
 
   <!-- Guava -->
   <Match>
@@ -517,13 +504,7 @@
     <Bug pattern="FE_FLOATING_POINT_EQUALITY"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.greedy_dual.GdsfPolicy$Node"/>
-    <Field name="frequency"/>
-    <Bug pattern="SPP_FIELD_COULD_BE_STATIC"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.admission.countmin4.CountMin4"/>
-    <Field name="step"/>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.Simulate"/>
     <Bug pattern="SPP_FIELD_COULD_BE_STATIC"/>
   </Match>
 
@@ -778,10 +759,5 @@
       DLS_DEAD_LOCAL_STORE,
       DCN_NULLPOINTER_EXCEPTION,
       THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.StripedBufferTest$FakeBuffer"/>
-    <Field name="writes"/>
-    <Bug pattern="SPP_FIELD_COULD_BE_STATIC"/>
   </Match>
 </FindBugsFilter>

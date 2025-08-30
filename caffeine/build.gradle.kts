@@ -75,6 +75,7 @@ dependencies {
   jmh(libs.flip.tables)
   jmh(libs.expiring.map)
   jmh(libs.bundles.coherence)
+  jmh(libs.java.`object`.layout)
   jmh(libs.concurrentlinkedhashmap)
 
   javaPoetImplementation(libs.guava)
@@ -299,9 +300,8 @@ tasks.register<JavaExec>("memoryOverhead") {
   group = "Benchmarks"
   description = "Evaluates cache overhead"
   mainClass = "com.github.benmanes.caffeine.cache.MemoryBenchmark"
-  classpath(sourceSets.named("jmh").map { it.runtimeClasspath },
-    sourceSets.named("codeGen").map { it.runtimeClasspath })
   val javaAgent = jammAgent.map { it.asPath }
+  classpath(tasks.named("jmhJar"))
   jvmArgumentProviders.add {
     listOf(
       "--add-opens", "java.base/java.util.concurrent.atomic=ALL-UNNAMED",
@@ -310,7 +310,10 @@ tasks.register<JavaExec>("memoryOverhead") {
       "--add-opens", "java.base/java.lang.ref=ALL-UNNAMED",
       "--add-opens", "java.base/java.lang=ALL-UNNAMED",
       "--add-opens", "java.base/java.util=ALL-UNNAMED",
-      "-javaagent:${javaAgent.get()}"
+      "-Djdk.attach.allowAttachSelf=true",
+      "-XX:+EnableDynamicAgentLoading",
+      "-javaagent:${javaAgent.get()}",
+      "-Djol.magicFieldOffset=true",
     )
   }
 }

@@ -77,7 +77,6 @@ jobs:
           dependency-caching: true
           packs: >
             +githubsecuritylab/codeql-java-queries,
-            githubsecuritylab/codeql-java-extensions,
             githubsecuritylab/codeql-java-library-sources,
             githubsecuritylab/codeql-java-queries:suites/java-local.qls
           config: |
