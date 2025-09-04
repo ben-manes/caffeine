@@ -6,7 +6,6 @@ bnd = "7.1.0"
 bouncycastle-jdk18on = "1.81"
 cache2k = "2.6.1.Final"
 caffeine = "3.2.2"
-checkstyle = "11.0.0"
 coherence = "25.03.2"
 commons-collections4 = "4.5.0"
 commons-compress = "1.28.0"
@@ -89,7 +88,7 @@ sigstore = "1.3.0"
 sonarqube = "6.3.1.5724"
 spotbugs = "4.9.4"
 spotbugs-contrib = "7.6.14"
-spotbugs-plugin = "6.2.6"
+spotbugs-plugin = "6.2.7"
 stream = "2.9.8"
 tcache = "2.0.1"
 testng = "7.11.0"
@@ -107,7 +106,6 @@ bcel = { module = "org.apache.bcel:bcel", version.ref = "bcel" }
 bouncycastle-jdk18on = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle-jdk18on" }
 cache2k = { module = "org.cache2k:cache2k-core", version.ref = "cache2k" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
-checkstyle = { module = "com.puppycrawl.tools:checkstyle", version.ref = "checkstyle" }
 coherence = { module = "com.oracle.coherence.ce:coherence", version.ref = "coherence" }
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commons-collections4" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
