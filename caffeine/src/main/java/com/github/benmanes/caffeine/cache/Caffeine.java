@@ -500,6 +500,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a weigher was already set
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> weigher(
       Weigher<? super K1, ? super V1> weigher) {
     requireNonNull(weigher);
@@ -525,7 +526,7 @@ public final class Caffeine<K, V> {
     return isWeighted() ? maximumWeight : maximumSize;
   }
 
-  @SuppressWarnings({"JavaAnnotator", "unchecked"})
+  @SuppressWarnings({"JavaAnnotator", "PMD.TypeParameterNamingConventions", "unchecked"})
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
     Weigher<K1, V1> delegate = (weigher == null) || (weigher == Weigher.singletonWeigher())
         ? Weigher.singletonWeigher()
@@ -776,6 +777,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if expiration was already set
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> expireAfter(
       Expiry<? super K1, ? super V1> expiry) {
     requireNonNull(expiry);
@@ -931,6 +933,7 @@ public final class Caffeine<K, V> {
    * @throws NullPointerException if the specified removal listener is null
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> evictionListener(
       RemovalListener<? super K1, ? super V1> evictionListener) {
     requireState(this.evictionListener == null,
@@ -942,7 +945,7 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings({"JavaAnnotator", "unchecked"})
+  @SuppressWarnings({"JavaAnnotator", "PMD.TypeParameterNamingConventions", "unchecked"})
   <K1 extends K, V1 extends V> @Nullable RemovalListener<K1, V1> getEvictionListener(
       boolean async) {
     var castedListener = (RemovalListener<K1, V1>) evictionListener;
@@ -983,6 +986,7 @@ public final class Caffeine<K, V> {
    * @throws NullPointerException if the specified removal listener is null
    */
   @CanIgnoreReturnValue
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> removalListener(
       RemovalListener<? super K1, ? super V1> removalListener) {
     requireState(this.removalListener == null,
@@ -994,7 +998,7 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings({"JavaAnnotator", "unchecked"})
+  @SuppressWarnings({"JavaAnnotator", "PMD.TypeParameterNamingConventions", "unchecked"})
   <K1 extends K, V1 extends V> @Nullable RemovalListener<K1, V1> getRemovalListener(boolean async) {
     var castedListener = (RemovalListener<K1, V1>) removalListener;
     return async && (castedListener != null)
@@ -1070,6 +1074,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends @Nullable V> Cache<K1, V1> build() {
     requireWeightWithWeigher();
     requireNonLoadingCache();
@@ -1095,6 +1100,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends @Nullable V> LoadingCache<K1, V1> build(
       CacheLoader<? super K1, V1> loader) {
     requireWeightWithWeigher();
@@ -1126,6 +1132,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends @Nullable V> AsyncCache<K1, V1> buildAsync() {
     requireState(valueStrength == null, "Weak or soft values cannot be combined with AsyncCache");
     requireState(isStrongKeys() || (evictionListener == null),
@@ -1158,6 +1165,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends @Nullable V> AsyncLoadingCache<K1, V1> buildAsync(
       CacheLoader<? super K1, V1> loader) {
     return buildAsync((AsyncCacheLoader<? super K1, V1>) loader);
@@ -1181,6 +1189,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public <K1 extends K, V1 extends @Nullable V> AsyncLoadingCache<K1, V1> buildAsync(
       AsyncCacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null,

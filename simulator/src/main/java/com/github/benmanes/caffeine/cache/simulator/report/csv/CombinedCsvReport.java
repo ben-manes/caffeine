@@ -105,6 +105,7 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
     }
   }
 
+  @SuppressWarnings("PMD.OverrideBothEqualsAndHashCodeOnComparable")
   private record Label(String policy, long size) implements Comparable<Label> {
     Label {
       requireNonNull(policy);

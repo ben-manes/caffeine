@@ -18,17 +18,17 @@ jobs:
     name: Analyze
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
-      pull-requests: read
-      security-events: write
+      actions: read # Needed for uploading security scan results
+      pull-requests: read # Needed to associate with the pull request
+      security-events: write # Needed for uploading security scan results
     strategy:
       fail-fast: false
       matrix:
         language: [ actions, java ]
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -59,13 +59,13 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Initialize CodeQL (Actions)
-        uses: github/codeql-action/init@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
+        uses: github/codeql-action/init@192325c86100d080feab897ff886c34abd4c83a3 # v3.30.3
         if: ${{ matrix.language == 'actions' }}
         with:
           languages: actions
           dependency-caching: true
       - name: Initialize CodeQL (Java)
-        uses: github/codeql-action/init@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
+        uses: github/codeql-action/init@192325c86100d080feab897ff886c34abd4c83a3 # v3.30.3
         if: ${{ matrix.language == 'java' }}
         with:
           queries: >
@@ -82,6 +82,6 @@ jobs:
           config: |
             threat-models: local
       - name: Autobuild
-        uses: github/codeql-action/autobuild@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
+        uses: github/codeql-action/autobuild@192325c86100d080feab897ff886c34abd4c83a3 # v3.30.3
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
+        uses: github/codeql-action/analyze@192325c86100d080feab897ff886c34abd4c83a3 # v3.30.3

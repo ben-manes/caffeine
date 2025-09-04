@@ -48,6 +48,7 @@ public final class CaffeinatedGuava {
    * @param <V1> the value type of the cache
    * @return a cache exposed under the Guava APIs
    */
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public static <K, V, K1 extends K, V1 extends V> Cache<K1, V1> build(Caffeine<K, V> builder) {
     return new CaffeinatedGuavaCache<>(builder.build());
   }
@@ -63,6 +64,7 @@ public final class CaffeinatedGuava {
    * @param <V1> the value type of the cache
    * @return a cache exposed under the Guava APIs
    */
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       Caffeine<K, V> builder, CacheLoader<? super K1, V1> loader) {
     return build(builder, hasLoadAll(loader)
@@ -81,6 +83,7 @@ public final class CaffeinatedGuava {
    * @param <V1> the value type of the cache
    * @return a cache exposed under the Guava APIs
    */
+  @SuppressWarnings("PMD.TypeParameterNamingConventions")
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       Caffeine<K, V> builder,
       com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> loader) {

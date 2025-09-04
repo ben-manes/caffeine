@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
-import static org.slf4j.event.Level.WARN;
+import static org.slf4j.event.Level.DEBUG;
 
 import java.time.Duration;
 import java.util.List;
@@ -53,7 +53,7 @@ import com.google.common.testing.SerializableTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(DEBUG)
 @Listeners(CacheValidationListener.class)
 @Test(groups = "isolated", dataProviderClass = CacheProvider.class)
 public final class MultiThreadedTest {
@@ -163,7 +163,7 @@ public final class MultiThreadedTest {
           key -> { asyncCache.asMap().putAll(Map.of(key, completedFuture(null))); },
           key -> { asyncCache.asMap().putIfAbsent(key, completedFuture(null)); },
           key -> { asyncCache.asMap().remove(key); },
-          key -> { asyncCache.asMap().remove(key, key); },
+          key -> { asyncCache.asMap().remove(key, completedFuture(null)); },
           key -> { asyncCache.asMap().replace(key, completedFuture(null)); },
           key -> { asyncCache.asMap().computeIfAbsent(key, k -> completedFuture(null)); },
           key -> { asyncCache.asMap().computeIfPresent(key, (k, v) -> v); },

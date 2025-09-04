@@ -35,6 +35,7 @@ import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
@@ -79,13 +80,14 @@ import com.google.common.collect.Range;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class EvictionTest {
 
   /* --------------- RemovalListener --------------- */
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
       weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN}, removalListener = Listener.REJECTING)
@@ -271,6 +273,7 @@ public final class EvictionTest {
   }
 
   @CheckNoStats
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
       weigher = CacheWeigher.DISABLED, evictionListener = Listener.REJECTING)
@@ -287,6 +290,7 @@ public final class EvictionTest {
 
   /* --------------- Weighted --------------- */
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -305,6 +309,7 @@ public final class EvictionTest {
     }
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -326,6 +331,7 @@ public final class EvictionTest {
         .hasSize(context.absentKeys().size());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -344,6 +350,7 @@ public final class EvictionTest {
     }
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -385,6 +392,7 @@ public final class EvictionTest {
     assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -415,6 +423,7 @@ public final class EvictionTest {
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -518,6 +527,7 @@ public final class EvictionTest {
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -611,6 +621,7 @@ public final class EvictionTest {
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -692,6 +703,7 @@ public final class EvictionTest {
     assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -732,6 +744,7 @@ public final class EvictionTest {
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -774,6 +787,7 @@ public final class EvictionTest {
     assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -804,6 +818,7 @@ public final class EvictionTest {
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -861,6 +876,7 @@ public final class EvictionTest {
     assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -895,6 +911,7 @@ public final class EvictionTest {
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -941,6 +958,7 @@ public final class EvictionTest {
     assertThat(context).hasWeightedSize(weightedSize);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -956,6 +974,7 @@ public final class EvictionTest {
     assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
       loader = Loader.ASYNC_INCOMPLETE, maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -973,6 +992,7 @@ public final class EvictionTest {
         .hasSize(context.isAsync() ? 1 : 0);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
@@ -988,6 +1008,7 @@ public final class EvictionTest {
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine,
       loader = Loader.ASYNC_INCOMPLETE, maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)

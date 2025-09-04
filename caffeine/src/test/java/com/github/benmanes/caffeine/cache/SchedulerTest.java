@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.util.Iterator;
@@ -48,8 +49,11 @@ import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.Futures;
@@ -57,6 +61,8 @@ import com.google.common.util.concurrent.Futures;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckMaxLogLevel(TRACE)
+@Listeners(CacheValidationListener.class)
 public final class SchedulerTest {
   private final NullPointerTester npeTester = new NullPointerTester();
 
@@ -70,6 +76,7 @@ public final class SchedulerTest {
     npeTester.testAllPublicInstanceMethods(scheduler);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "runnableSchedulers")
   public void scheduler_exception(Scheduler scheduler) {
     var thread = new AtomicReference<Thread>();
@@ -160,6 +167,7 @@ public final class SchedulerTest {
   }
 
   @Test
+  @CheckMaxLogLevel(WARN)
   public void guardedScheduler_exception() {
     var future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new IllegalStateException(); })
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);

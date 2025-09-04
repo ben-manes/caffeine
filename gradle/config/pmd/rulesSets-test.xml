@@ -118,6 +118,7 @@
     <exclude name="NullAssignment"/>
     <exclude name="AssignmentInOperand"/>
     <exclude name="UseProperClassLoader"/>
+    <exclude name="UselessPureMethodCall"/>
     <exclude name="AvoidCatchingThrowable"/>
     <exclude name="AvoidDuplicateLiterals"/>
     <exclude name="CompareObjectsWithEquals"/>

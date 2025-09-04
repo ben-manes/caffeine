@@ -14,7 +14,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -42,7 +42,7 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
       - name: Submit Dependency Graph
-        uses: gradle/actions/dependency-submission@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4.4.2
+        uses: gradle/actions/dependency-submission@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           dependency-graph: generate-and-upload

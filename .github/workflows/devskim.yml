@@ -14,12 +14,12 @@ jobs:
     name: DevSkim
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
-      security-events: write
+      actions: read # Needed for uploading security scan results
+      security-events: write # Needed for uploading security scan results
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -33,6 +33,6 @@ jobs:
       - name: Run DevSkim scanner
         uses: microsoft/DevSkim-Action@4b5047945a44163b94642a1cecc0d93a3f428cc6 # v1.0.16
       - name: Upload DevSkim scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
+        uses: github/codeql-action/upload-sarif@192325c86100d080feab897ff886c34abd4c83a3 # v3.30.3
         with:
           sarif_file: devskim-results.sarif

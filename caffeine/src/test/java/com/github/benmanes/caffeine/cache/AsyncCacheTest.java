@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.io.IOException;
@@ -88,7 +89,7 @@ import com.google.common.primitives.Ints;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckNoEvictions @CheckMaxLogLevel(WARN)
+@CheckNoEvictions @CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsyncCacheTest {
@@ -179,6 +180,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getFunc_absent_failure(AsyncCache<Int, Int> cache, CacheContext context) {
     var valueFuture = cache.get(context.absentKey(), k -> { throw new IllegalStateException(); });
@@ -194,6 +196,7 @@ public final class AsyncCacheTest {
         .hasSize(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.THREADED, executorFailure = ExecutorFailure.IGNORED)
   public void getFunc_absent_failure_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -316,6 +319,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getBiFunc_absent_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = new CompletableFuture<Int>();
@@ -336,6 +340,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getBiFunc_absent_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = new CompletableFuture<Int>();
@@ -447,6 +452,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllFunction_immutable_keys(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = cache.getAll(context.absentKeys(), keys -> {
@@ -466,6 +472,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   public void getAllFunction_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -475,6 +482,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllFunction_absent_failure(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getAll(context.absentKeys(), keys -> { throw new IllegalStateException(); }))
@@ -533,6 +541,7 @@ public final class AsyncCacheTest {
     assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -669,6 +678,7 @@ public final class AsyncCacheTest {
     }
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_badLoader(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -737,6 +747,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_immutable_keys(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(UnsupportedOperationException.class, () -> {
@@ -757,6 +768,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = CompletableFuture.completedFuture((Map<Int, Int>) null);
@@ -765,6 +777,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
@@ -772,6 +785,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_failure_checkedException(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -789,6 +803,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_failure_runtimeException(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -806,6 +821,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_failure_error(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -847,6 +863,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_throwsCheckedException(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -862,6 +879,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_throwsRuntimeException(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -876,6 +894,7 @@ public final class AsyncCacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAllBifunction_absent_throwsError(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -932,6 +951,7 @@ public final class AsyncCacheTest {
     assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_different(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1080,6 +1100,7 @@ public final class AsyncCacheTest {
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_badLoader(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1167,6 +1188,7 @@ public final class AsyncCacheTest {
     assertThat(logEvents()).isEmpty();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_insert_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1297,6 +1319,7 @@ public final class AsyncCacheTest {
 
   /* --------------- misc --------------- */
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void remove_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1305,6 +1328,7 @@ public final class AsyncCacheTest {
     assertThat(cache).doesNotContainKey(context.firstKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replace_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1313,6 +1337,7 @@ public final class AsyncCacheTest {
     assertThat(cache).doesNotContainKey(context.firstKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replaceConditionally_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1321,6 +1346,7 @@ public final class AsyncCacheTest {
     assertThat(cache).doesNotContainKey(context.firstKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void computeIfPresent_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1329,6 +1355,7 @@ public final class AsyncCacheTest {
     assertThat(cache).doesNotContainKey(context.firstKey());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void compute_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1337,6 +1364,7 @@ public final class AsyncCacheTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void merge_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {

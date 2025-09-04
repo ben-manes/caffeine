@@ -34,6 +34,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
@@ -76,7 +77,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class RefreshAfterWriteTest {
@@ -127,6 +128,7 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
@@ -154,6 +156,7 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       loader = Loader.REFRESH_INTERRUPTED, refreshAfterWrite = Expire.ONE_MINUTE,
@@ -374,6 +377,7 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
@@ -397,6 +401,7 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)

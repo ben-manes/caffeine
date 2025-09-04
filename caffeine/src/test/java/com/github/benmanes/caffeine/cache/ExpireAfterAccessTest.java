@@ -29,7 +29,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.slf4j.event.Level.WARN;
+import static org.slf4j.event.Level.TRACE;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -65,7 +65,7 @@ import com.google.common.collect.Maps;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterAccessTest {

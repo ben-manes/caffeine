@@ -1,8 +1,8 @@
 [versions]
 caffeine = "3.2.2"
 graal = "0.11.0"
-junit = "6.0.0-RC2"
-truth = "1.4.4"
+junit = "6.0.0-RC3"
+truth = "1.4.5"
 versions = "0.52.0"
 
 [libraries]

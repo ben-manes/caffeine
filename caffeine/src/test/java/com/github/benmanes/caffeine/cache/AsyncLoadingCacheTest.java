@@ -32,6 +32,7 @@ import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
@@ -82,7 +83,7 @@ import com.google.common.primitives.Ints;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckNoEvictions @CheckMaxLogLevel(WARN)
+@CheckNoEvictions @CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsyncLoadingCacheTest {
@@ -102,6 +103,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.get(context.absentKey())).succeedsWith(context.absentValue());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   public void get_absent_failure(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
@@ -115,6 +117,7 @@ public final class AsyncLoadingCacheTest {
         .hasSize(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL, executor = CacheExecutor.THREADED,
       executorFailure = ExecutorFailure.IGNORED)
@@ -194,8 +197,9 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.getAll(List.of()).join()).isExhaustivelyEmpty();
   }
 
-  @CacheSpec(loader = Loader.BULK_MODIFY_KEYS)
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.BULK_MODIFY_KEYS)
   public void getAll_immutable_keys_loader(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var future = cache.getAll(context.absentKeys());
@@ -203,6 +207,7 @@ public final class AsyncLoadingCacheTest {
         .hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.ASYNC_BULK_MODIFY_KEYS)
   public void getAll_immutable_keys_asyncLoader(
@@ -226,15 +231,17 @@ public final class AsyncLoadingCacheTest {
     assertThat(result.get(null)).isNull();
   }
 
-  @CacheSpec(loader = Loader.BULK_NULL)
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.BULK_NULL)
   public void getAll_absent_bulkNull(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getAll(context.absentKeys())).failsWith(NullMapCompletionException.class);
     assertThat(context).stats().hits(0).misses(context.absentKeys().size()).success(0).failures(1);
   }
 
-  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   public void getAll_absent_failure(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getAll(context.absentKeys())).failsWith(CompletionException.class);
     int misses = context.absentKeys().size();
@@ -248,6 +255,7 @@ public final class AsyncLoadingCacheTest {
         .hasSize(loadFailures);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.ASYNC_EXCEPTIONAL, Loader.ASYNC_BULK_EXCEPTIONAL })
   public void getAll_absent_throwsException(
@@ -257,6 +265,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.ASYNC_CHECKED_EXCEPTIONAL, Loader.ASYNC_BULK_CHECKED_EXCEPTIONAL })
   public void getAll_absent_throwsCheckedException(
@@ -268,6 +277,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.ASYNC_INTERRUPTED, Loader.ASYNC_BULK_INTERRUPTED })
   public void getAll_absent_interrupted(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
@@ -510,6 +520,7 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.ASYNC, removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_badLoader(CacheContext context) {

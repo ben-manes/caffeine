@@ -2,6 +2,7 @@ import org.jspecify.annotations.NullMarked;
 
 /** This module contains an adapter to the Guava cache interfaces. */
 @NullMarked
+@SuppressWarnings("PMD.DanglingJavadoc")
 module com.github.benmanes.caffeine.guava {
   exports com.github.benmanes.caffeine.guava;
 

@@ -43,6 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.ERROR;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.util.AbstractMap;
@@ -97,7 +98,7 @@ import com.google.common.collect.Maps;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckNoEvictions @CheckMaxLogLevel(WARN)
+@CheckNoEvictions @CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsyncAsMapTest {
@@ -667,6 +668,7 @@ public final class AsyncAsMapTest {
     assertThat(result).isNull();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, removalListener = Listener.CONSUMING)
   public void replace_failure(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -976,6 +978,7 @@ public final class AsyncAsMapTest {
     assertThat(context).stats().hits(1).misses(0).success(0).failures(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(stats = Stats.ENABLED)
   public void computeIfAbsent_present_failed(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1432,6 +1435,7 @@ public final class AsyncAsMapTest {
     });
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })

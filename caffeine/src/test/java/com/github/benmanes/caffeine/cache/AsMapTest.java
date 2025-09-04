@@ -46,6 +46,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.ERROR;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.util.AbstractMap;
@@ -103,7 +104,7 @@ import com.google.common.testing.SerializableTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckNoEvictions @CheckMaxLogLevel(WARN)
+@CheckNoEvictions @CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsMapTest {
@@ -1536,6 +1537,7 @@ public final class AsMapTest {
         map.merge(context.firstKey(), context.original().get(context.firstKey()), mappingFunction));
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -1648,6 +1650,7 @@ public final class AsMapTest {
     assertThat(cache).containsEntry(key, newValue);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
@@ -1767,6 +1770,7 @@ public final class AsMapTest {
     assertThat(parseToString(map)).containsExactlyEntriesIn(parseToString(context.original()));
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @SuppressWarnings("CheckReturnValue")
   @CacheSpec(implementation = Implementation.Caffeine, executorFailure = ExecutorFailure.IGNORED)

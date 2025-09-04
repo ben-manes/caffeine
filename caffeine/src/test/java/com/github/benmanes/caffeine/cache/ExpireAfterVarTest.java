@@ -48,6 +48,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.io.Serializable;
@@ -96,7 +97,7 @@ import com.google.common.testing.SerializableTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterVarTest {
@@ -497,6 +498,7 @@ public final class ExpireAfterVarTest {
     assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void replace_expiryFails_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -565,6 +567,7 @@ public final class ExpireAfterVarTest {
     assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void replaceConditionally_expiryFails_async(
@@ -608,6 +611,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void get_expiryFails_create_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -636,6 +640,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void getAll_expiryFails(Cache<Int, Int> cache, CacheContext context) {
@@ -656,6 +661,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void getAll_expiryFails_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -676,6 +682,7 @@ public final class ExpireAfterVarTest {
         .hasSize(context.absentKeys().size());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void getAll_expiryFails_newEntries(Cache<Int, Int> cache, CacheContext context) {
@@ -696,6 +703,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void getAll_expiryFails_newEntries_async(
@@ -741,6 +749,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void put_insert_expiryFails_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -796,6 +805,7 @@ public final class ExpireAfterVarTest {
     assertThat(currentDuration).isEqualTo(expectedDuration);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void put_update_expiryFails_async(AsyncCache<Int, Int> cache,
@@ -869,6 +879,7 @@ public final class ExpireAfterVarTest {
     assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void computeIfAbsent_expiryFails_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -952,6 +963,7 @@ public final class ExpireAfterVarTest {
     assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void computeIfPresent_expiryFails_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1154,6 +1166,7 @@ public final class ExpireAfterVarTest {
     verifyNoMoreInteractions(context.expiry());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, loader = Loader.ASYNC_INCOMPLETE)
@@ -1206,6 +1219,7 @@ public final class ExpireAfterVarTest {
     verifyNoMoreInteractions(context.expiry());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, loader = Loader.ASYNC_INCOMPLETE)
@@ -2137,6 +2151,7 @@ public final class ExpireAfterVarTest {
     assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void compute_absent_expiryFails_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -2164,6 +2179,7 @@ public final class ExpireAfterVarTest {
     assertThat(map).containsExactlyEntriesIn(context.original());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void compute_present_expiryFails_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -2181,6 +2197,7 @@ public final class ExpireAfterVarTest {
         .hasSize(1);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   public void compute_incomplete(AsyncCache<Int, Int> cache,

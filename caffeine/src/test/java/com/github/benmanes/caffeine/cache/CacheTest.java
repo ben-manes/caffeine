@@ -36,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.ERROR;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.io.IOException;
@@ -109,7 +110,7 @@ import com.google.common.testing.NullPointerTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckNoEvictions @CheckMaxLogLevel(WARN)
+@CheckNoEvictions @CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class CacheTest {
@@ -185,6 +186,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void get_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
     var error = assertThrows(Exception.class, () ->
@@ -198,6 +200,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void get_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
@@ -206,6 +209,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void get_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(ExpectedError.class, () ->
@@ -410,6 +414,7 @@ public final class CacheTest {
     assertThrows(NullPointerException.class, () -> cache.getAll(context.absentKeys(), null));
   }
 
+  @CheckMaxLogLevel(WARN)
   @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -421,6 +426,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAll_immutable_keys(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(UnsupportedOperationException.class, () -> {
@@ -447,6 +453,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAll_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
     var error = assertThrows(Exception.class, () ->
@@ -462,6 +469,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAll_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
@@ -471,6 +479,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   public void getAll_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(ExpectedError.class, () ->
@@ -907,6 +916,7 @@ public final class CacheTest {
 
   /* --------------- misc --------------- */
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, removalListener = Listener.REJECTING)
   public void removalListener_error_log(Cache<Int, Int> cache, CacheContext context) {

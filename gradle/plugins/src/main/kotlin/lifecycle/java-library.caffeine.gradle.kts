@@ -9,7 +9,6 @@ plugins {
   id("publish.caffeine")
   id("testing.caffeine")
   id("spotbugs.caffeine")
-  id("checkstyle.caffeine")
   id("errorprone.caffeine")
   id("biz.aQute.bnd.builder")
   id("object-layout.caffeine")

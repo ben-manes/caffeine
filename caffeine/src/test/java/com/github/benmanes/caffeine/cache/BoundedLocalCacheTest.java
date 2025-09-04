@@ -70,6 +70,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.ERROR;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.io.IOException;
@@ -163,7 +164,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 @SuppressWarnings({"ClassEscapesDefinedScope", "GuardedBy"})

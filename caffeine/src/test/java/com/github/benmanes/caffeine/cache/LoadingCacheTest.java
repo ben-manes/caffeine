@@ -89,7 +89,7 @@ import com.google.common.primitives.Ints;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class LoadingCacheTest {
@@ -113,6 +113,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   public void get_absent_throwsException(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -121,6 +122,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.CHECKED_EXCEPTIONAL)
   public void get_absent_throwsCheckedException(
@@ -188,6 +190,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_MODIFY_KEYS)
   public void getAll_immutable_keys(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -219,6 +222,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NULL)
   public void getAll_absent_bulkNull(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -228,6 +232,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   public void getAll_absent_throwsException(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -238,6 +243,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.CHECKED_EXCEPTIONAL, Loader.BULK_CHECKED_EXCEPTIONAL })
   public void getAll_absent_throwsCheckedException(
@@ -251,6 +257,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   public void getAll_absent_throwsException_iterable(
@@ -263,6 +270,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.INTERRUPTED, Loader.BULK_INTERRUPTED })
   public void getAll_absent_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -501,6 +509,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       loader = Loader.EXCEPTIONAL, removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -533,6 +542,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.REFRESH_INTERRUPTED)
   public void refresh_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -585,6 +595,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL)
   public void refresh_absent_null(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -917,8 +928,8 @@ public final class LoadingCacheTest {
     assertThat(context).stats().success(1).failures(0);
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CheckNoEvictions @CheckMaxLogLevel(TRACE)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refresh_cancel_noLog(CacheContext context) {
     var cacheLoader = new CacheLoader<Int, Int>() {
@@ -938,8 +949,8 @@ public final class LoadingCacheTest {
     assertThat(logEvents()).isEmpty();
   }
 
+  @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CheckNoEvictions @CheckMaxLogLevel(TRACE)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refresh_timeout_noLog(CacheContext context) {
     var cacheLoader = new CacheLoader<Int, Int>() {
@@ -960,8 +971,9 @@ public final class LoadingCacheTest {
     assertThat(logEvents()).isEmpty();
   }
 
+  @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
-  @CheckNoEvictions @CheckMaxLogLevel(WARN)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   public void refresh_error_log(CacheContext context) {
     var expected = new RuntimeException();
@@ -1075,6 +1087,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -1088,6 +1101,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       loader = Loader.EXCEPTIONAL, removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -1099,6 +1113,7 @@ public final class LoadingCacheTest {
   }
 
   @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.REFRESH_INTERRUPTED)
   public void refreshAll_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {

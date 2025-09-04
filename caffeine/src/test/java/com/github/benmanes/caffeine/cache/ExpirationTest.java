@@ -40,6 +40,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
@@ -87,11 +88,12 @@ import com.google.common.util.concurrent.Futures;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpirationTest {
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -115,6 +117,7 @@ public final class ExpirationTest {
   }
 
   @CheckNoStats
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1464,6 +1467,7 @@ public final class ExpirationTest {
     assertThat(map).containsKey(key);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1532,6 +1536,7 @@ public final class ExpirationTest {
     future.complete(null);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1544,6 +1549,7 @@ public final class ExpirationTest {
     map.keySet().spliterator().forEachRemaining(key -> Assert.fail());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1556,6 +1562,7 @@ public final class ExpirationTest {
     assertThat(map.keySet().spliterator().tryAdvance(key -> Assert.fail())).isFalse();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1570,6 +1577,7 @@ public final class ExpirationTest {
     assertThat(map.keySet().stream().toArray()).isEmpty();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1583,6 +1591,7 @@ public final class ExpirationTest {
     assertThat(cache.asMap().keySet().stream().toArray()).isEmpty();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1652,6 +1661,7 @@ public final class ExpirationTest {
     future.complete(null);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1664,6 +1674,7 @@ public final class ExpirationTest {
     map.values().spliterator().forEachRemaining(value -> Assert.fail());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1676,6 +1687,7 @@ public final class ExpirationTest {
     assertThat(map.values().spliterator().tryAdvance(value -> Assert.fail())).isFalse();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1690,6 +1702,7 @@ public final class ExpirationTest {
     assertThat(map.values().stream().toArray()).isEmpty();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1703,6 +1716,7 @@ public final class ExpirationTest {
     assertThat(cache.asMap().values().stream().toArray()).isEmpty();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1771,6 +1785,7 @@ public final class ExpirationTest {
     future.complete(null);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1783,6 +1798,7 @@ public final class ExpirationTest {
     map.entrySet().spliterator().forEachRemaining(entry -> Assert.fail());
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1795,6 +1811,7 @@ public final class ExpirationTest {
     assertThat(map.entrySet().spliterator().tryAdvance(entry -> Assert.fail())).isFalse();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1809,6 +1826,7 @@ public final class ExpirationTest {
     assertThat(map.entrySet().stream().toArray()).isEmpty();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },

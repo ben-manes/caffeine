@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
@@ -32,6 +33,7 @@ import java.util.function.Supplier;
 
 import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -45,6 +47,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.testing.FakeTicker;
 import com.google.common.testing.NullPointerTester;
@@ -54,6 +58,8 @@ import com.google.common.testing.NullPointerTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckMaxLogLevel(TRACE)
+@Listeners(CacheValidationListener.class)
 public final class CaffeineTest {
   private static final Expiry<Object, Object> expiry = Expiry.accessing(
       (key, value) -> { throw new AssertionError(); });
@@ -105,6 +111,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @CheckMaxLogLevel(WARN)
   public void fromSpec_lenientParsing() {
     var cache = Caffeine.from(CaffeineSpec.parse("maximumSize=100")).weigher((k, v) -> 0).build();
     assertThat(cache).isNotNull();
@@ -128,6 +135,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @CheckMaxLogLevel(WARN)
   public void fromString_lenientParsing() {
     var cache = Caffeine.from("maximumSize=100").weigher((k, v) -> 0).build();
     assertThat(cache).isNotNull();
@@ -197,6 +205,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @CheckMaxLogLevel(WARN)
   public void hasMethodOverride_notFound() {
     var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "abc_xyz", Set.class);
     assertThat(overridden).isFalse();

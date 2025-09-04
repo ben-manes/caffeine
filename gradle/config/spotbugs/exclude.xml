@@ -15,7 +15,6 @@
       CLI_CONSTANT_LIST_INDEX,
       CNC_COLLECTION_NAMING_CONFUSION,
       CT_CONSTRUCTOR_THROW,
-      CWO_CLOSED_WITHOUT_OPENED,
       DMI_RANDOM_USED_ONLY_ONCE,
       EI_EXPOSE_REP, EI_EXPOSE_REP2,
       ENMI_EQUALS_ON_ENUM,
@@ -98,11 +97,6 @@
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
     <Method name="snapshot"/>
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
-  </Match>
-  <Match>
-    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
-    <Method name="scheduleAfterWrite"/>
-    <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache$KeySetView"/>
@@ -572,6 +566,11 @@
       DP_DO_INSIDE_DO_PRIVILEGED"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.Reset"/>
+    <Method name="destroy"/>
+    <Bug pattern="CWO_CLOSED_WITHOUT_OPENED"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.testing.Threads"/>
     <Bug pattern="CRLF_INJECTION_LOGS"/>
   </Match>
@@ -748,6 +747,7 @@
     <Method name="lambda$refreshes_memoize$0"/>
     <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
   </Match>
+
   <Match>
     <Or>
       <Class name="~com\.github\.benmanes\.caffeine\.cache.*_jcstress.*"/>

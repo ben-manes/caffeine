@@ -4106,7 +4106,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           return OptionalInt.empty();
         }
         synchronized (node) {
-          return OptionalInt.of(node.getWeight());
+          return node.isAlive() ? OptionalInt.of(node.getWeight()) : OptionalInt.empty();
         }
       }
       @Override public OptionalLong weightedSize() {

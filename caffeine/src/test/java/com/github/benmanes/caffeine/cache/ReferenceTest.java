@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.util.AbstractMap;
@@ -88,7 +89,7 @@ import com.google.common.testing.GcFinalization;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@CheckMaxLogLevel(WARN)
+@CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
@@ -112,6 +113,7 @@ public final class ReferenceTest {
     assertThat(cache).doesNotContainKey(value);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       requiresWeakOrSoft = true, evictionListener = Listener.REJECTING)
@@ -893,6 +895,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -944,6 +947,7 @@ public final class ReferenceTest {
     assertThat(map).doesNotContainKey(key);
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -1017,6 +1021,7 @@ public final class ReferenceTest {
     }
   }
 
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -1270,6 +1275,7 @@ public final class ReferenceTest {
   }
 
   @CheckNoStats
+  @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       removalListener = {Listener.DISABLED, Listener.REJECTING})

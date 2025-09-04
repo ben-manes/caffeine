@@ -13,9 +13,9 @@ jobs:
     name: Snyk
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
-      security-events: write
+      actions: read # Needed for uploading security scan results
+      security-events: write # Needed for uploading security scan results
     container:
       # Incompatible with Harden Runner
       image: snyk/snyk:gradle-jdk21
@@ -77,7 +77,7 @@ jobs:
             }
           ' results.sarif > snyk.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
+        uses: github/codeql-action/upload-sarif@192325c86100d080feab897ff886c34abd4c83a3 # v3.30.3
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: snyk.sarif

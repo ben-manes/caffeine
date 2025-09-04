@@ -23,20 +23,26 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@CheckMaxLogLevel(TRACE)
+@Listeners(CacheValidationListener.class)
 public final class StatsCounterTest {
 
   @BeforeMethod @AfterMethod
@@ -112,6 +118,7 @@ public final class StatsCounterTest {
   }
 
   @Test
+  @CheckMaxLogLevel(WARN)
   public void guarded_exception() {
     StatsCounter statsCounter = Mockito.mock();
     when(statsCounter.snapshot()).thenThrow(new NullPointerException());

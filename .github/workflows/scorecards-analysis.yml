@@ -12,14 +12,14 @@ jobs:
     name: Scorecards analysis
     runs-on: ubuntu-latest
     permissions:
-      security-events: write
-      id-token: write
-      actions: read
       contents: read
+      id-token: write # Needed for attestation
+      actions: read # Needed for uploading security scan results
+      security-events: write # Needed for uploading security scan results
     if: github.event.repository.fork == false
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -57,6 +57,6 @@ jobs:
           path: results.sarif
           retention-days: 5
       - name: Upload to code-scanning
-        uses: github/codeql-action/upload-sarif@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
+        uses: github/codeql-action/upload-sarif@192325c86100d080feab897ff886c34abd4c83a3 # v3.30.3
         with:
           sarif_file: results.sarif
