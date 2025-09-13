@@ -47,7 +47,7 @@ application {
 }
 
 java.toolchain {
-  languageVersion = maxOf(languageVersion.get(), JavaLanguageVersion.of(24))
+  languageVersion = maxOf(languageVersion.get(), JavaLanguageVersion.of(25))
 }
 
 forbiddenApis {

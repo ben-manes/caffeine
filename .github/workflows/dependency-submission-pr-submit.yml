@@ -4,7 +4,7 @@ on: [ pull_request ]
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  JAVA_VERSION: 24
+  JAVA_VERSION: 25
 
 jobs:
   dependency-submission:
@@ -37,10 +37,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        uses: ./.github/actions/run-gradle
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Submit Dependency Graph
         uses: gradle/actions/dependency-submission@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
         with:

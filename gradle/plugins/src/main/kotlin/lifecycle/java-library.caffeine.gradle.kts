@@ -28,7 +28,7 @@ java.toolchain {
   nativeImageCapable.unset()
 }
 val javaRuntimeVersion: Provider<JavaLanguageVersion> =
-  java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(24)) }
+  java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(25)) }
 
 tasks.withType<JavaCompile>().configureEach {
   inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })

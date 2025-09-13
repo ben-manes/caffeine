@@ -192,7 +192,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.IDENTITY,
+  @CacheSpec(loader = Loader.IDENTITY,
       population = Population.FULL, removalListener = Listener.MOCKITO)
   public void clear_pendingWrites_reload(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var populated = new boolean[1];
@@ -216,8 +216,8 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches", groups = "slow")
-  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.IDENTITY,
-      population = Population.FULL, keys = ReferenceType.WEAK, removalListener = Listener.MOCKITO)
+  @CacheSpec(loader = Loader.IDENTITY, population = Population.FULL,
+      keys = ReferenceType.WEAK, removalListener = Listener.MOCKITO)
   public void clear_pendingWrites_weakKeys(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var collected = new boolean[1];

@@ -502,7 +502,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Guava,
+  @CacheSpec(population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   public void replace_weigherFails_absent(Cache<Int, Int> cache, CacheContext context) {
     when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);

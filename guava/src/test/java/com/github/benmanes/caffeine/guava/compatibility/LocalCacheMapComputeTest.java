@@ -96,6 +96,15 @@ public class LocalCacheMapComputeTest extends TestCase {
     assertThat(cache.getIfPresent(key).split(delimiter)).hasLength(count + 1);
   }
 
+  public void testComputeIfPresent_error() {
+    cache.put(key, "1");
+    assertThrows(Error.class, () -> cache.asMap().computeIfPresent(key, (k, v) -> {
+      throw new Error();
+    }));
+    assertThat(cache.getIfPresent(key)).isEqualTo("1");
+    assertThat(cache.asMap().computeIfPresent(key, (k, v) -> "2")).isEqualTo("2");
+  }
+
   public void testUpdates() {
     cache.put(key, "1");
     // simultaneous update for same key, some null, some non-null

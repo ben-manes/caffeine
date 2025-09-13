@@ -45,21 +45,22 @@ runs:
       uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
       with:
         java-version: ${{ steps.gradle_toolchain.outputs.version }}
-        distribution: temurin
+        distribution: zulu
     - name: Set up JDK
       uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
       with:
         java-version: ${{ inputs.java }}
-        distribution: ${{ inputs.distribution }}
+        distribution: ${{ inputs.java == '26-ea' && 'temurin' || inputs.distribution == 'temurin' && 'zulu' || inputs.distribution }}
     - name: Prepare JDK toolchain
       id: java_toolchain
       env:
         INPUTS_JAVA: ${{ inputs.java }}
         JDK_EA: ${{ endsWith(inputs.java, '-ea') }}
-        INPUTS_DISTRIBUTION: ${{ inputs.distribution }}
+        INPUTS_DISTRIBUTION: ${{ inputs.java == '26-ea' && 'temurin' || inputs.distribution == 'temurin' && 'zulu' || inputs.distribution }}
       shell: bash
       run: |
         declare -A -r VENDORS=(
+          ["zulu"]="Azul"
           ["temurin"]="Adoptium"
           ["graalvm"]="GraalVM Community"
         )

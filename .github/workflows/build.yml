@@ -50,7 +50,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 26-ea ]
+        java: [ 11, 25, 26-ea ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

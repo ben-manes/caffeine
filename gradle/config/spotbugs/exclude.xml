@@ -747,7 +747,6 @@
     <Method name="lambda$refreshes_memoize$0"/>
     <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
   </Match>
-
   <Match>
     <Or>
       <Class name="~com\.github\.benmanes\.caffeine\.cache.*_jcstress.*"/>

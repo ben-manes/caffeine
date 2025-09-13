@@ -322,109 +322,84 @@ public final class GuavaCacheFromContext {
       @Override
       public @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
         requireNonNull(mappingFunction);
-        V value = getIfPresent(key);
-        if (value != null) {
-          return value;
-        }
+        boolean[] present = { true };
         long now = ticker.read();
-        try {
-          value = mappingFunction.apply(key);
-          long loadTime = (ticker.read() - now);
-          if (value == null) {
-            statsCounter.recordLoadException(loadTime);
-            return null;
+        V result = delegate().computeIfAbsent(key, k -> {
+          statsCounter.recordMisses(1);
+          present[0] = false;
+          try {
+            V value = mappingFunction.apply(key);
+            if (value == null) {
+              statsCounter.recordLoadException(ticker.read() - now);
+            }
+            return value;
+          } catch (Throwable t) {
+            statsCounter.recordLoadException(ticker.read() - now);
+            throw t;
           }
-          statsCounter.recordLoadSuccess(loadTime);
-          V v = delegate().putIfAbsent(key, value);
-          return (v == null) ? value : v;
-        } catch (RuntimeException | Error e) {
-          statsCounter.recordLoadException((ticker.read() - now));
-          throw e;
+        });
+        if (present[0]) {
+          statsCounter.recordHits(1);
         }
+        return result;
       }
       @Override
-      @SuppressWarnings("CheckReturnValue")
       public @Nullable V computeIfPresent(K key,
           BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         requireNonNull(remappingFunction);
-        V oldValue;
         long now = ticker.read();
-        if ((oldValue = get(key)) != null) {
+        return delegate().computeIfPresent(key, (k, v) -> {
           try {
-            V newValue = remappingFunction.apply(key, oldValue);
-            long loadTime = ticker.read() - now;
-            if (newValue == null) {
-              statsCounter.recordLoadException(loadTime);
-              remove(key);
-              return null;
-            } else {
-              statsCounter.recordLoadSuccess(loadTime);
-              put(key, newValue);
-              return newValue;
+            V value = remappingFunction.apply(k, v);
+            if (value == null) {
+              statsCounter.recordLoadException(ticker.read() - now);
+            } else if (value == v) {
+              statsCounter.recordLoadSuccess(ticker.read() - now);
             }
-          } catch (RuntimeException | Error e) {
+            return value;
+          } catch (Throwable t) {
             statsCounter.recordLoadException(ticker.read() - now);
-            throw e;
+            throw t;
           }
-        }
-        return null;
+        });
       }
       @Override
-      @SuppressWarnings("CheckReturnValue")
       public @Nullable V compute(K key,
           BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         requireNonNull(remappingFunction);
-        V oldValue = get(key);
-
         long now = ticker.read();
-        try {
-          V newValue = remappingFunction.apply(key, oldValue);
-          if (newValue == null) {
-            if (oldValue != null || containsKey(key)) {
-              remove(key);
+        return delegate().compute(key, (k, v) -> {
+          try {
+            V value = remappingFunction.apply(k, v);
+            if (value == null) {
+              statsCounter.recordLoadException(ticker.read() - now);
+            } else if (value == v) {
+              statsCounter.recordLoadSuccess(ticker.read() - now);
             }
+            return value;
+          } catch (Throwable t) {
             statsCounter.recordLoadException(ticker.read() - now);
-            return null;
+            throw t;
           }
-          statsCounter.recordLoadSuccess(ticker.read() - now);
-          put(key, newValue);
-          return newValue;
-        } catch (RuntimeException | Error e) {
-          statsCounter.recordLoadException(ticker.read() - now);
-          throw e;
-        }
+        });
       }
       @Override
       public @Nullable V merge(K key, V value,
           BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
         requireNonNull(remappingFunction);
-        requireNonNull(value);
-        V oldValue = get(key);
-        for (;;) {
-          if (oldValue != null) {
-            long now = ticker.read();
-            try {
-              V newValue = remappingFunction.apply(oldValue, value);
-              if (newValue != null) {
-                if (replace(key, oldValue, newValue)) {
-                  statsCounter.recordLoadSuccess(ticker.read() - now);
-                  return newValue;
-                }
-              } else if (remove(key, oldValue)) {
-                statsCounter.recordLoadException(ticker.read() - now);
-                return null;
-              }
-            } catch (RuntimeException | Error e) {
+        long now = ticker.read();
+        return delegate().merge(key, value, (k, v) -> {
+          try {
+            V newValue = remappingFunction.apply(k, v);
+            if (newValue == null) {
               statsCounter.recordLoadException(ticker.read() - now);
-              throw e;
             }
-            oldValue = get(key);
-          } else {
-            if ((oldValue = putIfAbsent(key, value)) == null) {
-              return value;
-            }
+            return newValue;
+          } catch (Throwable t) {
+            statsCounter.recordLoadException(ticker.read() - now);
+            throw t;
           }
-        }
+        });
       }
       @Override
       public Set<K> keySet() {

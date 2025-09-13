@@ -905,14 +905,21 @@ public final class ReferenceTest {
     Int key = context.firstKey();
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
-    collected.add(new SimpleEntry<>(key, null));
+    if (!context.isGuava()) {
+      collected.add(new SimpleEntry<>(key, null));
+    }
 
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.computeIfAbsent(key, k -> null)).isNull();
     assertThat(context.cache()).whenCleanedUp().isEmpty();
-    assertThat(context).notifications().withCause(COLLECTED)
-        .contains(collected).exclusively();
+    if (context.isGuava()) {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .contains(collected);
+    } else {
+      assertThat(context).notifications().withCause(COLLECTED)
+          .contains(collected).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -958,7 +965,7 @@ public final class ReferenceTest {
     Int replaced = new Int(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
-    if (!context.isStrongValues()) {
+    if (!context.isStrongValues() && !context.isGuava()) {
       collected.add(new SimpleEntry<>(key, null));
     }
 
@@ -977,8 +984,19 @@ public final class ReferenceTest {
     } else {
       assertThat(value).isNull();
       assertThat(context.cache()).whenCleanedUp().isEmpty();
-      assertThat(context).notifications().withCause(COLLECTED)
-          .contains(collected).exclusively();
+      if (context.isGuava()) {
+        // when a null valued EXPLICIT notification then that is rejected by the listener
+        assertThat(context).notifications().withCause(COLLECTED).contains(collected);
+        assertThat(logEvents()
+            .withMessage("Exception thrown by removal listener")
+            .withThrowable(NullPointerException.class)
+            .withLevel(WARN)
+            .exclusively())
+            .hasSizeLessThan(2);
+      } else {
+        assertThat(context).notifications().withCause(COLLECTED)
+            .contains(collected).exclusively();
+      }
     }
   }
 
@@ -1031,7 +1049,6 @@ public final class ReferenceTest {
     Int key = context.firstKey();
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
-    collected.add(new SimpleEntry<>(key, null));
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -1040,8 +1057,22 @@ public final class ReferenceTest {
       return null;
     })).isNull();
     assertThat(context.cache()).whenCleanedUp().isEmpty();
-    assertThat(context).notifications().withCause(COLLECTED)
-        .contains(collected).exclusively();
+
+    if (context.isGuava()) {
+      // when a null valued EXPLICIT notification then that is rejected by the listener
+      assertThat(context).notifications().withCause(COLLECTED).contains(collected);
+      assertThat(logEvents()
+          .withMessage("Exception thrown by removal listener")
+          .withThrowable(NullPointerException.class)
+          .withLevel(WARN)
+          .exclusively())
+          .hasSizeLessThan(2);
+    } else {
+      assertThat(logEvents()).isEmpty();
+      collected.add(new SimpleEntry<>(key, null));
+      assertThat(context).notifications().withCause(COLLECTED)
+          .contains(collected).exclusively();
+    }
   }
 
   @Test(dataProvider = "caches")

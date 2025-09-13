@@ -35,10 +35,10 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 26-ea ]
+        java: [ 11, 25, 26-ea ]
         distribution: [ temurin ]
         include:
-          - java: 24
+          - java: 25
             distribution: graalvm
           - java: 23
             distribution: semeru
@@ -88,10 +88,10 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 26-ea ]
+        java: [ 11, 25, 26-ea ]
         distribution: [ temurin ]
         include:
-          - java: 24
+          - java: 25
             distribution: graalvm
           - java: 23
             distribution: semeru
@@ -141,10 +141,10 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 26-ea ]
+        java: [ 11, 25, 26-ea ]
         distribution: [ temurin ]
         include:
-          - java: 24
+          - java: 25
             distribution: graalvm
           - java: 23
             distribution: semeru
@@ -194,10 +194,10 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 26-ea ]
+        java: [ 11, 25, 26-ea ]
         distribution: [ temurin ]
         include:
-          - java: 24
+          - java: 25
             distribution: graalvm
           - java: 23
             distribution: semeru
@@ -247,10 +247,10 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 26-ea ]
+        java: [ 11, 25, 26-ea ]
         distribution: [ temurin ]
         include:
-          - java: 24
+          - java: 25
             distribution: graalvm
           - java: 23
             distribution: semeru
@@ -299,10 +299,10 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 24, 26-ea ]
+        java: [ 11, 25, 26-ea ]
         distribution: [ temurin ]
         include:
-          - java: 24
+          - java: 25
             distribution: graalvm
           - java: 23
             distribution: semeru

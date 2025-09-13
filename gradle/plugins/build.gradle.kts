@@ -21,7 +21,6 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 dependencies {
   implementation(libs.jmh)
-  implementation(libs.guava)
   implementation(libs.bundles.pmd)
 
   implementation(plugin(libs.plugins.bnd))

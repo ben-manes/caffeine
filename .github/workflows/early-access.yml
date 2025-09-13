@@ -100,7 +100,7 @@ jobs:
           - jcache:check
           - guava:check
     env:
-      JAVA_VERSION: 24
+      JAVA_VERSION: 25
       JAVA_TEST_VERSION: 26
     steps:
       - name: Harden Runner

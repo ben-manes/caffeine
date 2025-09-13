@@ -75,7 +75,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
@@ -1753,7 +1752,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  @CacheSpec(population = Population.FULL)
   public void keySet_removeAll_byCollection(AsyncCache<Int, Int> cache, CacheContext context) {
     var delegate = Sets.union(context.original().keySet(), context.absentKeys());
     Collection<Int> keys = Mockito.mock();
@@ -1766,7 +1765,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  @CacheSpec(population = Population.FULL)
   public void keySet_removeAll_bySet(AsyncCache<Int, Int> cache, CacheContext context) {
     var delegate = Sets.union(context.original().keySet(), context.absentKeys());
     Set<Int> keys = Mockito.mock();
@@ -2766,7 +2765,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  @CacheSpec(population = Population.FULL)
   public void entrySet_removeAll_byCollection(AsyncCache<Int, Int> cache, CacheContext context) {
     var delegate = Sets.union(cache.asMap().entrySet(),
         Maps.transformValues(context.absent(), Int::toFuture).entrySet());
@@ -2780,7 +2779,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine)
+  @CacheSpec(population = Population.FULL)
   public void entrySet_removeAll_bySet(AsyncCache<Int, Int> cache, CacheContext context) {
     var delegate = Sets.union(cache.asMap().entrySet(),
         Maps.transformValues(context.absent(), Int::toFuture).entrySet());
