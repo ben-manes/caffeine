@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -52,7 +53,7 @@ public final class Issue568Test {
     String val = "val";
     cache.put("key", "val");
 
-    var error = new AtomicReference<RuntimeException>();
+    var error = new AtomicReference<@Nullable RuntimeException>();
     var threads = new ArrayList<Thread>();
     for (int i = 0; i < 10; i++) {
       int name = i;
@@ -89,7 +90,7 @@ public final class Issue568Test {
    */
   @Test
   public void resurrect() throws InterruptedException {
-    var error = new AtomicReference<RuntimeException>();
+    var error = new AtomicReference<@Nullable RuntimeException>();
     Cache<String, Object> cache = Caffeine.newBuilder()
         .weakValues()
         .executor(ConcurrentTestHarness.executor)
