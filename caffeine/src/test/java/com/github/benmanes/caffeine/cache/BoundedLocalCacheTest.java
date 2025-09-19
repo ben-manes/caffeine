@@ -1305,9 +1305,9 @@ public final class BoundedLocalCacheTest {
     var evictor = Thread.currentThread();
     var started = new AtomicBoolean();
     var writing = new AtomicBoolean();
-    var evictedValue = new AtomicReference<Int>();
-    var previousValue = new AtomicReference<Int>();
-    var removedValues = new AtomicReference<>(Int.valueOf(0));
+    var evictedValue = new AtomicReference<@Nullable Int>();
+    var previousValue = new AtomicReference<@Nullable Int>();
+    var removedValues = new AtomicReference<@Nullable Int>(Int.valueOf(0));
 
     RemovalListener<Int, Int> evictionListener =
         (k, v, cause) -> evictedValue.set(v);
@@ -2742,7 +2742,7 @@ public final class BoundedLocalCacheTest {
   public void putIfAbsent_expireAfterRead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
     context.ticker().advance(Duration.ofHours(1));
-    var result = new AtomicReference<Int>();
+    var result = new AtomicReference<@Nullable Int>();
     long currentDuration = 1;
     requireNonNull(node);
 

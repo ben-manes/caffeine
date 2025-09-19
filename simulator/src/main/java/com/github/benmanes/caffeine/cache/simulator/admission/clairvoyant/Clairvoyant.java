@@ -37,6 +37,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * {@literal Bélády's} optimal page replacement policy applied as an admission policy by comparing
  * the keys using their next access times.
@@ -44,7 +46,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Clairvoyant implements KeyOnlyAdmittor {
-  private static final AtomicReference<Long2ObjectMap<IntList>> snapshot = new AtomicReference<>();
+  private static final AtomicReference<@Nullable Long2ObjectMap<IntList>> snapshot = new AtomicReference<>();
 
   private final Long2ObjectMap<IntPriorityQueue> accessTimes;
   private final PolicyStats policyStats;
