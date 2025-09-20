@@ -132,13 +132,13 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  */
 @SuppressWarnings({"AlmostJavadoc", "BadInstanceof", "BooleanLiteral", "BoxedPrimitiveEquality",
     "ClassIsInstance", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
-    "EmptyCatch", "EntryIterableToImmutableMap", "FieldCanBeFinal", "IdentifierName",
-    "IdentityConversion", "IdentityHashMapBoxing", "InvalidParam", "IterableIsEmpty", "JdkObsolete",
-    "JUnitClassModifiers", "JUnitMethodDeclaration", "ModifyingCollectionWithItself",
-    "MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonFinalStaticField", "NonStaticImport",
-    "NullAway", "ParameterMissingNullable", "rawtypes", "ReferenceEquality", "resource",
-    "ReturnValueIgnored", "SelfEquals", "SystemOut", "unchecked", "UndefinedEquals",
-    "UnnecessaryFinal", "unused", "UnusedMethod"})
+    "EmptyCatch", "EntryIterableToImmutableMap", "ExplicitArrayForVarargs", "FieldCanBeFinal",
+    "IdentifierName", "IdentityConversion", "IdentityHashMapBoxing", "InvalidParam",
+    "IterableIsEmpty", "JdkObsolete", "JUnitClassModifiers", "JUnitMethodDeclaration",
+    "ModifyingCollectionWithItself", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
+    "NonFinalStaticField", "NonStaticImport", "NullAway", "ParameterMissingNullable", "rawtypes",
+    "ReferenceEquality", "resource", "ReturnValueIgnored", "SelfEquals", "SystemOut", "unchecked",
+    "UndefinedEquals", "UnnecessaryFinal", "unused", "UnusedMethod"})
 public class MOAT {
     // Collections under test must not be initialized to contain this value,
     // and maps under test must not contain this value as a key.
