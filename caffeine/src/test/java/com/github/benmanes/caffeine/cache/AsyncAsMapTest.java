@@ -2804,7 +2804,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"MapEntry", "NullAway"})
+  @SuppressWarnings("MapEntry")
   public void entrySet_remove_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = Iterables.getFirst(cache.asMap().values(), context.absentValue().toFuture());
     assertThat(cache.asMap().entrySet().remove(Maps.immutableEntry(null, future))).isFalse();
@@ -2814,7 +2814,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"MapEntry", "NullAway"})
+  @SuppressWarnings("MapEntry")
   public void entrySet_remove_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     var key = Iterables.getFirst(context.original().keySet(), context.absentKey());
     assertThat(cache.asMap().entrySet().remove(Maps.immutableEntry(key, null))).isFalse();
@@ -2824,7 +2824,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"MapEntry", "NullAway"})
+  @SuppressWarnings("MapEntry")
   public void entrySet_remove_nullKeyValue(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().entrySet().remove(Maps.immutableEntry(null, null))).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());

@@ -194,7 +194,6 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       removalListener = Listener.MOCKITO)
-  @SuppressWarnings("NullAway")
   public void schedule_delay(Cache<Int, Duration> cache, CacheContext context) {
     var actualExpirationPeriods = new HashMap<Int, Duration>();
     var delay = ArgumentCaptor.forClass(long.class);
