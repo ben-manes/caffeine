@@ -331,7 +331,6 @@ public final class EventDispatcherTest {
   @Test
   public void awaitSynchronous_failure() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
-    @SuppressWarnings("NullAway")
     var future = new CompletableFuture<@Nullable Void>();
     future.completeExceptionally(new RuntimeException());
     dispatcher.pending.get().add(future);
@@ -356,7 +355,6 @@ public final class EventDispatcherTest {
     int key = 1;
 
     var dispatchQueue = primary.dispatchQueues.values().iterator().next();
-    @SuppressWarnings("NullAway")
     var queue = new CompletableFuture<@Nullable Void>();
     dispatchQueue.put(key, queue);
 
