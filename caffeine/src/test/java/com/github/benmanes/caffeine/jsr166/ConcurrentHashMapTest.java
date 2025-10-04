@@ -872,7 +872,7 @@ public class ConcurrentHashMapTest extends JSR166TestCase {
             map.put(I, I);
         }
         Set<Item> keySet = map.keySet();
-        Collection<Item> removeMe = Arrays.asList(new Item[] { minusOne, minusTwo });
+        Collection<Item> removeMe = Arrays.asList(minusOne, minusTwo);
         for (int i = 0; i < iterations; i++) {
           assertFalse(keySet.removeAll(removeMe));
         }

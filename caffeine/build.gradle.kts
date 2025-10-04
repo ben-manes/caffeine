@@ -197,6 +197,10 @@ val lincheckTest = tasks.register<Test>("lincheckTest") {
   useTestNG {
     includeGroups("lincheck")
   }
+
+  // https://github.com/JetBrains/lincheck/issues/842
+  val isCompatibleJdk = java.toolchain.languageVersion.map { !it.canCompileOrRun(21) }
+  onlyIf { isCompatibleJdk.get() }
 }
 
 val fuzzTest = tasks.register<Test>("fuzzTest") {

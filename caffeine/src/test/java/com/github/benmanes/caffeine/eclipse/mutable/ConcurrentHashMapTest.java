@@ -55,7 +55,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 @NullUnmarked
 @ParameterizedClass
 @MethodSource("caches")
-@SuppressWarnings({"all", "CanIgnoreReturnValueSuggester", "IdentityConversion", "unchecked"})
+@SuppressWarnings({"all", "CanIgnoreReturnValueSuggester",
+    "ExplicitArrayForVarargs", "IdentityConversion", "unchecked"})
 final class ConcurrentHashMapTest extends ConcurrentHashMapTestCase {
   public static final MutableMap<Integer, MutableBag<Integer>> SMALL_BAG_MUTABLE_MAP =
       Interval.oneTo(100).groupBy(each -> each % 10).toMap(HashBag::new);
