@@ -1,11 +1,11 @@
 [versions]
 caffeine = "3.2.2"
-h2 = "2.3.232"
-hibernate = "7.1.1.Final"
-junit = "6.0.0-RC3"
+h2 = "2.4.240"
+hibernate = "7.1.3.Final"
+junit = "6.0.0"
 log4j2 = "3.0.0-beta2"
 truth = "1.4.5"
-versions = "0.52.0"
+versions = "0.53.0"
 
 [libraries]
 caffeine = { module = "com.github.ben-manes.caffeine:jcache", version.ref = "caffeine" }

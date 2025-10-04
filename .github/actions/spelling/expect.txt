@@ -1,3 +1,4 @@
+acer
 actionlint
 admittor
 Adoptium
@@ -8,6 +9,7 @@ asdads
 ASet
 Autobuild
 awaitility
+Azul
 Backpressure
 baos
 benmanes
@@ -55,7 +57,6 @@ develocity
 devskim
 dotnet
 dragonwell
-dsn
 Eached
 ecj
 edu
@@ -183,11 +184,10 @@ ninetynine
 nio
 nkeys
 Noops
-NOPMD
 nops
 NPath
 npe
-NVD
+nvd
 Ohad
 ois
 OLDVALUE
@@ -203,6 +203,7 @@ pmd
 prescreen
 presized
 proactively
+PSMS
 PTL
 putremove
 qls
@@ -218,6 +219,7 @@ reserializable
 reserialize
 reserialized
 rethrowing
+revapi
 risc
 Rmax
 rmi
@@ -281,12 +283,12 @@ unconfigured
 unhash
 Uninterruptibles
 Unregisters
-usr
 untreeified
 untreeify
 untreeifying
 UOE
 UPPERBOUND
+usr
 uvx
 Varifier
 vaultservice

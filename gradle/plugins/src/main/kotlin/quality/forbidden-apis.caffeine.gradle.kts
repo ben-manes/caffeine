@@ -12,7 +12,6 @@ forbiddenApis {
 tasks.withType<CheckForbiddenApis>().configureEach {
   val languageVersion = java.toolchain.languageVersion.get()
   enabled = rootProject.hasProperty("forbiddenApis")
-    && !languageVersion.canCompileOrRun(25) // incompatible
   if (enabled) {
     forbiddenApis.failOnMissingClasses = !languageVersion.canCompileOrRun(
       JavaVersion.current().majorVersion.toInt())

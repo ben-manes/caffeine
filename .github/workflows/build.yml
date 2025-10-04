@@ -50,7 +50,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 25, 26-ea ]
+        java: [ 11, 24, 26-ea ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -111,7 +111,6 @@ jobs:
           - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
           - caffeine:junitJupiterTest
           - caffeine:standaloneTest
-          - caffeine:lincheckTest
           - caffeine:isolatedTest
           - caffeine:junitTest
           - simulator:check
@@ -165,6 +164,8 @@ jobs:
             java: 11
           - suite: caffeine:fuzzTest
             java: 11
+          - suite: caffeine:lincheckTest
+            java: 25
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
@@ -185,7 +186,9 @@ jobs:
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Format Test Artifact Name
-        if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
+        if: >
+          always() &&
+          ((env.JAVA_VERSION == env.PUBLISH_JDK) || (matrix.suite == 'caffeine:lincheckTest'))
         id: format_artifact
         env:
           INPUTS_ARGUMENTS: ${{ matrix.suite }}

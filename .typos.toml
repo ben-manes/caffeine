@@ -1,6 +1,7 @@
 [default.extend-words]
 Pagent = "Pagent"
 testng = "testng"
+Varifier = "Varifier"
 
 [files]
 extend-exclude = [

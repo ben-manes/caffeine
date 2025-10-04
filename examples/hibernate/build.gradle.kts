@@ -11,8 +11,9 @@ dependencies {
   annotationProcessor(libs.hibernate.processor)
 
   implementation(libs.bundles.hibernate)
-  implementation(libs.bundles.log4j2)
   implementation(libs.caffeine)
+
+  runtimeOnly(libs.bundles.log4j2)
   runtimeOnly(libs.h2)
 
   testImplementation(libs.junit)
