@@ -1,8 +1,9 @@
 name: Benchmarks
 permissions: {}
 on:
-  push:
-    branches: [master]
+  schedule:
+    - cron: '0 0 * * 6'
+  workflow_dispatch: {}
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -40,7 +41,7 @@ jobs:
         include:
           - java: 25
             distribution: graalvm
-          - java: 23
+          - java: 25
             distribution: semeru
           - java: 21
             distribution: dragonwell

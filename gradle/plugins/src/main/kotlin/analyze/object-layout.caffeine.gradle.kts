@@ -25,7 +25,7 @@ modes.forEach { (mode, details) ->
     inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
     argumentProviders.add {
       var className = findProperty("className") as? String
-      var base = "com.github.benmanes.caffeine.cache"
+      val base = "com.github.benmanes.caffeine.cache"
       require(className != null) { "Usage: $name -PclassName=$base.[CLASS_NAME]" }
       if (!className.startsWith("com") && !className.startsWith("java")) {
         className = "$base.$className"

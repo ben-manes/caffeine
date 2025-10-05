@@ -231,7 +231,7 @@ val junitTest = tasks.register<Test>("junitTest") {
 
   useJUnit()
   val relativeDir = projectDir
-  var jarFile = jar.flatMap { it.archiveFile }.map { it.asFile }
+  val jarFile = jar.flatMap { it.archiveFile }.map { it.asFile }
   doFirst { systemProperty("caffeine.osgi.jar", jarFile.get().relativeTo(relativeDir).path) }
 }
 

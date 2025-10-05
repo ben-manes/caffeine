@@ -3,7 +3,8 @@ name: Build (ARM)
 permissions: {}
 on:
   schedule:
-    - cron: '0 0 * * 4'
+    - cron: '0 0 * * 3'
+  workflow_dispatch: {}
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -101,7 +102,7 @@ jobs:
           - jcache:check
           - guava:check
     env:
-      JAVA_VERSION: 24
+      JAVA_VERSION: 25
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1

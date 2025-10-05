@@ -16,11 +16,13 @@
 package com.github.benmanes.caffeine.guava;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 import static org.ops4j.pax.exam.CoreOptions.bundle;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.options;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -40,6 +42,11 @@ import com.google.common.cache.LoadingCache;
 @SuppressWarnings("MemberName")
 @ExamReactorStrategy(PerMethod.class)
 public final class OSGiTest {
+
+  @BeforeClass
+  public static void skipOnIncompatibleJdk() {
+    assumeTrue("Incompatible on JDK 25+", Runtime.version().feature() < 25);
+  }
 
   @Configuration
   public Option[] config() {

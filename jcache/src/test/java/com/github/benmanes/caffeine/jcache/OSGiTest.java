@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assume.assumeTrue;
 import static org.ops4j.pax.exam.CoreOptions.bundle;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
@@ -27,6 +28,7 @@ import javax.cache.Caching;
 import javax.cache.spi.CachingProvider;
 import javax.inject.Inject;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -49,6 +51,11 @@ public final class OSGiTest {
 
   @Inject
   private CachingProvider cachingProvider;
+
+  @BeforeClass
+  public static void skipOnIncompatibleJdk() {
+    assumeTrue("Incompatible on JDK 25+", Runtime.version().feature() < 25);
+  }
 
   @Configuration
   public Option[] config() {
