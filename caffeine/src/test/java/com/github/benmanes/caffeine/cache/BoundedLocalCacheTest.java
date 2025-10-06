@@ -33,6 +33,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
+import static com.github.benmanes.caffeine.cache.Reset.awaitFullGc;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
@@ -234,7 +235,7 @@ public final class BoundedLocalCacheTest {
           var ref = (WeakReference<?>) keyRef;
           ref.enqueue();
         }
-        GcFinalization.awaitFullGc();
+        awaitFullGc();
         collected[0] = (invocation.<RemovalCause>getArgument(2) == COLLECTED);
       }
       return null;

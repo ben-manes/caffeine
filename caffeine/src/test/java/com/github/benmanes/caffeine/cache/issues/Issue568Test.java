@@ -13,6 +13,8 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
+import static com.github.benmanes.caffeine.cache.Reset.awaitFullGc;
+
 import java.lang.ref.Reference;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,7 +27,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
-import com.google.common.testing.GcFinalization;
 
 /**
  * Issue #568: Incorrect handling of weak/soft reference caching.
@@ -112,7 +113,7 @@ public final class Issue568Test {
             break;
           }
           if (Math.random() < .01) {
-            GcFinalization.awaitFullGc();
+            awaitFullGc();
             cache.cleanUp();
           } else if ((cache.getIfPresent(key) == null) && !missing.getAndSet(true)) {
             cache.put(key, new Object());

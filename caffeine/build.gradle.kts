@@ -353,6 +353,7 @@ for (scenario in Scenario.all()) {
         if (slow == Slow.Enabled) {
           maxParallelForks = 2
           includeGroups.add("slow")
+          jvmArgs("-XX:-ExplicitGCInvokesConcurrent")
           if (java.toolchain.languageVersion.get().canCompileOrRun(23)) {
             jvmArgs("-XX:+UseShenandoahGC")
           } else {

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static com.github.benmanes.caffeine.cache.LocalCacheSubject.syncLocal;
 import static com.github.benmanes.caffeine.cache.ReserializableSubject.syncReserializable;
+import static com.github.benmanes.caffeine.cache.Reset.awaitFullGc;
 import static com.github.benmanes.caffeine.cache.testing.CacheSubject.CleanUpSubject.CLEANUP_FACTORY;
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -29,7 +30,6 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.google.common.testing.GcFinalization;
 import com.google.common.truth.Correspondence;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Ordered;
@@ -181,7 +181,7 @@ public final class CacheSubject extends Subject {
       // Ensures that all of the pending work is performed (Guava limits work per cycle)
       for (int i = 0; i < 100; i++) {
         if ((i > 0) && ((i % 10) == 0)) {
-          GcFinalization.awaitFullGc();
+          awaitFullGc();
         }
         actual.cleanUp();
 

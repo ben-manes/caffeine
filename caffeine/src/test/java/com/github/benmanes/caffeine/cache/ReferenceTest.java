@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.RemovalCause.COLLECTED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
+import static com.github.benmanes.caffeine.cache.Reset.awaitFullGc;
 import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
@@ -82,7 +83,6 @@ import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
 import com.google.common.testing.EqualsTester;
-import com.google.common.testing.GcFinalization;
 
 /**
  * The test cases for caches that support a reference eviction policy.
@@ -119,7 +119,7 @@ public final class ReferenceTest {
       requiresWeakOrSoft = true, evictionListener = Listener.REJECTING)
   public void collect_evictionListener_failure(CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
 
     assertThat(context.cache()).whenCleanedUp().isEmpty();
     assertThat(context).evictionNotifications().hasSize(context.initialSize());
@@ -142,7 +142,7 @@ public final class ReferenceTest {
   public void getIfPresent(Cache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.getIfPresent(key)).isNull();
   }
 
@@ -157,7 +157,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context, context.original());
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.get(key, k -> context.absentValue())).isEqualTo(context.absentValue());
 
     assertThat(cache).whenCleanedUp().hasSize(1);
@@ -172,7 +172,7 @@ public final class ReferenceTest {
     Int key = context.firstKey();
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () -> cache.get(key, identity()));
@@ -188,7 +188,7 @@ public final class ReferenceTest {
   public void getAllPresent(Cache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.getAllPresent(keys)).isExhaustivelyEmpty();
   }
 
@@ -208,7 +208,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.getAll(keys, keysToLoad -> Maps.toMap(keysToLoad, Int::negate)))
         .containsExactlyEntriesIn(Maps.toMap(keys, Int::negate));
 
@@ -231,7 +231,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     cache.put(key, context.absentValue());
     assertThat(cache).whenCleanedUp().hasSize(1);
 
@@ -259,7 +259,7 @@ public final class ReferenceTest {
         context.middleKey(), context.absentValue(), context.absentKey(), context.absentValue());
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     cache.putAll(entries);
 
     assertThat(context.cache()).whenCleanedUp().hasSize(entries.size());
@@ -279,7 +279,7 @@ public final class ReferenceTest {
         Maps.filterKeys(context.original(), not(equalTo(key))));
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache).whenCleanedUp().hasSize(1);
 
     cache.invalidate(key);
@@ -314,7 +314,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     cache.invalidateAll(keys);
     assertThat(cache).whenCleanedUp().isEmpty();
 
@@ -351,7 +351,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     cache.invalidateAll();
 
     if (context.isStrongValues()) {
@@ -375,7 +375,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context, context.original());
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(context.cache()).whenCleanedUp().isEmpty();
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(collected).exclusively();
@@ -386,7 +386,7 @@ public final class ReferenceTest {
   public void coldest(CacheContext context, Eviction<Int, Int> eviction) {
     context.clear();
     var coldest = eviction.coldest(stream -> {
-      GcFinalization.awaitFullGc();
+      awaitFullGc();
       return stream.collect(toImmutableList());
     });
     assertThat(coldest).isEmpty();
@@ -397,7 +397,7 @@ public final class ReferenceTest {
   public void hottest(CacheContext context, Eviction<Int, Int> eviction) {
     context.clear();
     var hottest = eviction.hottest(stream -> {
-      GcFinalization.awaitFullGc();
+      awaitFullGc();
       return stream.collect(toImmutableList());
     });
     assertThat(hottest).isEmpty();
@@ -417,7 +417,7 @@ public final class ReferenceTest {
         Maps.filterKeys(context.original(), not(equalTo(key))));
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache).whenCleanedUp().hasSize(1);
     assertThat(cache.get(key)).isEqualTo(value);
 
@@ -432,7 +432,7 @@ public final class ReferenceTest {
     Int key = context.firstKey();
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () -> cache.get(key));
@@ -456,7 +456,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.getAll(keys)).containsExactlyEntriesIn(Maps.toMap(keys, Int::negate));
     assertThat(cache).whenCleanedUp().hasSize(keys.size());
 
@@ -476,7 +476,7 @@ public final class ReferenceTest {
         Maps.filterKeys(context.original(), not(equalTo(key))));
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(context.cache()).whenCleanedUp().hasSize(1);
     assertThat(cache.refresh(key)).succeedsWith(key);
     assertThat(cache).doesNotContainEntry(key, value);
@@ -500,7 +500,7 @@ public final class ReferenceTest {
     Int value = context.original().get(key);
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.synchronous()).whenCleanedUp().hasSize(1);
     assertThat(cache.synchronous().getIfPresent(key)).isEqualTo(value);
   }
@@ -514,7 +514,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context, context.original());
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.get(context.absentKey(), identity()))
         .succeedsWith(context.absentKey());
     assertThat(context).notifications().withCause(COLLECTED)
@@ -532,7 +532,7 @@ public final class ReferenceTest {
         Maps.filterKeys(context.original(), not(keys::contains)));
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.getAll(keys, keysToLoad -> Maps.toMap(keysToLoad, Int::negate)).join())
         .containsExactlyEntriesIn(Maps.toMap(keys, Int::negate));
     assertThat(context).notifications().withCause(COLLECTED)
@@ -548,7 +548,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context, context.original());
     Int key = context.absentKey();
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     cache.put(key, context.absentValue().toFuture());
 
     assertThat(cache).hasSize(1);
@@ -565,7 +565,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void isEmpty(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map).isNotEmpty();
     assertThat(context.cache()).whenCleanedUp().isEmpty();
   }
@@ -577,7 +577,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void size(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map).hasSize(context.initialSize());
     assertThat(context.cache()).whenCleanedUp().isEmpty();
   }
@@ -590,7 +590,7 @@ public final class ReferenceTest {
   public void containsKey(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.containsKey(key)).isEqualTo(context.isStrongValues());
   }
 
@@ -604,11 +604,11 @@ public final class ReferenceTest {
     Int key = context.firstKey();
     Int value = context.original().get(key);
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.containsValue(value)).isTrue();
 
     key = null;
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.containsValue(value)).isNotEqualTo(context.isWeakKeys());
   }
 
@@ -624,7 +624,7 @@ public final class ReferenceTest {
         context.original(), retained).entriesOnlyOnLeft());
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     map.clear();
 
     assertThat(context).evictionNotifications().withCause(COLLECTED)
@@ -648,7 +648,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     Int value = map.putIfAbsent(key, context.absentValue());
     if (context.isStrongValues()) {
       assertThat(value).isNotNull();
@@ -670,7 +670,7 @@ public final class ReferenceTest {
   public void put_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
 
     var value = cache.asMap().put(key, Int.listOf(1, 2, 3));
     if (context.isStrongValues()) {
@@ -688,7 +688,7 @@ public final class ReferenceTest {
     Int key = context.firstKey();
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () -> cache.put(key, key));
@@ -710,7 +710,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     Int value = map.put(key, context.absentValue());
     if (context.isStrongValues()) {
       assertThat(value).isNotNull();
@@ -740,7 +740,7 @@ public final class ReferenceTest {
     Int key = context.firstKey();
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () -> map.put(key, key));
@@ -756,7 +756,7 @@ public final class ReferenceTest {
     Int key = context.firstKey();
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     Int value = map.replace(key, context.absentValue());
     if (context.isStrongValues()) {
       assertThat(value).isNotNull();
@@ -775,7 +775,7 @@ public final class ReferenceTest {
     Int value = context.original().get(key);
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.replace(key, value, context.absentValue())).isTrue();
   }
 
@@ -787,7 +787,7 @@ public final class ReferenceTest {
   public void replaceConditionally_collectedValue(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.replace(key, context.absentValue(), context.absentValue())).isFalse();
   }
 
@@ -806,7 +806,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     Int value = map.remove(key);
     if (context.isStrongValues()) {
       assertThat(value).isNotNull();
@@ -839,7 +839,7 @@ public final class ReferenceTest {
         Maps.filterKeys(context.original(), not(equalTo(key))));
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.remove(key, value)).isTrue();
     assertThat(context.cache()).whenCleanedUp().isEmpty();
 
@@ -862,7 +862,7 @@ public final class ReferenceTest {
     collected.add(new SimpleEntry<>(key, null));
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.remove(key, context.absentValue())).isFalse();
     assertThat(context.cache()).whenCleanedUp().isEmpty();
     assertThat(context).notifications().withCause(COLLECTED)
@@ -883,7 +883,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     Int value = map.computeIfAbsent(key, k -> context.absentValue());
     assertThat(context.cache()).whenCleanedUp().hasSize(1);
     if (context.isStrongValues()) {
@@ -910,7 +910,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.computeIfAbsent(key, k -> null)).isNull();
     assertThat(context.cache()).whenCleanedUp().isEmpty();
     if (context.isGuava()) {
@@ -930,7 +930,7 @@ public final class ReferenceTest {
   public void computeIfAbsent_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
 
     cache.asMap().computeIfAbsent(key, k -> Int.listOf(1, 2, 3));
     if (context.isStrongValues()) {
@@ -947,7 +947,7 @@ public final class ReferenceTest {
     Int key = context.firstKey();
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () -> map.computeIfAbsent(key, identity()));
@@ -970,7 +970,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     Int value = map.computeIfPresent(key, (k, v) -> context.absentValue());
     if (context.isStrongValues()) {
       assertThat(value).isEqualTo(context.absentValue());
@@ -1015,7 +1015,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     Int value = map.compute(key, (k, v) -> {
       if (context.isStrongValues()) {
         assertThat(v).isNotNull();
@@ -1051,7 +1051,7 @@ public final class ReferenceTest {
         Maps.filterKeys(context.original(), not(equalTo(key))));
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.compute(key, (k, v) -> {
       assertThat(v).isNull();
       return null;
@@ -1083,7 +1083,7 @@ public final class ReferenceTest {
   public void compute_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
 
     cache.asMap().compute(key, (k, v) -> Int.listOf(1, 2, 3));
     assertThat(context).hasWeightedSize(3);
@@ -1096,7 +1096,7 @@ public final class ReferenceTest {
     Int key = context.firstKey();
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
         .thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () -> map.compute(key, (k, v) -> k));
@@ -1118,7 +1118,7 @@ public final class ReferenceTest {
     }
 
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     Int value = map.merge(key, context.absentValue(), (oldValue, v) -> {
       if (context.isWeakKeys() && !context.isStrongValues()) {
         Assert.fail("Should not be invoked");
@@ -1148,7 +1148,7 @@ public final class ReferenceTest {
   public void merge_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, Int.listOf(1));
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
 
     cache.asMap().merge(key, Int.listOf(1, 2, 3), (oldValue, v) -> {
       if (context.isWeakKeys() && !context.isStrongValues()) {
@@ -1163,7 +1163,7 @@ public final class ReferenceTest {
   @CacheSpec(requiresWeakOrSoft = true)
   public void iterators(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.keySet().iterator().hasNext()).isFalse();
     assertThat(map.values().iterator().hasNext()).isFalse();
     assertThat(map.entrySet().iterator().hasNext()).isFalse();
@@ -1176,7 +1176,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void keySet_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.keySet().toArray()).isEmpty();
     assertThat(map.keySet().toArray(new Int[0])).isEmpty();
     assertThat(map.keySet().toArray(Int[]::new)).isEmpty();
@@ -1194,7 +1194,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void keySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     map.keySet().spliterator().forEachRemaining(key -> Assert.fail());
   }
 
@@ -1202,7 +1202,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.keySet().spliterator().tryAdvance(key -> Assert.fail())).isFalse();
   }
 
@@ -1211,7 +1211,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine)
   public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.keySet().stream().toArray()).isEmpty();
     assertThat(map.keySet().stream().toArray(Int[]::new)).isEmpty();
   }
@@ -1220,7 +1220,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void keyStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.asMap().keySet().stream().toArray()).isEmpty();
     assertThat(cache.asMap().keySet().stream().toArray(Int[]::new)).isEmpty();
   }
@@ -1232,7 +1232,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void values_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.values().toArray()).isEmpty();
     assertThat(map.values().toArray(new Int[0])).isEmpty();
     assertThat(map.values().toArray(Int[]::new)).isEmpty();
@@ -1251,7 +1251,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void valueSpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     map.values().spliterator().forEachRemaining(value -> Assert.fail());
   }
 
@@ -1259,7 +1259,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.values().spliterator().tryAdvance(value -> Assert.fail())).isFalse();
   }
 
@@ -1268,7 +1268,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine)
   public void valueStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.values().stream().toArray()).isEmpty();
     assertThat(map.values().stream().toArray(Int[]::new)).isEmpty();
   }
@@ -1277,7 +1277,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void valueStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.asMap().values().stream().toArray()).isEmpty();
     assertThat(cache.asMap().values().stream().toArray(Int[]::new)).isEmpty();
   }
@@ -1289,7 +1289,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void entrySet_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.entrySet().toArray()).isEmpty();
     assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0])).isEmpty();
     assertThat(map.entrySet().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
@@ -1314,7 +1314,7 @@ public final class ReferenceTest {
     var entry = new AbstractMap.SimpleEntry<>(context.firstKey(), null);
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.entrySet().contains(entry)).isFalse();
   }
 
@@ -1325,7 +1325,7 @@ public final class ReferenceTest {
     map.putAll(expected);
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.entrySet().equals(expected.entrySet())).isFalse();
     assertThat(expected.entrySet().equals(map.entrySet())).isFalse();
 
@@ -1338,7 +1338,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entrySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     map.entrySet().spliterator().forEachRemaining(entry -> Assert.fail());
   }
 
@@ -1346,7 +1346,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entrySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.entrySet().spliterator().tryAdvance(entry -> Assert.fail())).isFalse();
   }
 
@@ -1355,7 +1355,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine)
   public void entryStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.entrySet().stream().toArray()).isEmpty();
     assertThat(map.entrySet().stream().toArray(Int[]::new)).isEmpty();
   }
@@ -1364,7 +1364,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entryStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(cache.asMap().entrySet().stream().toArray()).isEmpty();
     assertThat(cache.asMap().entrySet().stream().toArray(Int[]::new)).isEmpty();
   }
@@ -1376,7 +1376,7 @@ public final class ReferenceTest {
     map.putAll(expected);
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.equals(expected)).isFalse();
     assertThat(expected.equals(map)).isFalse();
 
@@ -1393,7 +1393,7 @@ public final class ReferenceTest {
         entry -> new Int(entry.getKey()), entry -> new Int(entry.getValue())));
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.equals(copy)).isFalse();
     assertThat(context.cache()).isEmpty();
   }
@@ -1405,7 +1405,7 @@ public final class ReferenceTest {
     map.putAll(expected);
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(map.hashCode()).isEqualTo(expected.hashCode());
 
     assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());
@@ -1419,7 +1419,7 @@ public final class ReferenceTest {
     map.putAll(expected);
     context.clear();
 
-    GcFinalization.awaitFullGc();
+    awaitFullGc();
     assertThat(parseToString(map)).containsExactlyEntriesIn(parseToString(expected));
 
     assertThat(context.cache()).whenCleanedUp().hasSize(expected.size());

@@ -15,10 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.lang.ref.Cleaner;
+import java.lang.ref.SoftReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.InaccessibleObjectException;
+import java.util.concurrent.CountDownLatch;
 
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AbstractCacheView;
+import com.google.common.testing.GcFinalization;
 
 /**
  * A hook to reset internal details of the cache implementation.
@@ -26,10 +30,28 @@ import com.github.benmanes.caffeine.cache.LocalAsyncCache.AbstractCacheView;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Reset {
+  private static final Cleaner CLEANER = Cleaner.create();
   private static final int RANDOM_SEED = 1_033_096_058;
   private static final int RANDOM_PROBE = 0x9e3779b9;
 
   private Reset() {}
+
+  /**
+   * Tries to perform a garbage collection cycle that includes the processing of weak and soft
+   * references.
+   */
+  @SuppressWarnings("PMD.UnusedAssignment")
+  public static void awaitFullGc() {
+    var target = new Object();
+    var cleaned = new CountDownLatch(1);
+    var ref = new SoftReference<>(target);
+    CLEANER.register(target, cleaned::countDown);
+    target = null;
+
+    GcFinalization.awaitFullGc();
+    GcFinalization.await(cleaned);
+    GcFinalization.awaitDone(() -> ref.get() == null);
+  }
 
   /** Forces the eviction jitter to be predictable. */
   @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

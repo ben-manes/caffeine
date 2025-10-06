@@ -580,6 +580,7 @@
   </Match>
   <Match>
     <Or>
+      <Class name="com.github.benmanes.caffeine.cache.Reset"/>
       <Class name="com.github.benmanes.caffeine.cache.InternerTest"/>
       <Class name="com.github.benmanes.caffeine.cache.ReferenceTest"/>
       <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCacheTest"/>
