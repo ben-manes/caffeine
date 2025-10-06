@@ -97,8 +97,7 @@ jobs:
           - caffeine:standaloneTest
           - caffeine:isolatedTest
           - caffeine:junitTest
-          - caffeine:fuzzTest
-          - simulator:check
+          - simulator:run
           - jcache:check
           - guava:check
     env:

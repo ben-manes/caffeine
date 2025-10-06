@@ -377,10 +377,37 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  reproducibility:
+    name: Reproducibility
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          disable-sudo-and-containers: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - name: Setup Gradle
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.PUBLISH_JDK }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Verify Build Reproducibility
+        env:
+          ORG_GRADLE_PROJECT_javaVersion: ${{ env.PUBLISH_JDK }}
+        shell: bash
+        run: ./.github/scripts/checkBuildReproducibility.sh
+
   publish-snapshot:
     name: Publish Snapshot
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [reproducibility, tests]
     if: >
       github.event_name == 'push'
       && github.event.repository.fork == false
@@ -408,16 +435,6 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - name: Setup Gradle
-        uses: ./.github/actions/run-gradle
-        with:
-          java: ${{ env.PUBLISH_JDK }}
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-      - name: Verify Build Reproducibility
-        env:
-          ORG_GRADLE_PROJECT_javaVersion: ${{ env.PUBLISH_JDK }}
-        shell: bash
-        run: ./.github/scripts/checkBuildReproducibility.sh
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
         env:
