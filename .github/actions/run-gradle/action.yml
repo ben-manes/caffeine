@@ -106,7 +106,8 @@ runs:
       run: |
         echo "::add-matcher::.github/problem-matcher.json"
         for ((i=1; i<=$INPUTS_ATTEMPT_LIMIT; i++)); do
-          ./gradlew --no-problems-report $(eval echo "$INPUTS_ARGUMENTS" | tr -d '\n') && break
+          ./gradlew -Dscan.tag.${WORKFLOW_NAME// /_} --no-problems-report \
+            $(eval echo "$INPUTS_ARGUMENTS" | tr -d '\n') && break
           if [ $i -lt $INPUTS_ATTEMPT_LIMIT ]; then
             echo "Attempt $i failed. Retrying in $INPUTS_ATTEMPT_DELAY seconds..."
             sleep $INPUTS_ATTEMPT_DELAY

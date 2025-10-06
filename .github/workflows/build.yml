@@ -408,6 +408,16 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
+      - name: Setup Gradle
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.PUBLISH_JDK }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Verify Build Reproducibility
+        env:
+          ORG_GRADLE_PROJECT_javaVersion: ${{ env.PUBLISH_JDK }}
+        shell: bash
+        run: ./.github/scripts/checkBuildReproducibility.sh
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
         env:

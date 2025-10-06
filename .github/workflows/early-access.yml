@@ -122,4 +122,6 @@ jobs:
       - name: Run Tests
         env:
           TEST_SUITE: ${{ matrix.suite }}
-        run: ./gradlew -PearlyAccess=true -PjavaTestVersion="$JAVA_TEST_VERSION" "$TEST_SUITE"
+        run: >
+          ./gradlew -PearlyAccess=true -Dscan.tag.${WORKFLOW_NAME// /_}
+          -PjavaTestVersion="$JAVA_TEST_VERSION" "$TEST_SUITE"
