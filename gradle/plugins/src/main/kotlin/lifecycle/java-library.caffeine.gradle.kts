@@ -81,6 +81,13 @@ tasks.named<Jar>("jar").configure {
       "-noextraheaders" to true,
       "-reproducible" to true,
       "-snapshot" to "SNAPSHOT"))
+
+    // Workaround until the bnd plugin supports the latest JDK
+    val javaVersion = java.toolchain.languageVersion.get()
+    if (javaVersion.canCompileOrRun(25)) {
+      bnd(mapOf("Require-Capability" to
+        """osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=${javaVersion}))""""))
+    }
   }
 }
 
