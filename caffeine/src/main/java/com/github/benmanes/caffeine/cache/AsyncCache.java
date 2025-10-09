@@ -73,7 +73,7 @@ public interface AsyncCache<K, V extends @Nullable Object> {
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key or mappingFunction is null
    */
-  CompletableFuture<V> get(K key, Function<? super @NonNull K, ? extends V> mappingFunction);
+  CompletableFuture<@Nullable V> get(K key, Function<? super @NonNull K, ? extends @Nullable V> mappingFunction);
 
   /**
    * Returns the future associated with the {@code key} in this cache, obtaining that value from

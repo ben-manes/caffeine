@@ -80,7 +80,7 @@ public interface Cache<K, V extends @Nullable Object> {
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
    *     left unestablished
    */
-  V get(K key, Function<? super K, ? extends V> mappingFunction);
+  @Nullable V get(K key, Function<? super K, ? extends @Nullable V> mappingFunction);
 
   /**
    * Returns a map of the values associated with the {@code keys} in this cache. The returned map
