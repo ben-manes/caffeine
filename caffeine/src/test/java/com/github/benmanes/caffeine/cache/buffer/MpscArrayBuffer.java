@@ -15,19 +15,19 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import org.jctools.queues.MpscArrayQueue;
+import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("PMD.LooseCoupling")
 final class MpscArrayBuffer<E> extends ReadBuffer<E> {
-  final MpscArrayQueue<E> queue;
+  final MpscAtomicArrayQueue<E> queue;
 
   long reads;
 
   MpscArrayBuffer() {
-    queue = new MpscArrayQueue<>(BUFFER_SIZE);
+    queue = new MpscAtomicArrayQueue<>(BUFFER_SIZE);
   }
 
   @Override

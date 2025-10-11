@@ -17,6 +17,7 @@ bestpractices
 bifunction
 Biggern
 bigserial
+blackbox
 BLC
 Bloemsma
 bss
@@ -117,6 +118,7 @@ hotspot
 HQL
 Ifed
 img
+integtest
 interleavings
 interners
 INTKEY

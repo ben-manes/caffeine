@@ -93,6 +93,7 @@ jobs:
           - caffeine:weakKeysAndWeakValuesSyncGuavaTest
           - caffeine:weakKeysAndSoftValuesSyncGuavaTest
           - caffeine:junitJupiterTest
+          - caffeine:integrationTest
           - caffeine:standaloneTest
           - caffeine:isolatedTest
           - caffeine:junitTest

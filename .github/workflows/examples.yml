@@ -4,6 +4,7 @@ on:
   pull_request: {}
   push:
     branches: [master]
+  workflow_dispatch: {}
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}

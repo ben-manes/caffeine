@@ -67,7 +67,7 @@ jobs:
       - name: Compile
         uses: ./.github/actions/run-gradle
         with:
-          arguments: check -x test
+          arguments: build -x check -x assemble
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
@@ -110,6 +110,7 @@ jobs:
           - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
           - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
           - caffeine:junitJupiterTest
+          - caffeine:integrationTest
           - caffeine:standaloneTest
           - caffeine:isolatedTest
           - caffeine:junitTest
@@ -248,7 +249,7 @@ jobs:
       - name: Prepare Jacoco Reports
         uses: ./.github/actions/run-gradle
         with:
-          arguments: check -x test
+          arguments: build -x check -x assemble
           java: ${{ env.PUBLISH_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Combine Jacoco Reports

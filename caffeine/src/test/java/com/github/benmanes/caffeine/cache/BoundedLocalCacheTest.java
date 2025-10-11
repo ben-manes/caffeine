@@ -2538,6 +2538,25 @@ public final class BoundedLocalCacheTest {
         .exclusively();
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  public void weightOf_notAlive(BoundedLocalCache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    for (var node : cache.data.values()) {
+      var key = requireNonNull(node.getKey());
+      assertThat(eviction.weightOf(key)).isPresent();
+      if ((node.getKeyReference().hashCode() % 2) == 0) {
+        node.retire();
+      } else {
+        node.die();
+      }
+      assertThat(eviction.weightOf(key)).isEmpty();
+    }
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
   /* --------------- Expiration --------------- */
 
   @Test(dataProvider = "caches")

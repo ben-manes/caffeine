@@ -31,13 +31,13 @@ import com.google.errorprone.annotations.Var;
 
 /**
  * A stress test that simulates the behavior for {@link java.lang.ref.Reference} reads and writes in
- * weak or soft valued caches. The {@link Node#setValue} proactively clears the underlying referent
- * after updating the entry's value. This is done to avoid cross-generational pollution which can
- * cause garbage collectors to unnecessarily promote young dead objects to an old collection and
- * increase pause times. The {@link Node#getValue} compensates by a re-check validation to determine
- * if the observed null referent is due to garbage collection or a stale read. Due to referent being
- * read and written with plain memory semantics, an additional memory barrier is required to ensure
- * the correct visibility ordering.
+ * weak or soft valued caches. The node's setter proactively clears the underlying referent after
+ * updating the entry's value. This is done to avoid cross-generational pollution which can cause
+ * garbage collectors to unnecessarily promote young dead objects to an old collection and increase
+ * pause times. The node's getter compensates by a re-check validation to determine if the observed
+ * null referent is due to garbage collection or a stale read. Due to referent being read and
+ * written with plain memory semantics, an additional memory barrier is required to ensure the
+ * correct visibility ordering.
  * <p>
  * {@snippet lang="shell" :
  * ./gradlew caffeine:jcstress -PjavaVersion=21 --tests IntermittentNull --rerun

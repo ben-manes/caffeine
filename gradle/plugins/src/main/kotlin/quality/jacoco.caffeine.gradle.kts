@@ -28,3 +28,12 @@ tasks.withType<Test>().configureEach {
     }
   }
 }
+
+afterEvaluate {
+  tasks.withType<JacocoCoverageVerification>().configureEach {
+    group = null
+  }
+  tasks.withType<JacocoReport>().configureEach {
+    group = null
+  }
+}

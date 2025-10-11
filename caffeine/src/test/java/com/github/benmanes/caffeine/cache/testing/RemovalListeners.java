@@ -22,7 +22,7 @@ import java.util.Collection;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.jctools.queues.MpscUnboundedArrayQueue;
+import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -78,7 +78,7 @@ public final class RemovalListeners {
     private final Collection<RemovalNotification<K, V>> removed;
 
     public ConsumingRemovalListener() {
-      this.removed = new MpscUnboundedArrayQueue<>(8);
+      this.removed = new MpscUnboundedAtomicArrayQueue<>(8);
     }
 
     public ConsumingRemovalListener(Collection<RemovalNotification<K, V>> removed) {

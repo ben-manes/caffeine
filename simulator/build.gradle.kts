@@ -50,6 +50,12 @@ java.toolchain {
   languageVersion = maxOf(languageVersion.get(), JavaLanguageVersion.of(25))
 }
 
+testing.suites {
+  named<JvmTestSuite>("test") {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+  }
+}
+
 forbiddenApis {
   bundledSignatures.addAll(listOf("commons-io-unsafe-2.15.1", "jdk-deprecated",
     "jdk-internal", "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
@@ -66,10 +72,6 @@ tasks.named<JavaCompile>("compileJava").configure {
       }
     }
   }
-}
-
-tasks.withType<Test>().configureEach {
-  useJUnitPlatform()
 }
 
 tasks.named<Jar>("jar").configure {
