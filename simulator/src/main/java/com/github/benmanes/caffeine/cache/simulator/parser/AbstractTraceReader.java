@@ -33,7 +33,6 @@ import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
-import org.apache.commons.io.input.CloseShieldInputStream;
 import org.jspecify.annotations.Nullable;
 import org.tukaani.xz.XZInputStream;
 
@@ -124,7 +123,11 @@ public abstract class AbstractTraceReader implements TraceReader {
           try {
             return (archive.getNextEntry() == null)
                 ? endOfData()
-                : readInput(CloseShieldInputStream.wrap(archive));
+                : readInput(new FilterInputStream(archive) {
+                    @Override public void close() {
+                      in = InputStream.nullInputStream();
+                    }
+                  });
           } catch (IOException e) {
             throw new UncheckedIOException(e);
           }

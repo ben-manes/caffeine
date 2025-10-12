@@ -16,8 +16,6 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
           "javax.json.bind", "org.jetbrains.kotlin", "org.osgi", "org.slf4j")
         if ((candidate.group in stable) && isNonStable(candidate.version)) {
           reject("Release candidate")
-        } else if ((candidate.module == "commons-io") && candidate.version.startsWith("2003")) {
-          reject("Bad release")
         } else if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
           reject("Internal dependency")
         }

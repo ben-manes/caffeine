@@ -9,7 +9,6 @@ caffeine = "3.2.2"
 coherence = "25.03.2"
 commons-collections4 = "4.5.0"
 commons-compress = "1.28.0"
-commons-io = "2.20.0"
 commons-lang3 = "3.19.0"
 commons-math3 = "3.6.1"
 commons-text = "1.14.0"
@@ -109,7 +108,6 @@ caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "c
 coherence = { module = "com.oracle.coherence.ce:coherence", version.ref = "coherence" }
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commons-collections4" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
-commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
 commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
 commons-math3 = { module = "org.apache.commons:commons-math3", version.ref = "commons-math3" }
 commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }

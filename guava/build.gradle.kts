@@ -36,7 +36,7 @@ testing.suites {
   named<JvmTestSuite>("test") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
-    targets.all {
+    targets.named("test") {
       testTask.configure {
         project(":caffeine").plugins.withId("java-library") {
           val caffeineJar = project(":caffeine").tasks.named<Jar>("jar")
@@ -96,8 +96,6 @@ tasks.named<CheckForbiddenApis>("forbiddenApisIntegrationTest").configure {
 
 eclipse.classpath.file.whenMerged {
   if (this is EclipseClasspath) {
-    entries.removeIf { entry ->
-      entry is SourceFolder && entry.path.contains("integrationTest")
-    }
+    entries.removeIf { (it is SourceFolder) && it.path.contains("integrationTest") }
   }
 }

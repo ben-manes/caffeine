@@ -252,9 +252,6 @@ testing.suites {
               group = "Parameterized Test"
               include("com/github/benmanes/caffeine/cache/**")
 
-              val jitpack = providers.environmentVariable("JITPACK")
-              onlyIf { !jitpack.isPresent }
-
               systemProperties(
                 "keys" to keys.name,
                 "stats" to stats.name,
@@ -262,22 +259,22 @@ testing.suites {
                 "compute" to compute.name,
                 "implementation" to implementation)
 
-              useTestNG {
-                if (slow == Slow.Enabled) {
-                  maxParallelForks = 2
+              jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
+                "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+                "-XX:-ExplicitGCInvokesConcurrent")
+              if (slow == Slow.Enabled) {
+                maxParallelForks =
+                  if (isCI().get()) Runtime.getRuntime().availableProcessors() else 2
+                useTestNG {
                   includeGroups.add("slow")
-                  jvmArgs("-XX:-ExplicitGCInvokesConcurrent")
-                  if (java.toolchain.languageVersion.get().canCompileOrRun(23)) {
-                    jvmArgs("-XX:+UseShenandoahGC")
-                  } else {
-                    jvmArgs("-XX:+UseParallelGC")
-                  }
-                } else {
+                }
+              } else {
+                useTestNG {
                   parallel = "methods"
                   excludeGroups("slow", "isolated", "lincheck")
-                  jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
-                    "--add-opens", "java.base/java.lang=ALL-UNNAMED")
-                  threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
+                  threadCount = Runtime.getRuntime().availableProcessors().let {
+                    if (isCI().get()) it else max(6, it - 1)
+                  }
                 }
               }
             }
@@ -398,9 +395,7 @@ eclipse {
           .filter { regex.matches(it.path) }
           .forEach { it.sourcePath = fileReference(
             file(collections4Sources.map { sources -> sources.singleFile })) }
-        entries.removeIf { entry ->
-          entry is SourceFolder && entry.path.contains("integrationTest")
-        }
+        entries.removeIf { (it is SourceFolder) && it.path.contains("integrationTest") }
       }
     }
   }

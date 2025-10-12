@@ -26,7 +26,6 @@ dependencies {
   implementation(libs.fastutil)
   implementation(libs.hazelcast)
   implementation(libs.jfreechart)
-  implementation(libs.commons.io)
   implementation(libs.fast.filter)
   implementation(libs.flip.tables)
   implementation(libs.expiring.map)
@@ -57,8 +56,8 @@ testing.suites {
 }
 
 forbiddenApis {
-  bundledSignatures.addAll(listOf("commons-io-unsafe-2.15.1", "jdk-deprecated",
-    "jdk-internal", "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
+  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
+    "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
