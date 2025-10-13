@@ -4,6 +4,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       github-actions:
         applies-to: version-updates
@@ -13,6 +15,8 @@ updates:
     directory: /.github/actions/run-gradle
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       github-actions:
         applies-to: version-updates
@@ -22,6 +26,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       gradle-dependencies:
         applies-to: version-updates
@@ -31,6 +37,8 @@ updates:
     directory: gradle/plugins
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       gradle-dependencies:
         applies-to: version-updates
@@ -40,6 +48,8 @@ updates:
     directory: examples/coalescing-bulkloader-reactor
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       gradle-dependencies:
         applies-to: version-updates
@@ -49,6 +59,8 @@ updates:
     directory: examples/hibernate
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       gradle-dependencies:
         applies-to: version-updates
@@ -58,6 +70,8 @@ updates:
     directory: examples/indexable
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       gradle-dependencies:
         applies-to: version-updates
@@ -67,6 +81,8 @@ updates:
     directory: examples/resilience-failsafe
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       gradle-dependencies:
         applies-to: version-updates
@@ -76,6 +92,8 @@ updates:
     directory: examples/graal-native
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       gradle-dependencies:
         applies-to: version-updates
@@ -85,6 +103,8 @@ updates:
     directory: examples/write-behind-rxjava
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 4
     groups:
       gradle-dependencies:
         applies-to: version-updates

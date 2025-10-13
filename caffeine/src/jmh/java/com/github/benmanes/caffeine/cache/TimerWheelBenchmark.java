@@ -144,6 +144,7 @@ public class TimerWheelBenchmark {
 
     @Override public Int getKey() { throw new UnsupportedOperationException(); }
     @Override public Object getKeyReference() { throw new UnsupportedOperationException(); }
+    @Override public Object getKeyReferenceOrNull() { throw new UnsupportedOperationException(); }
     @Override public Int getValue() { throw new UnsupportedOperationException(); }
     @Override public Object getValueReference() { throw new UnsupportedOperationException(); }
     @Override public void setValue(Int value, @Nullable ReferenceQueue<Int> queue) {}

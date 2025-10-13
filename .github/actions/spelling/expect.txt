@@ -249,6 +249,7 @@ spi
 spliterated
 splitonced
 spotbugs
+SSMS
 stest
 subtable
 systor
@@ -302,6 +303,7 @@ workingset
 writeback
 writebehind
 wrt
+WSMS
 wtinylfu
 XEntry
 xorshift

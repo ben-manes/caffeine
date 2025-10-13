@@ -540,7 +540,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     return (weigher != Weigher.singletonWeigher());
   }
 
-  protected FrequencySketch<K> frequencySketch() {
+  protected FrequencySketch frequencySketch() {
     throw new UnsupportedOperationException();
   }
 
@@ -814,14 +814,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       // Evict immediately if an entry was collected
-      K victimKey = victim.getKey();
-      K candidateKey = candidate.getKey();
-      if (victimKey == null) {
+      var victimKeyRef = victim.getKeyReferenceOrNull();
+      var candidateKeyRef = candidate.getKeyReferenceOrNull();
+      if (victimKeyRef == null) {
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
-      } else if (candidateKey == null) {
+      } else if (candidateKeyRef == null) {
         Node<K, V> evict = candidate;
         candidate = candidate.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
@@ -850,7 +850,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       // Evict the entry with the lowest frequency
-      if (admit(candidateKey, victimKey)) {
+      if (admit(candidateKeyRef, victimKeyRef)) {
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
@@ -869,14 +869,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * collision attacks, where the victim's frequency is artificially raised so that no new entries
    * are admitted.
    *
-   * @param candidateKey the key for the entry being proposed for long term retention
-   * @param victimKey the key for the entry chosen by the eviction policy for replacement
+   * @param candidateKeyRef the keyRef for the entry being proposed for long term retention
+   * @param victimKeyRef the keyRef for the entry chosen by the eviction policy for replacement
    * @return if the candidate should be admitted and the victim ejected
    */
   @GuardedBy("evictionLock")
-  boolean admit(K candidateKey, K victimKey) {
-    int victimFreq = frequencySketch().frequency(victimKey);
-    int candidateFreq = frequencySketch().frequency(candidateKey);
+  boolean admit(Object candidateKeyRef, Object victimKeyRef) {
+    int candidateFreq = frequencySketch().frequency(candidateKeyRef);
+    int victimFreq = frequencySketch().frequency(victimKeyRef);
     if (candidateFreq > victimFreq) {
       return true;
     } else if (candidateFreq >= ADMIT_HASHDOS_THRESHOLD) {
@@ -1779,11 +1779,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @GuardedBy("evictionLock")
   void onAccess(Node<K, V> node) {
     if (evicts()) {
-      K key = node.getKey();
-      if (key == null) {
+      var keyRef = node.getKeyReferenceOrNull();
+      if (keyRef == null) {
         return;
       }
-      frequencySketch().increment(key);
+      frequencySketch().increment(keyRef);
       if (node.inWindow()) {
         reorder(accessOrderWindowDeque(), node);
       } else if (node.inMainProbation()) {
@@ -1899,9 +1899,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }
         }
 
-        K key = node.getKey();
-        if (key != null) {
-          frequencySketch().increment(key);
+        var keyRef = node.getKeyReferenceOrNull();
+        if (keyRef != null) {
+          frequencySketch().increment(keyRef);
         }
 
         setMissesInSample(missesInSample() + 1);
@@ -3109,8 +3109,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   <T> T evictionOrder(boolean hottest, Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     Comparator<Node<K, V>> comparator = Comparator.comparingInt(node -> {
-      K key = node.getKey();
-      return (key == null) ? 0 : frequencySketch().frequency(key);
+      var keyRef = node.getKeyReferenceOrNull();
+      return (keyRef == null) ? 0 : frequencySketch().frequency(keyRef);
     });
     Iterable<Node<K, V>> iterable;
     if (hottest) {

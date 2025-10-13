@@ -136,6 +136,9 @@ final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
   @Override public Object getKeyReference() {
     return keyReference;
   }
+  @Override public Object getKeyReferenceOrNull() {
+    return keyReference;
+  }
   @Override public V getValue() {
     return (V) Boolean.TRUE;
   }

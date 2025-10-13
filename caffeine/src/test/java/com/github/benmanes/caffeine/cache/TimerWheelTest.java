@@ -668,6 +668,7 @@ public final class TimerWheelTest {
 
     @Override public Int getKey() { return longToInt(variableTime); }
     @Override public Object getKeyReference() { return null; }
+    @Override public Object getKeyReferenceOrNull() { return null; }
     @Override public Int getValue() { return getKey().negate(); }
     @Override public Object getValueReference() { return null; }
     @Override public void setValue(Int value, ReferenceQueue<Int> referenceQueue) {}

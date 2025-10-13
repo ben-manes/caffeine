@@ -471,6 +471,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
 
     @Override public @Nullable K getKey() { return null; }
     @Override public Object getKeyReference() { throw new UnsupportedOperationException(); }
+    @Override public Object getKeyReferenceOrNull() { throw new UnsupportedOperationException(); }
     @Override public @Nullable V getValue() { return null; }
     @Override public Object getValueReference() { throw new UnsupportedOperationException(); }
     @Override public void setValue(V value, @Nullable ReferenceQueue<V> referenceQueue) {}
