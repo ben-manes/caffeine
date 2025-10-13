@@ -21,11 +21,15 @@ import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import javax.lang.model.element.Modifier;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
+import com.palantir.javapoet.AnnotationSpec;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.TypeName;
 
 /**
  * Adds the key to the node.
@@ -56,20 +60,56 @@ public final class AddKey implements NodeRule {
         .addField(fieldSpec.build())
         .addMethod(context.newGetter(context.keyStrength(), kTypeVar, "key",
             (context.keyStrength() == Strength.STRONG) ? Visibility.OPAQUE : Visibility.PLAIN))
-        .addMethod(newGetKeyRef(context));
+        .addMethod(MethodSpec.methodBuilder("getKeyReference")
+            .addModifiers(context.publicFinalModifiers())
+            .addStatement("return $L.getOpaque(this)", varHandleName("key"))
+            .returns(Object.class)
+            .build());
+    var getKeyReferenceOrNull = MethodSpec.methodBuilder("getKeyReferenceOrNull")
+        .addModifiers(context.publicFinalModifiers());
+    if (context.isStrongKeys()) {
+      getKeyReferenceOrNull
+          .addStatement("return $L.getOpaque(this)", varHandleName("key"))
+          .returns(Object.class);
+    } else {
+      getKeyReferenceOrNull
+          .addStatement("$1T keyRef = ($1T) $2L.getOpaque(this)",
+              referenceType, varHandleName("key"))
+          .addStatement("return (keyRef.get() == null) ? null : keyRef")
+          .returns(TypeName.get(Object.class)
+              .annotated(AnnotationSpec.builder(Nullable.class).build()));
+    }
+    context.nodeSubtype.addMethod(getKeyReferenceOrNull.build());
     context.addVarHandle("key", context.isStrongKeys()
         ? ClassName.get(Object.class)
         : context.keyReferenceType().rawType());
   }
 
   private static void addIfCollectedValue(NodeContext context) {
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getKeyReference")
-        .addModifiers(context.publicFinalModifiers())
-        .returns(Object.class)
-        .addStatement("$1T valueRef = ($1T) $2L.getAcquire(this)",
-            context.valueReferenceType(), varHandleName("value"))
-        .addStatement("return valueRef.getKeyReference()")
-        .build());
+    context.nodeSubtype
+        .addMethod(MethodSpec.methodBuilder("getKeyReference")
+            .addModifiers(context.publicFinalModifiers())
+            .addStatement("$1T valueRef = ($1T) $2L.getAcquire(this)",
+                context.valueReferenceType(), varHandleName("value"))
+            .addStatement("return valueRef.getKeyReference()")
+            .returns(Object.class)
+            .build());
+    var getKeyReferenceOrNull = MethodSpec.methodBuilder("getKeyReferenceOrNull")
+            .addModifiers(context.publicFinalModifiers())
+            .addStatement("$1T valueRef = ($1T) $2L.getAcquire(this)",
+                context.valueReferenceType(), varHandleName("value"));
+    if (context.isStrongKeys()) {
+      getKeyReferenceOrNull
+          .addStatement("return valueRef.getKeyReference()")
+          .returns(Object.class);
+    } else {
+      getKeyReferenceOrNull
+          .addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceType)
+          .addStatement("return (keyRef.get() == null) ? null : keyRef")
+          .returns(TypeName.get(Object.class)
+              .annotated(AnnotationSpec.builder(Nullable.class).build()));
+    }
+    context.nodeSubtype.addMethod(getKeyReferenceOrNull.build());
 
     var getKey = MethodSpec.methodBuilder("getKey")
         .addModifiers(context.publicFinalModifiers())
@@ -86,11 +126,4 @@ public final class AddKey implements NodeRule {
     context.suppressedWarnings.add("unchecked");
   }
 
-  private static MethodSpec newGetKeyRef(NodeContext context) {
-    var getter = MethodSpec.methodBuilder("getKeyReference")
-        .addModifiers(context.publicFinalModifiers())
-        .returns(Object.class);
-    getter.addStatement("return $L.getOpaque(this)", varHandleName("key"));
-    return getter.build();
-  }
 }

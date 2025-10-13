@@ -44,7 +44,7 @@ public enum SketchType {
   },
   Block {
     @Override public <E> TinyLfuSketch<E> create(long estimatedSize) {
-      var frequencySketch = new FrequencySketch<E>();
+      var frequencySketch = new FrequencySketch();
       frequencySketch.ensureCapacity(estimatedSize);
       return new TinyLfuSketch<>() {
         @Override public int frequency(E e) {

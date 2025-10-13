@@ -32,7 +32,7 @@ public final class FrequencySketchTest {
 
   @Test
   public void construct() {
-    var sketch = new FrequencySketch<Integer>();
+    var sketch = new FrequencySketch();
     assertThat(sketch.table).isNull();
     assertThat(sketch.isNotInitialized()).isTrue();
 
@@ -41,12 +41,12 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch")
-  public void ensureCapacity_negative(FrequencySketch<Integer> sketch) {
+  public void ensureCapacity_negative(FrequencySketch sketch) {
     assertThrows(IllegalArgumentException.class, () -> sketch.ensureCapacity(-1));
   }
 
   @Test(dataProvider = "sketch")
-  public void ensureCapacity_smaller(FrequencySketch<Integer> sketch) {
+  public void ensureCapacity_smaller(FrequencySketch sketch) {
     int size = sketch.table.length;
     sketch.ensureCapacity(size / 2);
     assertThat(sketch.table).hasLength(size);
@@ -55,7 +55,7 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch")
-  public void ensureCapacity_larger(FrequencySketch<Integer> sketch) {
+  public void ensureCapacity_larger(FrequencySketch sketch) {
     int size = sketch.table.length;
     sketch.ensureCapacity(2L * size);
     assertThat(sketch.table).hasLength(2 * size);
@@ -64,7 +64,7 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch", groups = "isolated")
-  public void ensureCapacity_maximum(FrequencySketch<Integer> sketch) {
+  public void ensureCapacity_maximum(FrequencySketch sketch) {
     int size = Integer.MAX_VALUE / 10 + 1;
     sketch.ensureCapacity(size);
     assertThat(sketch.sampleSize).isEqualTo(Integer.MAX_VALUE);
@@ -73,13 +73,13 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch")
-  public void increment_once(FrequencySketch<Integer> sketch) {
+  public void increment_once(FrequencySketch sketch) {
     sketch.increment(item);
     assertThat(sketch.frequency(item)).isEqualTo(1);
   }
 
   @Test(dataProvider = "sketch")
-  public void increment_max(FrequencySketch<Integer> sketch) {
+  public void increment_max(FrequencySketch sketch) {
     for (int i = 0; i < 20; i++) {
       sketch.increment(item);
     }
@@ -87,7 +87,7 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch")
-  public void increment_distinct(FrequencySketch<Integer> sketch) {
+  public void increment_distinct(FrequencySketch sketch) {
     sketch.increment(item);
     sketch.increment(item + 1);
     assertThat(sketch.frequency(item)).isEqualTo(1);
@@ -96,7 +96,7 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch")
-  public void increment_zero(FrequencySketch<Integer> sketch) {
+  public void increment_zero(FrequencySketch sketch) {
     sketch.increment(0);
     assertThat(sketch.frequency(0)).isEqualTo(1);
   }
@@ -104,7 +104,7 @@ public final class FrequencySketchTest {
   @Test
   public void reset() {
     boolean reset = false;
-    var sketch = new FrequencySketch<Integer>();
+    var sketch = new FrequencySketch();
     sketch.ensureCapacity(64);
 
     for (int i = 1; i < 20 * sketch.table.length; i++) {
@@ -120,7 +120,7 @@ public final class FrequencySketchTest {
 
   @Test
   public void full() {
-    FrequencySketch<Integer> sketch = makeSketch(512);
+    FrequencySketch sketch = makeSketch(512);
     sketch.sampleSize = Integer.MAX_VALUE;
     for (int i = 0; i < 100_000; i++) {
       sketch.increment(i);
@@ -137,7 +137,7 @@ public final class FrequencySketchTest {
 
   @Test
   public void heavyHitters() {
-    FrequencySketch<Double> sketch = makeSketch(512);
+    FrequencySketch sketch = makeSketch(512);
     for (int i = 100; i < 100_000; i++) {
       sketch.increment((double) i);
     }
@@ -170,8 +170,8 @@ public final class FrequencySketchTest {
     return new Object[][] {{ makeSketch(512) }};
   }
 
-  private static <E> FrequencySketch<E> makeSketch(long maximumSize) {
-    var sketch = new FrequencySketch<E>();
+  private static FrequencySketch makeSketch(long maximumSize) {
+    var sketch = new FrequencySketch();
     sketch.ensureCapacity(maximumSize);
     return sketch;
   }

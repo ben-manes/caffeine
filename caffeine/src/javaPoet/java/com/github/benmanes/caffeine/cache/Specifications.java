@@ -102,8 +102,7 @@ public final class Specifications {
   public static final TypeName TIMER_WHEEL = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "TimerWheel"), kTypeVar, vTypeVar);
 
-  public static final TypeName FREQUENCY_SKETCH = ParameterizedTypeName.get(
-      ClassName.get(PACKAGE_NAME, "FrequencySketch"), kTypeVar);
+  public static final TypeName FREQUENCY_SKETCH = ClassName.get(PACKAGE_NAME, "FrequencySketch");
 
   private Specifications() {}
 }

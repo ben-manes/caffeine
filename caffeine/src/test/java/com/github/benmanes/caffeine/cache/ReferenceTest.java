@@ -94,10 +94,10 @@ import com.google.common.testing.EqualsTester;
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
 
-  // These tests require that the JVM uses a garbage collection algorithm that strictly honors
-  // -XX:SoftRefLRUPolicyMSPerMB=0 (-XX:+UseParallelGC until 23; -XX:+UseShenandoahGC onward)
-  // so that soft references can be reliably garbage collected by making them behave as weak
-  // references.
+  // These tests require that the JVM uses a garbage collection algorithm that can immediately
+  // discard all unreachable references so that soft references can be reliably garbage collected
+  // by making them behave like weak references. Typically this combination works:
+  // -XX:SoftRefLRUPolicyMSPerMB=0 -XX:+UseParallelGC -XX:-ExplicitGCInvokesConcurrent
 
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL)

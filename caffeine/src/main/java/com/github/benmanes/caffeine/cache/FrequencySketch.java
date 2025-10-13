@@ -26,7 +26,7 @@ import com.google.errorprone.annotations.Var;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class FrequencySketch<E> {
+final class FrequencySketch {
 
   /*
    * This class maintains a 4-bit CountMinSketch [1] with periodic aging to provide the popularity
@@ -117,7 +117,7 @@ final class FrequencySketch<E> {
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
   @SuppressWarnings("Varifier")
-  public int frequency(E e) {
+  public int frequency(Object e) {
     if (isNotInitialized()) {
       return 0;
     }
@@ -145,7 +145,7 @@ final class FrequencySketch<E> {
    * @param e the element to add
    */
   @SuppressWarnings({"ShortCircuitBoolean", "UnnecessaryLocalVariable"})
-  public void increment(E e) {
+  public void increment(Object e) {
     if (isNotInitialized()) {
       return;
     }

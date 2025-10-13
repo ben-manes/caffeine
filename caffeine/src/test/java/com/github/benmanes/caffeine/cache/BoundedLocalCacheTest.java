@@ -117,6 +117,7 @@ import com.github.benmanes.caffeine.cache.LocalCacheFactory.MethodHandleBasedFac
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
+import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.CompleteEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableEntry;
@@ -2557,6 +2558,79 @@ public final class BoundedLocalCacheTest {
     requireNonNull(context.build(key -> key));
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      initialCapacity = InitialCapacity.FULL, maximumSize = Maximum.UNREACHABLE)
+  public void frequencySketch_addTask(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.put(context.absentKey(), context.absentValue())).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.absentKey())));
+    assertThat(cache.frequencySketch().frequency(node.getKeyReference())).isEqualTo(1);
+    if (context.isWeakKeys()) {
+      int hashCode = requireNonNull(node.getKey()).hashCode();
+      assertThat(node.getKeyReference().hashCode()).isNotEqualTo(hashCode);
+      assertThat(cache.frequencySketch().frequency(hashCode)).isEqualTo(0);
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.SINGLETON,
+      initialCapacity = InitialCapacity.FULL, maximumSize = Maximum.UNREACHABLE)
+  public void frequencySketch_onAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    requireNonNull(cache.get(context.firstKey()));
+    cache.cleanUp();
+
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    assertThat(cache.frequencySketch().frequency(node.getKeyReference())).isEqualTo(2);
+    if (context.isWeakKeys()) {
+      int hashCode = requireNonNull(node.getKey()).hashCode();
+      assertThat(node.getKeyReference().hashCode()).isNotEqualTo(hashCode);
+      assertThat(cache.frequencySketch().frequency(hashCode)).isEqualTo(0);
+    }
+  }
+
+  @Test
+  public void frequencySketch_admit_strongKeys() {
+    var builder = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .initialCapacity(100)
+        .maximumSize(100);
+    var calls = new int[1];
+    var cache = new SSMS<>(builder, /* cacheLoader= */ Mockito.mock(), /* isAsync= */ false) {
+      @Override boolean admit(Object candidateKeyRef, Object victimKeyRef) {
+        calls[0]++;
+        assertThat(victimKeyRef).isInstanceOf(Int.class);
+        assertThat(candidateKeyRef).isInstanceOf(Int.class);
+        return super.admit(candidateKeyRef, victimKeyRef);
+      }
+    };
+    for (int i = 0; i < 200; i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    assertThat(calls[0]).isEqualTo(100);
+  }
+
+  @Test
+  public void frequencySketch_admit_weakKeys() {
+    var builder = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .initialCapacity(100)
+        .maximumSize(100)
+        .weakKeys();
+    var calls = new int[1];
+    var cache = new WSMS<>(builder, /* cacheLoader= */ Mockito.mock(), /* isAsync= */ false) {
+      @Override boolean admit(Object candidateKeyRef, Object victimKeyRef) {
+        calls[0]++;
+        assertThat(victimKeyRef).isInstanceOf(InternalReference.class);
+        assertThat(candidateKeyRef).isInstanceOf(InternalReference.class);
+        return super.admit(candidateKeyRef, victimKeyRef);
+      }
+    };
+    for (int i = 0; i < 200; i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    assertThat(calls[0]).isEqualTo(100);
+  }
+
   /* --------------- Expiration --------------- */
 
   @Test(dataProvider = "caches")
@@ -3899,6 +3973,9 @@ public final class BoundedLocalCacheTest {
       return null;
     }
     @Override public Object getKeyReference() {
+      return null;
+    }
+    @Override public Object getKeyReferenceOrNull() {
       return null;
     }
     @Override public Object getValue() {

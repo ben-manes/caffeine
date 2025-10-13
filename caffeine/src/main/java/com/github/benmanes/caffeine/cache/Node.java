@@ -42,6 +42,12 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
    */
   public abstract Object getKeyReference();
 
+  /**
+   * Returns the reference that the cache is holding the entry by or {@code null} if the underlying
+   * key has been reclaimed by the garbage collector.
+   */
+  public abstract @Nullable Object getKeyReferenceOrNull();
+
   /** Return the value or {@code null} if it has been reclaimed by the garbage collector. */
   public abstract @Nullable V getValue();
 
