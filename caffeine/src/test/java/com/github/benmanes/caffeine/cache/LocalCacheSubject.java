@@ -371,8 +371,15 @@ public final class LocalCacheSubject extends Subject {
       }
       var clazz = node instanceof Interned ? WeakKeyEqualsReference.class : WeakKeyReference.class;
       check("keyReference").that(node.getKeyReference()).isInstanceOf(clazz);
+      if (key == null) {
+        check("keyReferenceOrNull").that(node.getKeyReferenceOrNull()).isNull();
+      } else {
+        check("keyReferenceOrNull").that(node.getKeyReferenceOrNull())
+            .isSameInstanceAs(node.getKeyReference());
+      }
     } else {
       check("key").that(key).isNotNull();
+      check("keyReferenceOrNull").that(node.getKeyReferenceOrNull()).isSameInstanceAs(key);
     }
     check("data").that(bounded.data).containsEntry(node.getKeyReference(), node);
   }
