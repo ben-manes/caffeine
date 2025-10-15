@@ -35,8 +35,10 @@ import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.slf4j.event.Level.ERROR;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
@@ -57,10 +59,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -1411,6 +1416,100 @@ public final class AsyncCacheTest {
 
     verify(context.removalListener(), never()).onRemoval(
         any(Int.class), any(Int.class), any(RemovalCause.class));
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void handleCompletion_brokenFuture_inFlight(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    CompletableFuture<Int> future = Mockito.spy();
+    ArgumentCaptor<BiConsumer<Int, Throwable>> captor = ArgumentCaptor.captor();
+    doReturn(future).when(future).whenComplete(captor.capture());
+    cache.put(context.absentKey(), future);
+
+    assertThat(future.isDone()).isFalse();
+    assertThat(future.isCompletedExceptionally()).isFalse();
+
+    var futureToString = future.toString();
+    captor.getValue().accept(context.absentValue(), /* error */ null);
+
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(logEvents()
+        .withMessage(msg -> msg.contains("An invalid state was detected"))
+        .withMessage(msg -> msg.contains("key: " + context.absentKey()))
+        .withMessage(msg -> msg.contains("key type: " + Int.class.getName()))
+        .withMessage(msg -> msg.contains("value type: " + Int.class.getName()))
+        .withMessage(msg -> msg.contains("future: " + futureToString))
+        .withThrowable(IllegalStateException.class)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void handleCompletion_brokenFuture_cancel(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    CompletableFuture<Int> future = Mockito.spy();
+    ArgumentCaptor<BiConsumer<Int, Throwable>> captor = ArgumentCaptor.captor();
+    doReturn(future).when(future).whenComplete(captor.capture());
+    cache.put(context.absentKey(), future);
+
+    future.cancel(true);
+    assertThat(future).isDone();
+    assertThat(future.isCancelled()).isTrue();
+    assertThat(future).hasCompletedExceptionally();
+
+    var futureToString = future.toString();
+    captor.getValue().accept(context.absentValue(), /* error */ null);
+
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(logEvents()
+        .withMessage(msg -> msg.contains("An invalid state was detected"))
+        .withMessage(msg -> msg.contains("key: " + context.absentKey()))
+        .withMessage(msg -> msg.contains("key type: " + Int.class.getName()))
+        .withMessage(msg -> msg.contains("value type: " + Int.class.getName()))
+        .withMessage(msg -> msg.contains("future: " + futureToString))
+        .withThrowable(IllegalStateException.class)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CheckMaxLogLevel(ERROR)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void handleCompletion_brokenFuture_nullValue(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    CompletableFuture<Int> future = Mockito.spy();
+    ArgumentCaptor<BiConsumer<Int, Throwable>> captor = ArgumentCaptor.captor();
+    doReturn(future).when(future).whenComplete(captor.capture());
+    cache.put(context.absentKey(), future);
+
+    future.complete(null);
+    assertThat(future).isDone();
+    assertThat(future.isCancelled()).isFalse();
+    assertThat(future.isCompletedExceptionally()).isFalse();
+
+    var futureToString = future.toString();
+    captor.getValue().accept(context.absentValue(), /* error */ null);
+
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(logEvents()
+        .withMessage(msg -> msg.contains("An invalid state was detected"))
+        .withMessage(msg -> msg.contains("key: " + context.absentKey()))
+        .withMessage(msg -> msg.contains("key type: " + Int.class.getName()))
+        .withMessage(msg -> msg.contains("value type: " + Int.class.getName()))
+        .withMessage(msg -> msg.contains("future: " + futureToString))
+        .withThrowable(IllegalStateException.class)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
   }
 
   @CacheSpec

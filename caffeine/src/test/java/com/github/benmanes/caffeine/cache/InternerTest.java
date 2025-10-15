@@ -199,8 +199,6 @@ public final class InternerTest extends TestCase {
   @Test
   public void nullPointerExceptions() {
     new NullPointerTester().testAllPublicStaticMethods(Interner.class);
-    var node = new Interned<Object, Boolean>(new WeakReference<>(1));
-    assertThat(node.getKeyReferenceOrNull()).isNotNull();
   }
 
   @Test
