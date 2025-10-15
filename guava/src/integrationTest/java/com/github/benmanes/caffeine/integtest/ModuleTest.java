@@ -24,6 +24,10 @@ import java.lang.module.ModuleDescriptor;
 import java.lang.module.ModuleDescriptor.Exports;
 import java.lang.module.ModuleDescriptor.Requires;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
 import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
@@ -35,6 +39,17 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class ModuleTest {
+
+  @Test
+  void sanity() {
+    var loader = new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        return -key;
+      }
+    };
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder(), loader);
+    assertEquals(-1, cache.getUnchecked(1).intValue());
+  }
 
   @Test
   void descriptor_name() {

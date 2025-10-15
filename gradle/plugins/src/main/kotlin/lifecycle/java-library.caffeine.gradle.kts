@@ -64,6 +64,11 @@ tasks.withType<JavaExec>().configureEach {
   }
 }
 
+tasks.named("assemble") {
+  dependsOn(tasks.withType<Jar>())
+  dependsOn(tasks.withType<JavaCompile>())
+}
+
 tasks.named<Jar>("jar").configure {
   inputs.property("version", project.version.toString())
   outputs.cacheIf { true }
@@ -93,6 +98,8 @@ tasks.named<Jar>("jar").configure {
 
 tasks.withType<Javadoc>().configureEach {
   val snippetPath = layout.projectDirectory.dir("src/test/java")
+  val isEnabled = isEarlyAccess().map { !it }
+  onlyIf { isEnabled.get() }
   inputs.dir(snippetPath)
     .withPathSensitivity(RELATIVE)
     .withPropertyName("snippetPath")

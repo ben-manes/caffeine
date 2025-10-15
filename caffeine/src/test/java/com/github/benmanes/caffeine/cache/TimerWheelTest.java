@@ -581,6 +581,7 @@ public final class TimerWheelTest {
     var node = new Sentinel<>();
     assertThrows(UnsupportedOperationException.class, node::getKeyReference);
     assertThrows(UnsupportedOperationException.class, node::getValueReference);
+    assertThrows(UnsupportedOperationException.class, node::getKeyReferenceOrNull);
   }
 
   /** Returns a snapshot roughly ordered by the expiration time. */

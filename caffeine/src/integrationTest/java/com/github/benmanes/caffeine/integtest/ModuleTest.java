@@ -24,6 +24,8 @@ import java.lang.module.ModuleDescriptor;
 import java.lang.module.ModuleDescriptor.Exports;
 import java.lang.module.ModuleDescriptor.Requires;
 
+import com.github.benmanes.caffeine.cache.LoadingCache;
+
 import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -35,6 +37,13 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class ModuleTest {
+
+  @Test
+  void sanity() {
+    @SuppressWarnings("Varifier")
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder().build(k -> -k);
+    assertEquals(-1, cache.get(1).intValue());
+  }
 
   @Test
   void descriptor_name() {

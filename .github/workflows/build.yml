@@ -67,7 +67,7 @@ jobs:
       - name: Compile
         uses: ./.github/actions/run-gradle
         with:
-          arguments: build -x check -x assemble
+          arguments: assemble
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
@@ -249,7 +249,7 @@ jobs:
       - name: Prepare Jacoco Reports
         uses: ./.github/actions/run-gradle
         with:
-          arguments: build -x check -x assemble
+          arguments: assemble
           java: ${{ env.PUBLISH_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Combine Jacoco Reports
