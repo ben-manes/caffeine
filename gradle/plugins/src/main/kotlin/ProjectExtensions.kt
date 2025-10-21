@@ -8,7 +8,9 @@ val Project.libs
   get() = the<LibrariesForLibs>()
 
 fun Project.version(major: Int, minor: Int, patch: Int, releaseBuild: Boolean) {
-  version = "$major.$minor.$patch" + if (releaseBuild) "" else "-SNAPSHOT"
+  if (version == Project.DEFAULT_VERSION) {
+    version = "$major.$minor.$patch" + if (releaseBuild) "" else "-SNAPSHOT"
+  }
 }
 
 fun Project.defaultJvmArgs(): ListProperty<String> {

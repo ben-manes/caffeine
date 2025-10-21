@@ -96,7 +96,7 @@ versions = "0.53.0"
 xz = "1.10"
 ycsb = "0.17.0"
 zero-allocation-hashing = "0.27ea1"
-zstd = "1.5.7-5"
+zstd = "1.5.7-6"
 
 [libraries]
 asm-bom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }
