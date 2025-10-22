@@ -43,7 +43,9 @@ tasks.withType<JavaCompile>().configureEach {
   }
 
   options.apply {
-    javaModuleVersion = provider { version as String }
+    javaModuleVersion = provider {
+      version.toString().takeIf { it.first().isDigit() } ?: "0.0.0-$version"
+    }
     compilerArgs.addAll(listOf("-Xlint:all", "-parameters",
       "-Xmaxerrs", "500", "-Xmaxwarns", "500"))
     val failOnWarnings = isCI()

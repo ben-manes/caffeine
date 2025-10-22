@@ -84,7 +84,6 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 fun disabledChecks() = listOf(
-  "AndroidJdkLibsChecker",
   "AssignmentExpression",
   "AvoidObjectArrays",
   "CannotMockMethod",
@@ -95,6 +94,7 @@ fun disabledChecks() = listOf(
   "MissingSummary",
   "MultipleTopLevelClasses",
   "PatternMatchingInstanceof",
+  "RedundantNullCheck",
   "Slf4jLoggerDeclaration",
   "StatementSwitchToExpressionSwitch",
   "StaticImport",

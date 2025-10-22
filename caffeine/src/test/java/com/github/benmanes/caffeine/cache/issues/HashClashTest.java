@@ -42,9 +42,9 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 @Test(dataProviderClass = CacheProvider.class)
 public final class HashClashTest {
   private static final int STEP = 5;
-  private static final Long LONG_1 = 1L;
+  private static final long LONG_1 = 1L;
   private static final long ITERS = 200_000;
-  private static final Long CLASH = (ITERS << 32) ^ ITERS ^ 1;
+  private static final long CLASH = (ITERS << 32) ^ ITERS ^ 1;
 
   private static final boolean debug = false;
 
@@ -60,7 +60,7 @@ public final class HashClashTest {
     printKeys(cache);
 
     // add a hashcode clash for 1
-    assertThat(CLASH.hashCode()).isEqualTo(LONG_1.hashCode());
+    assertThat(Long.hashCode(CLASH)).isEqualTo(Long.hashCode(LONG_1));
     cache.get(CLASH, identity());
     printKeys(cache);
 

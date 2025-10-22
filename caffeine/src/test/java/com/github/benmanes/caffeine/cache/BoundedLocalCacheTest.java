@@ -945,7 +945,8 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.EMPTY, maximumSize = Maximum.TEN, weigher = CacheWeigher.DISABLED)
+      population = Population.EMPTY, keys = ReferenceType.STRONG,
+      maximumSize = Maximum.TEN, weigher = CacheWeigher.DISABLED)
   public void evict_wtinylfu(Cache<Int, Int> cache, CacheContext context) {
     // Enforce full initialization of internal structures; clear sketch
     asBoundedLocalCache(cache).frequencySketch().ensureCapacity(context.maximumSize());
