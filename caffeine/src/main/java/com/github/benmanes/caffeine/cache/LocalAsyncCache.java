@@ -68,7 +68,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   Policy<K, V> policy();
 
   /** An empty array of completable futures. */
-  CompletableFuture<?>[] EMPTY_FEATURES_ARRAY = new CompletableFuture[0];
+  CompletableFuture<?>[] EMPTY_FUTURES_ARRAY = new CompletableFuture[0];
 
   @Override
   default @Nullable CompletableFuture<V> getIfPresent(K key) {
