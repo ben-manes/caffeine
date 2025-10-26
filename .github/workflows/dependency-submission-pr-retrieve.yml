@@ -4,6 +4,9 @@ on:
   workflow_run:
     workflows: ['Generate and save dependency graph']
     types: [completed]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}

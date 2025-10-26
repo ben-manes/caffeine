@@ -36,6 +36,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -59,6 +60,7 @@ import com.github.benmanes.caffeine.cache.testing.ExpireAfterWrite;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Range;
 
 /**
  * The test cases for caches that support the expire-after-write (time-to-live) policy.
@@ -345,6 +347,21 @@ public final class ExpireAfterWriteTest {
     cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(Duration.ofMinutes(2));
     assertThat(expireAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE)
+  public void ageOf_async(AsyncCache<Int, Int> cache,
+      CacheContext context, @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(expireAfterWrite.ageOf(context.absentKey()).orElseThrow())
+        .isAtLeast(Duration.ofNanos(-Async.ASYNC_EXPIRY));
+
+    future.complete(Int.valueOf(2));
+    context.ticker().advance(Duration.ofSeconds(30));
+    assertThat(expireAfterWrite.ageOf(context.absentKey()).orElseThrow())
+        .isIn(Range.closed(Duration.ofSeconds(30), Duration.ofSeconds(31)));
   }
 
   /* --------------- Policy: oldest --------------- */

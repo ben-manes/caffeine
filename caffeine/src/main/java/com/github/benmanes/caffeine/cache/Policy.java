@@ -166,7 +166,8 @@ public interface Policy<K, V> {
 
     /**
      * Returns the weight of the entry. If this cache does not use a weighted size bound or does not
-     * support querying for the entry's weight, then the {@link OptionalInt} will be empty.
+     * support querying for the entry's weight, then the {@link OptionalInt} will be empty. In an
+     * asynchronous cache while the future is incomplete then the weight may be zero.
      *
      * @param key the key for the entry being queried
      * @return the weight if the entry is present in the cache
@@ -346,7 +347,8 @@ public interface Policy<K, V> {
 
     /**
      * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
-     * estimate of the amount of time since the entry's expiration was last reset.
+     * estimate of the amount of time since the entry's expiration was last reset. In an
+     * asynchronous cache while the future is incomplete then the duration may be negative.
      * <p>
      * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
@@ -361,7 +363,8 @@ public interface Policy<K, V> {
 
     /**
      * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
-     * estimate of the amount of time since the entry's expiration was last reset.
+     * estimate of the amount of time since the entry's expiration was last reset. In an
+     * asynchronous cache while the future is incomplete then the duration may be negative.
      * <p>
      * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
@@ -520,7 +523,8 @@ public interface Policy<K, V> {
 
     /**
      * Returns the duration until the entry should be automatically removed. The expiration policy
-     * determines when the entry's duration is reset.
+     * determines when the entry's duration is reset. In an asynchronous cache while the future is
+     * incomplete then the duration may be extended into the distant future.
      *
      * @param key the key for the entry being queried
      * @param unit the unit that {@code age} is expressed in
@@ -531,7 +535,8 @@ public interface Policy<K, V> {
 
     /**
      * Returns the duration until the entry should be automatically removed. The expiration policy
-     * determines when the entry's duration is reset.
+     * determines when the entry's duration is reset. In an asynchronous cache while the future is
+     * incomplete then the duration may be extended into the distant future.
      *
      * @param key the key for the entry being queried
      * @return the duration if the entry is present in the cache
@@ -546,7 +551,8 @@ public interface Policy<K, V> {
 
     /**
      * Specifies that the entry should be automatically removed from the cache once the duration has
-     * elapsed. The expiration policy determines when the entry's age is reset.
+     * elapsed. The expiration policy determines when the entry's age is reset. This method has no
+     * effect if the mapping is absent or, in an asynchronous cache, if the future is incomplete.
      *
      * @param key the key for the entry being set
      * @param duration the length of time from now when the entry should be automatically removed
@@ -558,7 +564,8 @@ public interface Policy<K, V> {
 
     /**
      * Specifies that the entry should be automatically removed from the cache once the duration has
-     * elapsed. The expiration policy determines when the entry's age is reset.
+     * elapsed. The expiration policy determines when the entry's age is reset. This method has no
+     * effect if the mapping is absent or, in an asynchronous cache, if the future is incomplete.
      *
      * @param key the key for the entry being set
      * @param duration the length of time from now when the entry should be automatically removed
@@ -764,7 +771,8 @@ public interface Policy<K, V> {
 
     /**
      * Returns the age of the entry based on the refresh policy. The entry's age is the cache's
-     * estimate of the amount of time since the entry's refresh period was last reset.
+     * estimate of the amount of time since the entry's refresh period was last reset. In an
+     * asynchronous cache while the future is incomplete then the duration may be negative.
      * <p>
      * A refresh policy uses the age to determine if an entry is fresh or stale by comparing it
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
@@ -779,7 +787,8 @@ public interface Policy<K, V> {
 
     /**
      * Returns the age of the entry based on the refresh policy. The entry's age is the cache's
-     * estimate of the amount of time since the entry's refresh period was last reset.
+     * estimate of the amount of time since the entry's refresh period was last reset. In an
+     * asynchronous cache while the future is incomplete then the duration may be negative.
      * <p>
      * A refresh policy uses the age to determine if an entry is fresh or stale by comparing it
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}

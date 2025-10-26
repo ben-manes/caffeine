@@ -70,6 +70,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Range;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
@@ -1061,5 +1062,20 @@ public final class RefreshAfterWriteTest {
     cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(Duration.ofMinutes(2));
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
+  public void ageOf_async(AsyncCache<Int, Int> cache,
+      CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(refreshAfterWrite.ageOf(context.absentKey()).orElseThrow())
+        .isAtLeast(Duration.ofNanos(-Async.ASYNC_EXPIRY));
+
+    future.complete(Int.valueOf(2));
+    context.ticker().advance(Duration.ofSeconds(30));
+    assertThat(refreshAfterWrite.ageOf(context.absentKey()).orElseThrow())
+        .isIn(Range.closed(Duration.ofSeconds(30), Duration.ofSeconds(31)));
   }
 }

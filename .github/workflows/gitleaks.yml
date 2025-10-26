@@ -4,7 +4,9 @@ on:
   pull_request: {}
   push:
     branches: [master, v3.dev]
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 env:
   ALLOWED_ENDPOINTS: >
     api.github.com:443

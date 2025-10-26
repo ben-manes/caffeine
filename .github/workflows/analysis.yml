@@ -1,7 +1,9 @@
 name: Static analysis for Java
 permissions: {}
 on: [ push, pull_request ]
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >

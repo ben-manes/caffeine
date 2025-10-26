@@ -4283,7 +4283,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           long durationNanos = TimeUnit.NANOSECONDS.convert(duration, unit);
           synchronized (node) {
             now = cache.expirationTicker().read();
-            if (cache.hasExpired(node, now)) {
+            if (cache.isComputingAsync(node.getValue()) || cache.hasExpired(node, now)) {
               return;
             }
             node.setVariableTime(now + Math.min(durationNanos, MAXIMUM_EXPIRY));

@@ -1314,6 +1314,23 @@ public final class ExpireAfterVarTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+          refreshAfterWrite = Expire.ONE_MINUTE)
+  public void getExpiresAfter_async(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey()).orElseThrow())
+        .isEqualTo(Duration.ofNanos(Async.ASYNC_EXPIRY));
+
+    future.complete(context.absentValue());
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey()).orElseThrow())
+        .isEqualTo(context.expiryTime().duration());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   public void setExpiresAfter_negative(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -1386,6 +1403,31 @@ public final class ExpireAfterVarTest {
     expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(1));
     cache.cleanUp();
     assertThat(cache).isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+          refreshAfterWrite = Expire.ONE_MINUTE)
+  public void setExpiresAfter_async(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey()).orElseThrow())
+        .isEqualTo(Duration.ofNanos(Async.ASYNC_EXPIRY));
+
+    expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(1));
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey()).orElseThrow())
+        .isEqualTo(Duration.ofNanos(Async.ASYNC_EXPIRY));
+
+    future.complete(context.absentValue());
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey()).orElseThrow())
+        .isEqualTo(context.expiryTime().duration());
+
+    expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(2));
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey()).orElseThrow())
+        .isEqualTo(Duration.ofMinutes(2));
   }
 
   /* --------------- Policy: putIfAbsent --------------- */

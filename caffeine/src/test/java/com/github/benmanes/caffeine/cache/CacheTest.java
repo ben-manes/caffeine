@@ -1136,6 +1136,19 @@ public final class CacheTest {
     }
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void getEntryIfPresentQuietly_async(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.synchronous().policy().getEntryIfPresentQuietly(context.absentKey())).isNull();
+
+    future.complete(context.absentValue());
+    var entry = cache.synchronous().policy().getEntryIfPresentQuietly(context.absentKey());
+    assertThat(entry).isNotNull();
+    assertThat(context).containsEntry(entry);
+  }
+
   /* --------------- Policy: refreshes --------------- */
 
   @CacheSpec

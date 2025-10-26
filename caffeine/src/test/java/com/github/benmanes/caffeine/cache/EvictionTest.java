@@ -1082,6 +1082,19 @@ public final class EvictionTest {
     assertThat(eviction.weightOf(context.absentKey())).isEmpty();
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  public void weightOf_async(AsyncCache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(eviction.weightOf(context.absentKey())).hasValue(0);
+
+    future.complete(Int.valueOf(2));
+    assertThat(eviction.weightOf(context.absentKey())).hasValue(2);
+  }
+
   /* --------------- Policy: WeightedSize --------------- */
 
   @Test(dataProvider = "caches")

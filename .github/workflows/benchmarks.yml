@@ -4,7 +4,9 @@ on:
   schedule:
     - cron: '0 0 * * 6'
   workflow_dispatch: {}
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >

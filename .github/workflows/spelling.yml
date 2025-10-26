@@ -1,6 +1,9 @@
 name: Spelling
 permissions: {}
 on: [ push, pull_request ]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   misspell:
@@ -22,7 +25,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Misspell
-        uses: reviewdog/action-misspell@9daa94af4357dddb6fd3775de806bc0a8e98d3e4 # v1.26.3
+        uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1.27.0
         with:
           reporter: github-check
           github_token: ${{ secrets.GITHUB_TOKEN }}

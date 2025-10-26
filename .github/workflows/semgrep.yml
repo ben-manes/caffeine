@@ -4,6 +4,9 @@ on:
   pull_request: {}
   push:
     branches: [master, v2.dev, v3.dev]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   semgrep:
@@ -34,7 +37,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@16140ae1a102900babc80a33c44059580f687047 # v4.30.9
+        uses: github/codeql-action/upload-sarif@4e94bd11f71e507f7f87df81788dff88d1dacbfb # v4.31.0
         if: steps.check_files.outputs.files_exists == 'true'
         continue-on-error: true
         with:
