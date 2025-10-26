@@ -67,6 +67,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   /** Returns the policy supported by this implementation and its configuration. */
   Policy<K, V> policy();
 
+  /** An empty array of completable futures. */
+  CompletableFuture<?>[] EMPTY_FEATURES_ARRAY = new CompletableFuture[0];
+
   @Override
   default @Nullable CompletableFuture<V> getIfPresent(K key) {
     return cache().getIfPresent(key, /* recordStats= */ true);
@@ -164,7 +167,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return CompletableFuture.completedFuture(emptyMap);
     }
     @SuppressWarnings("rawtypes")
-    CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
+    CompletableFuture<?>[] array = futures.values().toArray(EMPTY_FEATURES_ARRAY);
     return CompletableFuture.allOf(array).thenApply(ignored -> {
       var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(futures.size()));
       futures.forEach((key, future) -> {
