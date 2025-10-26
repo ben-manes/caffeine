@@ -167,7 +167,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return CompletableFuture.completedFuture(emptyMap);
     }
     @SuppressWarnings("rawtypes")
-    CompletableFuture<?>[] array = futures.values().toArray(EMPTY_FEATURES_ARRAY);
+    CompletableFuture<?>[] array = futures.values().toArray(EMPTY_FUTURES_ARRAY);
     return CompletableFuture.allOf(array).thenApply(ignored -> {
       var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(futures.size()));
       futures.forEach((key, future) -> {
