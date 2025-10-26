@@ -15,11 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.RuleContext.varHandleName;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
-import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.MethodSpec;
 
 /**
@@ -27,7 +28,7 @@ import com.palantir.javapoet.MethodSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddConstructors implements NodeRule {
+public final class AddConstructors implements Rule<NodeContext> {
 
   @Override
   public boolean applies(NodeContext context) {

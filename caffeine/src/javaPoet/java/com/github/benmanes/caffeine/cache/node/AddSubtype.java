@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.google.common.base.CaseFormat;
 
 /**
@@ -30,7 +31,7 @@ import com.google.common.base.CaseFormat;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddSubtype implements NodeRule {
+public final class AddSubtype implements Rule<NodeContext> {
 
   @Override
   public boolean applies(NodeContext context) {
@@ -39,19 +40,19 @@ public final class AddSubtype implements NodeRule {
 
   @Override
   public void execute(NodeContext context) {
-    context.nodeSubtype
+    context.classSpec
         .addJavadoc(getJavaDoc(context))
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {
-      context.nodeSubtype.addModifiers(Modifier.FINAL);
+      context.classSpec.addModifiers(Modifier.FINAL);
     }
     if (context.isBaseClass()) {
-      context.nodeSubtype
+      context.classSpec
           .superclass(NODE)
           .addSuperinterface(NODE_FACTORY);
     } else {
-      context.nodeSubtype.superclass(context.superClass);
+      context.classSpec.superclass(context.superClass);
     }
   }
 

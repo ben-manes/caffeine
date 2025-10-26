@@ -15,20 +15,25 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
+import static com.github.benmanes.caffeine.cache.RuleContext.varHandleName;
 import static com.github.benmanes.caffeine.cache.Specifications.FREQUENCY_SKETCH;
+import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
+import com.github.benmanes.caffeine.cache.RuleContext;
 import com.palantir.javapoet.CodeBlock;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.TypeName;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddMaximum implements LocalCacheRule {
+public final class AddMaximum implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -45,7 +50,7 @@ public final class AddMaximum implements LocalCacheRule {
   }
 
   private static void addEvicts(LocalCacheContext context) {
-    context.cache.addMethod(MethodSpec.methodBuilder("evicts")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("evicts")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)
@@ -53,8 +58,9 @@ public final class AddMaximum implements LocalCacheRule {
   }
 
   private static void addMaximumSize(LocalCacheContext context) {
-    addField(context, long.class, "maximum");
-    addField(context, long.class, "weightedSize");
+    addAcquireReleaseField(context, long.class, "maximum");
+    addAcquireReleaseField(context, long.class, "weightedSize");
+
     addField(context, long.class, "windowMaximum");
     addField(context, long.class, "windowWeightedSize");
     addField(context, long.class, "mainProtectedMaximum");
@@ -70,7 +76,7 @@ public final class AddMaximum implements LocalCacheRule {
   }
 
   private static void addFrequencySketch(LocalCacheContext context) {
-    context.cache.addField(FieldSpec.builder(
+    context.classSpec.addField(FieldSpec.builder(
         FREQUENCY_SKETCH, "sketch", Modifier.FINAL).build());
     context.constructor.addCode(CodeBlock.builder()
         .addStatement("this.sketch = new $T()", FREQUENCY_SKETCH)
@@ -79,24 +85,45 @@ public final class AddMaximum implements LocalCacheRule {
                 "builder.getMaximum()", "builder.getInitialCapacity()")
             .addStatement("this.sketch.ensureCapacity(capacity)")
         .endControlFlow().build());
-    context.cache.addMethod(MethodSpec.methodBuilder("frequencySketch")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("frequencySketch")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return sketch")
         .returns(FREQUENCY_SKETCH)
         .build());
   }
 
-  private static void addField(LocalCacheContext context, Class<?> type, String name) {
-    context.cache.addField(FieldSpec.builder(type, name).build());
-    context.cache.addMethod(MethodSpec.methodBuilder(name)
+  private static void addField(RuleContext context, Class<?> type, String name) {
+    context.classSpec.addField(FieldSpec.builder(type, name).build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder(name)
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return $L", name)
         .returns(type)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("set" + capitalize(name))
+    context.classSpec.addMethod(MethodSpec.methodBuilder("set" + capitalize(name))
         .addModifiers(context.protectedFinalModifiers())
         .addParameter(type, name)
         .addStatement("this.$1L = $1L", name)
+        .build());
+  }
+
+  private static void addAcquireReleaseField(RuleContext context, Class<?> type, String name) {
+    context.addVarHandle(LOCAL_CACHE_FACTORY, name, TypeName.get(type));
+    context.classSpec.addField(FieldSpec.builder(type, name, Modifier.VOLATILE).build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder(name)
+        .addModifiers(context.protectedFinalModifiers())
+        .addStatement("return ($L) $L.get(this)", type, varHandleName(name))
+        .returns(type)
+        .build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder(name + "Acquire")
+        .addModifiers(context.protectedFinalModifiers())
+        .addStatement("return ($L) $L.getAcquire(this)",
+            type, varHandleName(name))
+        .returns(type)
+        .build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder("set" + capitalize(name))
+        .addModifiers(context.protectedFinalModifiers())
+        .addParameter(type, name)
+        .addStatement("$L.setRelease(this, $N)", varHandleName(name), name)
         .build());
   }
 }

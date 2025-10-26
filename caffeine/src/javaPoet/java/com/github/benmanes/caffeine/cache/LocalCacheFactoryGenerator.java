@@ -53,7 +53,6 @@ import com.github.benmanes.caffeine.cache.local.AddStats;
 import com.github.benmanes.caffeine.cache.local.AddSubtype;
 import com.github.benmanes.caffeine.cache.local.Finalize;
 import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
-import com.github.benmanes.caffeine.cache.local.LocalCacheRule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -74,11 +73,11 @@ public final class LocalCacheFactoryGenerator {
   private final Feature[] featureByIndex = { null, null, Feature.LISTENING, Feature.STATS,
       Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
       Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
-  private final List<LocalCacheRule> rules = List.of(new AddSubtype(), new AddConstructor(),
-      new AddKeyValueStrength(), new AddRemovalListener(), new AddStats(),
-      new AddExpirationTicker(), new AddMaximum(), new AddFastPath(), new AddDeques(),
-      new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
-      new AddPacer(), new Finalize());
+  private final List<Rule<LocalCacheContext>> rules = List.of(
+      new AddSubtype(), new AddConstructor(), new AddKeyValueStrength(), new AddRemovalListener(),
+      new AddStats(), new AddExpirationTicker(), new AddMaximum(), new AddFastPath(),
+      new AddDeques(), new AddExpireAfterAccess(), new AddExpireAfterWrite(),
+      new AddRefreshAfterWrite(), new AddPacer(), new Finalize());
   private final List<TypeSpec> factoryTypes;
   private final Path directory;
 
@@ -186,7 +185,7 @@ public final class LocalCacheFactoryGenerator {
 
     var context = new LocalCacheContext(superClass,
         className, isFinal, parentFeatures, generateFeatures);
-    for (LocalCacheRule rule : rules) {
+    for (var rule : rules) {
       if (rule.applies(context)) {
         rule.execute(context);
       }

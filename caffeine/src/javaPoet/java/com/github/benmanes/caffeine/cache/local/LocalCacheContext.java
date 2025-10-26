@@ -15,56 +15,43 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
+import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
+import static org.apache.commons.lang3.StringUtils.capitalize;
+
 import java.util.Set;
-import java.util.TreeSet;
 
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import com.github.benmanes.caffeine.cache.RuleContext;
+import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeName;
-import com.palantir.javapoet.TypeSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LocalCacheContext {
-  final boolean isFinal;
-  final String className;
-  final TypeName superClass;
-  final TypeSpec.Builder cache;
+public final class LocalCacheContext extends RuleContext {
   final MethodSpec.Builder constructor;
-  final Set<String> suppressedWarnings;
-  final ImmutableSet<Feature> parentFeatures;
-  final ImmutableSet<Feature> generateFeatures;
 
   public LocalCacheContext(TypeName superClass, String className, boolean isFinal,
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
-    this.isFinal = isFinal;
-    this.className = className;
-    this.superClass = superClass;
-    this.suppressedWarnings = new TreeSet<>();
-    this.cache = TypeSpec.classBuilder(className);
+    super(superClass, className, isFinal, parentFeatures, generateFeatures);
     this.constructor = MethodSpec.constructorBuilder();
-    this.parentFeatures = Sets.immutableEnumSet(parentFeatures);
-    this.generateFeatures = Sets.immutableEnumSet(generateFeatures);
   }
 
-  public TypeSpec build() {
-    return cache.build();
-  }
-
-  public Modifier[] publicFinalModifiers() {
-    return isFinal
-        ? new Modifier[] { Modifier.PUBLIC }
-        : new Modifier[] { Modifier.PUBLIC, Modifier.FINAL };
-  }
-
-  public Modifier[] protectedFinalModifiers() {
-    return isFinal
-        ? new Modifier[] { Modifier.PROTECTED }
-        : new Modifier[] { Modifier.PROTECTED, Modifier.FINAL };
+  public void addAcquireReleaseField(Class<?> type, String name) {
+    addVarHandle(LOCAL_CACHE_FACTORY, name, TypeName.get(type));
+    classSpec.addField(FieldSpec.builder(type, name, Modifier.VOLATILE).build());
+    classSpec.addMethod(MethodSpec.methodBuilder(name)
+        .addModifiers(protectedFinalModifiers())
+        .addStatement("return ($L) $L.getAcquire(this)", type, varHandleName(name))
+        .returns(type)
+        .build());
+    classSpec.addMethod(MethodSpec.methodBuilder("set" + capitalize(name))
+        .addModifiers(protectedFinalModifiers())
+        .addParameter(type, name)
+        .addStatement("$L.setRelease(this, $N)", varHandleName(name), name)
+        .build());
   }
 }

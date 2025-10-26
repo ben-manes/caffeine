@@ -15,13 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.RuleContext.varHandleName;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
-import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
+import com.github.benmanes.caffeine.cache.Rule;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.palantir.javapoet.MethodSpec;
 
@@ -30,7 +31,7 @@ import com.palantir.javapoet.MethodSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddHealth implements NodeRule {
+public final class AddHealth implements Rule<NodeContext> {
 
   @Override
   public boolean applies(NodeContext context) {
@@ -49,7 +50,7 @@ public final class AddHealth implements NodeRule {
       deadArg = DEAD_WEAK_KEY;
     }
 
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("isAlive")
         .addStatement("Object key = getKeyReference()")
         .addStatement("return (key != $L) && (key != $L)", retiredArg, deadArg)
         .addModifiers(context.publicFinalModifiers())
@@ -61,7 +62,7 @@ public final class AddHealth implements NodeRule {
 
   private static void addState(NodeContext context, String checkName,
       String actionName, String arg, boolean finalized) {
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder(checkName)
+    context.classSpec.addMethod(MethodSpec.methodBuilder(checkName)
         .addStatement("return (getKeyReference() == $L)", arg)
         .addModifiers(context.publicFinalModifiers())
         .returns(boolean.class)
@@ -89,6 +90,6 @@ public final class AddHealth implements NodeRule {
       action.addStatement("valueRef.setKeyReference($N)", arg);
       action.addStatement("valueRef.clear()");
     }
-    context.nodeSubtype.addMethod(action.build());
+    context.classSpec.addMethod(action.build());
   }
 }

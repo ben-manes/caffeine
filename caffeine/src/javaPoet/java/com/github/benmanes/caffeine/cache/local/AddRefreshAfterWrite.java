@@ -15,16 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
-import javax.lang.model.element.Modifier;
-
 import com.github.benmanes.caffeine.cache.Feature;
-import com.palantir.javapoet.FieldSpec;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.MethodSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddRefreshAfterWrite implements LocalCacheRule {
+public final class AddRefreshAfterWrite implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -34,23 +32,12 @@ public final class AddRefreshAfterWrite implements LocalCacheRule {
   @Override
   public void execute(LocalCacheContext context) {
     context.constructor.addStatement(
-        "this.refreshAfterWriteNanos = builder.getRefreshAfterWriteNanos()");
-    context.cache.addField(FieldSpec.builder(long.class, "refreshAfterWriteNanos")
-        .addModifiers(Modifier.VOLATILE).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("refreshAfterWrite")
+        "setRefreshAfterWriteNanos(builder.getRefreshAfterWriteNanos())");
+    context.classSpec.addMethod(MethodSpec.methodBuilder("refreshAfterWrite")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("refreshAfterWriteNanos")
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("return refreshAfterWriteNanos")
-        .returns(long.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("setRefreshAfterWriteNanos")
-        .addStatement("this.refreshAfterWriteNanos = refreshAfterWriteNanos")
-        .addParameter(long.class, "refreshAfterWriteNanos")
-        .addModifiers(context.protectedFinalModifiers())
-        .build());
+    context.addAcquireReleaseField(long.class, "refreshAfterWriteNanos");
   }
 }

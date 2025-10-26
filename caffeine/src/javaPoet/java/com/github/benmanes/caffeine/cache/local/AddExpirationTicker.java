@@ -20,13 +20,14 @@ import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddExpirationTicker implements LocalCacheRule {
+public final class AddExpirationTicker implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -37,8 +38,8 @@ public final class AddExpirationTicker implements LocalCacheRule {
   @Override
   public void execute(LocalCacheContext context) {
     context.constructor.addStatement("this.ticker = builder.getTicker()");
-    context.cache.addField(FieldSpec.builder(TICKER, "ticker", Modifier.FINAL).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("expirationTicker")
+    context.classSpec.addField(FieldSpec.builder(TICKER, "ticker", Modifier.FINAL).build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder("expirationTicker")
         .addModifiers(context.publicFinalModifiers())
         .addStatement("return ticker")
         .returns(TICKER)

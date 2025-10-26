@@ -15,14 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.RuleContext.varHandleName;
+import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.referenceType;
-import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import javax.lang.model.element.Modifier;
 
 import org.jspecify.annotations.Nullable;
 
+import com.github.benmanes.caffeine.cache.Rule;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
 import com.palantir.javapoet.AnnotationSpec;
@@ -36,7 +38,7 @@ import com.palantir.javapoet.TypeName;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddKey implements NodeRule {
+public final class AddKey implements Rule<NodeContext> {
 
   @Override
   public boolean applies(NodeContext context) {
@@ -56,7 +58,7 @@ public final class AddKey implements NodeRule {
     var fieldSpec = context.isStrongKeys()
         ? FieldSpec.builder(kTypeVar, "key", Modifier.VOLATILE)
         : FieldSpec.builder(context.keyReferenceType(), "key", Modifier.VOLATILE);
-    context.nodeSubtype
+    context.classSpec
         .addField(fieldSpec.build())
         .addMethod(context.newGetter(context.keyStrength(), kTypeVar, "key",
             (context.keyStrength() == Strength.STRONG) ? Visibility.OPAQUE : Visibility.PLAIN))
@@ -79,14 +81,14 @@ public final class AddKey implements NodeRule {
           .returns(TypeName.get(Object.class)
               .annotated(AnnotationSpec.builder(Nullable.class).build()));
     }
-    context.nodeSubtype.addMethod(getKeyReferenceOrNull.build());
-    context.addVarHandle("key", context.isStrongKeys()
+    context.classSpec.addMethod(getKeyReferenceOrNull.build());
+    context.addVarHandle(NODE_FACTORY.rawType(), "key", context.isStrongKeys()
         ? ClassName.get(Object.class)
         : context.keyReferenceType().rawType());
   }
 
   private static void addIfCollectedValue(NodeContext context) {
-    context.nodeSubtype
+    context.classSpec
         .addMethod(MethodSpec.methodBuilder("getKeyReference")
             .addModifiers(context.publicFinalModifiers())
             .addStatement("$1T valueRef = ($1T) $2L.getAcquire(this)",
@@ -109,7 +111,7 @@ public final class AddKey implements NodeRule {
           .returns(TypeName.get(Object.class)
               .annotated(AnnotationSpec.builder(Nullable.class).build()));
     }
-    context.nodeSubtype.addMethod(getKeyReferenceOrNull.build());
+    context.classSpec.addMethod(getKeyReferenceOrNull.build());
 
     var getKey = MethodSpec.methodBuilder("getKey")
         .addModifiers(context.publicFinalModifiers())
@@ -122,7 +124,7 @@ public final class AddKey implements NodeRule {
       getKey.addStatement("$1T keyRef = ($1T) valueRef.getKeyReference()", referenceType);
       getKey.addStatement("return keyRef.get()");
     }
-    context.nodeSubtype.addMethod(getKey.build());
+    context.classSpec.addMethod(getKey.build());
     context.suppressedWarnings.add("unchecked");
   }
 

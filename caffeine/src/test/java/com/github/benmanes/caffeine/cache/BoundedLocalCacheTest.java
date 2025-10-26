@@ -623,24 +623,32 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
-  public void weightedSize_maintenance(BoundedLocalCache<Int, Int> cache,
+  public void weightedSize_noMaintenance(BoundedLocalCache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     cache.drainStatus = REQUIRED;
     var weight = eviction.weightedSize();
-
+    assertThat(cache.drainStatus).isEqualTo(REQUIRED);
     assertThat(weight).isPresent();
-    assertThat(cache.drainStatus).isEqualTo(IDLE);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.FULL)
-  public void maximumSize_maintenance(BoundedLocalCache<Int, Int> cache,
+  public void maximumSize_noMaintenance(BoundedLocalCache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     cache.drainStatus = REQUIRED;
     var maximum = eviction.getMaximum();
-
+    assertThat(cache.drainStatus).isEqualTo(REQUIRED);
     assertThat(maximum).isEqualTo(context.maximumWeightOrSize());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = Maximum.FULL)
+  public void setMaximumSize_maintenance(BoundedLocalCache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    cache.drainStatus = REQUIRED;
+    eviction.setMaximum(context.maximumWeightOrSize());
     assertThat(cache.drainStatus).isEqualTo(IDLE);
+    assertThat(eviction.getMaximum()).isEqualTo(context.maximumWeightOrSize());
   }
 
   @Test(dataProvider = "caches")

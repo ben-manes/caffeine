@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.node;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
 import com.palantir.javapoet.MethodSpec;
@@ -26,7 +27,7 @@ import com.palantir.javapoet.TypeName;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddMaximum implements NodeRule {
+public final class AddMaximum implements Rule<NodeContext> {
 
   @Override
   public boolean applies(NodeContext context) {
@@ -40,13 +41,13 @@ public final class AddMaximum implements NodeRule {
   }
 
   private static void addQueueFlag(NodeContext context) {
-    context.nodeSubtype.addField(int.class, "queueType");
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getQueueType")
+    context.classSpec.addField(int.class, "queueType");
+    context.classSpec.addMethod(MethodSpec.methodBuilder("getQueueType")
         .addModifiers(context.publicFinalModifiers())
         .returns(int.class)
         .addStatement("return queueType")
         .build());
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("setQueueType")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("setQueueType")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(int.class, "queueType")
         .addStatement("this.queueType = queueType")
@@ -57,14 +58,14 @@ public final class AddMaximum implements NodeRule {
     if (!context.generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
       return;
     }
-    context.nodeSubtype.addField(int.class, "weight")
+    context.classSpec.addField(int.class, "weight")
         .addMethod(context.newGetter(Strength.STRONG,
             TypeName.INT, "weight", Visibility.VOLATILE))
         .addMethod(context.newSetter(TypeName.INT, "weight", Visibility.VOLATILE));
     context.constructorByKey.addStatement("this.$N = $N", "weight", "weight");
     context.constructorByKeyRef.addStatement("this.$N = $N", "weight", "weight");
 
-    context.nodeSubtype.addField(int.class, "policyWeight")
+    context.classSpec.addField(int.class, "policyWeight")
         .addMethod(context.newGetter(Strength.STRONG,
             TypeName.INT, "policyWeight", Visibility.VOLATILE))
         .addMethod(context.newSetter(TypeName.INT, "policyWeight", Visibility.VOLATILE));

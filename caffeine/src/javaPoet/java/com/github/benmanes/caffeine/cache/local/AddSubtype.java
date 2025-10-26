@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.google.common.base.CaseFormat;
 
 /**
@@ -28,7 +29,7 @@ import com.google.common.base.CaseFormat;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddSubtype implements LocalCacheRule {
+public final class AddSubtype implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -37,12 +38,12 @@ public final class AddSubtype implements LocalCacheRule {
 
   @Override
   public void execute(LocalCacheContext context) {
-    context.cache.superclass(context.superClass)
+    context.classSpec.superclass(context.superClass)
         .addJavadoc(getJavaDoc(context))
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {
-      context.cache.addModifiers(Modifier.FINAL);
+      context.classSpec.addModifiers(Modifier.FINAL);
     }
   }
 

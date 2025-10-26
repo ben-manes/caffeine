@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeName;
@@ -28,7 +29,7 @@ import com.palantir.javapoet.TypeName;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddKeyValueStrength implements LocalCacheRule {
+public final class AddKeyValueStrength implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -56,15 +57,15 @@ public final class AddKeyValueStrength implements LocalCacheRule {
   /** Adds the reference strength methods for the key or value. */
   private static void addStrength(LocalCacheContext context,
       String collectName, String queueName, TypeName type) {
-    context.cache.addMethod(MethodSpec.methodBuilder(queueName)
+    context.classSpec.addMethod(MethodSpec.methodBuilder(queueName)
         .addModifiers(context.protectedFinalModifiers())
         .returns(type)
         .addStatement("return $N", queueName)
         .build());
-    context.cache.addField(FieldSpec.builder(type, queueName, Modifier.FINAL)
+    context.classSpec.addField(FieldSpec.builder(type, queueName, Modifier.FINAL)
         .initializer("new $T()", type)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder(collectName)
+    context.classSpec.addMethod(MethodSpec.methodBuilder(collectName)
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)

@@ -554,6 +554,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     throw new UnsupportedOperationException();
   }
 
+  /** Returns the maximum weighted size. */
+  protected long maximumAcquire() {
+    throw new UnsupportedOperationException();
+  }
+
   /** Returns the maximum weighted size of the window space. */
   protected long windowMaximum() {
     throw new UnsupportedOperationException();
@@ -581,6 +586,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** Returns the combined weight of the values in the cache (may be negative). */
   protected long weightedSize() {
+    throw new UnsupportedOperationException();
+  }
+
+  /** Returns the combined weight of the values in the cache (may be negative). */
+  protected long weightedSizeAcquire() {
     throw new UnsupportedOperationException();
   }
 
@@ -4110,31 +4120,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
       }
       @Override public OptionalLong weightedSize() {
-        if (isWeighted()) {
-          cache.evictionLock.lock();
-          try {
-            if (cache.drainStatusOpaque() == REQUIRED) {
-              cache.maintenance(/* ignored */ null);
-            }
-            return OptionalLong.of(Math.max(0, cache.weightedSize()));
-          } finally {
-            cache.evictionLock.unlock();
-            cache.rescheduleCleanUpIfIncomplete();
-          }
-        }
-        return OptionalLong.empty();
+        return isWeighted
+            ? OptionalLong.of(Math.max(0, cache.weightedSizeAcquire()))
+            : OptionalLong.empty();
       }
       @Override public long getMaximum() {
-        cache.evictionLock.lock();
-        try {
-          if (cache.drainStatusOpaque() == REQUIRED) {
-            cache.maintenance(/* ignored */ null);
-          }
-          return cache.maximum();
-        } finally {
-          cache.evictionLock.unlock();
-          cache.rescheduleCleanUpIfIncomplete();
-        }
+        return cache.maximumAcquire();
       }
       @Override public void setMaximum(long maximum) {
         cache.evictionLock.lock();

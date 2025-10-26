@@ -20,13 +20,14 @@ import static com.github.benmanes.caffeine.cache.Specifications.REMOVAL_LISTENER
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddRemovalListener implements LocalCacheRule {
+public final class AddRemovalListener implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -35,15 +36,15 @@ public final class AddRemovalListener implements LocalCacheRule {
 
   @Override
   public void execute(LocalCacheContext context) {
-    context.cache.addField(
+    context.classSpec.addField(
         FieldSpec.builder(REMOVAL_LISTENER, "removalListener", Modifier.FINAL).build());
     context.constructor.addStatement("this.removalListener = builder.getRemovalListener(async)");
-    context.cache.addMethod(MethodSpec.methodBuilder("removalListener")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("removalListener")
         .addModifiers(context.publicFinalModifiers())
         .addStatement("return removalListener")
         .returns(REMOVAL_LISTENER)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("hasRemovalListener")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("hasRemovalListener")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)

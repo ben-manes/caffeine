@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
-import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
@@ -23,70 +22,32 @@ import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
-import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
-import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
-import java.util.function.Consumer;
-
-import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
-import com.google.common.base.CaseFormat;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import com.github.benmanes.caffeine.cache.RuleContext;
 import com.palantir.javapoet.ClassName;
-import com.palantir.javapoet.CodeBlock;
-import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.ParameterizedTypeName;
 import com.palantir.javapoet.TypeName;
-import com.palantir.javapoet.TypeSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class NodeContext {
-  final boolean isFinal;
-  final String className;
-  final TypeName superClass;
-  final TypeSpec.Builder nodeSubtype;
-  final Set<String> suppressedWarnings;
-  final MethodSpec.Builder constructorByKey;
-  final ImmutableSet<Feature> parentFeatures;
-  final MethodSpec.Builder constructorDefault;
+public final class NodeContext extends RuleContext {
   final MethodSpec.Builder constructorByKeyRef;
-  final ImmutableSet<Feature> generateFeatures;
-  final List<Consumer<CodeBlock.Builder>> varHandles;
+  final MethodSpec.Builder constructorDefault;
+  final MethodSpec.Builder constructorByKey;
 
   public NodeContext(TypeName superClass, String className, boolean isFinal,
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
-    this.isFinal = isFinal;
-    this.varHandles = new ArrayList<>();
-    this.suppressedWarnings = new TreeSet<>();
-    this.className = requireNonNull(className);
-    this.superClass = requireNonNull(superClass);
-    this.nodeSubtype = TypeSpec.classBuilder(className);
-    this.constructorDefault = MethodSpec.constructorBuilder();
-    this.parentFeatures = Sets.immutableEnumSet(parentFeatures);
-    this.generateFeatures = Sets.immutableEnumSet(generateFeatures);
-    this.constructorByKey = MethodSpec.constructorBuilder().addParameter(keySpec);
+    super(superClass, className, isFinal, parentFeatures, generateFeatures);
     this.constructorByKeyRef = MethodSpec.constructorBuilder().addParameter(keyRefSpec);
-  }
-
-  public TypeSpec build() {
-    return nodeSubtype.build();
-  }
-
-  public Modifier[] publicFinalModifiers() {
-    return isFinal
-        ? new Modifier[] { Modifier.PUBLIC }
-        : new Modifier[] { Modifier.PUBLIC, Modifier.FINAL };
+    this.constructorByKey = MethodSpec.constructorBuilder().addParameter(keySpec);
+    this.constructorDefault = MethodSpec.constructorBuilder();
   }
 
   public boolean isBaseClass() {
@@ -123,18 +84,6 @@ public final class NodeContext {
         ? "WeakValueReference"
         : "SoftValueReference";
     return ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME + ".References", clazz), vTypeVar);
-  }
-
-  /** Creates a VarHandle to the instance field. */
-  public void addVarHandle(String varName, TypeName type) {
-    String fieldName = varHandleName(varName);
-    nodeSubtype.addField(FieldSpec.builder(VarHandle.class, fieldName,
-        Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL).build());
-    Consumer<CodeBlock.Builder> statement = builder -> builder
-        .addStatement("$L = lookup.findVarHandle($T.class, $L.$L, $T.class)", fieldName,
-            ClassName.bestGuess(className), NODE_FACTORY.rawType().simpleName(),
-            fieldName, type);
-    varHandles.add(statement);
   }
 
   /** Creates an accessor that returns the unwrapped variable. */
@@ -195,11 +144,6 @@ public final class NodeContext {
         break;
     }
     return setter.build();
-  }
-
-  /** Returns the name of the VarHandle to this variable. */
-  public static String varHandleName(String varName) {
-    return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName);
   }
 
   public enum Visibility {

@@ -240,6 +240,32 @@
   </Match>
   <Match>
     <Or>
+      <Field name="stepSize"/>
+      <Field name="adjustment"/>
+      <Field name="hitsInSample"/>
+      <Field name="windowMaximum"/>
+      <Field name="missesInSample"/>
+      <Field name="windowWeightedSize"/>
+      <Field name="mainProtectedMaximum"/>
+      <Field name="previousSampleHitRate"/>
+      <Field name="mainProtectedWeightedSize"/>
+    </Or>
+    <Bug pattern="
+      AT_NONATOMIC_64BIT_PRIMITIVE,
+      AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
+  </Match>
+  <Match>
+    <Or>
+      <Field name="maximum"/>
+      <Field name="weightedSize"/>
+      <Field name="expiresAfterWriteNanos"/>
+      <Field name="refreshAfterWriteNanos"/>
+      <Field name="expiresAfterAccessNanos"/>
+    </Or>
+    <Bug pattern="UUF_UNUSED_FIELD"/>
+  </Match>
+  <Match>
+    <Or>
       <Class name="~.*FD.*"/>
       <Class name="~.*FS.*"/>
       <Class name="~.*FW.*"/>

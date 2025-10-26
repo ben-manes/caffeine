@@ -15,16 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
-import javax.lang.model.element.Modifier;
-
 import com.github.benmanes.caffeine.cache.Feature;
-import com.palantir.javapoet.FieldSpec;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.MethodSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddExpireAfterWrite implements LocalCacheRule {
+public final class AddExpireAfterWrite implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -34,23 +32,12 @@ public final class AddExpireAfterWrite implements LocalCacheRule {
   @Override
   public void execute(LocalCacheContext context) {
     context.constructor.addStatement(
-        "this.expiresAfterWriteNanos = builder.getExpiresAfterWriteNanos()");
-    context.cache.addField(FieldSpec.builder(long.class, "expiresAfterWriteNanos")
-        .addModifiers(Modifier.VOLATILE).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("expiresAfterWrite")
+        "setExpiresAfterWriteNanos(builder.getExpiresAfterWriteNanos())");
+    context.classSpec.addMethod(MethodSpec.methodBuilder("expiresAfterWrite")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("expiresAfterWriteNanos")
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("return expiresAfterWriteNanos")
-        .returns(long.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("setExpiresAfterWriteNanos")
-        .addStatement("this.expiresAfterWriteNanos = expiresAfterWriteNanos")
-        .addParameter(long.class, "expiresAfterWriteNanos")
-        .addModifiers(context.protectedFinalModifiers())
-        .build());
+    context.addAcquireReleaseField(long.class, "expiresAfterWriteNanos");
   }
 }

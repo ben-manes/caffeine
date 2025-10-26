@@ -15,9 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.RuleContext.varHandleName;
+import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
-import static com.github.benmanes.caffeine.cache.node.NodeContext.varHandleName;
 
 import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
@@ -25,6 +26,7 @@ import java.util.Objects;
 
 import javax.lang.model.element.Modifier;
 
+import com.github.benmanes.caffeine.cache.Rule;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
@@ -36,7 +38,7 @@ import com.palantir.javapoet.MethodSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddValue implements NodeRule {
+public final class AddValue implements Rule<NodeContext> {
 
   @Override
   public boolean applies(NodeContext context) {
@@ -45,16 +47,16 @@ public final class AddValue implements NodeRule {
 
   @Override
   public void execute(NodeContext context) {
-    context.nodeSubtype
+    context.classSpec
         .addField(newValueField(context))
         .addMethod(makeGetValue(context))
         .addMethod(makeSetValue(context))
         .addMethod(makeGetValueRef(context))
         .addMethod(makeContainsValue(context));
     if (context.isStrongValues()) {
-      context.addVarHandle("value", ClassName.get(Object.class));
+      context.addVarHandle(NODE_FACTORY.rawType(), "value", ClassName.get(Object.class));
     } else {
-      context.addVarHandle("value", context.valueReferenceType().rawType());
+      context.addVarHandle(NODE_FACTORY.rawType(), "value", context.valueReferenceType().rawType());
     }
   }
 

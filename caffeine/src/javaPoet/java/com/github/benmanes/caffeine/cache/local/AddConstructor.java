@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACT
 
 import javax.lang.model.element.Modifier;
 
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.FieldSpec;
 
 /**
@@ -29,7 +30,7 @@ import com.palantir.javapoet.FieldSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddConstructor implements LocalCacheRule {
+public final class AddConstructor implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -49,7 +50,7 @@ public final class AddConstructor implements LocalCacheRule {
     } else {
       context.constructor.addStatement("super(builder, cacheLoader, async)");
     }
-    context.cache
+    context.classSpec
         .addField(FieldSpec.builder(LOCAL_CACHE_FACTORY, "FACTORY", Modifier.STATIC, Modifier.FINAL)
             .initializer("$N::new", context.className).build());
   }

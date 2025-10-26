@@ -65,6 +65,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
@@ -129,7 +130,7 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = Maximum.TEN, weigher = CacheWeigher.COLLECTION,
+      keys = ReferenceType.STRONG, maximumSize = Maximum.TEN, weigher = CacheWeigher.COLLECTION,
       initialCapacity = InitialCapacity.EXCESSIVE)
   public void evict_weighted(Cache<Int, List<Int>> cache, CacheContext context) {
     // Enforce full initialization of internal structures

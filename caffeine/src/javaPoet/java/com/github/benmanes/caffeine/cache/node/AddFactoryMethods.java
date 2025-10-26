@@ -27,6 +27,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.google.common.collect.ImmutableList;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.ParameterSpec;
@@ -34,7 +35,7 @@ import com.palantir.javapoet.ParameterSpec;
 /**
  * @author github.com/jvassev (Julian Vassev)
  */
-public final class AddFactoryMethods implements NodeRule {
+public final class AddFactoryMethods implements Rule<NodeContext> {
 
   @Override
   public boolean applies(NodeContext context) {
@@ -56,12 +57,12 @@ public final class AddFactoryMethods implements NodeRule {
   }
 
   private static void addFactories(NodeContext context) {
-    context.nodeSubtype.addMethod(
+    context.classSpec.addMethod(
         newNode(keySpec, keyRefQueueSpec)
             .addStatement("return new $N<>(key, keyReferenceQueue, value, "
                 + "valueReferenceQueue, weight, now)", context.className)
             .build());
-    context.nodeSubtype.addMethod(
+    context.classSpec.addMethod(
         newNode(keyRefSpec)
             .addStatement("return new $N<>(keyReference, value, valueReferenceQueue, weight, now)",
                 context.className)
@@ -69,13 +70,13 @@ public final class AddFactoryMethods implements NodeRule {
   }
 
   private static void addWeakKeys(NodeContext context) {
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("newLookupKey")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("newLookupKey")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(Object.class, "key")
         .addStatement("return new $T<>(key)", lookupKeyType)
         .returns(Object.class)
         .build());
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("newReferenceKey")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("newReferenceKey")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(kTypeVar, "key")
         .addParameter(kRefQueueType, "referenceQueue")
@@ -85,7 +86,7 @@ public final class AddFactoryMethods implements NodeRule {
   }
 
   private static void addSoftValues(NodeContext context) {
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("softValues")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("softValues")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return true")
         .returns(boolean.class)
@@ -93,7 +94,7 @@ public final class AddFactoryMethods implements NodeRule {
   }
 
   private static void addWeakValues(NodeContext context) {
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("weakValues")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("weakValues")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return true")
         .returns(boolean.class)

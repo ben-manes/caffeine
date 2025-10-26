@@ -37,6 +37,11 @@ interface LocalCacheFactory {
       void.class, Caffeine.class, AsyncCacheLoader.class, boolean.class);
   MethodType FACTORY_CALL = FACTORY.changeReturnType(BoundedLocalCache.class);
   ConcurrentMap<String, LocalCacheFactory> FACTORIES = new ConcurrentHashMap<>();
+  String EXPIRES_AFTER_ACCESS_NANOS = "expiresAfterAccessNanos";
+  String EXPIRES_AFTER_WRITE_NANOS = "expiresAfterWriteNanos";
+  String REFRESH_AFTER_WRITE_NANOS = "refreshAfterWriteNanos";
+  String WEIGHTED_SIZE = "weightedSize";
+  String MAXIMUM = "maximum";
 
   /** Returns a cache optimized for this configuration. */
   <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,

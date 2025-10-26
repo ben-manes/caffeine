@@ -48,7 +48,6 @@ import com.github.benmanes.caffeine.cache.node.AddSubtype;
 import com.github.benmanes.caffeine.cache.node.AddValue;
 import com.github.benmanes.caffeine.cache.node.Finalize;
 import com.github.benmanes.caffeine.cache.node.NodeContext;
-import com.github.benmanes.caffeine.cache.node.NodeRule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -76,7 +75,7 @@ import com.palantir.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class NodeFactoryGenerator {
-  private final List<NodeRule> rules = List.of(new AddSubtype(), new AddConstructors(),
+  private final List<Rule<NodeContext>> rules = List.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
       new AddFactoryMethods(),  new AddHealth(), new Finalize());
   private final Feature[] featureByIndex = { null, null, Feature.EXPIRE_ACCESS,
@@ -181,7 +180,7 @@ public final class NodeFactoryGenerator {
     }
 
     var context = new NodeContext(superClass, className, isFinal, parentFeatures, generateFeatures);
-    for (NodeRule rule : rules) {
+    for (var rule : rules) {
       if (rule.applies(context)) {
         rule.execute(context);
       }

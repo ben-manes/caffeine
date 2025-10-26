@@ -21,13 +21,14 @@ import static com.github.benmanes.caffeine.cache.Specifications.TIMER_WHEEL;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddExpireAfterAccess implements LocalCacheRule {
+public final class AddExpireAfterAccess implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -42,36 +43,25 @@ public final class AddExpireAfterAccess implements LocalCacheRule {
 
   private static void fixedExpiration(LocalCacheContext context) {
     context.constructor.addStatement(
-        "this.expiresAfterAccessNanos = builder.getExpiresAfterAccessNanos()");
-    context.cache.addField(FieldSpec.builder(long.class, "expiresAfterAccessNanos")
-        .addModifiers(Modifier.VOLATILE).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccess")
+        "setExpiresAfterAccessNanos(builder.getExpiresAfterAccessNanos())");
+    context.addAcquireReleaseField(long.class, "expiresAfterAccessNanos");
+    context.classSpec.addMethod(MethodSpec.methodBuilder("expiresAfterAccess")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return (timerWheel == null)")
         .returns(boolean.class)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccessNanos")
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("return expiresAfterAccessNanos")
-        .returns(long.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("setExpiresAfterAccessNanos")
-        .addStatement("this.expiresAfterAccessNanos = expiresAfterAccessNanos")
-        .addParameter(long.class, "expiresAfterAccessNanos")
-        .addModifiers(context.protectedFinalModifiers())
-        .build());
   }
 
   private static void variableExpiration(LocalCacheContext context) {
-    context.cache.addMethod(MethodSpec.methodBuilder("expiresVariable")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("expiresVariable")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return (timerWheel != null)")
         .returns(boolean.class)
         .build());
 
     context.constructor.addStatement("this.expiry = builder.getExpiry(isAsync)");
-    context.cache.addField(FieldSpec.builder(EXPIRY, "expiry", Modifier.FINAL).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("expiry")
+    context.classSpec.addField(FieldSpec.builder(EXPIRY, "expiry", Modifier.FINAL).build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder("expiry")
         .addModifiers(context.publicFinalModifiers())
         .addStatement("return expiry")
         .returns(EXPIRY)
@@ -79,8 +69,8 @@ public final class AddExpireAfterAccess implements LocalCacheRule {
 
     context.constructor.addStatement(
         "this.timerWheel = builder.expiresVariable() ? new $T() : null", TIMER_WHEEL);
-    context.cache.addField(FieldSpec.builder(TIMER_WHEEL, "timerWheel", Modifier.FINAL).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("timerWheel")
+    context.classSpec.addField(FieldSpec.builder(TIMER_WHEEL, "timerWheel", Modifier.FINAL).build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder("timerWheel")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return timerWheel")
         .returns(TIMER_WHEEL)

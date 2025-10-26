@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.WRITE_ORDER_DEQU
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeName;
@@ -28,7 +29,7 @@ import com.palantir.javapoet.TypeName;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddDeques implements LocalCacheRule {
+public final class AddDeques implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -81,8 +82,8 @@ public final class AddDeques implements LocalCacheRule {
   }
 
   private static void addFieldAndMethod(LocalCacheContext context, TypeName type, String name) {
-    context.cache.addField(FieldSpec.builder(type, name, Modifier.FINAL).build());
-    context.cache.addMethod(MethodSpec.methodBuilder(name)
+    context.classSpec.addField(FieldSpec.builder(type, name, Modifier.FINAL).build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder(name)
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return " + name)
         .returns(type)

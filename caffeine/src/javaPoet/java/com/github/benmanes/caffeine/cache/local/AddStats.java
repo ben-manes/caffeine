@@ -21,13 +21,14 @@ import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.github.benmanes.caffeine.cache.Rule;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.MethodSpec;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddStats implements LocalCacheRule {
+public final class AddStats implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
@@ -42,7 +43,7 @@ public final class AddStats implements LocalCacheRule {
   }
 
   private static void addIsRecording(LocalCacheContext context) {
-    context.cache.addMethod(MethodSpec.methodBuilder("isRecordingStats")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("isRecordingStats")
         .addModifiers(context.publicFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)
@@ -51,9 +52,9 @@ public final class AddStats implements LocalCacheRule {
 
   private static void addStatsCounter(LocalCacheContext context) {
     context.constructor.addStatement("this.statsCounter = builder.getStatsCounterSupplier().get()");
-    context.cache.addField(FieldSpec.builder(
+    context.classSpec.addField(FieldSpec.builder(
         STATS_COUNTER, "statsCounter", Modifier.FINAL).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("statsCounter")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("statsCounter")
         .addModifiers(context.publicFinalModifiers())
         .addStatement("return statsCounter")
         .returns(STATS_COUNTER)
@@ -61,7 +62,7 @@ public final class AddStats implements LocalCacheRule {
   }
 
   private static void addStatsTicker(LocalCacheContext context) {
-    context.cache.addMethod(MethodSpec.methodBuilder("statsTicker")
+    context.classSpec.addMethod(MethodSpec.methodBuilder("statsTicker")
         .addModifiers(context.publicFinalModifiers())
         .addStatement("return $T.systemTicker()", TICKER)
         .returns(TICKER)

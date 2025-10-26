@@ -20,6 +20,8 @@ import static com.github.benmanes.caffeine.cache.Specifications.METHOD_HANDLES;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.github.benmanes.caffeine.cache.Rule;
+import com.github.benmanes.caffeine.cache.RuleContext;
 import com.palantir.javapoet.AnnotationSpec;
 import com.palantir.javapoet.CodeBlock;
 
@@ -28,7 +30,7 @@ import com.palantir.javapoet.CodeBlock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Finalize implements NodeRule {
+public final class Finalize implements Rule<NodeContext> {
 
   @Override
   public boolean applies(NodeContext context) {
@@ -37,35 +39,39 @@ public final class Finalize implements NodeRule {
 
   @Override
   public void execute(NodeContext context) {
+    context.classSpec
+        .addMethod(context.constructorDefault.build())
+        .addMethod(context.constructorByKey.build())
+        .addMethod(context.constructorByKeyRef.build());
+    addSuppressedWarnings(context);
+    addStaticBlock(context);
+  }
+
+  private static void addSuppressedWarnings(RuleContext context) {
     if (!context.suppressedWarnings.isEmpty()) {
       var format = (context.suppressedWarnings.size() == 1)
           ? "$S"
           : "{" + StringUtils.repeat("$S", ", ", context.suppressedWarnings.size()) + "}";
-      context.nodeSubtype.addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
+      context.classSpec.addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
           .addMember("value", format, context.suppressedWarnings.toArray())
           .build());
     }
-    context.nodeSubtype
-        .addMethod(context.constructorDefault.build())
-        .addMethod(context.constructorByKey.build())
-        .addMethod(context.constructorByKeyRef.build());
-    addStaticBlock(context);
   }
 
-  private static void addStaticBlock(NodeContext context) {
-    if (context.varHandles.isEmpty()) {
+  private static void addStaticBlock(RuleContext context) {
+    if (context.varHandles().isEmpty()) {
       return;
     }
     var codeBlock = CodeBlock.builder()
         .addStatement("$T lookup = $T.lookup()", LOOKUP, METHOD_HANDLES)
         .beginControlFlow("try");
-    for (var varHandle : context.varHandles) {
+    for (var varHandle : context.varHandles()) {
       varHandle.accept(codeBlock);
     }
     codeBlock
         .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
           .addStatement("throw new ExceptionInInitializerError(e)")
         .endControlFlow();
-    context.nodeSubtype.addStaticBlock(codeBlock.build());
+    context.classSpec.addStaticBlock(codeBlock.build());
   }
 }

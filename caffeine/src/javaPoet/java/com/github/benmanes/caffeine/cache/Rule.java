@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.node;
+package com.github.benmanes.caffeine.cache;
 
 /**
- * A code generation rule for a node.
+ * A code generation rule.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface NodeRule {
+public interface Rule<T extends RuleContext> {
 
   /** Returns if the rule should be executed. */
-  boolean applies(NodeContext context);
+  boolean applies(T context);
 
   /** Modifies the context. */
-  void execute(NodeContext context);
+  void execute(T context);
 }
