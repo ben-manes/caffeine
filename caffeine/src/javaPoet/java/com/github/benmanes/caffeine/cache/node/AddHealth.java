@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015 Ben Manes. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.*;
@@ -7,62 +22,35 @@ import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.palantir.javapoet.MethodSpec;
 
 /**
- * Adds the health state to the node.
- * 
- * Refactor versión — ahora cumple con el Principio de Responsabilidad Única (SRP).
- * 
- * Cambios realizados:
- * 1. Separación de responsabilidades en clases auxiliares.
- * 2. Eliminación de lógica mezclada (decisión, mapeo y generación).
- * 3. Delegación clara de tareas para reducir el acoplamiento.
- * 
- * @author Domenica
+ * Refactor: Clase AddHealth corregida para cumplir con SRP.
+ * La responsabilidad de determinar constantes y generar métodos
+ * se separó en clases auxiliares internas.
  */
 public final class AddHealth implements NodeRule {
 
-  // ✅ NUEVO: ahora AddHealth delega las tareas a dos ayudantes
-  private final HealthStateMapper mapper;       // Encargado de determinar los estados (retired/dead)
-  private final HealthMethodGenerator generator; // Encargado de generar los métodos JavaPoet
+  private final HealthStateMapper stateMapper = new HealthStateMapper(); // ← NUEVO
+  private final HealthMethodGenerator methodGenerator = new HealthMethodGenerator(); // ← NUEVO
 
-  /** 
-   * ✅ Constructor agregado para inicializar las clases auxiliares 
-   * Se evita que AddHealth asuma toda la lógica directamente.
-   */
-  public AddHealth() {
-    this.mapper = new HealthStateMapper();
-    this.generator = new HealthMethodGenerator();
-  }
-
-  /**
-   * Mantiene una única responsabilidad: decidir si se aplica la regla.
-   */
   @Override
   public boolean applies(NodeContext context) {
-    return context.isBaseClass(); // ✅ Sin cambios — sigue cumpliendo su propósito original
+    return context.isBaseClass();
   }
 
-  /**
-   * ✅ Cambiado: ahora solo coordina la ejecución, sin contener la lógica interna.
-   * Antes este método hacía tres tareas distintas.
-   */
   @Override
   public void execute(NodeContext context) {
-    // 1️⃣ Mapea los estados de salud (retired/dead)
-    HealthConstants constants = mapper.map(context);
+    // Línea refactorizada: responsabilidad delegada
+    HealthConstants constants = stateMapper.mapConstants(context);
 
-    // 2️⃣ Genera los métodos "isAlive", "retire" y "die"
-    generator.generate(context, constants);
+    // Generación de métodos delegada
+    methodGenerator.addIsAlive(context, constants);
+    methodGenerator.addStateMethods(context, constants);
   }
 
-  // ===============================================================
-  // ✅ NUEVA CLASE INTERNA: Encapsula la lógica de mapeo de estados
-  // ===============================================================
-  private static class HealthStateMapper {
+  // ----------------------- NUEVAS CLASES INTERNAS -----------------------
 
-    /**
-     * Devuelve los valores correctos según el tipo de clave (STRONG o WEAK).
-     */
-    public HealthConstants map(NodeContext context) {
+  /** Clase auxiliar que define las constantes según la fuerza de la clave */
+  private static class HealthStateMapper { // ← NUEVO BLOQUE
+    public HealthConstants mapConstants(NodeContext context) {
       if (context.keyStrength() == Strength.STRONG) {
         return new HealthConstants(RETIRED_STRONG_KEY, DEAD_STRONG_KEY);
       }
@@ -70,48 +58,34 @@ public final class AddHealth implements NodeRule {
     }
   }
 
-  // ===============================================================
-  // ✅ NUEVA CLASE INTERNA: Genera el código correspondiente
-  // ===============================================================
-  private static class HealthMethodGenerator {
-
-    /**
-     * Genera los métodos de estado ("isAlive", "isRetired", "retire", "die")
-     */
-    public void generate(NodeContext context, HealthConstants constants) {
-
-      // Método "isAlive" — se mantiene igual, pero encapsulado aquí
+  /** Clase auxiliar que genera los métodos del estado de salud */
+  private static class HealthMethodGenerator { // ← NUEVO BLOQUE
+    public void addIsAlive(NodeContext context, HealthConstants constants) {
       context.nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
           .addStatement("Object key = getKeyReference()")
           .addStatement("return (key != $L) && (key != $L)",
-              constants.retiredArg(), constants.deadArg())
+              constants.retiredKey(), constants.deadKey())
           .addModifiers(context.publicFinalModifiers())
           .returns(boolean.class)
           .build());
-
-      // Se agregan los demás métodos con ayuda de un método auxiliar privado
-      addState(context, "isRetired", "retire", constants.retiredArg(), false);
-      addState(context, "isDead", "die", constants.deadArg(), true);
     }
 
-    /**
-     * ✅ Método trasladado desde la clase principal (antes dentro de AddHealth)
-     * Mantiene la generación de código, pero ahora separada del control de lógica.
-     */
-    private void addState(NodeContext context, String checkName,
-                          String actionName, String arg, boolean finalized) {
-      // Método "isRetired" o "isDead"
+    public void addStateMethods(NodeContext context, HealthConstants constants) {
+      addState(context, "isRetired", "retire", constants.retiredKey(), false);
+      addState(context, "isDead", "die", constants.deadKey(), true);
+    }
+
+    private static void addState(NodeContext context, String checkName,
+        String actionName, String arg, boolean finalized) {
       context.nodeSubtype.addMethod(MethodSpec.methodBuilder(checkName)
           .addStatement("return (getKeyReference() == $L)", arg)
           .addModifiers(context.publicFinalModifiers())
           .returns(boolean.class)
           .build());
 
-      // Método "retire" o "die"
       var action = MethodSpec.methodBuilder(actionName)
           .addModifiers(context.publicFinalModifiers());
 
-      // Diferencia entre claves y valores fuertes/débiles
       if (context.valueStrength() == Strength.STRONG) {
         if (context.keyStrength() != Strength.STRONG) {
           action.addStatement("key.clear()");
@@ -134,8 +108,6 @@ public final class AddHealth implements NodeRule {
     }
   }
 
-  // ===============================================================
-  // ✅ NUEVO: Record para encapsular las constantes del estado de salud
-  // ===============================================================
-  private static record HealthConstants(String retiredArg, String deadArg) {}
+  /** Clase contenedora de las constantes de salud */
+  private static record HealthConstants(String retiredKey, String deadKey) {} // ← NUEVO BLOQUE
 }

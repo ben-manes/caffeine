@@ -62,31 +62,34 @@ import com.palantir.javapoet.TypeSpec;
 
 /**
  * Generates the cache entry's specialized type. These entries are optimized for the configuration
- * to minimize memory use. An entry may have any of the following properties:
- * <ul>
- *   <li>strong or weak key
- *   <li>strong, weak, or soft value
- *   <li>access timestamp
- *   <li>write timestamp
- *   <li>size queue type
- *   <li>list references
- *   <li>weight
- * </ul>
- *
- * @author ben.manes@gmail.com (Ben Manes)
+ * to minimize memory use. 
+ * 
+ * Refactor: Now supports dependency injection for NodeRules to comply with OCP.
+ * 
+ * @author ben.manes
  */
 public final class NodeFactoryGenerator {
-  private final List<NodeRule> rules = List.of(new AddSubtype(), new AddConstructors(),
-      new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
-      new AddFactoryMethods(),  new AddHealth(), new Finalize());
+
+  // Cambio 1: Eliminamos la lista rígida de reglas predefinidas
+  private final List<NodeRule> rules;
+
   private final Feature[] featureByIndex = { null, null, Feature.EXPIRE_ACCESS,
       Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
   private final List<TypeSpec> nodeTypes;
   private final Path directory;
 
-  private NodeFactoryGenerator(Path directory) {
+  // Cambio 2: Se permite inyección de reglas externas
+  public NodeFactoryGenerator(Path directory, List<NodeRule> injectedRules) {
     this.directory = requireNonNull(directory);
+    this.rules = new ArrayList<>(requireNonNull(injectedRules));
     this.nodeTypes = new ArrayList<>();
+  }
+
+  // Cambio 3: Método alternativo para registrar reglas dinámicamente (extensión sin modificar clase)
+  public void registerRule(NodeRule rule) {
+    if (rule != null && !rules.contains(rule)) {
+      rules.add(rule);
+    }
   }
 
   private void generate() throws IOException {
@@ -159,7 +162,6 @@ public final class NodeFactoryGenerator {
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       features.remove(Feature.MAXIMUM_SIZE);
     }
-    // In featureByIndex order for class naming
     return ImmutableSet.copyOf(features);
   }
 
@@ -168,12 +170,12 @@ public final class NodeFactoryGenerator {
     TypeName superClass;
     ImmutableSet<Feature> parentFeatures;
     ImmutableSet<Feature> generateFeatures;
+
     if (features.size() == 2) {
       parentFeatures = ImmutableSet.of();
       generateFeatures = features;
       superClass = ClassName.OBJECT;
     } else {
-      // Requires that parentFeatures is in featureByIndex order for super class naming
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
       generateFeatures = Sets.immutableEnumSet(features.asList().get(features.size() - 1));
       superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
@@ -181,11 +183,14 @@ public final class NodeFactoryGenerator {
     }
 
     var context = new NodeContext(superClass, className, isFinal, parentFeatures, generateFeatures);
+
+    // ✅ Cambio 4: Itera sobre las reglas inyectadas externamente
     for (NodeRule rule : rules) {
       if (rule.applies(context)) {
         rule.execute(context);
       }
     }
+
     return context.build();
   }
 
@@ -202,14 +207,13 @@ public final class NodeFactoryGenerator {
         expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximumSize, weighed);
   }
 
-  /** Returns an encoded form of the class name for compact use. */
   private static String encode(String className) {
     return Feature.makeEnumName(className)
-        .replaceFirst("STRONG_KEYS", "P") // puissant
-        .replaceFirst("WEAK_KEYS", "F") // faible
+        .replaceFirst("STRONG_KEYS", "P")
+        .replaceFirst("WEAK_KEYS", "F")
         .replaceFirst("_STRONG_VALUES", "S")
         .replaceFirst("_WEAK_VALUES", "W")
-        .replaceFirst("_SOFT_VALUES", "D") // doux
+        .replaceFirst("_SOFT_VALUES", "D")
         .replaceFirst("_EXPIRE_ACCESS", "A")
         .replaceFirst("_EXPIRE_WRITE", "W")
         .replaceFirst("_REFRESH_WRITE", "R")
@@ -219,6 +223,19 @@ public final class NodeFactoryGenerator {
   }
 
   public static void main(String[] args) throws IOException {
-    new NodeFactoryGenerator(Path.of(args[0])).generate();
+    // Cambio 5: Se pasa la lista de reglas como parámetro externo (cumple OCP)
+    List<NodeRule> rules = List.of(
+        new com.github.benmanes.caffeine.cache.node.AddSubtype(),
+        new AddConstructors(),
+        new AddKey(),
+        new AddValue(),
+        new AddMaximum(),
+        new AddExpiration(),
+        new AddDeques(),
+        new AddFactoryMethods(),
+        new AddHealth(),
+        new Finalize()
+    );
+    new NodeFactoryGenerator(Path.of(args[0]), rules).generate();
   }
 }

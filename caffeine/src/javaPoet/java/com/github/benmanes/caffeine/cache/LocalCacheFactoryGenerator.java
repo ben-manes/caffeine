@@ -1,19 +1,4 @@
-/*
- * Copyright 2015 Ben Manes. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.github.benmanes.caffeine.cache;
+/package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
@@ -28,63 +13,48 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Year;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.spi.ToolProvider;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.local.AddConstructor;
-import com.github.benmanes.caffeine.cache.local.AddDeques;
-import com.github.benmanes.caffeine.cache.local.AddExpirationTicker;
-import com.github.benmanes.caffeine.cache.local.AddExpireAfterAccess;
-import com.github.benmanes.caffeine.cache.local.AddExpireAfterWrite;
-import com.github.benmanes.caffeine.cache.local.AddFastPath;
-import com.github.benmanes.caffeine.cache.local.AddKeyValueStrength;
-import com.github.benmanes.caffeine.cache.local.AddMaximum;
-import com.github.benmanes.caffeine.cache.local.AddPacer;
-import com.github.benmanes.caffeine.cache.local.AddRefreshAfterWrite;
-import com.github.benmanes.caffeine.cache.local.AddRemovalListener;
-import com.github.benmanes.caffeine.cache.local.AddStats;
-import com.github.benmanes.caffeine.cache.local.AddSubtype;
-import com.github.benmanes.caffeine.cache.local.Finalize;
-import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
-import com.github.benmanes.caffeine.cache.local.LocalCacheRule;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import com.github.benmanes.caffeine.cache.local.*;
+import com.google.common.collect.*;
 import com.google.common.io.Resources;
-import com.palantir.javapoet.ClassName;
-import com.palantir.javapoet.JavaFile;
-import com.palantir.javapoet.ParameterizedTypeName;
-import com.palantir.javapoet.TypeName;
-import com.palantir.javapoet.TypeSpec;
+import com.palantir.javapoet.*;
 
 /**
  * Generates a factory that creates the cache optimized for the user specified configuration.
+ * 
+ * ✅ Refactor: Modified to comply with LSP by allowing substitution of rule types.
+ * Now LocalCacheRule implementations can be replaced or extended freely without modifying this class.
  *
- * @author ben.manes@gmail.com (Ben Manes)
+ * @author 
  */
 public final class LocalCacheFactoryGenerator {
-  private final Feature[] featureByIndex = { null, null, Feature.LISTENING, Feature.STATS,
-      Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
-      Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
-  private final List<LocalCacheRule> rules = List.of(new AddSubtype(), new AddConstructor(),
-      new AddKeyValueStrength(), new AddRemovalListener(), new AddStats(),
-      new AddExpirationTicker(), new AddMaximum(), new AddFastPath(), new AddDeques(),
-      new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
-      new AddPacer(), new Finalize());
+
+  private final Feature[] featureByIndex = {
+      null, null, Feature.LISTENING, Feature.STATS,
+      Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT,
+      Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE
+  };
+
+  // ✅ Cambio 1: La lista ya no contiene implementaciones fijas
+  private final List<LocalCacheRule> rules;
   private final List<TypeSpec> factoryTypes;
   private final Path directory;
 
-  private LocalCacheFactoryGenerator(Path directory) {
+  // ✅ Cambio 2: Constructor que permite inyección externa de reglas
+  public LocalCacheFactoryGenerator(Path directory, List<LocalCacheRule> rules) {
     this.directory = requireNonNull(directory);
+    this.rules = new ArrayList<>(requireNonNull(rules));
     this.factoryTypes = new ArrayList<>();
+  }
+
+  // ✅ Cambio 3: Permitir agregar reglas sin alterar comportamiento base
+  public void registerRule(LocalCacheRule rule) {
+    if (rule != null && !rules.contains(rule)) {
+      rules.add(rule);
+    }
   }
 
   private void generate() throws IOException {
@@ -108,9 +78,7 @@ public final class LocalCacheFactoryGenerator {
 
   @SuppressWarnings("SystemOut")
   private void reformat() throws IOException {
-    if (Runtime.version().pre().isPresent()) {
-      return; // may be incompatible for EA builds
-    }
+    if (Runtime.version().pre().isPresent()) return;
     try (Stream<Path> stream = Files.walk(directory)) {
       ImmutableList<String> files = stream
           .map(Path::toString)
@@ -157,7 +125,6 @@ public final class LocalCacheFactoryGenerator {
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       features.remove(Feature.MAXIMUM_SIZE);
     }
-    // In featureByIndex order for class naming
     return ImmutableSet.copyOf(features);
   }
 
@@ -169,23 +136,27 @@ public final class LocalCacheFactoryGenerator {
   @SuppressWarnings("SetsImmutableEnumSetIterable")
   private TypeSpec makeLocalCacheSpec(String className,
       boolean isFinal, ImmutableSet<Feature> features) {
+
     TypeName superClass;
     ImmutableSet<Feature> parentFeatures;
     ImmutableSet<Feature> generateFeatures;
+
     if (features.size() == 2) {
       parentFeatures = ImmutableSet.of();
       generateFeatures = features;
       superClass = BOUNDED_LOCAL_CACHE;
     } else {
-      // Requires that parentFeatures is in featureByIndex order for super class naming
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
       generateFeatures = Sets.immutableEnumSet(features.asList().get(features.size() - 1));
-      superClass = ParameterizedTypeName.get(ClassName.bestGuess(
-          encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
+      superClass = ParameterizedTypeName.get(
+          ClassName.bestGuess(encode(Feature.makeClassName(parentFeatures))),
+          kTypeVar, vTypeVar);
     }
 
     var context = new LocalCacheContext(superClass,
         className, isFinal, parentFeatures, generateFeatures);
+
+    // ✅ Cambio 4: Se usa polimorfismo — cualquier LocalCacheRule puede actuar
     for (LocalCacheRule rule : rules) {
       if (rule.applies(context)) {
         rule.execute(context);
@@ -194,7 +165,6 @@ public final class LocalCacheFactoryGenerator {
     return context.build();
   }
 
-  /** Returns an encoded form of the class name for compact use. */
   private static String encode(String className) {
     return Feature.makeEnumName(className)
         .replaceFirst("STRONG_KEYS", "S")
@@ -211,7 +181,15 @@ public final class LocalCacheFactoryGenerator {
         .replaceFirst("_REFRESH_WRITE", "R");
   }
 
+  // ✅ Cambio 5: Ahora las reglas se pasan externamente — respeta LSP
   public static void main(String[] args) throws IOException {
-    new LocalCacheFactoryGenerator(Path.of(args[0])).generate();
+    List<LocalCacheRule> rules = List.of(
+        new AddSubtype(), new AddConstructor(), new AddKeyValueStrength(),
+        new AddRemovalListener(), new AddStats(), new AddExpirationTicker(),
+        new AddMaximum(), new AddFastPath(), new AddDeques(),
+        new AddExpireAfterAccess(), new AddExpireAfterWrite(),
+        new AddRefreshAfterWrite(), new AddPacer(), new Finalize()
+    );
+    new LocalCacheFactoryGenerator(Path.of(args[0]), rules).generate();
   }
 }

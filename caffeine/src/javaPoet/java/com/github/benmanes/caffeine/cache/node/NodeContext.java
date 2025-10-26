@@ -48,10 +48,12 @@ import com.palantir.javapoet.ParameterizedTypeName;
 import com.palantir.javapoet.TypeName;
 import com.palantir.javapoet.TypeSpec;
 
+import javaPoet.java.com.github.benmanes.caffeine.cache.node.INodeContext;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class NodeContext {
+public final class NodeContext implements INodeContext{
   final boolean isFinal;
   final String className;
   final TypeName superClass;
@@ -218,4 +220,14 @@ public final class NodeContext {
       throw new IllegalStateException("No strength for " + feature);
     }
   }
+  
+  @Override
+public MethodSpec.Builder getConstructorByKey() {
+    return constructorByKey;
+}
+
+@Override
+public MethodSpec.Builder getConstructorByKeyRef() {
+    return constructorByKeyRef;
+}
 }

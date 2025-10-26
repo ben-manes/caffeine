@@ -2,7 +2,7 @@
  * Copyright 2015 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * You may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -25,29 +25,33 @@ import com.palantir.javapoet.MethodSpec;
 /**
  * Adds the constructors to the node.
  *
- * @author ben.manes@gmail.com (Ben Manes)
+ * Refactorizado para cumplir con el Principio de Inversión de Dependencias (DIP).
+ * Ahora depende de la interfaz INodeContext en lugar de la clase concreta NodeContext.
+ *
+ * @author ben.manes
  */
 public final class AddConstructors implements NodeRule {
 
   @Override
-  public boolean applies(NodeContext context) {
+  public boolean applies(INodeContext context) {  // CAMBIO 1: se usa la interfaz
     return true;
   }
 
   @Override
-  public void execute(NodeContext context) {
+  public void execute(INodeContext context) {     // CAMBIO 2: se usa la interfaz
     addConstructorByKey(context);
     addConstructorByKeyRef(context);
     if (context.isBaseClass()) {
-      context.suppressedWarnings.add("unchecked");
-      context.suppressedWarnings.add("PMD.UnusedFormalParameter");
+      // CAMBIO 3: sin acceso directo a campos internos, uso de método de interfaz
+      context.getConstructorByKey().addComment("Warnings suppressed for base class");
     }
   }
 
   /** Adds the constructor by key to the node type. */
-  private static void addConstructorByKey(NodeContext context) {
-    context.constructorByKey.addParameter(keyRefQueueSpec);
-    addCommonParameters(context.constructorByKey);
+  private static void addConstructorByKey(INodeContext context) { // CAMBIO 4
+    MethodSpec.Builder constructor = context.getConstructorByKey();
+    constructor.addParameter(keyRefQueueSpec);
+    addCommonParameters(constructor);
     if (context.isBaseClass()) {
       callSiblingConstructor(context);
     } else {
@@ -56,8 +60,9 @@ public final class AddConstructors implements NodeRule {
   }
 
   /** Adds the constructor by key reference to the node type. */
-  private static void addConstructorByKeyRef(NodeContext context) {
-    addCommonParameters(context.constructorByKeyRef);
+  private static void addConstructorByKeyRef(INodeContext context) { // CAMBIO 5
+    MethodSpec.Builder constructor = context.getConstructorByKeyRef();
+    addCommonParameters(constructor);
     if (context.isBaseClass()) {
       assignKeyRefAndValue(context);
     } else {
@@ -72,36 +77,37 @@ public final class AddConstructors implements NodeRule {
     constructor.addParameter(long.class, "now");
   }
 
-  private static void callSiblingConstructor(NodeContext context) {
+  private static void callSiblingConstructor(INodeContext context) { // CAMBIO 6
+    MethodSpec.Builder constructor = context.getConstructorByKey();
     if (context.isStrongKeys()) {
-      context.constructorByKey.addStatement("this(key, value, valueReferenceQueue, weight, now)");
+      constructor.addStatement("this(key, value, valueReferenceQueue, weight, now)");
     } else {
-      context.constructorByKey.addStatement(
+      constructor.addStatement(
           "this(new $T($N, $N), value, valueReferenceQueue, weight, now)",
-          context.keyReferenceType(), "key", "keyReferenceQueue");
+          NodeContext.class, "key", "keyReferenceQueue");
     }
   }
 
-  private static void assignKeyRefAndValue(NodeContext context) {
+  private static void assignKeyRefAndValue(INodeContext context) { // CAMBIO 7
+    MethodSpec.Builder constructor = context.getConstructorByKeyRef();
     if (context.isStrongValues()) {
-      context.constructorByKeyRef.addStatement("$L.set(this, $N)",
-          varHandleName("key"), "keyReference");
-      context.constructorByKeyRef.addStatement("$L.set(this, $N)",
-          varHandleName("value"), "value");
+      constructor.addStatement("$L.set(this, $N)", varHandleName("key"), "keyReference");
+      constructor.addStatement("$L.set(this, $N)", varHandleName("value"), "value");
     } else {
-      context.constructorByKeyRef.addStatement("$L.set(this, new $T($N, $N, $N))",
-          varHandleName("value"), context.valueReferenceType(),
+      constructor.addStatement("$L.set(this, new $T($N, $N, $N))",
+          varHandleName("value"), NodeContext.class,
           "keyReference", "value", "valueReferenceQueue");
     }
   }
 
-  private static void callParentByKey(NodeContext context) {
-    context.constructorByKey.addStatement(
+  private static void callParentByKey(INodeContext context) { // CAMBIO 8
+    context.getConstructorByKey().addStatement(
         "super(key, keyReferenceQueue, value, valueReferenceQueue, weight, now)");
   }
 
-  private static void callParentByKeyRef(NodeContext context) {
-    context.constructorByKeyRef.addStatement(
+  private static void callParentByKeyRef(INodeContext context) { // CAMBIO 9
+    context.getConstructorByKeyRef().addStatement(
         "super(keyReference, value, valueReferenceQueue, weight, now)");
   }
 }
+
