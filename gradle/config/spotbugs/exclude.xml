@@ -545,6 +545,8 @@
       <Class name="~.*\.testing.*"/>
       <Class name="com.github.benmanes.caffeine.cache.Reset"/>
       <Class name="com.github.benmanes.caffeine.cache.Stresser"/>
+      <Class name="com.github.benmanes.caffeine.cache.CacheValidationListener"/>
+      <Class name="com.github.benmanes.caffeine.cache.GuavaCacheFromContext$GuavaLoadingCache"/>
     </Or>
     <Bug pattern="
       EC_NULL_ARG,
@@ -560,7 +562,7 @@
       UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.Snippets"/>
+    <Class name="com.github.benmanes.caffeine.cache.Snippets"/>
     <Bug pattern="UP_UNUSED_PARAMETER"/>
   </Match>
   <Match>
@@ -577,10 +579,10 @@
   </Match>
   <Match>
     <Or>
+      <Class name="~.*Subject"/>
+      <Class name="~.*CacheSpec.*"/>
+      <Class name="~.*GuavaCacheFromContext.*"/>
       <Package name="com.github.benmanes.caffeine.testing"/>
-      <Package name="com.github.benmanes.caffeine.cache.testing"/>
-      <Class name="com.github.benmanes.caffeine.cache.LocalCacheSubject"/>
-      <Class name="com.github.benmanes.caffeine.cache.ReserializableSubject"/>
     </Or>
     <Bug pattern="BC_UNCONFIRMED_CAST_OF_RETURN_VALUE"/>
   </Match>
@@ -620,8 +622,8 @@
   </Match>
   <Match>
     <Or>
-      <Class name="com.github.benmanes.caffeine.cache.testing.RemovalNotification"/>
-      <Class name="com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext$GuavaCacheEntry"/>
+      <Class name="com.github.benmanes.caffeine.cache.RemovalNotification"/>
+      <Class name="com.github.benmanes.caffeine.cache.GuavaCacheFromContext$GuavaCacheEntry"/>
     </Or>
     <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
   </Match>
@@ -640,6 +642,10 @@
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCacheTest"/>
     <Bug pattern="MDM_LOCK_ISLOCKED"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCacheTest"/>
+    <Bug pattern="BC_UNCONFIRMED_CAST"/>
   </Match>
   <Match>
     <Or>
@@ -674,11 +680,11 @@
     <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
   </Match>
   <Match>
-    <Class name="~com\.github\.benmanes\.caffeine\.cache\.testing\.GuavaCacheFromContext.*"/>
+    <Class name="~com\.github\.benmanes\.caffeine\.cache\.GuavaCacheFromContext.*"/>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.testing.RemovalListeners$ConsumingRemovalListener"/>
+    <Class name="com.github.benmanes.caffeine.cache.RemovalListeners$ConsumingRemovalListener"/>
     <Method name="removed"/>
     <Bug pattern="IMC_IMMATURE_CLASS_COLLECTION_RETURN"/>
   </Match>
@@ -692,7 +698,7 @@
       <Class name="com.github.benmanes.caffeine.cache.ReferenceTest"/>
       <Class name="com.github.benmanes.caffeine.cache.AsyncAsMapTest"/>
       <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCacheTest"/>
-      <Class name="~com\.github\.benmanes\.caffeine\.cache\.testing\.GuavaCacheFromContext.*"/>
+      <Class name="~com\.github\.benmanes\.caffeine\.cache\.GuavaCacheFromContext.*"/>
     </Or>
     <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
@@ -728,7 +734,7 @@
     <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.testing.CacheSpec$Loader$SerializableAsyncCacheLoader"/>
+    <Class name="com.github.benmanes.caffeine.cache.CacheSpec$Loader$SerializableAsyncCacheLoader"/>
     <Bug pattern="SE_PRIVATE_READ_RESOLVE_NOT_INHERITED"/>
   </Match>
   <Match>
@@ -743,7 +749,7 @@
     <Bug pattern="SPP_NON_USEFUL_TOSTRING"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.testing.CacheProvider"/>
+    <Class name="com.github.benmanes.caffeine.cache.CacheProvider"/>
     <Bug pattern="UCC_UNRELATED_COLLECTION_CONTENTS"/>
   </Match>
   <Match>

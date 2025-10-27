@@ -58,7 +58,7 @@ testing.suites {
       }
     }
   }
-  val integrationTest by registering(JvmTestSuite::class) {
+  val moduleTest by registering(JvmTestSuite::class) {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -66,7 +66,7 @@ testing.suites {
     }
   }
   tasks.check.configure {
-    dependsOn(integrationTest)
+    dependsOn(moduleTest)
   }
 }
 
@@ -79,23 +79,17 @@ tasks.named<Jar>("jar").configure {
     "Export-Package" to "com.github.benmanes.caffeine.guava"))
 }
 
-tasks.named<CheckForbiddenApis>("forbiddenApisMain").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
-}
-
-tasks.named<CheckForbiddenApis>("forbiddenApisTest").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-system-out", "jdk-unsafe"))
-}
-
-tasks.named<CheckForbiddenApis>("forbiddenApisIntegrationTest").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
+tasks.withType<CheckForbiddenApis>().configureEach {
+  bundledSignatures.addAll(when (name) {
+    "forbiddenApisTest" -> listOf("jdk-deprecated", "jdk-internal",
+      "jdk-non-portable", "jdk-system-out", "jdk-unsafe")
+    else -> listOf("jdk-deprecated", "jdk-internal", "jdk-non-portable",
+      "jdk-reflection", "jdk-system-out", "jdk-unsafe")
+  })
 }
 
 eclipse.classpath.file.whenMerged {
   if (this is EclipseClasspath) {
-    entries.removeIf { (it is SourceFolder) && it.path.contains("integrationTest") }
+    entries.removeIf { (it is SourceFolder) && it.path.contains("moduleTest") }
   }
 }

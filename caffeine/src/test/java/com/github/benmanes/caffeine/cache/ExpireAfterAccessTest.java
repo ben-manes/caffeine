@@ -15,12 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.VARIABLE;
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
-import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
@@ -44,19 +44,12 @@ import java.util.function.Function;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.ExpireAfterAccess;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;

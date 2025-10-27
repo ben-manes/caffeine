@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 
 /**
  * SOLR-10141: Removal listener notified with stale value
@@ -96,7 +97,7 @@ public final class Solr10141Test {
       }
 
       void test(Random r) {
-        long block = r.nextInt(blocksInTest);
+        @Var long block = r.nextInt(blocksInTest);
         if (readLastBlockOdds > 0 && r.nextInt(readLastBlockOdds) == 0) {
           // some percent of the time, try to read the last block another
           block = lastBlock.get();
@@ -105,7 +106,7 @@ public final class Solr10141Test {
         lastBlock.set(block);
 
         long k = block;
-        Val v = cache.getIfPresent(k);
+        @Var Val v = cache.getIfPresent(k);
         if (v != null) {
           hits.incrementAndGet();
           assertThat(k).isEqualTo(v.key);
@@ -167,7 +168,7 @@ public final class Solr10141Test {
       }
       void test(Random r) {
         long k = r.nextInt(blocksInTest);
-        Val v = cache.getIfPresent(k);
+        @Var Val v = cache.getIfPresent(k);
         if (v != null) {
           assertThat(k).isEqualTo(v.key);
         }

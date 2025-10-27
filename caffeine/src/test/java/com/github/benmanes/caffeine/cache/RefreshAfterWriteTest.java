@@ -15,16 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheContext.intern;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.VARIABLE;
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
-import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
@@ -32,7 +32,6 @@ import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
@@ -52,26 +51,21 @@ import java.util.function.Function;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.Var;
 
 /**
  * The test cases for caches that support the refresh after write policy.
@@ -112,7 +106,7 @@ public final class RefreshAfterWriteTest {
     cache.put(key, original);
     context.ticker().advance(duration);
     ConcurrentTestHarness.execute(() -> assertThat(cache.get(key)).isAnyOf(original, refresh1));
-    await().untilAtomic(reloads, is(1));
+    await().untilAsserted(() -> assertThat(reloads.get()).isEqualTo(1));
 
     assertThat(cache.get(key)).isEqualTo(original);
     refresh.set(true);
@@ -152,7 +146,9 @@ public final class RefreshAfterWriteTest {
       context.ticker().advance(Duration.ofMinutes(2));
       Int value = cache.get(key);
       assertThat(value).isEqualTo(key);
-      await().untilAtomic(reloads, is(i + 1));
+
+      int count = i + 1;
+      await().untilAsserted(() -> assertThat(reloads.get()).isEqualTo(count));
     }
   }
 
@@ -910,7 +906,7 @@ public final class RefreshAfterWriteTest {
       loader = Loader.ASYNC_INCOMPLETE, refreshAfterWrite = Expire.ONE_MINUTE)
   public void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
-    int submitted;
+    @Var int submitted;
 
     // trigger an automatic refresh
     submitted = context.executor().submitted();

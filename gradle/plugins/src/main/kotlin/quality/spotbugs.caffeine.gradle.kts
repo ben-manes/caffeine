@@ -28,6 +28,12 @@ spotbugs {
   excludeFilter = rootProject.layout.projectDirectory.file("gradle/config/spotbugs/exclude.xml")
 }
 
+tasks.register("spotbugs") {
+  group = "SpotBugs"
+  description = "Run all SpotBugs checks."
+  dependsOn(tasks.withType<SpotBugsTask>())
+}
+
 tasks.withType<SpotBugsTask>().configureEach {
   val isEnabled = providers.gradleProperty("spotbugs")
   onlyIf { isEnabled.isPresent }

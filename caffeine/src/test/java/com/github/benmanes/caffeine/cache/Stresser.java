@@ -32,6 +32,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.errorprone.annotations.Var;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -115,7 +116,7 @@ public final class Stresser implements Runnable {
   @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored"})
   private void execute() {
     ConcurrentTestHarness.timeTasks(workload.maxThreads, () -> {
-      int index = ThreadLocalRandom.current().nextInt();
+      @Var int index = ThreadLocalRandom.current().nextInt();
       for (;;) {
         Integer key = ints[index++ & MASK];
         switch (workload) {

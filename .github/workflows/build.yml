@@ -111,11 +111,15 @@ jobs:
           - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
           - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
           - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
-          - caffeine:junitJupiterTest
-          - caffeine:integrationTest
-          - caffeine:standaloneTest
-          - caffeine:isolatedTest
-          - caffeine:junitTest
+          - caffeine:eclipseTest
+          - caffeine:jctoolsTest
+          - caffeine:openjdkTest
+          - caffeine:apacheTest
+          - caffeine:googleTest
+          - caffeine:jsr166Test
+          - caffeine:moduleTest
+          - caffeine:osgiTest
+          - caffeine:test
           - simulator:check
           - jcache:check
           - guava:check
@@ -165,10 +169,10 @@ jobs:
             java: 11
           - suite: caffeine:weakKeysAndSoftValuesSyncGuavaTest
             java: 11
-          - suite: caffeine:fuzzTest
-            java: 11
           - suite: caffeine:lincheckTest
             java: 25
+          - suite: caffeine:fuzzTest
+            java: 11
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

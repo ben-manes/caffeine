@@ -33,6 +33,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.google.errorprone.annotations.Var;
 
 import site.ycsb.generator.ScrambledZipfianGenerator;
 
@@ -77,7 +78,7 @@ public final class Issue412Test {
 
   private void addRemoveAndExpire() {
     int mask = (ints.length - 1);
-    int index = random.nextInt();
+    @Var int index = random.nextInt();
     for (int i = 0; i < (10 * ints.length); i++) {
       Integer key = ints[index++ & mask];
       cache.put(key, true);

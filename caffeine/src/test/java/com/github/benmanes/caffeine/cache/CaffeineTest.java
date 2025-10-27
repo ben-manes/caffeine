@@ -36,19 +36,14 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.InitialCapacity;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.testing.FakeTicker;
 import com.google.common.testing.NullPointerTester;
@@ -213,7 +208,7 @@ public final class CaffeineTest {
 
   @Test
   public void hasMethodOverride_present() {
-    CacheLoader<Object, Object> cacheLoader = new CacheLoader<Object, Object>() {
+    var cacheLoader = new CacheLoader<Object, Object>() {
       @Override public Object load(Object key) {
         throw new AssertionError();
       }

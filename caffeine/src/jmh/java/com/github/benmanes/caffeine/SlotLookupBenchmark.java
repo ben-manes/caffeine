@@ -26,6 +26,8 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A comparison of different lookup approaches for indexes for a slot in a fixed-sized shared array.
  * This approach is used for elimination (threads backoff and rendezvous) and striping (reduced
@@ -87,7 +89,7 @@ public class SlotLookupBenchmark {
     return selectSlot(Long.hashCode(hash));
   }
 
-  private static long mix64(long x) {
+  private static long mix64(@Var long x) {
     x = (x ^ (x >>> 30)) * 0xbf58476d1ce4e5b9L;
     x = (x ^ (x >>> 27)) * 0x94d049bb133111ebL;
     return x ^ (x >>> 31);
@@ -100,7 +102,7 @@ public class SlotLookupBenchmark {
     return selectSlot(hash);
   }
 
-  private static int mix32(int x) {
+  private static int mix32(@Var int x) {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;
@@ -109,7 +111,7 @@ public class SlotLookupBenchmark {
   @Benchmark
   public long striped64_varHandle(Blackhole blackhole) {
     // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
-    int hash = getProbe_varHandle();
+    @Var int hash = getProbe_varHandle();
     if (hash == 0) {
       blackhole.consume(ThreadLocalRandom.current()); // force initialization
       hash = getProbe_varHandle();
@@ -123,7 +125,7 @@ public class SlotLookupBenchmark {
     return (int) PROBE.get(Thread.currentThread());
   }
 
-  private static void advanceProbe_varHandle(int probe) {
+  private static void advanceProbe_varHandle(@Var int probe) {
     probe ^= probe << 13; // xorshift
     probe ^= probe >>> 17;
     probe ^= probe << 5;

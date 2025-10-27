@@ -15,8 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.LocalCacheSubject.mapLocal;
-import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.truth.Truth.assertAbout;
@@ -26,10 +26,7 @@ import static java.lang.Thread.State.WAITING;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.ref.WeakReference;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,37 +37,14 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
-import com.google.common.collect.testing.SetTestSuiteBuilder;
-import com.google.common.collect.testing.TestStringSetGenerator;
-import com.google.common.collect.testing.features.CollectionFeature;
-import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.testing.GcFinalization;
 import com.google.common.testing.NullPointerTester;
-
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import com.google.errorprone.annotations.Var;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class InternerTest extends TestCase {
-
-  @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")
-  public static TestSuite suite() {
-    return SetTestSuiteBuilder
-        .using(new TestStringSetGenerator() {
-          @Override protected Set<String> create(String[] elements) {
-            var set = Collections.newSetFromMap(new WeakInterner<String>().cache);
-            set.addAll(Arrays.asList(elements));
-            return set;
-          }
-        })
-        .named("Interner")
-        .withFeatures(
-            CollectionSize.ANY,
-            CollectionFeature.GENERAL_PURPOSE)
-        .createTestSuite();
-  }
+public final class InternerTest {
 
   @SuppressWarnings("NullAway")
   @Test(dataProvider = "interners")
@@ -96,10 +70,10 @@ public final class InternerTest extends TestCase {
   @Test
   @SuppressWarnings("PMD.UnusedAssignment")
   public void intern_weak_replace() {
-    var canonical = new Int(1);
+    @Var var canonical = new Int(1);
     var other = new Int(1);
 
-    Interner<Int> interner = Interner.newWeakInterner();
+    var interner = Interner.<Int>newWeakInterner();
     assertThat(interner.intern(canonical)).isSameInstanceAs(canonical);
 
     var signal = new WeakReference<>(canonical);
@@ -114,10 +88,10 @@ public final class InternerTest extends TestCase {
   @Test
   @SuppressWarnings("PMD.UnusedAssignment")
   public void intern_weak_remove() {
-    var canonical = new Int(1);
+    @Var var canonical = new Int(1);
     var next = new Int(2);
 
-    Interner<Int> interner = Interner.newWeakInterner();
+    var interner = Interner.<Int>newWeakInterner();
     assertThat(interner.intern(canonical)).isSameInstanceAs(canonical);
 
     var signal = new WeakReference<>(canonical);

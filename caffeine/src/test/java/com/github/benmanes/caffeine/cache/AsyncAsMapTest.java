@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheContext.intern;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
@@ -71,25 +71,19 @@ import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
-import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.ExpectedError;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.errorprone.annotations.Var;
 
 /**
  * The test cases for the {@link AsyncCache#asMap()} view and its serializability. These tests do
@@ -1944,7 +1938,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySet_iterator(AsyncCache<Int, Int> cache, CacheContext context) {
-    int count = 0;
+    @Var int count = 0;
     for (var i = cache.asMap().keySet().iterator(); i.hasNext();) {
       assertThat(cache).containsKey(i.next());
       count++;
@@ -2004,7 +1998,7 @@ public final class AsyncAsMapTest {
   public void keySpliterator_tryAdvance(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().keySet().spliterator();
     int[] count = new int[1];
-    boolean advanced;
+    @Var boolean advanced;
     do {
       advanced = spliterator.tryAdvance(key -> count[0]++);
     } while (advanced);
@@ -2429,7 +2423,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void valueIterator(AsyncCache<Int, Int> cache, CacheContext context) {
-    int count = 0;
+    @Var int count = 0;
     for (var i = cache.asMap().values().iterator(); i.hasNext();) {
       assertThat(cache).containsValue(i.next());
       count++;
@@ -2489,7 +2483,7 @@ public final class AsyncAsMapTest {
   public void valueSpliterator_tryAdvance(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().values().spliterator();
     int[] count = new int[1];
-    boolean advanced;
+    @Var boolean advanced;
     do {
       advanced = spliterator.tryAdvance(value -> count[0]++);
     } while (advanced);
@@ -3002,7 +2996,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void entryIterator(AsyncCache<Int, Int> cache, CacheContext context) {
     var i = cache.asMap().entrySet().iterator();
-    int iterations = 0;
+    @Var int iterations = 0;
     while (i.hasNext()) {
       var entry = i.next();
       assertThat(cache).containsEntry(entry.getKey(), entry.getValue());
@@ -3071,7 +3065,7 @@ public final class AsyncAsMapTest {
       AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().entrySet().spliterator();
     int[] count = new int[1];
-    boolean advanced;
+    @Var boolean advanced;
     do {
       advanced = spliterator.tryAdvance(entry -> {
         if (context.isCaffeine()) {

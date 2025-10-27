@@ -1,4 +1,3 @@
-import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
@@ -32,11 +31,6 @@ val compileJcstressJava by tasks.existing(JavaCompile::class) {
 val jcstressJar = tasks.register<Jar>("jcstressJar") {
   archiveClassifier.set("jcstress")
   from(jcstress.map { it.output })
-}
-
-tasks.named<CheckForbiddenApis>("forbiddenApisJcstress").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
 }
 
 tasks.register<JCStress>("jcstress") {

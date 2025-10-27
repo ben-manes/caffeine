@@ -37,8 +37,6 @@ dependencies {
   implementation(libs.zero.allocation.hashing)
 
   compileOnly(libs.spotbugs.annotations)
-
-  testRuntimeOnly(libs.bundles.junit.engines)
 }
 
 application {

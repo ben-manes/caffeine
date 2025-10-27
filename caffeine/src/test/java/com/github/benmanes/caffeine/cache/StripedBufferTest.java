@@ -37,6 +37,7 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -69,7 +70,7 @@ public final class StripedBufferTest {
     var buffer = new FakeBuffer<Integer>(FAILED);
     assertThat(buffer.offer(ELEMENT)).isEqualTo(SUCCESS);
 
-    var success = false;
+    @Var var success = false;
     for (int i = 0; i < 64; i++) {
       int result = buffer.offer(ELEMENT);
       success |= (result == SUCCESS);

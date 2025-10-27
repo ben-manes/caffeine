@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueue.findVarHandle;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.Truth.assertThat;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -229,7 +228,7 @@ public final class MpscGrowableArrayQueueTest {
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      await().untilAtomic(started, is(2));
+      await().untilAsserted(() -> assertThat(started.get()).isEqualTo(2));
       for (int i = 0; i < PRODUCE; i++) {
         while (!queue.offer(i)) { /* produce */ }
       }
@@ -237,14 +236,14 @@ public final class MpscGrowableArrayQueueTest {
     });
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      await().untilAtomic(started, is(2));
+      await().untilAsserted(() -> assertThat(started.get()).isEqualTo(2));
       for (int i = 0; i < PRODUCE; i++) {
         while (queue.poll() == null) { /* consume */ }
       }
       finished.incrementAndGet();
     });
 
-    await().untilAtomic(finished, is(2));
+    await().untilAsserted(() -> assertThat(finished.get()).isEqualTo(2));
     assertThat(queue).isEmpty();
   }
 
@@ -268,7 +267,7 @@ public final class MpscGrowableArrayQueueTest {
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
+      await().untilAsserted(() -> assertThat(started.get()).isEqualTo(NUM_PRODUCERS + 1));
       for (int i = 0; i < (NUM_PRODUCERS * PRODUCE); i++) {
         while (queue.poll() == null) { /* consume */ }
       }
@@ -277,14 +276,14 @@ public final class MpscGrowableArrayQueueTest {
 
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       started.incrementAndGet();
-      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
+      await().untilAsserted(() -> assertThat(started.get()).isEqualTo(NUM_PRODUCERS + 1));
       for (int i = 0; i < PRODUCE; i++) {
         while (!queue.offer(i)) { /* produce */ }
       }
       finished.incrementAndGet();
     });
 
-    await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
+    await().untilAsserted(() -> assertThat(finished.get()).isEqualTo(NUM_PRODUCERS + 1));
     assertThat(queue).isEmpty();
   }
 

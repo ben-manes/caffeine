@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.sketch;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.math.IntMath;
+import com.google.errorprone.annotations.Var;
 
 /**
  * A probabilistic multiset for estimating the popularity of an element within a time window. The
@@ -77,7 +78,7 @@ public final class CountMinSketch<E> {
    */
   public void ensureCapacity(long maximumSize) {
     checkArgument(maximumSize >= 0);
-    int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
+    var maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {
       return;
     }
@@ -112,10 +113,10 @@ public final class CountMinSketch<E> {
 
     int hash = spread(e.hashCode());
     int start = (hash & 3) << 2;
-    int frequency = Integer.MAX_VALUE;
+    @Var int frequency = Integer.MAX_VALUE;
     for (int i = 0; i < 4; i++) {
-      int index = indexOf(hash, i);
-      int count = (int) ((table[index] >>> ((start + i) << 2)) & 0xfL);
+      var index = indexOf(hash, i);
+      var count = (int) ((table[index] >>> ((start + i) << 2)) & 0xfL);
       frequency = Math.min(frequency, count);
     }
     return frequency;
@@ -142,7 +143,7 @@ public final class CountMinSketch<E> {
     int index2 = indexOf(hash, 2);
     int index3 = indexOf(hash, 3);
 
-    boolean added = incrementAt(index0, start);
+    @Var boolean added = incrementAt(index0, start);
     added |= incrementAt(index1, start + 1);
     added |= incrementAt(index2, start + 2);
     added |= incrementAt(index3, start + 3);
@@ -171,7 +172,7 @@ public final class CountMinSketch<E> {
 
   /** Reduces every counter by half of its original value. */
   public void reset() {
-    int count = 0;
+    @Var int count = 0;
     for (int i = 0; i < table.length; i++) {
       count += Long.bitCount(table[i] & ONE_MASK);
       table[i] = (table[i] >>> 1) & RESET_MASK;
@@ -187,7 +188,7 @@ public final class CountMinSketch<E> {
    * @return the table index
    */
   int indexOf(int item, int i) {
-    long hash = (item + SEED[i]) * SEED[i];
+    @Var long hash = (item + SEED[i]) * SEED[i];
     hash += (hash >>> 32);
     return ((int) hash) & tableMask;
   }
@@ -196,7 +197,7 @@ public final class CountMinSketch<E> {
    * Applies a supplemental hash function to a given hashCode, which defends against poor quality
    * hash functions.
    */
-  int spread(int x) {
+  int spread(@Var int x) {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;

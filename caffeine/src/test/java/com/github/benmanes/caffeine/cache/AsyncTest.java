@@ -19,8 +19,6 @@ import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.Truth.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
@@ -91,9 +89,9 @@ public final class AsyncTest {
       result.set(1);
       result.set(Async.getWhenSuccessful(future));
     });
-    await().untilAtomic(result, is(1));
+    await().untilAsserted(() -> assertThat(result.get()).isEqualTo(1));
     future.complete(2);
-    await().untilAtomic(result, is(2));
+    await().untilAsserted(() -> assertThat(result.get()).isEqualTo(2));
   }
 
   @Test(dataProvider = "unsuccessful")
@@ -105,9 +103,9 @@ public final class AsyncTest {
         Object value = Async.getWhenSuccessful(future);
         result.set((value == null) ? 2 : 3);
       });
-      await().untilAtomic(result, is(1));
+      await().untilAsserted(() -> assertThat(result.get()).isEqualTo(1));
       future.obtrudeException(new IllegalStateException());
-      await().untilAtomic(result, is(not(1)));
+      await().untilAsserted(() -> assertThat(result.get()).isNotEqualTo(1));
       assertThat(result.get()).isEqualTo(2);
     }
     assertThat(Async.getWhenSuccessful(future)).isNull();

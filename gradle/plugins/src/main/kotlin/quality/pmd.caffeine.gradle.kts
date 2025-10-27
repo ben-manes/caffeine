@@ -13,6 +13,12 @@ pmd {
     rootProject.layout.projectDirectory.file("gradle/config/pmd/rulesSets.xml"))
 }
 
+tasks.register("pmd") {
+  group = "PMD"
+  description = "Run all PMD checks."
+  dependsOn(tasks.withType<Pmd>())
+}
+
 tasks.withType<Pmd>().configureEach {
   val isEnabled = providers.gradleProperty("pmd")
   onlyIf { isEnabled.isPresent }
@@ -22,9 +28,9 @@ tasks.withType<Pmd>().configureEach {
     html.required = true
   }
   isConsoleOutput = true
-}
 
-tasks.named<Pmd>("pmdTest").configure {
-  ruleSetConfig = resources.text.fromFile(
-    rootProject.layout.projectDirectory.file("gradle/config/pmd/rulesSets-test.xml"))
+  if (name.contains("Test")) {
+    ruleSetConfig = resources.text.fromFile(
+      rootProject.layout.projectDirectory.file("gradle/config/pmd/rulesSets-test.xml"))
+  }
 }

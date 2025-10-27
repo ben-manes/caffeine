@@ -41,6 +41,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.errorprone.annotations.Var;
 
 /**
  * A unit-test for the @{@link AbstractLinkedDeque} implementations.
@@ -452,7 +453,7 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void poll_toEmpty(LinkedDeque<LinkedValue> deque) {
-    LinkedValue value;
+    @Var LinkedValue value;
     while ((value = deque.poll()) != null) {
       assertThat(deque.contains(value)).isFalse();
     }
@@ -474,7 +475,7 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void pollFirst_toEmpty(LinkedDeque<LinkedValue> deque) {
-    LinkedValue value;
+    @Var LinkedValue value;
     while ((value = deque.pollFirst()) != null) {
       assertThat(deque.contains(value)).isFalse();
     }
@@ -496,7 +497,7 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void pollLast_toEmpty(LinkedDeque<LinkedValue> deque) {
-    LinkedValue value;
+    @Var LinkedValue value;
     while ((value = deque.pollLast()) != null) {
       assertThat(deque.contains(value)).isFalse();
     }
@@ -737,7 +738,7 @@ public final class LinkedDequeTest {
     var value = iterator.next();
     iterator.remove();
 
-    int remaining = 0;
+    @Var int remaining = 0;
     while (iterator.hasNext()) {
       assertThat(iterator.next()).isNotSameInstanceAs(value);
       remaining++;
@@ -782,7 +783,7 @@ public final class LinkedDequeTest {
     var value = iterator.next();
     iterator.remove();
 
-    int remaining = 0;
+    @Var int remaining = 0;
     while (iterator.hasNext()) {
       assertThat(iterator.next()).isNotEqualTo(value);
       remaining++;

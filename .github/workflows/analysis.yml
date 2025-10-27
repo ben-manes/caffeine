@@ -44,9 +44,9 @@ jobs:
       - name: ECJ
         uses: ./.github/actions/run-gradle
         with:
+          arguments: ecj
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: ecjJavaPoet ecjMain ecjCodeGen ecjJmh ecjTest ecjJcstress
 
   forbidden-apis:
     name: Forbidden APIs
@@ -96,7 +96,7 @@ jobs:
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: pmdJavaPoet pmdMain pmdCodeGen pmdJmh pmdTest pmdJcstress -Ppmd
+          arguments: pmd -Ppmd
       - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -153,9 +153,7 @@ jobs:
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: >
-            spotbugsJavaPoet spotbugsMain spotbugsCodeGen
-            spotbugsJmh spotbugsTest spotbugsJcstress -Pspotbugs
+          arguments: spotbugs -Pspotbugs
       - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

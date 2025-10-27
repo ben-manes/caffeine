@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.buffer;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A ring buffer implemented using the FastFlow technique to reduce contention caused by the
  * drain invalidating the read counter.
@@ -35,7 +37,7 @@ final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
 
   @Override
   public int offer(E e) {
-    long head = readCache;
+    @Var long head = readCache;
     long tail = writeCounterOpaque();
 
     long wrap = (tail - BUFFER_SIZE);
@@ -48,7 +50,7 @@ final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
     }
 
     if (casWriteCounter(tail, tail + 1)) {
-      int index = (int) (tail & BUFFER_MASK);
+      var index = (int) (tail & BUFFER_MASK);
       BUFFER.setRelease(buffer, index, e);
       return SUCCESS;
     }
@@ -58,15 +60,15 @@ final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
   @Override
   @SuppressWarnings("unchecked")
   protected void drainTo(Consumer<E> consumer) {
-    long head = readCounter;
+    @Var long head = readCounter;
     long tail = writeCounterOpaque();
     long size = (tail - head);
     if (size == 0) {
       return;
     }
     do {
-      int index = (int) (head & BUFFER_MASK);
-      E e = (E) BUFFER.getAcquire(buffer, index);
+      var index = (int) (head & BUFFER_MASK);
+      var e = (E) BUFFER.getAcquire(buffer, index);
       if (e == null) {
         // not published yet
         break;

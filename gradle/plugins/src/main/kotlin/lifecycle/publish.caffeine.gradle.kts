@@ -10,21 +10,10 @@ java {
   withSourcesJar()
 }
 
-val testJar by tasks.registering(Jar::class) {
-  group = "Build"
-  description = "Assembles a jar archive containing the test classes."
-  from(sourceSets.test.map { it.output })
-  archiveClassifier = "test"
-}
-
-val testArtifacts by configurations.registering
-artifacts.add(testArtifacts.name, testJar)
-
 publishing {
   publications {
     register<MavenPublication>("mavenJava") {
       from(components["java"])
-      artifact(testJar)
 
       pom {
         name = "Caffeine cache"

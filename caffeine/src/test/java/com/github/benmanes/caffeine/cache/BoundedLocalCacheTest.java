@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_REQUIRED;
@@ -27,6 +28,12 @@ import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.QUEUE_TRANSFER_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WARN_AFTER_LOCK_WAIT_NANOS;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
+import static com.github.benmanes.caffeine.cache.CacheContext.intern;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.VARIABLE;
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.Node.WINDOW;
 import static com.github.benmanes.caffeine.cache.RemovalCause.COLLECTED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
@@ -34,13 +41,6 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
 import static com.github.benmanes.caffeine.cache.Reset.awaitFullGc;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
-import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
@@ -53,9 +53,6 @@ import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -113,40 +110,34 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedPolicy.FixedExpireAfterWrite;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.PerformCleanupTask;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheScheduler;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.InitialCapacity;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.LocalCacheFactory.MethodHandleBasedFactory;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
+import com.github.benmanes.caffeine.cache.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.CompleteEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableWeightedEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.RefreshableExpirableEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.WeightedEntry;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
-import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.github.valfirst.slf4jtest.TestLogger;
@@ -160,6 +151,7 @@ import com.google.common.collect.Streams;
 import com.google.common.testing.GcFinalization;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.errorprone.annotations.Var;
 
 /**
  * The test cases for the implementation details of {@link BoundedLocalCache}.
@@ -256,7 +248,7 @@ public final class BoundedLocalCacheTest {
   @Test
   @SuppressWarnings("PMD.UnusedAssignment")
   public void cleanupTask_allowGc() {
-    var cache = new BoundedLocalCache<>(
+    @Var var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var task = cache.drainBuffersTask;
     cache = null;
@@ -434,7 +426,7 @@ public final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.drainStatus = REQUIRED;
     cache.rescheduleCleanUpIfIncomplete();
-    await().until(() -> cache.drainStatus, is(IDLE));
+    await().untilAsserted(() -> assertThat(cache.drainStatus).isEqualTo(IDLE));
   }
 
   @Test(dataProvider = "caches")
@@ -448,7 +440,7 @@ public final class BoundedLocalCacheTest {
 
     cache.rescheduleCleanUpIfIncomplete();
     verifyNoInteractions(context.scheduler());
-    await().until(() -> cache.drainStatus, is(REQUIRED));
+    await().untilAsserted(() -> assertThat(cache.drainStatus).isEqualTo(REQUIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -469,7 +461,7 @@ public final class BoundedLocalCacheTest {
       });
       await().untilTrue(done);
       verifyNoInteractions(context.scheduler());
-      await().until(() -> cache.drainStatus, is(REQUIRED));
+      await().untilAsserted(() -> assertThat(cache.drainStatus).isEqualTo(REQUIRED));
     } finally {
       cache.evictionLock.unlock();
     }
@@ -1293,8 +1285,8 @@ public final class BoundedLocalCacheTest {
     while (cache.frequencySketch().frequency(candidate) < ADMIT_HASHDOS_THRESHOLD) {
       cache.frequencySketch().increment(candidate);
     }
-    int allow = 0;
-    int reject = 0;
+    @Var int allow = 0;
+    @Var int reject = 0;
     for (int i = 0; i < 1_000; i++) {
       if (cache.admit(candidate, victim)) {
         allow++;
@@ -1352,9 +1344,9 @@ public final class BoundedLocalCacheTest {
     var evicted = localCache.evictEntry(node, SIZE, 0);
     assertThat(evicted).isTrue();
 
-    await().untilAtomic(evictedValue, is(newValue));
-    await().untilAtomic(previousValue, is(oldValue));
-    await().untilAtomic(removedValues, is(oldValue.add(newValue)));
+    await().untilAsserted(() -> assertThat(evictedValue.get()).isEqualTo(newValue));
+    await().untilAsserted(() -> assertThat(previousValue.get()).isEqualTo(oldValue));
+    await().untilAsserted(() -> assertThat(removedValues.get()).isEqualTo(oldValue.add(newValue)));
   }
 
   @Test(dataProvider = "caches")
@@ -1939,7 +1931,7 @@ public final class BoundedLocalCacheTest {
       var result = buffer.offer(dummy);
       assertThat(result).isEqualTo(Buffer.SUCCESS);
     }
-    var result = buffer.offer(dummy);
+    @Var var result = buffer.offer(dummy);
     assertThat(result).isEqualTo(Buffer.FULL);
 
     var refreshed = cache.afterRead(dummy, /* now= */ 0, /* recordHit= */ true);
@@ -2245,7 +2237,7 @@ public final class BoundedLocalCacheTest {
       });
 
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().untilAtomic(writer, is(not(nullValue())));
+      await().untilAsserted(() -> assertThat(writer).isNotNull());
       await().until(() -> {
         var thread = writer.get();
         return (thread != null) && threadState.contains(thread.getState());
@@ -2800,7 +2792,7 @@ public final class BoundedLocalCacheTest {
 
   private static void checkExpiryWriteTolerance(BoundedLocalCache<Int, Int> cache,
       CacheContext context, BiFunction<Int, Int, Int> write) {
-    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
+    @Var var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
     assertThat(oldValue).isNull();
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
 
@@ -2867,7 +2859,7 @@ public final class BoundedLocalCacheTest {
     }
 
     var expected = context.original().get(context.firstKey());
-    await().untilAtomic(result, is(expected));
+    await().untilAsserted(() -> assertThat(result.get()).isEqualTo(expected));
     assertThat(node.getVariableTime()).isEqualTo(
         context.ticker().read() + context.expiryTime().timeNanos());
     verify(context.expiry()).expireAfterRead(context.firstKey(),
@@ -3747,12 +3739,14 @@ public final class BoundedLocalCacheTest {
     assertThrows(type, cache::timerWheel);
     assertThrows(type, cache::frequencySketch);
     assertThrows(type, cache::maximum);
+    assertThrows(type, cache::maximumAcquire);
     assertThrows(type, cache::windowMaximum);
     assertThrows(type, cache::mainProtectedMaximum);
     assertThrows(type, () -> cache.setMaximum(1L));
     assertThrows(type, () -> cache.setWindowMaximum(1L));
     assertThrows(type, () -> cache.setMainProtectedMaximum(1L));
     assertThrows(type, cache::weightedSize);
+    assertThrows(type, cache::weightedSizeAcquire);
     assertThrows(type, cache::windowWeightedSize);
     assertThrows(type, cache::mainProtectedWeightedSize);
     assertThrows(type, () -> cache.setWeightedSize(1L));

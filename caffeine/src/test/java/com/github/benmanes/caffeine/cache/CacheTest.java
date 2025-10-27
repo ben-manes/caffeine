@@ -15,12 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheContext.intern;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -65,6 +65,15 @@ import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
@@ -75,23 +84,7 @@ import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableWeightedEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.RefreshableExpirableEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.WeightedEntry;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
-import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.ExpectedError;
+import com.github.benmanes.caffeine.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -102,6 +95,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.NullPointerTester;
+import com.google.errorprone.annotations.Var;
 
 /**
  * The test cases for the {@link Cache} interface that simulate the most generic usages. These
@@ -763,7 +757,7 @@ public final class CacheTest {
   public void putAll_mixed(Cache<Int, Int> cache, CacheContext context) {
     var entries = new HashMap<Int, Int>();
     var replaced = new HashMap<Int, Int>();
-    context.original().forEach((key, value) -> {
+    context.original().forEach((var key, @Var var value) -> {
       if ((key.intValue() % 2) == 0) {
         value = intern(value.add(1));
         replaced.put(key, value);

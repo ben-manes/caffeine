@@ -40,8 +40,8 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.FutureSubject;
 import com.google.common.util.concurrent.MoreExecutors;
 

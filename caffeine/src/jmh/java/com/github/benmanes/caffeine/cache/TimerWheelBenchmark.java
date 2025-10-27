@@ -26,6 +26,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
 import com.github.benmanes.caffeine.testing.Int;
+import com.google.errorprone.annotations.Var;
 
 /**
  * {@snippet lang="shell" :
@@ -94,7 +95,7 @@ public class TimerWheelBenchmark {
   @Benchmark
   @SuppressWarnings({"ForEachIterable", "PMD.ForLoopCanBeForeach"})
   public int ascending() {
-    int count = 0;
+    @Var int count = 0;
     for (var i = timerWheel.iterator(); i.hasNext();) {
       i.next();
       count++;
@@ -104,7 +105,7 @@ public class TimerWheelBenchmark {
 
   @Benchmark
   public int descending() {
-    int count = 0;
+    @Var int count = 0;
     for (var i = timerWheel.descendingIterator(); i.hasNext();) {
       i.next();
       count++;

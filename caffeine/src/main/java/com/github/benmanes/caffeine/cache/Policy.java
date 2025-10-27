@@ -251,7 +251,8 @@ public interface Policy<K, V> {
      * at the time of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet class=com.github.benmanes.caffeine.Snippets region=eviction_coldest lang=java}
+     * {@snippet class=com.github.benmanes.caffeine.cache.Snippets
+     *           region=eviction_coldest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -316,7 +317,8 @@ public interface Policy<K, V> {
      * at the time of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet class=com.github.benmanes.caffeine.Snippets region=eviction_hottest lang=java}
+     * {@snippet class=com.github.benmanes.caffeine.cache.Snippets
+     *           region=eviction_hottest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -452,7 +454,8 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet class=com.github.benmanes.caffeine.Snippets region=expireFixed_oldest lang=java}
+     * {@snippet class=com.github.benmanes.caffeine.cache.Snippets
+     *           region=expireFixed_oldest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -494,7 +497,8 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet class=com.github.benmanes.caffeine.Snippets region=expireFixed_youngest lang=java}
+     * {@snippet class=com.github.benmanes.caffeine.cache.Snippets
+     *           region=expireFixed_youngest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -700,7 +704,8 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet class=com.github.benmanes.caffeine.Snippets region=expireVar_oldest lang=java}
+     * {@snippet class=com.github.benmanes.caffeine.cache.Snippets
+     *           region=expireVar_oldest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction
@@ -742,7 +747,8 @@ public interface Policy<K, V> {
      * of creating this computation.
      * <p>
      * Usage example:
-     * {@snippet class=com.github.benmanes.caffeine.Snippets region=expireVar_youngest lang=java}
+     * {@snippet class=com.github.benmanes.caffeine.cache.Snippets
+     *           region=expireVar_youngest lang=java}
      * <p>
      * Beware that this computation is performed within the eviction policy's exclusive lock, so the
      * computation should be short and simple. While the computation is in progress further eviction

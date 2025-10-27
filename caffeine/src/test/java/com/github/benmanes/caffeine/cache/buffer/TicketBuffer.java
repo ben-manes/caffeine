@@ -48,7 +48,7 @@ final class TicketBuffer<E> extends ReadBuffer<E> {
   @Override
   public int offer(E e) {
     long writeCount = writeCounter.get();
-    int index = (int) (writeCount & BUFFER_MASK);
+    var index = (int) (writeCount & BUFFER_MASK);
     AtomicReference<Object> slot = buffer[index];
     Object value = slot.get();
     if (!(value instanceof Turn)) {
@@ -70,7 +70,7 @@ final class TicketBuffer<E> extends ReadBuffer<E> {
   @Override
   protected void drainTo(Consumer<E> consumer) {
     for (int i = 0; i < BUFFER_SIZE; i++) {
-      int index = (int) (readCounter & BUFFER_MASK);
+      var index = (int) (readCounter & BUFFER_MASK);
       AtomicReference<Object> slot = buffer[index];
       if (slot.get() instanceof Turn) {
         break;

@@ -15,14 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheContext.intern;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.COLLECTED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.Reset.awaitFullGc;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
@@ -55,6 +55,16 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.References.LookupKeyEqualsReference;
@@ -63,26 +73,11 @@ import com.github.benmanes.caffeine.cache.References.SoftValueReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.cache.References.WeakValueReference;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
 import com.google.common.testing.EqualsTester;
+import com.google.errorprone.annotations.Var;
 
 /**
  * The test cases for caches that support a reference eviction policy.
@@ -102,14 +97,14 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL)
   public void identity_keys(Cache<Int, Int> cache, CacheContext context) {
-    Int key = new Int(context.firstKey());
+    var key = new Int(context.firstKey());
     assertThat(cache).doesNotContainKey(key);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(values = {ReferenceType.WEAK, ReferenceType.SOFT}, population = Population.FULL)
   public void identity_values(Cache<Int, Int> cache, CacheContext context) {
-    Int value = new Int(context.original().get(context.firstKey()));
+    var value = new Int(context.original().get(context.firstKey()));
     assertThat(cache).doesNotContainKey(value);
   }
 
@@ -601,7 +596,7 @@ public final class ReferenceTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void containsValue(Map<Int, Int> map, CacheContext context) {
-    Int key = context.firstKey();
+    @Var var key = context.firstKey();
     Int value = context.original().get(key);
     context.clear();
     awaitFullGc();
@@ -702,7 +697,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void put_map(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    Int replaced = new Int(context.original().get(key));
+    var replaced = new Int(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
@@ -798,7 +793,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void remove(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    Int removed = new Int(context.original().get(key));
+    var removed = new Int(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
@@ -962,7 +957,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void computeIfPresent(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    Int replaced = new Int(context.original().get(key));
+    var replaced = new Int(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues() && !context.isGuava()) {
@@ -1007,7 +1002,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void compute(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    Int replaced = new Int(context.original().get(key));
+    var replaced = new Int(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
@@ -1110,7 +1105,7 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void merge(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    Int replaced = new Int(context.original().get(key));
+    var replaced = new Int(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
@@ -1243,7 +1238,7 @@ public final class ReferenceTest {
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void values_contains(Map<Int, Int> map, CacheContext context) {
-    Int value = new Int(context.original().get(context.firstKey()));
+    var value = new Int(context.original().get(context.firstKey()));
     assertThat(map.values().contains(value)).isFalse();
   }
 
@@ -1489,7 +1484,7 @@ public final class ReferenceTest {
   private static List<Map.Entry<Int, Int>> getExpectedAfterGc(
       CacheContext context, Map<Int, Int> original) {
     var expected = new ArrayList<Map.Entry<Int, Int>>();
-    original.forEach((key, value) -> {
+    original.forEach((@Var var key, @Var var value) -> {
       key = context.isStrongKeys() ? new Int(key) : null;
       value = context.isStrongValues() ? new Int(value) : null;
       expected.add(new SimpleImmutableEntry<>(key, value));

@@ -20,16 +20,16 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Locale.US;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
@@ -47,16 +47,16 @@ import it.unimi.dsi.fastutil.ints.IntList;
  * @author ashish0x90 (Ashish Yadav)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class MembershipTest {
+final class MembershipTest {
   private static final Logger logger = LoggerFactory.getLogger(MembershipTest.class);
 
   private static final String[] HEADERS = { "Type", "Capacity", "Insertions", "False Positives" };
   private static final double EXPECTED_INSERTIONS_MULTIPLIER = 0.5;
   private static final double FPP = 0.03;
 
-  @SuppressWarnings("Varifier")
-  @Test(dataProvider = "filterTypes")
-  public void bloomFilter(FilterType filterType) {
+  @ParameterizedTest
+  @MethodSource("filterTypes")
+  void bloomFilter(FilterType filterType) {
     var capacities = new IntArrayList(IntList.of(0, 1));
     for (int capacity = 2 << 10; capacity < (2 << 22); capacity <<= 2) {
       capacities.add(capacity);
@@ -70,7 +70,7 @@ public final class MembershipTest {
 
       Membership filter = filterType.create(config);
       int falsePositives = falsePositives(filter, input);
-      int expectedInsertions = (int) (capacity * EXPECTED_INSERTIONS_MULTIPLIER);
+      var expectedInsertions = (int) (capacity * EXPECTED_INSERTIONS_MULTIPLIER);
       double falsePositiveRate = ((double) falsePositives / expectedInsertions);
 
       if (!Double.isNaN(falsePositiveRate)) {
@@ -81,20 +81,19 @@ public final class MembershipTest {
     printTable(rows);
   }
 
-  @Test(dataProvider = "ensureCapacity")
-  public void caffeine_ensureCapacity(int expectedInsertions, double fpp) {
+  @ParameterizedTest
+  @MethodSource("expectedInsertions")
+  void caffeine_ensureCapacity(int expectedInsertions, double fpp) {
     var filter = new BloomFilter();
     filter.ensureCapacity(expectedInsertions, fpp);
     assertThat(filter.put(-1)).isTrue();
   }
 
-  @DataProvider(name = "ensureCapacity")
-  public Iterator<Object[]> providesExpectedInsertions() {
-    return IntStream.range(0,  25).boxed().map(i -> new Object[] { i, FPP }).iterator();
+  static Stream<Object[]> expectedInsertions() {
+    return IntStream.range(0,  25).boxed().map(i -> new Object[] { i, FPP });
   }
 
-  @DataProvider(name = "filterTypes")
-  public Object[] providesFilterTypes() {
+  static Object[] filterTypes() {
     return FilterType.values();
   }
 

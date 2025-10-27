@@ -2,8 +2,9 @@
 set -eux
 
 ./gradlew --console colored \
+    ecj \
+    assemble \
+    pmd -Ppmd \
+    spotbugs -Pspotbugs \
     forbiddenApis -PforbiddenApis \
-    ecjJavaPoet ecjMain ecjCodeGen ecjJmh ecjTest ecjJcstress \
-    pmdJavaPoet pmdMain pmdCodeGen pmdJmh pmdTest pmdJcstress -Ppmd \
-    spotbugsJavaPoet spotbugsMain spotbugsCodeGen spotbugsJmh spotbugsTest spotbugsJcstress -Pspotbugs \
     "$@"

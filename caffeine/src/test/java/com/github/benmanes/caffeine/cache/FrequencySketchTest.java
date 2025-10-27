@@ -23,6 +23,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -103,7 +105,7 @@ public final class FrequencySketchTest {
 
   @Test
   public void reset() {
-    boolean reset = false;
+    @Var boolean reset = false;
     var sketch = new FrequencySketch();
     sketch.ensureCapacity(64);
 

@@ -21,9 +21,6 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.schedul
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.testing.TestingExecutors.sameThreadScheduledExecutor;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -52,8 +49,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.Futures;
@@ -86,7 +81,7 @@ public final class SchedulerTest {
     };
     var future = scheduler.schedule(executor, () -> {}, 1L, TimeUnit.NANOSECONDS);
     assertThat(future).isNotNull();
-    await().untilAtomic(thread, is(not(nullValue())));
+    await().untilAsserted(() -> assertThat(thread.get()).isNotNull());
 
     if (thread.get() == Thread.currentThread()) {
       assertThat(logEvents()

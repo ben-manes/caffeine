@@ -15,12 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheContext.intern;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
@@ -76,20 +76,13 @@ import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
-import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.ExpectedError;
+import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
@@ -97,6 +90,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.testing.SerializableTester;
+import com.google.errorprone.annotations.Var;
 
 /**
  * The test cases for the {@link Cache#asMap()} view and its serializability. These tests do not
@@ -461,7 +455,7 @@ public final class AsMapTest {
   public void putAll_mixed(Map<Int, Int> map, CacheContext context) {
     var entries = new HashMap<Int, Int>();
     var replaced = new HashMap<Int, Int>();
-    context.original().forEach((key, value) -> {
+    context.original().forEach((var key, @Var var value) -> {
       if ((key.intValue() % 2) == 0) {
         value = intern(value.add(1));
         replaced.put(key, value);
@@ -1731,7 +1725,7 @@ public final class AsMapTest {
     assertThat(other.equals(map)).isFalse();
     assertThat(map.hashCode()).isNotEqualTo(other.hashCode());
 
-    Map<Int, Int> empty = Map.of();
+    var empty = Map.<Int, Int>of();
     assertThat(map.equals(empty)).isFalse();
     assertThat(empty.equals(map)).isFalse();
     assertThat(map.hashCode()).isNotEqualTo(empty.hashCode());
@@ -2221,7 +2215,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySet_iterator(Map<Int, Int> map, CacheContext context) {
-    int iterations = 0;
+    @Var int iterations = 0;
     for (var i = map.keySet().iterator(); i.hasNext();) {
       assertThat(map).containsKey(i.next());
       iterations++;
@@ -2280,7 +2274,7 @@ public final class AsMapTest {
   public void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.keySet().spliterator();
     int[] count = new int[1];
-    boolean advanced;
+    @Var boolean advanced;
     do {
       advanced = spliterator.tryAdvance(key -> count[0]++);
     } while (advanced);
@@ -2884,7 +2878,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void valueIterator(Map<Int, Int> map, CacheContext context) {
-    int iterations = 0;
+    @Var int iterations = 0;
     for (var i = map.values().iterator(); i.hasNext();) {
       assertThat(map.values()).contains(i.next());
       iterations++;
@@ -2943,7 +2937,7 @@ public final class AsMapTest {
   public void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.values().spliterator();
     int[] count = new int[1];
-    boolean advanced;
+    @Var boolean advanced;
     do {
       advanced = spliterator.tryAdvance(value -> count[0]++);
     } while (advanced);
@@ -3594,7 +3588,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entryIterator(Map<Int, Int> map, CacheContext context) {
-    int iterations = 0;
+    @Var int iterations = 0;
     for (var i = map.entrySet().iterator(); i.hasNext();) {
       var entry = i.next();
       assertThat(map).containsEntry(entry.getKey(), entry.getValue());
@@ -3660,7 +3654,7 @@ public final class AsMapTest {
   public void entrySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.entrySet().spliterator();
     int[] count = new int[1];
-    boolean advanced;
+    @Var boolean advanced;
     do {
       advanced = spliterator.tryAdvance(entry -> {
         if (context.isCaffeine()) {

@@ -1,0 +1,6 @@
+[allowlist]
+  description = "Ignore false positives"
+  paths = [
+    '''caffeine/build\.gradle\.kts''',
+    '''.github/actions/spelling/block-delimiters\.list''',
+  ]

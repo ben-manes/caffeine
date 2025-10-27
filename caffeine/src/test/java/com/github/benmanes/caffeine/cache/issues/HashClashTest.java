@@ -24,13 +24,13 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.CacheContext;
+import com.github.benmanes.caffeine.cache.CacheProvider;
+import com.github.benmanes.caffeine.cache.CacheSpec;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
+import com.github.benmanes.caffeine.cache.CacheValidationListener;
 
 /**
  * CASSANDRA-11452: Hash collisions cause the cache to not admit new entries.

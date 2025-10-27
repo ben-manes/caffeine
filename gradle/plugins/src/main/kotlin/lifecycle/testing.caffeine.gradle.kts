@@ -22,8 +22,6 @@ dependencies {
   testImplementation(platform(libs.kotlin.bom))
   testImplementation(platform(libs.junit.jupiter.bom))
 
-  testRuntimeOnly(libs.junit.jupiter.launcher)
-
   mockitoAgent(libs.mockito) {
     isTransitive = false
   }
@@ -81,18 +79,20 @@ tasks.withType<Test>().configureEach {
   )
 }
 
-tasks.named<JavaCompile>("compileTestJava").configure {
-  options.errorprone.nullaway {
-    customInitializerAnnotations.addAll(listOf(
-      "org.testng.annotations.BeforeClass",
-      "org.testng.annotations.BeforeMethod"))
-    externalInitAnnotations.addAll(listOf(
-      "org.mockito.testng.MockitoSettings",
-      "picocli.CommandLine.Command"))
-    excludedFieldAnnotations.addAll(listOf(
-      "org.junit.jupiter.params.Parameter",
-      "jakarta.inject.Inject",
-      "org.mockito.Captor",
-      "org.mockito.Mock"))
+tasks.withType<JavaCompile>().configureEach {
+  if (name.endsWith("TestJava")) {
+    options.errorprone.nullaway {
+      customInitializerAnnotations.addAll(listOf(
+        "org.testng.annotations.BeforeClass",
+        "org.testng.annotations.BeforeMethod"))
+      externalInitAnnotations.addAll(listOf(
+        "org.mockito.testng.MockitoSettings",
+        "picocli.CommandLine.Command"))
+      excludedFieldAnnotations.addAll(listOf(
+        "org.junit.jupiter.params.Parameter",
+        "jakarta.inject.Inject",
+        "org.mockito.Captor",
+        "org.mockito.Mock"))
+    }
   }
 }

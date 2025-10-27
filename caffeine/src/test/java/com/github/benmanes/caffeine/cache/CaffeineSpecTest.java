@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.math.BigInteger;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -37,18 +38,14 @@ import java.util.stream.IntStream;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.InitialCapacity;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -101,7 +98,8 @@ public final class CaffeineSpecTest {
   }
 
   private static void parseNumber(BiFunction<String, String, Number> parser) {
-    var invalid = List.of("_52", "52_", "-_52", "+_52", "52-", "52+", "52_-", "52_+", "value");
+    var invalid = Arrays.asList(null, "", "_52", "52_", "-_52",
+        "+_52", "52-", "52+", "52_-", "52_+", "value");
     for (var value : invalid) {
       assertThrows(IllegalArgumentException.class, () -> parser.apply("key", value));
     }
@@ -114,26 +112,33 @@ public final class CaffeineSpecTest {
   @Test
   @SuppressWarnings("NullAway")
   public void parseDuration_exception() {
+    // TimeUnit
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseTimeUnit("key", ""));
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseTimeUnit("key", null));
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parseDuration("key", "value"));
-    assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseTimeUnit("key", "value"));
+
+    // Duration
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parseIsoDuration("key", "value"));
+        () -> CaffeineSpec.parseDuration("key", null));
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parseSimpleDuration("key", "value"));
+        () -> CaffeineSpec.parseDuration("key", ""));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseDuration("key", "value"));
 
     // ISO
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseIsoDuration("key", "value"));
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseDuration("key", "-PT7H3M"));
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseDuration("key", "p3xyz"));
 
     // Simple
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parseSimpleDuration("key", "value"));
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseDuration("key", "-1s"));
     assertThrows(IllegalArgumentException.class,
@@ -296,56 +301,63 @@ public final class CaffeineSpecTest {
   }
 
   static void checkMaximumSize(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
-    if (context.isWeighted()) {
-      assertThat(spec.maximumSize).isEqualTo(UNSET_LONG);
-      assertThat(builder.maximumSize).isEqualTo(UNSET_LONG);
-      return;
-    }
-    if (context.maximum() == Maximum.DISABLED) {
+    if ((context.maximum() == Maximum.DISABLED) || context.isWeighted()) {
       assertThat(spec.maximumSize).isEqualTo(UNSET_LONG);
       assertThat(builder.maximumSize).isEqualTo(UNSET_LONG);
     } else {
       assertThat(spec.maximumSize).isEqualTo(context.maximum().max());
       assertThat(builder.maximumSize).isEqualTo(context.maximum().max());
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",maximumSize=1"));
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",maximumWeight=1"));
     }
   }
 
   static void checkMaximumWeight(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
-    if (!context.isWeighted()) {
-      assertThat(spec.maximumWeight).isEqualTo(UNSET_LONG);
-      assertThat(builder.maximumWeight).isEqualTo(UNSET_LONG);
-      return;
-    }
-    if (context.maximum() == Maximum.DISABLED) {
+    if ((context.maximum() == Maximum.DISABLED) || !context.isWeighted()) {
       assertThat(spec.maximumWeight).isEqualTo(UNSET_LONG);
       assertThat(builder.maximumWeight).isEqualTo(UNSET_LONG);
     } else {
       assertThat(spec.maximumWeight).isEqualTo(context.maximum().max());
       assertThat(builder.maximumWeight).isEqualTo(context.maximum().max());
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",maximumSize=1"));
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",maximumWeight=1"));
     }
   }
 
   static void checkWeakKeys(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
-    if (context.isWeakKeys()) {
-      assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
-      assertThat(builder.keyStrength).isEqualTo(Strength.WEAK);
-    } else {
+    if (context.isStrongKeys()) {
       assertThat(spec.keyStrength).isNull();
       assertThat(builder.keyStrength).isNull();
+    } else {
+      assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
+      assertThat(builder.keyStrength).isEqualTo(Strength.WEAK);
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",weakKeys"));
     }
   }
 
   static void checkValueStrength(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
+    if (context.isStrongValues()) {
+      assertThat(spec.valueStrength).isNull();
+      assertThat(builder.valueStrength).isNull();
+      return;
+    }
+
     if (context.isWeakValues()) {
       assertThat(spec.valueStrength).isEqualTo(Strength.WEAK);
       assertThat(builder.valueStrength).isEqualTo(Strength.WEAK);
     } else if (context.isSoftValues()) {
       assertThat(spec.valueStrength).isEqualTo(Strength.SOFT);
       assertThat(builder.valueStrength).isEqualTo(Strength.SOFT);
-    } else {
-      assertThat(spec.valueStrength).isNull();
-      assertThat(builder.valueStrength).isNull();
     }
+    assertThrows(IllegalArgumentException.class, () ->
+        CaffeineSpec.parse(spec.toParsableString() + ",weakValues"));
+    assertThrows(IllegalArgumentException.class, () ->
+        CaffeineSpec.parse(spec.toParsableString() + ",softValues"));
   }
 
   static void checkExpireAfterAccess(CaffeineSpec spec,
@@ -357,6 +369,10 @@ public final class CaffeineSpecTest {
       var duration = epoch.truncate(context.expireAfterAccess().duration());
       assertThat(spec.expireAfterAccess).isEqualTo(duration);
       assertThat(builder.expireAfterAccessNanos).isEqualTo(duration.toNanos());
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",expireAfterAccess=1s"));
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",expireAfterAccess=" + Duration.ofDays(1)));
     }
   }
 
@@ -369,6 +385,10 @@ public final class CaffeineSpecTest {
       var duration = epoch.truncate(context.expireAfterWrite().duration());
       assertThat(spec.expireAfterWrite).isEqualTo(duration);
       assertThat(builder.expireAfterWriteNanos).isEqualTo(duration.toNanos());
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",expireAfterWrite=1s"));
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",expireAfterWrite=" + Duration.ofDays(1)));
     }
   }
 
@@ -381,6 +401,10 @@ public final class CaffeineSpecTest {
       var duration = epoch.truncate(context.refreshAfterWrite().duration());
       assertThat(spec.refreshAfterWrite).isEqualTo(duration);
       assertThat(builder.refreshAfterWriteNanos).isEqualTo(duration.toNanos());
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",refreshAfterWrite=1s"));
+      assertThrows(IllegalArgumentException.class, () ->
+          CaffeineSpec.parse(spec.toParsableString() + ",refreshAfterWrite=" + Duration.ofDays(1)));
     }
   }
 

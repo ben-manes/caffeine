@@ -36,7 +36,7 @@ import org.jspecify.annotations.Nullable;
  * overridden as desired.
  * <p>
  * Usage example:
- * {@snippet class=com.github.benmanes.caffeine.Snippets region=loader_basic lang=java}
+ * {@snippet class=com.github.benmanes.caffeine.cache.Snippets region=loader_basic lang=java}
  *
  * @param <K> the type of keys
  * @param <V> the type of values. A loader may return null values if and only if it declares a
@@ -214,7 +214,7 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
    * retrieving the {@code key} prior to returning to the value to the cache.
    * <p>
    * Usage example:
-   * {@snippet class=com.github.benmanes.caffeine.Snippets region=loader_bulk lang=java}
+   * {@snippet class=com.github.benmanes.caffeine.cache.Snippets region=loader_bulk lang=java}
    *
    * @param <K> the key type
    * @param <V> the value type

@@ -169,14 +169,13 @@ tasks.named<Javadoc>("javadoc").configure {
   }
 }
 
-tasks.named<CheckForbiddenApis>("forbiddenApisMain").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
-}
-
-tasks.named<CheckForbiddenApis>("forbiddenApisTest").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
+tasks.withType<CheckForbiddenApis>().configureEach {
+  bundledSignatures.addAll(when (name) {
+    "forbiddenApisTest" -> listOf("jdk-deprecated", "jdk-internal",
+      "jdk-non-portable", "jdk-reflection", "jdk-unsafe")
+    else -> listOf("jdk-deprecated", "jdk-internal", "jdk-non-portable",
+      "jdk-reflection", "jdk-system-out", "jdk-unsafe")
+  })
 }
 
 eclipse {

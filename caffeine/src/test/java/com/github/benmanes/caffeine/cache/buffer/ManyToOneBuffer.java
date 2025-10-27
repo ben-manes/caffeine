@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.buffer;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A simple ring buffer implementation that watches both the head and tail counts to acquire a
  * slot.
@@ -42,7 +44,7 @@ final class ManyToOneBuffer<E> extends ManyToOneHeader.ReadAndWriteCounterRef<E>
       return FULL;
     }
     if (casWriteCounter(tail, tail + 1)) {
-      int index = (int) (tail & BUFFER_MASK);
+      var index = (int) (tail & BUFFER_MASK);
       BUFFER.setRelease(buffer, index, e);
       return SUCCESS;
     }
@@ -52,15 +54,15 @@ final class ManyToOneBuffer<E> extends ManyToOneHeader.ReadAndWriteCounterRef<E>
   @Override
   @SuppressWarnings("unchecked")
   protected void drainTo(Consumer<E> consumer) {
-    long head = readCounter;
+    @Var long head = readCounter;
     long tail = writeCounterOpaque();
     long size = (tail - head);
     if (size == 0) {
       return;
     }
     do {
-      int index = (int) (head & BUFFER_MASK);
-      E e = (E) BUFFER.getAcquire(buffer, index);
+      var index = (int) (head & BUFFER_MASK);
+      var e = (E) BUFFER.getAcquire(buffer, index);
       if (e == null) {
         // not published yet
         break;

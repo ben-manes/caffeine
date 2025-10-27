@@ -13,7 +13,7 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 

@@ -5,9 +5,8 @@ Varifier = "Varifier"
 
 [files]
 extend-exclude = [
-  "caffeine/src/jmh/java/com/github/benmanes/caffeine/cache/impl/ConcurrentHashMapV7.java",
-  "caffeine/src/test/java/com/github/benmanes/caffeine/eclipse/*",
-  "caffeine/src/test/java/com/github/benmanes/caffeine/jsr166/*",
+  "caffeine/src/jsr166Test/*",
+  "caffeine/src/eclipseTest/*",
   "guava/src/test/java/com/github/benmanes/caffeine/guava/compatibility/*",
   "simulator/src/main/resources/com/github/benmanes/caffeine/cache/simulator/parser/lirs/*",
 ]

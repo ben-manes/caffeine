@@ -21,14 +21,11 @@ import static com.github.benmanes.caffeine.cache.Buffer.FULL;
 import static com.github.benmanes.caffeine.cache.Buffer.SUCCESS;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.ToIntBiFunction;
 
-import org.jetbrains.lincheck.Lincheck;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -107,66 +104,6 @@ public final class BoundedBufferTest {
     assertThat(data).containsExactly(true);
     assertThat(buffer.readCounter).isEqualTo(Long.MIN_VALUE);
     assertThat(buffer.writeCounter).isEqualTo(Long.MIN_VALUE);
-  }
-
-  @Test(groups = "lincheck")
-  public void concurrent_offer() {
-    Lincheck.runConcurrentTest(() -> {
-      try {
-        int reads = 32;
-        var buffer = new BoundedBuffer<Integer>();
-        Runnable task = () -> {
-          for (int i = 0; i < reads; i++) {
-            int result = buffer.offer(i);
-            assertTrue((result == SUCCESS) || (result == FAILED) || (result == FULL));
-          }
-        };
-        var offer1 = new Thread(task);
-        var offer2 = new Thread(task);
-        offer1.start();
-        offer2.start();
-        offer1.join();
-        offer2.join();
-        assertTrue(buffer.size() >= BoundedBuffer.BUFFER_SIZE, () -> "Observed: " + buffer.size());
-      } catch (InterruptedException e) {
-        throw new AssertionError(e);
-      }
-    });
-  }
-
-  @Test(groups = "lincheck")
-  public void concurrent_drain_offer() {
-    checkConcurrent(BoundedBuffer::offer);
-  }
-
-  @Test(groups = "lincheck")
-  public void concurrent_drain_expandOrRetry() {
-    checkConcurrent((buffer, e) -> buffer.expandOrRetry(e, e, e, /* wasUncontended= */ false));
-  }
-
-  private static void checkConcurrent(ToIntBiFunction<BoundedBuffer<Integer>, Integer> writer) {
-    Lincheck.runConcurrentTest(() -> {
-      try {
-        int reads = 32;
-        var drained = new AtomicInteger();
-        var buffer = new BoundedBuffer<Integer>();
-        var offer = new Thread(() -> {
-          for (int i = 0; i < reads; i++) {
-            int result = writer.applyAsInt(buffer, i);
-            assertTrue((result == SUCCESS) || (result == FAILED) || (result == FULL));
-          }
-        });
-        var drain = new Thread(() -> buffer.drainTo(e -> drained.incrementAndGet()));
-        offer.start();
-        drain.start();
-        offer.join();
-        drain.join();
-        int result = drained.get();
-        assertTrue(result <= reads, () -> "Observed: " + result);
-      } catch (InterruptedException e) {
-        throw new AssertionError(e);
-      }
-    });
   }
 
   @Test

@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheContext.intern;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
@@ -69,20 +69,13 @@ import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoEvictions;
-import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;

@@ -32,9 +32,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.RemovalCause;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 

@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
+import org.gradle.kotlin.dsl.withType
 
 plugins {
   `jvm-ecosystem`
@@ -23,6 +24,12 @@ sourceSets.configureEach {
   }
 }
 
+tasks.register("ecj") {
+  group = "ECJ"
+  description = "Run all ECJ checks."
+  dependsOn(tasks.withType<EclipseJavaCompile>())
+}
+
 @CacheableTask
 abstract class EclipseJavaCompile @Inject constructor(
                                   @Internal val projectLayout: ProjectLayout) : JavaExec() {
@@ -37,6 +44,7 @@ abstract class EclipseJavaCompile @Inject constructor(
 
   init {
     group = "ECJ"
+    onlyIf { !javaSources.isEmpty }
     mainClass = "org.eclipse.jdt.internal.compiler.batch.Main"
     argumentProviders.add {
       val sources = javaSources.filter { it.name != "module-info.java" }.map { it.absolutePath }

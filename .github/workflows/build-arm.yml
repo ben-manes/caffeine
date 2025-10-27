@@ -95,11 +95,16 @@ jobs:
           - caffeine:strongKeysAndSoftValuesSyncGuavaTest
           - caffeine:weakKeysAndWeakValuesSyncGuavaTest
           - caffeine:weakKeysAndSoftValuesSyncGuavaTest
-          - caffeine:junitJupiterTest
-          - caffeine:integrationTest
-          - caffeine:standaloneTest
-          - caffeine:isolatedTest
-          - caffeine:junitTest
+          - caffeine:eclipseTest
+          - caffeine:jctoolsTest
+          - caffeine:openjdkTest
+          - caffeine:apacheTest
+          - caffeine:googleTest
+          - caffeine:jsr166Test
+          - caffeine:moduleTest
+          - caffeine:fuzzTest
+          - caffeine:osgiTest
+          - caffeine:test
           - simulator:run
           - jcache:check
           - guava:check

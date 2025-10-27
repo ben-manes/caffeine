@@ -35,6 +35,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.LongMath;
+import com.google.errorprone.annotations.Var;
 import com.jakewharton.fliptables.FlipTable;
 
 /**
@@ -228,7 +229,7 @@ public final class MemoryBenchmark {
 
     long entryOverhead = 2 * FUZZY_SIZE
         * evaluator.applyAsLong(workingSet.keySet().iterator().next());
-    long perEntry = LongMath.divide(populated - entryOverhead - base, FUZZY_SIZE, HALF_EVEN);
+    @Var long perEntry = LongMath.divide(populated - entryOverhead - base, FUZZY_SIZE, HALF_EVEN);
     perEntry += ((perEntry & 1) == 0) ? 0 : 1;
     long aligned = ((perEntry % 8) == 0) ? perEntry : ((1 + perEntry / 8) * 8);
 

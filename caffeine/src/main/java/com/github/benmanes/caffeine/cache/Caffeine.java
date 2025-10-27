@@ -71,7 +71,7 @@ import com.google.errorprone.annotations.FormatMethod;
  * cache instances created by {@code Caffeine} will not perform any type of eviction.
  * <p>
  * Usage example:
- * {@snippet class=com.github.benmanes.caffeine.Snippets region=builder lang=java}
+ * {@snippet class=com.github.benmanes.caffeine.cache.Snippets region=builder lang=java}
  * <p>
  * The returned cache is implemented as a hash table with similar performance characteristics to
  * {@link ConcurrentHashMap}. The {@code asMap} view (and its collection views) have <i>weakly

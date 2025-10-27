@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.buffer;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+import com.google.errorprone.annotations.Var;
+
 /**
  * A simple ring buffer implementation that watches both the head and tail counts to acquire a
  * slot. This version uses a contiguous array that spaces each element to avoid false sharing.
@@ -47,7 +49,7 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
       return FULL;
     }
     if (casWriteCounter(tail, tail + OFFSET)) {
-      int index = (int) (tail & SPACED_MASK);
+      var index = (int) (tail & SPACED_MASK);
       BUFFER.setRelease(buffer, index, e);
       return SUCCESS;
     }
@@ -57,15 +59,15 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
   @Override
   @SuppressWarnings("unchecked")
   protected void drainTo(Consumer<E> consumer) {
-    long head = readCounter;
+    @Var long head = readCounter;
     long tail = writeCounterOpaque();
     long size = (tail - head);
     if (size == 0) {
       return;
     }
     do {
-      int index = (int) (head & SPACED_MASK);
-      E e = (E) BUFFER.getAcquire(buffer, index);
+      var index = (int) (head & SPACED_MASK);
+      var e = (E) BUFFER.getAcquire(buffer, index);
       if (e == null) {
         // not published yet
         break;

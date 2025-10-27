@@ -54,6 +54,7 @@ import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Streams;
 import com.google.common.hash.Hashing;
+import com.google.errorprone.annotations.Var;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -94,7 +95,7 @@ public final class TimerWheelTest {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
-    int expired = 0;
+    @Var int expired = 0;
     for (long timeout : times) {
       if (timeout <= duration) {
         expired++;
@@ -279,9 +280,9 @@ public final class TimerWheelTest {
     }
     timerWheel.advance(cache, duration);
 
-    long minDelay = Long.MAX_VALUE;
-    int minSpan = Integer.MAX_VALUE;
-    int minBucket = Integer.MAX_VALUE;
+    @Var long minDelay = Long.MAX_VALUE;
+    @Var int minSpan = Integer.MAX_VALUE;
+    @Var int minBucket = Integer.MAX_VALUE;
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         var timers = getTimers(timerWheel.wheel[i][j]);
@@ -458,7 +459,7 @@ public final class TimerWheelTest {
     timerWheel.schedule(new Timer(clock + timeout));
     timerWheel.advance(cache, clock + duration);
 
-    int count = 0;
+    @Var int count = 0;
     for (int i = 0; i <= span; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         count += getTimers(timerWheel.wheel[i][j]).size();
@@ -484,7 +485,7 @@ public final class TimerWheelTest {
   @Test(dataProvider = "iterator")
   public void iterator_hasNext(
       TimerWheel<Int, Int> timerWheel, Iterable<Node<Int, Int>> iterable) {
-    var iterator = iterable.iterator();
+    @Var var iterator = iterable.iterator();
     assertThat(iterator.hasNext()).isFalse();
 
     timerWheel.schedule(new Timer(1));
@@ -593,7 +594,7 @@ public final class TimerWheelTest {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       int indexOffset = ascending ? i : -i;
       int index = startLevel + indexOffset;
-      int ticks = (int) (timerWheel.nanos >>> SHIFT[index]);
+      var ticks = (int) (timerWheel.nanos >>> SHIFT[index]);
       int bucketMask = (timerWheel.wheel[index].length - 1);
       int startBucket = (ticks & bucketMask) + (ascending ? 1 : 0);
       for (int j = 0; j < timerWheel.wheel[index].length; j++) {
@@ -613,7 +614,7 @@ public final class TimerWheelTest {
   static void printTimerWheel(TimerWheel<?, ?> timerWheel) {
     var builder = new StringBuilder();
     for (int i = 0; i < timerWheel.wheel.length; i++) {
-      int ticks = (int) (timerWheel.nanos >>> SHIFT[i]);
+      var ticks = (int) (timerWheel.nanos >>> SHIFT[i]);
       int bucketMask = (timerWheel.wheel[i].length - 1);
       int index = (ticks & bucketMask);
       var buckets = new TreeMap<String, List<Object>>();

@@ -15,14 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheContext.intern;
+import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.VARIABLE;
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
-import static com.github.benmanes.caffeine.cache.testing.AsyncCacheSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheContext.intern;
-import static com.github.benmanes.caffeine.cache.testing.CacheContextSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
-import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
-import static com.github.benmanes.caffeine.cache.testing.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
@@ -52,29 +52,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.InitialCapacity;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
-import com.github.benmanes.caffeine.cache.testing.CacheProvider;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.CheckMaxLogLevel;
-import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
-import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
+import com.github.benmanes.caffeine.cache.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
+import com.google.errorprone.annotations.Var;
 
 /**
  * The test cases for caches with a page replacement algorithm.
@@ -96,7 +91,7 @@ public final class EvictionTest {
     var removalListener = (RejectingRemovalListener<Int, Int>) context.removalListener();
     // Guava-style caches reject before the max size is reached & are unpredictable
     removalListener.rejected = 0;
-    long size = cache.estimatedSize();
+    @Var long size = cache.estimatedSize();
     for (Int key : context.absentKeys()) {
       cache.put(key, key);
       if (cache.estimatedSize() != ++size) {
@@ -1111,7 +1106,7 @@ public final class EvictionTest {
   @CacheSpec(maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
   public void weightedSize(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    long weightedSize = 0;
+    @Var long weightedSize = 0;
     for (Int key : cache.asMap().keySet()) {
       weightedSize += eviction.weightOf(key).getAsInt();
     }

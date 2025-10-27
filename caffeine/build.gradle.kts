@@ -1,15 +1,16 @@
 import com.google.common.base.CaseFormat
 import com.google.common.collect.Sets
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
-import kotlin.math.max
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
-import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.Library
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
+import kotlin.math.max
+import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
   id("java-library.caffeine")
+  id("java-test-fixtures")
   id("jcstress.caffeine")
   id("revapi.caffeine")
   id("jmh.caffeine")
@@ -37,27 +38,17 @@ dependencies {
   api(libs.jspecify)
   api(libs.errorprone.annotations)
 
-  testImplementation(libs.ycsb) {
-    isTransitive = false
-  }
-  testImplementation(libs.jazzer)
-  testImplementation(libs.jctools)
-  testImplementation(libs.mockito)
-  testImplementation(libs.picocli)
-  testImplementation(libs.lincheck)
-  testImplementation(libs.commons.lang3)
-  testImplementation(libs.guava.testlib)
-  testImplementation(libs.bundles.awaitility)
-  testImplementation(libs.bundles.slf4j.test)
-  testImplementation(libs.commons.collections4)
-  testImplementation(libs.commons.collections4) {
-    artifact { classifier = "tests" }
-  }
-  testImplementation(libs.bundles.osgi.test.compile)
-  testImplementation(libs.eclipse.collections.testutils)
-  testImplementation(sourceSets.named("codeGen").map { it.output })
+  testFixturesApi(libs.truth)
+  testFixturesApi(libs.awaitility)
+  testFixturesApi(libs.guava.testlib)
+  testFixturesApi(libs.bundles.slf4j.test)
 
-  testRuntimeOnly(libs.bundles.osgi.test.runtime)
+  testFixturesImplementation(libs.testng)
+  testFixturesImplementation(libs.jctools)
+  testFixturesImplementation(libs.mockito)
+  testFixturesImplementation(libs.commons.lang3)
+
+  testImplementation(sourceSets.named("codeGen").map { it.output })
 
   collections4Sources(libs.commons.collections4) {
     artifact { classifier = "test-sources" }
@@ -148,11 +139,12 @@ tasks.named<JavaCompile>("compileJava").configure {
 tasks.named<JavaCompile>("compileTestJava").configure {
   inputs.files(compileCodeGenJava.map { it.outputs.files })
   inputs.files(jar.map { it.outputs.files })
-  options.apply {
-    compilerArgs.add("-Xlint:-auxiliaryclass")
-    errorprone {
-      disable("Varifier")
-      disable("Var")
+}
+
+tasks.withType<JavaCompile>().configureEach {
+  if (name.contains("Test") && name.contains("Java")) {
+    options.apply {
+      compilerArgs.add("-Xlint:-auxiliaryclass")
     }
   }
 }
@@ -160,32 +152,36 @@ tasks.named<JavaCompile>("compileTestJava").configure {
 tasks.named<JavaCompile>("compileJmhJava").configure {
   options.apply {
     compilerArgs.add("-Xlint:-classfile")
-    errorprone {
-      disable("Varifier")
-      disable("Var")
-    }
   }
 }
 
 testing.suites {
   named<JvmTestSuite>("test") {
+    dependencies {
+      implementation(libs.ycsb) {
+        isTransitive = false
+      }
+      implementation(libs.guava)
+      implementation(libs.jazzer)
+      implementation(libs.jctools)
+      implementation(libs.mockito)
+      implementation(libs.picocli)
+      implementation(libs.lincheck)
+      implementation(libs.commons.lang3)
+      implementation(libs.guava.testlib)
+      implementation(libs.commons.collections4)
+      implementation(libs.commons.collections4) {
+        artifact { classifier = "tests" }
+      }
+      implementation.bundle(libs.bundles.awaitility)
+      implementation.bundle(libs.bundles.slf4j.test)
+      implementation(libs.eclipse.collections.testutils)
+      implementation.bundle(libs.bundles.osgi.test.compile)
+
+      runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
+    }
     targets {
       named("test") {
-        testTask.configure {
-          exclude("com/github/benmanes/caffeine/**")
-        }
-      }
-      register("standaloneTest") {
-        testTask.configure {
-          exclude("com/github/benmanes/caffeine/cache/**")
-          useTestNG {
-            threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
-            excludeGroups("slow", "isolated", "lincheck")
-            parallel = "methods"
-          }
-        }
-      }
-      register("isolatedTest") {
         testTask.configure {
           maxHeapSize = "3g"
           useTestNG {
@@ -193,55 +189,13 @@ testing.suites {
           }
         }
       }
-      register("lincheckTest") {
-        testTask.configure {
-          val isEnabled = isEarlyAccess().map { !it }
-          testLogging.events("started")
-          onlyIf { isEnabled.get() }
-          maxHeapSize = "3g"
-          failFast = true
-          useTestNG {
-            includeGroups("lincheck")
-          }
-
-          // https://github.com/JetBrains/lincheck/issues/842
-          val isCompatibleJdk = java.toolchain.languageVersion.map { !it.canCompileOrRun(21) }
-          onlyIf { isCompatibleJdk.get() }
-        }
-      }
-      register("fuzzTest") {
-        testTask.configure {
-          include("com/github/benmanes/caffeine/fuzz/**")
-          environment("JAZZER_FUZZ", "1")
-          useJUnitPlatform()
-          failFast = true
-          forkEvery = 1
-        }
-      }
-      register("junitJupiterTest") {
-        testTask.configure {
-          exclude("com/github/benmanes/caffeine/fuzz/**")
-          useJUnitPlatform()
-          systemProperties(
-            "junit.jupiter.execution.parallel.enabled" to "true",
-            "junit.jupiter.execution.parallel.mode.default" to "concurrent")
-        }
-      }
-      register("junitTest") {
-        testTask.configure {
-          inputs.files(jar.map { it.outputs.files })
-          maxParallelForks = Runtime.getRuntime().availableProcessors()
-
-          useJUnit()
-          val relativeDir = projectDir
-          val jarFile = jar.flatMap { it.archiveFile }.map { it.asFile }
-          doFirst { systemProperty("caffeine.osgi.jar", jarFile.get().relativeTo(relativeDir).path) }
-        }
-      }
       all {
+        useTestNG(libs.versions.testng)
+
         testTask.configure {
           testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs })
-          classpath = files(sourceSets.named("test").map { it.runtimeClasspath },
+          classpath = files(
+            sourceSets.named("test").map { it.runtimeClasspath },
             sourceSets.named("codeGen").map { it.runtimeClasspath })
         }
       }
@@ -257,7 +211,8 @@ testing.suites {
                 "stats" to stats.name,
                 "values" to values.name,
                 "compute" to compute.name,
-                "implementation" to implementation)
+                "implementation" to implementation
+              )
 
               jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
                 "--add-opens", "java.base/java.lang=ALL-UNNAMED",
@@ -271,7 +226,7 @@ testing.suites {
               } else {
                 useTestNG {
                   parallel = "methods"
-                  excludeGroups("slow", "isolated", "lincheck")
+                  excludeGroups("slow", "isolated")
                   threadCount = Runtime.getRuntime().availableProcessors().let {
                     if (isCI().get()) it else max(6, it - 1)
                   }
@@ -286,16 +241,176 @@ testing.suites {
       }
     }
   }
-  val integrationTest by registering(JvmTestSuite::class) {
+  val apacheTest by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(testFixtures(project()))
+      implementation(libs.commons.collections4)
+      implementation(libs.commons.collections4) {
+        artifact { classifier = "tests" }
+      }
+    }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
+      }
+    }
+  }
+  val eclipseTest by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(testFixtures(project()))
+      implementation(libs.eclipse.collections.testutils)
+    }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
+      }
+    }
+  }
+  val fuzzTest by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.truth)
+      implementation(libs.jazzer)
+    }
+    targets.all {
+      testTask.configure {
+        environment("JAZZER_FUZZ", "1")
+        failFast = true
+        forkEvery = 1
+      }
+    }
+  }
+  val googleTest by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.truth)
+      implementation(testFixtures(project()))
+      implementation(libs.junit.jupiter.vintage)
+    }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
+      }
+    }
+  }
+  val moduleTest by registering(JvmTestSuite::class) {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
       implementation(project())
       implementation(libs.guava)
     }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
+      }
+    }
+  }
+  val jctoolsTest by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.truth)
+      implementation(libs.jctools)
+      implementation(libs.junit.jupiter.vintage)
+    }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
+      }
+    }
+  }
+  val jsr166Test by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.junit.jupiter.vintage)
+    }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
+      }
+    }
+  }
+  val lincheckTest by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.lincheck)
+    }
+    targets.all {
+      testTask.configure {
+        val isEnabled = isEarlyAccess().map { !it }
+        testLogging.events("started")
+        onlyIf { isEnabled.get() }
+        maxHeapSize = "3g"
+        failFast = true
+
+        // https://github.com/JetBrains/lincheck/issues/842
+        val isCompatibleJdk = java.toolchain.languageVersion.map { !it.canCompileOrRun(21) }
+        onlyIf { isCompatibleJdk.get() }
+      }
+    }
+  }
+  val osgiTest by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.junit.jupiter.vintage)
+      implementation.bundle(libs.bundles.osgi.test.compile)
+
+      runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
+    }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
+        val relativeDir = projectDir
+        inputs.files(jar.map { it.outputs.files })
+        val jarFile = jar.flatMap { it.archiveFile }.map { it.asFile }
+        doFirst { systemProperty("caffeine.osgi.jar", jarFile.get().relativeTo(relativeDir).path) }
+      }
+    }
+  }
+  val openjdkTest by registering(JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.truth)
+      implementation(libs.testng)
+      runtimeOnly(libs.junit.jupiter.testng)
+    }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
+      }
+    }
   }
   tasks.check.configure {
-    dependsOn(integrationTest)
+    dependsOn(fuzzTest)
+    dependsOn(osgiTest)
+    dependsOn(apacheTest)
+    dependsOn(googleTest)
+    dependsOn(jsr166Test)
+    dependsOn(moduleTest)
+    dependsOn(eclipseTest)
+    dependsOn(jctoolsTest)
+    dependsOn(openjdkTest)
+    dependsOn(lincheckTest)
   }
 }
 
@@ -322,34 +437,29 @@ tasks.named<Javadoc>("javadoc").configure {
   mustRunAfter(compileCodeGenJava)
 }
 
+tasks.named<Javadoc>("testFixturesJavadoc").configure {
+  javadocOptions {
+    addBooleanOption("Xdoclint:all,-missing", true)
+  }
+}
+
 tasks.named<CheckForbiddenApis>("forbiddenApisCodeGen").configure {
-  classpath = files(sourceSets.named("main").map { it.output },
+  classpath = files(
+    sourceSets.named("main").map { it.output },
     sourceSets.named("codeGen").map { it.output })
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
 }
 
-tasks.named<CheckForbiddenApis>("forbiddenApisMain").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated-18", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
-}
-
-tasks.named<CheckForbiddenApis>("forbiddenApisJavaPoet").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-unsafe"))
-}
-
-tasks.named<CheckForbiddenApis>("forbiddenApisTest").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated-18"))
-}
-
-tasks.named<CheckForbiddenApis>("forbiddenApisIntegrationTest").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated", "jdk-internal",
-    "jdk-non-portable", "jdk-reflection", "jdk-system-out", "jdk-unsafe"))
-}
-
-tasks.named<CheckForbiddenApis>("forbiddenApisJmh").configure {
-  bundledSignatures.addAll(listOf("jdk-deprecated-18", "jdk-reflection", "jdk-unsafe"))
+tasks.withType<CheckForbiddenApis>().configureEach {
+  bundledSignatures.addAll(when (name) {
+    "forbiddenApisJavaPoet", "forbiddenApisJsr166Test" -> listOf("jdk-deprecated-18",
+      "jdk-internal", "jdk-non-portable", "jdk-reflection", "jdk-unsafe")
+    "forbiddenApisOpenjdkTest", "forbiddenApisTestFixtures" -> listOf("jdk-deprecated-18",
+      "jdk-internal", "jdk-non-portable", "jdk-unsafe")
+    "forbiddenApisTest" -> listOf("jdk-deprecated-18", "jdk-internal", "jdk-non-portable")
+    "forbiddenApisJmh" -> listOf("jdk-deprecated-18", "jdk-reflection", "jdk-unsafe")
+    else -> listOf("jdk-deprecated-18", "jdk-internal", "jdk-non-portable",
+        "jdk-reflection", "jdk-system-out", "jdk-unsafe")
+  })
 }
 
 tasks.register<JavaExec>("memoryOverhead") {
@@ -379,9 +489,18 @@ tasks.register<Stress>("stress") {
   description = "Executes a stress test"
   mainClass = "com.github.benmanes.caffeine.cache.Stresser"
   inputs.files(tasks.named<JavaCompile>("compileTestJava").map { it.outputs.files })
-  classpath(sourceSets.named("codeGen").map { it.runtimeClasspath },
+  classpath(
+    sourceSets.named("codeGen").map { it.runtimeClasspath },
     sourceSets.named("test").map { it.runtimeClasspath })
   outputs.upToDateWhen { false }
+}
+
+val javaComponent = components["java"] as AdhocComponentWithVariants
+javaComponent.withVariantsFromConfiguration(configurations.testFixturesApiElements.get()) {
+  skip()
+}
+javaComponent.withVariantsFromConfiguration(configurations.testFixturesRuntimeElements.get()) {
+  skip()
 }
 
 eclipse {
@@ -390,12 +509,21 @@ eclipse {
 
     file.whenMerged {
       if (this is EclipseClasspath) {
-        val regex = ".*collections4.*-tests.jar".toRegex()
+        val collectionsRegex = ".*collections4.*-tests.jar".toRegex()
         entries.filterIsInstance<Library>()
-          .filter { regex.matches(it.path) }
-          .forEach { it.sourcePath = fileReference(
-            file(collections4Sources.map { sources -> sources.singleFile })) }
-        entries.removeIf { (it is SourceFolder) && it.path.contains("integrationTest") }
+          .filter { collectionsRegex.matches(it.path) }
+          .forEach {
+            it.sourcePath = fileReference(
+              file(collections4Sources.map { sources -> sources.singleFile }))
+          }
+
+        val testRegex = "src/(.*Test|testFixtures)/java".toRegex()
+        entries.filterIsInstance<SourceFolder>()
+          .filter { testRegex.matches(it.path) }
+          .forEach {
+            it.entryAttributes["test"] = "true"
+            it.entryAttributes["module"] = "false"
+          }
       }
     }
   }

@@ -19,6 +19,7 @@ import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.CacheType;
+import com.google.errorprone.annotations.Var;
 
 import site.ycsb.generator.NumberGenerator;
 import site.ycsb.generator.ScrambledZipfianGenerator;
@@ -71,7 +72,7 @@ public final class CacheProfiler extends ProfilerHook {
   /** Spins forever reading from the cache. */
   @SuppressWarnings("CheckReturnValue")
   private void reads() {
-    int index = random.nextInt();
+    @Var int index = random.nextInt();
     for (;;) {
       Integer key = ints[index++ & MASK];
       cache.get(key);
@@ -81,7 +82,7 @@ public final class CacheProfiler extends ProfilerHook {
 
   /** Spins forever writing into the cache. */
   private void writes() {
-    int index = random.nextInt();
+    @Var int index = random.nextInt();
     for (;;) {
       Integer key = ints[index++ & MASK];
       cache.put(key, true);
