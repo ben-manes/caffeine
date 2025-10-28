@@ -31,23 +31,6 @@ dependencies {
   api(libs.jcache)
   api(libs.config)
 
-  testImplementation(libs.guice)
-  testImplementation(libs.mockito)
-  testImplementation(libs.jcache.guice)
-  testImplementation(libs.guava.testlib)
-  testImplementation(libs.bundles.slf4j.nop)
-  testImplementation(files(testResourcesJar))
-  testImplementation(libs.bundles.awaitility)
-  testImplementation(libs.nullaway.annotations)
-  testImplementation(libs.bundles.osgi.test.compile)
-  testImplementation(libs.jcache.tck)
-  testImplementation(libs.jcache.tck) {
-    artifact { classifier = "tests" }
-  }
-
-  testRuntimeOnly(libs.bundles.osgi.test.runtime)
-  testRuntimeOnly(libs.bundles.junit.engines)
-
   jcacheJavadoc(libs.jcache) {
     artifact { classifier = "javadoc" }
   }
@@ -65,21 +48,38 @@ testing.suites {
   named<JvmTestSuite>("test") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
+    dependencies {
+      implementation(libs.truth)
+      implementation(libs.testng)
+      implementation(libs.guice)
+      implementation(libs.mockito)
+      implementation(libs.awaitility)
+      implementation(libs.jcache.guice)
+      implementation(libs.guava.testlib)
+      implementation(files(testResourcesJar))
+      implementation(libs.nullaway.annotations)
+      implementation.bundle(libs.bundles.slf4j.nop)
+      implementation.bundle(libs.bundles.osgi.test.compile)
+      implementation(libs.jcache.tck)
+      implementation(libs.jcache.tck) {
+        artifact { classifier = "tests" }
+      }
+
+      runtimeOnly(libs.junit.jupiter.testng)
+      runtimeOnly(libs.junit.jupiter.vintage)
+      runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
+    }
     targets {
       named("test") {
         testTask.configure {
-          useJUnitPlatform {
-            excludeTags("isolated")
-          }
+          systemProperty("testng.excludedGroups", "isolated")
         }
       }
       register("isolatedTest") {
         testTask.configure {
           forkEvery = 1
+          systemProperty("testng.groups", "isolated")
           maxParallelForks = 2 * Runtime.getRuntime().availableProcessors()
-          useJUnitPlatform {
-            includeTags("isolated")
-          }
         }
       }
       all {

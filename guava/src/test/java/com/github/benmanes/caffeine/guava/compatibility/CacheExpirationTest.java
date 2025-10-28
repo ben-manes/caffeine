@@ -49,7 +49,7 @@ import junit.framework.TestCase;
  * @author mike nonemacher
  */
 @NullUnmarked
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"PreferJavaTimeOverload", "Varifier"})
 public class CacheExpirationTest extends TestCase {
 
   private static final long EXPIRING_TIME = 1000;

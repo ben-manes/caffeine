@@ -1,6 +1,5 @@
 /** Guava compatibility adapter. The tests are forked from Guava commit e370dde. */
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
-import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
 
@@ -13,29 +12,26 @@ dependencies {
   api(project(":caffeine"))
   api(libs.guava)
 
-  testImplementation(libs.guava.testlib)
-  testImplementation(libs.bundles.slf4j.nop)
-  testImplementation(libs.bundles.osgi.test.compile)
-
-  testRuntimeOnly(libs.bundles.osgi.test.runtime)
-  testRuntimeOnly(libs.bundles.junit.engines)
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
   options.compilerArgs.add("-Xlint:-exports")
 }
 
-tasks.named<JavaCompile>("compileTestJava").configure {
-  options.errorprone {
-    disable("Varifier")
-    disable("Var")
-  }
-}
-
 testing.suites {
   named<JvmTestSuite>("test") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
+    dependencies {
+      implementation(libs.truth)
+      implementation(libs.guava.testlib)
+      implementation.bundle(libs.bundles.slf4j.nop)
+      implementation.bundle(libs.bundles.osgi.test.compile)
+
+      runtimeOnly(libs.junit.jupiter.testng)
+      runtimeOnly(libs.junit.jupiter.vintage)
+      runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
+    }
     targets.named("test") {
       testTask.configure {
         project(":caffeine").plugins.withId("java-library") {

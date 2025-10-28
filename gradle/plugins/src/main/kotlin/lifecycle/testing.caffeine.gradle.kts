@@ -15,15 +15,16 @@ val javaTestVersion: Provider<JavaLanguageVersion> = java.toolchain.languageVers
 val mockitoAgent by configurations.registering
 
 dependencies {
-  testImplementation(libs.truth)
-  testImplementation(libs.testng)
-  testImplementation(libs.bundles.junit)
-  testImplementation(platform(libs.asm.bom))
-  testImplementation(platform(libs.kotlin.bom))
-  testImplementation(platform(libs.junit.jupiter.bom))
-
   mockitoAgent(libs.mockito) {
     isTransitive = false
+  }
+}
+
+testing.suites.withType<JvmTestSuite>().configureEach {
+  dependencies {
+    implementation(platform(libs.asm.bom))
+    implementation(platform(libs.kotlin.bom))
+    implementation(platform(libs.junit.jupiter.bom))
   }
 }
 

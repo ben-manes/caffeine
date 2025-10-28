@@ -53,7 +53,7 @@ import junit.framework.TestCase;
  */
 @NullUnmarked
 @GwtCompatible
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"PreferJavaTimeOverload", "Var", "Varifier"})
 public class CacheBuilderGwtTest extends TestCase {
 
   private FakeTicker fakeTicker;

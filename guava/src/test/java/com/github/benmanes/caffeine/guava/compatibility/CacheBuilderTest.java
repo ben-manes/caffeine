@@ -69,7 +69,7 @@ import junit.framework.TestCase;
 @NullUnmarked
 @GwtCompatible(emulated = true)
 @SuppressWarnings({"CacheLoaderNull", "CanonicalDuration",
-  "PreferJavaTimeOverload", "ThreadPriorityCheck"})
+    "PreferJavaTimeOverload", "ThreadPriorityCheck", "Varifier"})
 public class CacheBuilderTest extends TestCase {
 
   public void testNewBuilder() {

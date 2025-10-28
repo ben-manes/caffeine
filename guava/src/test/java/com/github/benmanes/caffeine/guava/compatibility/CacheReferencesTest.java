@@ -40,7 +40,7 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
-@SuppressWarnings("MapEntry")
+@SuppressWarnings({"MapEntry", "Var", "Varifier"})
 public class CacheReferencesTest extends TestCase {
 
   private static final CacheLoader<Key,String> KEY_TO_STRING_LOADER =

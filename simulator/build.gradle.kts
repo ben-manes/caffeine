@@ -50,6 +50,10 @@ java.toolchain {
 testing.suites {
   named<JvmTestSuite>("test") {
     useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(libs.truth)
+    }
   }
 }
 

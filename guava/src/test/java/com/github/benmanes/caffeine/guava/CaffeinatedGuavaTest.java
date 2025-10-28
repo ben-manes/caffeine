@@ -200,7 +200,7 @@ final class CaffeinatedGuavaTest {
 
   @Test
   void cacheLoader_reload() throws Exception {
-    SettableFuture<Integer> reloader = SettableFuture.create();
+    var reloader = SettableFuture.<Integer>create();
     var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
@@ -220,7 +220,7 @@ final class CaffeinatedGuavaTest {
 
   @Test
   void cacheLoader_reloadFailure() throws Exception {
-    SettableFuture<Integer> reloader = SettableFuture.create();
+    var reloader = SettableFuture.<Integer>create();
     var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();

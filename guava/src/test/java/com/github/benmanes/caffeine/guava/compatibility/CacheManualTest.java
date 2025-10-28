@@ -34,6 +34,7 @@ import junit.framework.TestCase;
 /**
  * @author Charles Fry
  */
+@SuppressWarnings({"Var", "Varifier"})
 public class CacheManualTest extends TestCase {
 
   public void testGetIfPresent() {

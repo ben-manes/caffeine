@@ -53,7 +53,7 @@ import junit.framework.TestCase;
  * @author mike nonemacher
  */
 @NullUnmarked
-@SuppressWarnings("CollectionToArray")
+@SuppressWarnings({"CollectionToArray", "Varifier"})
 public class PopulatedCachesTest extends TestCase {
   // we use integers as keys; make sure the range covers some values that ARE cached by
   // Integer.valueOf(int), and some that are not cached. (127 is the highest cached value.)

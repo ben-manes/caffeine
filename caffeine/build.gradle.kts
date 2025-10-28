@@ -167,13 +167,14 @@ testing.suites {
       implementation(libs.mockito)
       implementation(libs.picocli)
       implementation(libs.lincheck)
+      implementation(libs.awaitility)
+      implementation(libs.junit.jupiter)
       implementation(libs.commons.lang3)
       implementation(libs.guava.testlib)
       implementation(libs.commons.collections4)
       implementation(libs.commons.collections4) {
         artifact { classifier = "tests" }
       }
-      implementation.bundle(libs.bundles.awaitility)
       implementation.bundle(libs.bundles.slf4j.test)
       implementation(libs.eclipse.collections.testutils)
       implementation.bundle(libs.bundles.osgi.test.compile)

@@ -44,7 +44,7 @@ import junit.framework.TestCase;
  * @author Charles Fry
  */
 @NullUnmarked
-@SuppressWarnings("JUnit3FloatingPointComparisonWithoutDelta")
+@SuppressWarnings({"JUnit3FloatingPointComparisonWithoutDelta", "Var", "Varifier"})
 public class LocalLoadingCacheTest extends TestCase {
   static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0);
 

@@ -41,6 +41,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @author mike nonemacher
  */
 @NullUnmarked
+@SuppressWarnings("Varifier")
 class CacheBuilderFactory {
   // Default values contain only 'null', which means don't call the CacheBuilder method (just give
   // the CacheBuilder default).
