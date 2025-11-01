@@ -4,12 +4,12 @@ plugins {
 }
 
 dependencies {
-  implementation(libs.caffeine)
   implementation(libs.guava)
+  implementation(libs.caffeine)
 
-  testImplementation(libs.junit.jupiter)
-  testImplementation(libs.guava.testlib)
   testImplementation(libs.truth)
+  testImplementation(libs.guava.testlib)
+  testImplementation(libs.junit.jupiter)
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)

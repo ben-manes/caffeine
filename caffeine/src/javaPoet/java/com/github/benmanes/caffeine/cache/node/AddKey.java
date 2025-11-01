@@ -127,5 +127,4 @@ public final class AddKey implements Rule<NodeContext> {
     context.classSpec.addMethod(getKey.build());
     context.suppressedWarnings.add("unchecked");
   }
-
 }

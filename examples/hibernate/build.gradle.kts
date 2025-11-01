@@ -16,8 +16,8 @@ dependencies {
   runtimeOnly(libs.bundles.log4j2)
   runtimeOnly(libs.h2)
 
-  testImplementation(libs.junit)
   testImplementation(libs.truth)
+  testImplementation(libs.junit.jupiter)
 }
 
 testing.suites {

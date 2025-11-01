@@ -7,8 +7,8 @@ plugins {
 dependencies {
   implementation(caffeine())
 
-  testImplementation(libs.junit)
   testImplementation(libs.truth)
+  testImplementation(libs.junit.jupiter)
 }
 
 application {

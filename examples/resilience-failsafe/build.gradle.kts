@@ -7,8 +7,8 @@ dependencies {
   implementation(libs.caffeine)
   implementation(libs.failsafe)
 
-  testImplementation(libs.junit)
   testImplementation(libs.truth)
+  testImplementation(libs.junit.jupiter)
 }
 
 testing.suites {

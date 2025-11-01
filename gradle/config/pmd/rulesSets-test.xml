@@ -99,6 +99,7 @@
     <exclude name="ExcessivePublicCount"/>
     <exclude name="LoosePackageCoupling"/>
     <exclude name="CouplingBetweenObjects"/>
+    <exclude name="AvoidDeeplyNestedIfStmts"/>
     <exclude name="AvoidRethrowingException"/>
     <exclude name="AbstractClassWithoutAnyMethod"/>
     <exclude name="AvoidCatchingGenericException"/>
@@ -125,6 +126,7 @@
     <exclude name="TestClassWithoutTestCases"/>
     <exclude name="SuspiciousEqualsMethodName"/>
     <exclude name="AvoidLiteralsInIfCondition"/>
+    <exclude name="AvoidCatchingGenericException"/>
     <exclude name="AvoidFieldNameMatchingMethodName"/>
     <exclude name="ConstructorCallsOverridableMethod"/>
     <exclude name="AvoidBranchingStatementAsLastInLoop"/>

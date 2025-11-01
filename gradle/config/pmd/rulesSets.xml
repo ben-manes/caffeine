@@ -80,9 +80,9 @@
     <exclude name="ExcessivePublicCount"/>
     <exclude name="LoosePackageCoupling"/>
     <exclude name="CouplingBetweenObjects"/>
+    <exclude name="AvoidDeeplyNestedIfStmts"/>
     <exclude name="AvoidRethrowingException"/>
     <exclude name="AbstractClassWithoutAnyMethod"/>
-    <exclude name="AvoidCatchingGenericException"/>
     <exclude name="AvoidThrowingRawExceptionTypes"/>
   </rule>
 
@@ -101,6 +101,7 @@
     <exclude name="AvoidDuplicateLiterals"/>
     <exclude name="CompareObjectsWithEquals"/>
     <exclude name="AvoidLiteralsInIfCondition"/>
+    <exclude name="AvoidCatchingGenericException"/>
     <exclude name="AvoidFieldNameMatchingMethodName"/>
     <exclude name="ConstructorCallsOverridableMethod"/>
     <exclude name="AvoidBranchingStatementAsLastInLoop"/>

@@ -4,11 +4,11 @@ plugins {
 }
 
 dependencies {
-  implementation(libs.caffeine)
   implementation(libs.rxjava)
+  implementation(libs.caffeine)
 
   testImplementation(libs.awaitility)
-  testImplementation(libs.junit)
+  testImplementation(libs.junit.jupiter)
 }
 
 testing.suites {

@@ -11,7 +11,6 @@ plugins {
 dependencies {
   api(project(":caffeine"))
   api(libs.guava)
-
 }
 
 tasks.named<JavaCompile>("compileJava").configure {

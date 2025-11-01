@@ -41,6 +41,7 @@ dependencies {
   implementation(plugin(libs.plugins.jvm.dependency.conflict.resolution))
 
   implementation(platform(libs.asm.bom))
+  implementation(platform(libs.grpc.bom))
   implementation(platform(libs.okio.bom))
   implementation(platform(libs.kotlin.bom))
   implementation(platform(libs.okhttp.bom))

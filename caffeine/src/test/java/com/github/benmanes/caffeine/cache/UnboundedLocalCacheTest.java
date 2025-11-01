@@ -57,7 +57,6 @@ public final class UnboundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings("PMD.AvoidCatchingNPE")
   public void refreshes_memoize() {
     // The refresh map is never unset once initialized and a CAS race can cause a thread's attempt
     // at initialization to fail so it re-reads for the current value. This asserts a non-null value

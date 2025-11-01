@@ -102,7 +102,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   private volatile boolean closed;
 
-  @SuppressWarnings({"this-escape", "TooManyParameters"})
+  @SuppressWarnings({"PMD.ExcessiveParameterList", "this-escape", "TooManyParameters"})
   public CacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache,

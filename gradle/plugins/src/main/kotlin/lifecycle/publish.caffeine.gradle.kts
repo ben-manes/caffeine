@@ -1,3 +1,5 @@
+import org.gradle.util.GradleVersion.version
+
 plugins {
   id("dev.sigstore.sign-base")
   `maven-publish`
@@ -8,6 +10,15 @@ plugins {
 java {
   withJavadocJar()
   withSourcesJar()
+}
+
+configurations.sigstoreClientClasspath {
+  resolutionStrategy.eachDependency {
+    if ((requested.group == "io.grpc")
+        && version(libs.versions.grpc.get()) >= version(requested.version)) {
+      useVersion(libs.versions.grpc.get())
+    }
+  }
 }
 
 publishing {

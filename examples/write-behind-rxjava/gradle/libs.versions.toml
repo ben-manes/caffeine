@@ -1,14 +1,14 @@
 [versions]
 awaitility = "4.3.0"
 caffeine = "3.2.3"
-junit = "6.0.0"
+junit-jupiter = "6.0.1"
 rxjava = "3.1.12"
 versions = "0.53.0"
 
 [libraries]
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
-junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 rxjava = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxjava" }
 
 [plugins]

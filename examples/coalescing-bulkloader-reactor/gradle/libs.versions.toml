@@ -1,13 +1,13 @@
 [versions]
 caffeine = "3.2.3"
-junit = "6.0.0"
+junit-jupiter = "6.0.1"
 reactor = "3.8.0-RC1"
 truth = "1.4.5"
 versions = "0.53.0"
 
 [libraries]
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
-junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 reactor = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
 

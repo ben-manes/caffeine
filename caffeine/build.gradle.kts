@@ -212,8 +212,7 @@ testing.suites {
                 "stats" to stats.name,
                 "values" to values.name,
                 "compute" to compute.name,
-                "implementation" to implementation
-              )
+                "implementation" to implementation)
 
               jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
                 "--add-opens", "java.base/java.lang=ALL-UNNAMED",
@@ -393,6 +392,7 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(libs.testng)
+
       runtimeOnly(libs.junit.jupiter.testng)
     }
     targets.all {
@@ -480,8 +480,7 @@ tasks.register<JavaExec>("memoryOverhead") {
       "-Djdk.attach.allowAttachSelf=true",
       "-XX:+EnableDynamicAgentLoading",
       "-javaagent:${javaAgent.get()}",
-      "-Djol.magicFieldOffset=true",
-    )
+      "-Djol.magicFieldOffset=true")
   }
 }
 

@@ -50,7 +50,7 @@ import com.google.errorprone.annotations.Var;
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, @Nullable Expirable<V>> cache;
 
-  @SuppressWarnings("TooManyParameters")
+  @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
   public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, @Nullable Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,
@@ -75,7 +75,6 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   /** Retrieves the value from the cache, loading it if necessary. */
-  @SuppressWarnings("PMD.AvoidDeeplyNestedIfStmts")
   private @Nullable V getOrLoad(K key) {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
