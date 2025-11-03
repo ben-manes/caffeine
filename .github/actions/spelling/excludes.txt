@@ -80,6 +80,7 @@
 \.xz$
 \.zip$
 ^\.github/actions/spelling/
+^\Q.github/CODEOWNERS\E$
 ^\Q.github/SECURITY.md\E$
 ^\Q.github/workflows/check-spelling.yml\E$
 ^\Q.typos.toml\E$
