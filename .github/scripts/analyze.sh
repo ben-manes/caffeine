@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux
 
-./gradlew --console colored \
+./gradlew --console colored --continue \
     ecj \
     assemble \
     pmd -Ppmd \
