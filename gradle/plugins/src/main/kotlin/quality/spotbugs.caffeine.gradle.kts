@@ -3,6 +3,7 @@ import com.github.spotbugs.snom.SpotBugsTask
 import com.github.spotbugs.snom.Effort.MAX
 
 plugins {
+  `java-library`
   id("com.github.spotbugs")
 }
 
@@ -38,9 +39,13 @@ tasks.withType<SpotBugsTask>().configureEach {
   val isEnabled = providers.gradleProperty("spotbugs")
   onlyIf { isEnabled.isPresent }
   group = "SpotBugs"
-  reports {
-    register("html") {
-      required = true
-    }
+  reports.create("html") {
+    required = true
+  }
+  launcher = javaToolchains.launcherFor {
+    vendor = java.toolchain.vendor
+    languageVersion = javaRuntimeVersion()
+    implementation = java.toolchain.implementation
+    nativeImageCapable = java.toolchain.nativeImageCapable
   }
 }

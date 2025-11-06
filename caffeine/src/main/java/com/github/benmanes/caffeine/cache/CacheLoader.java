@@ -71,7 +71,7 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
    * If the returned map doesn't contain all requested {@code keys}, then the entries it does
    * contain will be cached, and {@code getAll} will return the partial results. If the returned map
    * contains extra keys not present in {@code keys} then all returned entries will be cached, but
-   * only the entries for {@code keys}, will be returned from {@code getAll}.
+   * only the entries for {@code keys} will be returned from {@code getAll}.
    * <p>
    * This method should be overridden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link LoadingCache#getAll} will defer to individual calls to
@@ -109,6 +109,9 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
         return load(key);
       } catch (RuntimeException e) {
         throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CompletionException(e);
       } catch (Exception e) {
         throw new CompletionException(e);
       }
@@ -122,7 +125,7 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
    * If the returned map doesn't contain all requested {@code keys}, then the entries it does
    * contain will be cached, and {@code getAll} will return the partial results. If the returned map
    * contains extra keys not present in {@code keys} then all returned entries will be cached, but
-   * only the entries for {@code keys}, will be returned from {@code getAll}.
+   * only the entries for {@code keys} will be returned from {@code getAll}.
    * <p>
    * This method should be overridden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link AsyncLoadingCache#getAll} will defer to individual calls
@@ -131,7 +134,7 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
    * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly.
    *
    * @param keys the unique, non-null keys whose values should be loaded
-   * @param executor the executor that with asynchronously loads the entries
+   * @param executor the executor that asynchronously loads the entries
    * @return a future containing the map from each key in {@code keys} to the value associated with
    *         that key; <b>may not contain null values</b>
    */
@@ -145,6 +148,9 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
         return loadAll(keys);
       } catch (RuntimeException e) {
         throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CompletionException(e);
       } catch (Exception e) {
         throw new CompletionException(e);
       }
@@ -202,6 +208,9 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
         return reload(key, oldValue);
       } catch (RuntimeException e) {
         throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CompletionException(e);
       } catch (Exception e) {
         throw new CompletionException(e);
       }
@@ -211,7 +220,7 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
   /**
    * Returns a cache loader that delegates to the supplied mapping function for retrieving the
    * values. Note that {@link #load} will silently discard any additional mappings loaded when
-   * retrieving the {@code key} prior to returning to the value to the cache.
+   * retrieving the {@code key} prior to returning the value to the cache.
    * <p>
    * Usage example:
    * {@snippet class=com.github.benmanes.caffeine.cache.Snippets region=loader_bulk lang=java}

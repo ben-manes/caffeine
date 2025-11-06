@@ -267,7 +267,6 @@ public final class Snippets {
     return CompletableFuture.completedFuture(Graph.INSTANCE);
   }
 
-  @SuppressWarnings({"PMD.UnusedFormalParameter", "UnusedVariable"})
   private static ImmutableMap<? extends Key, Graph> createExpensiveGraphs(Set<? extends Key> keys) {
     return Maps.toMap(keys, key -> Graph.INSTANCE);
   }

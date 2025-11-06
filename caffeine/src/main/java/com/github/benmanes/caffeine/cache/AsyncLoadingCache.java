@@ -62,13 +62,13 @@ public interface AsyncLoadingCache<K, V extends @Nullable Object> extends AsyncC
    * with newly loaded entries; it will never contain null keys or values. If any of the
    * asynchronous computations fail, those entries will be automatically removed from this cache.
    * <p>
-   * Caches loaded by a {@link AsyncCacheLoader} supporting bulk loading will issue a single request
-   * to {@link AsyncCacheLoader#asyncLoadAll} for all keys that are not already present in the
-   * cache. If another call to {@link #get} tries to load the value for a key in {@code keys}, that
-   * thread retrieves a future that is completed by this bulk computation. Caches that do not use a
-   * {@link AsyncCacheLoader} with an optimized bulk load implementation will sequentially load each
-   * key by making individual {@link AsyncCacheLoader#asyncLoad} calls. Note that multiple threads
-   * can concurrently load values for distinct keys.
+   * Caches loaded by an {@link AsyncCacheLoader} supporting bulk loading will issue a single
+   * request to {@link AsyncCacheLoader#asyncLoadAll} for all keys that are not already present in
+   * the cache. If another call to {@link #get} tries to load the value for a key in {@code keys},
+   * that thread retrieves a future that is completed by this bulk computation. Caches that do not
+   * use a {@link AsyncCacheLoader} with an optimized bulk load implementation will sequentially
+   * load each key by making individual {@link AsyncCacheLoader#asyncLoad} calls. Note that multiple
+   * threads can concurrently load values for distinct keys.
    * <p>
    * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
    * ignored.

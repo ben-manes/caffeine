@@ -3,15 +3,15 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
+import kotlin.math.max
 
 plugins {
   `java-library`
   id("errorprone.caffeine")
 }
 
-val javaTestVersion: Provider<JavaLanguageVersion> = java.toolchain.languageVersion.flatMap {
-  javaTestVersion().map(JavaLanguageVersion::of).orElse(it)
-}
+val javaTestVersion = javaTestVersion()
+  .zip(java.toolchain.languageVersion) { v1, v2 -> maxOf(v1, v2) }
 val mockitoAgent by configurations.registering
 
 dependencies {
@@ -70,14 +70,12 @@ tasks.withType<Test>().configureEach {
     showExceptions = true
     showCauses = true
   }
-  javaLauncher.set(
-    javaToolchains.launcherFor {
-      vendor = java.toolchain.vendor
-      languageVersion = javaTestVersion
-      implementation = java.toolchain.implementation
-      nativeImageCapable = java.toolchain.nativeImageCapable
-    }
-  )
+  javaLauncher = javaToolchains.launcherFor {
+    vendor = java.toolchain.vendor
+    languageVersion = javaTestVersion
+    implementation = java.toolchain.implementation
+    nativeImageCapable = java.toolchain.nativeImageCapable
+  }
 }
 
 tasks.withType<JavaCompile>().configureEach {

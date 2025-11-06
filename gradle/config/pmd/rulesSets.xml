@@ -13,7 +13,6 @@
     <exclude name="GuardLogStatement"/>
     <exclude name="AvoidReassigningParameters"/>
     <exclude name="LiteralsFirstInComparisons"/>
-    <exclude name="UnnecessaryWarningSuppression"/>
   </rule>
 
   <rule ref="category/java/bestpractices.xml/LooseCoupling">

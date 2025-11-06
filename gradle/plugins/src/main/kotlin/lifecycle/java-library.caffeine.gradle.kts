@@ -21,14 +21,13 @@ dependencies {
 }
 
 java.toolchain {
-  languageVersion = javaVersion().map { it.toIntOrNull() }.orElse(11).map(JavaLanguageVersion::of)
+  languageVersion = javaVersion()
   if (javaVendor().isPresent) {
-    vendor = javaVendor().map(JvmVendorSpec::of)
+    vendor = javaVendor()
   }
   nativeImageCapable.unset()
 }
-val javaRuntimeVersion: Provider<JavaLanguageVersion> =
-  java.toolchain.languageVersion.map { maxOf(it, JavaLanguageVersion.of(25)) }
+val javaRuntimeVersion = javaRuntimeVersion()
 
 tasks.withType<JavaCompile>().configureEach {
   inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })
@@ -58,6 +57,15 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<JavaExec>().configureEach {
   jvmArgs(DisableStrongEncapsulationJvmArgs)
+  javaLauncher = javaToolchains.launcherFor {
+    vendor = java.toolchain.vendor
+    languageVersion = javaRuntimeVersion
+    implementation = java.toolchain.implementation
+    nativeImageCapable = java.toolchain.nativeImageCapable
+  }
+}
+
+tasks.withType<AbstractCodeQualityTask>().configureEach {
   javaLauncher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor
     languageVersion = javaRuntimeVersion

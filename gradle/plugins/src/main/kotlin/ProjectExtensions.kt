@@ -2,6 +2,8 @@ import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.Project
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Provider
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JvmVendorSpec
 import org.gradle.kotlin.dsl.the
 
 val Project.libs
@@ -37,14 +39,20 @@ fun Project.isGraalVM(): Provider<Boolean> =
   providers.gradleProperty("graalvm").map { it == "true" }.orElse(false)
 fun Project.isCI(): Provider<Boolean> =
   providers.environmentVariable("CI").map { true }.orElse(false)
-fun Project.javaVersion(): Provider<String> =
-  providers.gradleProperty("javaVersion").orElse(providers.environmentVariable("JAVA_VERSION"))
-fun Project.javaTestVersion(): Provider<String> =
-  providers.gradleProperty("javaTestVersion")
+fun Project.javaVersion(): Provider<JavaLanguageVersion> =
+  providers.gradleProperty("javaVersion")
+    .orElse(providers.environmentVariable("JAVA_VERSION"))
+    .map { it.toIntOrNull() }.orElse(11).map(JavaLanguageVersion::of)
+fun Project.javaRuntimeVersion(): Provider<JavaLanguageVersion> =
+  javaVersion().map { maxOf(it, JavaLanguageVersion.of(25)) }
+fun Project.javaTestVersion(): Provider<JavaLanguageVersion> =
+  javaVersion().flatMap {
+    providers.gradleProperty("javaTestVersion").map(JavaLanguageVersion::of).orElse(it)
+  }
 fun Project.javaDistribution(): Provider<String> =
   providers.gradleProperty("javaDistribution")
-fun Project.javaVendor(): Provider<String> =
-  providers.gradleProperty("javaVendor")
+fun Project.javaVendor(): Provider<JvmVendorSpec> =
+  providers.gradleProperty("javaVendor").map(JvmVendorSpec::of)
 
 val DisableStrongEncapsulationJvmArgs = buildList {
   listOf("api", "code", "file", "main", "parser", "processing", "tree", "util").forEach {

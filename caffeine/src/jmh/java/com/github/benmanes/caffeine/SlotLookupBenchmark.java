@@ -51,7 +51,6 @@ import com.google.errorprone.annotations.Var;
 @State(Scope.Benchmark)
 @SuppressWarnings({"MemberName", "PMD.MethodNamingConventions"})
 public class SlotLookupBenchmark {
-  static final int SPARSE_SIZE = 2 << 14;
   static final int ARENA_SIZE = 2 << 6;
   static final VarHandle PROBE;
 

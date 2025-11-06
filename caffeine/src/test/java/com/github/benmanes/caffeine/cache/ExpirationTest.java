@@ -35,7 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -140,26 +142,33 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void schedule(Cache<Int, Int> cache, CacheContext context) {
-    var delay = ArgumentCaptor.forClass(long.class);
-    var task = ArgumentCaptor.forClass(Runnable.class);
-    when(context.scheduler().schedule(eq(context.executor()), task.capture(), delay.capture(),
+    when(context.scheduler().schedule(eq(context.executor()), any(), anyLong(),
         eq(TimeUnit.NANOSECONDS))).then(invocation -> DisabledFuture.instance());
 
     cache.put(context.absentKey(), context.absentValue());
 
     long minError = TimeUnit.MINUTES.toNanos(1) - TOLERANCE;
     long maxError = TimeUnit.MINUTES.toNanos(1) + TOLERANCE;
-    assertThat(delay.getValue()).isIn(Range.closed(minError, maxError));
-    var duration = Duration.ofNanos(delay.getValue());
+    var task1 = ArgumentCaptor.forClass(Runnable.class);
+    var delay1 = ArgumentCaptor.forClass(long.class);
+
+    verify(context.scheduler()).schedule(any(), task1.capture(), delay1.capture(), any());
+    assertThat(delay1.getValue()).isIn(Range.closed(minError, maxError));
+    var duration = Duration.ofNanos(delay1.getValue());
 
     context.ticker().advance(duration);
-    task.getValue().run();
+    task1.getValue().run();
 
     if (context.expiresVariably()) {
+      var task2 = ArgumentCaptor.forClass(Runnable.class);
+      var delay2 = ArgumentCaptor.forClass(long.class);
+      verify(context.scheduler(), times(2))
+          .schedule(any(), task2.capture(), delay2.capture(), any());
+
       // scheduled a timerWheel cascade, run next schedule
-      assertThat(delay.getAllValues()).hasSize(2);
+      assertThat(delay2.getAllValues()).hasSize(2);
       context.ticker().advance(duration);
-      task.getValue().run();
+      task2.getValue().run();
     }
 
     assertThat(cache).isEmpty();
@@ -190,8 +199,6 @@ public final class ExpirationTest {
       removalListener = Listener.MOCKITO)
   public void schedule_delay(Cache<Int, Duration> cache, CacheContext context) {
     var actualExpirationPeriods = new HashMap<Int, Duration>();
-    var delay = ArgumentCaptor.forClass(long.class);
-    var task = ArgumentCaptor.forClass(Runnable.class);
     Answer<@Nullable Void> onRemoval = invocation -> {
       Int key = invocation.getArgument(0);
       Duration value = invocation.getArgument(1);
@@ -199,8 +206,7 @@ public final class ExpirationTest {
       return null;
     };
     doAnswer(onRemoval).when(context.removalListener()).onRemoval(any(), any(), any());
-    // NullAway suppression since it can't infer type argument for Futures.immediateFuture call
-    when(context.scheduler().schedule(any(), task.capture(), delay.capture(), any()))
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
         .thenReturn(Futures.immediateFuture(null));
     var original = new HashMap<Int, Duration>();
 
@@ -217,17 +223,27 @@ public final class ExpirationTest {
     original.put(key2, value2);
     cache.put(key2, value2);
 
-    var expireKey1 = Duration.ofNanos(1 + delay.getValue()).minus(insertDelay);
+    var delay1 = ArgumentCaptor.forClass(long.class);
+    var task1 = ArgumentCaptor.forClass(Runnable.class);
+    verify(context.scheduler()).schedule(any(), task1.capture(), delay1.capture(), any());
+    var expireKey1 = Duration.ofNanos(1 + delay1.getValue()).minus(insertDelay);
     context.ticker().advance(expireKey1);
-    task.getValue().run();
+    task1.getValue().run();
 
-    var expireKey2 = Duration.ofNanos(1 + delay.getValue());
+    var delay2 = ArgumentCaptor.forClass(long.class);
+    var task2 = ArgumentCaptor.forClass(Runnable.class);
+    verify(context.scheduler(), times(2)).schedule(any(), task2.capture(), delay2.capture(), any());
+    var expireKey2 = Duration.ofNanos(1 + delay2.getValue());
     context.ticker().advance(expireKey2);
-    task.getValue().run();
+    task2.getValue().run();
 
     if (context.expiresVariably()) {
+      var task3 = ArgumentCaptor.forClass(Runnable.class);
       context.ticker().advance(Duration.ofNanos(TOLERANCE));
-      task.getValue().run();
+      verify(context.scheduler(), atLeast(2)).schedule(any(), task3.capture(), anyLong(), any());
+      if (task3.getAllValues().size() > 2) {
+        task3.getValue().run();
+      }
     }
 
     var maxExpirationPeriod = context.expiryTime().duration().plusNanos(TOLERANCE);

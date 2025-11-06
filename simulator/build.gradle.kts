@@ -43,9 +43,7 @@ application {
   mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulator"
 }
 
-java.toolchain {
-  languageVersion = maxOf(languageVersion.get(), JavaLanguageVersion.of(25))
-}
+java.toolchain.languageVersion = javaRuntimeVersion()
 
 testing.suites {
   named<JvmTestSuite>("test") {

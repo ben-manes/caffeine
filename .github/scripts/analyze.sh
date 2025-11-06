@@ -1,10 +1,11 @@
 #!/bin/bash
 set -eux
 
-./gradlew --console colored --continue \
+./gradlew \
     ecj \
     assemble \
     pmd -Ppmd \
     spotbugs -Pspotbugs \
     forbiddenApis -PforbiddenApis \
+    --console colored --no-configuration-cache --continue \
     "$@"

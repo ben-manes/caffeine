@@ -102,7 +102,7 @@ public interface Cache<K, V extends @Nullable Object> {
    * <p>
    * A single request to the {@code mappingFunction} is performed for all keys which are not already
    * present in the cache. All entries returned by {@code mappingFunction} will be stored in the
-   * cache, over-writing any previously cached values. If another call to {@link #get} tries to load
+   * cache, overwriting any previously cached values. If another call to {@link #get} tries to load
    * the value for a key in {@code keys}, implementations may either have that thread load the entry
    * or simply wait for this thread to finish and return the loaded value. In the case of
    * overlapping non-blocking loads, the last load to complete will replace the existing entry. Note

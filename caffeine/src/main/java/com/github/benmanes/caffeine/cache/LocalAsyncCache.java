@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
@@ -28,7 +29,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -207,8 +207,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         cache().statsCounter().recordLoadFailure(loadTime);
         cache().remove(key, valueFuture);
       } else if (!Async.isReady(valueFuture)) {
-        logger.log(Level.ERROR, String.format(Locale.US, "An invalid state was detected, occurring "
-            + "when the future's dependent action has completed successfully with a value, but the "
+        logger.log(Level.ERROR, String.format(US, "An invalid state was detected, occurring when "
+            + "the future's dependent action has completed successfully with a value, but the "
             + "future remains either in-flight or in a failed completion state. This may occur "
             + "when using a custom future that does not abide by the CompletableFuture contract "
             + "(key: %s, key type: %s, value type: %s, future: %s, cache type: %s).",

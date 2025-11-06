@@ -62,6 +62,13 @@ jmh {
       benchmarkParameters.put(param[0], objects.listProperty<String>().value(param[1].split(",")))
     }
   }
+
+  javaLauncher = javaToolchains.launcherFor {
+    vendor = java.toolchain.vendor
+    implementation = java.toolchain.implementation
+    languageVersion = java.toolchain.languageVersion
+    nativeImageCapable = java.toolchain.nativeImageCapable
+  }
 }
 
 jmhReport {
@@ -86,15 +93,6 @@ tasks.withType<JmhTask>().configureEach {
     require(includePattern.isPresent) { "jmh: includePattern expected" }
   }
   finalizedBy(tasks.named("jmhReport"))
-}
-
-tasks.withType<JmhBytecodeGeneratorTask>().configureEach {
-  javaLauncher = javaToolchains.launcherFor {
-    vendor = java.toolchain.vendor
-    implementation = java.toolchain.implementation
-    languageVersion = java.toolchain.languageVersion
-    nativeImageCapable = java.toolchain.nativeImageCapable
-  }
 }
 
 tasks.named<JavaCompile>("jmhCompileGeneratedClasses").configure {

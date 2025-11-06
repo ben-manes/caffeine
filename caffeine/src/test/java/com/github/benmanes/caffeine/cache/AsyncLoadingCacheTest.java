@@ -154,6 +154,18 @@ public final class AsyncLoadingCacheTest {
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
   }
 
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.INTERRUPTED)
+  public void get_absent_interrupted_future(
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var future = cache.get(context.absentKey());
+    assertThat(Thread.interrupted()).isTrue();
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(InterruptedException.class);
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
@@ -278,6 +290,19 @@ public final class AsyncLoadingCacheTest {
 
     assertThat(Thread.interrupted()).isTrue();
     assertThat(e).hasCauseThat().isInstanceOf(InterruptedException.class);
+    int misses = context.loader().isBulk() ? context.absentKeys().size() : 1;
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.BULK_INTERRUPTED)
+  public void getAll_absent_interrupted_future(
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var future = cache.getAll(context.absentKeys());
+    assertThat(Thread.interrupted()).isTrue();
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(InterruptedException.class);
     int misses = context.loader().isBulk() ? context.absentKeys().size() : 1;
     assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
   }
@@ -648,6 +673,19 @@ public final class AsyncLoadingCacheTest {
 
     int failures = context.isGuava() ? 1 : 0;
     assertThat(context).stats().hits(0).misses(0).success(0).failures(failures);
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.INTERRUPTED)
+  public void refresh_interrupted_future(
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var key = context.original().isEmpty() ? context.absentKey() : context.firstKey();
+    var future = cache.synchronous().refresh(key);
+    assertThat(Thread.interrupted()).isTrue();
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(InterruptedException.class);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
   }
 
   @CacheSpec
