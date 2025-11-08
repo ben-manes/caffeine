@@ -80,6 +80,7 @@ import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
 /**
@@ -505,6 +506,16 @@ public final class AsyncCacheTest {
     assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
   }
 
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllFunction_absent_nullMapping(AsyncCache<Int, Int> cache, CacheContext context) {
+    context.absent().put(context.absentKey(), null);
+    var result = cache.getAll(context.absentKeys(), keys -> context.absent()).join();
+    int count = context.absentKeys().size();
+    assertThat(result).hasSize(count - 1);
+    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -537,6 +548,19 @@ public final class AsyncCacheTest {
     assertThat(result).containsExactlyKeys(context.absentKeys());
     assertThat(cache).hasSizeGreaterThan(context.initialSize() + context.absentKeys().size());
     assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllFunction_exceeds_nullMapping(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    context.absent().put(context.absentKey(), null);
+    var expectedKeys = Sets.filter(context.absentKeys(), key -> !context.absentKey().equals(key));
+    var result = cache.getAll(expectedKeys, keys -> context.absent()).join();
+    int count = expectedKeys.size();
+    assertThat(result).hasSize(count);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
   }
 
   @CheckMaxLogLevel(WARN)
@@ -914,6 +938,18 @@ public final class AsyncCacheTest {
     assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
   }
 
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllBifunction_absent_nullMapping(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    context.absent().put(context.absentKey(), null);
+    var result = cache.getAll(context.absentKeys(),
+        (keys, executor) -> CompletableFuture.completedFuture(context.absent())).join();
+    int count = context.absentKeys().size();
+    assertThat(result).hasSize(count - 1);
+    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -947,6 +983,20 @@ public final class AsyncCacheTest {
     assertThat(result).containsExactlyKeys(context.absentKeys());
     assertThat(cache).hasSizeGreaterThan(context.initialSize() + context.absentKeys().size());
     assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getAllBifunction_exceeds_nullMapping(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    context.absent().put(context.absentKey(), null);
+    var expectedKeys = Sets.filter(context.absentKeys(), key -> !context.absentKey().equals(key));
+    var result = cache.getAll(expectedKeys,
+        (keys, executor) -> CompletableFuture.completedFuture(context.absent())).join();
+    int count = expectedKeys.size();
+    assertThat(result).hasSize(count);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
   }
 
   @CheckMaxLogLevel(WARN)

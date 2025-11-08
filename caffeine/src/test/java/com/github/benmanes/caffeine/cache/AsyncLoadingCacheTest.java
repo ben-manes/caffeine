@@ -307,6 +307,17 @@ public final class AsyncLoadingCacheTest {
     assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
   }
 
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = {Loader.NULL, Loader.BULK_NULL_MAPPING})
+  public void getAll_absent_nullMapping(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.getAll(context.absentKeys()).join()).isEmpty();
+    int misses = context.absentKeys().size();
+    int loadSuccess = (context.loader().isBulk() || context.isSync()) ? 1 : 0;
+    int loadFailure = (context.loader().isBulk() || context.isSync()) ? 0 : misses;
+    assertThat(context).stats().hits(0).misses(misses).success(loadSuccess).failures(loadFailure);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -354,7 +365,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
+  @CacheSpec(loader = Loader.BULK_EXCEEDS_NEGATIVE,
       removalListener = { Listener.DISABLED, Listener.REJECTING },
       executor = { CacheExecutor.DIRECT, CacheExecutor.THREADED })
   public void getAll_exceeds(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
@@ -363,6 +374,18 @@ public final class AsyncLoadingCacheTest {
     assertThat(result.keySet()).containsExactlyElementsIn(context.absentKeys());
     assertThat(cache).hasSizeGreaterThan(context.initialSize() + context.absentKeys().size());
     assertThat(context).stats().hits(0).misses(result.size()).success(1).failures(0);
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.BULK_EXCEEDS_NULL)
+  public void getAll_exceeds_nullMapping(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.getAll(context.absentKeys()).join()).isEmpty();
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    int misses = context.absentKeys().size();
+    int loadSuccess = (context.loader().isBulk() || context.isSync()) ? 1 : 0;
+    int loadFailure = (context.loader().isBulk() || context.isSync()) ? 0 : misses;
+    assertThat(context).stats().hits(0).misses(misses).success(loadSuccess).failures(loadFailure);
   }
 
   @Test(dataProvider = "caches")
@@ -421,7 +444,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_NEGATIVE_EXCEEDS },
+  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEEDS_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_ordered_present(
@@ -434,7 +457,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
+  @CacheSpec(loader = Loader.BULK_EXCEEDS_NEGATIVE,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_ordered_exceeds(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) {

@@ -458,17 +458,28 @@ public @interface CacheSpec {
         throw new InterruptedException();
       }
     },
-
-    /** A loader that always returns null (no mapping). */
+    /** A bulk-only loader that always returns null (no mapping). */
     BULK_NULL {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-
       @SuppressWarnings({"NullAway",
         "PMD.ReturnEmptyCollectionRatherThanNull", "ReturnsNullCollection"})
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
         return null;
+      }
+    },
+    /** A bulk-only loader that always returns null mappings. */
+    BULK_NULL_MAPPING {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
+        Map<Int, Int> result = Maps.newHashMapWithExpectedSize(keys.size());
+        for (Int key : keys) {
+          result.put(key, null);
+        }
+        return result;
       }
     },
     BULK_IDENTITY {
@@ -507,8 +518,23 @@ public @interface CacheSpec {
             key -> intern(intern(key).negate()), identity()));
       }
     },
-    /** A bulk-only loader that loads more than requested. */
-    BULK_NEGATIVE_EXCEEDS {
+    /** A bulk-only loader that loads more than requested with null values. */
+    BULK_EXCEEDS_NULL {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<? extends Int, ? extends Int> loadAll(
+          Set<? extends Int> keys) throws Exception {
+        var moreKeys = new LinkedHashSet<Int>(keys.size() + 10);
+        moreKeys.addAll(keys);
+        for (int i = 0; i < 10; i++) {
+          moreKeys.add(Int.valueOf(ThreadLocalRandom.current().nextInt()));
+        }
+        return BULK_NULL_MAPPING.loadAll(moreKeys);
+      }
+    },
+    /** A bulk-only loader that loads more than requested with negated values. */
+    BULK_EXCEEDS_NEGATIVE {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
@@ -560,7 +586,6 @@ public @interface CacheSpec {
         return Map.of();
       }
     },
-
     /** A loader that always throws a runtime exception. */
     ASYNC_EXCEPTIONAL {
       @Override public Int load(Int key) {

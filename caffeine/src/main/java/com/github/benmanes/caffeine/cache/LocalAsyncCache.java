@@ -336,8 +336,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Var Throwable error = failure;
       for (var entry : result.entrySet()) {
         var key = entry.getKey();
-        var value = result.get(key);
+        var value = entry.getValue();
         if (!proxies.containsKey(key)) {
+          if (value == null) {
+            continue;
+          }
           try {
             cache.put(key, CompletableFuture.completedFuture(value));
           } catch (Throwable t) {

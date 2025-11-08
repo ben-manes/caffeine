@@ -337,7 +337,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
+  @CacheSpec(loader = Loader.BULK_EXCEEDS_NEGATIVE,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_exceeds(LoadingCache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys());
@@ -416,7 +416,7 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
+  @CacheSpec(loader = Loader.BULK_EXCEEDS_NEGATIVE,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_ordered_exceeds(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
