@@ -53,7 +53,7 @@ public interface AsyncCache<K, V extends @Nullable Object> {
    *     does not contain a mapping for the key
    * @throws NullPointerException if the specified key is null
    */
-  @Nullable CompletableFuture<@NonNull V> getIfPresent(K key);
+  @Nullable CompletableFuture<V> getIfPresent(K key);
 
   /**
    * Returns the future associated with the {@code key} in this cache, obtaining that value from
