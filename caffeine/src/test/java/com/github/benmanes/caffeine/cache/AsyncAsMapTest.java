@@ -52,6 +52,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -1997,12 +1999,48 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void keySpliterator_tryAdvance(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().keySet().spliterator();
-    int[] count = new int[1];
-    @Var boolean advanced;
-    do {
-      advanced = spliterator.tryAdvance(key -> count[0]++);
-    } while (advanced);
-    assertThat(count[0]).isEqualTo(context.initialSize());
+    var consumed = new LinkedHashSet<Int>();
+    @Var var advanced = 0;
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(key -> {
+        assertThat(cache).containsKey(key);
+        consumed.add(key);
+      });
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyElementsIn(context.original().keySet());
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void keySpliterator_tryAdvance_incomplete(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var spliterator = cache.synchronous().asMap().keySet().spliterator();
+    var future = new CompletableFuture<Int>();
+    var consumed = new LinkedHashSet<Int>();
+    @Var int advanced = 0;
+    for (var key : context.absentKeys()) {
+      cache.put(key, future);
+    }
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(key -> {
+        assertThat(cache).containsKey(key);
+        consumed.add(key);
+      });
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    future.complete(context.absentValue());
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyElementsIn(context.original().keySet());
   }
 
   @CacheSpec
@@ -2482,12 +2520,48 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void valueSpliterator_tryAdvance(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().values().spliterator();
-    int[] count = new int[1];
-    @Var boolean advanced;
-    do {
-      advanced = spliterator.tryAdvance(value -> count[0]++);
-    } while (advanced);
-    assertThat(count[0]).isEqualTo(context.initialSize());
+    var consumed = new LinkedHashSet<Int>();
+    @Var var advanced = 0;
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(value -> {
+        assertThat(cache).containsValue(value);
+        consumed.add(value.join());
+      });
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyElementsIn(context.original().values());
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void valuesSpliterator_tryAdvance_incomplete(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var spliterator = cache.synchronous().asMap().values().spliterator();
+    var future = new CompletableFuture<Int>();
+    var consumed = new LinkedHashSet<Int>();
+    @Var int advanced = 0;
+    for (var key : context.absentKeys()) {
+      cache.put(key, future);
+    }
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(value -> {
+        assertThat(cache).containsValue(value);
+        consumed.add(value);
+      });
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    future.complete(context.absentValue());
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyElementsIn(context.original().values());
   }
 
   @CacheSpec
@@ -3064,17 +3138,54 @@ public final class AsyncAsMapTest {
   public void entrySpliterator_tryAdvance(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().entrySet().spliterator();
-    int[] count = new int[1];
-    @Var boolean advanced;
-    do {
-      advanced = spliterator.tryAdvance(entry -> {
+    var consumed = new LinkedHashMap<Int, Int>();
+    @Var int advanced = 0;
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(entry -> {
         if (context.isCaffeine()) {
           assertThat(entry).isInstanceOf(WriteThroughEntry.class);
         }
-        count[0]++;
+        assertThat(cache).containsEntry(entry.getKey(), entry.getValue());
+        consumed.put(entry.getKey(), entry.getValue().join());
       });
-    } while (advanced);
-    assertThat(count[0]).isEqualTo(context.initialSize());
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyEntriesIn(context.original());
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void entrySpliterator_tryAdvance_incomplete(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var spliterator = cache.synchronous().asMap().entrySet().spliterator();
+    var consumed = new LinkedHashMap<Int, Int>();
+    var future = new CompletableFuture<Int>();
+    @Var int advanced = 0;
+    for (var key : context.absentKeys()) {
+      cache.put(key, future);
+    }
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(entry -> {
+        if (context.isCaffeine()) {
+          assertThat(entry).isInstanceOf(WriteThroughEntry.class);
+        }
+        assertThat(cache).containsEntry(entry.getKey(), entry.getValue());
+        consumed.put(entry.getKey(), entry.getValue());
+      });
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    future.complete(context.absentValue());
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyEntriesIn(context.original());
   }
 
   @CacheSpec

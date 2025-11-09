@@ -56,6 +56,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -2273,12 +2274,21 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   public void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.keySet().spliterator();
-    int[] count = new int[1];
-    @Var boolean advanced;
-    do {
-      advanced = spliterator.tryAdvance(key -> count[0]++);
-    } while (advanced);
-    assertThat(count[0]).isEqualTo(context.initialSize());
+    var consumed = new LinkedHashSet<Int>();
+    @Var var advanced = 0;
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(key -> {
+        assertThat(map).containsKey(key);
+        consumed.add(key);
+      });
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyElementsIn(context.original().keySet());
   }
 
   @CacheSpec
@@ -2936,12 +2946,21 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   public void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.values().spliterator();
-    int[] count = new int[1];
-    @Var boolean advanced;
-    do {
-      advanced = spliterator.tryAdvance(value -> count[0]++);
-    } while (advanced);
-    assertThat(count[0]).isEqualTo(context.initialSize());
+    var consumed = new LinkedHashSet<Int>();
+    @Var var advanced = 0;
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(value -> {
+        assertThat(map).containsValue(value);
+        consumed.add(value);
+      });
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyElementsIn(context.original().values());
   }
 
   @CacheSpec
@@ -3653,17 +3672,24 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   public void entrySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.entrySet().spliterator();
-    int[] count = new int[1];
-    @Var boolean advanced;
-    do {
-      advanced = spliterator.tryAdvance(entry -> {
+    var consumed = new LinkedHashMap<Int, Int>();
+    @Var int advanced = 0;
+    for (;;) {
+      boolean remaining = spliterator.tryAdvance(entry -> {
         if (context.isCaffeine()) {
           assertThat(entry).isInstanceOf(WriteThroughEntry.class);
         }
-        count[0]++;
+        assertThat(map).containsEntry(entry.getKey(), entry.getValue());
+        consumed.put(entry.getKey(), entry.getValue());
       });
-    } while (advanced);
-    assertThat(count[0]).isEqualTo(context.initialSize());
+      if (remaining) {
+        advanced++;
+      } else {
+        break;
+      }
+    }
+    assertThat(advanced).isEqualTo(context.initialSize());
+    assertThat(consumed).containsExactlyEntriesIn(context.original());
   }
 
   @CacheSpec

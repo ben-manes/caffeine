@@ -1516,19 +1516,27 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Override
       public boolean tryAdvance(Consumer<? super Entry<K, V>> action) {
         requireNonNull(action);
-        return spliterator.tryAdvance(entry -> {
+        boolean[] advanced = { false };
+        Consumer<? super Entry<K, CompletableFuture<V>>> consumer = entry -> {
           V value = Async.getIfReady(entry.getValue());
           if (value != null) {
             var e = new WriteThroughEntry<>(AsMapView.this, entry.getKey(), value);
             action.accept(e);
+            advanced[0] = true;
           }
-        });
+        };
+        while (spliterator.tryAdvance(consumer)) {
+          if (advanced[0]) {
+            return true;
+          }
+        }
+        return false;
       }
 
       @Override
       public @Nullable Spliterator<Entry<K, V>> trySplit() {
-      Spliterator<Entry<K, CompletableFuture<V>>> split = spliterator.trySplit();
-      return (split == null) ? null : new EntrySpliterator(split);
+        Spliterator<Entry<K, CompletableFuture<V>>> split = spliterator.trySplit();
+        return (split == null) ? null : new EntrySpliterator(split);
       }
 
       @Override

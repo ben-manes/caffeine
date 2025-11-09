@@ -3,15 +3,13 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
-import kotlin.math.max
 
 plugins {
   `java-library`
   id("errorprone.caffeine")
 }
 
-val javaTestVersion = javaTestVersion()
-  .zip(java.toolchain.languageVersion) { v1, v2 -> maxOf(v1, v2) }
+val javaTestVersion = javaTestVersion().zip(java.toolchain.languageVersion, ::maxOf)
 val mockitoAgent by configurations.registering
 
 dependencies {

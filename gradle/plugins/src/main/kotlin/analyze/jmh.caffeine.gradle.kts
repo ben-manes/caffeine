@@ -1,7 +1,6 @@
 /** Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin */
 import org.gradle.plugins.ide.eclipse.model.Classpath
 import org.gradle.plugins.ide.eclipse.model.Library
-import me.champeau.jmh.JmhBytecodeGeneratorTask
 import me.champeau.jmh.JMHTask as JmhTask
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
