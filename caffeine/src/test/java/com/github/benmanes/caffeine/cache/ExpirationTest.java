@@ -77,7 +77,6 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Range;
-import com.google.common.util.concurrent.Futures;
 
 /**
  * The test cases for caches that support an expiration policy.
@@ -205,10 +204,15 @@ public final class ExpirationTest {
       actualExpirationPeriods.put(key, Duration.ofNanos(context.ticker().read()).minus(value));
       return null;
     };
+    var future1 = new CompletableFuture<@Nullable Void>();
+    var future2 = new CompletableFuture<@Nullable Void>();
+    var future3 = new CompletableFuture<@Nullable Void>();
+    var original = new HashMap<Int, Duration>();
     doAnswer(onRemoval).when(context.removalListener()).onRemoval(any(), any(), any());
     when(context.scheduler().schedule(any(), any(), anyLong(), any()))
-        .thenReturn(Futures.immediateFuture(null));
-    var original = new HashMap<Int, Duration>();
+        .then(invocation -> future1)
+        .then(invocation -> future2)
+        .then(invocation -> future3);
 
     Int key1 = Int.valueOf(1);
     var value1 = Duration.ofNanos(context.ticker().read());
@@ -229,6 +233,7 @@ public final class ExpirationTest {
     var expireKey1 = Duration.ofNanos(1 + delay1.getValue()).minus(insertDelay);
     context.ticker().advance(expireKey1);
     task1.getValue().run();
+    future1.complete(null);
 
     var delay2 = ArgumentCaptor.forClass(long.class);
     var task2 = ArgumentCaptor.forClass(Runnable.class);
@@ -236,6 +241,7 @@ public final class ExpirationTest {
     var expireKey2 = Duration.ofNanos(1 + delay2.getValue());
     context.ticker().advance(expireKey2);
     task2.getValue().run();
+    future2.complete(null);
 
     if (context.expiresVariably()) {
       var task3 = ArgumentCaptor.forClass(Runnable.class);
@@ -243,6 +249,7 @@ public final class ExpirationTest {
       verify(context.scheduler(), atLeast(2)).schedule(any(), task3.capture(), anyLong(), any());
       if (task3.getAllValues().size() > 2) {
         task3.getValue().run();
+        future3.complete(null);
       }
     }
 

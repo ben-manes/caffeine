@@ -54,7 +54,7 @@ final class Pacer {
       }
     } else if ((nextFireTime - now) > 0L) {
       // Determine whether to reschedule
-      if (maySkip(scheduleAt)) {
+      if (!future.isDone() && maySkip(scheduleAt)) {
         return;
       }
       future.cancel(/* mayInterruptIfRunning= */ false);
