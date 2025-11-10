@@ -59,6 +59,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
@@ -316,6 +317,28 @@ public final class RefreshAfterWriteTest {
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.firstKey(), context.original().get(context.firstKey()))
         .exclusively();
+  }
+
+  @CheckNoEvictions
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      keys = ReferenceType.WEAK, refreshAfterWrite = Expire.ONE_MINUTE,
+      removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
+  public void refreshIfNeeded_weakKeyRemoved(LoadingCache<Int, Int> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, context.absentValue());
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isSameInstanceAs(context.absentValue());
+
+    await().untilAsserted(() -> assertThat(cache.policy().refreshes()).containsKey(key));
+    var future = requireNonNull(cache.policy().refreshes().get(key));
+
+    cache.invalidate(key);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+
+    future.complete(context.absentValue());
+    assertThat(cache).doesNotContainKey(key);
   }
 
   @CheckNoEvictions

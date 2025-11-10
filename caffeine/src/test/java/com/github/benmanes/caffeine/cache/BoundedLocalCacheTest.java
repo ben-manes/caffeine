@@ -2273,6 +2273,19 @@ public final class BoundedLocalCacheTest {
     assertThat(localCache.cache().isPendingEviction(context.absentKey())).isFalse();
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.ASYNC, population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void asyncCompletion_removesRefresh(AsyncCache<Int, Int> cache, CacheContext context) {
+    var localCache = ((LocalAsyncCache<Int, Int>) cache).cache();
+    var keyRef = localCache.referenceKey(context.absentKey());
+    localCache.refreshes().put(keyRef, new CompletableFuture<>());
+
+    var future = cache.get(context.absentKey(), (key, executor) ->
+        CompletableFuture.completedFuture(context.absentValue()));
+    assertThat(future).succeedsWith(context.absentValue());
+    assertThat(localCache.refreshes()).doesNotContainKey(keyRef);
+  }
+
   @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
@@ -2505,6 +2518,69 @@ public final class BoundedLocalCacheTest {
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(null, context.original().get(context.firstKey()))
         .exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void computeIfAbsent_removesRefresh_absent(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var keyRef = cache.nodeFactory.newReferenceKey(context.absentKey(), cache.keyReferenceQueue());
+    var future = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, future);
+
+    var result = cache.doComputeIfAbsent(context.absentKey(),
+        keyRef, k -> context.absentValue(), new long[1], /* recordStats= */ false);
+    assertThat(result).isEqualTo(context.absentValue());
+    assertThat(cache.refreshes()).doesNotContainKey(keyRef);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  public void computeIfAbsent_removesRefresh_absent_null(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var keyRef = cache.nodeFactory.newReferenceKey(context.absentKey(), cache.keyReferenceQueue());
+    var future = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, future);
+
+    @SuppressWarnings("NullAway")
+    var result = cache.doComputeIfAbsent(context.absentKey(),
+        keyRef, k -> null, new long[1], /* recordStats= */ false);
+    assertThat(result).isNull();
+    assertThat(cache.refreshes()).doesNotContainKey(keyRef);
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG)
+  public void computeIfAbsent_removesRefresh_present(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    node.setValue(null, cache.valueReferenceQueue());
+    var keyRef = node.getKeyReference();
+    var future = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, future);
+
+    var result = cache.doComputeIfAbsent(node.getKey(), keyRef,
+        k -> context.absentValue(), new long[1], /* recordStats= */ false);
+    assertThat(result).isEqualTo(context.absentValue());
+    assertThat(cache.refreshes()).doesNotContainKey(keyRef);
+  }
+
+  @SuppressWarnings("NullAway")
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG)
+  public void computeIfAbsent_removesRefresh_present_null(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    node.setValue(null, cache.valueReferenceQueue());
+    var keyRef = node.getKeyReference();
+    var future = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, future);
+
+    var result = cache.doComputeIfAbsent(node.getKey(), keyRef,
+        k -> null, new long[1], /* recordStats= */ false);
+    assertThat(result).isNull();
+    assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
   @SuppressWarnings("NullAway")

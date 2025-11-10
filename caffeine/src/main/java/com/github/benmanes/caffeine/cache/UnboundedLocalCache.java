@@ -283,11 +283,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     boolean[] missed = new boolean[1];
     value = data.computeIfAbsent(key, k -> {
-      // Do not communicate to CacheWriter on a load
       missed[0] = true;
-      return recordStats
-          ? statsAware(mappingFunction, recordLoad).apply(key)
-          : mappingFunction.apply(key);
+      V computed = recordStats
+          ? statsAware(mappingFunction, recordLoad).apply(k)
+          : mappingFunction.apply(k);
+      discardRefresh(k);
+      return computed;
     });
     if (!missed[0] && recordStats) {
       statsCounter.recordHits(1);

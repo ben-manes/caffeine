@@ -81,6 +81,33 @@ public final class UnboundedLocalCacheTest {
   }
 
   @Test
+  public void computeIfAbsent_discardsRefresh() {
+    var cache = new UnboundedLocalCache<Integer, Integer>(
+        Caffeine.newBuilder(), /* isAsync= */ false);
+    Integer key = 1;
+    cache.refreshes().put(key, new CompletableFuture<>());
+
+    var result = cache.computeIfAbsent(key, k -> 42,
+        /* recordStats= */ false, /* recordLoad= */ false);
+    assertThat(result).isEqualTo(42);
+    assertThat(cache.refreshes()).doesNotContainKey(key);
+  }
+
+  @Test
+  public void computeIfAbsent_discardsRefresh_null() {
+    var cache = new UnboundedLocalCache<Integer, Integer>(
+        Caffeine.newBuilder(), /* isAsync= */ false);
+    Integer key = 1;
+    cache.refreshes().put(key, new CompletableFuture<>());
+
+    @SuppressWarnings("NullAway")
+    var result = cache.computeIfAbsent(key, k -> null,
+        /* recordStats= */ false, /* recordLoad= */ false);
+    assertThat(result).isNull();
+    assertThat(cache.refreshes()).doesNotContainKey(key);
+  }
+
+  @Test
   public void findVarHandle_absent() {
     assertThrows(ExceptionInInitializerError.class, () ->
         findVarHandle(UnboundedLocalCache.class, "absent", int.class));

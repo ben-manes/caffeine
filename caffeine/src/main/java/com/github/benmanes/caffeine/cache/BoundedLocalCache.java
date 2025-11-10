@@ -2457,7 +2457,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (cause[0].wasEvicted()) {
           notifyEviction(oldKey[0], oldValue[0], cause[0]);
         }
-        discardRefresh(lookupKey);
+        discardRefresh(k);
         node[0] = n;
         n.retire();
         return null;
@@ -2505,7 +2505,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (cause[0].wasEvicted()) {
           notifyEviction(oldKey[0], oldValue[0], cause[0]);
         }
-        discardRefresh(lookupKey);
+        discardRefresh(kR);
         removed[0] = node;
         node.retire();
         return null;
@@ -2706,6 +2706,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (n == null) {
         newValue[0] = mappingFunction.apply(key);
         if (newValue[0] == null) {
+          discardRefresh(k);
           return null;
         }
         now[0] = expirationTicker().read();
@@ -2716,6 +2717,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setVariableTime(created, expireAfterCreate(key, newValue[0], expiry(), now[0]));
         setAccessTime(created, expirationTime);
         setWriteTime(created, expirationTime);
+        discardRefresh(k);
         return created;
       }
 
@@ -2735,6 +2737,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         notifyEviction(nodeKey[0], oldValue[0], cause[0]);
         newValue[0] = mappingFunction.apply(key);
         if (newValue[0] == null) {
+          discardRefresh(k);
           removed[0] = n;
           n.retire();
           return null;
@@ -2890,8 +2893,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setAccessTime(created, expirationTime);
         setWriteTime(created, expirationTime);
         setVariableTime(created, varTime);
-
-        discardRefresh(key);
+        discardRefresh(kr);
         return created;
       }
 
