@@ -7,5 +7,6 @@ set -eux
     pmd -Ppmd \
     spotbugs -Pspotbugs \
     forbiddenApis -PforbiddenApis \
-    --console colored --no-configuration-cache --continue \
+    --warning-mode all --continue \
+    --console colored --no-configuration-cache \
     "$@"

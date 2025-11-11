@@ -13,10 +13,10 @@ function calculate_checksums() {
   local OUTPUT=$1
 
   ./gradlew \
+    -Dorg.gradle.java.installations.auto-download=false \
+    -Dscan.tag.Reproducibility \
     --configuration-cache \
     --no-build-cache \
-    -Porg.gradle.java.installations.auto-download=false \
-    -Dscan.tag.Reproducibility \
     clean assemble -x jmhJar
 
   # Find all JARs in build/libs (excluding javadoc), sort, and hash

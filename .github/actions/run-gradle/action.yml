@@ -101,12 +101,13 @@ runs:
         ORG_GRADLE_PROJECT_javaVersion: ${{ steps.java_toolchain.outputs.version }}
         ORG_GRADLE_PROJECT_earlyAccess: ${{ steps.java_toolchain.outputs.early_access }}
         ORG_GRADLE_PROJECT_javaDistribution: ${{ steps.java_toolchain.outputs.distribution }}
-        ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: false
       shell: bash
       run: |
         echo "::add-matcher::.github/problem-matcher.json"
         for ((i=1; i<=$INPUTS_ATTEMPT_LIMIT; i++)); do
-          ./gradlew -Dscan.tag.${GITHUB_WORKFLOW// /_} --no-problems-report \
+          ./gradlew -Dorg.gradle.java.installations.auto-download=false \
+            --warning-mode all --no-problems-report \
+            -Dscan.tag.${GITHUB_WORKFLOW// /_} \
             $(eval echo "$INPUTS_ARGUMENTS" | tr -d '\n') && break
           if [ $i -lt $INPUTS_ATTEMPT_LIMIT ]; then
             echo "Attempt $i failed. Retrying in $INPUTS_ATTEMPT_DELAY seconds..."
