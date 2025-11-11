@@ -50,35 +50,30 @@ jobs:
       - name: Write-behind (rxjava)
         uses: ./.github/actions/run-gradle
         with:
-          distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/write-behind-rxjava
       - name: Coalescing Bulkloader (reactor)
         uses: ./.github/actions/run-gradle
         with:
-          distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/coalescing-bulkloader-reactor
       - name: Hibernate (jcache)
         uses: ./.github/actions/run-gradle
         with:
-          distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/hibernate
       - name: Indexable
         uses: ./.github/actions/run-gradle
         with:
-          distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/indexable
       - name: Resilience (failsafe)
         uses: ./.github/actions/run-gradle
         with:
-          distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/resilience-failsafe

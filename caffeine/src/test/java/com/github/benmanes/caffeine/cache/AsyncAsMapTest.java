@@ -24,6 +24,7 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -303,6 +304,41 @@ public final class AsyncAsMapTest {
     assertThat(cache).hasSize(context.initialSize() + 1);
   }
 
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void put_insert_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
+    var failedFuture = CompletableFuture.<Int>failedFuture(new IllegalStateException());
+
+    assertThat(cache.asMap().put(context.absentKey(), failedFuture)).isNull();
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void put_insert_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
+    var failedFuture = new CompletableFuture<Int>();
+
+    assertThat(cache.asMap().put(context.absentKey(), failedFuture)).isNull();
+    failedFuture.completeExceptionally(new IllegalStateException());
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -465,6 +501,41 @@ public final class AsyncAsMapTest {
     assertThat(cache.asMap().putIfAbsent(context.absentKey(), value)).isNull();
     assertThat(cache).containsEntry(context.absentKey(), value);
     assertThat(cache).hasSize(context.initialSize() + 1);
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void putIfAbsent_insert_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
+    var failedFuture = CompletableFuture.<Int>failedFuture(new IllegalStateException());
+
+    assertThat(cache.asMap().putIfAbsent(context.absentKey(), failedFuture)).isNull();
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void putIfAbsent_insert_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
+    var failedFuture = new CompletableFuture<Int>();
+
+    assertThat(cache.asMap().putIfAbsent(context.absentKey(), failedFuture)).isNull();
+    failedFuture.completeExceptionally(new IllegalStateException());
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @Test(dataProvider = "caches")
@@ -666,11 +737,43 @@ public final class AsyncAsMapTest {
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, removalListener = Listener.CONSUMING)
-  public void replace_failure(AsyncCache<Int, Int> cache, CacheContext context) {
-    cache.asMap().replace(context.firstKey(), CompletableFuture.failedFuture(new Exception()));
+  public void replace_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
+    var failedFuture = CompletableFuture.<Int>failedFuture(new IllegalStateException());
+    var oldValue = requireNonNull(cache.asMap().get(context.firstKey()));
+
+    assertThat(cache.asMap().replace(context.firstKey(), failedFuture)).isSameInstanceAs(oldValue);
+    assertThat(cache).doesNotContainKey(context.firstKey());
+    assertThat(cache).hasSize(context.initialSize() - 1);
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(context.firstKey(), context.original().get(context.firstKey()))
         .exclusively();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.SINGLETON, removalListener = Listener.CONSUMING)
+  public void replace_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
+    var oldValue = requireNonNull(cache.asMap().get(context.firstKey()));
+    var failedFuture = new CompletableFuture<Int>();
+
+    assertThat(cache.asMap().replace(context.firstKey(), failedFuture)).isSameInstanceAs(oldValue);
+    failedFuture.completeExceptionally(new IllegalStateException());
+    assertThat(cache).hasSize(context.initialSize() - 1);
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()))
+        .exclusively();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @Test(dataProvider = "caches")
@@ -845,6 +948,50 @@ public final class AsyncAsMapTest {
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(replaced).exclusively();
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.SINGLETON, removalListener = Listener.CONSUMING)
+  public void replaceConditionally_failure_before(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var failedFuture = CompletableFuture.<Int>failedFuture(new IllegalStateException());
+    var oldValue = requireNonNull(cache.asMap().get(context.firstKey()));
+
+    assertThat(cache.asMap().replace(context.firstKey(), oldValue, failedFuture)).isTrue();
+    assertThat(cache).doesNotContainKey(context.firstKey());
+    assertThat(cache).hasSize(context.initialSize() - 1);
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()))
+        .exclusively();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CheckMaxLogLevel(WARN)
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.SINGLETON, removalListener = Listener.CONSUMING)
+  public void replaceConditionally_failure_after(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var failedFuture = new CompletableFuture<Int>();
+    var oldValue = requireNonNull(cache.asMap().get(context.firstKey()));
+
+    assertThat(cache.asMap().replace(context.firstKey(), oldValue, failedFuture)).isTrue();
+    failedFuture.completeExceptionally(new IllegalStateException());
+    assertThat(cache).hasSize(context.initialSize() - 1);
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()))
+        .exclusively();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   /* ---------------- replaceAll -------------- */
@@ -1168,8 +1315,7 @@ public final class AsyncAsMapTest {
       var value = cache.asMap().get(key);
       assertThat(cache.asMap().computeIfPresent(key, (k, v) -> value)).isSameInstanceAs(value);
     }
-    int count = context.firstMiddleLastKeys().size();
-    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
     assertThat(context).removalNotifications().isEmpty();
     assertThat(cache).hasSize(context.initialSize());
   }
@@ -1315,14 +1461,29 @@ public final class AsyncAsMapTest {
       var value = cache.asMap().get(key);
       assertThat(cache.asMap().compute(key, (k, v) -> value)).isSameInstanceAs(value);
     }
-    int count = context.firstMiddleLastKeys().size();
-    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
 
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
       assertThat(cache).containsEntry(key, value);
     }
     assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void compute_sameInstance_completionRecordedOnce(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    assertThat(cache.asMap().compute(context.absentKey(),
+        (k, v) -> future)).isSameInstanceAs(future);
+    assertThat(cache.asMap().compute(context.absentKey(),
+        (k, v) -> future)).isSameInstanceAs(future);
+
+    future.complete(context.absentValue());
+    assertThat(cache.asMap().get(context.absentKey())).succeedsWith(context.absentValue());
+    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
     assertThat(context).removalNotifications().isEmpty();
   }
 
@@ -1487,8 +1648,7 @@ public final class AsyncAsMapTest {
       var result = cache.asMap().merge(key, key.negate().toFuture(), (oldValue, v) -> value);
       assertThat(result).isSameInstanceAs(value);
     }
-    int count = context.firstMiddleLastKeys().size();
-    assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
 
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);

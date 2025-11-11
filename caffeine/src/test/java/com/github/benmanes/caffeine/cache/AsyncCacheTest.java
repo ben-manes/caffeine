@@ -1310,6 +1310,22 @@ public final class AsyncCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void put_sameInstance_completionRecordedOnce(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    cache.put(context.absentKey(), future);
+    assertThat(cache).hasSize(context.initialSize() + 1);
+    assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
+
+    future.complete(context.absentValue());
+    assertThat(context).removalNotifications().isEmpty();
+    assertThat(context).stats().hits(1).misses(0).success(1).failures(0);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.FULL })
   public void put_replace_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = CompletableFuture.completedFuture((Int) null);

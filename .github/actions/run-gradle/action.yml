@@ -97,7 +97,7 @@ runs:
         JDK_CI: ${{ steps.java_toolchain.outputs.java_home }}
         GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}
         ORG_GRADLE_PROJECT_graalvm: ${{ steps.java_toolchain.outputs.graalvm }}
-        ORG_GRADLE_PROJECT_javaVendor: ${{ steps.java_toolchain.outputs.vendor }}
+        #ORG_GRADLE_PROJECT_javaVendor: ${{ steps.java_toolchain.outputs.vendor }}
         ORG_GRADLE_PROJECT_javaVersion: ${{ steps.java_toolchain.outputs.version }}
         ORG_GRADLE_PROJECT_earlyAccess: ${{ steps.java_toolchain.outputs.early_access }}
         ORG_GRADLE_PROJECT_javaDistribution: ${{ steps.java_toolchain.outputs.distribution }}
