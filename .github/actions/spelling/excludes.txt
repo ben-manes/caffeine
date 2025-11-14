@@ -86,6 +86,7 @@
 ^\Q.typos.toml\E$
 ^\Qgradle/config/eclipse/org.eclipse.jdt.core.prefs\E$
 ^\Qgradle/libs.versions.toml\E$
+^caffeine/src/jctoolsTest/
 ^gradle/config/spotbugs/exclude\.xml$
 ^wiki/design/design\.vsdx$
 gradle\.kts$

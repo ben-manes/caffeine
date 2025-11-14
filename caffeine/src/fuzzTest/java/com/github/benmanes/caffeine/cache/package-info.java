@@ -1,6 +1,6 @@
 @NullMarked
 @CheckReturnValue
-package com.github.benmanes.caffeine.fuzz;
+package com.github.benmanes.caffeine.cache;
 
 import org.jspecify.annotations.NullMarked;
 

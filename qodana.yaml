@@ -10,6 +10,7 @@ exclude:
   - name: ConstantValue
   - name: DataFlowIssue
   - name: EmptyStatementBody
+  - name: HasPlatformType
   - name: IgnoreResultOfCall
   - name: NotNullFieldNotInitialized
   - name: NullableProblems

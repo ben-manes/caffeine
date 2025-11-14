@@ -97,7 +97,6 @@ jobs:
       - name: Build snapshot
         uses: ./.github/actions/run-gradle
         with:
-          distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: caffeine:jar

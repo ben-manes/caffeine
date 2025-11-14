@@ -452,8 +452,8 @@ tasks.named<CheckForbiddenApis>("forbiddenApisCodeGen").configure {
 
 tasks.withType<CheckForbiddenApis>().configureEach {
   bundledSignatures.addAll(when (name) {
-    "forbiddenApisJavaPoet", "forbiddenApisJsr166Test" -> listOf("jdk-deprecated-18",
-      "jdk-internal", "jdk-non-portable", "jdk-reflection", "jdk-unsafe")
+    "forbiddenApisJavaPoet", "forbiddenApisJctoolsTest", "forbiddenApisJsr166Test" -> listOf(
+      "jdk-deprecated-18", "jdk-internal", "jdk-non-portable", "jdk-reflection", "jdk-unsafe")
     "forbiddenApisOpenjdkTest", "forbiddenApisTestFixtures" -> listOf("jdk-deprecated-18",
       "jdk-internal", "jdk-non-portable", "jdk-unsafe")
     "forbiddenApisTest" -> listOf("jdk-deprecated-18", "jdk-internal", "jdk-non-portable")

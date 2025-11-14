@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Ben Manes. All Rights Reserved.
+ * Copyright 2025 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,29 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.fuzz;
+package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.code_intelligence.jazzer.junit.DictionaryEntries;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import com.code_intelligence.jazzer.mutation.annotation.NotNull;
-import com.github.benmanes.caffeine.cache.CaffeineSpec;
+import com.google.common.collect.Range;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CaffeineSpecFuzzer {
-
+final class FrequencySketchFuzzer {
   // These tests require the environment variable JAZZER_FUZZ=1 to try new input arguments
+  static final Range<Integer> FREQUENCY_RANGE = Range.closed(0, 15);
 
-  @FuzzTest(maxDuration = "5m")
-  @DictionaryEntries({"=", " ", "+52", "+5_2", "+_52", ",", "-52", "-5_2", "-_52", "52_", "5_2",
-      "_52", "expireAfterAccess", "expireAfterWrite", "initialCapacity", "maximumSize",
-      "maximumWeight", "recordStats", "refreshAfterWrite", "softValues", "weakKeys", "weakValues"})
-  public void parse(@NotNull String specification) {
-    try {
-      assertThat(CaffeineSpec.parse(specification)).isNotNull();
-    } catch (IllegalArgumentException expected) { /* ignored */ }
+  final FrequencySketch sketch;
+
+  FrequencySketchFuzzer() {
+    sketch = new FrequencySketch();
+    sketch.ensureCapacity(1024 * 1024);
+  }
+
+  @FuzzTest(maxDuration = "3m")
+  void sketch(@NotNull Integer item) {
+    sketch.increment(item);
+    assertThat(sketch.frequency(item)).isIn(FREQUENCY_RANGE);
   }
 }

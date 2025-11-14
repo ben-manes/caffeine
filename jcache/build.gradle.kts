@@ -1,6 +1,6 @@
 /** JCache compatibility adapter. */
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
-import org.gradle.plugins.ide.eclipse.model.Classpath
+import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.Library
 
 plugins {
@@ -179,7 +179,7 @@ tasks.withType<CheckForbiddenApis>().configureEach {
 
 eclipse {
   classpath.file.whenMerged {
-    if (this is Classpath) {
+    if (this is EclipseClasspath) {
       val regex = ".*cache-tests.*-tests.jar".toRegex()
       entries.filterIsInstance<Library>()
         .filter { regex.matches(it.path) }

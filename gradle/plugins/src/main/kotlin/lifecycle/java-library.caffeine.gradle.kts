@@ -25,7 +25,7 @@ java.toolchain {
   if (javaVendor().isPresent) {
     vendor = javaVendor()
   }
-  nativeImageCapable.unset()
+  nativeImageCapable = isGraalVM()
 }
 val javaRuntimeVersion = javaRuntimeVersion()
 

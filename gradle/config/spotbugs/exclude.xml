@@ -536,7 +536,11 @@
       <Package name="~com\.github\.benmanes\.caffeine\.eclipse.*"/>
       <Package name="~com\.github\.benmanes\.caffeine\.openjdk.*"/>
       <Package name="~com\.github\.benmanes\.caffeine\.guava\.compatibility.*"/>
+      <Class name="~com\.github\.benmanes\.caffeine\.cache\.NBHM_Tester2.*"/>
+      <Class name="~com\.github\.benmanes\.caffeine\.cache\.NBHMRemoveTest.*"/>
+      <Class name="~com\.github\.benmanes\.caffeine\.cache\.NBHMReplaceTest.*"/>
       <Class name="~com\.github\.benmanes\.caffeine\.cache\.QueueSanityTest.*"/>
+      <Class name="~com\.github\.benmanes\.caffeine\.cache\.KeyAtomicityTest.*"/>
     </Or>
   </Match>
   <Match>
