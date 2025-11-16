@@ -42,7 +42,6 @@ import com.github.benmanes.caffeine.cache.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
-import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.Policy.CacheEntry;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.testing.Int;
@@ -78,7 +77,7 @@ public final class GuavaCacheFromContext {
     checkState(!context.isAsync(), "Guava caches are synchronous only");
 
     var builder = CacheBuilder.newBuilder();
-    context.guava = builder;
+    context.with(builder);
 
     builder.concurrencyLevel(1);
     if (context.initialCapacity() != InitialCapacity.DEFAULT) {
@@ -109,7 +108,7 @@ public final class GuavaCacheFromContext {
     }
     if (context.isWeakKeys()) {
       builder.weakKeys();
-    } else if (context.keyStrength == ReferenceType.SOFT) {
+    } else if (!context.isStrongKeys()) {
       throw new IllegalStateException();
     }
     if (context.isWeakValues()) {
@@ -124,16 +123,16 @@ public final class GuavaCacheFromContext {
           translateZeroExpire, context.removalListener()));
     }
     if (context.loader() == Loader.DISABLED) {
-      context.cache = new GuavaCache<>(builder.<Int, Int>build(), context);
+      context.with(new GuavaCache<>(builder.<Int, Int>build(), context));
     } else if (context.loader().isBulk()) {
       var loader = new BulkLoader<>(context.loader());
-      context.cache = new GuavaLoadingCache<>(builder.build(loader), context);
+      context.with(new GuavaLoadingCache<>(builder.build(loader), context));
     } else {
       var loader = new SingleLoader<>(context.loader());
-      context.cache = new GuavaLoadingCache<>(builder.build(loader), context);
+      context.with(new GuavaLoadingCache<>(builder.build(loader), context));
     }
     @SuppressWarnings("unchecked")
-    var castedCache = (Cache<K, V>) context.cache;
+    var castedCache = (Cache<K, V>) context.cache();
     return castedCache;
   }
 

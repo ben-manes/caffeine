@@ -337,8 +337,8 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             ${{ env.ALLOWED_ENDPOINTS }}
-            badgen.net:443
             codecov.io:443
+            img.shields.io:443
             uploader.codecov.io:443
       - name: Download Tests
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
@@ -361,7 +361,7 @@ jobs:
           COLOR: 31c653
           STATUS: ${{ fromJSON(steps.test-results.outputs.json).formatted.stats.runs }}
         continue-on-error: true
-        run: curl -s -f https://badgen.net/badge/$LABEL/$STATUS/$COLOR > badge.svg
+        run: curl -s -f https://img.shields.io/badge/$LABEL-$STATUS-$COLOR > badge.svg
       - name: Upload badge to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
         if: >

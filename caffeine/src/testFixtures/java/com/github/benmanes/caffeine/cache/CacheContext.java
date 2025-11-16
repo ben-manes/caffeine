@@ -70,52 +70,52 @@ public final class CacheContext {
   private static final ThreadLocal<Map<Object, Object>> interner =
       ThreadLocal.withInitial(HashMap::new);
 
-  final RemovalListener<Int, Int> evictionListener;
-  final RemovalListener<Int, Int> removalListener;
-  final Weigher<Object, Object> weigher;
-  final InitialCapacity initialCapacity;
-  final Implementation implementation;
-  final CacheScheduler cacheScheduler;
-  final SerializableFakeTicker ticker;
-  final Listener evictionListenerType;
-  final Listener removalListenerType;
-  final CacheExecutor cacheExecutor;
-  final ReferenceType valueStrength;
-  final TrackingExecutor executor;
-  final ReferenceType keyStrength;
-  final CacheWeigher cacheWeigher;
-  final Map<Int, Int> original;
-  final CacheExpiry expiryType;
-  final Population population;
-  final Maximum maximumSize;
-  final Scheduler scheduler;
-  final StartTime startTime;
-  final Expire afterAccess;
-  final Expire afterWrite;
-  final Expire expiryTime;
-  final Compute compute;
-  final Expire refresh;
-  final Loader loader;
-  final Stats stats;
+  private final RemovalListener<Int, Int> evictionListener;
+  private final RemovalListener<Int, Int> removalListener;
+  private final Weigher<Object, Object> weigher;
+  private final InitialCapacity initialCapacity;
+  private final Implementation implementation;
+  private final CacheScheduler cacheScheduler;
+  private final SerializableFakeTicker ticker;
+  private final Listener evictionListenerType;
+  private final Listener removalListenerType;
+  private final CacheExecutor cacheExecutor;
+  private final ReferenceType valueStrength;
+  private final TrackingExecutor executor;
+  private final ReferenceType keyStrength;
+  private final CacheWeigher cacheWeigher;
+  private final Map<Int, Int> original;
+  private final CacheExpiry expiryType;
+  private final Population population;
+  private final Maximum maximumSize;
+  private final Scheduler scheduler;
+  private final StartTime startTime;
+  private final Expire afterAccess;
+  private final Expire afterWrite;
+  private final Expire expiryTime;
+  private final Compute compute;
+  private final Expire refresh;
+  private final Loader loader;
+  private final Stats stats;
 
-  final @Nullable Expiry<Int, Int> expiry;
+  private final @Nullable Expiry<Int, Int> expiry;
 
-  final boolean isAsyncLoader;
+  private final boolean isAsyncLoader;
 
-  CacheBuilder<Object, Object> guava;
-  Caffeine<Object, Object> caffeine;
-  AsyncCache<?, ?> asyncCache;
-  Cache<?, ?> cache;
+  private CacheBuilder<Object, Object> guava;
+  private Caffeine<Object, Object> caffeine;
+  private AsyncCache<?, ?> asyncCache;
+  private Cache<?, ?> cache;
 
-  @Nullable Int firstKey;
-  @Nullable Int middleKey;
-  @Nullable Int lastKey;
-  long initialSize;
+  private @Nullable Int firstKey;
+  private @Nullable Int middleKey;
+  private @Nullable Int lastKey;
+  private long initialSize;
 
   // Generated on-demand
-  @Nullable Int absentKey;
-  @Nullable Int absentValue;
-  @Nullable Map<Int, Int> absent;
+  private @Nullable Int absentKey;
+  private @Nullable Int absentValue;
+  private @Nullable Map<Int, Int> absent;
 
   /** A copy constructor that does not include the cache instance or any generated fields. */
   public CacheContext(CacheContext context) {
@@ -164,6 +164,35 @@ public final class CacheContext {
     this.startTime = requireNonNull(startTime);
     this.ticker = new SerializableFakeTicker(startTime.create());
     this.expiry = (expiryType == CacheExpiry.DISABLED) ? null : expiryType.createExpiry(expiryTime);
+  }
+
+  void with(@Nullable Int firstKey, @Nullable Int middleKey,
+      @Nullable Int lastKey, Map<Int, Int> original) {
+    checkState(initialSize < 0);
+    this.lastKey = lastKey;
+    this.firstKey = firstKey;
+    this.middleKey = middleKey;
+    this.original.putAll(original);
+  }
+
+  void with(CacheBuilder<Object, Object> guava) {
+    checkState(this.guava == null);
+    this.guava = guava;
+  }
+
+  void with(Caffeine<Object, Object> caffeine) {
+    checkState(this.caffeine == null);
+    this.caffeine = caffeine;
+  }
+
+  void with(AsyncCache<?, ?> asyncCache) {
+    checkState(this.asyncCache == null);
+    this.asyncCache = asyncCache;
+  }
+
+  void with(Cache<?, ?> cache) {
+    checkState(this.cache == null);
+    this.cache = cache;
   }
 
   /** Returns a thread local interner for explicit caching. */
@@ -483,6 +512,10 @@ public final class CacheContext {
 
   public boolean isGuava() {
     return (implementation == Implementation.Guava);
+  }
+
+  public CacheScheduler schedulerType() {
+    return cacheScheduler;
   }
 
   public CacheExecutor executorType() {

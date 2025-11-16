@@ -495,6 +495,38 @@ public final class AsyncAsMapTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void putIfAbsent_present_compute(AsyncCache<Int, Int> cache, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    var future = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      return cache.asMap()
+          .putIfAbsent(context.absentKey(), context.absentValue().toFuture()).join();
+    }, ConcurrentTestHarness.executor);
+
+    cache.asMap().computeIfAbsent(context.absentKey(), key -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+
+      return context.absentKey().toFuture();
+    });
+
+    assertThat(future).succeedsWith(context.absentKey());
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void putIfAbsent_insert(AsyncCache<Int, Int> cache, CacheContext context) {
     var value = context.absentValue().toFuture();

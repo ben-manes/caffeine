@@ -25,7 +25,6 @@ import com.github.benmanes.caffeine.cache.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
-import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 
 /**
  * A factory that constructs a {@link Cache} from the {@link CacheContext}.
@@ -40,7 +39,7 @@ public final class CaffeineCacheFromContext {
 
   public static <K, V> Cache<K, V> newCaffeineCache(CacheContext context) {
     var builder = Caffeine.newBuilder();
-    context.caffeine = builder;
+    context.with(builder);
 
     if (context.initialCapacity() != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity().size());
@@ -74,7 +73,7 @@ public final class CaffeineCacheFromContext {
     }
     if (context.isWeakKeys()) {
       builder.weakKeys();
-    } else if (context.keyStrength == ReferenceType.SOFT) {
+    } else if (!context.isStrongKeys()) {
       throw new IllegalStateException();
     }
     if (context.isWeakValues()) {
@@ -85,7 +84,7 @@ public final class CaffeineCacheFromContext {
     if (context.executorType() != CacheExecutor.DEFAULT) {
       builder.executor(context.executor());
     }
-    if (context.cacheScheduler != CacheScheduler.DISABLED) {
+    if (context.schedulerType() != CacheScheduler.DISABLED) {
       builder.scheduler(context.scheduler());
     }
     if (context.removalListenerType() != Listener.DISABLED) {
@@ -96,20 +95,20 @@ public final class CaffeineCacheFromContext {
     }
     if (context.isAsync()) {
       if (context.loader() == Loader.DISABLED) {
-        context.asyncCache = builder.buildAsync();
+        context.with(builder.buildAsync());
       } else {
-        context.asyncCache = builder.buildAsync(
-            context.isAsyncLoader() ? context.loader().async() : context.loader());
+        context.with(builder.buildAsync(
+            context.isAsyncLoader() ? context.loader().async() : context.loader()));
       }
-      context.cache = context.asyncCache.synchronous();
+      context.with(context.asyncCache().synchronous());
     } else if (context.loader() == Loader.DISABLED) {
-      context.cache = builder.build();
+      context.with(builder.build());
     } else {
-      context.cache = builder.build(context.loader());
+      context.with(builder.build(context.loader()));
     }
 
     @SuppressWarnings("unchecked")
-    var castedCache = (Cache<K, V>) context.cache;
+    var castedCache = (Cache<K, V>) context.cache();
     return castedCache;
   }
 }

@@ -147,8 +147,8 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     if (context.executor() != null) {
       context.executor().resume();
 
-      if ((context.cacheExecutor != CacheExecutor.DIRECT)
-          && (context.cacheExecutor != CacheExecutor.DISCARDING)
+      if ((context.executorType() != CacheExecutor.DIRECT)
+          && (context.executorType() != CacheExecutor.DISCARDING)
           && (context.executor().submitted() != context.executor().completed())) {
         await().pollInSameThread().until(() ->
             context.executor().submitted() == context.executor().completed());
@@ -179,10 +179,10 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   /** Checks that the cache is in a valid state. */
   private static void checkCache(CacheContext context) {
-    if (context.cache != null) {
-      assertThat(context.cache).isValid();
-    } else if (context.asyncCache != null) {
-      assertThat(context.asyncCache).isValid();
+    if (context.cache() != null) {
+      assertThat(context.cache()).isValid();
+    } else if (context.asyncCache() != null) {
+      assertThat(context.asyncCache()).isValid();
     } else {
       Assert.fail("Test requires that the CacheContext holds the cache under test");
     }
@@ -258,7 +258,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         if (context.expiryType() == CacheExpiry.MOCKITO) {
           Mockito.clearInvocations(context.expiry());
         }
-        if (context.cacheScheduler == CacheScheduler.MOCKITO) {
+        if (context.schedulerType() == CacheScheduler.MOCKITO) {
           Mockito.clearInvocations(context.scheduler());
         }
       }

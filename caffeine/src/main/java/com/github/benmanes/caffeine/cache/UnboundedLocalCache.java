@@ -242,28 +242,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
     requireNonNull(function);
 
-    // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
-    @Nullable K[] notificationKey = (K[]) new Object[1];
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
-    @Nullable V[] notificationValue = (V[]) new Object[1];
-    data.replaceAll((key, value) -> {
-      if (notificationKey[0] != null) {
-        notifyRemoval(notificationKey[0], notificationValue[0], RemovalCause.REPLACED);
-        notificationValue[0] = null;
-        notificationKey[0] = null;
-      }
-
-      V newValue = requireNonNull(function.apply(key, value));
-      if (newValue != value) {
-        notificationKey[0] = key;
-        notificationValue[0] = value;
-      }
-
-      return newValue;
-    });
-    if (notificationKey[0] != null) {
-      notifyRemoval(notificationKey[0], notificationValue[0], RemovalCause.REPLACED);
+    BiFunction<K, V, V> remappingFunction = (key, oldValue) ->
+        (oldValue == null) ? null : requireNonNull(function.apply(key, oldValue));
+    for (K key : keySet()) {
+      remap(key, remappingFunction);
     }
   }
 
@@ -272,7 +254,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       boolean recordStats, boolean recordLoad) {
     requireNonNull(mappingFunction);
 
-    // optimistic fast path due to computeIfAbsent always locking
+    // An optimistic fast path to avoid unnecessary locking
     @Var V value = data.get(key);
     if (value != null) {
       if (recordStats) {
@@ -301,7 +283,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     requireNonNull(remappingFunction);
 
-    // optimistic fast path due to computeIfAbsent always locking
+    // An optimistic fast path to avoid unnecessary locking
     if (!data.containsKey(key)) {
       return null;
     }
@@ -422,23 +404,43 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public @Nullable V put(K key, V value) {
-    V oldValue = data.put(key, value);
-    notifyOnReplace(key, oldValue, value);
-    return oldValue;
+    requireNonNull(value);
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    var oldValue = (V[]) new Object[1];
+    data.compute(key, (K k, V v) -> {
+      discardRefresh(k);
+      oldValue[0] = v;
+      return value;
+    });
+    if (oldValue[0] != null) {
+      notifyOnReplace(key, oldValue[0], value);
+    }
+    return oldValue[0];
   }
 
   @Override
   public @Nullable V putIfAbsent(K key, V value) {
-    return data.putIfAbsent(key, value);
+    requireNonNull(value);
+
+    // An optimistic fast path to avoid unnecessary locking
+    var v = data.get(key);
+    if (v != null) {
+      return v;
+    }
+
+    var added = new boolean[1];
+    var val = data.computeIfAbsent(key, k -> {
+      discardRefresh(k);
+      added[0] = true;
+      return value;
+    });
+    return added[0] ? null : val;
   }
 
   @Override
   public void putAll(Map<? extends K, ? extends V> map) {
-    if (removalListener == null) {
-      data.putAll(map);
-    } else {
-      map.forEach(this::put);
-    }
+    map.forEach(this::put);
   }
 
   @Override
