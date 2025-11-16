@@ -510,6 +510,37 @@ public final class AsMapTest {
     assertThat(map).hasSize(context.initialSize());
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  public void putIfAbsent_present_compute(Map<Int, Int> map, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    var future = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      return map.putIfAbsent(context.absentKey(), context.absentValue());
+    }, ConcurrentTestHarness.executor);
+
+    map.computeIfAbsent(context.absentKey(), key -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+
+      return context.absentKey();
+    });
+
+    assertThat(future).succeedsWith(context.absentKey());
+  }
+
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -988,6 +1019,40 @@ public final class AsMapTest {
     });
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(context.original()).exclusively();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.SINGLETON)
+  public void replaceAll_removed(Map<Int, Int> map, CacheContext context) {
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<Thread>();
+
+    var future = CompletableFuture.runAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(computing);
+      map.replaceAll((k, v) -> context.absentValue());
+    }, ConcurrentTestHarness.executor);
+
+    map.compute(context.firstKey(), (key, value) -> {
+      await().untilTrue(started);
+      computing.set(true);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && threadState.contains(thread.getState());
+      });
+
+      return null;
+    });
+
+    assertThat(map).isEmpty();
+    assertThat(future).succeedsWithNull();
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.firstKey(), requireNonNull(context.original().get(context.firstKey())))
+        .exclusively();
   }
 
   /* --------------- computeIfAbsent --------------- */

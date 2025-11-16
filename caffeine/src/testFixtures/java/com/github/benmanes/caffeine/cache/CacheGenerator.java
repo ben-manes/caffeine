@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -191,7 +192,7 @@ public final class CacheGenerator {
             || (context.expireAfterWrite() != Expire.DISABLED));
     boolean expirationIncompatible = (cacheSpec.mustExpireWithAnyOf().length > 0)
         && Arrays.stream(cacheSpec.mustExpireWithAnyOf()).noneMatch(context::expires);
-    boolean schedulerIgnored = (context.cacheScheduler != CacheScheduler.DISABLED)
+    boolean schedulerIgnored = (context.schedulerType() != CacheScheduler.DISABLED)
         && (!context.expires() || context.isGuava());
     boolean evictionListenerIncompatible = (context.evictionListenerType() != Listener.DISABLED)
         && (!context.isCaffeine() || (context.isAsync() && context.isWeakKeys()));
@@ -215,17 +216,21 @@ public final class CacheGenerator {
   /** Fills the cache up to the population size. */
   @SuppressWarnings("unchecked")
   private static void populate(CacheContext context, Cache<Int, Int> cache) {
-    if (context.population.size() == 0) {
+    if (context.population().size() == 0) {
       // timerWheel clock initialization
       cache.cleanUp();
       return;
     }
 
-    int maximum = Math.toIntExact(Math.min(context.maximumSize(), context.population.size()));
-    int first = Math.toIntExact(BASE + Math.min(0, context.population.size()));
+    int maximum = Math.toIntExact(Math.min(context.maximumSize(), context.population().size()));
+    int first = Math.toIntExact(BASE + Math.min(0, context.population().size()));
     int last = BASE + maximum - 1;
     int middle = Math.max(first, BASE + ((last - first) / 2));
 
+    var original = new LinkedHashMap<Int, Int>();
+    @Var Int middleKey = null;
+    @Var Int firstKey = null;
+    @Var Int lastKey = null;
     for (int i = 0; i < maximum; i++) {
       Map.Entry<Int, Int> entry = INTS.get(i);
 
@@ -234,17 +239,19 @@ public final class CacheGenerator {
       var value = context.isStrongValues() ? entry.getValue() : new Int(-key.intValue());
 
       if (key.intValue() == first) {
-        context.firstKey = key;
+        firstKey = key;
       }
       if (key.intValue() == middle) {
-        context.middleKey = key;
+        middleKey = key;
       }
       if (key.intValue() == last) {
-        context.lastKey = key;
+        lastKey = key;
       }
       cache.put(key, value);
-      context.original.put(key, value);
+      original.put(key, value);
     }
+    context.with(firstKey, middleKey, lastKey, original);
+
     if (context.executorType() != CacheExecutor.DIRECT) {
       cache.cleanUp();
     }

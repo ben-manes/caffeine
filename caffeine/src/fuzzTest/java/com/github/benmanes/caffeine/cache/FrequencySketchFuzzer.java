@@ -35,7 +35,7 @@ final class FrequencySketchFuzzer {
     sketch.ensureCapacity(1024 * 1024);
   }
 
-  @FuzzTest(maxDuration = "3m")
+  @FuzzTest(maxDuration = "5m")
   void sketch(@NotNull Integer item) {
     sketch.increment(item);
     assertThat(sketch.frequency(item)).isIn(FREQUENCY_RANGE);

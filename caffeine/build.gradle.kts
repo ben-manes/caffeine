@@ -283,6 +283,7 @@ testing.suites {
     targets.all {
       testTask.configure {
         environment("JAZZER_FUZZ", "1")
+        maxParallelForks = 2 * Runtime.getRuntime().availableProcessors()
         failFast = true
         forkEvery = 1
       }
