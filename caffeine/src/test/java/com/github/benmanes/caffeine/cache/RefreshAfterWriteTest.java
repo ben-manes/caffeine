@@ -723,6 +723,7 @@ public final class RefreshAfterWriteTest {
       assertThat(next).isSameInstanceAs(original);
     }
     done.set(true);
+    await().untilAsserted(() -> assertThat(cache.synchronous().policy().refreshes()).isEmpty());
     await().untilAsserted(() -> assertThat(cache).containsEntry(key, key.negate()));
   }
 
@@ -754,6 +755,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache.get(key)).isEqualTo(originalValue);
 
     done.set(true);
+    await().untilAsserted(() -> assertThat(cache.policy().refreshes()).isEmpty());
     await().untilAsserted(() -> assertThat(cache).containsEntry(key, refreshedValue));
   }
 

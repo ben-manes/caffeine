@@ -28,7 +28,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           persist-credentials: false
       - name: Setup Gradle
@@ -79,7 +79,7 @@ jobs:
             }
           ' results.sarif > snyk.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@014f16e7ab1402f30e7c3329d33797e7948572db # v4.31.3
+        uses: github/codeql-action/upload-sarif@e12f0178983d466f2f6028f5cc7a6d786fd97f4b # v4.31.4
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: snyk.sarif

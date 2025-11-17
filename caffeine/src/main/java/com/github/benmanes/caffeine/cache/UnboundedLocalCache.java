@@ -244,7 +244,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     BiFunction<K, V, V> remappingFunction = (key, oldValue) ->
         (oldValue == null) ? null : requireNonNull(function.apply(key, oldValue));
-    for (K key : keySet()) {
+    for (K key : data.keySet()) {
       remap(key, remappingFunction);
     }
   }
@@ -378,11 +378,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public void clear() {
-    if ((removalListener == null) && ((refreshes == null) || refreshes.isEmpty())) {
-      data.clear();
-      return;
-    }
-    for (K key : List.copyOf(data.keySet())) {
+    var keys = (removalListener == null) ? data.keySet() : List.copyOf(data.keySet());
+    for (K key : keys) {
       remove(key);
     }
   }

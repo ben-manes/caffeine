@@ -3234,6 +3234,7 @@ public final class BoundedLocalCacheTest {
     try {
       context.ticker().advance(Duration.ofMinutes(10));
       var value = cache.getIfPresent(context.absentKey(), /* recordStats= */ true);
+      await().untilAsserted(() -> assertThat(cache.refreshes()).isEmpty());
       assertThat(value).isEqualTo(context.absentValue());
       assertThat(refreshEntry.get()).isNull();
       assertThat(errors).isEmpty();
@@ -3404,9 +3405,28 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
       loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
+  public void refreshIfNeeded_skip_discarded(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    context.executor().pause();
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.refreshIfNeeded(node, context.ticker().read())).isNull();
+    var future = requireNonNull(cache.refreshes().remove(node.getKeyReference()));
+    context.executor().resume();
+
+    assertThat(future).succeedsWith(context.firstKey());
+    await().untilAsserted(() -> assertThat(context.cache()).containsEntry(
+        context.firstKey(), context.original().get(context.firstKey())));
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.firstKey());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
+      loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
   public void refreshIfNeeded_replaced(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = requireNonNull(cache.data.get(
-        cache.nodeFactory.newLookupKey(context.firstKey())));
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     context.executor().pause();
 
     context.ticker().advance(Duration.ofMinutes(2));

@@ -55,16 +55,6 @@ public final class RemovalNotification<K, V> extends SimpleImmutableEntry<K, V> 
     return cause;
   }
 
-  /**
-   * Returns {@code true} if there was an automatic removal due to eviction (the cause is neither
-   * {@link RemovalCause#EXPLICIT} nor {@link RemovalCause#REPLACED}).
-   *
-   * @return if the entry was removed due to eviction
-   */
-  public boolean wasEvicted() {
-    return cause.wasEvicted();
-  }
-
   @Override
   public String toString() {
     return getKey() + "=" + getValue() + " [" + cause + "]";

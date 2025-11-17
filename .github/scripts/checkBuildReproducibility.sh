@@ -12,15 +12,15 @@ trap 'rm -f "$CHECKSUM1" "$CHECKSUM2"' EXIT
 function calculate_checksums() {
   local OUTPUT=$1
 
+  # Exclude javadoc and jmh jars as non-deterministic
   ./gradlew \
     -Dorg.gradle.java.installations.auto-download=false \
     -Dscan.tag.Reproducibility \
-    --configuration-cache \
     --no-build-cache \
-    clean assemble -x jmhJar
+    clean assemble -x jmhJar -x javadocJar
 
-  # Find all JARs in build/libs (excluding javadoc), sort, and hash
-  find . -type f -path '*/build/libs/*.jar' ! -name '*javadoc*.jar' -print0 \
+  # Find all JARs in build/libs, sort, and hash
+  find . -type f -path '*/build/libs/*.jar' -print0 \
     | sort -z \
     | xargs -0 sha512sum > "${OUTPUT}"
 }

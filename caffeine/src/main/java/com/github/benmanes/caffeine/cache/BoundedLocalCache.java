@@ -1379,6 +1379,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         RemovalCause[] cause = new RemovalCause[1];
         V result = compute(key, (k, currentValue) -> {
+          boolean removed = refreshes.remove(keyReference, refreshFuture[0]);
           if (currentValue == null) {
             // If the entry is absent then discard the refresh and maybe notifying the listener
             if (value != null) {
@@ -1392,7 +1393,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               (newValue == Async.getIfReady((CompletableFuture<?>) currentValue))) {
             // If the completed futures hold the same value instance then no-op
             return currentValue;
-          } else if ((currentValue == oldValue) && (node.getWriteTime() == writeTime)) {
+          } else if (removed && (currentValue == oldValue) && (node.getWriteTime() == writeTime)) {
             // If the entry was not modified while in-flight (no ABA) then replace
             return value;
           }
@@ -1409,8 +1410,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         } else {
           statsCounter().recordLoadSuccess(loadTime);
         }
-
-        refreshes.remove(keyReference, refreshFuture[0]);
         return result;
       });
       return Async.getIfReady(refreshed);
