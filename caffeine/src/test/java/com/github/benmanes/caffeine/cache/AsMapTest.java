@@ -689,6 +689,17 @@ public final class AsMapTest {
         .contains(removed).exclusively();
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void removeConditionally_sameInstance_badEquality(
+      Map<Int, Object> map, CacheContext context) {
+    var value = new BrokenEquality();
+    map.put(context.absentKey(), value);
+    assertThat(map.remove(context.absentKey(), value)).isTrue();
+    assertThat(map).doesNotContainKey(context.absentKey());
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
@@ -933,6 +944,17 @@ public final class AsMapTest {
     } else {
       assertThat(context).removalNotifications().isEmpty();
     }
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void replaceConditionally_sameInstance_badEquality(
+      Map<Int, Object> map, CacheContext context) {
+    var value = new BrokenEquality();
+    map.put(context.absentKey(), value);
+    assertThat(map.replace(context.absentKey(), value, context.absentValue())).isTrue();
+    assertThat(map).containsEntry(context.absentKey(), context.absentValue());
   }
 
   @CheckNoStats
@@ -3856,5 +3878,14 @@ public final class AsMapTest {
     assertThat(entry.equals(other)).isFalse();
     assertThat(entry.hashCode()).isNotEqualTo(other.hashCode());
     assertThat(entry.toString()).isNotEqualTo(other.toString());
+  }
+
+  private static final class BrokenEquality {
+    @Override public boolean equals(Object o) {
+      return false;
+    }
+    @Override public int hashCode() {
+      return System.identityHashCode(this);
+    }
   }
 }

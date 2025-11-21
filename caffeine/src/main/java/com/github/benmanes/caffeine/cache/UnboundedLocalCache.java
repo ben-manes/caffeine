@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
@@ -472,7 +473,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     var oldValue = (V[]) new Object[1];
 
     data.computeIfPresent(castKey, (k, v) -> {
-      if (v.equals(value)) {
+      if (Objects.equals(v, value)) {
         discardRefresh(k);
         oldValue[0] = v;
         return null;
@@ -518,7 +519,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings({"rawtypes", "unchecked"})
     var prev = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
-      if (v.equals(oldValue)) {
+      if (Objects.equals(v, oldValue)) {
         if (shouldDiscardRefresh) {
           discardRefresh(k);
         }

@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.CancellationException;
@@ -817,7 +818,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
           done[0] = true;
           V oldValue = Async.getIfReady(oldValueFuture);
-          removed[0] = value.equals(oldValue);
+          removed[0] = Objects.equals(value, oldValue);
           return (oldValue == null) || removed[0] ? null : oldValueFuture;
         }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
 
@@ -883,7 +884,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           }
 
           done[0] = true;
-          replaced[0] = oldValue.equals(Async.getIfReady(oldValueFuture));
+          replaced[0] = Objects.equals(oldValue, Async.getIfReady(oldValueFuture));
           return replaced[0] ? CompletableFuture.completedFuture(newValue) : oldValueFuture;
         }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
 

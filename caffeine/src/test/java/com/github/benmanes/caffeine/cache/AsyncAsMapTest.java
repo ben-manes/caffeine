@@ -734,6 +734,16 @@ public final class AsyncAsMapTest {
         .contains(removed).exclusively();
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void removeConditionally_sameInstance_badEquality(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new BrokenEqualityFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap().remove(context.absentKey(), future)).isTrue();
+    assertThat(cache).doesNotContainKey(context.absentKey());
+  }
+
   /* ---------------- replace -------------- */
 
   @CheckNoStats
@@ -963,6 +973,17 @@ public final class AsyncAsMapTest {
     }
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY)
+  public void replaceConditionally_sameInstance_badEquality(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new BrokenEqualityFuture<Int>();
+    cache.put(context.absentKey(), future);
+    assertThat(cache.asMap()
+        .replace(context.absentKey(), future, context.absentValue().toFuture())).isTrue();
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   @Test(dataProvider = "caches")
@@ -3492,4 +3513,13 @@ public final class AsyncAsMapTest {
   }
 
   // writeThroughEntry_serialize() - CompletableFuture is not serializable
+
+  private static final class BrokenEqualityFuture<T> extends CompletableFuture<T> {
+    @Override public boolean equals(Object o) {
+      return false;
+    }
+    @Override public int hashCode() {
+      return System.identityHashCode(this);
+    }
+  }
 }

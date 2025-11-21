@@ -3416,8 +3416,10 @@ public final class BoundedLocalCacheTest {
     context.executor().resume();
 
     assertThat(future).succeedsWith(context.firstKey());
-    await().untilAsserted(() -> assertThat(context.cache()).containsEntry(
-        context.firstKey(), context.original().get(context.firstKey())));
+    await().untilAsserted(() -> assertThat(context.executor().completed())
+        .isEqualTo(context.executor().submitted()));
+    await().untilAsserted(() -> assertThat(context.cache())
+        .containsEntry(context.firstKey(), context.original().get(context.firstKey())));
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(context.firstKey(), context.firstKey());
   }

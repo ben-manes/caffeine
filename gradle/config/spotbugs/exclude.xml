@@ -627,6 +627,13 @@
   </Match>
   <Match>
     <Or>
+      <Class name="com.github.benmanes.caffeine.cache.AsMapTest$BrokenEquality"/>
+      <Class name="com.github.benmanes.caffeine.cache.AsyncAsMapTest$BrokenEqualityFuture"/>
+    </Or>
+    <Bug pattern="EQ_ALWAYS_FALSE"/>
+  </Match>
+  <Match>
+    <Or>
       <Class name="com.github.benmanes.caffeine.cache.RemovalNotification"/>
       <Class name="com.github.benmanes.caffeine.cache.GuavaCacheFromContext$GuavaCacheEntry"/>
     </Or>
