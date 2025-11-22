@@ -73,9 +73,7 @@ jobs:
             -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Compute JMH Results to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: >
-          github.event_name == 'push'
-          && github.event.repository.fork == false
+        if: github.event.repository.fork == false
         continue-on-error: true
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -126,9 +124,7 @@ jobs:
             -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Get/Put JMH Results to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: >
-          github.event_name == 'push'
-          && github.event.repository.fork == false
+        if: github.event.repository.fork == false
         continue-on-error: true
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -179,9 +175,7 @@ jobs:
             -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
       - name: Upload Put/Remove JMH Results to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: >
-          github.event_name == 'push'
-          && github.event.repository.fork == false
+        if: github.event.repository.fork == false
         continue-on-error: true
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -232,9 +226,7 @@ jobs:
             -PbenchmarkParameters=cacheType=Caffeine,Guava
       - name: Upload EvictionBenchmark JMH Results to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: >
-          github.event_name == 'push'
-          && github.event.repository.fork == false
+        if: github.event.repository.fork == false
         continue-on-error: true
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -284,9 +276,7 @@ jobs:
             -PincludePattern=FrequencySketchBenchmark
       - name: Upload FrequencySketch JMH Results to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: >
-          github.event_name == 'push'
-          && github.event.repository.fork == false
+        if: github.event.repository.fork == false
         continue-on-error: true
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -336,9 +326,7 @@ jobs:
             -PincludePattern=TimerWheelBenchmark
       - name: Upload TimerWheelBenchmark JMH Results to Gist
         uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: >
-          github.event_name == 'push'
-          && github.event.repository.fork == false
+        if: github.event.repository.fork == false
         continue-on-error: true
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -351,9 +339,7 @@ jobs:
     name: Publish
     needs: [compute, get-put, put-remove, eviction, frequency-sketch, timer-wheel]
     runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'push'
-      && github.event.repository.fork == false
+    if: github.event.repository.fork == false
     steps:
       - name: Publish JMH benchmarks
         run: |
