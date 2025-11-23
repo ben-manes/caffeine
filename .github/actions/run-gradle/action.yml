@@ -76,17 +76,18 @@ runs:
         echo "java_home=$JAVA_HOME" >> $GITHUB_OUTPUT
         echo "version=$version" >> $GITHUB_OUTPUT
         echo "vendor=$vendor" >> $GITHUB_OUTPUT
+    - name: Setup composite build caching
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: |
+          gradle/plugins/build
+          gradle/plugins/.gradle
+        key: build-logic-${{ hashFiles('gradle/plugins/*.kts', 'gradle/plugins/src/**') }}
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
       with:
         cache-read-only: false
         add-job-summary: on-failure
-        cache-overwrite-existing: true
-        gradle-home-cache-strict-match: true
-        gradle-home-cache-includes: |
-          caches
-          notifications
-          wrapper/dists
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}

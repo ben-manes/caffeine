@@ -7,6 +7,7 @@ on:
     branches: [master, v2.dev, v3.dev]
   schedule:
     - cron: '40 22 * * 0'
+  workflow_dispatch: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true

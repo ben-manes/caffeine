@@ -1,6 +1,6 @@
 name: Qodana
 permissions: {}
-on: [ push ]
+on: [ push, workflow_dispatch ]
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -63,12 +63,12 @@ jobs:
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: assemble
       - name: Qodana - Code Inspection
         uses: JetBrains/qodana-action@e5d20b1260e99a93210d46ec8882c83978a09036 # v2025.2.2
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
+          use-caches: false
           upload-result: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file for GitHub Advanced Security Dashboard

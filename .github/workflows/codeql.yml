@@ -11,6 +11,7 @@ on:
     branches: [master]
   schedule:
     - cron: '0 0 * * 4'
+  workflow_dispatch: {}
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
