@@ -170,6 +170,7 @@ public final class CaffeineSpecTest {
   }
 
   @Test
+  @SuppressWarnings("SequencedCollectionGetFirst")
   public void equals() {
     var configurations = Lists.cartesianProduct(IntStream.range(0, 9)
         .mapToObj(i -> ImmutableList.of(false, true)).collect(toImmutableList()));

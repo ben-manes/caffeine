@@ -48,11 +48,6 @@ subprojects {
       testResults.from(this@configureEach.binaryResultsDirectory)
     }
     inputs.files(tasks.named<Jar>("jar").map { it.outputs.files })
-
-    // ensure tasks don't overwrite the default report directories used by the 'test' task
-    reports.html.outputLocation = file(layout.buildDirectory.file("reports/$name"))
-    reports.junitXml.outputLocation = file(layout.buildDirectory.file("reports/$name/results"))
-    binaryResultsDirectory = layout.buildDirectory.dir("reports/$name/results/binary/$name")
   }
 }
 

@@ -1748,6 +1748,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("PMD.EnumComparison")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void equals_null(Map<Int, Int> map, CacheContext context) {
     assertThat(map.equals(null)).isFalse();

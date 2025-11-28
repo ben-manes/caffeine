@@ -119,6 +119,7 @@ public final class JCacheConfigurationTest {
   }
 
   @Test
+  @SuppressWarnings("SequencedCollectionGetFirst")
   public void equality() {
     var tester = new EqualsTester()
         .addEqualityGroup(cacheConfig,

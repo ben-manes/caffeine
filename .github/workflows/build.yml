@@ -74,8 +74,8 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-  tests:
-    name: Tests
+  caffeine-tests:
+    name: Caffeine Tests
     timeout-minutes: 60
     runs-on: ubuntu-latest
     needs: compile
@@ -84,34 +84,118 @@ jobs:
     strategy:
       matrix:
         suite:
-          - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineSlowTest
-          - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineSlowTest
-          - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineSlowTest
-          - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineSlowTest
-          - caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest
-          - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineSlowTest
-          - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineSlowTest
-          - caffeine:strongKeysAndStrongValuesStatsSyncCaffeineTest
-          - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest
-          - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest
-          - caffeine:weakKeysAndStrongValuesAsyncCaffeineSlowTest
-          - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineTest
-          - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineTest
-          - caffeine:weakKeysAndStrongValuesSyncCaffeineSlowTest
-          - caffeine:strongKeysAndWeakValuesSyncCaffeineSlowTest
-          - caffeine:strongKeysAndSoftValuesSyncCaffeineSlowTest
-          - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest
-          - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest
-          - caffeine:strongKeysAndStrongValuesAsyncCaffeineTest
-          - caffeine:weakKeysAndWeakValuesSyncCaffeineSlowTest
-          - caffeine:weakKeysAndSoftValuesSyncCaffeineSlowTest
-          - caffeine:strongKeysAndStrongValuesSyncCaffeineTest
-          - caffeine:weakKeysAndStrongValuesAsyncCaffeineTest
-          - caffeine:weakKeysAndStrongValuesSyncCaffeineTest
-          - caffeine:strongKeysAndWeakValuesSyncCaffeineTest
-          - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
-          - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
-          - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
+          - weakKeysAndStrongValuesStatsAsyncLoadingUnboundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsSyncLoadingUnboundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsAsyncManualUnboundedCaffeineSlowTest
+          - strongKeysAndWeakValuesStatsSyncLoadingUnboundedCaffeineSlowTest
+          - strongKeysAndSoftValuesStatsSyncLoadingUnboundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsSyncManualUnboundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsAsyncLoadingBoundedCaffeineSlowTest
+          - strongKeysAndWeakValuesStatsSyncManualUnboundedCaffeineSlowTest
+          - strongKeysAndStrongValuesStatsAsyncLoadingUnboundedCaffeineTest
+          - strongKeysAndSoftValuesStatsSyncManualUnboundedCaffeineSlowTest
+          - weakKeysAndWeakValuesStatsSyncLoadingUnboundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsSyncLoadingBoundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsAsyncManualBoundedCaffeineSlowTest
+          - weakKeysAndSoftValuesStatsSyncLoadingUnboundedCaffeineSlowTest
+          - strongKeysAndWeakValuesStatsSyncLoadingBoundedCaffeineSlowTest
+          - strongKeysAndStrongValuesStatsSyncLoadingUnboundedCaffeineTest
+          - strongKeysAndStrongValuesStatsAsyncManualUnboundedCaffeineTest
+          - strongKeysAndSoftValuesStatsSyncLoadingBoundedCaffeineSlowTest
+          - weakKeysAndWeakValuesStatsSyncManualUnboundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsSyncManualBoundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsAsyncLoadingUnboundedCaffeineTest
+          - weakKeysAndSoftValuesStatsSyncManualUnboundedCaffeineSlowTest
+          - strongKeysAndWeakValuesStatsSyncManualBoundedCaffeineSlowTest
+          - strongKeysAndStrongValuesStatsSyncManualUnboundedCaffeineTest
+          - strongKeysAndStrongValuesStatsAsyncLoadingBoundedCaffeineTest
+          - strongKeysAndSoftValuesStatsSyncManualBoundedCaffeineSlowTest
+          - weakKeysAndWeakValuesStatsSyncLoadingBoundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsSyncLoadingUnboundedCaffeineTest
+          - weakKeysAndStrongValuesStatsAsyncManualUnboundedCaffeineTest
+          - weakKeysAndStrongValuesAsyncLoadingUnboundedCaffeineSlowTest
+          - weakKeysAndSoftValuesStatsSyncLoadingBoundedCaffeineSlowTest
+          - strongKeysAndWeakValuesStatsSyncLoadingUnboundedCaffeineTest
+          - strongKeysAndStrongValuesStatsSyncLoadingBoundedCaffeineTest
+          - strongKeysAndStrongValuesStatsAsyncManualBoundedCaffeineTest
+          - strongKeysAndSoftValuesStatsSyncLoadingUnboundedCaffeineTest
+          - weakKeysAndWeakValuesStatsSyncManualBoundedCaffeineSlowTest
+          - weakKeysAndStrongValuesSyncLoadingUnboundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsSyncManualUnboundedCaffeineTest
+          - weakKeysAndStrongValuesStatsAsyncLoadingBoundedCaffeineTest
+          - weakKeysAndStrongValuesAsyncManualUnboundedCaffeineSlowTest
+          - weakKeysAndSoftValuesStatsSyncManualBoundedCaffeineSlowTest
+          - strongKeysAndWeakValuesSyncLoadingUnboundedCaffeineSlowTest
+          - strongKeysAndWeakValuesStatsSyncManualUnboundedCaffeineTest
+          - strongKeysAndStrongValuesStatsSyncManualBoundedCaffeineTest
+          - strongKeysAndSoftValuesSyncLoadingUnboundedCaffeineSlowTest
+          - strongKeysAndSoftValuesStatsSyncManualUnboundedCaffeineTest
+          - weakKeysAndWeakValuesStatsSyncLoadingUnboundedCaffeineTest
+          - weakKeysAndStrongValuesSyncManualUnboundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsSyncLoadingBoundedCaffeineTest
+          - weakKeysAndStrongValuesStatsAsyncManualBoundedCaffeineTest
+          - weakKeysAndStrongValuesAsyncLoadingBoundedCaffeineSlowTest
+          - weakKeysAndSoftValuesStatsSyncLoadingUnboundedCaffeineTest
+          - strongKeysAndWeakValuesSyncManualUnboundedCaffeineSlowTest
+          - strongKeysAndWeakValuesStatsSyncLoadingBoundedCaffeineTest
+          - strongKeysAndStrongValuesAsyncLoadingUnboundedCaffeineTest
+          - strongKeysAndSoftValuesSyncManualUnboundedCaffeineSlowTest
+          - strongKeysAndSoftValuesStatsSyncLoadingBoundedCaffeineTest
+          - weakKeysAndWeakValuesSyncLoadingUnboundedCaffeineSlowTest
+          - weakKeysAndWeakValuesStatsSyncManualUnboundedCaffeineTest
+          - weakKeysAndStrongValuesSyncLoadingBoundedCaffeineSlowTest
+          - weakKeysAndStrongValuesStatsSyncManualBoundedCaffeineTest
+          - weakKeysAndStrongValuesAsyncManualBoundedCaffeineSlowTest
+          - weakKeysAndSoftValuesSyncLoadingUnboundedCaffeineSlowTest
+          - weakKeysAndSoftValuesStatsSyncManualUnboundedCaffeineTest
+          - strongKeysAndWeakValuesSyncLoadingBoundedCaffeineSlowTest
+          - strongKeysAndWeakValuesStatsSyncManualBoundedCaffeineTest
+          - strongKeysAndStrongValuesSyncLoadingUnboundedCaffeineTest
+          - strongKeysAndStrongValuesAsyncManualUnboundedCaffeineTest
+          - strongKeysAndSoftValuesSyncLoadingBoundedCaffeineSlowTest
+          - strongKeysAndSoftValuesStatsSyncManualBoundedCaffeineTest
+          - weakKeysAndWeakValuesSyncManualUnboundedCaffeineSlowTest
+          - weakKeysAndWeakValuesStatsSyncLoadingBoundedCaffeineTest
+          - weakKeysAndStrongValuesSyncManualBoundedCaffeineSlowTest
+          - weakKeysAndStrongValuesAsyncLoadingUnboundedCaffeineTest
+          - weakKeysAndSoftValuesSyncManualUnboundedCaffeineSlowTest
+          - weakKeysAndSoftValuesStatsSyncLoadingBoundedCaffeineTest
+          - strongKeysAndWeakValuesSyncManualBoundedCaffeineSlowTest
+          - strongKeysAndStrongValuesSyncManualUnboundedCaffeineTest
+          - strongKeysAndStrongValuesAsyncLoadingBoundedCaffeineTest
+          - strongKeysAndSoftValuesSyncManualBoundedCaffeineSlowTest
+          - weakKeysAndWeakValuesSyncLoadingBoundedCaffeineSlowTest
+          - weakKeysAndWeakValuesStatsSyncManualBoundedCaffeineTest
+          - weakKeysAndStrongValuesSyncLoadingUnboundedCaffeineTest
+          - weakKeysAndStrongValuesAsyncManualUnboundedCaffeineTest
+          - weakKeysAndSoftValuesSyncLoadingBoundedCaffeineSlowTest
+          - weakKeysAndSoftValuesStatsSyncManualBoundedCaffeineTest
+          - strongKeysAndWeakValuesSyncLoadingUnboundedCaffeineTest
+          - strongKeysAndStrongValuesSyncLoadingBoundedCaffeineTest
+          - strongKeysAndStrongValuesAsyncManualBoundedCaffeineTest
+          - strongKeysAndSoftValuesSyncLoadingUnboundedCaffeineTest
+          - weakKeysAndWeakValuesSyncManualBoundedCaffeineSlowTest
+          - weakKeysAndStrongValuesSyncManualUnboundedCaffeineTest
+          - weakKeysAndStrongValuesAsyncLoadingBoundedCaffeineTest
+          - weakKeysAndSoftValuesSyncManualBoundedCaffeineSlowTest
+          - strongKeysAndWeakValuesSyncManualUnboundedCaffeineTest
+          - strongKeysAndStrongValuesSyncManualBoundedCaffeineTest
+          - strongKeysAndSoftValuesSyncManualUnboundedCaffeineTest
+          - weakKeysAndWeakValuesSyncLoadingUnboundedCaffeineTest
+          - weakKeysAndStrongValuesSyncLoadingBoundedCaffeineTest
+          - weakKeysAndStrongValuesAsyncManualBoundedCaffeineTest
+          - weakKeysAndSoftValuesSyncLoadingUnboundedCaffeineTest
+          - strongKeysAndWeakValuesSyncLoadingBoundedCaffeineTest
+          - strongKeysAndSoftValuesSyncLoadingBoundedCaffeineTest
+          - weakKeysAndWeakValuesSyncManualUnboundedCaffeineTest
+          - weakKeysAndStrongValuesSyncManualBoundedCaffeineTest
+          - weakKeysAndSoftValuesSyncManualUnboundedCaffeineTest
+          - strongKeysAndWeakValuesSyncManualBoundedCaffeineTest
+          - strongKeysAndSoftValuesSyncManualBoundedCaffeineTest
+          - weakKeysAndWeakValuesSyncLoadingBoundedCaffeineTest
+          - weakKeysAndSoftValuesSyncLoadingBoundedCaffeineTest
+          - weakKeysAndWeakValuesSyncManualBoundedCaffeineTest
+          - weakKeysAndSoftValuesSyncManualBoundedCaffeineTest
           - caffeine:eclipseTest
           - caffeine:jctoolsTest
           - caffeine:openjdkTest
@@ -126,50 +210,6 @@ jobs:
           - guava:check
         java: [ 11, 25 ]
         include:
-          - suite: caffeine:weakKeysAndStrongValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndWeakValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndSoftValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:weakKeysAndWeakValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:weakKeysAndSoftValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndStrongValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndStrongValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:strongKeysAndWeakValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:strongKeysAndSoftValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndStrongValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndWeakValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndSoftValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:weakKeysAndWeakValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndSoftValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndWeakValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:weakKeysAndSoftValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndStrongValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndStrongValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:strongKeysAndWeakValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:strongKeysAndSoftValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndWeakValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndSoftValuesSyncGuavaTest
-            java: 11
           - suite: caffeine:lincheckTest
             java: 25
           - suite: caffeine:fuzzTest
@@ -219,10 +259,151 @@ jobs:
           name: ${{ steps.format_artifact.outputs.name }}-results
           path: ${{ steps.format_artifact.outputs.name }}.tar.gz
 
+  guava-tests:
+    name: Guava Tests
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    needs: compile
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        suite:
+          - weakKeysAndStrongValuesStatsSyncLoadingUnboundedGuavaSlowTest
+          - strongKeysAndWeakValuesStatsSyncLoadingUnboundedGuavaSlowTest
+          - strongKeysAndSoftValuesStatsSyncLoadingUnboundedGuavaSlowTest
+          - weakKeysAndStrongValuesStatsSyncManualUnboundedGuavaSlowTest
+          - strongKeysAndWeakValuesStatsSyncManualUnboundedGuavaSlowTest
+          - strongKeysAndSoftValuesStatsSyncManualUnboundedGuavaSlowTest
+          - weakKeysAndWeakValuesStatsSyncLoadingUnboundedGuavaSlowTest
+          - weakKeysAndStrongValuesStatsSyncLoadingBoundedGuavaSlowTest
+          - weakKeysAndSoftValuesStatsSyncLoadingUnboundedGuavaSlowTest
+          - strongKeysAndWeakValuesStatsSyncLoadingBoundedGuavaSlowTest
+          - strongKeysAndStrongValuesStatsSyncLoadingUnboundedGuavaTest
+          - strongKeysAndSoftValuesStatsSyncLoadingBoundedGuavaSlowTest
+          - weakKeysAndWeakValuesStatsSyncManualUnboundedGuavaSlowTest
+          - weakKeysAndStrongValuesStatsSyncManualBoundedGuavaSlowTest
+          - weakKeysAndSoftValuesStatsSyncManualUnboundedGuavaSlowTest
+          - strongKeysAndWeakValuesStatsSyncManualBoundedGuavaSlowTest
+          - strongKeysAndStrongValuesStatsSyncManualUnboundedGuavaTest
+          - strongKeysAndSoftValuesStatsSyncManualBoundedGuavaSlowTest
+          - weakKeysAndWeakValuesStatsSyncLoadingBoundedGuavaSlowTest
+          - weakKeysAndStrongValuesStatsSyncLoadingUnboundedGuavaTest
+          - weakKeysAndSoftValuesStatsSyncLoadingBoundedGuavaSlowTest
+          - strongKeysAndWeakValuesStatsSyncLoadingUnboundedGuavaTest
+          - strongKeysAndStrongValuesStatsSyncLoadingBoundedGuavaTest
+          - strongKeysAndSoftValuesStatsSyncLoadingUnboundedGuavaTest
+          - weakKeysAndWeakValuesStatsSyncManualBoundedGuavaSlowTest
+          - weakKeysAndStrongValuesSyncLoadingUnboundedGuavaSlowTest
+          - weakKeysAndStrongValuesStatsSyncManualUnboundedGuavaTest
+          - weakKeysAndSoftValuesStatsSyncManualBoundedGuavaSlowTest
+          - strongKeysAndWeakValuesSyncLoadingUnboundedGuavaSlowTest
+          - strongKeysAndWeakValuesStatsSyncManualUnboundedGuavaTest
+          - strongKeysAndStrongValuesStatsSyncManualBoundedGuavaTest
+          - strongKeysAndSoftValuesSyncLoadingUnboundedGuavaSlowTest
+          - strongKeysAndSoftValuesStatsSyncManualUnboundedGuavaTest
+          - weakKeysAndWeakValuesStatsSyncLoadingUnboundedGuavaTest
+          - weakKeysAndStrongValuesSyncManualUnboundedGuavaSlowTest
+          - weakKeysAndStrongValuesStatsSyncLoadingBoundedGuavaTest
+          - weakKeysAndSoftValuesStatsSyncLoadingUnboundedGuavaTest
+          - strongKeysAndWeakValuesSyncManualUnboundedGuavaSlowTest
+          - strongKeysAndWeakValuesStatsSyncLoadingBoundedGuavaTest
+          - strongKeysAndSoftValuesSyncManualUnboundedGuavaSlowTest
+          - strongKeysAndSoftValuesStatsSyncLoadingBoundedGuavaTest
+          - weakKeysAndWeakValuesSyncLoadingUnboundedGuavaSlowTest
+          - weakKeysAndWeakValuesStatsSyncManualUnboundedGuavaTest
+          - weakKeysAndStrongValuesSyncLoadingBoundedGuavaSlowTest
+          - weakKeysAndStrongValuesStatsSyncManualBoundedGuavaTest
+          - weakKeysAndSoftValuesSyncLoadingUnboundedGuavaSlowTest
+          - weakKeysAndSoftValuesStatsSyncManualUnboundedGuavaTest
+          - strongKeysAndWeakValuesSyncLoadingBoundedGuavaSlowTest
+          - strongKeysAndWeakValuesStatsSyncManualBoundedGuavaTest
+          - strongKeysAndStrongValuesSyncLoadingUnboundedGuavaTest
+          - strongKeysAndSoftValuesSyncLoadingBoundedGuavaSlowTest
+          - strongKeysAndSoftValuesStatsSyncManualBoundedGuavaTest
+          - weakKeysAndWeakValuesSyncManualUnboundedGuavaSlowTest
+          - weakKeysAndWeakValuesStatsSyncLoadingBoundedGuavaTest
+          - weakKeysAndStrongValuesSyncManualBoundedGuavaSlowTest
+          - weakKeysAndSoftValuesSyncManualUnboundedGuavaSlowTest
+          - weakKeysAndSoftValuesStatsSyncLoadingBoundedGuavaTest
+          - strongKeysAndWeakValuesSyncManualBoundedGuavaSlowTest
+          - strongKeysAndStrongValuesSyncManualUnboundedGuavaTest
+          - strongKeysAndSoftValuesSyncManualBoundedGuavaSlowTest
+          - weakKeysAndWeakValuesSyncLoadingBoundedGuavaSlowTest
+          - weakKeysAndWeakValuesStatsSyncManualBoundedGuavaTest
+          - weakKeysAndStrongValuesSyncLoadingUnboundedGuavaTest
+          - weakKeysAndSoftValuesSyncLoadingBoundedGuavaSlowTest
+          - weakKeysAndSoftValuesStatsSyncManualBoundedGuavaTest
+          - strongKeysAndWeakValuesSyncLoadingUnboundedGuavaTest
+          - strongKeysAndStrongValuesSyncLoadingBoundedGuavaTest
+          - strongKeysAndSoftValuesSyncLoadingUnboundedGuavaTest
+          - weakKeysAndWeakValuesSyncManualBoundedGuavaSlowTest
+          - weakKeysAndStrongValuesSyncManualUnboundedGuavaTest
+          - weakKeysAndSoftValuesSyncManualBoundedGuavaSlowTest
+          - strongKeysAndWeakValuesSyncManualUnboundedGuavaTest
+          - strongKeysAndStrongValuesSyncManualBoundedGuavaTest
+          - strongKeysAndSoftValuesSyncManualUnboundedGuavaTest
+          - weakKeysAndWeakValuesSyncLoadingUnboundedGuavaTest
+          - weakKeysAndStrongValuesSyncLoadingBoundedGuavaTest
+          - weakKeysAndSoftValuesSyncLoadingUnboundedGuavaTest
+          - strongKeysAndWeakValuesSyncLoadingBoundedGuavaTest
+          - strongKeysAndSoftValuesSyncLoadingBoundedGuavaTest
+          - weakKeysAndWeakValuesSyncManualUnboundedGuavaTest
+          - weakKeysAndStrongValuesSyncManualBoundedGuavaTest
+          - weakKeysAndSoftValuesSyncManualUnboundedGuavaTest
+          - strongKeysAndWeakValuesSyncManualBoundedGuavaTest
+          - strongKeysAndSoftValuesSyncManualBoundedGuavaTest
+          - weakKeysAndWeakValuesSyncLoadingBoundedGuavaTest
+          - weakKeysAndSoftValuesSyncLoadingBoundedGuavaTest
+          - weakKeysAndWeakValuesSyncManualBoundedGuavaTest
+          - weakKeysAndSoftValuesSyncManualBoundedGuavaTest
+    env:
+      JAVA_VERSION: 25
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          disable-sudo-and-containers: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Run tests (${{ env.JAVA_VERSION }})
+        uses: ./.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          arguments: ${{ matrix.suite }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Format Test Artifact Name
+        id: format_artifact
+        if: always()
+        env:
+          INPUTS_ARGUMENTS: ${{ matrix.suite }}
+        run: |
+          RAW_NAME=$INPUTS_ARGUMENTS-$JAVA_VERSION
+          ARTIFACT_NAME=$(echo $RAW_NAME | sed 's/:/-/g')
+          echo "name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+      - name: Compress test results
+        if: always()
+        env:
+          ARTIFACT_NAME: ${{ steps.format_artifact.outputs.name }}
+        run: >
+          find . -path */jacoco/*.exec -o -path */results/*.xml
+          | tar czf $ARTIFACT_NAME.tar.gz --files-from -
+      - name: Upload test results
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          retention-days: 1
+          name: ${{ steps.format_artifact.outputs.name }}-results
+          path: ${{ steps.format_artifact.outputs.name }}.tar.gz
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [caffeine-tests, guava-tests]
     permissions:
       contents: read
     steps:
@@ -326,7 +507,7 @@ jobs:
   test-results:
     name: Test Results
     runs-on: ubuntu-latest
-    needs: tests
+    needs: [caffeine-tests, guava-tests]
     permissions:
       contents: read
       checks: write # Needed to annotate commit
@@ -419,7 +600,7 @@ jobs:
   publish-snapshot:
     name: Publish Snapshot
     runs-on: ubuntu-latest
-    needs: [reproducibility, tests]
+    needs: [reproducibility, caffeine-tests, guava-tests]
     if: >
       github.event_name == 'push'
       && github.event.repository.fork == false

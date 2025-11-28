@@ -40,6 +40,8 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.StartTime;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
+import com.github.benmanes.caffeine.cache.Options.Bounding;
+import com.github.benmanes.caffeine.cache.Options.Loading;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -53,6 +55,10 @@ import com.google.errorprone.annotations.Var;
  */
 public final class CacheGenerator {
   private static final ImmutableList<Map.Entry<Int, Int>> INTS = makeInts();
+  private static final ImmutableSet<Maximum> DISABLED_MAXIMUM =
+      Sets.immutableEnumSet(Maximum.DISABLED);
+  private static final ImmutableSet<Loader> DISABLED_LOADER =
+      Sets.immutableEnumSet(Loader.DISABLED);
   private static final int BASE = 1_000;
 
   private final Options options;
@@ -102,7 +108,7 @@ public final class CacheGenerator {
     @Var var computations = filterTypes(options.compute(), cacheSpec.compute());
     @Var var loaders = Sets.immutableEnumSet(Arrays.asList(cacheSpec.loader()));
     var population = Sets.immutableEnumSet(Arrays.asList(cacheSpec.population()));
-    var maximumSize = Sets.immutableEnumSet(Arrays.asList(cacheSpec.maximumSize()));
+    @Var var maximumSize = Sets.immutableEnumSet(Arrays.asList(cacheSpec.maximumSize()));
     var initialCapacity = Sets.immutableEnumSet(Arrays.asList(cacheSpec.initialCapacity()));
     var removalListener = Sets.immutableEnumSet(Arrays.asList(cacheSpec.removalListener()));
     var evictionListener = Sets.immutableEnumSet(Arrays.asList(cacheSpec.evictionListener()));
@@ -128,11 +134,18 @@ public final class CacheGenerator {
     }
 
     if (isLoadingOnly) {
-      loaders = Sets.difference(loaders, Sets.immutableEnumSet(Loader.DISABLED)).immutableCopy();
+      loaders = Sets.difference(loaders, DISABLED_LOADER).immutableCopy();
+    }
+    if (options.loading().isPresent()) {
+      loaders = options.loading().orElseThrow() == Loading.LOADING
+          ? Sets.difference(loaders, DISABLED_LOADER).immutableCopy()
+          : Sets.intersection(loaders, DISABLED_LOADER).immutableCopy();
     }
 
-    if (computations.isEmpty() || implementations.isEmpty() || keys.isEmpty() || values.isEmpty()) {
-      return ImmutableSet.of();
+    if (options.bounding().isPresent()) {
+      maximumSize = options.bounding().orElseThrow() == Bounding.BOUNDED
+          ? Sets.difference(maximumSize, DISABLED_MAXIMUM).immutableCopy()
+          : Sets.intersection(maximumSize, DISABLED_MAXIMUM).immutableCopy();
     }
 
     return Sets.cartesianProduct(initialCapacity, statistics, weigher, maximumSize, expiry,

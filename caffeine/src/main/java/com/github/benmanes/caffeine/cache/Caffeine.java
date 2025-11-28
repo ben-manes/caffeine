@@ -808,10 +808,10 @@ public final class Caffeine<K, V> {
    * Specifies that active entries are eligible for automatic refresh once a fixed duration has
    * elapsed after the entry's creation, or the most recent replacement of its value. The semantics
    * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
-   * {@link AsyncCacheLoader#asyncLoad}.
+   * {@link AsyncCacheLoader#asyncReload}.
    * <p>
    * Automatic refreshes are performed when the first stale request for an entry occurs. The request
-   * triggering the refresh will make a synchronous call to {@link AsyncCacheLoader#asyncLoad} to
+   * triggering the refresh will make a synchronous call to {@link AsyncCacheLoader#asyncReload} to
    * obtain a future of the new value. If the returned future is already complete, it is returned
    * immediately. Otherwise, the old value is returned.
    * <p>
@@ -833,10 +833,10 @@ public final class Caffeine<K, V> {
    * Specifies that active entries are eligible for automatic refresh once a fixed duration has
    * elapsed after the entry's creation, or the most recent replacement of its value. The semantics
    * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
-   * {@link AsyncCacheLoader#asyncLoad}.
+   * {@link AsyncCacheLoader#asyncReload}.
    * <p>
    * Automatic refreshes are performed when the first stale request for an entry occurs. The request
-   * triggering the refresh will make a synchronous call to {@link AsyncCacheLoader#asyncLoad} to
+   * triggering the refresh will make a synchronous call to {@link AsyncCacheLoader#asyncReload} to
    * obtain a future of the new value. If the returned future is already complete, it is returned
    * immediately. Otherwise, the old value is returned.
    * <p>

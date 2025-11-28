@@ -102,9 +102,8 @@ public interface LoadingCache<K, V extends @Nullable Object> extends Cache<K, V>
    * exception is thrown while refreshing, the previous value will remain, <i>and the exception will
    * be logged (using {@link System.Logger}) and swallowed</i>.
    * <p>
-   * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
-   * currently contains a value for the {@code key}, and {@link CacheLoader#load} otherwise. Loading
-   * is asynchronous by delegating to the default executor.
+   * Loading is asynchronous by calling {@link AsyncCacheLoader#asyncReload} if the cache currently
+   * contains a value for the {@code key}, and {@link AsyncCacheLoader#asyncLoad} otherwise.
    * <p>
    * Returns an existing future without doing anything if another thread is currently loading the
    * value for {@code key}.
@@ -124,9 +123,8 @@ public interface LoadingCache<K, V extends @Nullable Object> extends Cache<K, V>
    * be logged (using {@link System.Logger}) and swallowed</i>. If another thread is currently
    * loading the value for {@code key}, then this method does not perform an additional load.
    * <p>
-   * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
-   * currently contains a value for the {@code key}, and {@link CacheLoader#load} otherwise. Loading
-   * is asynchronous by delegating to the default executor.
+   * Loading is asynchronous by calling {@link AsyncCacheLoader#asyncReload} if the cache currently
+   * contains a value for the {@code key}, and {@link AsyncCacheLoader#asyncLoad} otherwise.
    *
    * @param keys the keys whose associated values are to be returned
    * @return a future containing an unmodifiable mapping of keys to values for the specified keys

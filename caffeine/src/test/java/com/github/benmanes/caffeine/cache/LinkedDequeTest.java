@@ -818,6 +818,7 @@ public final class LinkedDequeTest {
   }
 
   @Test(dataProvider = "full")
+  @SuppressWarnings("SequencedCollectionGetFirst")
   public void comparing(LinkedDeque<LinkedValue> deque) {
     var expect = ImmutableList.copyOf(
         Iterators.concat(deque.iterator(), deque.descendingIterator()));

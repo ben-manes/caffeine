@@ -145,7 +145,7 @@ public final class NodeFactoryGenerator {
     return classNameToFeatures;
   }
 
-  @SuppressWarnings("SetsImmutableEnumSetIterable")
+  @SuppressWarnings({"SequencedCollectionGetFirst", "SetsImmutableEnumSetIterable"})
   private ImmutableSet<Feature> getFeatures(List<Object> combination) {
     var features = new LinkedHashSet<Feature>();
     features.add((Feature) combination.get(0));

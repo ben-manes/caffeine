@@ -301,16 +301,16 @@ public final class TimerWheelTest {
 
     long delay = timerWheel.getExpirationDelay();
     if (minDelay == Long.MAX_VALUE) {
-      var format = "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s";
-      assertWithMessage(format, delay, minDelay, minSpan, minBucket)
+      assertWithMessage(
+          "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s", delay, minDelay, minSpan, minBucket)
           .that(delay).isEqualTo(Long.MAX_VALUE);
       return;
     }
 
     long maxError = minDelay + SPANS[minSpan];
     if (maxError > delay) {
-      var format = "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s";
-      assertWithMessage(format, delay, minDelay, minSpan, minBucket)
+      assertWithMessage(
+          "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s", delay, minDelay, minSpan, minBucket)
           .that(delay).isLessThan(maxError);
     }
   }

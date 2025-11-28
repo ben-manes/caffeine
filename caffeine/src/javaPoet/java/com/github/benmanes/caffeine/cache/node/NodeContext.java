@@ -54,6 +54,7 @@ public final class NodeContext extends RuleContext {
     return superClass.equals(ClassName.OBJECT);
   }
 
+  @SuppressWarnings("SequencedCollectionGetFirst")
   public Strength keyStrength() {
     return Strength.of(generateFeatures.asList().get(0));
   }

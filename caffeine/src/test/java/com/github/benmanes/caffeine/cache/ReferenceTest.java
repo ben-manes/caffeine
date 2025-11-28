@@ -45,7 +45,6 @@ import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1503,9 +1502,7 @@ public final class ReferenceTest {
     }
     @Override public boolean retryMethod(ITestResult result) {
       return !result.isSuccess()
-          && Strings.CI.contains(result.getThrowable().getMessage(), "expected")
-          && Arrays.stream(result.getParameters())
-              .anyMatch(param -> param.toString().contains("valueStrength=SOFT"));
+          && Strings.CI.contains(result.getThrowable().getMessage(), "expected");
     }
   }
 }

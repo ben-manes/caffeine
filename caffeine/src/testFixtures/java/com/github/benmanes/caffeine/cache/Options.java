@@ -39,30 +39,41 @@ final class Options {
   private final Optional<Implementation> implementation;
   private final Optional<ReferenceType> values;
   private final Optional<ReferenceType> keys;
+  private final Optional<Bounding> bounding;
   private final Optional<Compute> compute;
+  private final Optional<Loading> loading;
   private final Optional<Stats> stats;
 
   private Options(Properties properties) {
     implementation = Optional.ofNullable(Enums.getIfPresent(Implementation.class,
         capitalize(properties.getProperty("implementation", "").toLowerCase(US))).orNull());
+    bounding = Optional.ofNullable(Enums.getIfPresent(Bounding.class,
+        properties.getProperty("bounding", "").toUpperCase(US)).orNull());
     compute = Optional.ofNullable(Enums.getIfPresent(Compute.class,
         properties.getProperty("compute", "").toUpperCase(US)).orNull());
     keys = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
         properties.getProperty("keys", "").toUpperCase(US)).orNull());
     values = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
         properties.getProperty("values", "").toUpperCase(US)).orNull());
+    loading = Optional.ofNullable(Enums.getIfPresent(Loading.class,
+        properties.getProperty("loading", "").toUpperCase(US)).orNull());
     stats = Optional.ofNullable(Enums.getIfPresent(Stats.class,
         properties.getProperty("stats", "").toUpperCase(US)).orNull());
   }
 
   /** Returns the test options from the system properties. */
-  public static Options fromSystemProperties() {
+  static Options fromSystemProperties() {
     return SYSTEM_PROPERTY_OPTIONS;
   }
 
   /** The implementation, or all if unset. */
   Optional<Implementation> implementation() {
     return implementation;
+  }
+
+  /** The computation type, or all if unset. */
+  Optional<Compute> compute() {
+    return compute;
   }
 
   /** The reference type, or all if unset. */
@@ -75,13 +86,26 @@ final class Options {
     return values;
   }
 
-  /** The computation type, or all if unset. */
-  Optional<Compute> compute() {
-    return compute;
+  /** The bounding type, or all if unset. */
+  Optional<Bounding> bounding() {
+    return bounding;
   }
 
   /** The statistics type, or all if unset. */
   Optional<Stats> stats() {
     return stats;
+  }
+
+  /** The loading type, or all if unset. */
+  Optional<Loading> loading() {
+    return loading;
+  }
+
+  enum Bounding {
+    BOUNDED, UNBOUNDED
+  }
+
+  enum Loading {
+    MANUAL, LOADING
   }
 }

@@ -212,7 +212,9 @@ testing.suites {
                 "stats" to stats.name,
                 "values" to values.name,
                 "compute" to compute.name,
-                "implementation" to implementation)
+                "loading" to loading.name,
+                "bounding" to bounding.name,
+                "implementation" to implementation.name)
 
               jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
                 "--add-opens", "java.base/java.lang=ALL-UNNAMED",
@@ -560,15 +562,17 @@ abstract class Stress : JavaExec() {
   }
 }
 
-data class Scenario(val implementation: Implementation,
-                    val keys: KeyStrength, val values: ValueStrength,
-                    val stats: Stats, val compute: Compute, val slow: Slow) {
+data class Scenario(val implementation: Implementation, val compute: Compute, val loading: Loading,
+                    val keys: KeyStrength, val values: ValueStrength, val bounding: Bounding,
+                    val stats: Stats, val slow: Slow) {
   companion object {
     fun all(): List<Scenario> {
       return Sets.cartesianProduct(
         Slow.entries.toSet(),
         Stats.entries.toSet(),
         Compute.entries.toSet(),
+        Loading.entries.toSet(),
+        Bounding.entries.toSet(),
         KeyStrength.entries.toSet(),
         ValueStrength.entries.toSet(),
         Implementation.entries.toSet(),
@@ -577,9 +581,11 @@ data class Scenario(val implementation: Implementation,
           slow = features[0] as Slow,
           stats = features[1] as Stats,
           compute = features[2] as Compute,
-          keys = features[3] as KeyStrength,
-          values = features[4] as ValueStrength,
-          implementation = features[5] as Implementation)
+          loading = features[3] as Loading,
+          bounding = features[4] as Bounding,
+          keys = features[5] as KeyStrength,
+          values = features[6] as ValueStrength,
+          implementation = features[7] as Implementation)
       }.filter { it.isValid() }
     }
   }
@@ -591,6 +597,8 @@ data class Scenario(val implementation: Implementation,
       append("Stats")
     }
     append(compute)
+    append(loading)
+    append(bounding)
     append(implementation)
     if (slow == Slow.Enabled) {
       append("Slow")
@@ -609,7 +617,9 @@ data class Scenario(val implementation: Implementation,
 
 enum class Implementation { Caffeine, Guava }
 enum class ValueStrength { Strong, Weak, Soft }
+enum class Bounding { Bounded, Unbounded }
 enum class KeyStrength { Strong, Weak }
+enum class Loading { Manual, Loading }
 enum class Stats { Enabled, Disabled }
 enum class Slow { Enabled, Disabled }
 enum class Compute { Async, Sync }
