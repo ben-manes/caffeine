@@ -21,6 +21,8 @@ import java.util.function.Consumer;
 
 import com.google.errorprone.annotations.Var;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * A striped, non-blocking, bounded buffer.
  *
@@ -59,7 +61,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
   static final class RingBuffer<E> extends BBHeader.ReadAndWriteCounterRef implements Buffer<E> {
     static final VarHandle BUFFER = MethodHandles.arrayElementVarHandle(Object[].class);
 
-    final Object[] buffer;
+    final @Nullable Object[] buffer;
 
     public RingBuffer(E e) {
       buffer = new Object[BUFFER_SIZE];

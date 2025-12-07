@@ -81,7 +81,8 @@ abstract class AbstractLincheckCacheTest {
   }
 
   @Operation
-  public Integer get_function(@Param(name = "key") int key, @Param(name = "value") int nextValue) {
+  public @Nullable Integer get_function(
+      @Param(name = "key") int key, @Param(name = "value") int nextValue) {
     return cache.get(key, k -> nextValue);
   }
 
@@ -98,7 +99,7 @@ abstract class AbstractLincheckCacheTest {
   /* --------------- LoadingCache --------------- */
 
   @Operation
-  public Integer get(@Param(name = "key") int key) {
+  public @Nullable Integer get(@Param(name = "key") int key) {
     return cache.get(key);
   }
 
@@ -115,17 +116,20 @@ abstract class AbstractLincheckCacheTest {
   }
 
   @Operation
-  public Integer put_asMap(@Param(name = "key") int key, @Param(name = "value") int value) {
+  public @Nullable Integer put_asMap(
+      @Param(name = "key") int key, @Param(name = "value") int value) {
     return cache.asMap().put(key, value);
   }
 
   @Operation
-  public Integer putIfAbsent(@Param(name = "key") int key, @Param(name = "value") int value) {
+  public @Nullable Integer putIfAbsent(
+      @Param(name = "key") int key, @Param(name = "value") int value) {
     return cache.asMap().putIfAbsent(key, value);
   }
 
   @Operation
-  public Integer replace(@Param(name = "key") int key, @Param(name = "value") int nextValue) {
+  public @Nullable Integer replace(
+      @Param(name = "key") int key, @Param(name = "value") int nextValue) {
     return cache.asMap().replace(key, nextValue);
   }
 
@@ -153,7 +157,7 @@ abstract class AbstractLincheckCacheTest {
   }
 
   @Operation
-  public Integer computeIfPresent(@Param(name = "key") int key,
+  public @Nullable Integer computeIfPresent(@Param(name = "key") int key,
       @Param(name = "value") int nextValue) {
     return cache.asMap().computeIfPresent(key, (k, v) -> nextValue);
   }

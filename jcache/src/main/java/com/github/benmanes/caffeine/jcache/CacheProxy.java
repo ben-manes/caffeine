@@ -59,6 +59,7 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Ticker;
@@ -216,7 +217,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       Set<? extends K> keys, boolean updateAccessTime) {
     int[] expired = { 0 };
     long[] millis = { 0L };
-    var result = new HashMap<K, Expirable<V>>(cache.getAllPresent(keys));
+    var result = new HashMap<K, @NonNull Expirable<V>>(cache.getAllPresent(keys));
     result.entrySet().removeIf(entry -> {
       if (!entry.getValue().isEternal() && (millis[0] == 0L)) {
         millis[0] = currentTimeMillis();
@@ -1215,7 +1216,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   final class EntryIterator implements Iterator<Cache.Entry<K, V>> {
     // NullAway does not yet understand the @NonNull annotation in the return type of asMap.
     @SuppressWarnings("NullAway")
-    Iterator<Map.Entry<K, Expirable<V>>> delegate = cache.asMap().entrySet().iterator();
+    final Iterator<Map.Entry<K, Expirable<V>>> delegate = cache.asMap().entrySet().iterator();
+
     Map.@Nullable Entry<K, Expirable<V>> current;
     Map.@Nullable Entry<K, Expirable<V>> cursor;
 

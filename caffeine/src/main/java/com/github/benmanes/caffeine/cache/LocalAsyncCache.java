@@ -197,7 +197,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
   }
 
-  @SuppressWarnings({"FutureReturnValueIgnored", "SuspiciousMethodCalls"})
+  @SuppressWarnings("FutureReturnValueIgnored")
   default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
       long startTime, boolean recordMiss) {
     valueFuture.whenComplete((value, error) -> {

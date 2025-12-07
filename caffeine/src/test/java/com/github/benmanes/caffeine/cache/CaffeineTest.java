@@ -208,7 +208,7 @@ public final class CaffeineTest {
 
   @Test
   public void hasMethodOverride_present() {
-    var cacheLoader = new CacheLoader<Object, Object>() {
+    var cacheLoader = new CacheLoader<>() {
       @Override public Object load(Object key) {
         throw new AssertionError();
       }

@@ -173,8 +173,8 @@ public final class AsyncTest {
   }
 
   @DataProvider(name = "unsuccessful")
-  public Object[][] providesUnsuccessful() {
-    return new Object[][] {
+  public @Nullable Object[][] providesUnsuccessful() {
+    return new @Nullable Object[][] {
         { null },
         { new CompletableFuture<Integer>() },
         { CompletableFuture.completedFuture(null) },

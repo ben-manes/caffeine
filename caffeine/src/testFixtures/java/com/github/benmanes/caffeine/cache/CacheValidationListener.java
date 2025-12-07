@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -127,7 +128,9 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   /** Validates the internal state of the cache. */
   private static void validate(ITestResult testResult) {
-    CacheContext context = Arrays.stream(testResult.getParameters())
+    CacheContext context = Stream
+        .concat(Arrays.stream(testResult.getParameters()),
+            CacheContext.interner().values().stream())
         .filter(CacheContext.class::isInstance)
         .findFirst().map(CacheContext.class::cast)
         .orElse(null);

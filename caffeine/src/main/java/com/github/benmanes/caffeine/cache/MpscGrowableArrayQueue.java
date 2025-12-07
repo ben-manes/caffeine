@@ -497,7 +497,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return (E) e;
   }
 
-  @SuppressWarnings({"CastCanBeRemovedNarrowingVariableType", "unchecked"})
+  @SuppressWarnings("unchecked")
   public @Nullable E relaxedPeek() {
     @Nullable E[] buffer = consumerBuffer;
     long index = consumerIndex;

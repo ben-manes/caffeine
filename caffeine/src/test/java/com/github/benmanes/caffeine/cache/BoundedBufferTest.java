@@ -89,7 +89,7 @@ public final class BoundedBufferTest {
 
   @Test
   public void overflow() {
-    @SuppressWarnings("NullAway")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     var buffer = new BoundedBuffer.RingBuffer<Boolean>(null);
     buffer.writeCounter = Long.MAX_VALUE;
     buffer.readCounter = Long.MAX_VALUE;

@@ -3852,13 +3852,11 @@ public final class BoundedLocalCacheTest {
     assertThrows(type, () -> cache.setMainProtectedWeightedSize(1L));
     assertThrows(type, cache::hitsInSample);
     assertThrows(type, cache::missesInSample);
-    assertThrows(type, cache::sampleCount);
     assertThrows(type, cache::stepSize);
     assertThrows(type, cache::previousSampleHitRate);
     assertThrows(type, cache::adjustment);
     assertThrows(type, () -> cache.setHitsInSample(1));
     assertThrows(type, () -> cache.setMissesInSample(1));
-    assertThrows(type, () -> cache.setSampleCount(1));
     assertThrows(type, () -> cache.setStepSize(1.0));
     assertThrows(type, () -> cache.setPreviousSampleHitRate(1.0));
     assertThrows(type, () -> cache.setAdjustment(1L));

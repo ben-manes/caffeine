@@ -64,6 +64,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
@@ -95,8 +96,8 @@ public final class AsyncCacheTest {
 
   /* --------------- getIfPresent --------------- */
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getIfPresent_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.getIfPresent(null));
@@ -122,32 +123,31 @@ public final class AsyncCacheTest {
   /* --------------- getFunc --------------- */
 
   @CacheSpec
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
-  public void getFunc_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
+  public void getFunc_nullKey(AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.get(null, key -> null));
   }
 
   @CacheSpec
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void getFunc_nullLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> mappingFunction = null;
     assertThrows(NullPointerException.class, () -> cache.get(context.absentKey(), mappingFunction));
   }
 
   @CacheSpec
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void getFunc_nullKeyAndLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.get(null, (Function<Int, Int>) null));
   }
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void getFunc_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void getFunc_absent_null(AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
     Int key = context.absentKey();
-    @SuppressWarnings("NullAway")
     var valueFuture = cache.get(key, k -> null);
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
 
@@ -157,11 +157,11 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.THREADED, executorFailure = ExecutorFailure.IGNORED)
-  public void getFunc_absent_null_async(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void getFunc_absent_null_async(
+      AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
     Int key = context.absentKey();
     var ready = new AtomicBoolean();
     var done = new AtomicBoolean();
-    @SuppressWarnings("NullAway")
     var valueFuture = cache.get(key, k -> {
       await().untilTrue(ready);
       return null;
@@ -217,9 +217,8 @@ public final class AsyncCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.THREADED, executorFailure = ExecutorFailure.IGNORED)
-  public void getFunc_absent_cancelled(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void getFunc_absent_cancelled(AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
     var done = new AtomicBoolean();
-    @SuppressWarnings("NullAway")
     var valueFuture = cache.get(context.absentKey(), k -> {
       await().until(done::get);
       return null;
@@ -260,24 +259,24 @@ public final class AsyncCacheTest {
   /* --------------- getBiFunc --------------- */
 
   @CacheSpec
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void getBiFunc_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
         cache.get(null, (key, executor) -> CompletableFuture.completedFuture(null)));
   }
 
   @CacheSpec
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void getBiFunc_nullLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     BiFunction<Int, Executor, CompletableFuture<Int>> mappingFunction = null;
     assertThrows(NullPointerException.class, () -> cache.get(context.absentKey(), mappingFunction));
   }
 
   @CacheSpec
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void getBiFunc_nullKeyAndLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     BiFunction<Int, Executor, CompletableFuture<Int>> mappingFunction = null;
     assertThrows(NullPointerException.class, () -> cache.get(null, mappingFunction));
@@ -312,6 +311,7 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  @SuppressWarnings("DataFlowIssue")
   public void getBiFunc_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
         cache.get(context.absentKey(), (k, executor) -> null));
@@ -396,8 +396,8 @@ public final class AsyncCacheTest {
   /* --------------- getAllFunc --------------- */
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKeys(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
@@ -405,8 +405,8 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKeys_nullFunction(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -415,8 +415,8 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullFunction(AsyncCache<Int, Int> cache, CacheContext context) {
     Function<Set<? extends Int>, Map<Int, Int>> mappingFunction = null;
@@ -426,6 +426,7 @@ public final class AsyncCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllFunction_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
@@ -472,8 +473,8 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @CheckMaxLogLevel(WARN)
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void getAllFunction_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getAll(context.absentKeys(), keys -> null))
         .failsWith(NullMapCompletionException.class);
@@ -508,6 +509,7 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  @SuppressWarnings("DataFlowIssue")
   public void getAllFunction_absent_nullMapping(AsyncCache<Int, Int> cache, CacheContext context) {
     context.absent().put(context.absentKey(), null);
     var result = cache.getAll(context.absentKeys(), keys -> context.absent()).join();
@@ -552,6 +554,7 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  @SuppressWarnings("DataFlowIssue")
   public void getAllFunction_exceeds_nullMapping(
       AsyncCache<Int, Int> cache, CacheContext context) {
     context.absent().put(context.absentKey(), null);
@@ -712,8 +715,8 @@ public final class AsyncCacheTest {
   /* --------------- getAllBiFunc --------------- */
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKeys(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
@@ -721,8 +724,8 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKeys_nullBifunction(
       AsyncCache<Int, Int> cache, CacheContext context) {
@@ -731,8 +734,8 @@ public final class AsyncCacheTest {
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullBifunction(AsyncCache<Int, Int> cache, CacheContext context) {
     BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;
@@ -741,6 +744,7 @@ public final class AsyncCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAllBifunction_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> {
@@ -801,6 +805,7 @@ public final class AsyncCacheTest {
   @CacheSpec
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void getAllBifunction_absent_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
         cache.getAll(context.absentKeys(), (keys, executor) -> null));
@@ -940,6 +945,7 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  @SuppressWarnings("DataFlowIssue")
   public void getAllBifunction_absent_nullMapping(
       AsyncCache<Int, Int> cache, CacheContext context) {
     context.absent().put(context.absentKey(), null);
@@ -987,6 +993,7 @@ public final class AsyncCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  @SuppressWarnings("DataFlowIssue")
   public void getAllBifunction_exceeds_nullMapping(
       AsyncCache<Int, Int> cache, CacheContext context) {
     context.absent().put(context.absentKey(), null);
@@ -1203,23 +1210,23 @@ public final class AsyncCacheTest {
 
   /* --------------- put --------------- */
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
     var value = context.absentValue().toFuture();
     assertThrows(NullPointerException.class, () -> cache.put(null, value));
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.put(context.absentKey(), null));
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullKeyAndValue(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.put(null, null));
@@ -1257,7 +1264,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_insert_failure_after_noLog(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future1 = new CompletableFuture<Int>();
+    var future1 = new CompletableFuture<@Nullable Int>();
     var future2 = new CompletableFuture<Int>();
     var future3 = new CompletableFuture<Int>();
     cache.put(Iterables.get(context.absentKeys(), 0), future1);
@@ -1469,7 +1476,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, removalListener = Listener.MOCKITO)
   public void removalListener_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
     future.complete(null);
 
@@ -1483,7 +1490,7 @@ public final class AsyncCacheTest {
   public void handleCompletion_brokenFuture_inFlight(
       AsyncCache<Int, Int> cache, CacheContext context) {
     CompletableFuture<Int> future = Mockito.spy();
-    ArgumentCaptor<BiConsumer<Int, Throwable>> captor = ArgumentCaptor.captor();
+    ArgumentCaptor<BiConsumer<Int, @Nullable Throwable>> captor = ArgumentCaptor.captor();
     doReturn(future).when(future).whenComplete(captor.capture());
     cache.put(context.absentKey(), future);
 
@@ -1513,7 +1520,7 @@ public final class AsyncCacheTest {
   public void handleCompletion_brokenFuture_cancel(
       AsyncCache<Int, Int> cache, CacheContext context) {
     CompletableFuture<Int> future = Mockito.spy();
-    ArgumentCaptor<BiConsumer<Int, Throwable>> captor = ArgumentCaptor.captor();
+    ArgumentCaptor<BiConsumer<Int, @Nullable Throwable>> captor = ArgumentCaptor.captor();
     doReturn(future).when(future).whenComplete(captor.capture());
     cache.put(context.absentKey(), future);
 
@@ -1544,8 +1551,8 @@ public final class AsyncCacheTest {
   @CacheSpec(population = Population.EMPTY)
   public void handleCompletion_brokenFuture_nullValue(
       AsyncCache<Int, Int> cache, CacheContext context) {
-    CompletableFuture<Int> future = Mockito.spy();
-    ArgumentCaptor<BiConsumer<Int, Throwable>> captor = ArgumentCaptor.captor();
+    CompletableFuture<@Nullable Int> future = Mockito.spy();
+    ArgumentCaptor<BiConsumer<Int, @Nullable Throwable>> captor = ArgumentCaptor.captor();
     doReturn(future).when(future).whenComplete(captor.capture());
     cache.put(context.absentKey(), future);
 

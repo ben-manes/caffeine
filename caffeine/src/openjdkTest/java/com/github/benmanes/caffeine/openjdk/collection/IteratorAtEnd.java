@@ -68,7 +68,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  */
 @SuppressWarnings({"AlmostJavadoc", "ClassIsInstance", "IdentifierName", "JdkObsolete",
     "MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonFinalStaticField", "rawtypes",
-    "SystemOut", "unchecked", "UnnecessaryFinal", "Var", "Varifier"})
+    "SequencedCollectionGetFirst", "SequencedCollectionGetLast", "SystemOut", "unchecked",
+    "UnnecessaryFinal", "Var", "Varifier"})
 public class IteratorAtEnd {
     private static final int SIZE = 6;
 

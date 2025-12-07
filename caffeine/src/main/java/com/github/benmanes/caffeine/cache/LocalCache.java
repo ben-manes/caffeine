@@ -104,11 +104,13 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
    * whether to record load statistics based on the success of this operation.
    */
-  @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+  @Nullable V compute(K key,
+      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad, boolean recordLoadFailure);
 
   @Override
-  default @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+  default @Nullable V computeIfAbsent(K key,
+      Function<? super K, ? extends @Nullable V> mappingFunction) {
     return computeIfAbsent(key, mappingFunction, /* recordStats= */ true, /* recordLoad= */ true);
   }
 

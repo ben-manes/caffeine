@@ -9,6 +9,7 @@ import kotlin.math.max
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
+  id("org.gradle.test-retry")
   id("java-library.caffeine")
   id("java-test-fixtures")
   id("jcstress.caffeine")
@@ -202,16 +203,21 @@ testing.suites {
       }
       for (scenario in Scenario.all()) {
         scenario.apply {
-          val task = targets.register(testName()) {
+          targets.register(testName()) {
             testTask.configure {
               group = "Parameterized Test"
               include("com/github/benmanes/caffeine/cache/**")
 
+              retry {
+                maxRetries = 3
+                filter.includeClasses = setOf("*BoundedLocalCacheTest",
+                  "*ReferenceTest", "*RefreshAfterWriteTest")
+              }
               systemProperties(
-                "keys" to keys.name,
-                "stats" to stats.name,
-                "values" to values.name,
-                "compute" to compute.name,
+                "keys" to keys,
+                "stats" to stats,
+                "values" to values,
+                "compute" to compute,
                 "implementation" to implementation)
 
               jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
@@ -234,14 +240,11 @@ testing.suites {
               }
             }
           }
-          tasks.check.configure {
-            dependsOn(task)
-          }
         }
       }
     }
   }
-  val apacheTest by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("apacheTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -258,7 +261,7 @@ testing.suites {
       }
     }
   }
-  val eclipseTest by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("eclipseTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -272,7 +275,7 @@ testing.suites {
       }
     }
   }
-  val fuzzTest by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("fuzzTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -289,7 +292,7 @@ testing.suites {
       }
     }
   }
-  val googleTest by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("googleTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -304,7 +307,7 @@ testing.suites {
       }
     }
   }
-  val moduleTest by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("moduleTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -317,7 +320,7 @@ testing.suites {
       }
     }
   }
-  val jctoolsTest by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("jctoolsTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -332,7 +335,7 @@ testing.suites {
       }
     }
   }
-  val jsr166Test by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("jsr166Test") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -345,7 +348,7 @@ testing.suites {
       }
     }
   }
-  val lincheckTest by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("lincheckTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -361,12 +364,12 @@ testing.suites {
         failFast = true
 
         // https://github.com/JetBrains/lincheck/issues/842
-        val isCompatibleJdk = java.toolchain.languageVersion.map { !it.canCompileOrRun(21) }
+        val isCompatibleJdk = java.toolchain.languageVersion.map { it.canCompileOrRun(21) }
         onlyIf { isCompatibleJdk.get() }
       }
     }
   }
-  val osgiTest by registering(JvmTestSuite::class) {
+  register<JvmTestSuite>("osgiTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -386,7 +389,7 @@ testing.suites {
       }
     }
   }
-  val openjdkTest by registering(JvmTestSuite::class) {
+  register("openjdkTest", JvmTestSuite::class) {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
@@ -401,18 +404,6 @@ testing.suites {
         useParallelJUnitJupiter()
       }
     }
-  }
-  tasks.check.configure {
-    dependsOn(fuzzTest)
-    dependsOn(osgiTest)
-    dependsOn(apacheTest)
-    dependsOn(googleTest)
-    dependsOn(jsr166Test)
-    dependsOn(moduleTest)
-    dependsOn(eclipseTest)
-    dependsOn(jctoolsTest)
-    dependsOn(openjdkTest)
-    dependsOn(lincheckTest)
   }
 }
 

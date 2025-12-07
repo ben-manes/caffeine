@@ -135,10 +135,12 @@ import com.github.benmanes.caffeine.cache.Caffeine;
     "EmptyCatch", "EntryIterableToImmutableMap", "ExplicitArrayForVarargs", "FieldCanBeFinal",
     "IdentifierName", "IdentityConversion", "IdentityHashMapBoxing", "InvalidParam",
     "IterableIsEmpty", "JdkObsolete", "JUnitClassModifiers", "JUnitMethodDeclaration",
-    "ModifyingCollectionWithItself", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
-    "NonFinalStaticField", "NonStaticImport", "NullAway", "ParameterMissingNullable", "rawtypes",
-    "ReferenceEquality", "resource", "ReturnValueIgnored", "SelfEquals", "SystemOut", "unchecked",
-    "UndefinedEquals", "UnnecessaryFinal", "unused", "UnusedMethod", "Var", "Varifier"})
+    "ListRemoveFirst", "ListRemoveLast", "ModifyingCollectionWithItself",
+    "MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonFinalStaticField", "NonStaticImport",
+    "NullAway", "ParameterMissingNullable", "rawtypes", "ReferenceEquality", "resource",
+    "ReturnValueIgnored", "SelfEquals", "SequencedCollectionGetFirst", "SequencedCollectionGetLast",
+    "SystemOut", "unchecked", "UndefinedEquals", "UnnecessaryFinal", "unused", "UnusedMethod",
+    "Var", "Varifier"})
 public class MOAT {
     // Collections under test must not be initialized to contain this value,
     // and maps under test must not contain this value as a key.

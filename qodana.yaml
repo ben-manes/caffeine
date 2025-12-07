@@ -1,6 +1,6 @@
 version: "1.0"
-projectJDK: "21"
-linter: jetbrains/qodana-jvm-community:2025.2
+projectJDK: "25"
+linter: jetbrains/qodana-jvm-community:2025.3
 profile:
   name: qodana.recommended
 licenseRules:
@@ -15,5 +15,6 @@ exclude:
   - name: NotNullFieldNotInitialized
   - name: NullableProblems
   - name: PackageDirectoryMismatch
+  - name: UnnecessaryModifier
   - name: UnnecessaryReturn
   - name: UnstableApiUsage

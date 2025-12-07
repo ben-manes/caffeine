@@ -60,9 +60,6 @@ testing.suites {
       implementation(project())
     }
   }
-  tasks.check.configure {
-    dependsOn(moduleTest)
-  }
 }
 
 tasks.named<Jar>("jar").configure {

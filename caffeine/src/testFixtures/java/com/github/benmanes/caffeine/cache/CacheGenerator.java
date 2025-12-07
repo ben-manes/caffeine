@@ -264,7 +264,7 @@ public final class CacheGenerator {
   private static ImmutableList<Map.Entry<Int, Int>> makeInts() {
     int size = Arrays.stream(Population.values())
         .mapToInt(population -> Math.toIntExact(population.size()))
-        .max().getAsInt();
+        .max().orElseThrow();
     var builder = new ImmutableList.Builder<Map.Entry<Int, Int>>();
     for (int i = 0; i < size; i++) {
       Int value = Int.valueOf(BASE + i);

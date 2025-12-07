@@ -765,7 +765,7 @@ public final class EvictionTest {
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
   public void computeIfPresent(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    long weightedSize = eviction.weightedSize().getAsLong()
+    long weightedSize = eviction.weightedSize().orElseThrow()
         + Math.abs(context.absentValue().intValue()) - context.firstKey().intValue();
     cache.asMap().computeIfPresent(context.firstKey(), (key, value) -> context.absentValue());
     assertThat(eviction.weightOf(context.firstKey()))
@@ -838,7 +838,7 @@ public final class EvictionTest {
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
   public void compute_insert(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    long weightedSize = eviction.weightedSize().getAsLong()
+    long weightedSize = eviction.weightedSize().orElseThrow()
         + Math.abs(context.absentValue().intValue());
     cache.asMap().compute(context.absentKey(), (key, value) -> context.absentValue());
     assertThat(eviction.weightOf(context.absentKey()))
@@ -851,7 +851,7 @@ public final class EvictionTest {
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
   public void compute_update(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    long weightedSize = eviction.weightedSize().getAsLong()
+    long weightedSize = eviction.weightedSize().orElseThrow()
         + Math.abs(context.absentValue().intValue()) - context.firstKey().intValue();
     cache.asMap().compute(context.firstKey(), (key, value) -> context.absentValue());
     assertThat(eviction.weightOf(context.firstKey()))
@@ -931,7 +931,7 @@ public final class EvictionTest {
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
   public void merge_absent(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    long weightedSize = eviction.weightedSize().getAsLong()
+    long weightedSize = eviction.weightedSize().orElseThrow()
         + Math.abs(context.absentValue().intValue());
     cache.asMap().merge(context.absentKey(),
         context.absentKey(), (key, value) -> context.absentValue());
@@ -945,7 +945,7 @@ public final class EvictionTest {
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
   public void merge_update(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
-    long weightedSize = eviction.weightedSize().getAsLong()
+    long weightedSize = eviction.weightedSize().orElseThrow()
         + Math.abs(context.absentValue().intValue()) - context.firstKey().intValue();
     cache.asMap().merge(context.firstKey(),
         context.absentKey(), (key, value) -> context.absentValue());
@@ -1108,7 +1108,7 @@ public final class EvictionTest {
       CacheContext context, Eviction<Int, Int> eviction) {
     @Var long weightedSize = 0;
     for (Int key : cache.asMap().keySet()) {
-      weightedSize += eviction.weightOf(key).getAsInt();
+      weightedSize += eviction.weightOf(key).orElseThrow();
     }
     assertThat(eviction.weightedSize()).hasValue(weightedSize);
     assertThat(weightedSize).isEqualTo(10 * cache.estimatedSize());

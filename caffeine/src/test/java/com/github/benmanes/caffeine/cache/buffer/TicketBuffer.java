@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>
  * The negatives of this algorithm is that it uses a boxed instance of the write index to track if
  * the slot is free. This allows the buffer to be non-blocking, whereas PTL is blocking.
- *
+ * <p>
  * https://blogs.oracle.com/dave/entry/ptlqueue_a_scalable_bounded_capacity
  *
  * @author ben.manes@gmail.com (Ben Manes)

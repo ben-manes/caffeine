@@ -301,16 +301,16 @@ public final class TimerWheelTest {
 
     long delay = timerWheel.getExpirationDelay();
     if (minDelay == Long.MAX_VALUE) {
-      var format = "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s";
-      assertWithMessage(format, delay, minDelay, minSpan, minBucket)
+      assertWithMessage(
+          "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s", delay, minDelay, minSpan, minBucket)
           .that(delay).isEqualTo(Long.MAX_VALUE);
       return;
     }
 
     long maxError = minDelay + SPANS[minSpan];
     if (maxError > delay) {
-      var format = "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s";
-      assertWithMessage(format, delay, minDelay, minSpan, minBucket)
+      assertWithMessage(
+          "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s", delay, minDelay, minSpan, minBucket)
           .that(delay).isLessThan(maxError);
     }
   }
@@ -621,7 +621,7 @@ public final class TimerWheelTest {
       int index = (ticks & bucketMask);
       var buckets = new TreeMap<String, List<Object>>();
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
-        var events = new ArrayList<Object>();
+        var events = new ArrayList<>();
         for (var node = timerWheel.wheel[i][j].getNextInVariableOrder();
              node != timerWheel.wheel[i][j]; node = node.getNextInVariableOrder()) {
           events.add(node.getKey());

@@ -18,15 +18,21 @@ import java.io.Serializable;
  */
 @Deprecated
 interface Sum extends Serializable {
+  @Deprecated
   Sum add(Object number);
 
+  @Deprecated
   Sum add(Number number);
 
+  @Deprecated
   Sum add(Sum otherSum);
 
+  @Deprecated
   Sum add(int value);
 
+  @Deprecated
   Number getValue();
 
+  @Deprecated
   Sum speciesNew();
 }

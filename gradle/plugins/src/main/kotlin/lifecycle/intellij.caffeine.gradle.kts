@@ -13,10 +13,15 @@ plugins {
 }
 
 val mockitoAgent by configurations.registering
-val excludes = rootDir.walkTopDown().filter {
-  it.name in listOf("bin", "build", "test-output", ".classpath",
-    ".gradle", ".kotlin", ".project", ".settings")
-}.toSet()
+val excludedFiles = setOf(".classpath", ".project")
+val excludeDirs = setOf(".gradle", ".kotlin", ".settings", "bin", "build", "test-output", "out")
+val excludeDirsRegex = excludeDirs
+  .joinToString(separator = "|", prefix = ".*(/", postfix = "/).*") { it.replace(".", "\\.") }
+  .toRegex()
+val excludes = rootDir.walkTopDown().maxDepth(5)
+  .onEnter { !it.name.startsWith(".") || !excludeDirsRegex.matches(it.parentFile.path) }
+  .filter { (it.name in excludeDirs) || (it.name in excludedFiles) }
+  .toSet()
 
 dependencies {
   mockitoAgent(libs.mockito) {

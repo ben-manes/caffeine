@@ -50,8 +50,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * It would be good to add more "Lockstep-style" tests to this file.
  */
 @SuppressWarnings({"MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonAtomicVolatileUpdate",
-    "rawtypes", "RedundantStringConversion", "SystemOut", "unchecked", "UnnecessaryFinal", "Var",
-    "Varifier"})
+    "rawtypes", "RedundantStringConversion", "SequencedCollectionGetFirst",
+    "SequencedCollectionGetLast", "SystemOut", "unchecked", "UnnecessaryFinal", "Var", "Varifier"})
 public class LockStep {
     void mapsEqual(Map m1, Map m2) {
         equal(m1, m2);

@@ -148,14 +148,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(keys));
+    var result = new LinkedHashMap<K, @Nullable V>(calculateHashMapCapacity(keys));
     for (K key : keys) {
       result.put(key, null);
     }
 
     int uniqueKeys = result.size();
     for (var iter = result.entrySet().iterator(); iter.hasNext();) {
-      Map.Entry<K, V> entry = iter.next();
+      Map.Entry<K, @Nullable V> entry = iter.next();
       V value = data.get(entry.getKey());
       if (value == null) {
         iter.remove();
@@ -166,7 +166,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     statsCounter.recordHits(result.size());
     statsCounter.recordMisses(uniqueKeys - result.size());
 
-    return Collections.unmodifiableMap(result);
+    @SuppressWarnings("NullableProblems")
+    Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
+    return unmodifiable;
   }
 
   @Override
@@ -315,7 +317,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+  public @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
       boolean recordLoadFailure) {
     requireNonNull(remappingFunction);
@@ -323,11 +325,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+  public @Nullable V merge(K key, V value,
+      BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
     requireNonNull(remappingFunction);
     requireNonNull(value);
 
-    return remap(key, (k, oldValue) ->
+    return remap(key, (K k, @Nullable V oldValue) ->
       (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value));
   }
 
@@ -338,10 +341,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
    * @param remappingFunction the function to compute a value
    * @return the new value associated with the specified key, or null if none
    */
-  V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+  @Nullable V remap(K key,
+      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    var oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     boolean[] replaced = new boolean[1];
     V nv = data.compute(key, (K k, V value) -> {
       V newValue = remappingFunction.apply(k, value);
@@ -404,8 +408,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public @Nullable V put(K key, V value) {
     requireNonNull(value);
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    var oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     data.compute(key, (K k, V v) -> {
       discardRefresh(k);
       oldValue[0] = v;
@@ -492,8 +496,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public @Nullable V replace(K key, V value) {
     requireNonNull(value);
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    var oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       discardRefresh(k);
       oldValue[0] = v;

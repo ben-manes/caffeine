@@ -36,6 +36,10 @@ configurations.all {
   }
 }
 
+tasks.check.configure {
+  dependsOn(tasks.withType<Test>())
+}
+
 tasks.withType<Test>().configureEach {
   inputs.property("javaDistribution", javaDistribution()).optional(true)
   inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })
@@ -46,6 +50,9 @@ tasks.withType<Test>().configureEach {
   jvmArgumentProviders.add { defaultJvmArguments.get() }
   jvmArgumentProviders.add { listOf("-javaagent:${javaAgent.get()}") }
   jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+EnableDynamicAgentLoading", "-Xshare:off")
+  if (javaTestVersion.get().canCompileOrRun(25)) {
+    jvmArgs("-XX:+UseCompactObjectHeaders")
+  }
 
   // Use -Pjfr to generate a profile
   if (rootProject.hasProperty("jfr")) {

@@ -42,12 +42,12 @@ runs:
         toolchainVersion=$(grep -oP '(?<=^toolchainVersion=).*' gradle/gradle-daemon-jvm.properties)
         echo "version=${toolchainVersion}" >> $GITHUB_OUTPUT
     - name: Set up JDK ${{ steps.gradle_toolchain.outputs.version }}
-      uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+      uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
       with:
         java-version: ${{ steps.gradle_toolchain.outputs.version }}
         distribution: temurin
     - name: Set up JDK
-      uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+      uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
       with:
         java-version: ${{ inputs.java }}
         distribution: ${{ inputs.java == '26-ea' && 'temurin' || inputs.distribution }}

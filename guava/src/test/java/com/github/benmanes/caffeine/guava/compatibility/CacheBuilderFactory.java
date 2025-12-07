@@ -103,6 +103,7 @@ class CacheBuilderFactory {
     return this;
   }
 
+  @SuppressWarnings("SequencedCollectionGetFirst")
   Iterable<Caffeine<Object, Object>> buildAllPermutations() {
     Iterable<List<Object>> combinations = buildCartesianProduct(concurrencyLevels,
         initialCapacities, maximumSizes, expireAfterWrites, expireAfterAccesses, refreshes,

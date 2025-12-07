@@ -69,7 +69,8 @@ public abstract class AbstractTraceReader implements TraceReader {
     @Var BufferedInputStream bufferedStream = null;
     try {
       bufferedStream = new BufferedInputStream(input, BUFFER_SIZE);
-      var extractors = List.<UnaryOperator<InputStream>>of(
+      @SuppressWarnings("NullAway")
+      var extractors = List.<UnaryOperator<@Nullable InputStream>>of(
           AbstractTraceReader::tryXz, AbstractTraceReader::tryCompressed, this::tryArchived);
       for (var extractor : extractors) {
         bufferedStream.mark(100);

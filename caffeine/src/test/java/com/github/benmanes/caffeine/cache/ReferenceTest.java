@@ -45,19 +45,15 @@ import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.apache.commons.lang3.Strings;
 import org.testng.Assert;
-import org.testng.ITestResult;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
-import org.testng.util.RetryAnalyzerCount;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
@@ -98,14 +94,14 @@ public final class ReferenceTest {
   // by making them behave like weak references. Typically this combination works:
   // -XX:SoftRefLRUPolicyMSPerMB=0 -XX:+UseParallelGC -XX:-ExplicitGCInvokesConcurrent
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL)
   public void identity_keys(Cache<Int, Int> cache, CacheContext context) {
     var key = new Int(context.firstKey());
     assertThat(cache).doesNotContainKey(key);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(values = {ReferenceType.WEAK, ReferenceType.SOFT}, population = Population.FULL)
   public void identity_values(Cache<Int, Int> cache, CacheContext context) {
     var value = new Int(context.original().get(context.firstKey()));
@@ -113,7 +109,7 @@ public final class ReferenceTest {
   }
 
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       requiresWeakOrSoft = true, evictionListener = Listener.REJECTING)
   public void collect_evictionListener_failure(CacheContext context) {
@@ -132,7 +128,7 @@ public final class ReferenceTest {
 
   /* --------------- Cache --------------- */
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -145,7 +141,7 @@ public final class ReferenceTest {
     assertThat(cache.getIfPresent(key)).isNull();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -164,7 +160,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
       values = {ReferenceType.WEAK, ReferenceType.SOFT})
   public void get_expiryFails(Cache<Int, Int> cache, CacheContext context) {
@@ -178,7 +174,7 @@ public final class ReferenceTest {
     assertThat(cache).doesNotContainKey(key);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -191,7 +187,7 @@ public final class ReferenceTest {
     assertThat(cache.getAllPresent(keys)).isExhaustivelyEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -216,7 +212,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -246,7 +242,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -266,7 +262,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -292,7 +288,7 @@ public final class ReferenceTest {
     assertThat(context).removalNotifications().withCause(EXPLICIT).contains(key, value);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -329,7 +325,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -365,7 +361,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -380,7 +376,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true, maximumSize = Maximum.FULL)
   public void coldest(CacheContext context, Eviction<Int, Int> eviction) {
     context.clear();
@@ -391,7 +387,7 @@ public final class ReferenceTest {
     assertThat(coldest).isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true, maximumSize = Maximum.FULL)
   public void hottest(CacheContext context, Eviction<Int, Int> eviction) {
     context.clear();
@@ -404,7 +400,7 @@ public final class ReferenceTest {
 
   /* --------------- LoadingCache --------------- */
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -424,7 +420,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, loader = Loader.IDENTITY)
   public void get_loading_expiryFails(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -438,7 +434,7 @@ public final class ReferenceTest {
     assertThat(cache).doesNotContainKey(key);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -463,7 +459,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -489,7 +485,7 @@ public final class ReferenceTest {
 
   /* --------------- AsyncCache --------------- */
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -504,7 +500,7 @@ public final class ReferenceTest {
     assertThat(cache.synchronous().getIfPresent(key)).isEqualTo(value);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -520,7 +516,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -538,7 +534,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -557,7 +553,7 @@ public final class ReferenceTest {
 
   /* --------------- Map --------------- */
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -569,7 +565,7 @@ public final class ReferenceTest {
     assertThat(context.cache()).whenCleanedUp().isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -581,7 +577,7 @@ public final class ReferenceTest {
     assertThat(context.cache()).whenCleanedUp().isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -593,7 +589,7 @@ public final class ReferenceTest {
     assertThat(map.containsKey(key)).isEqualTo(context.isStrongValues());
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @SuppressWarnings("PMD.UnusedAssignment")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -611,7 +607,7 @@ public final class ReferenceTest {
     assertThat(map.containsValue(value)).isNotEqualTo(context.isWeakKeys());
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -633,7 +629,7 @@ public final class ReferenceTest {
     assertThat(context).removalNotifications().hasSize(context.initialSize());
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -661,7 +657,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
@@ -680,7 +676,7 @@ public final class ReferenceTest {
     assertThat(context).hasWeightedSize(3);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
       values = {ReferenceType.WEAK, ReferenceType.SOFT})
   public void put_expiryFails(Cache<Int, Int> cache, CacheContext context) {
@@ -694,7 +690,7 @@ public final class ReferenceTest {
     assertThat(cache).doesNotContainKey(key);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -732,7 +728,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
       values = {ReferenceType.WEAK, ReferenceType.SOFT})
   public void put_map_expiryFails(Map<Int, Int> map, CacheContext context) {
@@ -746,7 +742,7 @@ public final class ReferenceTest {
     assertThat(map).doesNotContainKey(key);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -764,7 +760,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -778,7 +774,7 @@ public final class ReferenceTest {
     assertThat(map.replace(key, value, context.absentValue())).isTrue();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, values = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -790,7 +786,7 @@ public final class ReferenceTest {
     assertThat(map.replace(key, context.absentValue(), context.absentValue())).isFalse();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -826,7 +822,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -849,7 +845,7 @@ public final class ReferenceTest {
     assertThat(context).removalNotifications().withCause(EXPLICIT).contains(key, value);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -868,7 +864,7 @@ public final class ReferenceTest {
         .contains(collected).exclusively();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -895,7 +891,7 @@ public final class ReferenceTest {
   }
 
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -921,7 +917,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
@@ -939,7 +935,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
       values = {ReferenceType.WEAK, ReferenceType.SOFT})
   public void computeIfAbsent_expiryFails(Map<Int, Int> map, CacheContext context) {
@@ -954,7 +950,7 @@ public final class ReferenceTest {
   }
 
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -999,7 +995,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -1039,7 +1035,7 @@ public final class ReferenceTest {
   }
 
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -1074,7 +1070,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
@@ -1088,7 +1084,7 @@ public final class ReferenceTest {
     assertThat(context).hasWeightedSize(3);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
       values = {ReferenceType.WEAK, ReferenceType.SOFT})
   public void compute_expiryFails(Map<Int, Int> map, CacheContext context) {
@@ -1102,7 +1098,7 @@ public final class ReferenceTest {
     assertThat(map).doesNotContainKey(key);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -1139,7 +1135,7 @@ public final class ReferenceTest {
     }
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
@@ -1158,7 +1154,7 @@ public final class ReferenceTest {
     assertThat(context).hasWeightedSize(3);
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(requiresWeakOrSoft = true)
   public void iterators(Map<Int, Int> map, CacheContext context) {
     context.clear();
@@ -1168,7 +1164,7 @@ public final class ReferenceTest {
     assertThat(map.entrySet().iterator().hasNext()).isFalse();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
@@ -1182,14 +1178,14 @@ public final class ReferenceTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void keySet_contains(Map<Int, Int> map, CacheContext context) {
     assertThat(map.keySet().contains(new Int(context.firstKey()))).isFalse();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void keySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
@@ -1197,7 +1193,7 @@ public final class ReferenceTest {
     map.keySet().spliterator().forEachRemaining(key -> Assert.fail());
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
@@ -1205,7 +1201,7 @@ public final class ReferenceTest {
     assertThat(map.keySet().spliterator().tryAdvance(key -> Assert.fail())).isFalse();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       implementation = Implementation.Caffeine)
   public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1215,7 +1211,7 @@ public final class ReferenceTest {
     assertThat(map.keySet().stream().toArray(Int[]::new)).isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void keyStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
@@ -1224,7 +1220,7 @@ public final class ReferenceTest {
     assertThat(cache.asMap().keySet().stream().toArray(Int[]::new)).isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
@@ -1238,7 +1234,7 @@ public final class ReferenceTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void values_contains(Map<Int, Int> map, CacheContext context) {
@@ -1246,7 +1242,7 @@ public final class ReferenceTest {
     assertThat(map.values().contains(value)).isFalse();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void valueSpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
@@ -1254,7 +1250,7 @@ public final class ReferenceTest {
     map.values().spliterator().forEachRemaining(value -> Assert.fail());
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
@@ -1262,7 +1258,7 @@ public final class ReferenceTest {
     assertThat(map.values().spliterator().tryAdvance(value -> Assert.fail())).isFalse();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       implementation = Implementation.Caffeine)
   public void valueStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1272,7 +1268,7 @@ public final class ReferenceTest {
     assertThat(map.values().stream().toArray(Int[]::new)).isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void valueStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
@@ -1281,7 +1277,7 @@ public final class ReferenceTest {
     assertThat(cache.asMap().values().stream().toArray(Int[]::new)).isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
@@ -1295,7 +1291,7 @@ public final class ReferenceTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void entrySet_contains(Map<Int, Int> map, CacheContext context) {
@@ -1306,7 +1302,7 @@ public final class ReferenceTest {
 
   @CheckNoStats
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void entrySet_contains_nullValue(Map<Int, Int> map, CacheContext context) {
@@ -1317,7 +1313,7 @@ public final class ReferenceTest {
     assertThat(map.entrySet().contains(entry)).isFalse();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entrySet_equals(Map<Int, Int> map, CacheContext context) {
     var expected = context.absent();
@@ -1333,7 +1329,7 @@ public final class ReferenceTest {
     assertThat(expected.entrySet().equals(map.entrySet())).isTrue();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entrySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
@@ -1341,7 +1337,7 @@ public final class ReferenceTest {
     map.entrySet().spliterator().forEachRemaining(entry -> Assert.fail());
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entrySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
@@ -1349,7 +1345,7 @@ public final class ReferenceTest {
     assertThat(map.entrySet().spliterator().tryAdvance(entry -> Assert.fail())).isFalse();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       implementation = Implementation.Caffeine)
   public void entryStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1359,7 +1355,7 @@ public final class ReferenceTest {
     assertThat(map.entrySet().stream().toArray(Int[]::new)).isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entryStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
@@ -1368,7 +1364,7 @@ public final class ReferenceTest {
     assertThat(cache.asMap().entrySet().stream().toArray(Int[]::new)).isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void equals(Map<Int, Int> map, CacheContext context) {
     var expected = context.absent();
@@ -1384,7 +1380,7 @@ public final class ReferenceTest {
     assertThat(expected.equals(map)).isTrue();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.FULL, requiresWeakOrSoft = true)
   public void equals_cleanUp(Map<Int, Int> map, CacheContext context) {
@@ -1397,7 +1393,7 @@ public final class ReferenceTest {
     assertThat(context.cache()).isEmpty();
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void hashCode(Map<Int, Int> map, CacheContext context) {
     var expected = context.absent();
@@ -1411,7 +1407,7 @@ public final class ReferenceTest {
     assertThat(map.hashCode()).isEqualTo(expected.hashCode());
   }
 
-  @Test(dataProvider = "caches", retryAnalyzer = SoftValueRetry.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void toString(Map<Int, Int> map, CacheContext context) {
     var expected = context.absent();
@@ -1494,18 +1490,5 @@ public final class ReferenceTest {
       expected.add(new SimpleImmutableEntry<>(key, value));
     });
     return expected;
-  }
-
-  /** Retries due to soft references not being deterministically garbage collected. */
-  public static final class SoftValueRetry extends RetryAnalyzerCount {
-    public SoftValueRetry() {
-      setCount(3);
-    }
-    @Override public boolean retryMethod(ITestResult result) {
-      return !result.isSuccess()
-          && Strings.CI.contains(result.getThrowable().getMessage(), "expected")
-          && Arrays.stream(result.getParameters())
-              .anyMatch(param -> param.toString().contains("valueStrength=SOFT"));
-    }
   }
 }

@@ -223,7 +223,7 @@ public final class TypesafeConfigurationTest {
     when(customized.hasPathOrNull(anyString())).thenReturn(true);
     when(root.getConfig(anyString())).thenReturn(customized);
 
-    var configurator = new Configurator<Object, Object>(root, "cache");
+    var configurator = new Configurator<>(root, "cache");
     configurator.addExecutor();
     verify(customized).hasPathOrNull(anyString());
   }

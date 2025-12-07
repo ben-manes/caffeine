@@ -80,7 +80,7 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
    * inserted, or when an existing entry has been re-accessed and moved to the head. The epoch is
    * used to determine whether an entry's test period has expired or not. Use int64 type or
    * consider handling integer overflow.
-   *
+   * <p>
    * For example, integer overflow can be handled by:
    * {@snippet lang="java":
    * // Newer returns true if x is newer epoch than y, otherwise return false. This method is safe

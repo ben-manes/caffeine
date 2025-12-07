@@ -395,7 +395,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /* --------------- Removal Listener Support --------------- */
 
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   protected RemovalListener<K, V> removalListener() {
     return null;
   }
@@ -449,12 +449,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     return false;
   }
 
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   protected ReferenceQueue<K> keyReferenceQueue() {
     return null;
   }
 
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   protected ReferenceQueue<V> valueReferenceQueue() {
     return null;
   }
@@ -514,7 +514,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public Expiry<K, V> expiry() {
     return null;
   }
@@ -627,10 +627,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     throw new UnsupportedOperationException();
   }
 
-  protected int sampleCount() {
-    throw new UnsupportedOperationException();
-  }
-
   protected double stepSize() {
     throw new UnsupportedOperationException();
   }
@@ -650,11 +646,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @GuardedBy("evictionLock")
   protected void setMissesInSample(int missCount) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock")
-  protected void setSampleCount(int sampleCount) {
     throw new UnsupportedOperationException();
   }
 
@@ -1427,8 +1418,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param now the current time, in nanoseconds
    * @return the expiration time
    */
-  long expireAfterCreate(K key, V value, Expiry<? super K, ? super V> expiry, long now) {
+  long expireAfterCreate(K key, V value, @Nullable Expiry<? super K, ? super V> expiry, long now) {
     if (expiresVariable()) {
+      requireNonNull(expiry);
       long duration = Math.max(0L, expiry.expireAfterCreate(key, value, now));
       return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
     }
@@ -1446,8 +1438,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return the expiration time
    */
   long expireAfterUpdate(Node<K, V> node, K key, V value,
-      Expiry<? super K, ? super V> expiry, long now) {
+      @Nullable Expiry<? super K, ? super V> expiry, long now) {
     if (expiresVariable()) {
+      requireNonNull(expiry);
       long currentDuration = Math.max(1, node.getVariableTime() - now);
       long duration = Math.max(0L, expiry.expireAfterUpdate(key, value, now, currentDuration));
       return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
@@ -2079,6 +2072,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     // Remove any stragglers if released early to more aggressively flush incoming writes
     @Var boolean cleanUp = false;
     for (var node : entries) {
+      @SuppressWarnings("DataFlowIssue")
       var key = node.getKey();
       if (key == null) {
         cleanUp = true;
@@ -2158,7 +2152,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  @SuppressWarnings("SuspiciousMethodCalls")
   public boolean containsValue(Object value) {
     requireNonNull(value);
 
@@ -2242,7 +2235,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(keys));
+    var result = new LinkedHashMap<K, @Nullable V>(calculateHashMapCapacity(keys));
     for (K key : keys) {
       result.put(key, null);
     }
@@ -2265,7 +2258,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     statsCounter().recordHits(result.size());
     statsCounter().recordMisses(uniqueKeys - result.size());
 
-    return Collections.unmodifiableMap(result);
+    @SuppressWarnings("NullableProblems")
+    Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
+    return unmodifiable;
   }
 
   @Override
@@ -2563,7 +2558,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     });
 
-    if ((nodeKey[0] == null) || (oldValue[0] == null)) {
+    if ((node == null) || (nodeKey[0] == null) || (oldValue[0] == null)) {
       return null;
     }
 
@@ -2630,7 +2625,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return n;
     });
 
-    if ((nodeKey[0] == null) || (prevValue[0] == null)) {
+    if ((node == null) || (nodeKey[0] == null) || (prevValue[0] == null)) {
       return false;
     }
 
@@ -2674,7 +2669,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           tryExpireAfterRead(node, key, value, expiry(), now);
           setAccessTime(node, now);
         }
-        var refreshed = afterRead(node, now, /* recordHit= */ recordStats);
+        @Nullable V refreshed = afterRead(node, now, /* recordHit= */ recordStats);
         return (refreshed == null) ? value : refreshed;
       }
     }
@@ -2835,7 +2830,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     long[] now = { expirationTicker().read() };
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    BiFunction<? super K, ? super V, ? extends V> mergeFunction = (k, oldValue) ->
+    BiFunction<? super K, ? super @Nullable V, ? extends V> mergeFunction = (k, oldValue) ->
         (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value);
     return remap(key, keyRef, mergeFunction, expiry(), now, /* computeIfAbsent= */ true);
   }
@@ -2859,7 +2854,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Nullable V remap(K key, Object keyRef,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
-      Expiry<? super K, ? super V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {
+      @Nullable Expiry<? super K, ? super V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings({"unchecked", "Varifier"})
@@ -2867,7 +2862,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] newValue = (V[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
-    Node<K, V>[] removed = new Node[1];
+    @Nullable Node<K, V>[] removed = new Node[1];
 
     var weight = new int[2]; // old, new
     var cause = new RemovalCause[1];
@@ -4052,7 +4047,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         var inFlight = new IdentityHashMap<K, CompletableFuture<V>>(refreshes.size());
         for (var entry : refreshes.entrySet()) {
           @SuppressWarnings("unchecked")
-          var key = ((InternalReference<K>) entry.getKey()).get();
+          @Nullable K key = ((InternalReference<K>) entry.getKey()).get();
           @SuppressWarnings("unchecked")
           var future = (CompletableFuture<V>) entry.getValue();
           if (key != null) {
@@ -4373,8 +4368,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         var delegate = (LocalCache<K, CompletableFuture<V>>) cache;
 
-        @SuppressWarnings({"rawtypes", "unchecked"})
-        var newValue = (V[]) new Object[1];
+        @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+        @Nullable V[] newValue = (@Nullable V[]) new Object[1];
         for (;;) {
           Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
@@ -4384,7 +4379,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             }
 
             V oldValue = Async.getIfReady(oldValueFuture);
-            BiFunction<? super K, ? super V, ? extends V> function = delegate.statsAware(
+            BiFunction<? super K, ? super V, ? extends @Nullable V> function = delegate.statsAware(
                 remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
             newValue[0] = function.apply(key, oldValue);
             return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
@@ -4476,7 +4471,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    @SuppressWarnings("NullAway")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     public AsyncCacheLoader<? super K, V> cacheLoader() {
       return cache.cacheLoader;
     }

@@ -15,17 +15,20 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Locale.US;
-import static org.apache.commons.lang3.StringUtils.capitalize;
+import static com.google.common.base.Preconditions.checkState;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+
+import org.apache.commons.lang3.Strings;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
-import com.google.common.base.Enums;
 
 /**
  * The test generation options.
@@ -43,16 +46,28 @@ final class Options {
   private final Optional<Stats> stats;
 
   private Options(Properties properties) {
-    implementation = Optional.ofNullable(Enums.getIfPresent(Implementation.class,
-        capitalize(properties.getProperty("implementation", "").toLowerCase(US))).orNull());
-    compute = Optional.ofNullable(Enums.getIfPresent(Compute.class,
-        properties.getProperty("compute", "").toUpperCase(US)).orNull());
-    keys = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
-        properties.getProperty("keys", "").toUpperCase(US)).orNull());
-    values = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
-        properties.getProperty("values", "").toUpperCase(US)).orNull());
-    stats = Optional.ofNullable(Enums.getIfPresent(Stats.class,
-        properties.getProperty("stats", "").toUpperCase(US)).orNull());
+    implementation = option(Implementation.class, "implementation", properties);
+    values = option(ReferenceType.class, "values", properties);
+    compute = option(Compute.class, "compute", properties);
+    keys = option(ReferenceType.class, "keys", properties);
+    stats = option(Stats.class, "stats", properties);
+    var settings = List.of(implementation, compute, keys, values, stats);
+    checkState(settings.stream().allMatch(Optional::isEmpty)
+        || settings.stream().allMatch(Optional::isPresent), "Inconsistent settings: %s", settings);
+  }
+
+  private static <T extends Enum<T>> Optional<T> option(
+      Class<T> enumClass, String property, Properties properties) {
+    var value = properties.getProperty(property);
+    if (isBlank(value)) {
+      return Optional.empty();
+    }
+    for (var option : EnumSet.allOf(enumClass)) {
+      if (Strings.CI.equals(option.name(), value)) {
+        return Optional.of(option);
+      }
+    }
+    throw new IllegalStateException(value + " not found in " + EnumSet.allOf(enumClass));
   }
 
   /** Returns the test options from the system properties. */
