@@ -167,9 +167,8 @@ public final class JCacheCombinedExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
     advancePastExpiry();
 
-    var result = jcache.invoke(KEY_1, (entry, args) -> {
-      return null;
-    });
+    @SuppressWarnings("DataFlowIssue")
+    var result = jcache.invoke(KEY_1, (entry, args) -> null);
     assertThat(result).isNull();
     assertThat(getExpirable(jcache, KEY_1)).isNull();
   }

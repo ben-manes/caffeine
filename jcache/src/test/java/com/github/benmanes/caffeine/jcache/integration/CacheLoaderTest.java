@@ -30,6 +30,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -52,6 +53,7 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void load_null() {
     when(cacheLoader.load(any())).thenReturn(null);
     assertThat(jcacheLoading.get(1)).isNull();
@@ -91,8 +93,9 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test
+  @SuppressWarnings("NullableProblems")
   public void loadAll_nullMapping() {
-    var mappings = new HashMap<Integer, Integer>();
+    var mappings = new HashMap<@Nullable Integer, @Nullable Integer>();
     mappings.put(1, null);
     mappings.put(null, 2);
     when(cacheLoader.loadAll(anyIterable())).thenReturn(mappings);

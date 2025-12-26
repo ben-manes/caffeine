@@ -87,7 +87,7 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   @SuppressWarnings({"DataFlowIssue", "NullAway"})
-  public void get_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void get_null(AsyncLoadingCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.get(null));
   }
 
@@ -182,7 +182,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void getAll_iterable_null(AsyncLoadingCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.getAll(null));
   }
 
@@ -191,7 +191,7 @@ public final class AsyncLoadingCacheTest {
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_nullKey(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void getAll_iterable_nullKey(AsyncLoadingCache<Int, Int> cache) {
     List<Int> keys = Collections.singletonList(null);
     assertThrows(NullPointerException.class, () -> cache.getAll(keys));
   }
@@ -200,7 +200,7 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_empty(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  public void getAll_iterable_empty(AsyncLoadingCache<Int, Int> cache) {
     assertThat(cache.getAll(List.of()).join()).isExhaustivelyEmpty();
   }
 

@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
-import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
@@ -70,8 +69,6 @@ public final class CacheContext {
   private static final ThreadLocal<Map<Object, Object>> interner =
       ThreadLocal.withInitial(HashMap::new);
 
-  private final RemovalListener<Int, Int> evictionListener;
-  private final RemovalListener<Int, Int> removalListener;
   private final Weigher<Object, Object> weigher;
   private final InitialCapacity initialCapacity;
   private final Implementation implementation;
@@ -81,14 +78,12 @@ public final class CacheContext {
   private final Listener removalListenerType;
   private final CacheExecutor cacheExecutor;
   private final ReferenceType valueStrength;
-  private final TrackingExecutor executor;
   private final ReferenceType keyStrength;
   private final CacheWeigher cacheWeigher;
   private final Map<Int, Int> original;
   private final CacheExpiry expiryType;
   private final Population population;
   private final Maximum maximumSize;
-  private final Scheduler scheduler;
   private final StartTime startTime;
   private final Expire afterAccess;
   private final Expire afterWrite;
@@ -98,15 +93,18 @@ public final class CacheContext {
   private final Loader loader;
   private final Stats stats;
 
+  private final @Nullable RemovalListener<Int, Int> evictionListener;
+  private final @Nullable RemovalListener<Int, Int> removalListener;
+  private final @Nullable TrackingExecutor executor;
   private final @Nullable Expiry<Int, Int> expiry;
+  private final @Nullable Scheduler scheduler;
 
   private final boolean isAsyncLoader;
 
-  private CacheBuilder<Object, Object> guava;
-  private Caffeine<Object, Object> caffeine;
-  private AsyncCache<?, ?> asyncCache;
-  private Cache<?, ?> cache;
-
+  private @Nullable CacheBuilder<Object, Object> guava;
+  private @Nullable Caffeine<Object, Object> caffeine;
+  private @Nullable AsyncCache<?, ?> asyncCache;
+  private @Nullable Cache<?, ?> cache;
   private @Nullable Int firstKey;
   private @Nullable Int middleKey;
   private @Nullable Int lastKey;
@@ -118,6 +116,7 @@ public final class CacheContext {
   private @Nullable Map<Int, Int> absent;
 
   /** A copy constructor that does not include the cache instance or any generated fields. */
+  @SuppressWarnings("CopyConstructorMissesField")
   public CacheContext(CacheContext context) {
     this(context.initialCapacity, context.stats, context.cacheWeigher, context.maximumSize,
         context.expiryType, context.afterAccess, context.afterWrite, context.refresh,
@@ -214,19 +213,19 @@ public final class CacheContext {
   }
 
   public Caffeine<Object, Object> caffeine() {
-    return caffeine;
+    return requireNonNull(caffeine);
   }
 
   public CacheBuilder<Object, Object> guava() {
-    return guava;
+    return requireNonNull(guava);
   }
 
   public AsyncCache<?, ?> asyncCache() {
-    return asyncCache;
+    return requireNonNull(asyncCache);
   }
 
   public Cache<?, ?> cache() {
-    return cache;
+    return requireNonNull(cache);
   }
 
   public InitialCapacity initialCapacity() {
@@ -270,7 +269,7 @@ public final class CacheContext {
   }
 
   public void cleanUp() {
-    cache.cleanUp();
+    cache().cleanUp();
   }
 
   public void clear() {
@@ -410,7 +409,7 @@ public final class CacheContext {
 
   public void clearRemovalNotifications() {
     if (removalListenerType() == Listener.CONSUMING) {
-      var listener = (ConsumingRemovalListener<?, ?>) removalListener;
+      var listener = (ConsumingRemovalListener<?, ?>) removalListener();
       listener.removed().clear();
     }
   }
@@ -428,7 +427,7 @@ public final class CacheContext {
   }
 
   public CacheStats stats() {
-    return cache.stats();
+    return cache().stats();
   }
 
   public boolean expires(Expiration expiration) {
@@ -453,9 +452,8 @@ public final class CacheContext {
     return (expiryType != CacheExpiry.DISABLED);
   }
 
-  @NullUnmarked
   public Expiry<Int, Int> expiry() {
-    return expiry;
+    return requireNonNull(expiry);
   }
 
   public CacheExpiry expiryType() {
@@ -481,10 +479,11 @@ public final class CacheContext {
   public <K, V> LoadingCache<K, V> build(CacheLoader<K, V> loader) {
     LoadingCache<K, V> loading;
     if (isCaffeine()) {
-      loading = isAsync() ? caffeine.buildAsync(loader).synchronous() : caffeine.build(loader);
+      loading = isAsync() ? caffeine().buildAsync(loader).synchronous() : caffeine().build(loader);
     } else {
       var guavaLoader = new SingleLoader<>(loader);
-      loading = new GuavaLoadingCache<>(guava.build(asyncReloading(guavaLoader, executor)), this);
+      loading = new GuavaLoadingCache<>(guava().build(
+          asyncReloading(guavaLoader, executor())), this);
     }
     this.cache = loading;
     return loading;
@@ -492,16 +491,16 @@ public final class CacheContext {
 
   public <K, V> AsyncLoadingCache<K, V> buildAsync(CacheLoader<K, V> loader) {
     checkState(isCaffeine() && isAsync());
-    AsyncLoadingCache<K, V> async = caffeine.buildAsync(loader);
-    this.cache = asyncCache.synchronous();
+    AsyncLoadingCache<K, V> async = caffeine().buildAsync(loader);
+    this.cache = async.synchronous();
     this.asyncCache = async;
     return async;
   }
 
   public <K, V> AsyncLoadingCache<K, V> buildAsync(AsyncCacheLoader<K, V> loader) {
     checkState(isCaffeine() && isAsync());
-    AsyncLoadingCache<K, V> async = caffeine.buildAsync(loader);
-    this.cache = asyncCache.synchronous();
+    AsyncLoadingCache<K, V> async = caffeine().buildAsync(loader);
+    this.cache = async.synchronous();
     this.asyncCache = async;
     return async;
   }
@@ -523,11 +522,11 @@ public final class CacheContext {
   }
 
   public TrackingExecutor executor() {
-    return executor;
+    return requireNonNull(executor);
   }
 
   public Scheduler scheduler() {
-    return scheduler;
+    return requireNonNull(scheduler);
   }
 
   @Override

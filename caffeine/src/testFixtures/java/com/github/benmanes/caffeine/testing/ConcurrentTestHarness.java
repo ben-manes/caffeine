@@ -26,6 +26,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
+import org.jspecify.annotations.Nullable;
+
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -85,10 +87,10 @@ public final class ConcurrentTestHarness {
    */
   @CanIgnoreReturnValue
   @SuppressWarnings("InterruptedExceptionSwallowed")
-  public static <T> TestResult<T> timeTasks(int nThreads, Callable<T> task) {
+  public static <T> TestResult<T> timeTasks(int nThreads, Callable<? extends @Nullable T> task) {
     var startGate = new CountDownLatch(1);
     var endGate = new CountDownLatch(nThreads);
-    var results = new AtomicReferenceArray<T>(nThreads);
+    var results = new AtomicReferenceArray<@Nullable T>(nThreads);
 
     for (int i = 0; i < nThreads; i++) {
       int index = i;
@@ -123,8 +125,8 @@ public final class ConcurrentTestHarness {
    * @param data the per-thread results from the test
    * @return the per-thread results as a standard collection
    */
-  private static <T> List<T> toList(AtomicReferenceArray<T> data) {
-    var list = new ArrayList<T>(data.length());
+  private static <T> List<@Nullable T> toList(AtomicReferenceArray<@Nullable T> data) {
+    var list = new ArrayList<@Nullable T>(data.length());
     for (int i = 0; i < data.length(); i++) {
       list.add(data.get(i));
     }
@@ -137,10 +139,10 @@ public final class ConcurrentTestHarness {
    * @param <T> the data type produced by the task
    */
   public static final class TestResult<T> {
+    private final List<@Nullable T> results;
     private final long executionTime;
-    private final List<T> results;
 
-    public TestResult(long executionTime, List<T> results) {
+    public TestResult(long executionTime, List<@Nullable T> results) {
       this.executionTime = executionTime;
       this.results = results;
     }
@@ -159,7 +161,7 @@ public final class ConcurrentTestHarness {
      *
      * @return The outputs from the tasks.
      */
-    public List<T> results() {
+    public List<@Nullable T> results() {
       return results;
     }
   }

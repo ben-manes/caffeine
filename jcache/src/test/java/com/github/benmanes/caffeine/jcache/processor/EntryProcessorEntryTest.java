@@ -43,6 +43,7 @@ public final class EntryProcessorEntryTest {
   }
 
   @Test
+  @SuppressWarnings("EqualsWithItself")
   public void equals() {
     assertThat(entry.equals(entry)).isTrue();
   }

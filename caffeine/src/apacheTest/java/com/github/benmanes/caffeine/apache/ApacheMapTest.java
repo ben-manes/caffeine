@@ -41,10 +41,10 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
  */
 @ParameterizedClass
 @MethodSource("caches")
-final class CaffeineMapTest<K, V> extends AbstractMapTest<ConcurrentMap<K, V>, K, V> {
+final class ApacheMapTest<K, V> extends AbstractMapTest<ConcurrentMap<K, V>, K, V> {
   final CacheContext template;
 
-  CaffeineMapTest(CacheContext template) {
+  ApacheMapTest(CacheContext template) {
     this.template = requireNonNull(template);
   }
   @Override public boolean isAllowNullKey() {
@@ -70,7 +70,7 @@ final class CaffeineMapTest<K, V> extends AbstractMapTest<ConcurrentMap<K, V>, K
       weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
       evictionListener = Listener.DISABLED, stats = Stats.ENABLED)
   static Stream<CacheContext> caches() throws NoSuchMethodException {
-    var cacheSpec = CaffeineMapTest.class.getDeclaredMethod("caches")
+    var cacheSpec = ApacheMapTest.class.getDeclaredMethod("caches")
         .getAnnotation(CacheSpec.class);
     return new CacheGenerator(cacheSpec).generate();
   }

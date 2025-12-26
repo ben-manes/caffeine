@@ -107,7 +107,7 @@ public final class CacheStatsTest {
 
   @Test
   public void saturatedAdd() {
-    // Should never allow have negative parameter, but added as a safety check
+    // Should never be allowed to have negative parameter, but added as a safety check
     assertThat(CacheStats.saturatedAdd(10, 5)).isEqualTo(15);
     assertThat(CacheStats.saturatedAdd(10, -5)).isEqualTo(5);
     assertThat(CacheStats.saturatedAdd(-10, -5)).isEqualTo(-15);

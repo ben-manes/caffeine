@@ -181,7 +181,8 @@ final class References {
    * the advent that the key is reclaimed so that the entry can be removed from the cache in
    * constant time.
    */
-  static class WeakKeyReference<K> extends WeakReference<K> implements InternalReference<K> {
+  static class WeakKeyReference<K> extends WeakReference<@Nullable K>
+      implements InternalReference<K> {
     private final int hashCode;
 
     public WeakKeyReference(@Nullable K key, @Nullable ReferenceQueue<K> queue) {
@@ -252,7 +253,7 @@ final class References {
    * the advent that the value is reclaimed so that the entry can be removed from the cache in
    * constant time.
    */
-  static final class WeakValueReference<V> extends WeakReference<V>
+  static final class WeakValueReference<V> extends WeakReference<@Nullable V>
       implements InternalReference<V> {
     private Object keyReference;
 
@@ -293,7 +294,7 @@ final class References {
    * the advent that the value is reclaimed so that the entry can be removed from the cache in
    * constant time.
    */
-  static final class SoftValueReference<V> extends SoftReference<V>
+  static final class SoftValueReference<V> extends SoftReference<@Nullable V>
       implements InternalReference<V> {
     private Object keyReference;
 

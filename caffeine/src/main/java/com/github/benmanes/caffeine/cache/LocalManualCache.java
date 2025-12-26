@@ -75,8 +75,8 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
 
     var found = cache().getAllPresent(keys);
     int initialCapacity = calculateHashMapCapacity(keys);
-    var result = new LinkedHashMap<K, V>(initialCapacity);
     var keysToLoad = new LinkedHashSet<K>(initialCapacity);
+    var result = new LinkedHashMap<K, @Nullable V>(initialCapacity);
     for (K key : keys) {
       V value = found.get(key);
       if (value == null) {
@@ -87,16 +87,18 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
     if (keysToLoad.isEmpty()) {
       return found;
     }
-
     bulkLoad(keysToLoad, result, mappingFunction);
-    return Collections.unmodifiableMap(result);
+
+    @SuppressWarnings("NullableProblems")
+    Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
+    return unmodifiable;
   }
 
   /**
    * Performs a non-blocking bulk load of the missing keys. Any missing entry that materializes
    * during the load are replaced when the loaded entries are inserted into the cache.
    */
-  default void bulkLoad(Set<K> keysToLoad, Map<K, V> result,
+  default void bulkLoad(Set<K> keysToLoad, Map<K, @Nullable V> result,
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     long startTime = cache().statsTicker().read();
     @Var boolean success = false;

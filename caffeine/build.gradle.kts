@@ -363,9 +363,26 @@ testing.suites {
         maxHeapSize = "3g"
         failFast = true
 
-        // https://github.com/JetBrains/lincheck/issues/842
-        val isCompatibleJdk = java.toolchain.languageVersion.map { it.canCompileOrRun(21) }
-        onlyIf { isCompatibleJdk.get() }
+        // https://github.com/JetBrains/lincheck/issues/915
+        if (java.toolchain.languageVersion.get().canCompileOrRun(25)) {
+          jvmArgs("-XX:-UseCompactObjectHeaders")
+        }
+      }
+    }
+  }
+  register("openjdkTest", JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.truth)
+      implementation(libs.testng)
+
+      runtimeOnly(libs.junit.jupiter.testng)
+    }
+    targets.all {
+      testTask.configure {
+        useParallelJUnitJupiter()
       }
     }
   }
@@ -386,22 +403,6 @@ testing.suites {
         inputs.files(jar.map { it.outputs.files })
         val jarFile = jar.flatMap { it.archiveFile }.map { it.asFile }
         doFirst { systemProperty("caffeine.osgi.jar", jarFile.get().relativeTo(relativeDir).path) }
-      }
-    }
-  }
-  register("openjdkTest", JvmTestSuite::class) {
-    useJUnitJupiter(libs.versions.junit.jupiter)
-
-    dependencies {
-      implementation(project())
-      implementation(libs.truth)
-      implementation(libs.testng)
-
-      runtimeOnly(libs.junit.jupiter.testng)
-    }
-    targets.all {
-      testTask.configure {
-        useParallelJUnitJupiter()
       }
     }
   }

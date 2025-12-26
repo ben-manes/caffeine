@@ -59,6 +59,8 @@ import com.palantir.javapoet.ParameterizedTypeName;
 import com.palantir.javapoet.TypeName;
 import com.palantir.javapoet.TypeSpec;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Generates the cache entry's specialized type. These entries are optimized for the configuration
  * to minimize memory use. An entry may have any of the following properties:
@@ -78,7 +80,7 @@ public final class NodeFactoryGenerator {
   private final List<Rule<NodeContext>> rules = List.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
       new AddFactoryMethods(),  new AddHealth(), new Finalize());
-  private final Feature[] featureByIndex = { null, null, Feature.EXPIRE_ACCESS,
+  private final @Nullable Feature[] featureByIndex = { null, null, Feature.EXPIRE_ACCESS,
       Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
   private final List<TypeSpec> nodeTypes;
   private final Path directory;
@@ -128,7 +130,7 @@ public final class NodeFactoryGenerator {
   private void generatedNodes() {
     NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures = getClassNameToFeatures();
     classNameToFeatures.forEach((className, features) -> {
-      String higherKey = classNameToFeatures.higherKey(className);
+      var higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
       TypeSpec nodeSpec = makeNodeSpec(className, isLeaf, features);
       nodeTypes.add(nodeSpec);
@@ -152,7 +154,7 @@ public final class NodeFactoryGenerator {
     features.add((Feature) combination.get(1));
     for (int i = 2; i < combination.size(); i++) {
       if ((Boolean) combination.get(i)) {
-        features.add(featureByIndex[i]);
+        features.add(requireNonNull(featureByIndex[i]));
       }
     }
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {

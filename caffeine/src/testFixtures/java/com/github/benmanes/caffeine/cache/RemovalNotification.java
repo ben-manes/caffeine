@@ -31,7 +31,8 @@ import com.google.errorprone.annotations.Immutable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Immutable(containerOf = {"K", "V"})
-public final class RemovalNotification<K, V> extends SimpleImmutableEntry<K, V> {
+public final class RemovalNotification<K, V>
+    extends SimpleImmutableEntry<@Nullable K, @Nullable V> {
   private static final long serialVersionUID = 1L;
 
   private final RemovalCause cause;

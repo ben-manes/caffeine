@@ -58,6 +58,6 @@ public final class ObjectStoreTraceReader extends TextTraceReader {
           }
           long key = new BigInteger(array[2], 16).longValue();
           return AccessEvent.forKeyAndWeight(key, weight);
-        }).filter(Objects::nonNull);
+        }).filter(Objects::nonNull).map(Objects::requireNonNull);
   }
 }

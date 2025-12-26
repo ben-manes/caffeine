@@ -21,6 +21,8 @@ import java.lang.ref.ReferenceQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.References.LookupKeyReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.google.errorprone.annotations.Var;
@@ -55,12 +57,12 @@ interface NodeFactory<K, V> {
   }
 
   /** Returns a node optimized for the specified features. */
-  Node<K, V> newNode(K key, ReferenceQueue<K> keyReferenceQueue, V value,
-      ReferenceQueue<V> valueReferenceQueue, int weight, long now);
+  Node<K, V> newNode(K key, @Nullable ReferenceQueue<K> keyReferenceQueue, V value,
+      @Nullable ReferenceQueue<V> valueReferenceQueue, int weight, long now);
 
   /** Returns a node optimized for the specified features. */
   Node<K, V> newNode(Object keyReference, V value,
-      ReferenceQueue<V> valueReferenceQueue, int weight, long now);
+      @Nullable ReferenceQueue<V> valueReferenceQueue, int weight, long now);
 
   /**
    * Returns a key suitable for inserting into the cache. If the cache holds keys strongly then the

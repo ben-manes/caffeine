@@ -293,7 +293,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void offer_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.offer(deque.peek())).isFalse();
+    var value = requireNonNull(deque.peek());
+    assertThat(deque.offer(value)).isFalse();
     assertThat(deque).hasSize(SIZE);
   }
 
@@ -317,7 +318,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void offerFirst_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.offerFirst(deque.peek())).isFalse();
+    var value = requireNonNull(deque.peek());
+    assertThat(deque.offerFirst(value)).isFalse();
     assertThat(deque).hasSize(SIZE);
   }
 
@@ -341,7 +343,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void offerLast_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.offerLast(deque.peek())).isFalse();
+    var value = requireNonNull(deque.peek());
+    assertThat(deque.offerLast(value)).isFalse();
     assertThat(deque).hasSize(SIZE);
   }
 
@@ -367,7 +370,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void add_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThat(deque.add(deque.peek())).isFalse();
+    var value = requireNonNull(deque.peek());
+    assertThat(deque.add(value)).isFalse();
   }
 
   @Test(dataProvider = "empty")
@@ -390,7 +394,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void addFirst_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThrows(IllegalArgumentException.class, () -> deque.addFirst(deque.peek()));
+    var value = requireNonNull(deque.peek());
+    assertThrows(IllegalArgumentException.class, () -> deque.addFirst(value));
   }
 
   @Test(dataProvider = "empty")
@@ -413,7 +418,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void addLast_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThrows(IllegalArgumentException.class, () -> deque.addLast(deque.peek()));
+    var value = requireNonNull(deque.peek());
+    assertThrows(IllegalArgumentException.class, () -> deque.addLast(value));
   }
 
   @Test(dataProvider = "empty")
@@ -649,7 +655,7 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void remove_withPopulated(LinkedDeque<LinkedValue> deque) {
-    var first = deque.peekFirst();
+    var first = requireNonNull(deque.peekFirst());
     assertThat(deque.removeAll(List.of(first))).isTrue();
     assertThat(deque.contains(first)).isFalse();
     assertThat(deque).hasSize(SIZE - 1);
@@ -683,7 +689,8 @@ public final class LinkedDequeTest {
 
   @Test(dataProvider = "full")
   public void push_whenLinked(LinkedDeque<LinkedValue> deque) {
-    assertThrows(IllegalArgumentException.class, () -> deque.push(deque.peek()));
+    var value = requireNonNull(deque.peek());
+    assertThrows(IllegalArgumentException.class, () -> deque.push(value));
   }
 
   @Test(dataProvider = "empty")

@@ -171,7 +171,7 @@ jobs:
           - suite: caffeine:weakKeysAndSoftValuesSyncGuavaTest
             java: 11
           - suite: caffeine:lincheckTest
-            java: 21
+            java: 11
           - suite: caffeine:fuzzTest
             java: 11
     env:
@@ -194,9 +194,7 @@ jobs:
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Format Test Artifact Name
-        if: >
-          always() &&
-          ((env.JAVA_VERSION == env.PUBLISH_JDK) || (matrix.suite == 'caffeine:lincheckTest'))
+        if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
         id: format_artifact
         env:
           INPUTS_ARGUMENTS: ${{ matrix.suite }}

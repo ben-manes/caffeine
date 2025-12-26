@@ -38,6 +38,7 @@ import java.util.function.Function;
 
 import javax.cache.CacheException;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -55,14 +56,14 @@ public final class JavaSerializationCopierTest {
         new JavaSerializationCopier(immutableClasses, deepCopyStrategies));
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "copier")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void null_object(Copier copier) {
     assertThrows(NullPointerException.class, () -> copy(copier, null));
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "copier")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void null_classLoader(Copier copier) {
     assertThrows(NullPointerException.class, () -> copier.copy(1, null));
   }
@@ -170,7 +171,7 @@ public final class JavaSerializationCopierTest {
   }
 
   @DataProvider(name = "nullArgs")
-  public Object[][] providesNullArgs() {
-    return new Object[][] { { null, null }, { null, Map.of() }, { Set.of(), null } };
+  public @Nullable Object[][] providesNullArgs() {
+    return new @Nullable Object[][] { { null, null }, { null, Map.of() }, { Set.of(), null } };
   }
 }

@@ -54,6 +54,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -92,10 +93,10 @@ public final class LoadingCacheTest {
   /* --------------- get --------------- */
 
   @CacheSpec
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
-  public void get_null(LoadingCache<Int, Int> cache, CacheContext context) {
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
+  public void get_null(LoadingCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.get(null));
   }
 
@@ -159,10 +160,10 @@ public final class LoadingCacheTest {
   /* --------------- getAll --------------- */
 
   @CheckNoEvictions
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_null(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void getAll_iterable_null(LoadingCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.getAll(null));
   }
 
@@ -170,7 +171,8 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_nullKey(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void getAll_iterable_nullKey(LoadingCache<Int, Int> cache) {
+    @SuppressWarnings("DataFlowIssue")
     List<Int> keys = Collections.singletonList(null);
     assertThrows(NullPointerException.class, () -> cache.getAll(keys));
   }
@@ -458,10 +460,10 @@ public final class LoadingCacheTest {
   /* --------------- refresh --------------- */
 
   @CheckNoEvictions
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void refresh_null(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void refresh_null(LoadingCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.refresh(null));
   }
 
@@ -760,9 +762,8 @@ public final class LoadingCacheTest {
       assertThat(future).succeedsWith(refreshed);
     }
 
-    await().untilAsserted(() -> {
-      assertThat(context).removalNotifications().withCause(REPLACED).contains(key, refreshed);
-    });
+    await().untilAsserted(() ->
+        assertThat(context).removalNotifications().withCause(REPLACED).contains(key, refreshed));
 
     assertThat(context).stats().success(1).failures(0);
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -865,7 +866,8 @@ public final class LoadingCacheTest {
       expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
       expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, removalListener = Listener.CONSUMING)
-  public void refresh_expired_inFlight(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void refresh_expired_inFlight(
+      LoadingCache<Int, @Nullable Int> cache, CacheContext context) {
     var future1 = cache.refresh(context.firstKey());
     context.ticker().advance(Duration.ofMinutes(10));
     var future2 = cache.refresh(context.firstKey());
@@ -993,7 +995,7 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings("NullAway")
+      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         return null;
       }
@@ -1008,7 +1010,7 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings("NullAway")
+      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
         return null;
@@ -1023,7 +1025,8 @@ public final class LoadingCacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       compute = Compute.SYNC, loader = Loader.ASYNC_INCOMPLETE,
       removalListener = Listener.CONSUMING)
-  public void refresh_discard_failure(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void refresh_discard_failure(
+      LoadingCache<Int, @Nullable Int> cache, CacheContext context) {
     var loading = (LocalLoadingCache<Int, Int>) cache;
     cache.put(context.absentKey(), context.absentValue());
     var future = cache.refresh(context.absentKey());
@@ -1234,18 +1237,19 @@ public final class LoadingCacheTest {
 
   /* --------------- refreshAll --------------- */
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void refreshAll_null(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void refreshAll_null(LoadingCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.refreshAll(null));
   }
 
   @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void refreshAll_nullKey(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void refreshAll_nullKey(LoadingCache<Int, Int> cache) {
+    @SuppressWarnings("DataFlowIssue")
     List<Int> keys = Collections.singletonList(null);
     assertThrows(NullPointerException.class, () -> cache.refreshAll(keys));
   }
@@ -1340,7 +1344,7 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings("NullAway")
+      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         return null;
       }
@@ -1355,7 +1359,7 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings("NullAway")
+      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
         return null;
@@ -1433,7 +1437,7 @@ public final class LoadingCacheTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void bulk_null() {
     assertThrows(NullPointerException.class, () -> CacheLoader.bulk(null));
   }
@@ -1447,9 +1451,8 @@ public final class LoadingCacheTest {
 
   @Test
   public void bulk_present() throws Exception {
-    CacheLoader<Int, Int> loader = CacheLoader.bulk(keys -> {
-      return keys.stream().collect(toImmutableMap(identity(), identity()));
-    });
+    CacheLoader<Int, Int> loader = CacheLoader.bulk(keys ->
+        keys.stream().collect(toImmutableMap(identity(), identity())));
     assertThat(loader.loadAll(Int.setOf(1, 2))).containsExactlyEntriesIn(Int.mapOf(1, 1, 2, 2));
     assertThat(loader.load(Int.valueOf(1))).isEqualTo(1);
   }

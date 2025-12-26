@@ -66,7 +66,7 @@ public final class FutureSubject extends Subject {
     }
   }
 
-  /** Fails if the future is has not completed exceptionally. */
+  /** Fails if the future has not completed exceptionally. */
   public void hasCompletedExceptionally() {
     requireNonNull(actual);
     if (!actual.isCompletedExceptionally()) {

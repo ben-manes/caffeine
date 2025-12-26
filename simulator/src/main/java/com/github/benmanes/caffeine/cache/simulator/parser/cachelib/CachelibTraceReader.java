@@ -43,10 +43,11 @@ public final class CachelibTraceReader extends TextTraceReader {
 
   @Override
   public Stream<AccessEvent> events() {
+    // header: key, op, size, op_count, key_size
     return lines().skip(1)
         .map(line -> line.split(","))
         .filter(array -> array[1].equals("GET"))
         .map(array -> AccessEvent.forKeyAndWeight(
-            Long.parseLong(array[0]), Integer.parseInt(array[1])));
+            Long.parseLong(array[0]), Integer.parseInt(array[2])));
   }
 }

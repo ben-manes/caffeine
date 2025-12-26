@@ -66,7 +66,7 @@ final class Async {
    * if successful to the user-supplied removal listener.
    */
   static final class AsyncRemovalListener<K, V>
-      implements RemovalListener<K, CompletableFuture<V>>, Serializable {
+      implements RemovalListener<K, CompletableFuture<@Nullable V>>, Serializable {
     private static final long serialVersionUID = 1L;
 
     final RemovalListener<K, V> delegate;
@@ -80,7 +80,7 @@ final class Async {
     @Override
     @SuppressWarnings("FutureReturnValueIgnored")
     public void onRemoval(@Nullable K key,
-        @Nullable CompletableFuture<V> future, RemovalCause cause) {
+        @Nullable CompletableFuture<@Nullable V> future, RemovalCause cause) {
       if (future != null) {
         future.thenAcceptAsync(value -> {
           if (value != null) {

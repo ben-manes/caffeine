@@ -105,7 +105,7 @@ final class CaffeinatedGuavaTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   void cacheLoader_null() {
     assertThrows(NullPointerException.class, () -> CaffeinatedGuava.caffeinate(null));
 

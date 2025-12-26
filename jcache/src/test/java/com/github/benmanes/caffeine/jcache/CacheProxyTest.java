@@ -103,7 +103,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"NullAway", "ObjectToString", "unchecked"})
+  @SuppressWarnings({"DataFlowIssue", "NullAway", "ObjectToString", "unchecked"})
   public void getConfiguration_immutable() {
     var config = jcache.getConfiguration(CaffeineConfiguration.class);
     var type = UnsupportedOperationException.class;
@@ -171,8 +171,9 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
+  @SuppressWarnings("NullableProblems")
   public void loadAll_nullMapping() throws InterruptedException, ExecutionException {
-    var result = new HashMap<Integer, Integer>();
+    var result = new HashMap<@Nullable Integer, @Nullable Integer>();
     result.put(null, VALUE_1);
     result.put(KEY_1, null);
 

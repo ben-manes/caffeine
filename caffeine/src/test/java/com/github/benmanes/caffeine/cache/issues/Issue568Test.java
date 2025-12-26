@@ -76,8 +76,9 @@ public final class Issue568Test {
     for (Thread thread : threads) {
       thread.join();
     }
-    if (error.get() != null) {
-      throw error.get();
+    var e = error.get();
+    if (e != null) {
+      throw e;
     }
   }
 
@@ -128,8 +129,9 @@ public final class Issue568Test {
     for (var thread : threads) {
       thread.join();
     }
-    if (error.get() != null) {
-      throw error.get();
+    var e = error.get();
+    if (e != null) {
+      throw e;
     }
   }
 }

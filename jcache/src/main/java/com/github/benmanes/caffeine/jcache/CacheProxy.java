@@ -248,7 +248,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   @SuppressWarnings({"CollectionUndefinedEquality", "FutureReturnValueIgnored"})
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
-      CompletionListener completionListener) {
+      @Nullable CompletionListener completionListener) {
     requireNotClosed();
     keys.forEach(Objects::requireNonNull);
     CompletionListener listener = (completionListener == null)
@@ -290,6 +290,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Performs the bulk load where the existing entries are retained. */
+  @SuppressWarnings("ConstantValue")
   private void loadAllAndKeepExisting(Set<? extends K> keys) {
     List<K> keysToLoad = keys.stream()
         .filter(key -> !cache.asMap().containsKey(key))
@@ -537,7 +538,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param key key whose mapping is to be removed from the cache
    * @return the old value
    */
-  private V removeNoCopyOrAwait(K key) {
+  private @Nullable V removeNoCopyOrAwait(K key) {
     @SuppressWarnings("unchecked")
     var removed = (V[]) new Object[1];
     cache.asMap().computeIfPresent(key, (k, expirable) -> {
@@ -596,7 +597,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
-  public V getAndRemove(K key) {
+  public @Nullable V getAndRemove(K key) {
     requireNotClosed();
     requireNonNull(key);
     boolean statsEnabled = statistics.isEnabled();
@@ -679,7 +680,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
 
-    V oldValue = replaceNoCopyOrAwait(key, value);
+    @Nullable V oldValue = replaceNoCopyOrAwait(key, value);
     dispatcher.awaitSynchronous();
     if (oldValue == null) {
       statistics.recordMisses(1L);
@@ -695,7 +696,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
-  public V getAndReplace(K key, V value) {
+  public @Nullable V getAndReplace(K key, V value) {
     requireNotClosed();
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
@@ -727,7 +728,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param value value to be associated with the specified key
    * @return the old value
    */
-  private V replaceNoCopyOrAwait(K key, V value) {
+  private @Nullable V replaceNoCopyOrAwait(K key, V value) {
     requireNonNull(value);
     V copy = copyOf(value);
     @SuppressWarnings("unchecked")
@@ -1108,7 +1109,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param <T> the type of object being copied
    * @return a copy of the object if storing by value or the same instance if by reference
    */
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   protected final <T> T copyOf(@Nullable T object) {
     if (object == null) {
       return null;
@@ -1123,7 +1124,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param expirable the expirable value to be copied
    * @return a copy of the value if storing by value or the same instance if by reference
    */
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   protected final V copyValue(@Nullable Expirable<V> expirable) {
     if (expirable == null) {
       return null;

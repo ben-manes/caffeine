@@ -95,7 +95,8 @@ public final class CaffeineCachingProvider implements CachingProvider {
   }
 
   @Override
-  public CacheManager getCacheManager(URI uri, ClassLoader classLoader, Properties properties) {
+  public CacheManager getCacheManager(URI uri,
+      ClassLoader classLoader, @Nullable Properties properties) {
     URI managerUri = getManagerUri(uri);
     ClassLoader managerClassLoader = getManagerClassLoader(classLoader);
 
@@ -157,11 +158,11 @@ public final class CaffeineCachingProvider implements CachingProvider {
     return (optionalFeature == STORE_BY_REFERENCE);
   }
 
-  private URI getManagerUri(URI uri) {
+  private URI getManagerUri(@Nullable URI uri) {
     return (uri == null) ? getDefaultURI() : uri;
   }
 
-  private ClassLoader getManagerClassLoader(ClassLoader classLoader) {
+  private ClassLoader getManagerClassLoader(@Nullable ClassLoader classLoader) {
     return (classLoader == null) ? getDefaultClassLoader() : classLoader;
   }
 

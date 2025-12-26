@@ -30,6 +30,7 @@ import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -46,8 +47,8 @@ import com.google.errorprone.annotations.Var;
  */
 public final class InternerTest {
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "interners")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void intern_null(Interner<Int> interner) {
     assertThrows(NullPointerException.class, () -> interner.intern(null));
   }
@@ -120,13 +121,14 @@ public final class InternerTest {
   }
 
   @Test
+  @SuppressWarnings("ConstantValue")
   public void intern_weak_retry() {
     var canonical = new Int(1);
     var other = new Int(1);
 
     var done = new AtomicBoolean();
     var started = new AtomicBoolean();
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var interner = (WeakInterner<Int>) Interner.<Int>newWeakInterner();
 
     var result = interner.cache.compute(canonical, (k, v) -> {
@@ -145,14 +147,15 @@ public final class InternerTest {
       });
       return true;
     });
+    await().untilTrue(done);
     assertThat(result).isTrue();
     assertThat(interner.intern(canonical)).isSameInstanceAs(canonical);
   }
 
   @Test
   public void intern_strong_present() {
-    var result = new AtomicReference<Int>();
-    var writer = new AtomicReference<Thread>();
+    var result = new AtomicReference<@Nullable Int>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var interner = (StrongInterner<Int>) Interner.<Int>newStrongInterner();
 
     interner.map.computeIfAbsent(Int.MAX_VALUE, key -> {
@@ -176,7 +179,7 @@ public final class InternerTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void factory() {
     assertThat(Interned.FACTORY.newReferenceKey(new Object(), null))
         .isInstanceOf(WeakKeyEqualsReference.class);
@@ -192,6 +195,7 @@ public final class InternerTest {
 
   @Test
   public void interned() {
+    @SuppressWarnings("DataFlowIssue")
     var node = new Interned<Object, Boolean>(new WeakReference<>(null));
     assertThat(node.isAlive()).isTrue();
     assertThat(node.getValue()).isTrue();

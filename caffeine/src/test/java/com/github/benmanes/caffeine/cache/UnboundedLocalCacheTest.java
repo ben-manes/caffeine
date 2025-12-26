@@ -49,7 +49,7 @@ public final class UnboundedLocalCacheTest {
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   @Test(dataProvider = "caches")
-  public void noPolicy(Cache<Integer, Integer> cache, CacheContext context) {
+  public void noPolicy(Cache<Integer, Integer> cache) {
     assertThat(cache.policy().eviction()).isEmpty();
     assertThat(cache.policy().expireAfterWrite()).isEmpty();
     assertThat(cache.policy().expireAfterAccess()).isEmpty();
@@ -100,7 +100,7 @@ public final class UnboundedLocalCacheTest {
     Integer key = 1;
     cache.refreshes().put(key, new CompletableFuture<>());
 
-    @SuppressWarnings("NullAway")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     var result = cache.computeIfAbsent(key, k -> null,
         /* recordStats= */ false, /* recordLoad= */ false);
     assertThat(result).isNull();

@@ -56,7 +56,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SampledPolicy implements KeyOnlyPolicy {
-  final Long2ObjectMap<Node> data;
+  final Long2ObjectMap<@Nullable Node> data;
   final PolicyStats policyStats;
   final @Nullable Node[] table;
   final EvictionPolicy policy;
@@ -118,6 +118,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   /** Evicts if the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
+      @SuppressWarnings("NullableProblems")
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
           : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
@@ -153,7 +154,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
         while (sample.size() < sampleSize) {
           int index = random.nextInt(elements.length);
           if (elements[index] != candidate) {
-            sample.add(elements[index]);
+            sample.add(requireNonNull(elements[index]));
           }
         }
         return sample;
@@ -170,6 +171,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
             continue;
           }
           count++;
+          requireNonNull(e);
           if (sample.size() <= sampleSize) {
             sample.add(e);
           } else {
@@ -183,6 +185,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     },
     SHUFFLE {
+      @SuppressWarnings("NullableProblems")
       @Override public <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         var sample = new ArrayList<>(Arrays.asList(elements));

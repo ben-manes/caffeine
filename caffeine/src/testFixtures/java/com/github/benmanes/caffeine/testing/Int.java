@@ -40,7 +40,7 @@ import com.google.errorprone.annotations.Immutable;
  */
 @Immutable
 public final class Int implements Serializable {
-  public static final Int MAX_VALUE = Int.valueOf(Integer.MAX_VALUE);
+  public static final Int MAX_VALUE = new Int(Integer.MAX_VALUE);
 
   private static final long serialVersionUID = 1L;
 
@@ -160,7 +160,7 @@ public final class Int implements Serializable {
     return valueOf(i).toFuture();
   }
 
-  /** Returns a preallocated range of {@code Int} instances */
+  /** Returns a pre-allocated range of {@code Int} instances */
   private static Int[] makeSharedCache() {
     var array = new Int[high - low + 1];
     for (int i = 0; i < array.length; i++) {

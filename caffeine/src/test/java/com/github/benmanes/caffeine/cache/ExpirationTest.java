@@ -497,7 +497,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void getIfPresent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
     context.ticker().advance(Duration.ofMinutes(5));
@@ -573,7 +573,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void get_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.get(context.absentKey(), k -> k)).isSameInstanceAs(future);
     context.ticker().advance(Duration.ofMinutes(5));
@@ -718,7 +718,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void containsKey_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.asMap().containsKey(context.absentKey())).isTrue();
     assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isFalse();
@@ -748,7 +748,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void containsValue_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.asMap().containsValue(future)).isTrue();
     context.ticker().advance(Duration.ofMinutes(5));
@@ -865,9 +865,9 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<Int>();
-    var f2 = new CompletableFuture<Int>();
-    var f3 = new CompletableFuture<Int>();
+    var f1 = new CompletableFuture<@Nullable Int>();
+    var f2 = new CompletableFuture<@Nullable Int>();
+    var f3 = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().put(context.absentKey(), f2)).isSameInstanceAs(f1);
     context.ticker().advance(Duration.ofMinutes(5));
@@ -917,9 +917,9 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void replace_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<Int>();
-    var f2 = new CompletableFuture<Int>();
-    var f3 = new CompletableFuture<Int>();
+    var f1 = new CompletableFuture<@Nullable Int>();
+    var f2 = new CompletableFuture<@Nullable Int>();
+    var f3 = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().replace(context.absentKey(), f2)).isSameInstanceAs(f1);
     context.ticker().advance(Duration.ofMinutes(5));
@@ -971,9 +971,9 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void replaceConditionally_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<Int>();
-    var f2 = new CompletableFuture<Int>();
-    var f3 = new CompletableFuture<Int>();
+    var f1 = new CompletableFuture<@Nullable Int>();
+    var f2 = new CompletableFuture<@Nullable Int>();
+    var f3 = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().replace(context.absentKey(), f1, f2)).isTrue();
     context.ticker().advance(Duration.ofMinutes(5));
@@ -1146,7 +1146,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void computeIfAbsent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<Int>();
+    var f1 = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().computeIfAbsent(
         context.absentKey(), key -> null)).isSameInstanceAs(f1);
@@ -1254,16 +1254,17 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.MOCKITO },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
-  public void computeIfPresent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<Int>();
-    var f2 = new CompletableFuture<Int>();
+  public void computeIfPresent_inFlight(
+      AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<@Nullable Int>();
+    var f2 = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), f1);
     cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
       assertThat(f).isSameInstanceAs(f1);
       return f2;
     });
 
-    var f3 = new CompletableFuture<Int>();
+    var f3 = new CompletableFuture<@Nullable Int>();
     context.ticker().advance(Duration.ofMinutes(5));
     cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
       assertThat(f).isSameInstanceAs(f2);
@@ -1398,16 +1399,16 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.MOCKITO },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
-  public void compute_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<Int>();
-    var f2 = new CompletableFuture<Int>();
+  public void compute_inFlight(AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<@Nullable Int>();
+    var f2 = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), f1);
     cache.asMap().compute(context.absentKey(), (k, f) -> {
       assertThat(f).isSameInstanceAs(f1);
       return f2;
     });
 
-    var f3 = new CompletableFuture<Int>();
+    var f3 = new CompletableFuture<@Nullable Int>();
     context.ticker().advance(Duration.ofMinutes(5));
     cache.asMap().compute(context.absentKey(), (k, f) -> {
       assertThat(f).isSameInstanceAs(f2);
@@ -1543,7 +1544,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void keySet_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.asMap().keySet().contains(context.absentKey())).isTrue();
 
@@ -1668,7 +1669,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void values_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.asMap().values().contains(future)).isTrue();
 
@@ -1728,7 +1729,7 @@ public final class ExpirationTest {
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void valueStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
-    assertThat(cache.asMap().values().stream().toArray(Int[]::new)).isEmpty();
+    assertThat(cache.asMap().values().stream().toArray(CompletableFuture<?>[]::new)).isEmpty();
     assertThat(cache.asMap().values().stream().toArray()).isEmpty();
   }
 
@@ -1792,7 +1793,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void entrySet_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.asMap().entrySet().contains(entry(context.absentKey(), future))).isTrue();
 
@@ -1838,7 +1839,7 @@ public final class ExpirationTest {
       implementation = Implementation.Caffeine)
   public void entryStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
-    assertThat(map.entrySet().stream().toArray(Int[]::new)).isEmpty();
+    assertThat(map.entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
     assertThat(map.entrySet().stream().toArray()).isEmpty();
   }
 
@@ -1852,7 +1853,7 @@ public final class ExpirationTest {
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   public void entryStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(context.expiryTime().duration().multipliedBy(2));
-    assertThat(cache.asMap().entrySet().stream().toArray(Int[]::new)).isEmpty();
+    assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
     assertThat(cache.asMap().entrySet().stream().toArray()).isEmpty();
   }
 
@@ -1956,7 +1957,7 @@ public final class ExpirationTest {
 
   private static Map<String, String> parseToString(Map<Int, Int> map) {
     return Splitter.on(',').trimResults().omitEmptyStrings().withKeyValueSeparator("=")
-        .split(map.toString().replaceAll("\\{|\\}", ""));
+        .split(map.toString().replaceAll("[{}]", ""));
   }
 
   /* --------------- Policy --------------- */

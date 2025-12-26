@@ -100,6 +100,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
@@ -352,7 +353,7 @@ public final class BoundedLocalCacheTest {
       await().untilTrue(done);
     };
     var cache = asBoundedLocalCache(Caffeine.newBuilder()
-        .executor(CacheExecutor.THREADED.create())
+        .executor(ConcurrentTestHarness.executor)
         .evictionListener(evictionListener)
         .maximumSize(0)
         .build());
@@ -422,8 +423,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DEFAULT)
-  public void rescheduleCleanUpIfIncomplete_immediate(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  public void rescheduleCleanUpIfIncomplete_immediate(BoundedLocalCache<Int, Int> cache) {
     cache.drainStatus = REQUIRED;
     cache.rescheduleCleanUpIfIncomplete();
     await().untilAsserted(() -> assertThat(cache.drainStatus).isEqualTo(IDLE));
@@ -516,7 +516,7 @@ public final class BoundedLocalCacheTest {
     pacer.cancel();
 
     cache.rescheduleCleanUpIfIncomplete();
-    assertThat(cache.pacer().isScheduled()).isTrue();
+    assertThat(pacer.isScheduled()).isTrue();
     verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
   }
 
@@ -533,14 +533,13 @@ public final class BoundedLocalCacheTest {
     cache.drainStatus = REQUIRED;
 
     cache.rescheduleCleanUpIfIncomplete();
-    assertThat(cache.pacer().isScheduled()).isTrue();
+    assertThat(pacer.isScheduled()).isTrue();
     verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
-  public void afterWrite_drainFullWriteBuffer(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  public void afterWrite_drainFullWriteBuffer(BoundedLocalCache<Int, Int> cache) {
     cache.drainStatus = PROCESSING_TO_IDLE;
 
     int[] queued = { 0 };
@@ -615,8 +614,8 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
-  public void weightedSize_noMaintenance(BoundedLocalCache<Int, Int> cache,
-      CacheContext context, Eviction<Int, Int> eviction) {
+  public void weightedSize_noMaintenance(
+      BoundedLocalCache<Int, Int> cache, Eviction<Int, Int> eviction) {
     cache.drainStatus = REQUIRED;
     var weight = eviction.weightedSize();
     assertThat(cache.drainStatus).isEqualTo(REQUIRED);
@@ -1318,9 +1317,9 @@ public final class BoundedLocalCacheTest {
         (k, v, cause) -> removedValues.accumulateAndGet(v, Int::add);
 
     var cache = Caffeine.newBuilder()
-        .executor(CacheExecutor.DIRECT.create())
         .evictionListener(evictionListener)
         .removalListener(removalListener)
+        .executor(Runnable::run)
         .maximumSize(100)
         .build();
     var localCache = asBoundedLocalCache(cache);
@@ -1454,7 +1453,7 @@ public final class BoundedLocalCacheTest {
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
-    var evictor = new AtomicReference<Thread>();
+    var evictor = new AtomicReference<@Nullable Thread>();
     var computed = cache.compute(key, (k, v) -> {
       assertThat(v).isNull();
       ConcurrentTestHarness.execute(() -> {
@@ -1492,7 +1491,7 @@ public final class BoundedLocalCacheTest {
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
-    var evictor = new AtomicReference<Thread>();
+    var evictor = new AtomicReference<@Nullable Thread>();
     cache.asMap().compute(key, (k, v) -> {
       ConcurrentTestHarness.execute(() -> {
         evictor.set(Thread.currentThread());
@@ -1528,7 +1527,7 @@ public final class BoundedLocalCacheTest {
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
-    var evictor = new AtomicReference<Thread>();
+    var evictor = new AtomicReference<@Nullable Thread>();
     context.ticker().advance(Duration.ofHours(1));
     cache.asMap().compute(key, (k, v) -> {
       ConcurrentTestHarness.execute(() -> {
@@ -1562,7 +1561,7 @@ public final class BoundedLocalCacheTest {
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
-    var evictor = new AtomicReference<Thread>();
+    var evictor = new AtomicReference<@Nullable Thread>();
     context.ticker().advance(Duration.ofMinutes(1));
     cache.asMap().compute(key, (k, v) -> {
       ConcurrentTestHarness.execute(() -> {
@@ -1596,7 +1595,7 @@ public final class BoundedLocalCacheTest {
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
-    var evictor = new AtomicReference<Thread>();
+    var evictor = new AtomicReference<@Nullable Thread>();
     context.ticker().advance(Duration.ofMinutes(1));
     cache.asMap().compute(key, (k, v) -> {
       ConcurrentTestHarness.execute(() -> {
@@ -1630,7 +1629,7 @@ public final class BoundedLocalCacheTest {
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
-    var evictor = new AtomicReference<Thread>();
+    var evictor = new AtomicReference<@Nullable Thread>();
     context.ticker().advance(Duration.ofHours(1));
     cache.asMap().compute(key, (k, v) -> {
       ConcurrentTestHarness.execute(() -> {
@@ -1666,7 +1665,7 @@ public final class BoundedLocalCacheTest {
 
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
-    var evictor = new AtomicReference<Thread>();
+    var evictor = new AtomicReference<@Nullable Thread>();
     var node = requireNonNull(cache.data.get(cache.referenceKey(key)));
     synchronized (node) {
       context.ticker().advance(Duration.ofHours(1));
@@ -1919,9 +1918,8 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
-  public void exceedsMaximumBufferSize_onRead(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    @SuppressWarnings("NullAway")
+  public void exceedsMaximumBufferSize_onRead(BoundedLocalCache<Int, Int> cache) {
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     var dummy = cache.nodeFactory.newNode(
         new WeakKeyReference<>(null, null), null, null, 1, 0);
     cache.frequencySketch().ensureCapacity(1);
@@ -1944,7 +1942,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
   public void exceedsMaximumBufferSize_onWrite(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+      BoundedLocalCache<Int, Int> cache) {
     var ran = new boolean[1];
     cache.afterWrite(() -> ran[0] = true);
     assertThat(ran[0]).isTrue();
@@ -2015,7 +2013,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
-  public void drain_onWrite(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  public void drain_onWrite(BoundedLocalCache<Int, Int> cache) {
     var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
     assertThat(oldValue).isNull();
 
@@ -2026,7 +2024,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
-  public void drain_nonblocking(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  public void drain_nonblocking(BoundedLocalCache<Int, Int> cache) {
     var done = new AtomicBoolean();
     Runnable task = () -> {
       cache.setDrainStatusRelease(REQUIRED);
@@ -2044,7 +2042,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
-  public void drain_blocksClear(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  public void drain_blocksClear(BoundedLocalCache<Int, Int> cache) {
     checkDrainBlocks(cache, cache::clear);
   }
 
@@ -2060,8 +2058,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
-  public void drain_blocksCapacity(BoundedLocalCache<Int, Int> cache,
-      CacheContext context, Eviction<Int, Int> eviction) {
+  public void drain_blocksCapacity(BoundedLocalCache<Int, Int> cache, Eviction<Int, Int> eviction) {
     checkDrainBlocks(cache, () -> eviction.setMaximum(0));
   }
 
@@ -2164,9 +2161,9 @@ public final class BoundedLocalCacheTest {
       compute = Compute.SYNC, loader = Loader.DISABLED, stats = Stats.DISABLED,
       removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void put_warnIfEvictionBlocked(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var testLogger = new AtomicReference<TestLogger>();
-    var thread = new AtomicReference<Thread>();
+  public void put_warnIfEvictionBlocked(BoundedLocalCache<Int, Int> cache) {
+    var testLogger = new AtomicReference<@Nullable TestLogger>();
+    var thread = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
     var done = new AtomicBoolean();
 
@@ -2191,8 +2188,7 @@ public final class BoundedLocalCacheTest {
       started.set(true);
       var halfWaitTime = Duration.ofNanos(WARN_AFTER_LOCK_WAIT_NANOS / 2);
       await().until(cache.evictionLock::hasQueuedThreads);
-      assertThat(thread.get()).isNotNull();
-      thread.get().interrupt();
+      requireNonNull(thread.get()).interrupt();
 
       Uninterruptibles.sleepUninterruptibly(halfWaitTime);
       assertThat(cache.evictionLock.hasQueuedThreads()).isTrue();
@@ -2228,8 +2224,9 @@ public final class BoundedLocalCacheTest {
     node.retire();
 
     var future = new Future<?>[1];
+    @SuppressWarnings("ConstantValue")
     var value = cache.data.compute(context.absentKey(), (k, n) -> {
-      var writer = new AtomicReference<Thread>();
+      var writer = new AtomicReference<@Nullable Thread>();
       future[0] = ConcurrentTestHarness.submit(() -> {
         writer.set(Thread.currentThread());
         var oldValue = cache.put(context.absentKey(), context.absentKey());
@@ -2286,8 +2283,8 @@ public final class BoundedLocalCacheTest {
     assertThat(localCache.refreshes()).doesNotContainKey(keyRef);
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT})
   public void isPendingEviction_collected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -2319,7 +2316,7 @@ public final class BoundedLocalCacheTest {
   public void putIfAbsent_expired(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var keyReference = cache.nodeFactory.newReferenceKey(
         context.absentKey(), cache.keyReferenceQueue());
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
@@ -2344,14 +2341,14 @@ public final class BoundedLocalCacheTest {
     cache.data.remove(keyReference);
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, maximumSize = Maximum.DISABLED)
   public void putIfAbsent_collectedValue(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var keyReference = cache.nodeFactory.newReferenceKey(
         context.absentKey(), cache.keyReferenceQueue());
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
@@ -2382,13 +2379,14 @@ public final class BoundedLocalCacheTest {
   public void remove_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
     var weakKey = (Reference<?>) node.getKeyReference();
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
-      assertThat(cache.remove(node.getKey())).isNull();
+      var key = requireNonNull(node.getKey());
+      assertThat(cache.remove(key)).isNull();
     }, ConcurrentTestHarness.executor);
     synchronized (node) {
       started.set(true);
@@ -2412,13 +2410,15 @@ public final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
     var weakKey = (Reference<?>) node.getKeyReference();
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
-      assertThat(cache.remove(node.getKey(), node.getValue())).isFalse();
+      var key = requireNonNull(node.getKey());
+      var value = requireNonNull(node.getValue());
+      assertThat(cache.remove(key, value)).isFalse();
     }, ConcurrentTestHarness.executor);
     synchronized (node) {
       started.set(true);
@@ -2441,13 +2441,15 @@ public final class BoundedLocalCacheTest {
   public void replace_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
     var weakKey = (Reference<?>) node.getKeyReference();
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
-      assertThat(cache.replace(node.getKey(), node.getValue())).isNull();
+      var key = requireNonNull(node.getKey());
+      var value = requireNonNull(node.getValue());
+      assertThat(cache.replace(key, value)).isNull();
     }, ConcurrentTestHarness.executor);
     synchronized (node) {
       started.set(true);
@@ -2468,13 +2470,15 @@ public final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
     var weakKey = (Reference<?>) node.getKeyReference();
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
-      assertThat(cache.replace(node.getKey(), node.getValue(), context.absentValue())).isFalse();
+      var key = requireNonNull(node.getKey());
+      var value = requireNonNull(node.getValue());
+      assertThat(cache.replace(key, value, context.absentValue())).isFalse();
     }, ConcurrentTestHarness.executor);
     synchronized (node) {
       started.set(true);
@@ -2495,13 +2499,13 @@ public final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
     var weakKey = (Reference<?>) node.getKeyReference();
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
-      var result = cache.doComputeIfAbsent(node.getKey(), node.getKeyReference(),
+      var result = cache.doComputeIfAbsent(requireNonNull(node.getKey()), node.getKeyReference(),
           key -> context.absentValue(), /* now= */ new long[1], /* recordStats= */ false);
       assertThat(result).isEqualTo(context.absentValue());
     }, ConcurrentTestHarness.executor);
@@ -2549,8 +2553,8 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG)
   public void computeIfAbsent_removesRefresh_present(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -2566,8 +2570,8 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG)
   public void computeIfAbsent_removesRefresh_present_null(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -2590,14 +2594,14 @@ public final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
     var weakKey = (Reference<?>) node.getKeyReference();
-    var writer = new AtomicReference<Thread>();
+    var writer = new AtomicReference<@Nullable Thread>();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
       var result = cache.remap(context.firstKey(), node.getKeyReference(),
-          (k, v) -> context.absentValue(), context.expiry(),
+          (k, v) -> context.absentValue(), context.expiresVariably() ? context.expiry() : null,
           /* now= */ new long[1], /* computeIfAbsent= */ true);
       assertThat(result).isEqualTo(context.absentValue());
     }, ConcurrentTestHarness.executor);
@@ -2775,7 +2779,7 @@ public final class BoundedLocalCacheTest {
   }
 
   private static void checkExpireAfterWriteTolerance(BoundedLocalCache<Int, Int> cache,
-      CacheContext context, BiFunction<Int, Int, Int> write) {
+      CacheContext context, BiFunction<Int, Int, @Nullable Int> write) {
     boolean mayCheckReads = context.isStrongKeys() && context.isStrongValues()
         && (cache.readBuffer != Buffer.<Node<Int, Int>>disabled());
 
@@ -2867,7 +2871,7 @@ public final class BoundedLocalCacheTest {
   }
 
   private static void checkExpiryWriteTolerance(BoundedLocalCache<Int, Int> cache,
-      CacheContext context, BiFunction<Int, Int, Int> write) {
+      CacheContext context, BiFunction<Int, Int, @Nullable Int> write) {
     @Var var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
     assertThat(oldValue).isNull();
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
@@ -2888,6 +2892,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(4);
 
     // If the expiration time reduces by more than the tolerance, treat the update as a write
+    requireNonNull(context.expiry());
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
     oldValue = write.apply(Int.valueOf(1), Int.valueOf(4));
@@ -2918,7 +2923,7 @@ public final class BoundedLocalCacheTest {
 
     synchronized (node) {
       var started = new AtomicBoolean();
-      var writer = new AtomicReference<Thread>();
+      var writer = new AtomicReference<@Nullable Thread>();
       ConcurrentTestHarness.execute(() -> {
         writer.set(Thread.currentThread());
         started.set(true);
@@ -3174,7 +3179,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void refresh_collected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    @SuppressWarnings("NullAway")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     var key = cache.nodeFactory.newReferenceKey(/* key= */ null, /* referenceQueue= */ null);
     cache.refreshes().put(key, context.absentValue().toFuture());
     assertThat(context.cache().policy().refreshes()).isEmpty();
@@ -3190,7 +3195,7 @@ public final class BoundedLocalCacheTest {
     context.caffeine().recordStats(() -> stats);
 
     // Capture the refresh parameters, should not be retired/dead sentinel entry
-    var refreshEntry = new AtomicReference<Map.Entry<Object, Object>>();
+    var refreshEntry = new AtomicReference<Map.@Nullable Entry<Object, Object>>();
     var cache = asBoundedLocalCache(context.build(new CacheLoader<>() {
       @Override public Int load(Object key) {
         throw new AssertionError();
@@ -3302,7 +3307,8 @@ public final class BoundedLocalCacheTest {
       refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER)
   public void refreshIfNeeded_slowLoad_obtrudeToNull(
       AsyncLoadingCache<Int, Int> cache, CacheContext context) throws Exception {
-    var future = CompletableFuture.completedFuture(context.absentKey());
+    CompletableFuture<@Nullable Int> future =
+        CompletableFuture.completedFuture(context.absentKey());
     var localCache = asBoundedLocalCache(cache);
     cache.put(context.absentKey(), future);
 
@@ -3314,7 +3320,7 @@ public final class BoundedLocalCacheTest {
       assertThat(v).isNull();
 
       context.ticker().advance(Duration.ofHours(1));
-      var reader = new AtomicReference<Thread>();
+      var reader = new AtomicReference<@Nullable Thread>();
       task[0] = ConcurrentTestHarness.submit(() -> {
         reader.set(Thread.currentThread());
         var future2 = cache.getIfPresent(context.absentKey());
@@ -3690,7 +3696,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void cacheFactory_null() {
     assertThrows(NullPointerException.class, () -> LocalCacheFactory.loadFactory(null));
   }
@@ -3789,7 +3795,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void nodeFactory_null() {
     assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(/* className= */ null));
   }
@@ -3809,8 +3815,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
-  public void nodeFactory_loadFactory(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) throws Throwable {
+  public void nodeFactory_loadFactory(BoundedLocalCache<Int, Int> cache) {
     var factory1 = NodeFactory.loadFactory(cache.nodeFactory.getClass().getSimpleName());
     assertThat(NodeFactory.FACTORIES).containsEntry(
         cache.nodeFactory.getClass().getSimpleName(), factory1);
@@ -3864,7 +3869,7 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void cleanupTask_ignore() {
-    @SuppressWarnings("NullAway")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     var task = new PerformCleanupTask(null);
     assertThat(task.getRawResult()).isNull();
     assertThat(task.cancel(false)).isFalse();
@@ -3877,7 +3882,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, compute = Compute.SYNC,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL})
-  public void node_string(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  public void node_string(BoundedLocalCache<Int, Int> cache) {
     var node = cache.data.values().iterator().next();
     var description = node.toString();
     assertThat(description).contains("key=" + node.getKey());
@@ -4064,7 +4069,7 @@ public final class BoundedLocalCacheTest {
     }
   }
   @NullUnmarked
-  static final class BadNode extends Node<Object, Object> {
+  static final class BadNode extends Node<@NonNull Object, @NonNull Object> {
     public BadNode() {
       throw new IllegalStateException();
     }
@@ -4084,7 +4089,7 @@ public final class BoundedLocalCacheTest {
       return null;
     }
     @Override public void setValue(Object value, ReferenceQueue<Object> referenceQueue) {}
-    @Override public boolean containsValue(Object value) {
+    @Override public boolean containsValue(@NonNull Object value) {
       return false;
     }
     @Override public boolean isAlive() {

@@ -65,7 +65,7 @@ public final class JmxRegistrationTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void sanitize() {
     assertThat(JmxRegistration.sanitize(null)).isEmpty();
     assertThat(JmxRegistration.sanitize("a.b")).isEqualTo("a.b");

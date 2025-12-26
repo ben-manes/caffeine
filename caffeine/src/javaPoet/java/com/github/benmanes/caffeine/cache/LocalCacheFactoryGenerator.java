@@ -64,15 +64,17 @@ import com.palantir.javapoet.ParameterizedTypeName;
 import com.palantir.javapoet.TypeName;
 import com.palantir.javapoet.TypeSpec;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Generates a factory that creates the cache optimized for the user specified configuration.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
-  private final Feature[] featureByIndex = { null, null, Feature.LISTENING, Feature.STATS,
-      Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
-      Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
+  private final @Nullable Feature[] featureByIndex = { null, null,
+      Feature.LISTENING, Feature.STATS, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT,
+      Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
   private final List<Rule<LocalCacheContext>> rules = List.of(
       new AddSubtype(), new AddConstructor(), new AddKeyValueStrength(), new AddRemovalListener(),
       new AddStats(), new AddExpirationTicker(), new AddMaximum(), new AddFastPath(),
@@ -126,7 +128,7 @@ public final class LocalCacheFactoryGenerator {
   private void generateLocalCaches() {
     NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures = getClassNameToFeatures();
     classNameToFeatures.forEach((className, features) -> {
-      String higherKey = classNameToFeatures.higherKey(className);
+      var higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
       TypeSpec cacheSpec = makeLocalCacheSpec(className, isLeaf, features);
       factoryTypes.add(cacheSpec);
@@ -150,7 +152,7 @@ public final class LocalCacheFactoryGenerator {
     features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
     for (int i = 2; i < combination.size(); i++) {
       if ((Boolean) combination.get(i)) {
-        features.add(featureByIndex[i]);
+        features.add(requireNonNull(featureByIndex[i]));
       }
     }
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {

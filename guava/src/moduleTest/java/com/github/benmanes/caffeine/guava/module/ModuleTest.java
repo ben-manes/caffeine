@@ -92,7 +92,7 @@ final class ModuleTest {
         .map(Requires::name)
         .collect(toImmutableSet());
     assertTrue(staticRequires.contains("com.google.errorprone.annotations"),
-        "Should have static require for errorprone annotations");
+        "Should have static require for error-prone annotations");
     assertTrue(staticRequires.contains("org.jspecify"),
         "Should have static require for jspecify");
     assertEquals(2, staticRequires.size());

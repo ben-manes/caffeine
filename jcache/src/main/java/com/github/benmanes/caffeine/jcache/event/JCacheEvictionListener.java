@@ -36,9 +36,8 @@ public final class JCacheEvictionListener<K, V> implements RemovalListener<K, Ex
   private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
 
-  private Cache<K, V> cache;
+  private @Nullable Cache<K, V> cache;
 
-  @SuppressWarnings("NullAway.Init")
   public JCacheEvictionListener(EventDispatcher<K, V> dispatcher,
       JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);
@@ -57,6 +56,7 @@ public final class JCacheEvictionListener<K, V> implements RemovalListener<K, Ex
   @Override
   public void onRemoval(@Nullable K key, @Nullable Expirable<V> expirable, RemovalCause cause) {
     requireNonNull(key);
+    requireNonNull(cache);
     requireNonNull(expirable);
     V value = expirable.get();
     if (cause == RemovalCause.EXPIRED) {

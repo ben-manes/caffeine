@@ -48,8 +48,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
@@ -91,7 +93,7 @@ public final class ReferenceTest {
 
   // These tests require that the JVM uses a garbage collection algorithm that can immediately
   // discard all unreachable references so that soft references can be reliably garbage collected
-  // by making them behave like weak references. Typically this combination works:
+  // by making them behave like weak references. Typically, this combination works:
   // -XX:SoftRefLRUPolicyMSPerMB=0 -XX:+UseParallelGC -XX:-ExplicitGCInvokesConcurrent
 
   @Test(dataProvider = "caches")
@@ -198,7 +200,7 @@ public final class ReferenceTest {
         Maps.filterKeys(context.original(), not(keys::contains)));
     if (!context.isStrongValues()) {
       for (var key : keys) {
-        collected.add(new SimpleEntry<>(key, null));
+        collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
       }
     }
 
@@ -222,7 +224,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -341,7 +343,7 @@ public final class ReferenceTest {
     } else {
       retained = Map.of();
       for (var key : keys) {
-        collected.add(new SimpleEntry<>(key, null));
+        collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
       }
     }
 
@@ -446,7 +448,7 @@ public final class ReferenceTest {
         Maps.filterKeys(context.original(), not(keys::contains)));
     if (!context.isStrongValues()) {
       for (var key : keys) {
-        collected.add(new SimpleEntry<>(key, null));
+        collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
       }
     }
 
@@ -639,7 +641,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -658,6 +660,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
@@ -701,7 +704,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -797,7 +800,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -854,7 +857,7 @@ public final class ReferenceTest {
     Int key = context.firstKey();
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
-    collected.add(new SimpleEntry<>(key, null));
+    collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
 
     context.clear();
     awaitFullGc();
@@ -874,7 +877,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -901,7 +904,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isGuava()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -961,7 +964,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues() && !context.isGuava()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -1006,7 +1009,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -1064,7 +1067,7 @@ public final class ReferenceTest {
           .hasSizeLessThan(2);
     } else {
       assertThat(logEvents()).isEmpty();
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
       assertThat(context).notifications().withCause(COLLECTED)
           .contains(collected).exclusively();
     }
@@ -1109,7 +1112,7 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<>(key, null));
+      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -1274,7 +1277,7 @@ public final class ReferenceTest {
     context.clear();
     awaitFullGc();
     assertThat(cache.asMap().values().stream().toArray()).isEmpty();
-    assertThat(cache.asMap().values().stream().toArray(Int[]::new)).isEmpty();
+    assertThat(cache.asMap().values().stream().toArray(CompletableFuture<?>[]::new)).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -1352,7 +1355,7 @@ public final class ReferenceTest {
     context.clear();
     awaitFullGc();
     assertThat(map.entrySet().stream().toArray()).isEmpty();
-    assertThat(map.entrySet().stream().toArray(Int[]::new)).isEmpty();
+    assertThat(map.entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -1361,7 +1364,7 @@ public final class ReferenceTest {
     context.clear();
     awaitFullGc();
     assertThat(cache.asMap().entrySet().stream().toArray()).isEmpty();
-    assertThat(cache.asMap().entrySet().stream().toArray(Int[]::new)).isEmpty();
+    assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
   }
 
   @Test(dataProvider = "caches")
@@ -1423,7 +1426,7 @@ public final class ReferenceTest {
 
   private static Map<String, String> parseToString(Map<Int, Int> map) {
     return Splitter.on(',').trimResults().omitEmptyStrings().withKeyValueSeparator("=")
-        .split(map.toString().replaceAll("\\{|\\}", ""));
+        .split(map.toString().replaceAll("[{}]", ""));
   }
 
   /* --------------- Reference --------------- */
@@ -1487,7 +1490,7 @@ public final class ReferenceTest {
     original.forEach((@Var var key, @Var var value) -> {
       key = context.isStrongKeys() ? new Int(key) : null;
       value = context.isStrongValues() ? new Int(value) : null;
-      expected.add(new SimpleImmutableEntry<>(key, value));
+      expected.add(new SimpleImmutableEntry<@Nullable Int, @Nullable Int>(key, value));
     });
     return expected;
   }

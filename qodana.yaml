@@ -15,6 +15,5 @@ exclude:
   - name: NotNullFieldNotInitialized
   - name: NullableProblems
   - name: PackageDirectoryMismatch
-  - name: UnnecessaryModifier
   - name: UnnecessaryReturn
   - name: UnstableApiUsage

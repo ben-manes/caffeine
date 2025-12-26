@@ -545,7 +545,7 @@ public final class Caffeine<K, V> {
    * <p>
    * Entries with keys that have been garbage collected may be counted in
    * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
-   * entries are cleaned up as part of the routine maintenance described in the class javadoc.
+   * entries are cleaned up as part of the routine maintenance described in the class Javadoc.
    * <p>
    * This feature cannot be used in conjunction when {@link #evictionListener(RemovalListener)} is
    * combined with {@link #buildAsync}.
@@ -576,7 +576,7 @@ public final class Caffeine<K, V> {
    * <p>
    * Entries with values that have been garbage collected may be counted in
    * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
-   * entries are cleaned up as part of the routine maintenance described in the class javadoc.
+   * entries are cleaned up as part of the routine maintenance described in the class Javadoc.
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
@@ -613,7 +613,7 @@ public final class Caffeine<K, V> {
    * <p>
    * Entries with values that have been garbage collected may be counted in
    * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
-   * entries are cleaned up as part of the routine maintenance described in the class javadoc.
+   * entries are cleaned up as part of the routine maintenance described in the class Javadoc.
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
@@ -633,7 +633,7 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * described in the class Javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
    * removal of expired entries.
    *
    * @param duration the length of time after an entry is created or updated before it should be
@@ -654,7 +654,7 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * described in the class Javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
    * removal of expired entries.
    * <p>
    * If you can represent the duration as a {@link java.time.Duration} (which should be preferred
@@ -694,7 +694,7 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * described in the class Javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
    * removal of expired entries.
    *
    * @param duration the length of time after an entry is last accessed before it should be
@@ -718,7 +718,7 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * described in the class Javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
    * removal of expired entries.
    * <p>
    * If you can represent the duration as a {@link java.time.Duration} (which should be preferred
@@ -758,7 +758,7 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * described in the class Javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
    * removal of expired entries.
    * <p>
    * <b>Important note:</b> after invoking this method, do not continue to use <i>this</i> cache

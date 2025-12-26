@@ -109,7 +109,7 @@ public final class CaffeineCachingProviderTest {
       assertThrows(ClassNotFoundException.class, () -> {
         Thread.currentThread().setContextClassLoader(classloader);
         var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null) {
-          @Override @Nullable ClassLoader getClassClassLoader() {
+          @Override ClassLoader getClassClassLoader() {
             return classloader;
           }
         };
@@ -139,7 +139,7 @@ public final class CaffeineCachingProviderTest {
       assertThrows(ClassNotFoundException.class, () -> {
         Thread.currentThread().setContextClassLoader(null);
         var jcacheClassLoader = new JCacheClassLoader(classloader) {
-          @Override @Nullable ClassLoader getClassClassLoader() {
+          @Override ClassLoader getClassClassLoader() {
             return classloader;
           }
         };
@@ -341,7 +341,7 @@ public final class CaffeineCachingProviderTest {
       try {
         Thread.currentThread().setContextClassLoader(classloader);
         var jcacheClassLoader = new JCacheClassLoader(/* parent= */ null) {
-          @Override @Nullable ClassLoader getClassClassLoader() {
+          @Override ClassLoader getClassClassLoader() {
             return classloader;
           }
         };
@@ -377,7 +377,7 @@ public final class CaffeineCachingProviderTest {
       try {
         Thread.currentThread().setContextClassLoader(null);
         var jcacheClassLoader = new JCacheClassLoader(classloader) {
-          @Override @Nullable ClassLoader getClassClassLoader() {
+          @Override ClassLoader getClassClassLoader() {
             return classloader;
           }
         };
@@ -423,7 +423,7 @@ public final class CaffeineCachingProviderTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void isSupported() {
     try (var provider = new CaffeineCachingProvider()) {
       assertThat(provider.isSupported(OptionalFeature.STORE_BY_REFERENCE)).isTrue();

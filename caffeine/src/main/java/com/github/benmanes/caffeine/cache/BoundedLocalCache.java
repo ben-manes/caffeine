@@ -82,6 +82,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
@@ -669,7 +670,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * to eagerly evicts entries until the cache shrinks to the appropriate size.
    */
   @GuardedBy("evictionLock")
-  @SuppressWarnings("Varifier")
+  @SuppressWarnings({"ConstantValue", "Varifier"})
   void setMaximumSize(long maximum) {
     requireArgument(maximum >= 0, "maximum must not be negative");
     if (maximum == maximum()) {
@@ -1315,7 +1316,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         && node.isAlive() && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
-      CompletableFuture<? extends V>[] refreshFuture = new CompletableFuture[1];
+      @Nullable CompletableFuture<? extends @Nullable V>[] refreshFuture = new CompletableFuture[1];
       try {
         refreshes.computeIfAbsent(keyReference, k -> {
           try {
@@ -1368,8 +1369,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         V value = (isAsync && (newValue != null)) ? (V) refreshFuture[0] : newValue;
 
-        RemovalCause[] cause = new RemovalCause[1];
-        V result = compute(key, (k, currentValue) -> {
+        @Nullable RemovalCause[] cause = new RemovalCause[1];
+        V result = compute(key, (K k, @Nullable V currentValue) -> {
           boolean removed = refreshes.remove(keyReference, refreshFuture[0]);
           if (currentValue == null) {
             // If the entry is absent then discard the refresh and maybe notifying the listener
@@ -2433,7 +2434,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable K[] oldKey = (K[]) new Object[1];
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (V[]) new Object[1];
-    RemovalCause[] cause = new RemovalCause[1];
+    @Nullable RemovalCause[] cause = new RemovalCause[1];
     Object lookupKey = nodeFactory.newLookupKey(key);
 
     data.computeIfPresent(lookupKey, (k, n) -> {
@@ -2441,16 +2442,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireIsAlive(key, n);
         oldKey[0] = n.getKey();
         oldValue[0] = n.getValue();
+        RemovalCause actualCause;
         if ((oldKey[0] == null) || (oldValue[0] == null)) {
-          cause[0] = RemovalCause.COLLECTED;
+          actualCause = RemovalCause.COLLECTED;
         } else if (hasExpired(n, expirationTicker().read())) {
-          cause[0] = RemovalCause.EXPIRED;
+          actualCause = RemovalCause.EXPIRED;
         } else {
-          cause[0] = RemovalCause.EXPLICIT;
+          actualCause= RemovalCause.EXPLICIT;
         }
-        if (cause[0].wasEvicted()) {
-          notifyEviction(oldKey[0], oldValue[0], cause[0]);
+        if (actualCause.wasEvicted()) {
+          notifyEviction(oldKey[0], oldValue[0], actualCause);
         }
+        cause[0] = actualCause;
         discardRefresh(k);
         node[0] = n;
         n.retire();
@@ -2467,14 +2470,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
-  public boolean remove(Object key, Object value) {
+  public boolean remove(Object key, @Nullable Object value) {
     requireNonNull(key);
     if (value == null) {
       return false;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    Node<K, V>[] removed = new Node[1];
+    @Nullable Node<K, V>[] removed = new Node[1];
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable K[] oldKey = (K[]) new Object[1];
     @SuppressWarnings({"unchecked", "Varifier"})
@@ -2692,10 +2695,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
-    Node<K, V>[] removed = new Node[1];
+    @Nullable Node<K, V>[] removed = new Node[1];
 
     int[] weight = new int[2]; // old, new
-    RemovalCause[] cause = new RemovalCause[1];
+    @Nullable RemovalCause[] cause = new RemovalCause[1];
     Node<K, V> node = data.compute(keyRef, (k, n) -> {
       if (n == null) {
         newValue[0] = mappingFunction.apply(key);
@@ -2720,15 +2723,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         nodeKey[0] = n.getKey();
         weight[0] = n.getWeight();
         oldValue[0] = n.getValue();
+        RemovalCause actualCause;
         if ((nodeKey[0] == null) || (oldValue[0] == null)) {
-          cause[0] = RemovalCause.COLLECTED;
+          actualCause = RemovalCause.COLLECTED;
         } else if (hasExpired(n, now[0])) {
-          cause[0] = RemovalCause.EXPIRED;
+          actualCause = RemovalCause.EXPIRED;
         } else {
           return n;
         }
 
-        notifyEviction(nodeKey[0], oldValue[0], cause[0]);
+        cause[0] = actualCause;
+        notifyEviction(nodeKey[0], oldValue[0], actualCause);
         newValue[0] = mappingFunction.apply(key);
         if (newValue[0] == null) {
           discardRefresh(k);
@@ -2807,7 +2812,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   @SuppressWarnings("NullAway")
-  public @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+  public @Nullable V compute(K key,
+      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
       boolean recordLoadFailure) {
     requireNonNull(key);
@@ -2830,8 +2836,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     long[] now = { expirationTicker().read() };
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    BiFunction<? super K, ? super @Nullable V, ? extends V> mergeFunction = (k, oldValue) ->
-        (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value);
+    BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> mergeFunction =
+        (k, oldValue) -> (oldValue == null)
+          ? value
+          : statsAware(remappingFunction).apply(oldValue, value);
     return remap(key, keyRef, mergeFunction, expiry(), now, /* computeIfAbsent= */ true);
   }
 
@@ -3491,7 +3499,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    public boolean remove(Object o) {
+    public boolean remove(@Nullable Object o) {
       if (o == null) {
         return false;
       }
@@ -3805,7 +3813,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      var entry = new WriteThroughEntry<>(cache, requireNonNull(key), requireNonNull(value));
+      var entry = new WriteThroughEntry<K, @NonNull V>(
+          cache, requireNonNull(key), requireNonNull(value));
       removalKey = key;
       advance();
       return entry;
@@ -4320,7 +4329,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }
 
           boolean[] added = { false };
-          var computed = (CompletableFuture<V>) cache.compute(key, (k, oldValue) -> {
+          var computed = (CompletableFuture<V>) cache.compute(key, (K k, @Nullable V oldValue) -> {
             var oldValueFuture = (CompletableFuture<V>) oldValue;
             added[0] = (oldValueFuture == null)
                 || (oldValueFuture.isDone() && (Async.getIfReady(oldValueFuture) == null));
@@ -4373,17 +4382,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         for (;;) {
           Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
-          CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
-            if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
-              return oldValueFuture;
-            }
+          CompletableFuture<V> valueFuture = delegate.compute(
+              key, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
+                if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
+                  return oldValueFuture;
+                }
 
-            V oldValue = Async.getIfReady(oldValueFuture);
-            BiFunction<? super K, ? super V, ? extends @Nullable V> function = delegate.statsAware(
-                remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
-            newValue[0] = function.apply(key, oldValue);
-            return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
-          }, new AsyncExpiry<>(expiry), /* recordLoad= */ false, /* recordLoadFailure= */ false);
+                V oldValue = Async.getIfReady(oldValueFuture);
+                BiFunction<? super K, ? super V, ? extends @Nullable V> function =
+                    delegate.statsAware(remappingFunction,
+                        /* recordLoad= */ true, /* recordLoadFailure= */ true);
+                newValue[0] = function.apply(key, oldValue);
+                return (newValue[0] == null) ? null
+                    : CompletableFuture.completedFuture(newValue[0]);
+              }, new AsyncExpiry<>(expiry), /* recordLoad= */ false,
+              /* recordLoadFailure= */ false);
 
           if (newValue[0] != null) {
             return newValue[0];

@@ -69,6 +69,7 @@ public final class OSGiTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void sanity() {
     try (var provider = Caching.getCachingProvider(PROVIDER_NAME, getClass().getClassLoader());
          var cacheManager = provider.getCacheManager();

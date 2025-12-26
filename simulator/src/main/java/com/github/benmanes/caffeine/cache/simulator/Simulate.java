@@ -124,7 +124,7 @@ public final class Simulate implements Runnable {
     return chart;
   }
 
-  public static void main(String[] args) {
+  static void main(String[] args) {
     Logger.getLogger("").setLevel(Level.WARNING);
     new CommandLine(Simulate.class)
         .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))

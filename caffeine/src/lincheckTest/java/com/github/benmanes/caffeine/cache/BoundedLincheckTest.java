@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.lincheck;
+package com.github.benmanes.caffeine.cache;
 
 import java.time.Duration;
-
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
  * Linearization test cases for a bounded cache.

@@ -39,8 +39,9 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public record Metrics(Function<Object, String> objectFormatter, LongFunction<String> longFormatter,
-    DoubleFunction<String> percentFormatter, DoubleFunction<String> doubleFormatter) {
+public record Metrics(Function<@Nullable Object, String> objectFormatter,
+    LongFunction<String> longFormatter, DoubleFunction<String> percentFormatter,
+    DoubleFunction<String> doubleFormatter) {
 
   public Metrics {
     requireNonNull(longFormatter);
@@ -50,7 +51,7 @@ public record Metrics(Function<Object, String> objectFormatter, LongFunction<Str
   }
 
   /** Returns the stringified value for the metric; empty if absent. */
-  public String format(Metric metric) {
+  public String format(@Nullable Metric metric) {
     if (metric == null) {
       return "";
     } else if (metric.value() instanceof LongSupplier supplier) {
@@ -123,13 +124,13 @@ public record Metrics(Function<Object, String> objectFormatter, LongFunction<Str
   }
 
   public static final class Builder {
-    private @Nullable Function<Object, String> objectFormatter;
+    private @Nullable Function<@Nullable Object, String> objectFormatter;
     private @Nullable DoubleFunction<String> percentFormatter;
     private @Nullable DoubleFunction<String> doubleFormatter;
     private @Nullable LongFunction<String> longFormatter;
 
     @CanIgnoreReturnValue
-    public Builder objectFormatter(Function<Object, String> objectFormatter) {
+    public Builder objectFormatter(Function<@Nullable Object, String> objectFormatter) {
       this.objectFormatter = requireNonNull(objectFormatter);
       requireNonNull(objectFormatter);
       return this;

@@ -92,7 +92,7 @@ final class StrongInterner<E> implements Interner<E> {
       return canonical;
     }
 
-    var value = map.putIfAbsent(sample, sample);
+    @Nullable E value = map.putIfAbsent(sample, sample);
     return (value == null) ? sample : value;
   }
 }
@@ -124,9 +124,9 @@ final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
 
   volatile Reference<?> keyReference;
 
-  @SuppressWarnings("NullAway.Init")
-  Interned() {}
-
+  Interned() {
+    keyReference = NodeFactory.DEAD_WEAK_KEY;
+  }
   Interned(Reference<K> keyReference) {
     this.keyReference = keyReference;
   }
@@ -149,12 +149,12 @@ final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
   @Override public boolean containsValue(Object value) {
     return Objects.equals(value, getValue());
   }
-  @Override public Node<K, V> newNode(K key, ReferenceQueue<K> keyReferenceQueue,
-      V value, ReferenceQueue<V> valueReferenceQueue, int weight, long now) {
+  @Override public Node<K, V> newNode(K key, @Nullable ReferenceQueue<K> keyReferenceQueue,
+      V value, @Nullable ReferenceQueue<V> valueReferenceQueue, int weight, long now) {
     return new Interned<>(new WeakKeyEqualsReference<>(key, keyReferenceQueue));
   }
   @Override public Node<K, V> newNode(Object keyReference, V value,
-      ReferenceQueue<V> valueReferenceQueue, int weight, long now) {
+      @Nullable ReferenceQueue<V> valueReferenceQueue, int weight, long now) {
     return new Interned<>((Reference<K>) keyReference);
   }
   @Override public Object newLookupKey(Object key) {

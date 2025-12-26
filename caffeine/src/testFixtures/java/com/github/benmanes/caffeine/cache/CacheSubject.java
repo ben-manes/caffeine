@@ -110,11 +110,6 @@ public final class CacheSubject extends Subject {
     check("cache").about(map()).that(actual.asMap()).containsValue(value);
   }
 
-  /** Fails if the cache does contain the given value. */
-  public void doesNotContainValue(Object value) {
-    check("cache").about(map()).that(actual.asMap()).doesNotContainValue(value);
-  }
-
   /** Fails if the cache does not contain the given entry. */
   public void containsEntry(Object key, @Nullable Object value) {
     requireNonNull(value);
@@ -177,7 +172,7 @@ public final class CacheSubject extends Subject {
     }
 
     public void hasSize(long expectedSize) {
-      // Ensures that all of the pending work is performed (Guava limits work per cycle)
+      // Ensures that all the pending work is performed (Guava limits work per cycle)
       for (int i = 0; i < 100; i++) {
         if ((i > 0) && ((i % 10) == 0)) {
           awaitFullGc();

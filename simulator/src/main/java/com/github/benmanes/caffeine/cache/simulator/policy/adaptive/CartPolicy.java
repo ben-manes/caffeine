@@ -88,7 +88,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     }
   }
 
-  private static boolean isHit(Node node) {
+  private static boolean isHit(@Nullable Node node) {
     // if (x is in T1 ∪ T2) then cache hit
     return (node != null) && ((node.type == QueueType.T1) || (node.type == QueueType.T2));
   }
@@ -99,7 +99,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
   }
 
-  private void onMiss(long key, @Var Node node) {
+  private void onMiss(long key, @Var @Nullable Node node) {
     // if (|T1| + |T2| = c) then
     //   /* cache full, replace a page from cache */
     //   replace()
@@ -163,7 +163,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
       // nS = nS + 1 /* history hit */
       node.filter = FilterType.SHORT_TERM;
       sizeS++;
-    } else if (node.type == QueueType.B1) {
+    } else if (requireNonNull(node).type == QueueType.B1) {
       // Adapt: Increase the target size for the list T1 as: p = min{p + max{1, nS / |B1|}, c}
       p = Math.min(p + Math.max(1, sizeS / sizeB1), maximumSize);
 
@@ -207,7 +207,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     }
   }
 
-  private static boolean isGhost(Node node) {
+  private static boolean isGhost(@Nullable Node node) {
     return (node != null) && ((node.type == QueueType.B1) || (node.type == QueueType.B2));
   }
 

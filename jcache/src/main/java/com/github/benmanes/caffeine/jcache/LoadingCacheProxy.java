@@ -53,8 +53,8 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
   public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, @Nullable Expirable<V>> cache,
-      EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,
-      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
+      EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader, ExpiryPolicy expiry,
+      Ticker ticker, JCacheStatisticsMXBean statistics) {
     super(name, executor, cacheManager, configuration, cache, dispatcher,
         Optional.of(cacheLoader), expiry, ticker, statistics);
     this.cache = cache;
@@ -152,7 +152,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   @Override
   @SuppressWarnings({"CheckReturnValue", "CollectionUndefinedEquality", "FutureReturnValueIgnored"})
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
-      CompletionListener completionListener) {
+      @Nullable CompletionListener completionListener) {
     requireNotClosed();
     keys.forEach(Objects::requireNonNull);
     CompletionListener listener = (completionListener == null)

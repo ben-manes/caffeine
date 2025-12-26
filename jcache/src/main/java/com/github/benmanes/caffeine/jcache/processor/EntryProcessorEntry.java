@@ -59,6 +59,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   }
 
   @Override
+  @SuppressWarnings("ConstantValue")
   public @Nullable V getValue() {
     if (action != Action.NONE) {
       return value;

@@ -103,7 +103,7 @@ public final class Rewriter implements Runnable {
     return params.toArray(String[]::new);
   }
 
-  public static void main(String[] args) {
+  static void main(String[] args) {
     new CommandLine(Rewriter.class)
         .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
         .setCommandName(Rewriter.class.getSimpleName())

@@ -84,12 +84,6 @@ public final class MapSubject extends com.google.common.truth.MapSubject {
     check("containsValue").that(actual.values()).contains(value);
   }
 
-  /** Fails if the map does contain the given value. */
-  public void doesNotContainValue(Object value) {
-    requireNonNull(actual);
-    check("containsValue").that(actual.values()).doesNotContain(value);
-  }
-
   /**
    * Fails if the map is not empty. This differs from {@link #isEmpty()} by checking all inspection
    * methods.

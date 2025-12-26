@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.lincheck;
-
-import static org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD;
+package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 
@@ -26,9 +24,6 @@ import org.jetbrains.lincheck.datastructures.Param;
 import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 
 /**
  * Linearizability checks. This property is guaranteed for per-key operations in the absence of
@@ -60,7 +55,6 @@ abstract class AbstractLincheckCacheTest {
     new ModelCheckingOptions()
         .iterations(100)                // the number of different scenarios
         .invocationsPerIteration(1_000) // how deeply each scenario is tested
-        .hangingDetectionThreshold(5 * DEFAULT_HANGING_DETECTION_THRESHOLD)
         .check(getClass());
   }
 

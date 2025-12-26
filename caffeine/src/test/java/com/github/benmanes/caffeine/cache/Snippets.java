@@ -35,7 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
 /**
- * The test cases for the JavaDoc external code snippets.
+ * The test cases for the Javadoc external code snippets.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -256,13 +256,13 @@ public final class Snippets {
     assertThat(tenYoungestKeys).isEmpty();
   }
 
-  @SuppressWarnings({"PMD.UnusedFormalParameter", "UnusedVariable"})
+  @SuppressWarnings({"unused", "UnusedVariable"})
   private static CompletableFuture<ImmutableMap<? extends Key, Graph>> createExpensiveGraphsAsync(
       Set<? extends Key> keys, Executor executor) {
     return CompletableFuture.completedFuture(createExpensiveGraphs(keys));
   }
 
-  @SuppressWarnings({"PMD.UnusedFormalParameter", "UnusedVariable"})
+  @SuppressWarnings({"unused", "UnusedVariable"})
   private static CompletableFuture<Graph> createExpensiveGraphAsync(Key key, Executor executor) {
     return CompletableFuture.completedFuture(Graph.INSTANCE);
   }
@@ -271,7 +271,7 @@ public final class Snippets {
     return Maps.toMap(keys, key -> Graph.INSTANCE);
   }
 
-  @SuppressWarnings({"PMD.UnusedFormalParameter", "UnusedVariable"})
+  @SuppressWarnings({"unused", "UnusedVariable"})
   private static Graph createExpensiveGraph(Key key) {
     return Graph.INSTANCE;
   }

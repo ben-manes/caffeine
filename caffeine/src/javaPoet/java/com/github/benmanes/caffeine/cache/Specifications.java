@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 
@@ -51,8 +50,6 @@ public final class Specifications {
       ClassName.get(Reference.class), kTypeVar);
   public static final TypeName referenceKeyType = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
-  public static final TypeName rawReferenceKeyType = ParameterizedTypeName.get(
-      ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), ClassName.get(Object.class));
 
   public static final ParameterSpec keySpec = ParameterSpec.builder(kTypeVar, "key").build();
   public static final ParameterSpec keyRefSpec =
@@ -66,7 +63,6 @@ public final class Specifications {
 
   public static final TypeName METHOD_HANDLES = ClassName.get(MethodHandles.class);
   public static final TypeName LOOKUP = ClassName.get(MethodHandles.Lookup.class);
-  public static final TypeName VAR_HANDLE = ClassName.get(VarHandle.class);
 
   public static final ClassName LOCAL_CACHE_FACTORY =
       ClassName.get(PACKAGE_NAME, "LocalCacheFactory");

@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.lincheck.datastructures.Param;
 import org.jetbrains.lincheck.datastructures.StressOptions;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -44,7 +45,7 @@ public final class MpscGrowableArrayQueueLincheckTest {
   }
 
   @Operation(nonParallelGroup = "consumer")
-  public Integer poll() {
+  public @Nullable Integer poll() {
     return queue.poll();
   }
 

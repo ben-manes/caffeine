@@ -393,7 +393,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   @SuppressWarnings("unchecked")
   private @Nullable E[] getNextBuffer(@Nullable E[] buffer, long mask) {
     long nextArrayOffset = nextArrayOffset(mask);
-    var nextBuffer = (@Nullable E[]) lvElement(buffer, nextArrayOffset);
+    @SuppressWarnings("Varifier")
+    @Nullable E[] nextBuffer = (@Nullable E[]) lvElement(buffer, nextArrayOffset);
     soElement(buffer, nextArrayOffset, null);
     return requireNonNull(nextBuffer);
   }

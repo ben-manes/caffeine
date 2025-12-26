@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.cache.StripedBuffer.MAXIMUM_TABLE_SIZ
 import static com.github.benmanes.caffeine.cache.StripedBuffer.NCPU;
 import static com.github.benmanes.caffeine.cache.StripedBuffer.findVarHandle;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -87,8 +88,9 @@ public final class StripedBufferTest {
     var striped = new FakeBuffer<>(FAILED);
     var buffer = Mockito.mock(Buffer.class);
     when(buffer.offer(any())).thenReturn(FAILED);
-    striped.table = new Buffer[2 * MAXIMUM_TABLE_SIZE];
-    Arrays.fill(striped.table, buffer);
+    var table = new Buffer[2 * MAXIMUM_TABLE_SIZE];
+    Arrays.fill(table, buffer);
+    striped.table = table;
 
     assertThat(striped.expandOrRetry(ELEMENT, 0, 1, /* wasUncontended= */ true)).isEqualTo(FAILED);
   }
@@ -116,7 +118,7 @@ public final class StripedBufferTest {
       }
     });
     assertThat(buffer.table).isNotNull();
-    assertThat(buffer.table.length).isAtMost(MAXIMUM_TABLE_SIZE);
+    assertThat(requireNonNull(buffer.table).length).isAtMost(MAXIMUM_TABLE_SIZE);
   }
 
   @Test(dataProvider = "buffers")

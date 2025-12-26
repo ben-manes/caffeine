@@ -69,7 +69,7 @@ import com.google.errorprone.annotations.Var;
 @SuppressWarnings({"PMD.PreserveStackTrace", "serial"})
 public final class GuavaCacheFromContext {
   private GuavaCacheFromContext() {}
-  private static final ThreadLocal<Throwable> error = new ThreadLocal<>();
+  private static final ThreadLocal<@Nullable Throwable> error = new ThreadLocal<>();
 
   /** Returns a Guava-backed cache. */
   @SuppressWarnings("CheckReturnValue")
@@ -163,7 +163,7 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public @Nullable V get(K key, Function<? super K, ? extends V> mappingFunction) {
+    public @Nullable V get(K key, Function<? super K, ? extends @Nullable V> mappingFunction) {
       requireNonNull(mappingFunction);
       try {
         return cache.get(key, () -> {
@@ -316,7 +316,8 @@ public final class GuavaCacheFromContext {
         return delegate().replace(key, oldValue, newValue);
       }
       @Override
-      public @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+      public @Nullable V computeIfAbsent(K key,
+          Function<? super K, ? extends @Nullable V> mappingFunction) {
         requireNonNull(mappingFunction);
         boolean[] present = { true };
         long now = ticker.read();
@@ -341,7 +342,7 @@ public final class GuavaCacheFromContext {
       }
       @Override
       public @Nullable V computeIfPresent(K key,
-          BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+          BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
         requireNonNull(remappingFunction);
         long now = ticker.read();
         return delegate().computeIfPresent(key, (k, v) -> {
@@ -361,7 +362,7 @@ public final class GuavaCacheFromContext {
       }
       @Override
       public @Nullable V compute(K key,
-          BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+          BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction) {
         requireNonNull(remappingFunction);
         long now = ticker.read();
         return delegate().compute(key, (k, v) -> {
@@ -381,7 +382,7 @@ public final class GuavaCacheFromContext {
       }
       @Override
       public @Nullable V merge(K key, V value,
-          BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+          BiFunction<? super V, ? super V, ? extends @Nullable V> remappingFunction) {
         requireNonNull(remappingFunction);
         long now = ticker.read();
         return delegate().merge(key, value, (k, v) -> {
@@ -506,7 +507,7 @@ public final class GuavaCacheFromContext {
 
     @Override
     public CompletableFuture<V> refresh(K key) {
-      error.set(null);
+      error.remove();
       cache.refresh(key);
 
       var e = error.get();
@@ -524,14 +525,14 @@ public final class GuavaCacheFromContext {
 
     @Override
     public CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-      var result = new LinkedHashMap<K, CompletableFuture<V>>();
+      var result = new LinkedHashMap<K, CompletableFuture<@Nullable V>>();
       for (K key : keys) {
         result.computeIfAbsent(key, this::refresh);
       }
       return composeResult(result);
     }
 
-    CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
+    CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<@Nullable V>> futures) {
       if (futures.isEmpty()) {
         return CompletableFuture.completedFuture(
             Collections.unmodifiableMap(Collections.emptyMap()));
@@ -601,7 +602,7 @@ public final class GuavaCacheFromContext {
     @SuppressWarnings("PMD.ExceptionAsFlowControl")
     public V load(K key) throws Exception {
       try {
-        error.set(null);
+        error.remove();
         V value = delegate.load(key);
         if (value == null) {
           throw CacheMissException.INSTANCE;
@@ -616,7 +617,7 @@ public final class GuavaCacheFromContext {
     @Override
     @SuppressWarnings("FutureReturnValueIgnored")
     public ListenableFuture<V> reload(K key, V oldValue) throws Exception {
-      error.set(null);
+      error.remove();
       var future = SettableFuture.<V>create();
       delegate.asyncReload(key, oldValue, Runnable::run).whenComplete((r, e) -> {
         if (e == null) {

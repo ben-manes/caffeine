@@ -85,7 +85,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
     }
   }
 
-  private static boolean isHit(Node node) {
+  private static boolean isHit(@Nullable Node node) {
     // if (x is in T1 ∪ T2) then cache hit
     return (node != null) && ((node.type == QueueType.T1) || (node.type == QueueType.T2));
   }
@@ -96,7 +96,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
   }
 
-  private void onMiss(long key, @Var Node node) {
+  private void onMiss(long key, @Var @Nullable Node node) {
     // if (|T1| + |T2| = c) then
     //   /* cache full, replace a page from cache */
     //   replace()
@@ -147,7 +147,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
       node.type = QueueType.T1;
       data.put(key, node);
       sizeT1++;
-    } else if (node.type == QueueType.B1) {
+    } else if (requireNonNull(node).type == QueueType.B1) {
       // Adapt: Increase the target size for the list T1 as: p = min{p + max{1, |B2|/|B1|}, c}
       // Move x at the tail of T2
       // Reset the page reference bit of x.
@@ -174,7 +174,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
     }
   }
 
-  private static boolean isGhost(Node node) {
+  private static boolean isGhost(@Nullable Node node) {
     return (node != null) && ((node.type == QueueType.B1) || (node.type == QueueType.B2));
   }
 

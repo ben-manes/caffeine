@@ -109,7 +109,7 @@ public class AccessEvent {
   }
 
   private static final class LongInterner {
-    static final AtomicReferenceArray<Long> cache = new AtomicReferenceArray<>(1 << 20);
+    static final AtomicReferenceArray<@Nullable Long> cache = new AtomicReferenceArray<>(1 << 20);
     static final int MASK = cache.length() - 1;
 
     static Long boxed(long l) {

@@ -132,7 +132,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void containsKey_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void containsKey_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().containsKey(null));
   }
 
@@ -157,7 +157,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void containsValue_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void containsValue_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().containsValue(null));
   }
 
@@ -185,7 +185,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void get_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void get_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().get(null));
   }
 
@@ -211,7 +211,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getOrDefault_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void getOrDefault_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().getOrDefault(null, Int.valueOf(1).toFuture()));
   }
@@ -242,7 +242,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void forEach_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void forEach_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().forEach(null));
   }
 
@@ -278,7 +278,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void put_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void put_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().put(null, Int.valueOf(1).toFuture()));
   }
@@ -287,7 +287,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void put_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void put_nullValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().put(Int.valueOf(1), null));
   }
@@ -296,7 +296,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void put_nullKeyAndValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void put_nullKeyAndValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().put(null, null));
   }
 
@@ -408,7 +408,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void putAll_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void putAll_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().putAll(null));
   }
 
@@ -468,7 +468,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void putIfAbsent_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void putIfAbsent_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().putIfAbsent(null, Int.valueOf(2).toFuture()));
   }
@@ -477,7 +477,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void putIfAbsent_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void putIfAbsent_nullValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().putIfAbsent(Int.valueOf(1), null));
   }
@@ -486,7 +486,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void putIfAbsent_nullKeyAndValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void putIfAbsent_nullKeyAndValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().putIfAbsent(null, null));
   }
 
@@ -585,7 +585,7 @@ public final class AsyncAsMapTest {
     var done = new AtomicBoolean();
     var started = new AtomicBoolean();
     var writer = new AtomicReference<@Nullable Thread>();
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
 
     cache.put(context.absentKey(), future);
     ConcurrentTestHarness.execute(() -> {
@@ -657,7 +657,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void remove_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void remove_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().remove(null));
   }
 
@@ -705,8 +705,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void removeConditionally_nullKeyAndValue(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void removeConditionally_nullKeyAndValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().remove(null, null));
   }
 
@@ -760,8 +759,9 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replace_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replace_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().replace(null, Int.valueOf(1).toFuture()));
   }
@@ -770,7 +770,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replace_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replace_nullValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().replace(Int.valueOf(1), null));
   }
 
@@ -778,7 +778,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replace_nullKeyAndValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replace_nullKeyAndValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().replace(null, null));
   }
 
@@ -882,7 +882,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceConditionally_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceConditionally_nullKey(AsyncCache<Int, Int> cache) {
     var value = Int.valueOf(1).toFuture();
     assertThrows(NullPointerException.class, () -> cache.asMap().replace(null, value, value));
   }
@@ -891,7 +891,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceConditionally_nullOldValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceConditionally_nullOldValue(AsyncCache<Int, Int> cache) {
     var value = Int.valueOf(1).toFuture();
     assertThrows(NullPointerException.class, () ->
         cache.asMap().replace(Int.valueOf(1), null, value));
@@ -901,7 +901,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceConditionally_nullNewValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceConditionally_nullNewValue(AsyncCache<Int, Int> cache) {
     var value = Int.futureOf(1);
     assertThrows(NullPointerException.class, () ->
         cache.asMap().replace(Int.valueOf(1), value, null));
@@ -911,8 +911,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceConditionally_nullKeyAndOldValue(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceConditionally_nullKeyAndOldValue(AsyncCache<Int, Int> cache) {
     var value = Int.futureOf(1);
     assertThrows(NullPointerException.class, () -> cache.asMap().replace(null, null, value));
   }
@@ -921,8 +920,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceConditionally_nullKeyAndNewValue(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceConditionally_nullKeyAndNewValue(AsyncCache<Int, Int> cache) {
     var value = Int.futureOf(1);
     assertThrows(NullPointerException.class, () -> cache.asMap().replace(null, value, null));
   }
@@ -931,8 +929,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceConditionally_nullOldAndNewValue(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceConditionally_nullOldAndNewValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().replace(Int.valueOf(1), null, null));
   }
@@ -941,8 +938,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceConditionally_nullKeyAndValues(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceConditionally_nullKeyAndValues(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().replace(null, null, null));
   }
 
@@ -1073,7 +1069,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceAll_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceAll_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().replaceAll(null));
   }
 
@@ -1082,7 +1078,7 @@ public final class AsyncAsMapTest {
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void replaceAll_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void replaceAll_nullValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().replaceAll((key, value) -> null));
   }
 
@@ -1098,9 +1094,8 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void replaceAll_differentValue(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().replaceAll((key, value) -> key.toFuture());
-    cache.asMap().forEach((key, value) -> {
-      assertThat(value).succeedsWith(key);
-    });
+    cache.asMap().forEach((key, value) ->
+        assertThat(value).succeedsWith(key));
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(context.original()).exclusively();
   }
@@ -1145,7 +1140,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void computeIfAbsent_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void computeIfAbsent_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().computeIfAbsent(null, key -> key.negate().toFuture()));
   }
@@ -1304,7 +1299,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void computeIfPresent_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void computeIfPresent_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().computeIfPresent(null, (key, value) -> key.negate().toFuture()));
   }
@@ -1313,8 +1308,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void computeIfPresent_nullMappingFunction(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void computeIfPresent_nullMappingFunction(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().computeIfPresent(Int.valueOf(1), null));
   }
@@ -1461,7 +1455,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void compute_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void compute_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().compute(null, (key, value) -> key.negate().toFuture()));
   }
@@ -1470,7 +1464,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void compute_nullMappingFunction(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void compute_nullMappingFunction(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().compute(Int.valueOf(1), null));
   }
 
@@ -1505,7 +1499,7 @@ public final class AsyncAsMapTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
-  public void compute_pingpong(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void compute_pingpong(AsyncCache<Int, Int> cache) {
     var key1 = Int.valueOf(1);
     var key2 = Int.valueOf(2);
     var mappingFunction = new BiFunction<Int, CompletableFuture<Int>, CompletableFuture<Int>>() {
@@ -1629,7 +1623,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void merge_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void merge_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().merge(null, Int.valueOf(-1).toFuture(), (oldValue, value) -> value));
   }
@@ -1638,7 +1632,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void merge_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void merge_nullValue(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().merge(Int.valueOf(1), null, (oldValue, value) -> null));
   }
@@ -1647,7 +1641,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void merge_nullMappingFunction(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void merge_nullMappingFunction(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().merge(Int.valueOf(1), Int.valueOf(1).toFuture(), null));
   }
@@ -1704,10 +1698,9 @@ public final class AsyncAsMapTest {
             return cache.asMap().merge(context.lastKey(), lastValue, this);
           }
         };
-    assertThrows(StackOverflowError.class, () -> {
-      cache.asMap().merge(context.firstKey(),
-          cache.asMap().get(context.firstKey()), mappingFunction);
-    });
+    var value = cache.asMap().get(context.firstKey());
+    assertThrows(StackOverflowError.class, () ->
+        cache.asMap().merge(context.firstKey(), value, mappingFunction));
   }
 
   @CheckMaxLogLevel(WARN)
@@ -1805,7 +1798,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("PMD.EnumComparison")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void equals_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void equals_null(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().equals(null)).isFalse();
   }
 
@@ -1813,7 +1806,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("SelfEquals")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void equals_self(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void equals_self(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().equals(cache.asMap())).isTrue();
   }
 
@@ -1840,14 +1833,14 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void hashCode(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void hashCode(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().hashCode()).isEqualTo(ImmutableMap.copyOf(cache.asMap()).hashCode());
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void hashCode_self(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void hashCode_self(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().hashCode()).isEqualTo(cache.asMap().hashCode());
   }
 
@@ -1855,7 +1848,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void equalsAndHashCodeFail_empty(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void equalsAndHashCodeFail_empty(AsyncCache<Int, Int> cache) {
     var other = Map.of(Int.valueOf(1), Int.futureOf(-1),
         Int.valueOf(2), Int.futureOf(-2), Int.valueOf(3), Int.futureOf(-3));
     assertThat(cache.asMap().equals(other)).isFalse();
@@ -1867,7 +1860,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void equalsAndHashCodeFail_present(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void equalsAndHashCodeFail_present(AsyncCache<Int, Int> cache) {
     var other = Map.of(Int.valueOf(1), Int.futureOf(-1),
         Int.valueOf(2), Int.futureOf(-2), Int.valueOf(3), Int.futureOf(-3));
     assertThat(cache.asMap().equals(other)).isFalse();
@@ -1885,14 +1878,14 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void toString(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void toString(AsyncCache<Int, Int> cache) {
     var copy = ImmutableMap.copyOf(cache.asMap());
     assertThat(parseToString(cache.asMap())).containsExactlyEntriesIn(parseToString(copy));
   }
 
   private static Map<String, String> parseToString(Map<Int, CompletableFuture<Int>> map) {
     return Splitter.on(',').trimResults().omitEmptyStrings().withKeyValueSeparator("=")
-        .split(map.toString().replaceAll("\\{|\\}", ""));
+        .split(map.toString().replaceAll("[{}]", ""));
   }
 
   /* ---------------- Key Set -------------- */
@@ -1901,7 +1894,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void keySet_toArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_toArray_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().keySet().toArray((Int[]) null));
   }
 
@@ -1938,14 +1931,14 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void keySet_whenEmpty(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_whenEmpty(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().keySet()).isExhaustivelyEmpty();
   }
 
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void keySet_addNotSupported(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_addNotSupported(AsyncCache<Int, Int> cache) {
     assertThrows(UnsupportedOperationException.class, () ->
         cache.asMap().keySet().add(Int.valueOf(1)));
   }
@@ -1964,7 +1957,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
-  public void keySet_removeAll_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_removeAll_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().keySet().removeAll(null));
   }
 
@@ -2059,7 +2052,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void keySet_remove_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_remove_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().keySet().remove(null));
   }
 
@@ -2085,7 +2078,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
-  public void keySet_removeIf_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_removeIf_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().keySet().removeIf(null));
   }
 
@@ -2132,14 +2125,14 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
-  public void keySet_retainAll_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_retainAll_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().keySet().retainAll(null));
   }
 
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void keySet_retainAll_nullKey(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySet_retainAll_nullKey(AsyncCache<Int, Int> cache) {
     cache.asMap().keySet().retainAll(Collections.singletonList(null));
     assertThat(cache).isEmpty();
   }
@@ -2241,7 +2234,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void keyIterator_noElement(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keyIterator_noElement(AsyncCache<Int, Int> cache) {
     assertThrows(IllegalStateException.class, () -> cache.asMap().keySet().iterator().remove());
   }
 
@@ -2249,15 +2242,14 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void keyIterator_noMoreElements(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keyIterator_noMoreElements(AsyncCache<Int, Int> cache) {
     assertThrows(NoSuchElementException.class, () -> cache.asMap().keySet().iterator().next());
   }
 
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void keySpliterator_forEachRemaining_null(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySpliterator_forEachRemaining_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().keySet().spliterator().forEachRemaining(null));
   }
@@ -2274,7 +2266,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void keySpliterator_tryAdvance_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySpliterator_tryAdvance_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().keySet().spliterator().tryAdvance(null));
   }
@@ -2352,7 +2344,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void keySpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void keySpliterator_characteristics(AsyncCache<Int, Int> cache) {
     var spliterator = cache.asMap().keySet().spliterator();
     assertThat(spliterator.characteristics()).isEqualTo(DISTINCT | NONNULL | CONCURRENT);
   }
@@ -2386,7 +2378,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void values_toArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void values_toArray_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().values().toArray((CompletableFuture<Int>[]) null));
   }
@@ -2429,7 +2421,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void values_empty(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void values_empty(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().values()).isExhaustivelyEmpty();
   }
 
@@ -2437,7 +2429,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void values_addNotSupported(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void values_addNotSupported(AsyncCache<Int, Int> cache) {
     assertThrows(UnsupportedOperationException.class, () ->
         cache.asMap().values().add(Int.valueOf(1).toFuture()));
   }
@@ -2766,7 +2758,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void valueIterator_noElement(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void valueIterator_noElement(AsyncCache<Int, Int> cache) {
     assertThrows(IllegalStateException.class, () -> cache.asMap().values().iterator().remove());
   }
 
@@ -2774,15 +2766,14 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void valueIterator_noMoreElements(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void valueIterator_noMoreElements(AsyncCache<Int, Int> cache) {
     assertThrows(NoSuchElementException.class, () -> cache.asMap().values().iterator().next());
   }
 
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void valueSpliterator_forEachRemaining_null(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void valueSpliterator_forEachRemaining_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().values().spliterator().forEachRemaining(null));
   }
@@ -2799,7 +2790,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void valueSpliterator_tryAdvance_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void valueSpliterator_tryAdvance_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().values().spliterator().tryAdvance(null));
   }
@@ -2877,7 +2868,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void valueSpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void valueSpliterator_characteristics(AsyncCache<Int, Int> cache) {
     var spliterator = cache.asMap().values().spliterator();
     assertThat(spliterator.characteristics()).isEqualTo(NONNULL | CONCURRENT);
   }
@@ -2885,7 +2876,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void valueStream_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void valueStream_toArray(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().values().stream().toArray(CompletableFuture<?>[]::new)).asList()
         .containsExactlyElementsIn(ImmutableList.copyOf(cache.asMap().values()));
   }
@@ -2912,7 +2903,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void entrySet_toArray_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySet_toArray_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().entrySet().toArray((Map.Entry<?, ?>[]) null));
   }
@@ -2992,7 +2983,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void entrySet_empty(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySet_empty(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().entrySet()).isExhaustivelyEmpty();
   }
 
@@ -3034,7 +3025,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, removalListener = Listener.DISABLED)
-  public void entrySet_addIsNotSupported(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySet_addIsNotSupported(AsyncCache<Int, Int> cache) {
     assertThrows(UnsupportedOperationException.class, () ->
         cache.asMap().entrySet().add(Map.entry(Int.valueOf(1), Int.valueOf(2).toFuture())));
     assertThat(cache).isEmpty();
@@ -3054,7 +3045,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
-  public void entrySet_removeAll_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySet_removeAll_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().entrySet().removeAll(null));
   }
 
@@ -3217,7 +3208,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
-  public void entrySet_removeIf_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySet_removeIf_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().entrySet().removeIf(null));
   }
 
@@ -3383,7 +3374,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void entryIterator_noElement(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entryIterator_noElement(AsyncCache<Int, Int> cache) {
     assertThrows(IllegalStateException.class, () -> cache.asMap().entrySet().iterator().remove());
   }
 
@@ -3391,15 +3382,14 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void entryIterator_noMoreElements(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entryIterator_noMoreElements(AsyncCache<Int, Int> cache) {
     assertThrows(NoSuchElementException.class, () -> cache.asMap().entrySet().iterator().next());
   }
 
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySpliterator_forEachRemaining_null(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySpliterator_forEachRemaining_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().entrySet().spliterator().forEachRemaining(null));
   }
@@ -3422,7 +3412,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySpliterator_tryAdvance_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySpliterator_tryAdvance_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().entrySet().spliterator().tryAdvance(null));
   }
@@ -3507,7 +3497,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySpliterator_characteristics(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entrySpliterator_characteristics(AsyncCache<Int, Int> cache) {
     var spliterator = cache.asMap().entrySet().spliterator();
     assertThat(spliterator.characteristics()).isEqualTo(DISTINCT | NONNULL | CONCURRENT);
   }
@@ -3515,7 +3505,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entryStream_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void entryStream_toArray(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).asList()
         .containsExactlyElementsIn(ImmutableList.copyOf(cache.asMap().entrySet()));
   }
@@ -3556,7 +3546,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("DataFlowIssue")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void writeThroughEntry_null(AsyncCache<Int, Int> cache, CacheContext context) {
+  public void writeThroughEntry_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().entrySet().iterator().next().setValue(null));
   }

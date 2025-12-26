@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.grad
 
 import static java.util.Locale.US;
 
-import java.util.List;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
 import com.typesafe.config.Config;
@@ -88,9 +86,6 @@ public final class Stochastic extends AbstractClimber {
 
     public StochasticSettings(Config config) {
       super(config);
-    }
-    public List<Double> percentMain() {
-      return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");

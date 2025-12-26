@@ -13,14 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.google;
+package com.github.benmanes.caffeine.cache;
 
 import java.util.Comparator;
 
-import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.CacheGenerator;
-import com.github.benmanes.caffeine.cache.CacheSpec;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
@@ -44,7 +40,7 @@ public final class CaffeineMapTests extends TestCase {
     new CacheGenerator(cacheSpec()).generate().parallel()
         .flatMap(MapTestFactory::makeTests)
         .sorted(Comparator.comparing(TestSuite::getName))
-        .forEach(suite::addTest);
+        .forEachOrdered(suite::addTest);
     return suite;
   }
 

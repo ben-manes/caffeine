@@ -31,7 +31,6 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  */
 public final class CacheProfiler extends ProfilerHook {
   static final CacheType cacheType = CacheType.Caffeine;
-  static final int MAX_SIZE = 10 * NUM_THREADS;
   static final int SIZE = (2 << 14);
   static final int MASK = SIZE - 1;
   static final int ITEMS = SIZE / 4;

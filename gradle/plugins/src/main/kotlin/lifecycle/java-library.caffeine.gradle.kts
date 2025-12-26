@@ -57,6 +57,9 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<JavaExec>().configureEach {
   jvmArgs(DisableStrongEncapsulationJvmArgs)
+  if (javaRuntimeVersion.get().canCompileOrRun(25)) {
+    jvmArgs("-XX:+UseCompactObjectHeaders")
+  }
   javaLauncher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor
     languageVersion = javaRuntimeVersion
@@ -96,13 +99,6 @@ tasks.named<Jar>("jar").configure {
       "-noextraheaders" to true,
       "-reproducible" to true,
       "-snapshot" to "SNAPSHOT"))
-
-    // Workaround until the bnd plugin supports the latest JDK
-    val javaVersion = java.toolchain.languageVersion.get()
-    if (javaVersion.canCompileOrRun(25)) {
-      bnd(mapOf("Require-Capability" to
-        """osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=${javaVersion}))""""))
-    }
   }
 }
 

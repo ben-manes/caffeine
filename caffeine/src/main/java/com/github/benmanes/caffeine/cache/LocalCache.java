@@ -95,7 +95,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   @Override
   default @Nullable V compute(K key,
-      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
     return compute(key, remappingFunction, expiry(),
         /* recordLoad= */ true, /* recordLoadFailure= */ true);
   }
@@ -118,7 +118,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * See {@link ConcurrentMap#computeIfAbsent}. This method differs by accepting parameters
    * indicating how to record statistics.
    */
-  @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
+  @Nullable V computeIfAbsent(K key, Function<? super K, ? extends @Nullable V> mappingFunction,
       boolean recordStats, boolean recordLoad);
 
   /** See {@link Cache#invalidateAll(Iterable)}. */
@@ -156,8 +156,8 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   }
 
   /** Decorates the mapping function to record statistics if enabled, recording a miss if called. */
-  default <T, R> Function<? super T, ? extends R> statsAware(
-      Function<? super T, ? extends R> mappingFunction, boolean recordLoad) {
+  default <T, R> Function<? super T, ? extends @Nullable R> statsAware(
+      Function<? super T, ? extends @Nullable R> mappingFunction, boolean recordLoad) {
     if (!isRecordingStats()) {
       return mappingFunction;
     }
@@ -184,14 +184,14 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
-  default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
+  default <T, U, R> BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
     return statsAware(remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
-  default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
-      BiFunction<? super T, ? super U, ? extends R> remappingFunction,
+  default <T, U, R> BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
+      BiFunction<? super T, ? super U, ? extends @Nullable R> remappingFunction,
       boolean recordLoad, boolean recordLoadFailure) {
     if (!isRecordingStats()) {
       return remappingFunction;

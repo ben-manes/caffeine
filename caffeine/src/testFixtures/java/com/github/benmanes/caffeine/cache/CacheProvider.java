@@ -87,7 +87,7 @@ public final class CacheProvider {
         intern = false;
       } else if (clazz.isInstance(context.cache())) {
         params[i] = context.cache();
-      } else if (clazz.isInstance(context.asyncCache())) {
+      } else if (context.isAsync() && clazz.isInstance(context.asyncCache())) {
         params[i] = context.asyncCache();
       } else if (clazz.isAssignableFrom(Map.class)) {
         params[i] = context.cache().asMap();

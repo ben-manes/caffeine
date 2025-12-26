@@ -82,7 +82,7 @@ public final class Issue1065Test {
   @BeforeMethod
   public void before() {
     fallback = provider.getCacheManager()
-        .createCache("fallback", new MutableConfiguration<String, String>());
+        .createCache("fallback", new MutableConfiguration<>());
     cache = provider.getCacheManager().createCache("primary",
         new MutableConfiguration<String, String>()
             .addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(

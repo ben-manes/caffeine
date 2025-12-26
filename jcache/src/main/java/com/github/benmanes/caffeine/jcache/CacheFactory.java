@@ -28,6 +28,7 @@ import javax.cache.configuration.Configuration;
 import javax.cache.configuration.Factory;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.integration.CacheLoader;
 
 import org.jspecify.annotations.Nullable;
 
@@ -212,7 +213,8 @@ final class CacheFactory {
 
     /** Creates a cache that reads through on a cache miss. */
     private CacheProxy<K, V> newLoadingCacheProxy() {
-      var cacheLoader = requireNonNull(config.getCacheLoaderFactory()).create();
+      @SuppressWarnings("NullAway")
+      CacheLoader<K, V> cacheLoader = requireNonNull(config.getCacheLoaderFactory()).create();
       var adapter = new JCacheLoaderAdapter<>(
           cacheLoader, dispatcher, expiryPolicy, ticker, statistics);
       var cache = caffeine.build(adapter);

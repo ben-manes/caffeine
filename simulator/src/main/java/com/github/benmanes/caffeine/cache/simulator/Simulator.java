@@ -145,7 +145,7 @@ public final class Simulator {
     throw error;
   }
 
-  public static void main(String[] args) {
+  static void main() {
     Logger.getLogger("").setLevel(Level.WARNING);
     var simulator = new Simulator(ConfigFactory.load());
     var stopwatch = Stopwatch.createStarted();

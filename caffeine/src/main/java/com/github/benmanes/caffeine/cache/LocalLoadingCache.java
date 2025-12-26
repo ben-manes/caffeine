@@ -70,7 +70,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   /** Sequentially loads each missing entry. */
   default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(keys));
+    var result = new LinkedHashMap<K, @Nullable V>(calculateHashMapCapacity(keys));
     for (K key : keys) {
       result.put(key, null);
     }
@@ -78,7 +78,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     @Var int count = 0;
     try {
       for (var iter = result.entrySet().iterator(); iter.hasNext();) {
-        Map.Entry<K, V> entry = iter.next();
+        Map.Entry<K, @Nullable V> entry = iter.next();
         count++;
 
         V value = get(entry.getKey());
@@ -92,7 +92,9 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
       cache().statsCounter().recordMisses(result.size() - count);
       throw t;
     }
-    return Collections.unmodifiableMap(result);
+    @SuppressWarnings("NullableProblems")
+    Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
+    return unmodifiable;
   }
 
   @Override
@@ -104,7 +106,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (V[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
-    CompletableFuture<? extends V>[] reloading = new CompletableFuture[1];
+    @Nullable CompletableFuture<? extends V>[] reloading = new CompletableFuture[1];
     Object keyReference = cache().referenceKey(key);
 
     var future = cache().refreshes().compute(keyReference, (k, existing) -> {
@@ -143,7 +145,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         }
 
         boolean[] discard = new boolean[1];
-        var value = cache().compute(key, (k, currentValue) -> {
+        @Nullable V value = cache().compute(key, (K k, @Nullable V currentValue) -> {
           boolean removed = cache().refreshes().remove(keyReference, reloading[0]);
           if (removed && (currentValue == oldValue[0])) {
             return (currentValue == null) && (newValue == null) ? null : newValue;
@@ -171,7 +173,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   @Override
   default CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, CompletableFuture<V>>(calculateHashMapCapacity(keys));
+    var result = new LinkedHashMap<K, CompletableFuture<@Nullable V>>(
+        calculateHashMapCapacity(keys));
     for (K key : keys) {
       result.computeIfAbsent(key, this::refresh);
     }

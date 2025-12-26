@@ -150,7 +150,7 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
-  public <K, V> CacheProxy<K, V> getCache(String cacheName) {
+  public <K, V> @Nullable CacheProxy<K, V> getCache(String cacheName) {
     ClassLoader old = Thread.currentThread().getContextClassLoader();
     try {
       if (runsAsAnOsgiBundle) {

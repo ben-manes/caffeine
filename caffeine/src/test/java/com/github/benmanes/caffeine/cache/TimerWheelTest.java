@@ -43,6 +43,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 import org.mockito.ArgumentCaptor;
@@ -612,7 +613,7 @@ public final class TimerWheelTest {
     return snapshot;
   }
 
-  @SuppressWarnings("SystemOut")
+  @SuppressWarnings({"SystemOut", "unused"})
   static void printTimerWheel(TimerWheel<?, ?> timerWheel) {
     var builder = new StringBuilder();
     for (int i = 0; i < timerWheel.wheel.length; i++) {
@@ -642,9 +643,9 @@ public final class TimerWheelTest {
   }
 
   @NullUnmarked
-  private static final class Timer extends Node<Int, Int> {
-    @Nullable Node<Int, Int> prev;
-    @Nullable Node<Int, Int> next;
+  private static final class Timer extends Node<@NonNull Int, @NonNull Int> {
+    @Nullable Node<@NonNull Int, @NonNull Int> prev;
+    @Nullable Node<@NonNull Int, @NonNull Int> next;
     long variableTime;
 
     Timer(long accessTime) {
@@ -657,16 +658,17 @@ public final class TimerWheelTest {
     @Override public void setVariableTime(long variableTime) {
       this.variableTime = variableTime;
     }
-    @Override public Node<Int, Int> getPreviousInVariableOrder() {
+    @Override public Node<@NonNull Int, @NonNull Int> getPreviousInVariableOrder() {
       return prev;
     }
-    @Override public void setPreviousInVariableOrder(@Nullable Node<Int, Int> prev) {
+    @Override public void setPreviousInVariableOrder(
+        @Nullable Node<@NonNull Int, @NonNull Int> prev) {
       this.prev = prev;
     }
-    @Override public Node<Int, Int> getNextInVariableOrder() {
+    @Override public Node<@NonNull Int, @NonNull Int> getNextInVariableOrder() {
       return next;
     }
-    @Override public void setNextInVariableOrder(@Nullable Node<Int, Int> next) {
+    @Override public void setNextInVariableOrder(@Nullable Node<@NonNull Int, @NonNull Int> next) {
       this.next = next;
     }
 
@@ -676,7 +678,7 @@ public final class TimerWheelTest {
     @Override public Int getValue() { return getKey().negate(); }
     @Override public Object getValueReference() { return null; }
     @Override public void setValue(Int value, ReferenceQueue<Int> referenceQueue) {}
-    @Override public boolean containsValue(Object value) { return false; }
+    @Override public boolean containsValue(@NonNull Object value) { return false; }
     @Override public boolean isAlive() { return true; }
     @Override public boolean isRetired() { return false; }
     @Override public boolean isDead() { return false; }

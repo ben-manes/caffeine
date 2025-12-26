@@ -50,13 +50,13 @@ runs:
       uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
       with:
         java-version: ${{ inputs.java }}
-        distribution: ${{ inputs.java == '26-ea' && 'temurin' || inputs.distribution }}
+        distribution: ${{ endsWith(inputs.java, '-ea') && 'temurin' || inputs.distribution }}
     - name: Prepare JDK toolchain
       id: java_toolchain
       env:
         INPUTS_JAVA: ${{ inputs.java }}
         JDK_EA: ${{ endsWith(inputs.java, '-ea') }}
-        INPUTS_DISTRIBUTION: ${{ inputs.java == '26-ea' && 'temurin' || inputs.distribution }}
+        INPUTS_DISTRIBUTION: ${{ endsWith(inputs.java, '-ea') && 'temurin' || inputs.distribution }}
       shell: bash
       run: |
         declare -A -r VENDORS=(

@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
@@ -36,9 +35,9 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.slf4j.bridge.SLF4JBridgeHandler;
-import org.testng.Assert;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
 import org.testng.ISuite;
@@ -65,7 +64,7 @@ import com.github.valfirst.slf4jtest.TestLoggerFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheValidationListener implements ISuiteListener, IInvokedMethodListener {
-  private static final Field ALL_LOGGING_EVENTS = FieldUtils.getDeclaredField(
+  private static final @Nullable Field ALL_LOGGING_EVENTS = FieldUtils.getDeclaredField(
       TestLogger.class, "allLoggingEvents", /* forceAccess= */ true);
   private static final Object[] EMPTY_PARAMS = {};
 
@@ -137,17 +136,18 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     if (context != null) {
       awaitExecutor(context);
 
-      checkCache(context);
       checkNoStats(testResult, context);
       checkExecutor(testResult, context);
       checkNoEvictions(testResult, context);
+      assertThat(context.cache()).isValid();
     }
     checkLogger(testResult);
   }
 
   /** Waits until the executor has completed all of the submitted work. */
+  @SuppressWarnings("resource")
   private static void awaitExecutor(CacheContext context) {
-    if (context.executor() != null) {
+    if (context.executorType() != CacheExecutor.DEFAULT) {
       context.executor().resume();
 
       if ((context.executorType() != CacheExecutor.DIRECT)
@@ -166,10 +166,11 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   }
 
   /** Checks whether the {@link TrackingExecutor} had unexpected failures. */
+  @SuppressWarnings("resource")
   private static void checkExecutor(ITestResult testResult, CacheContext context) {
     var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
     var cacheSpec = testMethod.getAnnotation(CacheSpec.class);
-    if ((cacheSpec == null) || (context.executor() == null)) {
+    if ((cacheSpec == null) || (context.executorType() == CacheExecutor.DEFAULT)) {
       return;
     }
 
@@ -177,17 +178,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       assertThat(context.executor().failed()).isGreaterThan(0);
     } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
       assertThat(context.executor().failed()).isEqualTo(0);
-    }
-  }
-
-  /** Checks that the cache is in a valid state. */
-  private static void checkCache(CacheContext context) {
-    if (context.cache() != null) {
-      assertThat(context.cache()).isValid();
-    } else if (context.asyncCache() != null) {
-      assertThat(context.asyncCache()).isValid();
-    } else {
-      Assert.fail("Test requires that the CacheContext holds the cache under test");
     }
   }
 

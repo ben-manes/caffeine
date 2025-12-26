@@ -36,7 +36,7 @@ import com.google.common.util.concurrent.ListenableFutureTask;
 /**
  * Issue #193: Invalidate before Refresh completes still stores value
  * <p>
- * When a refresh starts before an invalidate and completes afterwards, the entry is inserted into
+ * When a refresh starts before an invalidate and completes afterward, the entry is inserted into
  * the cache. This breaks linearizability assumptions, as the invalidation may be to ensure that
  * the cache does not hold stale data that refresh will have observed in its load. This undesirable
  * behavior is also present in Guava, so the stricter handling is an intentional deviation.
@@ -73,7 +73,7 @@ public final class Issue193Test {
 
   @Test
   public void invalidateDuringRefreshRemovalCheck() {
-    var removed = new ArrayList<Long>();
+    var removed = new ArrayList<@Nullable Long>();
     AsyncLoadingCache<String, Long> cache = Caffeine.newBuilder()
         .removalListener(
             (@Nullable String key, @Nullable Long value, RemovalCause reason) -> removed.add(value))

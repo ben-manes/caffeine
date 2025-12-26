@@ -66,7 +66,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
 
   @Override
   @SuppressWarnings({"PMD.ExceptionAsFlowControl", "PMD.PreserveStackTrace"})
-  public V get(K key, Callable<? extends V> valueLoader) throws ExecutionException {
+  public V get(K key, Callable<? extends @Nullable V> valueLoader) throws ExecutionException {
     requireNonNull(valueLoader);
     try {
       return cache.get(key, k -> {
@@ -169,8 +169,8 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     @Override public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
       return delegate().computeIfAbsent(key, mappingFunction);
     }
-    @Override public V computeIfPresent(K key,
-        BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    @Override public @Nullable V computeIfPresent(K key,
+        BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
       return delegate().computeIfPresent(key, remappingFunction);
     }
     @Override public V compute(K key,

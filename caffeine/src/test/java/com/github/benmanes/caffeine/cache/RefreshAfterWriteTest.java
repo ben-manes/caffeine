@@ -299,6 +299,7 @@ public final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
+  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE, executor = CacheExecutor.THREADED)
@@ -431,7 +432,7 @@ public final class RefreshAfterWriteTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings("NullAway")
+      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
         refreshed.set(true);
@@ -1002,15 +1003,14 @@ public final class RefreshAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void getRefreshesAfter(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+  public void getRefreshesAfter(FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(1);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(1);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshAfter_negative(
-      CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+  public void setRefreshAfter_negative(FixedRefresh<Int, Int> refreshAfterWrite) {
     var duration = Duration.ofMinutes(-2);
     assertThrows(IllegalArgumentException.class, () ->
         refreshAfterWrite.setRefreshesAfter(duration));
@@ -1018,8 +1018,7 @@ public final class RefreshAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshAfter_excessive(
-      CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+  public void setRefreshAfter_excessive(FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(ChronoUnit.FOREVER.getDuration());
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.NANOSECONDS)).isEqualTo(Long.MAX_VALUE);
   }
@@ -1027,7 +1026,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("PreferJavaTimeOverload")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshesAfter(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+  public void setRefreshesAfter(FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(2, TimeUnit.MINUTES);
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(2);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(2);
@@ -1035,8 +1034,7 @@ public final class RefreshAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshesAfter_duration(CacheContext context,
-      FixedRefresh<Int, Int> refreshAfterWrite) {
+  public void setRefreshesAfter_duration(FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(2));
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(2);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(2);

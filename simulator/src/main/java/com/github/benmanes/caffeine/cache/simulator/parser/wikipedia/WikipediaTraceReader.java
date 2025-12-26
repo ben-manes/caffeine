@@ -108,7 +108,7 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
       return url;
     }
 
-    // Replace the html entities that we want to search for inside paths
+    // Replace the HTML entities that we want to search for inside paths
     @Var String cleansed = url.substring(index + 1);
     for (var replacement : REPLACEMENTS) {
       cleansed = Strings.CS.replace(cleansed, replacement.search(), replacement.replace());

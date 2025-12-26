@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.google;
+package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
@@ -22,10 +22,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.CacheContext;
-import com.github.benmanes.caffeine.cache.CacheGenerator;
 import com.google.common.collect.testing.ConcurrentMapTestSuiteBuilder;
 import com.google.common.collect.testing.SampleElements;
 import com.google.common.collect.testing.TestMapGenerator;

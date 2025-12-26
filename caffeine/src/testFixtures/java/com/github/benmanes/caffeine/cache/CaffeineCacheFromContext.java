@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.Serializable;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
@@ -56,7 +58,7 @@ public final class CaffeineCacheFromContext {
       }
     }
     if (context.expiryType() != CacheExpiry.DISABLED) {
-      builder.expireAfter(context.expiry());
+      builder.expireAfter(requireNonNull(context.expiry()));
     }
     if (context.expiresAfterAccess()) {
       builder.expireAfterAccess(context.expireAfterAccess().duration());

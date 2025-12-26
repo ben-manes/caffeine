@@ -52,9 +52,8 @@ public final class JCacheLoaderAdapter<K, V>
   private final ExpiryPolicy expiry;
   private final Ticker ticker;
 
-  private CacheProxy<K, V> cache;
+  private @Nullable CacheProxy<K, V> cache;
 
-  @SuppressWarnings("NullAway.Init")
   public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher,
       ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);
@@ -74,6 +73,7 @@ public final class JCacheLoaderAdapter<K, V>
   }
 
   @Override
+  @SuppressWarnings("ConstantValue")
   public @Nullable Expirable<V> load(K key) {
     try {
       boolean statsEnabled = statistics.isEnabled();
@@ -84,6 +84,7 @@ public final class JCacheLoaderAdapter<K, V>
         return null;
       }
 
+      requireNonNull(cache);
       dispatcher.publishCreated(cache, key, value);
 
       if (statsEnabled) {
@@ -103,7 +104,9 @@ public final class JCacheLoaderAdapter<K, V>
     try {
       boolean statsEnabled = statistics.isEnabled();
       long start = statsEnabled ? ticker.read() : 0L;
+      requireNonNull(cache);
 
+      @SuppressWarnings("ConstantValue")
       Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
           .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
           .collect(toUnmodifiableMap(Map.Entry::getKey,

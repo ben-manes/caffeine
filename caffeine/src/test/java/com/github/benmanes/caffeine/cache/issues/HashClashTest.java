@@ -24,7 +24,6 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.CacheContext;
 import com.github.benmanes.caffeine.cache.CacheProvider;
 import com.github.benmanes.caffeine.cache.CacheSpec;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
@@ -51,7 +50,7 @@ public final class HashClashTest {
   @Test(dataProvider = "caches")
   @SuppressWarnings("CheckReturnValue")
   @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.ONE_FIFTY, stats = Stats.ENABLED)
-  public void testCache(Cache<Long, Long> cache, CacheContext context) {
+  public void testCache(Cache<Long, Long> cache) {
     for (long j = 0; j < 300; ++j) {
       cache.get(1L, identity());
       cache.get(j, identity());

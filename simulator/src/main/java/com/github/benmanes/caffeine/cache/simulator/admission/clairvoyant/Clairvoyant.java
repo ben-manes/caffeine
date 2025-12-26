@@ -48,7 +48,7 @@ import org.jspecify.annotations.Nullable;
 public final class Clairvoyant implements KeyOnlyAdmittor {
   private static final AtomicReference<@Nullable Long2ObjectMap<IntList>> snapshot = new AtomicReference<>();
 
-  private final Long2ObjectMap<IntPriorityQueue> accessTimes;
+  private final Long2ObjectMap<@Nullable IntPriorityQueue> accessTimes;
   private final PolicyStats policyStats;
 
   public Clairvoyant(Config config, PolicyStats policyStats) {

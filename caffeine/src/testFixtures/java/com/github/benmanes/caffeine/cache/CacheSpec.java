@@ -45,6 +45,7 @@ import java.util.function.BiFunction;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.RemovalListeners.ConsumingRemovalListener;
@@ -200,8 +201,8 @@ public @interface CacheSpec {
      */
     RANDOM(Weighers::random),
     /**
-     * A flag indicating that the entry's weight records interactions and is skipped by automatic
-     * automatic validation checks.
+     * A flag indicating that the entry's weight is randomly changing and is skipped by automatic
+     * validation checks.
      */
     @SuppressWarnings("unchecked")
     MOCKITO(() -> {
@@ -394,12 +395,12 @@ public @interface CacheSpec {
     /** A removal listener that records interactions. */
     MOCKITO(Mockito::mock);
 
-    private final Supplier<RemovalListener<Object, Object>> factory;
+    private final Supplier<@Nullable RemovalListener<Object, Object>> factory;
 
-    Listener(Supplier<RemovalListener<Object, Object>> factory) {
+    Listener(Supplier<@Nullable RemovalListener<Object, Object>> factory) {
       this.factory = factory;
     }
-    public <K, V> RemovalListener<K, V> create() {
+    public <K, V> @Nullable RemovalListener<K, V> create() {
       return (RemovalListener<K, V>) factory.get();
     }
   }
@@ -421,7 +422,7 @@ public @interface CacheSpec {
     },
     /** A loader that always returns null (no mapping). */
     NULL {
-      @SuppressWarnings("NullAway")
+      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public Int load(Int key) {
         return null;
       }
@@ -463,7 +464,7 @@ public @interface CacheSpec {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @SuppressWarnings({"NullAway",
+      @SuppressWarnings({"DataFlowIssue", "NullAway",
         "PMD.ReturnEmptyCollectionRatherThanNull", "ReturnsNullCollection"})
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
         return null;
@@ -475,11 +476,13 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
-        Map<Int, Int> result = Maps.newHashMapWithExpectedSize(keys.size());
+        Map<Int, @Nullable Int> result = Maps.newHashMapWithExpectedSize(keys.size());
         for (Int key : keys) {
           result.put(key, null);
         }
-        return result;
+        @SuppressWarnings({"NullableProblems", "NullAway"})
+        Map<Int, Int> loaded = result;
+        return loaded;
       }
     },
     BULK_IDENTITY {
@@ -743,7 +746,7 @@ public @interface CacheSpec {
       final Loader loader;
 
       SerializableAsyncCacheLoader(Loader loader) {
-        this.loader = loader;
+        this.loader = requireNonNull(loader);
       }
       @Override
       public CompletableFuture<? extends Int> asyncLoad(
@@ -751,7 +754,7 @@ public @interface CacheSpec {
         return loader.asyncLoad(key, executor);
       }
       private Object readResolve() {
-        return loader.asyncLoader;
+        return requireNonNull(loader).asyncLoader;
       }
     }
 
@@ -805,13 +808,13 @@ public @interface CacheSpec {
       });
     });
 
-    private final Supplier<TrackingExecutor> executor;
+    private final Supplier<@Nullable TrackingExecutor> executor;
 
-    CacheExecutor(Supplier<TrackingExecutor> executor) {
+    CacheExecutor(Supplier<@Nullable TrackingExecutor> executor) {
       this.executor = requireNonNull(executor);
     }
 
-    public TrackingExecutor create() {
+    public @Nullable TrackingExecutor create() {
       return executor.get();
     }
   }
@@ -830,13 +833,13 @@ public @interface CacheSpec {
     THREADED(() -> Scheduler.forScheduledExecutorService(scheduledExecutor)),
     MOCKITO(Mockito::mock);
 
-    private final Supplier<Scheduler> scheduler;
+    private final Supplier<@Nullable Scheduler> scheduler;
 
-    CacheScheduler(Supplier<Scheduler> scheduler) {
+    CacheScheduler(Supplier<@Nullable Scheduler> scheduler) {
       this.scheduler = requireNonNull(scheduler);
     }
 
-    public Scheduler create() {
+    public @Nullable Scheduler create() {
       return scheduler.get();
     }
   }

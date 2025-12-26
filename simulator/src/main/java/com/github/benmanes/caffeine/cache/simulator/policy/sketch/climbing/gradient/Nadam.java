@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient;
 
-import java.util.List;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
 import com.typesafe.config.Config;
@@ -77,9 +75,6 @@ public final class Nadam extends AbstractClimber {
 
     public NadamSettings(Config config) {
       super(config);
-    }
-    public List<Double> percentMain() {
-      return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");

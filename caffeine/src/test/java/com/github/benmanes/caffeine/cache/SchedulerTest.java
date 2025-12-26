@@ -41,6 +41,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
@@ -74,7 +75,7 @@ public final class SchedulerTest {
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "runnableSchedulers")
   public void scheduler_exception(Scheduler scheduler) {
-    var thread = new AtomicReference<Thread>();
+    var thread = new AtomicReference<@Nullable Thread>();
     Executor executor = task -> {
       thread.set(Thread.currentThread());
       throw new IllegalStateException();
@@ -129,7 +130,7 @@ public final class SchedulerTest {
   /* --------------- guarded --------------- */
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void guardedScheduler_null() {
     assertThrows(NullPointerException.class, () -> Scheduler.guardedScheduler(null));
   }
@@ -178,7 +179,7 @@ public final class SchedulerTest {
   /* --------------- ScheduledExecutorService --------------- */
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void scheduledExecutorService_null() {
     assertThrows(NullPointerException.class, () -> Scheduler.forScheduledExecutorService(null));
   }

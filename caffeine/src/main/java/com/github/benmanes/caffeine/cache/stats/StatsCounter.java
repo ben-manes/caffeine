@@ -40,9 +40,9 @@ public interface StatsCounter {
 
   /**
    * Records cache misses. This should be called when a cache request returns a value that was not
-   * found in the cache. This method should be called by the loading thread, as well as by threads
-   * blocking on the load. Multiple concurrent calls to {@link Cache} lookup methods with the same
-   * key on an absent value should result in a single call to either {@code recordLoadSuccess} or
+   * found in the cache. This method should be called by the loading thread and by threads blocking
+   * on the load. Multiple concurrent calls to {@link Cache} lookup methods with the same key on an
+   * absent value should result in a single call to either {@code recordLoadSuccess} or
    * {@code recordLoadFailure} and multiple calls to this method, despite all being served by the
    * results of a single load operation.
    *

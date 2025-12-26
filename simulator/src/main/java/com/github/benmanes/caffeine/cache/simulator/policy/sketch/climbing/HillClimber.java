@@ -74,9 +74,6 @@ public interface HillClimber {
         return increaseWindow(amount);
       }
     }
-    public static int roundToInt(double amount) {
-      return (amount < 0) ? (int) Math.floor(amount) : (int) Math.ceil(amount);
-    }
 
     public static Adaptation hold() {
       return HOLD;

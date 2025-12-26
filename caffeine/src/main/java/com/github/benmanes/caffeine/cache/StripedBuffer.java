@@ -128,7 +128,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     int result;
     Buffer<E> buffer;
     @Var boolean uncontended = true;
-    Buffer<E>[] buffers = table;
+    @Nullable Buffer<E>[] buffers = table;
     if ((buffers == null)
         || ((mask = buffers.length - 1) < 0)
         || ((buffer = buffers[h & mask]) == null)
@@ -153,7 +153,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     @Var int result = Buffer.FAILED;
     @Var boolean collide = false; // True if last slot nonempty
     for (int attempt = 0; attempt < ATTEMPTS; attempt++) {
-      Buffer<E>[] buffers;
+      @Nullable Buffer<E>[] buffers;
       Buffer<E> buffer;
       int n;
       if (((buffers = table) != null) && ((n = buffers.length) > 0)) {
@@ -161,7 +161,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
           if ((tableBusy == 0) && casTableBusy()) { // Try to attach new Buffer
             @Var boolean created = false;
             try { // Recheck under lock
-              Buffer<E>[] rs;
+              @Nullable Buffer<E>[] rs;
               int mask;
               int j;
               if (((rs = table) != null) && ((mask = rs.length) > 0)
@@ -223,7 +223,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
 
   @Override
   public void drainTo(Consumer<E> consumer) {
-    Buffer<E>[] buffers = table;
+    @Nullable Buffer<E>[] buffers = table;
     if (buffers == null) {
       return;
     }
@@ -236,7 +236,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
 
   @Override
   public long reads() {
-    Buffer<E>[] buffers = table;
+    @Nullable Buffer<E>[] buffers = table;
     if (buffers == null) {
       return 0;
     }
@@ -251,7 +251,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
 
   @Override
   public long writes() {
-    Buffer<E>[] buffers = table;
+    @Nullable Buffer<E>[] buffers = table;
     if (buffers == null) {
       return 0;
     }

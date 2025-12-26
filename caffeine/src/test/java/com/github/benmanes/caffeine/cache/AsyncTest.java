@@ -95,7 +95,7 @@ public final class AsyncTest {
   }
 
   @Test(dataProvider = "unsuccessful")
-  public void getWhenSuccessful_fails(CompletableFuture<?> future) {
+  public void getWhenSuccessful_fails(@Nullable CompletableFuture<?> future) {
     if ((future != null) && !future.isDone()) {
       var result = new AtomicInteger();
       ConcurrentTestHarness.execute(() -> {

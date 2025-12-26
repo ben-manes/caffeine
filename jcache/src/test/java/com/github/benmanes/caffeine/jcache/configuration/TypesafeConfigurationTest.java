@@ -64,7 +64,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void setConfigSource_supplier() {
     Config config = Mockito.mock();
     TypesafeConfigurator.setConfigSource(() -> config);
@@ -76,7 +76,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void setConfigSource_function() {
     TypesafeConfigurator.setConfigSource((uri, loader) -> null);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
@@ -86,7 +86,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void configSource_null() {
     assertThrows(NullPointerException.class, () -> configSource().get(null, null));
     assertThrows(NullPointerException.class, () -> configSource().get(null, classloader));
@@ -174,8 +174,8 @@ public final class TypesafeConfigurationTest {
 
   @Test
   public void configSource_file() throws URISyntaxException {
-    var config = configSource().get(
-        getClass().getResource("/custom.properties").toURI(), classloader);
+    var resource = requireNonNull(getClass().getResource("/custom.properties"));
+    var config = configSource().get(resource.toURI(), classloader);
     assertThat(config.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
     assertThat(config.hasPath("caffeine.jcache.default.key-type")).isTrue();
     assertThat(config.hasPath("caffeine.jcache.test-cache")).isFalse();

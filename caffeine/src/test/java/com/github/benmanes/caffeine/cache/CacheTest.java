@@ -121,10 +121,10 @@ public final class CacheTest {
   /* --------------- getIfPresent --------------- */
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getIfPresent_nullKey(Cache<Int, Int> cache, CacheContext context) {
+  public void getIfPresent_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.getIfPresent(null));
   }
 
@@ -149,31 +149,31 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
-  public void get_nullKey(Cache<Int, Int> cache, CacheContext context) {
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
+  public void get_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.get(null, identity()));
   }
 
   @CacheSpec
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void get_nullLoader(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.get(context.absentKey(), null));
   }
 
   @CacheSpec
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
-  public void get_nullKeyAndLoader(Cache<Int, Int> cache, CacheContext context) {
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
+  public void get_nullKeyAndLoader(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.get(null, null));
   }
 
   @CacheSpec
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void get_absent_null(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey(), k -> null)).isNull();
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
@@ -236,24 +236,25 @@ public final class CacheTest {
   /* --------------- getAllPresent --------------- */
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_iterable_null(Cache<Int, Int> cache, CacheContext context) {
+  public void getAllPresent_iterable_null(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.getAllPresent(null));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_iterable_nullKey(Cache<Int, Int> cache, CacheContext context) {
+  public void getAllPresent_iterable_nullKey(Cache<Int, Int> cache) {
+    @SuppressWarnings("DataFlowIssue")
     List<Int> keys = Collections.singletonList(null);
     assertThrows(NullPointerException.class, () -> cache.getAllPresent(keys));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_iterable_empty(Cache<Int, Int> cache, CacheContext context) {
+  public void getAllPresent_iterable_empty(Cache<Int, Int> cache) {
     assertThat(cache.getAllPresent(List.of())).isExhaustivelyEmpty();
   }
 
@@ -377,17 +378,18 @@ public final class CacheTest {
 
   /* --------------- getAll --------------- */
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_null(Cache<Int, Int> cache, CacheContext context) {
+  public void getAll_iterable_null(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.getAll(null, keys -> { throw new AssertionError(); }));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_nullKey(Cache<Int, Int> cache, CacheContext context) {
+  public void getAll_iterable_nullKey(Cache<Int, Int> cache) {
+    @SuppressWarnings("DataFlowIssue")
     List<Int> keys = Collections.singletonList(null);
     assertThrows(NullPointerException.class, () ->
         cache.getAll(keys, k -> { throw new AssertionError(); }));
@@ -401,16 +403,16 @@ public final class CacheTest {
     assertThat(context).stats().hits(0).misses(0);
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_function_null(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.getAll(context.absentKeys(), null));
   }
 
   @CheckMaxLogLevel(WARN)
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_function_nullValue(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class,
@@ -704,26 +706,26 @@ public final class CacheTest {
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullKey(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.put(null, context.absentValue()));
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullValue(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.put(context.absentKey(), null));
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void put_nullKeyAndValue(Cache<Int, Int> cache, CacheContext context) {
+  public void put_nullKeyAndValue(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.put(null, null));
   }
 
@@ -784,10 +786,10 @@ public final class CacheTest {
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void putAll_null(Cache<Int, Int> cache, CacheContext context) {
+  public void putAll_null(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.putAll(null));
   }
 
@@ -816,10 +818,10 @@ public final class CacheTest {
   }
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void invalidate_nullKey(Cache<Int, Int> cache, CacheContext context) {
+  public void invalidate_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.invalidate(null));
   }
 
@@ -837,7 +839,7 @@ public final class CacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void invalidateAll_empty(Cache<Int, Int> cache, CacheContext context) {
+  public void invalidateAll_empty(Cache<Int, Int> cache) {
     cache.invalidateAll(Set.of());
   }
 
@@ -863,9 +865,9 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
-  public void invalidateAll_null(Cache<Int, Int> cache, CacheContext context) {
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
+  public void invalidateAll_null(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.invalidateAll(null));
   }
 
@@ -904,7 +906,7 @@ public final class CacheTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void cleanUp(Cache<Int, Int> cache, CacheContext context) {
+  public void cleanUp(Cache<Int, Int> cache) {
     cache.cleanUp();
   }
 
@@ -913,7 +915,7 @@ public final class CacheTest {
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, removalListener = Listener.REJECTING)
-  public void removalListener_error_log(Cache<Int, Int> cache, CacheContext context) {
+  public void removalListener_error_log(Cache<Int, Int> cache) {
     cache.invalidateAll();
     assertThat(logEvents()
         .withMessage("Exception thrown by removal listener")
@@ -928,7 +930,7 @@ public final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
       executor = CacheExecutor.REJECTING, executorFailure = ExecutorFailure.EXPECTED,
       removalListener = Listener.CONSUMING)
-  public void removalListener_submit_error_log(Cache<Int, Int> cache, CacheContext context) {
+  public void removalListener_submit_error_log(Cache<Int, Int> cache) {
     cache.invalidateAll();
     assertThat(logEvents()
         .withMessage("Exception thrown when submitting removal listener")
@@ -957,7 +959,7 @@ public final class CacheTest {
       context.caffeine().ticker(caffeineTicker);
     }
 
-    Cache<Int, Int> cache = context.build(key -> key);
+    Cache<Int, @Nullable Int> cache = context.build(key -> key);
     assertThat(cache.getIfPresent(context.absentKey())).isNull();
     assertThat(cache.get(context.absentKey(), key -> null)).isNull();
     assertThat(cache.get(context.absentKey(), key -> key)).isNotNull();
@@ -976,7 +978,7 @@ public final class CacheTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void serialize(Cache<Int, Int> cache, CacheContext context) {
+  public void serialize(Cache<Int, Int> cache) {
     assertThat(cache).isReserialize();
   }
 
@@ -1078,10 +1080,10 @@ public final class CacheTest {
   /* --------------- Policy: getIfPresentQuietly --------------- */
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getIfPresentQuietly_nullKey(Cache<Int, Int> cache, CacheContext context) {
+  public void getIfPresentQuietly_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.policy().getIfPresentQuietly(null));
   }
 
@@ -1105,10 +1107,10 @@ public final class CacheTest {
   /* --------------- Policy: getEntryIfPresentQuietly --------------- */
 
   @CheckNoStats
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getEntryIfPresentQuietly_nullKey(Cache<Int, Int> cache, CacheContext context) {
+  public void getEntryIfPresentQuietly_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.policy().getEntryIfPresentQuietly(null));
   }
 
@@ -1148,21 +1150,21 @@ public final class CacheTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void refreshes_empty(Cache<Int, Int> cache, CacheContext context) {
+  public void refreshes_empty(Cache<Int, Int> cache) {
     assertThat(cache.policy().refreshes()).isExhaustivelyEmpty();
   }
 
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void refreshes_unmodifiable(Cache<Int, Int> cache, CacheContext context) {
+  public void refreshes_unmodifiable(Cache<Int, Int> cache) {
     assertThrows(UnsupportedOperationException.class, () -> cache.policy().refreshes().clear());
   }
 
   @CacheSpec
   @Test(dataProvider = "caches")
   @SuppressWarnings("CollectionUndefinedEquality")
-  public void refreshes_nullLookup(Cache<Int, Int> cache, CacheContext context) {
+  public void refreshes_nullLookup(Cache<Int, Int> cache) {
     assertThat(cache.policy().refreshes().containsValue(null)).isFalse();
     assertThat(cache.policy().refreshes().containsKey(null)).isFalse();
     assertThat(cache.policy().refreshes().get(null)).isNull();

@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Deque;
@@ -140,8 +142,8 @@ interface LinkedDeque<E> extends Deque<E> {
           } else if (!second.hasNext()) {
             return first.next();
           }
-          E o1 = first.peek();
-          E o2 = second.peek();
+          E o1 = requireNonNull(first.peek());
+          E o2 = requireNonNull(second.peek());
           boolean greaterOrEqual = (comparator.compare(o1, o2) >= 0);
           return greaterOrEqual ? first.next() : second.next();
         }
@@ -151,8 +153,8 @@ interface LinkedDeque<E> extends Deque<E> {
           } else if (!second.hasNext()) {
             return first.peek();
           }
-          E o1 = first.peek();
-          E o2 = second.peek();
+          E o1 = requireNonNull(first.peek());
+          E o2 = requireNonNull(second.peek());
           boolean greaterOrEqual = (comparator.compare(o1, o2) >= 0);
           return greaterOrEqual ? o1 : o2;
         }

@@ -66,7 +66,7 @@ public final class CsvReporter extends TextReporter {
         .objectFormatter(object -> {
           return (object instanceof Stopwatch stopwatch)
               ? Long.toString(stopwatch.elapsed(TimeUnit.MILLISECONDS))
-              : object.toString();
+              : String.valueOf(object);
         }).build();
   }
 }

@@ -35,6 +35,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -97,7 +98,7 @@ public final class CaffeineSpecTest {
         CaffeineSpec.parseLong("key", BigInteger.valueOf(Long.MIN_VALUE).subtract(ONE).toString()));
   }
 
-  private static void parseNumber(BiFunction<String, String, Number> parser) {
+  private static void parseNumber(BiFunction<String, @Nullable String, @Nullable Number> parser) {
     var invalid = Arrays.asList(null, "", "_52", "52_", "-_52",
         "+_52", "52-", "52+", "52_-", "52_+", "value");
     for (var value : invalid) {
@@ -110,7 +111,7 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void parseDuration_exception() {
     // TimeUnit
     assertThrows(IllegalArgumentException.class,
@@ -148,7 +149,7 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void parse_exception() {
     assertThrows(NullPointerException.class, () -> CaffeineSpec.parse(null));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("="));
