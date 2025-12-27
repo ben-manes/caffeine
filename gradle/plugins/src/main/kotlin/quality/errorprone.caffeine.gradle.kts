@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -100,9 +101,6 @@ fun disabledChecks() = listOf(
   "StaticImport",
   "SuppressWarningsWithoutExplanation",
   "UngroupedOverloads",
-
-  // https://github.com/google/error-prone/issues/4914
-  "UnescapedEntity",
 )
 @Suppress("CanConvertToMultiDollarString")
 fun disabledRules() = listOf(

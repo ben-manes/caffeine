@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import org.gradle.plugins.ide.eclipse.model.Classpath
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
 

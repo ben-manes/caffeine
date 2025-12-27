@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 plugins {
   id("base.caffeine")
   id("coverage.caffeine")

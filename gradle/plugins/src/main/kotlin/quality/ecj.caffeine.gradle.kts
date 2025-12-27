@@ -1,5 +1,5 @@
+@file:Suppress("PackageDirectoryMismatch")
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
-import org.gradle.kotlin.dsl.withType
 
 plugins {
   `jvm-ecosystem`
@@ -51,8 +51,8 @@ abstract class EclipseJavaCompile @Inject constructor(
       buildList {
         addAll(listOf(
           "-classpath", compileClasspath.get().filter { it.exists() }.asPath,
-          "-properties", properties.get().asFile.absolutePath,
-          "-log", report.get().asFile.absolutePath,
+          "-properties", properties.absolutePath().get(),
+          "-log", report.absolutePath().get(),
           "-encoding", "UTF-8",
           "-enableJavadoc",
           "-failOnWarning",

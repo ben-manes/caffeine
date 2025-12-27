@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import org.gradle.api.plugins.JavaPluginExtension
 
 plugins {

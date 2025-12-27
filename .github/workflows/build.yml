@@ -237,7 +237,6 @@ jobs:
             coveralls.io:443
             fastly.com:443
             nodejs.org:443
-            raw.githubusercontent.com
             sonarcloud.io:443
             scanner.sonarcloud.io:443
             storage.googleapis.com:443

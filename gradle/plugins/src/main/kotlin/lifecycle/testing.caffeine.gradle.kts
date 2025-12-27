@@ -1,8 +1,9 @@
+@file:Suppress("PackageDirectoryMismatch")
+import net.ltgt.gradle.errorprone.errorprone
+import net.ltgt.gradle.nullaway.nullaway
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
-import net.ltgt.gradle.errorprone.errorprone
-import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
   `java-library`
@@ -56,11 +57,17 @@ tasks.withType<Test>().configureEach {
 
   // Use -Pjfr to generate a profile
   if (rootProject.hasProperty("jfr")) {
-    val jfr = layout.buildDirectory.file("jfr/$name.jfr").get().asFile
-    jvmArgs("-XX:StartFlightRecording=filename=${jfr.absolutePath}")
     val relativeDir = gradle.startParameter.currentDir
-    doFirst { jfr.parentFile.mkdirs() }
-    doLast { println("Java Flight Recording stored at: ${jfr.relativeTo(relativeDir)}") }
+    val jfr = layout.buildDirectory.file("jfr/$name.jfr")
+    jvmArgumentProviders.add {
+      listOf("-XX:StartFlightRecording=filename=${jfr.absolutePath().get()}")
+    }
+    doFirst {
+      jfr.get().asFile.parentFile.mkdirs()
+    }
+    doLast {
+      println("Java Flight Recording stored at: ${jfr.relativePathFrom(relativeDir).get()}")
+    }
   }
 
   reports {
@@ -69,7 +76,7 @@ tasks.withType<Test>().configureEach {
     html.required = isCI().map { !it }
   }
   testLogging {
-    events = setOf(SKIPPED, FAILED)
+    events(SKIPPED, FAILED)
     exceptionFormat = FULL
     showStackTraces = true
     showExceptions = true

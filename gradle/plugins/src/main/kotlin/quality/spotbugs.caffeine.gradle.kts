@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import com.github.spotbugs.snom.Confidence.LOW
 import com.github.spotbugs.snom.SpotBugsTask
 import com.github.spotbugs.snom.Effort.MAX

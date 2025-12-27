@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 
 plugins {

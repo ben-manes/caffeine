@@ -125,7 +125,7 @@ final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
   volatile Reference<?> keyReference;
 
   Interned() {
-    keyReference = NodeFactory.DEAD_WEAK_KEY;
+    this.keyReference = NodeFactory.DEAD_WEAK_KEY;
   }
   Interned(Reference<K> keyReference) {
     this.keyReference = keyReference;

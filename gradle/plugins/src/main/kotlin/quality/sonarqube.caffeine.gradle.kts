@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 plugins {
   id("org.sonarqube")
   id("coverage.caffeine")

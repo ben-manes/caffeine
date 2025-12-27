@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import org.gradle.util.GradleVersion.version as versionOf
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport

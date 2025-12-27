@@ -22,8 +22,8 @@ import java.time.Duration;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class BoundedLincheckTest extends AbstractLincheckCacheTest {
-  public BoundedLincheckTest() {
+public final class BoundedCacheLincheckTest extends AbstractLincheckCacheTest {
+  public BoundedCacheLincheckTest() {
     super(Caffeine.newBuilder()
         .maximumSize(Long.MAX_VALUE)
         .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE)));

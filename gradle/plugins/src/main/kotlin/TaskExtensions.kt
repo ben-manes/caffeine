@@ -3,7 +3,6 @@ import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.api.tasks.testing.Test
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.kotlin.dsl.systemProperties
-import kotlin.math.max
 
 /** Applies the standard doclet options. */
 fun Javadoc.javadocOptions(block: StandardJavadocDocletOptions.() -> Unit) {
@@ -16,9 +15,7 @@ fun Task.incompatibleWithConfigurationCache() {
 }
 
 fun Test.useParallelJUnitJupiter() {
-  val threadCount = Runtime.getRuntime().availableProcessors().let {
-    if (project.isCI().get()) it else max(6, it - 1)
-  }
+  val threadCount = Runtime.getRuntime().availableProcessors()
   systemProperties(
     "testng.parallel" to "methods",
     "testng.threadCount" to threadCount.toString(),

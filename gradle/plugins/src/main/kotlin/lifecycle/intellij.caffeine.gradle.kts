@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.jetbrains.gradle.ext.ActionDelegationConfig.TestRunner.PLATFORM
 import org.jetbrains.gradle.ext.runConfigurations
@@ -41,7 +42,7 @@ allprojects {
 
 idea.project.settings {
   delegateActions {
-    delegateBuildRunToGradle = false
+    delegateBuildRunToGradle = true
     testRunner = PLATFORM
   }
   runConfigurations {

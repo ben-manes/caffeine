@@ -20,8 +20,8 @@ package com.github.benmanes.caffeine.cache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class UnboundedLincheckTest extends AbstractLincheckCacheTest {
-  public UnboundedLincheckTest() {
+public final class UnboundedCacheLincheckTest extends AbstractLincheckCacheTest {
+  public UnboundedCacheLincheckTest() {
     super(Caffeine.newBuilder());
   }
 }

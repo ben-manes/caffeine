@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.util.Map;
 import java.util.Set;
@@ -33,7 +34,7 @@ import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalB
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalSingleLoader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.InternalBulkLoader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.InternalSingleLoader;
-import com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders;
+import com.google.common.base.Function;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
@@ -57,8 +58,8 @@ final class CaffeinatedGuavaTest {
     SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder()));
     SerializableTester.reserialize(CaffeinatedGuava.build(
         Caffeine.newBuilder(), IdentityLoader.INSTANCE));
-    SerializableTester.reserialize(CaffeinatedGuava.build(
-        Caffeine.newBuilder(), TestingCacheLoaders.identityLoader()));
+    SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder(),
+        CacheLoader.from((Serializable & Function<Object, Object>) key -> key)));
   }
 
   @Test
@@ -71,7 +72,7 @@ final class CaffeinatedGuavaTest {
 
   @Test
   void hasMethod_notFound() {
-    assertThat(CaffeinatedGuava.hasMethod(TestingCacheLoaders.identityLoader(), "abc")).isFalse();
+    assertThat(CaffeinatedGuava.hasMethod(CacheLoader.from(k -> k), "abc")).isFalse();
   }
 
   @Test

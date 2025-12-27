@@ -1,11 +1,12 @@
+
 import com.google.common.base.CaseFormat
 import com.google.common.collect.Sets
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
+import org.gradle.api.tasks.testing.logging.TestLogEvent.STARTED
 import org.gradle.plugins.ide.eclipse.model.Library
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
-import kotlin.math.max
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
@@ -34,6 +35,13 @@ val jammAgent by configurations.registering
 val collections4Sources by configurations.registering
 val javaPoetImplementation by configurations.existing
 val javaPoetRuntimeOnly by configurations.existing
+val osgiBundleElements by configurations.registering {
+  configureAsRuntimeOutgoing()
+}
+
+artifacts {
+  add(osgiBundleElements.name, jar)
+}
 
 dependencies {
   api(libs.jspecify)
@@ -118,8 +126,8 @@ fun JavaExec.codeGenerationTask(generator: String) {
   val directory = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, generator)
   mainClass = "com.github.benmanes.caffeine.cache.${generator}FactoryGenerator"
   val outputDir = layout.buildDirectory.dir("generated/sources/$directory")
-  argumentProviders.add { listOf(outputDir.get().asFile.absolutePath) }
   classpath(sourceSets.named("javaPoet").map { it.runtimeClasspath })
+  argumentProviders.add { listOf(outputDir.absolutePath().get()) }
   inputs.files(compileJavaPoetJava.map { it.outputs.files })
   outputs.dir(outputDir)
   outputs.cacheIf { true }
@@ -208,24 +216,18 @@ testing.suites {
               group = "Parameterized Test"
               include("com/github/benmanes/caffeine/cache/**")
 
-              retry {
-                maxRetries = 3
-                filter.includeClasses = setOf("*BoundedLocalCacheTest",
-                  "*ReferenceTest", "*RefreshAfterWriteTest")
-              }
+              retry.maxRetries = 3
               systemProperties(
                 "keys" to keys,
                 "stats" to stats,
                 "values" to values,
                 "compute" to compute,
                 "implementation" to implementation)
-
               jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
                 "--add-opens", "java.base/java.lang=ALL-UNNAMED",
                 "-XX:-ExplicitGCInvokesConcurrent")
               if (slow == Slow.Enabled) {
-                maxParallelForks =
-                  if (isCI().get()) Runtime.getRuntime().availableProcessors() else 2
+                maxParallelForks = Runtime.getRuntime().availableProcessors()
                 useTestNG {
                   includeGroups.add("slow")
                 }
@@ -233,9 +235,7 @@ testing.suites {
                 useTestNG {
                   parallel = "methods"
                   excludeGroups("slow", "isolated")
-                  threadCount = Runtime.getRuntime().availableProcessors().let {
-                    if (isCI().get()) it else max(6, it - 1)
-                  }
+                  threadCount = Runtime.getRuntime().availableProcessors()
                 }
               }
             }
@@ -358,8 +358,9 @@ testing.suites {
     targets.all {
       testTask.configure {
         val isEnabled = isEarlyAccess().map { !it }
-        testLogging.events("started")
+        testLogging.events(STARTED)
         onlyIf { isEnabled.get() }
+        useParallelJUnitJupiter()
         maxHeapSize = "3g"
         failFast = true
 
@@ -401,8 +402,8 @@ testing.suites {
         useParallelJUnitJupiter()
         val relativeDir = projectDir
         inputs.files(jar.map { it.outputs.files })
-        val jarFile = jar.flatMap { it.archiveFile }.map { it.asFile }
-        doFirst { systemProperty("caffeine.osgi.jar", jarFile.get().relativeTo(relativeDir).path) }
+        val jarPath = jar.flatMap { it.archiveFile }.relativePathFrom(relativeDir)
+        doFirst { systemProperty("caffeine.osgi.jar", jarPath.get()) }
       }
     }
   }

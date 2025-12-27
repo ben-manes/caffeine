@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import org.revapi.gradle.RevapiAcceptAllBreaksTask
 import org.revapi.gradle.RevapiVersionOverrideTask
 import org.revapi.gradle.RevapiAcceptBreakTask

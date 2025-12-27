@@ -1,7 +1,7 @@
 /** JCache compatibility adapter. */
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
-import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.Library
+import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
   id("java-library.caffeine")
@@ -17,6 +17,9 @@ sourceSets {
 val jcacheJavadoc by configurations.registering
 val jcacheTckTests by configurations.registering
 val jcacheTckSources by configurations.registering
+val caffeineOsgiBundle by configurations.registering {
+  configureAsRuntimeIncoming()
+}
 
 val testResourcesJar by tasks.registering(Jar::class) {
   from(sourceSets.named("testResources").map { it.output })
@@ -30,6 +33,8 @@ dependencies {
   api(libs.jakarta.inject)
   api(libs.jcache)
   api(libs.config)
+
+  caffeineOsgiBundle(project(":caffeine", "osgiBundleElements"))
 
   jcacheJavadoc(libs.jcache) {
     artifact { classifier = "javadoc" }
@@ -49,9 +54,9 @@ testing.suites {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
+      implementation(libs.guice)
       implementation(libs.truth)
       implementation(libs.testng)
-      implementation(libs.guice)
       implementation(libs.mockito)
       implementation(libs.awaitility)
       implementation(libs.jcache.guice)
@@ -59,14 +64,8 @@ testing.suites {
       implementation(files(testResourcesJar))
       implementation(libs.nullaway.annotations)
       implementation.bundle(libs.bundles.slf4j.nop)
-      implementation.bundle(libs.bundles.osgi.test.compile)
-      implementation(libs.jcache.tck)
-      implementation(libs.jcache.tck) {
-        artifact { classifier = "tests" }
-      }
 
       runtimeOnly(libs.junit.jupiter.testng)
-      runtimeOnly(libs.junit.jupiter.vintage)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
     targets {
@@ -82,45 +81,68 @@ testing.suites {
           maxParallelForks = 2 * Runtime.getRuntime().availableProcessors()
         }
       }
-      all {
-        testTask.configure {
-          inputs.files(unzipTestKit.map { it.outputs.files })
-          testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs },
-            layout.buildDirectory.files("tck"))
-          classpath = files(sourceSets.named("test").map { it.runtimeClasspath })
+    }
+  }
+  register<JvmTestSuite>("osgiTest") {
+    useJUnitJupiter(libs.versions.junit.jupiter)
 
-          project(":caffeine").plugins.withId("java-library") {
-            val caffeineJar = project(":caffeine").tasks.named<Jar>("jar")
-            val jcacheJar = project(":jcache").tasks.named<Jar>("jar")
-            inputs.files(caffeineJar.map { it.outputs.files })
-            inputs.files(jcacheJar.map { it.outputs.files })
+    dependencies {
+      implementation(project())
+      implementation(libs.junit.jupiter.vintage)
+      implementation.bundle(libs.bundles.osgi.test.compile)
 
-            val caffeineJarFile = caffeineJar.flatMap { it.archiveFile }.map { it.asFile }
-            val jcacheJarFile = jcacheJar.flatMap { it.archiveFile }.map { it.asFile }
-            val relativeDir = projectDir
-            val versions = libs.versions
-            doFirst {
-              systemProperties(mapOf(
-                // Test Compatibility Kit
-                "java.net.preferIPv4Stack" to "true",
-                "org.jsr107.tck.management.agentId" to "CaffeineMBeanServer",
-                "javax.cache.Cache" to "com.github.benmanes.caffeine.jcache.CacheProxy",
-                "javax.cache.Cache.Entry" to "com.github.benmanes.caffeine.jcache.EntryProxy",
-                "javax.cache.CacheManager" to "com.github.benmanes.caffeine.jcache.CacheManagerImpl",
-                "javax.management.builder.initial" to
-                  "com.github.benmanes.caffeine.jcache.management.JCacheMBeanServerBuilder",
+      runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
+    }
+    targets.all {
+      testTask.configure {
+        val caffeineOsgiJarFile = layout.file(caffeineOsgiBundle.map { it.singleFile })
+        val jcacheJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
+        inputs.files(caffeineOsgiJarFile)
+        inputs.files(jcacheJarFile)
 
-                // OSGi tests
-                "config.osgi.version" to versions.config.get(),
-                "jcache.osgi.version" to versions.jcache.get(),
-                "felixScr.version" to versions.felix.scr.get(),
-                "osgiUtil.promise" to versions.osgi.promise.get(),
-                "osgiUtil.function" to versions.osgi.function.get(),
-                "osgiService.component" to versions.osgi.annotations.get(),
-                "caffeine.osgi.jar" to caffeineJarFile.get().relativeTo(relativeDir).path,
-                "caffeine-jcache.osgi.jar" to jcacheJarFile.get().relativeTo(relativeDir).path))
-            }
-          }
+        val relativeDir = projectDir
+        val versions = libs.versions
+        doFirst {
+          systemProperties(mapOf(
+            "config.osgi.version" to versions.config.get(),
+            "jcache.osgi.version" to versions.jcache.get(),
+            "felixScr.version" to versions.felix.scr.get(),
+            "osgiUtil.promise" to versions.osgi.promise.get(),
+            "osgiUtil.function" to versions.osgi.function.get(),
+            "osgiService.component" to versions.osgi.annotations.get(),
+            "caffeine.osgi.jar" to caffeineOsgiJarFile.relativePathFrom(relativeDir).get(),
+            "caffeine-jcache.osgi.jar" to jcacheJarFile.relativePathFrom(relativeDir).get()))
+        }
+      }
+    }
+  }
+  register<JvmTestSuite>("tckTest") {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.hamcrest)
+      implementation(libs.jcache.tck)
+      implementation(libs.jcache.tck) {
+        artifact { classifier = "tests" }
+      }
+
+      runtimeOnly(libs.junit.jupiter.vintage)
+    }
+    targets.all {
+      testTask.configure {
+        inputs.files(unzipTestKit.map { it.outputs.files })
+        testClassesDirs = layout.buildDirectory.files("tck")
+
+        doFirst {
+          val pkg = "com.github.benmanes.caffeine.jcache"
+          systemProperties(mapOf(
+            "java.net.preferIPv4Stack" to "true",
+            "javax.cache.Cache" to "$pkg.CacheProxy",
+            "javax.cache.Cache.Entry" to "$pkg.EntryProxy",
+            "javax.cache.CacheManager" to "$pkg.CacheManagerImpl",
+            "org.jsr107.tck.management.agentId" to "CaffeineMBeanServer",
+            "javax.management.builder.initial" to "$pkg.management.JCacheMBeanServerBuilder"))
         }
       }
     }

@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import org.gradle.util.GradleVersion.version
 
 plugins {

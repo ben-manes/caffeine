@@ -36,10 +36,8 @@ import com.google.errorprone.annotations.Var;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheProvider {
-  private static final Class<?> BOUNDED_LOCAL_CACHE =
-      classForName("com.github.benmanes.caffeine.cache.BoundedLocalCache");
   private static final ImmutableSet<Class<?>> GUAVA_INCOMPATIBLE = ImmutableSet.of(
-      AsyncCache.class, AsyncLoadingCache.class, BOUNDED_LOCAL_CACHE, Policy.Eviction.class,
+      AsyncCache.class, AsyncLoadingCache.class, BoundedLocalCache.class, Policy.Eviction.class,
       Policy.FixedExpiration.class, Policy.VarExpiration.class, Policy.FixedRefresh.class);
 
   private final Parameter[] parameters;
@@ -91,8 +89,8 @@ public final class CacheProvider {
         params[i] = context.asyncCache();
       } else if (clazz.isAssignableFrom(Map.class)) {
         params[i] = context.cache().asMap();
-      } else if (clazz.isAssignableFrom(BOUNDED_LOCAL_CACHE)) {
-        if (!BOUNDED_LOCAL_CACHE.isInstance(context.cache().asMap())) {
+      } else if (clazz.isAssignableFrom(BoundedLocalCache.class)) {
+        if (!(context.cache().asMap() instanceof BoundedLocalCache)) {
           return new Object[] {};
         }
         params[i] = context.cache().asMap();
@@ -142,13 +140,5 @@ public final class CacheProvider {
   /** Returns if the class matches a parameter type. */
   private boolean hasParameterOfType(Class<?> clazz) {
     return Arrays.stream(parameters).map(Parameter::getType).anyMatch(clazz::isAssignableFrom);
-  }
-
-  private static Class<?> classForName(String className) {
-    try {
-      return Class.forName(className);
-    } catch (ClassNotFoundException e) {
-      throw new AssertionError(e);
-    }
   }
 }

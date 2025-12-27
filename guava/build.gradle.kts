@@ -1,16 +1,21 @@
 /** Guava compatibility adapter. The tests are forked from Guava commit e370dde. */
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
-import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
+import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
   id("java-library.caffeine")
   id("revapi.caffeine")
 }
 
+val caffeineOsgiBundle by configurations.registering {
+  configureAsRuntimeIncoming()
+}
+
 dependencies {
   api(project(":caffeine"))
   api(libs.guava)
+  caffeineOsgiBundle(project(":caffeine", "osgiBundleElements"))
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
@@ -25,39 +30,57 @@ testing.suites {
       implementation(libs.truth)
       implementation(libs.guava.testlib)
       implementation.bundle(libs.bundles.slf4j.nop)
-      implementation.bundle(libs.bundles.osgi.test.compile)
 
-      runtimeOnly(libs.junit.jupiter.testng)
       runtimeOnly(libs.junit.jupiter.vintage)
-      runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
-    }
-    targets.named("test") {
-      testTask.configure {
-        project(":caffeine").plugins.withId("java-library") {
-          val caffeineJar = project(":caffeine").tasks.named<Jar>("jar")
-          val guavaJar = project(":guava").tasks.named<Jar>("jar")
-          inputs.files(caffeineJar.map { it.outputs.files })
-          inputs.files(guavaJar.map { it.outputs.files })
-
-          val caffeineJarFile = caffeineJar.flatMap { it.archiveFile }.map { it.asFile }
-          val guavaJarFile = guavaJar.flatMap { it.archiveFile }.map { it.asFile }
-          val relativeDir = projectDir
-          val versions = libs.versions
-          doFirst {
-            systemProperties(mapOf(
-              "caffeine-guava.osgi.jar" to guavaJarFile.get().relativeTo(relativeDir).path,
-              "caffeine.osgi.jar" to caffeineJarFile.get().relativeTo(relativeDir).path,
-              "guava.osgi.version" to versions.guava.get()))
-          }
-        }
-      }
     }
   }
-  val moduleTest by registering(JvmTestSuite::class) {
+  register("compatibilityTest", JvmTestSuite::class) {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
       implementation(project())
+      implementation(libs.truth)
+      implementation(libs.guava.testlib)
+
+      runtimeOnly(libs.junit.jupiter.vintage)
+    }
+  }
+  register("moduleTest", JvmTestSuite::class) {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+    }
+  }
+  register<JvmTestSuite>("osgiTest") {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.junit.jupiter.vintage)
+      implementation.bundle(libs.bundles.slf4j.nop)
+      implementation.bundle(libs.bundles.osgi.test.compile)
+
+      runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
+    }
+    targets.all {
+      testTask.configure {
+        val caffeineOsgiJarFile = layout.file(caffeineOsgiBundle.map { it.singleFile })
+        val guavaJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
+        inputs.files(caffeineOsgiJarFile)
+        inputs.files(guavaJarFile)
+
+        val relativeDir = projectDir
+        val versions = libs.versions
+        doFirst {
+          val caffeinePath = caffeineOsgiJarFile.relativePathFrom(relativeDir)
+          val guavaPath = guavaJarFile.relativePathFrom(relativeDir)
+          systemProperties(mapOf(
+            "caffeine.osgi.jar" to caffeinePath.get(),
+            "caffeine-guava.osgi.jar" to guavaPath.get(),
+            "guava.osgi.version" to versions.guava.get()))
+        }
+      }
     }
   }
 }

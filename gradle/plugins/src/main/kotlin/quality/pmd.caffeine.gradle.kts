@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 plugins {
   pmd
 }
