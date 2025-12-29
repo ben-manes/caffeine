@@ -14,6 +14,10 @@ inputs:
   cache-encryption-key:
     required: false
     description: A Gradle cache encryption key
+  local-build-cache:
+    default: 'false'
+    required: false
+    description: Whether to use Gradle's local build cache
   attempt-limit:
     default: '1'
     required: false
@@ -79,9 +83,15 @@ runs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
       with:
-        cache-read-only: false
         add-job-summary: on-failure
+        cache-read-only: ${{ inputs.local-build-cache }}
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
+    - name: Restore local build cache
+      uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
+      if: ${{ inputs.local-build-cache == 'true' }}
+      with:
+        path: ~/.gradle/caches/build-cache-*
+        key: gradle-build-cache-${{ runner.os }}-jdk${{ inputs.java }}-${{ inputs.arguments }}
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}
       env:
@@ -89,6 +99,7 @@ runs:
         INPUTS_ATTEMPT_DELAY: ${{ inputs.attempt-delay }}
         INPUTS_ATTEMPT_LIMIT: ${{ inputs.attempt-limit }}
         JDK_CI: ${{ steps.java_toolchain.outputs.java_home }}
+        LOCAL_BUILD_CACHE_CI: ${{ inputs.local-build-cache }}
         GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}
         ORG_GRADLE_PROJECT_graalvm: ${{ steps.java_toolchain.outputs.graalvm }}
         ORG_GRADLE_PROJECT_javaVendor: ${{ steps.java_toolchain.outputs.vendor }}

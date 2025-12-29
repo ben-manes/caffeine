@@ -176,12 +176,11 @@ jobs:
           fi
       - name: Run tests
         uses: ./.github/actions/run-gradle
-        env:
-          LOCAL_BUILD_CACHE_CI: ${{ steps.local_build_cache.outputs.enabled }}
         with:
           java: ${{ env.MINIMUM_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          local-build-cache: ${{ steps.local_build_cache.outputs.enabled }}
       - name: Format Test Artifact Name
         if: always()
         id: format_artifact
@@ -286,12 +285,11 @@ jobs:
           fi
       - name: Run tests
         uses: ./.github/actions/run-gradle
-        env:
-          LOCAL_BUILD_CACHE_CI: ${{ steps.local_build_cache.outputs.enabled }}
         with:
           java: ${{ env.LATEST_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          local-build-cache: ${{ steps.local_build_cache.outputs.enabled }}
 
   coverage:
     name: Coverage

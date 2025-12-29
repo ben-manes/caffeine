@@ -22,10 +22,11 @@ buildCache {
   def ci = providers.environmentVariable('CI')
   def overrideCi = providers.environmentVariable('LOCAL_BUILD_CACHE_CI')
   def hasAccessKey = providers.environmentVariable('DEVELOCITY_ACCESS_KEY')
+
   remote(develocity.buildCache) {
     // Check access key presence to avoid build cache errors on PR builds when not present
     push = ci.isPresent() && hasAccessKey.isPresent()
     enabled = !gradle.startParameter.isBuildScan()
   }
-  local.enabled = !ci.isPresent() || overrideCi.isPresent()
+  local.enabled = !ci.isPresent() || overrideCi.map { it.toBoolean() }.getOrElse(false)
 }
