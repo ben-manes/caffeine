@@ -78,8 +78,8 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-  tests-latest:
-    name: Latest JDK Tests
+  tests-minimum:
+    name: Tests (Minimum JDK)
     timeout-minutes: 60
     runs-on: ubuntu-latest
     needs: compile
@@ -202,7 +202,7 @@ jobs:
         env:
           LOCAL_BUILD_CACHE_CI: ${{ steps.local_build_cache.outputs.enabled }}
         with:
-          java: ${{ env.LATEST_JDK }}
+          java: ${{ env.MINIMUM_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Format Test Artifact Name
@@ -212,7 +212,7 @@ jobs:
           INPUTS_ARGUMENTS: ${{ matrix.suite }}
         shell: bash
         run: |
-          RAW_NAME=$INPUTS_ARGUMENTS-$LATEST_JDK
+          RAW_NAME=$INPUTS_ARGUMENTS-$MINIMUM_JDK
           ARTIFACT_NAME=$(echo $RAW_NAME | sed 's/:/-/g')
           echo "name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
       - name: Compress test results
@@ -231,8 +231,8 @@ jobs:
           name: ${{ steps.format_artifact.outputs.name }}-results
           path: ${{ steps.format_artifact.outputs.name }}.tar.gz
 
-  tests-regression:
-    name: JDK-11 Regression Tests
+  tests-latest:
+    name: Tests (Latest JDK)
     timeout-minutes: 60
     runs-on: ubuntu-latest
     needs: compile
@@ -312,14 +312,14 @@ jobs:
         env:
           LOCAL_BUILD_CACHE_CI: ${{ steps.local_build_cache.outputs.enabled }}
         with:
-          java: ${{ env.MINIMUM_JDK }}
+          java: ${{ env.LATEST_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
-    needs: tests-latest
+    needs: tests-minimum
     permissions:
       contents: read
     steps:
@@ -353,13 +353,13 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           arguments: assemble
-          java: ${{ env.LATEST_JDK }}
+          java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Combine Jacoco Reports
         uses: ./.github/actions/run-gradle
         with:
           arguments: jacocoFullReport
-          java: ${{ env.LATEST_JDK }}
+          java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Check file existence
         id: check_files
@@ -382,7 +382,7 @@ jobs:
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
-          java: ${{ env.LATEST_JDK }}
+          java: ${{ env.MINIMUM_JDK }}
           arguments: coverallsJacoco --no-configuration-cache
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
@@ -414,7 +414,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          java: ${{ env.LATEST_JDK }}
+          java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: sonar -Dsonar.branch.name=${{ github.ref_name }} --no-parallel
         continue-on-error: true
@@ -422,7 +422,7 @@ jobs:
   test-results:
     name: Test Results
     runs-on: ubuntu-latest
-    needs: tests-latest
+    needs: tests-minimum
     permissions:
       contents: read
       checks: write # Needed to annotate commit
@@ -515,7 +515,7 @@ jobs:
   publish-snapshot:
     name: Publish Snapshot
     runs-on: ubuntu-latest
-    needs: [reproducibility, tests-latest, tests-regression]
+    needs: [reproducibility, tests-minimum, tests-latest]
     if: >
       github.event_name == 'push'
       && github.event.repository.fork == false

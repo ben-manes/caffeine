@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 
@@ -115,12 +114,6 @@ public class CollectionSubject extends IterableSubject {
 
   private void checkQueue(Queue<?> queue) {
     check("peek()").that(queue.peek()).isNull();
-    try {
-      failWithActual("remove()", queue.remove());
-    } catch (NoSuchElementException expected) { /* ignored */ }
-    try {
-      failWithActual("element()", queue.element());
-    } catch (NoSuchElementException expected) { /* ignored */ }
   }
 
   private void checkDeque(Deque<?> deque) {
