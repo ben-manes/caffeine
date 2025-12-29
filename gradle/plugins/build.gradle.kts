@@ -96,6 +96,6 @@ fun setProjectEncoding() {
   }
 }
 
-if (System.getenv("CI").isNullOrEmpty()) {
+if (!providers.environmentVariable("CI").isPresent) {
   setProjectEncoding()
 }

@@ -75,7 +75,7 @@ tasks.withType<Sign>().configureEach {
   incompatibleWithConfigurationCache()
 }
 
-if (!System.getenv("ACTIONS_ID_TOKEN_REQUEST_URL").isNullOrEmpty()) {
+if (providers.environmentVariable("ACTIONS_ID_TOKEN_REQUEST_URL").isPresent) {
   publishing {
     sigstoreSign {
       sign(publications = publishing.publications)

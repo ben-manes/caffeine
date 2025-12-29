@@ -364,11 +364,13 @@ testing.suites {
         maxHeapSize = "3g"
         failFast = true
 
+        systemProperties(providers.systemPropertiesPrefixedBy("lincheck").get())
+        jvmArgs("-XX:+UseParallelGC")
+
         // https://github.com/JetBrains/lincheck/issues/915
         if (java.toolchain.languageVersion.get().canCompileOrRun(25)) {
           jvmArgs("-XX:-UseCompactObjectHeaders")
         }
-        jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled")
       }
     }
   }

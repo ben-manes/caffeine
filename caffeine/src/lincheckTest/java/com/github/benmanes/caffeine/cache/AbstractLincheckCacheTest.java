@@ -46,26 +46,21 @@ abstract class AbstractLincheckCacheTest {
     cache = builder.executor(Runnable::run).build(key -> -key);
   }
 
-  /**
-   * This test checks linearizability with bounded model checking. Unlike stress testing, this
-   * approach can also provide a trace of an incorrect execution. However, it uses sequential
-   * consistency model, so it cannot find any low-level bugs (e.g., missing 'volatile'), and thus,
-   * it is recommended to have both test modes.
-   */
   @Test
   void modelCheckingTest() {
+    var options = LincheckOptions.modelChecking();
     new ModelCheckingOptions()
-        .iterations(100)                // the number of different scenarios
-        .invocationsPerIteration(1_000) // how deeply each scenario is tested
+        .iterations(options.iterations)
+        .invocationsPerIteration(options.invocationsPerIteration)
         .check(getClass());
   }
 
-  /** This test checks linearizability with stress testing. */
   @Test
   void stressTest() {
+    var options = LincheckOptions.stress();
     new StressOptions()
-        .iterations(100)                 // the number of different scenarios
-        .invocationsPerIteration(10_000) // how deeply each scenario is tested
+        .iterations(options.iterations)
+        .invocationsPerIteration(options.invocationsPerIteration)
         .check(getClass());
   }
 

@@ -153,40 +153,18 @@ jobs:
           - jcache:check
           - guava:check
     steps:
-      - name: Determine whether to run the suite
-        id: run_suite
-        shell: bash
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          IS_FORK: ${{ github.event.repository.fork }}
-          EVENT_NAME: ${{ github.event_name }}
-          MATRIX_SUITE: ${{ matrix.suite }}
-          REF_NAME: ${{ github.ref_name }}
-          SKIP_SUITE: caffeine:lincheckTest
-        run: |
-          set -euo pipefail
-          if [[ "$SKIP_SUITE" != *"$MATRIX_SUITE"* ||
-              ( "$EVENT_NAME" == "push" && "$IS_FORK" == "false" &&
-                "$REF_NAME" == "$DEFAULT_BRANCH" ) ]]; then
-            echo "execute=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "execute=false" >> "$GITHUB_OUTPUT"
-          fi
       - name: Harden Runner
         uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
-        if: steps.run_suite.outputs.execute == 'true'
         with:
           disable-sudo-and-containers: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        if: steps.run_suite.outputs.execute == 'true'
         with:
           persist-credentials: false
       - name: Configure the local build cache
         id: local_build_cache
-        if: steps.run_suite.outputs.execute == 'true'
         shell: bash
         env:
           MATRIX_SUITE: ${{ matrix.suite }}
@@ -198,7 +176,6 @@ jobs:
           fi
       - name: Run tests
         uses: ./.github/actions/run-gradle
-        if: steps.run_suite.outputs.execute == 'true'
         env:
           LOCAL_BUILD_CACHE_CI: ${{ steps.local_build_cache.outputs.enabled }}
         with:
@@ -206,7 +183,7 @@ jobs:
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Format Test Artifact Name
-        if: always() && (steps.run_suite.outputs.execute == 'true')
+        if: always()
         id: format_artifact
         env:
           INPUTS_ARGUMENTS: ${{ matrix.suite }}
@@ -216,7 +193,7 @@ jobs:
           ARTIFACT_NAME=$(echo $RAW_NAME | sed 's/:/-/g')
           echo "name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
       - name: Compress test results
-        if: always() && (steps.run_suite.outputs.execute == 'true')
+        if: always()
         env:
           ARTIFACT_NAME: ${{ steps.format_artifact.outputs.name }}
         shell: bash
@@ -225,7 +202,7 @@ jobs:
           | tar czf $ARTIFACT_NAME.tar.gz --files-from -
       - name: Upload test results
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: always() && (steps.run_suite.outputs.execute == 'true')
+        if: always()
         with:
           retention-days: 1
           name: ${{ steps.format_artifact.outputs.name }}-results

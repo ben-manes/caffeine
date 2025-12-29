@@ -39,6 +39,26 @@ public final class MpscGrowableArrayQueueLincheckTest {
     queue = new MpscGrowableArrayQueue<>(4, 65_536);
   }
 
+  @Test
+  void modelCheckingTest() {
+    var options = LincheckOptions.modelChecking();
+    new ModelCheckingOptions()
+        .iterations(options.iterations)
+        .invocationsPerIteration(options.invocationsPerIteration)
+        .check(getClass());
+  }
+
+  @Test
+  void stressTest() {
+    var options = LincheckOptions.stress();
+    new StressOptions()
+        .iterations(options.iterations)
+        .invocationsPerIteration(options.invocationsPerIteration)
+        .check(getClass());
+  }
+
+  /* --------------- Operations --------------- */
+
   @Operation
   public boolean offer(@Param(name = "element") int e) {
     return queue.offer(e);
@@ -47,28 +67,5 @@ public final class MpscGrowableArrayQueueLincheckTest {
   @Operation(nonParallelGroup = "consumer")
   public @Nullable Integer poll() {
     return queue.poll();
-  }
-
-  /**
-   * This test checks that the concurrent queue is linearizable with bounded model checking. Unlike
-   * stress testing, this approach can also provide a trace of an incorrect execution. However, it
-   * uses sequential consistency model, so it cannot find any low-level bugs (e.g., missing
-   * 'volatile'), and thus, it is recommended to have both test modes.
-   */
-  @Test
-  void modelCheckingTest() {
-    new ModelCheckingOptions()
-        .iterations(100)                 // the number of different scenarios
-        .invocationsPerIteration(10_000) // how deeply each scenario is tested
-        .check(getClass());
-  }
-
-  /** This test checks that the concurrent queue is linearizable with stress testing. */
-  @Test
-  void stressTest() {
-    new StressOptions()
-        .iterations(100)                 // the number of different scenarios
-        .invocationsPerIteration(10_000) // how deeply each scenario is tested
-        .check(getClass());
   }
 }
