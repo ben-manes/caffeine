@@ -67,6 +67,7 @@ junit-testng = "1.1.0"
 jvm-dependency-conflict-resolution = "2.5"
 kotlin = "2.3.0"
 lincheck = "3.4"
+log4j = "2.25.3"
 mockito = "5.21.0"
 nexus-publish = "2.0.0"
 nullaway = "0.12.15"
@@ -169,6 +170,7 @@ junit-jupiter-testng = { module = "org.junit.support:testng-engine", version.ref
 junit-jupiter-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit-jupiter" }
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 lincheck = { module = "org.jetbrains.lincheck:lincheck", version.ref = "lincheck" }
+log4j = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 nullaway-annotations = { module = "com.uber.nullaway:nullaway-annotations", version.ref = "nullaway" }
@@ -206,8 +208,8 @@ zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 
 [bundles]
 coherence = ["coherence", "json-bind"]
-constraints = ["bcel", "bouncycastle-jdk18on", "commons-compress", "commons-lang3",
-  "commons-text", "h2", "httpclient", "jcommander", "jgit", "junit", "jsoup", "protobuf", "testng"]
+constraints = ["bcel", "bouncycastle-jdk18on", "commons-compress", "commons-lang3", "commons-text",
+  "h2", "httpclient", "jcommander", "jgit", "junit", "jsoup", "log4j", "protobuf", "testng"]
 errorprone-support = ["errorprone-support", "errorprone-support-refaster"]
 osgi-test-compile = ["javax-inject", "pax-exam-junit4"]
 osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function", "osgi-promise",

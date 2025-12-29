@@ -42,7 +42,11 @@ env:
     services.gradle.org:443
     schemastore.org:443
     www.graalvm.org:443
-  PUBLISH_JDK: 11
+  LOCAL_BUILD_CACHE_TASKS: >
+    caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest
+    caffeine:strongKeysAndStrongValuesAsyncCaffeineTest
+  MINIMUM_JDK: 11
+  LATEST_JDK: 25
 
 jobs:
   compile:
@@ -74,11 +78,168 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-  tests:
-    name: Tests
+  tests-latest:
+    name: Latest JDK Tests
     timeout-minutes: 60
     runs-on: ubuntu-latest
     needs: compile
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        suite:
+          - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineSlowTest
+          - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineSlowTest
+          - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineSlowTest
+          - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineSlowTest
+          - caffeine:strongKeysAndStrongValuesStatsAsyncCaffeineTest
+          - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineSlowTest
+          - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineSlowTest
+          - caffeine:strongKeysAndStrongValuesStatsSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesStatsAsyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesStatsSyncGuavaSlowTest
+          - caffeine:strongKeysAndWeakValuesStatsSyncGuavaSlowTest
+          - caffeine:strongKeysAndSoftValuesStatsSyncGuavaSlowTest
+          - caffeine:weakKeysAndStrongValuesStatsSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesAsyncCaffeineSlowTest
+          - caffeine:strongKeysAndWeakValuesStatsSyncCaffeineTest
+          - caffeine:strongKeysAndSoftValuesStatsSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesSyncCaffeineSlowTest
+          - caffeine:strongKeysAndWeakValuesSyncCaffeineSlowTest
+          - caffeine:strongKeysAndSoftValuesSyncCaffeineSlowTest
+          - caffeine:weakKeysAndWeakValuesStatsSyncGuavaSlowTest
+          - caffeine:weakKeysAndSoftValuesStatsSyncGuavaSlowTest
+          - caffeine:strongKeysAndStrongValuesStatsSyncGuavaTest
+          - caffeine:weakKeysAndWeakValuesStatsSyncCaffeineTest
+          - caffeine:weakKeysAndSoftValuesStatsSyncCaffeineTest
+          - caffeine:strongKeysAndStrongValuesAsyncCaffeineTest
+          - caffeine:weakKeysAndWeakValuesSyncCaffeineSlowTest
+          - caffeine:weakKeysAndSoftValuesSyncCaffeineSlowTest
+          - caffeine:strongKeysAndStrongValuesSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesStatsSyncGuavaTest
+          - caffeine:strongKeysAndWeakValuesStatsSyncGuavaTest
+          - caffeine:strongKeysAndSoftValuesStatsSyncGuavaTest
+          - caffeine:weakKeysAndStrongValuesAsyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesSyncGuavaSlowTest
+          - caffeine:strongKeysAndWeakValuesSyncGuavaSlowTest
+          - caffeine:strongKeysAndSoftValuesSyncGuavaSlowTest
+          - caffeine:weakKeysAndStrongValuesSyncCaffeineTest
+          - caffeine:strongKeysAndWeakValuesSyncCaffeineTest
+          - caffeine:strongKeysAndSoftValuesSyncCaffeineTest
+          - caffeine:weakKeysAndWeakValuesStatsSyncGuavaTest
+          - caffeine:weakKeysAndSoftValuesStatsSyncGuavaTest
+          - caffeine:weakKeysAndWeakValuesSyncGuavaSlowTest
+          - caffeine:weakKeysAndSoftValuesSyncGuavaSlowTest
+          - caffeine:strongKeysAndStrongValuesSyncGuavaTest
+          - caffeine:weakKeysAndWeakValuesSyncCaffeineTest
+          - caffeine:weakKeysAndSoftValuesSyncCaffeineTest
+          - caffeine:weakKeysAndStrongValuesSyncGuavaTest
+          - caffeine:strongKeysAndWeakValuesSyncGuavaTest
+          - caffeine:strongKeysAndSoftValuesSyncGuavaTest
+          - caffeine:weakKeysAndWeakValuesSyncGuavaTest
+          - caffeine:weakKeysAndSoftValuesSyncGuavaTest
+          - caffeine:lincheckTest
+          - caffeine:eclipseTest
+          - caffeine:jctoolsTest
+          - caffeine:openjdkTest
+          - caffeine:apacheTest
+          - caffeine:googleTest
+          - caffeine:jsr166Test
+          - caffeine:moduleTest
+          - caffeine:fuzzTest
+          - caffeine:osgiTest
+          - simulator:check
+          - caffeine:test
+          - jcache:check
+          - guava:check
+    steps:
+      - name: Determine whether to run the suite
+        id: run_suite
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          IS_FORK: ${{ github.event.repository.fork }}
+          EVENT_NAME: ${{ github.event_name }}
+          MATRIX_SUITE: ${{ matrix.suite }}
+          REF_NAME: ${{ github.ref_name }}
+          SKIP_SUITE: caffeine:lincheckTest
+        run: |
+          set -euo pipefail
+          if [[ "$SKIP_SUITE" != *"$MATRIX_SUITE"* ||
+              ( "$EVENT_NAME" == "push" && "$IS_FORK" == "false" &&
+                "$REF_NAME" == "$DEFAULT_BRANCH" ) ]]; then
+            echo "execute=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "execute=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Harden Runner
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        if: steps.run_suite.outputs.execute == 'true'
+        with:
+          disable-sudo-and-containers: true
+          egress-policy: block
+          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        if: steps.run_suite.outputs.execute == 'true'
+        with:
+          persist-credentials: false
+      - name: Configure the local build cache
+        id: local_build_cache
+        if: steps.run_suite.outputs.execute == 'true'
+        shell: bash
+        env:
+          MATRIX_SUITE: ${{ matrix.suite }}
+        run: |
+          if [[ "$LOCAL_BUILD_CACHE_TASKS" == *"$MATRIX_SUITE"* ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run tests
+        uses: ./.github/actions/run-gradle
+        if: steps.run_suite.outputs.execute == 'true'
+        env:
+          LOCAL_BUILD_CACHE_CI: ${{ steps.local_build_cache.outputs.enabled }}
+        with:
+          java: ${{ env.LATEST_JDK }}
+          arguments: ${{ matrix.suite }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Format Test Artifact Name
+        if: always() && (steps.run_suite.outputs.execute == 'true')
+        id: format_artifact
+        env:
+          INPUTS_ARGUMENTS: ${{ matrix.suite }}
+        shell: bash
+        run: |
+          RAW_NAME=$INPUTS_ARGUMENTS-$LATEST_JDK
+          ARTIFACT_NAME=$(echo $RAW_NAME | sed 's/:/-/g')
+          echo "name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+      - name: Compress test results
+        if: always() && (steps.run_suite.outputs.execute == 'true')
+        env:
+          ARTIFACT_NAME: ${{ steps.format_artifact.outputs.name }}
+        shell: bash
+        run: >
+          find . -path */jacoco/*.exec -o -path */test-results/*.xml
+          | tar czf $ARTIFACT_NAME.tar.gz --files-from -
+      - name: Upload test results
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always() && (steps.run_suite.outputs.execute == 'true')
+        with:
+          retention-days: 1
+          name: ${{ steps.format_artifact.outputs.name }}-results
+          path: ${{ steps.format_artifact.outputs.name }}.tar.gz
+
+  tests-regression:
+    name: JDK-11 Regression Tests
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    needs: compile
+    if: >
+      github.event_name == 'push'
+      && github.event.repository.fork == false
+      && endsWith(github.ref, github.event.repository.default_branch)
     permissions:
       contents: read
     strategy:
@@ -120,62 +281,10 @@ jobs:
           - caffeine:jsr166Test
           - caffeine:moduleTest
           - caffeine:osgiTest
-          - caffeine:test
           - simulator:check
+          - caffeine:test
           - jcache:check
           - guava:check
-        java: [ 11, 25 ]
-        include:
-          - suite: caffeine:weakKeysAndStrongValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndWeakValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndSoftValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:weakKeysAndWeakValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:weakKeysAndSoftValuesStatsSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndStrongValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndStrongValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:strongKeysAndWeakValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:strongKeysAndSoftValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndStrongValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndWeakValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndSoftValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:weakKeysAndWeakValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndSoftValuesStatsSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndWeakValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:weakKeysAndSoftValuesSyncGuavaSlowTest
-            java: 11
-          - suite: caffeine:strongKeysAndStrongValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndStrongValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:strongKeysAndWeakValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:strongKeysAndSoftValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndWeakValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:weakKeysAndSoftValuesSyncGuavaTest
-            java: 11
-          - suite: caffeine:lincheckTest
-            java: 11
-          - suite: caffeine:fuzzTest
-            java: 11
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
@@ -187,40 +296,30 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
-      - name: Run tests (${{ env.JAVA_VERSION }})
+      - name: Configure the local build cache
+        id: local_build_cache
+        shell: bash
+        env:
+          MATRIX_SUITE: ${{ matrix.suite }}
+        run: |
+          if [[ "$LOCAL_BUILD_CACHE_TASKS" == *"$MATRIX_SUITE"* ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run tests
         uses: ./.github/actions/run-gradle
+        env:
+          LOCAL_BUILD_CACHE_CI: ${{ steps.local_build_cache.outputs.enabled }}
         with:
-          java: ${{ env.JAVA_VERSION }}
+          java: ${{ env.MINIMUM_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-      - name: Format Test Artifact Name
-        if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
-        id: format_artifact
-        env:
-          INPUTS_ARGUMENTS: ${{ matrix.suite }}
-        run: |
-          RAW_NAME=$INPUTS_ARGUMENTS-$JAVA_VERSION
-          ARTIFACT_NAME=$(echo $RAW_NAME | sed 's/:/-/g')
-          echo "name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
-      - name: Compress test results
-        if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
-        env:
-          ARTIFACT_NAME: ${{ steps.format_artifact.outputs.name }}
-        run: >
-          find . -path */jacoco/*.exec -o -path */test-results/*.xml
-          | tar czf $ARTIFACT_NAME.tar.gz --files-from -
-      - name: Upload test results
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: always() && (env.JAVA_VERSION == env.PUBLISH_JDK)
-        with:
-          retention-days: 1
-          name: ${{ steps.format_artifact.outputs.name }}-results
-          path: ${{ steps.format_artifact.outputs.name }}.tar.gz
 
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
-    needs: tests
+    needs: tests-latest
     permissions:
       contents: read
     steps:
@@ -254,13 +353,13 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           arguments: assemble
-          java: ${{ env.PUBLISH_JDK }}
+          java: ${{ env.LATEST_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Combine Jacoco Reports
         uses: ./.github/actions/run-gradle
         with:
           arguments: jacocoFullReport
-          java: ${{ env.PUBLISH_JDK }}
+          java: ${{ env.LATEST_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Check file existence
         id: check_files
@@ -283,8 +382,8 @@ jobs:
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
+          java: ${{ env.LATEST_JDK }}
           arguments: coverallsJacoco --no-configuration-cache
-          java: ${{ env.PUBLISH_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
       - name: Publish to Codecov
@@ -315,7 +414,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          java: ${{ env.PUBLISH_JDK }}
+          java: ${{ env.LATEST_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: sonar -Dsonar.branch.name=${{ github.ref_name }} --no-parallel
         continue-on-error: true
@@ -323,7 +422,7 @@ jobs:
   test-results:
     name: Test Results
     runs-on: ubuntu-latest
-    needs: tests
+    needs: tests-latest
     permissions:
       contents: read
       checks: write # Needed to annotate commit
@@ -405,18 +504,18 @@ jobs:
       - name: Setup Gradle
         uses: ./.github/actions/run-gradle
         with:
-          java: ${{ env.PUBLISH_JDK }}
+          java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Verify Build Reproducibility
         env:
-          ORG_GRADLE_PROJECT_javaVersion: ${{ env.PUBLISH_JDK }}
+          ORG_GRADLE_PROJECT_javaVersion: ${{ env.MINIMUM_JDK }}
         shell: bash
         run: ./.github/scripts/checkBuildReproducibility.sh
 
   publish-snapshot:
     name: Publish Snapshot
     runs-on: ubuntu-latest
-    needs: [reproducibility, tests]
+    needs: [reproducibility, tests-latest, tests-regression]
     if: >
       github.event_name == 'push'
       && github.event.repository.fork == false
@@ -453,8 +552,8 @@ jobs:
           ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
         with:
-          attempt-limit: 3
           attempt-delay: 2
-          java: ${{ env.PUBLISH_JDK }}
+          attempt-limit: 3
+          java: ${{ env.MINIMUM_JDK }}
           arguments: publishToSonatype --no-configuration-cache
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

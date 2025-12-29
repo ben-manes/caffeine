@@ -9,7 +9,7 @@ develocity {
     } else {
       obfuscation.ipAddresses { [] }
     }
-    if (System.env.GITHUB_ACTIONS) {
+    if (providers.environmentVariable('GITHUB_ACTIONS').isPresent()) {
       obfuscation.username { 'github' }
     }
 
@@ -19,10 +19,13 @@ develocity {
 }
 
 buildCache {
+  def ci = providers.environmentVariable('CI')
+  def overrideCi = providers.environmentVariable('LOCAL_BUILD_CACHE_CI')
+  def hasAccessKey = providers.environmentVariable('DEVELOCITY_ACCESS_KEY')
   remote(develocity.buildCache) {
     // Check access key presence to avoid build cache errors on PR builds when not present
-    push = System.env.CI && System.env.DEVELOCITY_ACCESS_KEY
+    push = ci.isPresent() && hasAccessKey.isPresent()
     enabled = !gradle.startParameter.isBuildScan()
   }
-  local.enabled = !System.env.CI
+  local.enabled = !ci.isPresent() || overrideCi.isPresent()
 }

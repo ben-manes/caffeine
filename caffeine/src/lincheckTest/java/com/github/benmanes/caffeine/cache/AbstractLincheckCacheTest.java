@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNullElse;
+
 import java.util.Map;
 
 import org.jetbrains.lincheck.datastructures.IntGen;
@@ -153,12 +155,12 @@ abstract class AbstractLincheckCacheTest {
   @Operation
   public @Nullable Integer computeIfPresent(@Param(name = "key") int key,
       @Param(name = "value") int nextValue) {
-    return cache.asMap().computeIfPresent(key, (k, v) -> nextValue);
+    return cache.asMap().computeIfPresent(key, (k, v) -> v + nextValue);
   }
 
   @Operation
   public Integer compute(@Param(name = "key") int key, @Param(name = "value") int nextValue) {
-    return cache.asMap().merge(key, nextValue, (oldValue, newValue) -> oldValue + newValue);
+    return cache.asMap().compute(key, (k, v) -> requireNonNullElse(v, 0) + nextValue);
   }
 
   @Operation

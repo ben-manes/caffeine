@@ -368,6 +368,7 @@ testing.suites {
         if (java.toolchain.languageVersion.get().canCompileOrRun(25)) {
           jvmArgs("-XX:-UseCompactObjectHeaders")
         }
+        jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled")
       }
     }
   }

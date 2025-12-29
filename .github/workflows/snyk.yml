@@ -50,6 +50,7 @@ jobs:
       - name: Install jq
         run: apt-get update && apt-get install -y jq
       - name: Merge project runs
+        if: steps.check_files.outputs.files_exists == 'true'
         run: |
           jq '
             {
