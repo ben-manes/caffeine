@@ -253,7 +253,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
+  public @Nullable V computeIfAbsent(K key,
+      Function<? super K, ? extends @Nullable V> mappingFunction,
       boolean recordStats, boolean recordLoad) {
     requireNonNull(mappingFunction);
 

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.spi;
 
+import static com.github.benmanes.caffeine.jcache.AbstractJCacheTest.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -423,11 +424,10 @@ public final class CaffeineCachingProviderTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void isSupported() {
     try (var provider = new CaffeineCachingProvider()) {
       assertThat(provider.isSupported(OptionalFeature.STORE_BY_REFERENCE)).isTrue();
-      assertThat(provider.isSupported(null)).isFalse();
+      assertThat(provider.isSupported(nullRef())).isFalse();
     }
   }
 

@@ -40,7 +40,7 @@ import com.google.common.collect.Maps;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(groups = "isolated")
-@SuppressWarnings("PMD.LambdaCanBeMethodReference")
+@SuppressWarnings({"Convert2MethodRef", "PMD.LambdaCanBeMethodReference"})
 public final class Snippets {
 
   @Test

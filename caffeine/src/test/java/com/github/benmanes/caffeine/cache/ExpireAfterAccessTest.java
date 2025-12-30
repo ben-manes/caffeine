@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -444,23 +445,23 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void oldestFunc_null(@ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    assertThrows(NullPointerException.class, () -> expireAfterAccess.oldest(null));
+    assertThrows(NullPointerException.class, () -> expireAfterAccess.oldest(nullFunction()));
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
-  public void oldestFunc_nullResult(@ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+  public void oldestFunc_nullResult(
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var result = expireAfterAccess.oldest(stream -> null);
     assertThat(result).isNull();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
-  public void oldestFunc_throwsException(@ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+  public void oldestFunc_throwsException(
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var expected = new IllegalStateException();
     var actual = assertThrows(IllegalStateException.class, () ->
         expireAfterAccess.oldest(stream -> { throw expected; }));
@@ -589,14 +590,12 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void youngestFunc_null(@ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
-    assertThrows(NullPointerException.class, () -> expireAfterAccess.youngest(null));
+    assertThrows(NullPointerException.class, () -> expireAfterAccess.youngest(nullFunction()));
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE)
   public void youngestFunc_nullResult(
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {

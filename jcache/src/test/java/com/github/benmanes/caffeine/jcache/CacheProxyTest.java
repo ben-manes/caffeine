@@ -103,31 +103,31 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway", "ObjectToString", "unchecked"})
+  @SuppressWarnings({"ObjectToString", "unchecked"})
   public void getConfiguration_immutable() {
     var config = jcache.getConfiguration(CaffeineConfiguration.class);
     var type = UnsupportedOperationException.class;
 
     assertThrows(type, () -> config.getCacheEntryListenerConfigurations().iterator().remove());
-    assertThrows(type, () -> config.addCacheEntryListenerConfiguration(null));
-    assertThrows(type, () -> config.setCacheLoaderFactory(null));
-    assertThrows(type, () -> config.setCacheWriterFactory(null));
-    assertThrows(type, () -> config.setCopierFactory(null));
-    assertThrows(type, () -> config.setExecutorFactory(null));
+    assertThrows(type, () -> config.addCacheEntryListenerConfiguration(nullRef()));
+    assertThrows(type, () -> config.setCacheLoaderFactory(nullRef()));
+    assertThrows(type, () -> config.setCacheWriterFactory(nullRef()));
+    assertThrows(type, () -> config.setCopierFactory(nullRef()));
+    assertThrows(type, () -> config.setExecutorFactory(nullRef()));
     assertThrows(type, () -> config.setExpireAfterAccess(OptionalLong.empty()));
     assertThrows(type, () -> config.setExpireAfterWrite(OptionalLong.empty()));
     assertThrows(type, () -> config.setExpiryFactory(Optional.empty()));
-    assertThrows(type, () -> config.setExpiryPolicyFactory(null));
+    assertThrows(type, () -> config.setExpiryPolicyFactory(nullRef()));
     assertThrows(type, () -> config.setManagementEnabled(false));
     assertThrows(type, () -> config.setMaximumSize(OptionalLong.empty()));
     assertThrows(type, () -> config.setMaximumWeight(OptionalLong.empty()));
     assertThrows(type, () -> config.setNativeStatisticsEnabled(false));
     assertThrows(type, () -> config.setReadThrough(false));
     assertThrows(type, () -> config.setRefreshAfterWrite(OptionalLong.empty()));
-    assertThrows(type, () -> config.setSchedulerFactory(null));
+    assertThrows(type, () -> config.setSchedulerFactory(nullRef()));
     assertThrows(type, () -> config.setStatisticsEnabled(false));
     assertThrows(type, () -> config.setStoreByValue(false));
-    assertThrows(type, () -> config.setTickerFactory(null));
+    assertThrows(type, () -> config.setTickerFactory(nullRef()));
     assertThrows(type, () -> config.setTypes(String.class, String.class));
     assertThrows(type, () -> config.setWeigherFactory(Optional.empty()));
     assertThrows(type, () -> config.setWriteThrough(false));
@@ -411,10 +411,10 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
   public void close_alreadyClosed() {
+    LoadingCache<Integer, @Nullable Expirable<Integer>> underlying = Mockito.mock();
     var cache = new CacheProxy<Integer, Integer>("mock", Mockito.mock(), cacheManager,
-        Mockito.mock(), Mockito.mock(), Mockito.mock(), Mockito.mock(), Mockito.mock(),
+        Mockito.mock(), underlying, Mockito.mock(), Mockito.mock(), Mockito.mock(),
         Mockito.mock(), Mockito.mock()) {
       int isClosed;
       @Override public boolean isClosed() {

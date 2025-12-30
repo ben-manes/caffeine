@@ -16,6 +16,9 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
+import static com.github.benmanes.caffeine.testing.Nullness.nullString;
+import static com.github.benmanes.caffeine.testing.Nullness.nullSupplier;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +31,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -100,9 +104,9 @@ public final class CaffeineTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void fromSpec_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.from((CaffeineSpec) null));
+    CaffeineSpec spec = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.from(spec));
   }
 
   @Test
@@ -124,9 +128,8 @@ public final class CaffeineTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void fromString_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.from((String) null));
+    assertThrows(NullPointerException.class, () -> Caffeine.from(nullString()));
   }
 
   @Test
@@ -224,9 +227,9 @@ public final class CaffeineTest {
   /* --------------- loading --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void loading_nullLoader() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().build(null));
+    CacheLoader<Object, Object> loader = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().build(loader));
   }
 
   /* --------------- async --------------- */
@@ -253,12 +256,11 @@ public final class CaffeineTest {
   /* --------------- async loader --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway", "RedundantCast"})
   public void asyncLoader_nullLoader() {
-    assertThrows(NullPointerException.class, () ->
-        Caffeine.newBuilder().buildAsync((CacheLoader<Object, Object>) null));
-    assertThrows(NullPointerException.class, () ->
-        Caffeine.newBuilder().buildAsync((AsyncCacheLoader<Object, Object>) null));
+    CacheLoader<Object, Object> loader = nullRef();
+    AsyncCacheLoader<Object, Object> asyncLoader = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().buildAsync(loader));
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().buildAsync(asyncLoader));
   }
 
   @Test
@@ -407,9 +409,9 @@ public final class CaffeineTest {
   /* --------------- weigher --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void weigher_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().weigher(null));
+    Weigher<Object, Object> nullWeigher = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().weigher(nullWeigher));
   }
 
   @Test
@@ -620,9 +622,9 @@ public final class CaffeineTest {
   /* --------------- expiry --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void expireAfter_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().expireAfter(null));
+    Expiry<Object, Object> nullExpiry = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().expireAfter(nullExpiry));
   }
 
   @Test
@@ -776,9 +778,9 @@ public final class CaffeineTest {
   /* --------------- scheduler --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void scheduler_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().scheduler(null));
+    Scheduler nullScheduler = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().scheduler(nullScheduler));
   }
 
   @Test
@@ -806,9 +808,9 @@ public final class CaffeineTest {
   /* --------------- executor --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void executor_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().executor(null));
+    Executor nullExecutor = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().executor(nullExecutor));
   }
 
   @Test
@@ -827,9 +829,9 @@ public final class CaffeineTest {
   /* --------------- ticker --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void ticker_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().ticker(null));
+    Ticker nullTicker = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().ticker(nullTicker));
   }
 
   @Test
@@ -850,9 +852,9 @@ public final class CaffeineTest {
   /* --------------- stats --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void recordStats_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().recordStats(null));
+    assertThrows(NullPointerException.class,
+        () -> Caffeine.newBuilder().recordStats(nullSupplier()));
   }
 
   @Test
@@ -894,9 +896,10 @@ public final class CaffeineTest {
   /* --------------- removalListener --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void removalListener_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().removalListener(null));
+    RemovalListener<Object, Object> nullListener = nullRef();
+    assertThrows(NullPointerException.class, () ->
+        Caffeine.newBuilder().removalListener(nullListener));
   }
 
   @Test
@@ -916,9 +919,10 @@ public final class CaffeineTest {
   /* --------------- evictionListener --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void evictionListener_null() {
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().evictionListener(null));
+    RemovalListener<Object, Object> nullListener = nullRef();
+    assertThrows(NullPointerException.class, () ->
+        Caffeine.newBuilder().evictionListener(nullListener));
   }
 
   @Test

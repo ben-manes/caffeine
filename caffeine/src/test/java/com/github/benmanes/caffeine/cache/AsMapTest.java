@@ -26,6 +26,15 @@ import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullArray;
+import static com.github.benmanes.caffeine.testing.Nullness.nullBiFunction;
+import static com.github.benmanes.caffeine.testing.Nullness.nullCollection;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
+import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
+import static com.github.benmanes.caffeine.testing.Nullness.nullMap;
+import static com.github.benmanes.caffeine.testing.Nullness.nullPredicate;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
+import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -233,11 +242,10 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getOrDefault_absent(Map<Int, Int> map, CacheContext context) {
     Int key = context.absentKey();
-    assertThat(map.getOrDefault(key, null)).isNull();
+    assertThat(map.getOrDefault(key, nullValue())).isNull();
     assertThat(map.getOrDefault(key, key.negate())).isEqualTo(key.negate());
   }
 
@@ -289,26 +297,23 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullKey(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.put(null, Int.valueOf(1)));
+    assertThrows(NullPointerException.class, () -> map.put(nullKey(), Int.valueOf(1)));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.put(Int.valueOf(1), null));
+    assertThrows(NullPointerException.class, () -> map.put(Int.valueOf(1), nullValue()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void put_nullKeyAndValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.put(null, null));
+    assertThrows(NullPointerException.class, () -> map.put(nullKey(), nullValue()));
   }
 
   @CheckNoStats
@@ -417,10 +422,9 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void putAll_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.putAll(null));
+    assertThrows(NullPointerException.class, () -> map.putAll(nullMap()));
   }
 
   @CheckNoStats
@@ -484,26 +488,23 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void putIfAbsent_nullKey(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.putIfAbsent(null, Int.valueOf(2)));
+    assertThrows(NullPointerException.class, () -> map.putIfAbsent(nullKey(), Int.valueOf(2)));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void putIfAbsent_nullValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.putIfAbsent(Int.valueOf(1), null));
+    assertThrows(NullPointerException.class, () -> map.putIfAbsent(Int.valueOf(1), nullValue()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void putIfAbsent_nullKeyAndValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.putIfAbsent(null, null));
+    assertThrows(NullPointerException.class, () -> map.putIfAbsent(nullKey(), nullValue()));
   }
 
   @CheckNoStats
@@ -739,26 +740,23 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replace_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.replace(null, Int.valueOf(1)));
+    assertThrows(NullPointerException.class, () -> map.replace(nullKey(), Int.valueOf(1)));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replace_nullValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.replace(Int.valueOf(1), null));
+    assertThrows(NullPointerException.class, () -> map.replace(Int.valueOf(1), nullValue()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replace_nullKeyAndValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.replace(null, null));
+    assertThrows(NullPointerException.class, () -> map.replace(nullKey(), nullValue()));
   }
 
   @CheckNoStats
@@ -850,61 +848,58 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replaceConditionally_nullKey(Map<Int, Int> map) {
     assertThrows(NullPointerException.class, () ->
-        map.replace(null, Int.valueOf(1), Int.valueOf(1)));
+        map.replace(nullKey(), Int.valueOf(1), Int.valueOf(1)));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replaceConditionally_nullOldValue(Map<Int, Int> map) {
     assertThrows(NullPointerException.class, () ->
-        map.replace(Int.valueOf(1), null, Int.valueOf(1)));
+        map.replace(Int.valueOf(1), nullValue(), Int.valueOf(1)));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replaceConditionally_nullNewValue(Map<Int, Int> map) {
     assertThrows(NullPointerException.class, () ->
-        map.replace(Int.valueOf(1), Int.valueOf(1), null));
+        map.replace(Int.valueOf(1), Int.valueOf(1), nullValue()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replaceConditionally_nullKeyAndOldValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.replace(null, null, Int.valueOf(1)));
+    assertThrows(NullPointerException.class, () ->
+        map.replace(nullKey(), nullValue(), Int.valueOf(1)));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replaceConditionally_nullKeyAndNewValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.replace(null, Int.valueOf(1), null));
+    assertThrows(NullPointerException.class, () ->
+        map.replace(nullKey(), Int.valueOf(1), nullValue()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replaceConditionally_nullOldAndNewValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.replace(Int.valueOf(1), null, null));
+    assertThrows(NullPointerException.class, () ->
+        map.replace(Int.valueOf(1), nullValue(), nullValue()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replaceConditionally_nullKeyAndValues(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.replace(null, null, null));
+    assertThrows(NullPointerException.class, () ->
+        map.replace(nullKey(), nullValue(), nullValue()));
   }
 
   @CheckNoStats
@@ -1029,11 +1024,10 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void replaceAll_nullValue(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.replaceAll((key, value) -> null));
+    assertThrows(NullPointerException.class, () -> map.replaceAll((key, value) -> nullValue()));
   }
 
   @CacheSpec
@@ -1099,18 +1093,17 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void computeIfAbsent_nullKey(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.computeIfAbsent(null, Int::negate));
+    assertThrows(NullPointerException.class, () -> map.computeIfAbsent(nullKey(), Int::negate));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void computeIfAbsent_nullMappingFunction(Map<Int, Int> map, CacheContext context) {
-    assertThrows(NullPointerException.class, () -> map.computeIfAbsent(context.absentKey(), null));
+    assertThrows(NullPointerException.class, () ->
+        map.computeIfAbsent(context.absentKey(), nullFunction()));
   }
 
   @Test(dataProvider = "caches")
@@ -1209,19 +1202,18 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void computeIfPresent_nullKey(Map<Int, Int> map) {
     assertThrows(NullPointerException.class, () ->
-        map.computeIfPresent(null, (key, value) -> key.negate()));
+        map.computeIfPresent(nullValue(), (key, value) -> key.negate()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void computeIfPresent_nullMappingFunction(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.computeIfPresent(Int.valueOf(1), null));
+    assertThrows(NullPointerException.class, () ->
+        map.computeIfPresent(Int.valueOf(1), nullBiFunction()));
   }
 
   @Test(dataProvider = "caches")
@@ -1384,18 +1376,17 @@ public final class AsMapTest {
   /* --------------- compute --------------- */
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void compute_nullKey(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.compute(null, (key, value) -> key.negate()));
+    assertThrows(NullPointerException.class, () ->
+        map.compute(nullKey(), (key, value) -> key.negate()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void compute_nullMappingFunction(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.compute(Int.valueOf(1), null));
+    assertThrows(NullPointerException.class, () -> map.compute(Int.valueOf(1), nullBiFunction()));
   }
 
   @Test(dataProvider = "caches")
@@ -1555,28 +1546,26 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void merge_nullKey(Map<Int, Int> map) {
     assertThrows(NullPointerException.class, () ->
-        map.merge(null, Int.valueOf(1), (oldValue, value) -> oldValue.negate()));
+        map.merge(nullKey(), Int.valueOf(1), (oldValue, value) -> oldValue.negate()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void merge_nullValue(Map<Int, Int> map) {
     assertThrows(NullPointerException.class, () ->
-        map.merge(Int.valueOf(1), null, (oldValue, value) -> oldValue.negate()));
+        map.merge(Int.valueOf(1), nullValue(), (oldValue, value) -> oldValue.negate()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void merge_nullMappingFunction(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.merge(Int.valueOf(1), Int.valueOf(1), null));
+    assertThrows(NullPointerException.class, () ->
+        map.merge(Int.valueOf(1), Int.valueOf(1), nullBiFunction()));
   }
 
   @Test(dataProvider = "caches")
@@ -1775,7 +1764,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"ConstantExpression", "ConstantValue", "PMD.EnumComparison"})
+  @SuppressWarnings({"ConstantExpression", "ConstantValue"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void equals_null(Map<Int, Int> map) {
     assertThat(map.equals(null)).isFalse();
@@ -1883,10 +1872,9 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void keySet_toArray_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.keySet().toArray((Int[]) null));
+    assertThrows(NullPointerException.class, () -> map.keySet().toArray(nullArray()));
   }
 
   @CheckNoStats
@@ -1960,9 +1948,8 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void keySet_removeAll_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.keySet().removeAll(null));
+    assertThrows(NullPointerException.class, () -> map.keySet().removeAll(nullCollection()));
   }
 
   @CacheSpec
@@ -2106,9 +2093,8 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void keySet_removeIf_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.keySet().removeIf(null));
+    assertThrows(NullPointerException.class, () -> map.keySet().removeIf(nullPredicate()));
   }
 
   @CacheSpec
@@ -2202,9 +2188,8 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void keySet_retainAll_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.keySet().retainAll(null));
+    assertThrows(NullPointerException.class, () -> map.keySet().retainAll(nullCollection()));
   }
 
   @CacheSpec
@@ -2476,10 +2461,9 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void values_toArray_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.values().toArray((Int[]) null));
+    assertThrows(NullPointerException.class, () -> map.values().toArray(nullArray()));
   }
 
   @CheckNoStats
@@ -2543,9 +2527,8 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void values_removeAll_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.values().removeAll(null));
+    assertThrows(NullPointerException.class, () -> map.values().removeAll(nullCollection()));
   }
 
   @CacheSpec
@@ -2770,9 +2753,8 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void values_removeIf_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.values().removeIf(null));
+    assertThrows(NullPointerException.class, () -> map.values().removeIf(nullPredicate()));
   }
 
   @CacheSpec
@@ -2847,9 +2829,8 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void values_retainAll_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.values().retainAll(null));
+    assertThrows(NullPointerException.class, () -> map.values().retainAll(nullCollection()));
   }
 
   @CacheSpec
@@ -3158,11 +3139,10 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_toArray_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () ->
-        map.entrySet().toArray((Map.Entry<?, ?>[]) null));
+    Map.Entry<Int, Int>[] array = nullRef();
+    assertThrows(NullPointerException.class, () -> map.entrySet().toArray(array));
   }
 
   @CheckNoStats
@@ -3281,9 +3261,9 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void entrySet_removeAll_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.entrySet().removeAll(null));
+    Collection<Map.Entry<Int, Int>> entries = nullRef();
+    assertThrows(NullPointerException.class, () -> map.entrySet().removeAll(entries));
   }
 
   @CacheSpec
@@ -3536,9 +3516,9 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void entrySet_removeIf_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.entrySet().removeIf(null));
+    Predicate<Map.Entry<Int, Int>> predicate = nullRef();
+    assertThrows(NullPointerException.class, () -> map.entrySet().removeIf(predicate));
   }
 
   @CacheSpec
@@ -3600,9 +3580,9 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   public void entrySet_retainAll_null(Map<Int, Int> map) {
-    assertThrows(NullPointerException.class, () -> map.entrySet().retainAll(null));
+    Collection<Map.Entry<Int, Int>> entries = nullRef();
+    assertThrows(NullPointerException.class, () -> map.entrySet().retainAll(entries));
   }
 
   @CacheSpec

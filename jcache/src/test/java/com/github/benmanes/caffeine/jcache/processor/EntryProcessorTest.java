@@ -74,7 +74,6 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings("DataFlowIssue")
   public void reload() {
     var value1 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
     assertThat(loads).isEqualTo(1);
@@ -99,7 +98,6 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings("DataFlowIssue")
   public void writeOccursForInitialLoadOfEntry() {
     map.put(KEY_1, 100);
     var value = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
@@ -108,10 +106,10 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     assertThat(value).isNull();
   }
 
-  private static @Nullable Object process(MutableEntry<Integer, Integer> entry) {
+  private static Object process(MutableEntry<Integer, Integer> entry) {
     var value = 1 + firstNonNull(entry.getValue(), 0);
     entry.setValue(value);
-    return null;
+    return nullRef();
   }
 
   final class MapWriter implements CacheWriter<Integer, Integer> {

@@ -23,6 +23,7 @@ import javax.cache.Caching;
 import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -46,6 +47,7 @@ import com.uber.nullaway.annotations.Initializer;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(singleThreaded = true)
+@SuppressWarnings("NotNullFieldNotInitialized")
 public abstract class AbstractJCacheTest {
   protected static final Duration EXPIRY_DURATION = Duration.ofMinutes(1);
   protected static final Duration START_TIME = Duration.ofNanos(
@@ -102,6 +104,13 @@ public abstract class AbstractJCacheTest {
   protected abstract CaffeineConfiguration<Integer, Integer> getConfiguration();
 
   /* --------------- Utility methods ------------- */
+
+  /** Returns {@code null} for use when testing null checks while satisfying null analysis tools. */
+  @SuppressWarnings({"DataFlowIssue", "NullableProblems",
+      "NullAway", "TypeParameterUnusedInFormals"})
+  public static <T> @NonNull T nullRef() {
+    return null;
+  }
 
   protected static JCacheStatisticsMXBean getStatistics(CacheProxy<Integer, Integer> cache) {
     return cache.statistics;

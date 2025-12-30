@@ -24,6 +24,12 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullBiFunction;
+import static com.github.benmanes.caffeine.testing.Nullness.nullCollection;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFuture;
+import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
+import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -51,7 +57,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Listeners;
@@ -86,9 +91,8 @@ public final class AsyncLoadingCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void get_null(AsyncLoadingCache<Int, Int> cache) {
-    assertThrows(NullPointerException.class, () -> cache.get(null));
+    assertThrows(NullPointerException.class, () -> cache.get(nullKey()));
   }
 
   @CacheSpec
@@ -180,19 +184,17 @@ public final class AsyncLoadingCacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_null(AsyncLoadingCache<Int, Int> cache) {
-    assertThrows(NullPointerException.class, () -> cache.getAll(null));
+    assertThrows(NullPointerException.class, () -> cache.getAll(nullCollection()));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_nullKey(AsyncLoadingCache<Int, Int> cache) {
-    List<Int> keys = Collections.singletonList(null);
+    var keys = Collections.singletonList(nullValue());
     assertThrows(NullPointerException.class, () -> cache.getAll(keys));
   }
 
@@ -626,10 +628,9 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.EMPTY, compute = Compute.ASYNC)
   public void refresh_nullFuture_load(CacheContext context) {
-    var cache = context.buildAsync((Int key, Executor executor) -> null);
+    var cache = context.buildAsync((Int key, Executor executor) -> nullFuture());
     assertThrows(NullPointerException.class, () ->
         cache.synchronous().refresh(context.absentKey()));
   }
@@ -641,10 +642,9 @@ public final class AsyncLoadingCacheTest {
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
-        return null;
+        return nullFuture();
       }
     });
     cache.synchronous().put(context.absentKey(), context.absentValue());
@@ -790,10 +790,8 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void bulk_function_null() {
-    Function<Set<? extends Int>, Map<Int, Int>> f = null;
-    assertThrows(NullPointerException.class, () -> AsyncCacheLoader.bulk(f));
+    assertThrows(NullPointerException.class, () -> AsyncCacheLoader.bulk(nullFunction()));
   }
 
   @Test
@@ -814,10 +812,8 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void bulk_bifunction_null() {
-    BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> f = null;
-    assertThrows(NullPointerException.class, () -> AsyncCacheLoader.bulk(f));
+    assertThrows(NullPointerException.class, () -> AsyncCacheLoader.bulk(nullBiFunction()));
   }
 
   @Test

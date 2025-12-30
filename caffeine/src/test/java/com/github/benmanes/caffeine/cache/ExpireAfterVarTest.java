@@ -31,6 +31,12 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullBiFunction;
+import static com.github.benmanes.caffeine.testing.Nullness.nullDuration;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
+import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
+import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.base.Predicates.in;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -1426,32 +1432,30 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_nullKey(VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.putIfAbsent(null, Int.valueOf(2), 3, TimeUnit.SECONDS));
+        expireAfterVar.putIfAbsent(nullKey(), Int.valueOf(2), 3, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_nullValue(VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.putIfAbsent(Int.valueOf(1), null, 3, TimeUnit.SECONDS));
+        expireAfterVar.putIfAbsent(Int.valueOf(1), nullValue(), 3, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_nullTimeUnit(VarExpiration<Int, Int> expireAfterVar) {
+    TimeUnit unit = nullRef();
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), 3, null));
+        expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), 3, unit));
   }
 
   @CheckNoStats
@@ -1465,12 +1469,11 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void putIfAbsent_nullDuration(VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), null));
+        expireAfterVar.putIfAbsent(Int.valueOf(1), Int.valueOf(2), nullDuration()));
   }
 
   @CheckNoStats
@@ -1645,32 +1648,30 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_nullKey(VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.put(null, Int.valueOf(2), 3, TimeUnit.SECONDS));
+        expireAfterVar.put(nullKey(), Int.valueOf(2), 3, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_nullValue(VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.put(Int.valueOf(1), null, 3, TimeUnit.SECONDS));
+        expireAfterVar.put(Int.valueOf(1), nullValue(), 3, TimeUnit.SECONDS));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_nullTimeUnit(VarExpiration<Int, Int> expireAfterVar) {
+    TimeUnit unit = nullRef();
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), 3, null));
+        expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), 3, unit));
   }
 
   @CheckNoStats
@@ -1696,12 +1697,11 @@ public final class ExpireAfterVarTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
   public void put_nullDuration(VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), null));
+        expireAfterVar.put(Int.valueOf(1), Int.valueOf(2), nullDuration()));
   }
 
   @Test(dataProvider = "caches")
@@ -1745,20 +1745,18 @@ public final class ExpireAfterVarTest {
   /* --------------- Policy: compute --------------- */
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_nullKey(VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.compute(null, (key, value) -> key.negate(), Duration.ZERO));
+        expireAfterVar.compute(nullKey(), (key, value) -> key.negate(), Duration.ZERO));
   }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expiry = CacheExpiry.ACCESS, removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void compute_nullMappingFunction(VarExpiration<Int, Int> expireAfterVar) {
     assertThrows(NullPointerException.class, () ->
-        expireAfterVar.compute(Int.valueOf(1), null, Duration.ZERO));
+        expireAfterVar.compute(Int.valueOf(1), nullBiFunction(), Duration.ZERO));
   }
 
   @CheckNoStats
@@ -2300,14 +2298,12 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void oldestFunc_null(VarExpiration<Int, Int> expireAfterVar) {
-    assertThrows(NullPointerException.class, () -> expireAfterVar.oldest(null));
+    assertThrows(NullPointerException.class, () -> expireAfterVar.oldest(nullFunction()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void oldestFunc_nullResult(VarExpiration<Int, Int> expireAfterVar) {
     var result = expireAfterVar.oldest(stream -> null);
     assertThat(result).isNull();
@@ -2440,14 +2436,12 @@ public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void youngestFunc_null(VarExpiration<Int, Int> expireAfterVar) {
-    assertThrows(NullPointerException.class, () -> expireAfterVar.youngest(null));
+    assertThrows(NullPointerException.class, () -> expireAfterVar.youngest(nullFunction()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void youngestFunc_nullResult(VarExpiration<Int, Int> expireAfterVar) {
     var result = expireAfterVar.youngest(stream -> null);
     assertThat(result).isNull();
@@ -2536,8 +2530,7 @@ public final class ExpireAfterVarTest {
 
   @Test
   public void expiry_creating_null() {
-    @SuppressWarnings("DataFlowIssue")
-    var expiry = Expiry.creating((key, value) -> null);
+    var expiry = Expiry.creating((key, value) -> nullDuration());
     assertThrows(NullPointerException.class, () -> expiry.expireAfterCreate(1, 2, 3));
     assertThat(expiry.expireAfterUpdate(1, 2, 3, 99)).isEqualTo(99);
     assertThat(expiry.expireAfterRead(1, 2, 3, 99)).isEqualTo(99);
@@ -2571,8 +2564,7 @@ public final class ExpireAfterVarTest {
 
   @Test
   public void expiry_writing_null() {
-    @SuppressWarnings("DataFlowIssue")
-    var expiry = Expiry.writing((Integer key, Integer value) -> null);
+    var expiry = Expiry.writing((Integer key, Integer value) -> nullDuration());
     assertThrows(NullPointerException.class, () -> expiry.expireAfterCreate(1, 2, 3));
     assertThrows(NullPointerException.class, () -> expiry.expireAfterUpdate(1, 2, 3, 99));
     assertThat(expiry.expireAfterRead(1, 2, 3, 99)).isEqualTo(99);
@@ -2609,8 +2601,7 @@ public final class ExpireAfterVarTest {
 
   @Test
   public void expiry_accessing_null() {
-    @SuppressWarnings("DataFlowIssue")
-    var expiry = Expiry.accessing((Integer key, Integer value) -> null);
+    var expiry = Expiry.accessing((Integer key, Integer value) -> nullDuration());
     assertThrows(NullPointerException.class, () -> expiry.expireAfterCreate(1, 2, 3));
     assertThrows(NullPointerException.class, () -> expiry.expireAfterUpdate(1, 2, 3, 99));
     assertThrows(NullPointerException.class, () -> expiry.expireAfterRead(1, 2, 3, 99));

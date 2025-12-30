@@ -19,6 +19,9 @@ import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.LocalCacheSubject.mapLocal;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
+import static com.github.benmanes.caffeine.testing.Nullness.nullReferenceQueue;
+import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
@@ -48,9 +51,8 @@ import com.google.errorprone.annotations.Var;
 public final class InternerTest {
 
   @Test(dataProvider = "interners")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void intern_null(Interner<Int> interner) {
-    assertThrows(NullPointerException.class, () -> interner.intern(null));
+    assertThrows(NullPointerException.class, () -> interner.intern(nullValue()));
   }
 
   @Test(dataProvider = "interners")
@@ -179,11 +181,10 @@ public final class InternerTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void factory() {
-    assertThat(Interned.FACTORY.newReferenceKey(new Object(), null))
+    assertThat(Interned.FACTORY.newReferenceKey(new Object(), nullReferenceQueue()))
         .isInstanceOf(WeakKeyEqualsReference.class);
-    assertThat(Interned.FACTORY.newNode(null, null, null, 1, 1))
+    assertThat(Interned.FACTORY.newNode(nullKey(), nullValue(), nullReferenceQueue(), 1, 1))
         .isInstanceOf(Interned.class);
 
     var builder = Caffeine.newBuilder();
@@ -195,8 +196,7 @@ public final class InternerTest {
 
   @Test
   public void interned() {
-    @SuppressWarnings("DataFlowIssue")
-    var node = new Interned<Object, Boolean>(new WeakReference<>(null));
+    var node = new Interned<Object, Boolean>(new WeakReference<>(nullKey()));
     assertThat(node.isAlive()).isTrue();
     assertThat(node.getValue()).isTrue();
     assertThat(node.isRetired()).isFalse();

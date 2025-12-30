@@ -27,7 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.UnaryOperator;
+import java.util.function.Function;
 
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -69,8 +69,7 @@ public abstract class AbstractTraceReader implements TraceReader {
     @Var BufferedInputStream bufferedStream = null;
     try {
       bufferedStream = new BufferedInputStream(input, BUFFER_SIZE);
-      @SuppressWarnings("NullAway")
-      var extractors = List.<UnaryOperator<@Nullable InputStream>>of(
+      var extractors = List.<Function<InputStream, @Nullable InputStream>>of(
           AbstractTraceReader::tryXz, AbstractTraceReader::tryCompressed, this::tryArchived);
       for (var extractor : extractors) {
         bufferedStream.mark(100);

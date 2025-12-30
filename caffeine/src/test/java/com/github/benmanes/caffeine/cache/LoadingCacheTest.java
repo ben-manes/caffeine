@@ -31,6 +31,11 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullCollection;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFuture;
+import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
+import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
@@ -95,9 +100,8 @@ public final class LoadingCacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void get_null(LoadingCache<Int, Int> cache) {
-    assertThrows(NullPointerException.class, () -> cache.get(null));
+    assertThrows(NullPointerException.class, () -> cache.get(nullKey()));
   }
 
   @CheckNoEvictions
@@ -161,10 +165,9 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_null(LoadingCache<Int, Int> cache) {
-    assertThrows(NullPointerException.class, () -> cache.getAll(null));
+    assertThrows(NullPointerException.class, () -> cache.getAll(nullCollection()));
   }
 
   @CheckNoEvictions
@@ -172,8 +175,7 @@ public final class LoadingCacheTest {
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_iterable_nullKey(LoadingCache<Int, Int> cache) {
-    @SuppressWarnings("DataFlowIssue")
-    List<Int> keys = Collections.singletonList(null);
+    var keys = Collections.singletonList(nullKey());
     assertThrows(NullPointerException.class, () -> cache.getAll(keys));
   }
 
@@ -441,8 +443,7 @@ public final class LoadingCacheTest {
         return 0; // to put keys in one bucket
       }
     }
-    @SuppressWarnings("NullAway")
-    LoadingCache<Object, Int> cache = context.build(key -> null);
+    LoadingCache<Object, Int> cache = context.build(key -> nullValue());
 
     var keys = intern(new ArrayList<Key>());
     for (int i = 0; i < Math.toIntExact(Population.FULL.size()); i++) {
@@ -461,10 +462,9 @@ public final class LoadingCacheTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refresh_null(LoadingCache<Int, Int> cache) {
-    assertThrows(NullPointerException.class, () -> cache.refresh(null));
+    assertThrows(NullPointerException.class, () -> cache.refresh(nullKey()));
   }
 
   @CheckNoEvictions
@@ -995,9 +995,8 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
-        return null;
+        return nullFuture();
       }
     });
     assertThrows(NullPointerException.class, () -> cache.refresh(context.absentKey()));
@@ -1010,10 +1009,9 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
-        return null;
+        return nullFuture();
       }
     });
     cache.put(context.absentKey(), context.absentValue());
@@ -1239,18 +1237,16 @@ public final class LoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_null(LoadingCache<Int, Int> cache) {
-    assertThrows(NullPointerException.class, () -> cache.refreshAll(null));
+    assertThrows(NullPointerException.class, () -> cache.refreshAll(nullCollection()));
   }
 
   @Test(dataProvider = "caches")
   @CheckNoEvictions @CheckNoStats
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void refreshAll_nullKey(LoadingCache<Int, Int> cache) {
-    @SuppressWarnings("DataFlowIssue")
-    List<Int> keys = Collections.singletonList(null);
+    var keys = Collections.singletonList(nullKey());
     assertThrows(NullPointerException.class, () -> cache.refreshAll(keys));
   }
 
@@ -1344,9 +1340,8 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
-        return null;
+        return nullFuture();
       }
     });
     assertThrows(NullPointerException.class, () -> cache.refreshAll(context.absent().keySet()));
@@ -1359,10 +1354,9 @@ public final class LoadingCacheTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
-        return null;
+        return nullFuture();
       }
     });
     cache.put(context.absentKey(), context.absentValue());
@@ -1437,9 +1431,8 @@ public final class LoadingCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void bulk_null() {
-    assertThrows(NullPointerException.class, () -> CacheLoader.bulk(null));
+    assertThrows(NullPointerException.class, () -> CacheLoader.bulk(nullFunction()));
   }
 
   @Test

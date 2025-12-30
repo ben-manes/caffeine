@@ -169,10 +169,9 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
     advanceHalfExpiry();
 
-    @SuppressWarnings("DataFlowIssue")
     var result = jcache.invoke(KEY_1, (entry, args) -> {
       entry.setValue(VALUE_2);
-      return null;
+      return nullRef();
     });
     assertThat(result).isNull();
 
@@ -187,10 +186,9 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
     jcache.putAll(entries);
     advanceHalfExpiry();
 
-    @SuppressWarnings("DataFlowIssue")
     var result = jcache.invokeAll(keys, (entry, args) -> {
       entry.setValue(VALUE_2);
-      return null;
+      return nullRef();
     });
     assertThat(result).isEmpty();
 

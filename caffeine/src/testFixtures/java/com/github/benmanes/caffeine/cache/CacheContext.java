@@ -476,7 +476,7 @@ public final class CacheContext {
     return ticker;
   }
 
-  public <K, V> LoadingCache<K, V> build(CacheLoader<K, V> loader) {
+  public <K, V extends @Nullable Object> LoadingCache<K, V> build(CacheLoader<K, V> loader) {
     LoadingCache<K, V> loading;
     if (isCaffeine()) {
       loading = isAsync() ? caffeine().buildAsync(loader).synchronous() : caffeine().build(loader);

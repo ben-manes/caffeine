@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
+import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -389,31 +390,27 @@ final class CacheBuilderSpecTest {
   }
 
   @Test
-  @SuppressWarnings("NullAway")
   void maximumWeight_withWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumWeight=9000"));
-    assertThat(builder.weigher((k, v) -> 42).build(k -> null)).isNotNull();
+    assertThat(builder.weigher((k, v) -> 42).build(k -> nullValue())).isNotNull();
   }
 
   @Test
-  @SuppressWarnings("NullAway")
   void maximumWeight_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumWeight=9000"));
-    assertThrows(IllegalStateException.class, () -> builder.build(k -> null));
+    assertThrows(IllegalStateException.class, () -> builder.build(k -> nullValue()));
   }
 
   @Test
-  @SuppressWarnings("NullAway")
   void maximumSize_withWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumSize=9000"));
-    assertThat(builder.weigher((k, v) -> 42).build(k -> null)).isNotNull();
+    assertThat(builder.weigher((k, v) -> 42).build(k -> nullValue())).isNotNull();
   }
 
   @Test
-  @SuppressWarnings("NullAway")
   void maximumSize_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.from(parse("maximumSize=9000"));
-    assertThat(builder.build(k -> null)).isNotNull();
+    assertThat(builder.build(k -> nullValue())).isNotNull();
   }
 
   @Test

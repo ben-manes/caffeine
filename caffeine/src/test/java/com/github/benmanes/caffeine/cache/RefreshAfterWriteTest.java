@@ -29,6 +29,7 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFuture;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
@@ -48,6 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -299,17 +301,18 @@ public final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE, executor = CacheExecutor.THREADED)
-  public void refreshIfNeeded_absent_nullValue(LoadingCache<Int, Int> cache, CacheContext context) {
+  public void refreshIfNeeded_absent_nullValue(
+      LoadingCache<Int, @Nullable Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
-    var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
+    CompletableFuture<@Nullable Int> future =
+        requireNonNull(cache.policy().refreshes().get(context.firstKey()));
 
     cache.invalidate(context.firstKey());
     future.complete(null);
@@ -432,11 +435,10 @@ public final class RefreshAfterWriteTest {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
       }
-      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public CompletableFuture<Int> asyncReload(
           Int key, Int oldValue, Executor executor) {
         refreshed.set(true);
-        return null;
+        return nullFuture();
       }
     };
 

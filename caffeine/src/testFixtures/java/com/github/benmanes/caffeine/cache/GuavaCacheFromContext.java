@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -466,13 +467,12 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    @SuppressWarnings("NullAway")
     public V get(K key) {
       try {
         return cache.get(key);
       } catch (UncheckedExecutionException e) {
         if (e.getCause() instanceof CacheMissException) {
-          return null;
+          return nullRef();
         }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {

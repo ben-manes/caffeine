@@ -36,7 +36,6 @@ public final class CacheStatsTest {
   }
 
   @Test
-  @SuppressWarnings("PMD.EnumComparison")
   public void empty() {
     var stats = CacheStats.of(0, 0, 0, 0, 0, 0, 0);
     checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0, 0);

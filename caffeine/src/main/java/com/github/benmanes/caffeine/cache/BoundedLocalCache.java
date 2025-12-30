@@ -2073,8 +2073,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     // Remove any stragglers if released early to more aggressively flush incoming writes
     @Var boolean cleanUp = false;
     for (var node : entries) {
-      @SuppressWarnings("DataFlowIssue")
-      var key = node.getKey();
+      @Nullable K key = node.getKey();
       if (key == null) {
         cleanUp = true;
       } else {
@@ -2657,7 +2656,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  public @Nullable V computeIfAbsent(K key, @Var Function<? super K, ? extends V> mappingFunction,
+  public @Nullable V computeIfAbsent(K key,
+      @Var Function<? super K, ? extends @Nullable V> mappingFunction,
       boolean recordStats, boolean recordLoad) {
     requireNonNull(key);
     requireNonNull(mappingFunction);
@@ -2811,7 +2811,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,

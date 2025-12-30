@@ -32,7 +32,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-interface LocalCache<K, V> extends ConcurrentMap<K, V> {
+interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> {
 
   /** Returns whether this cache is asynchronous. */
   boolean isAsync();

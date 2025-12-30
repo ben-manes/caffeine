@@ -46,6 +46,11 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
+import static com.github.benmanes.caffeine.testing.Nullness.nullReferenceQueue;
+import static com.github.benmanes.caffeine.testing.Nullness.nullString;
+import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
@@ -95,6 +100,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -754,7 +760,6 @@ public final class BoundedLocalCacheTest {
     requireNonNull(context.build(key -> key));
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
   public void nodeToCacheEntry_notAlive(
@@ -765,13 +770,12 @@ public final class BoundedLocalCacheTest {
       } else {
         node.die();
       }
-      assertThat(cache.nodeToCacheEntry(node, identity())).isNull();
+      assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
     }
     // reset due to intentionally corrupting the internal state
     requireNonNull(context.build(key -> key));
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void nodeToCacheEntry_collectedKey(
@@ -779,10 +783,9 @@ public final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var weakKey = (Reference<?>) node.getKeyReference();
     weakKey.clear();
-    assertThat(cache.nodeToCacheEntry(node, identity())).isNull();
+    assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT})
   public void nodeToCacheEntry_collectedValue(
@@ -790,7 +793,7 @@ public final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var weakValue = (Reference<?>) node.getValueReference();
     weakValue.clear();
-    assertThat(cache.nodeToCacheEntry(node, identity())).isNull();
+    assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
   }
 
   /* --------------- Eviction --------------- */
@@ -1919,9 +1922,8 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
   public void exceedsMaximumBufferSize_onRead(BoundedLocalCache<Int, Int> cache) {
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    var dummy = cache.nodeFactory.newNode(
-        new WeakKeyReference<>(null, null), null, null, 1, 0);
+    var dummy = cache.nodeFactory.newNode(new WeakKeyReference<>(
+        nullKey(), nullReferenceQueue()), nullValue(), nullReferenceQueue(), 1, 0);
     cache.frequencySketch().ensureCapacity(1);
 
     var buffer = cache.readBuffer;
@@ -2284,12 +2286,11 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT})
   public void isPendingEviction_collected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    node.setValue(/* value= */ null, cache.valueReferenceQueue());
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    node.setValue(nullValue(), cache.valueReferenceQueue());
     assertThat(cache.isPendingEviction(context.firstKey())).isTrue();
   }
 
@@ -2342,7 +2343,6 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, maximumSize = Maximum.DISABLED)
   public void putIfAbsent_collectedValue(BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -2363,7 +2363,7 @@ public final class BoundedLocalCacheTest {
         var thread = writer.get();
         return (thread != null) && threadState.contains(thread.getState());
       });
-      return cache.nodeFactory.newNode(keyReference, null,
+      return cache.nodeFactory.newNode(keyReference, nullValue(),
           cache.valueReferenceQueue(), 1, cache.expirationTicker().read());
     });
     assertThat(future).succeedsWithNull();
@@ -2373,13 +2373,12 @@ public final class BoundedLocalCacheTest {
     cache.data.remove(keyReference);
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void remove_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    var weakKey = (Reference<?>) node.getKeyReference();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var writer = new AtomicReference<@Nullable Thread>();
+    var weakKey = (Reference<?>) node.getKeyReference();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
@@ -2403,14 +2402,13 @@ public final class BoundedLocalCacheTest {
         .exclusively();
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void removeConditionally_collectedKey(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    var weakKey = (Reference<?>) node.getKeyReference();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var writer = new AtomicReference<@Nullable Thread>();
+    var weakKey = (Reference<?>) node.getKeyReference();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
@@ -2435,13 +2433,12 @@ public final class BoundedLocalCacheTest {
         .exclusively();
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void replace_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    var weakKey = (Reference<?>) node.getKeyReference();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var writer = new AtomicReference<@Nullable Thread>();
+    var weakKey = (Reference<?>) node.getKeyReference();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
@@ -2463,14 +2460,13 @@ public final class BoundedLocalCacheTest {
     assertThat(future).succeedsWithNull();
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void replaceConditionally_collectedKey(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    var weakKey = (Reference<?>) node.getKeyReference();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var writer = new AtomicReference<@Nullable Thread>();
+    var weakKey = (Reference<?>) node.getKeyReference();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
@@ -2492,14 +2488,13 @@ public final class BoundedLocalCacheTest {
     assertThat(future).succeedsWithNull();
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void computeIfAbsent_collectedKey(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    var weakKey = (Reference<?>) node.getKeyReference();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var writer = new AtomicReference<@Nullable Thread>();
+    var weakKey = (Reference<?>) node.getKeyReference();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
@@ -2533,7 +2528,7 @@ public final class BoundedLocalCacheTest {
     cache.refreshes().put(keyRef, future);
 
     var result = cache.doComputeIfAbsent(context.absentKey(),
-        keyRef, k -> context.absentValue(), new long[1], /* recordStats= */ false);
+        keyRef, key -> context.absentValue(), new long[1], /* recordStats= */ false);
     assertThat(result).isEqualTo(context.absentValue());
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -2546,55 +2541,52 @@ public final class BoundedLocalCacheTest {
     var future = new CompletableFuture<Int>();
     cache.refreshes().put(keyRef, future);
 
-    @SuppressWarnings("NullAway")
+    Function<Int, @Nullable Int> function = key -> null;
     var result = cache.doComputeIfAbsent(context.absentKey(),
-        keyRef, k -> null, new long[1], /* recordStats= */ false);
+        keyRef, function, new long[1], /* recordStats= */ false);
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG)
   public void computeIfAbsent_removesRefresh_present(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
-    node.setValue(null, cache.valueReferenceQueue());
+    node.setValue(nullValue(), cache.valueReferenceQueue());
     var keyRef = node.getKeyReference();
     var future = new CompletableFuture<Int>();
     cache.refreshes().put(keyRef, future);
 
-    var result = cache.doComputeIfAbsent(node.getKey(), keyRef,
-        k -> context.absentValue(), new long[1], /* recordStats= */ false);
+    var result = cache.doComputeIfAbsent(requireNonNull(node.getKey()), keyRef,
+        key -> context.absentValue(), new long[1], /* recordStats= */ false);
     assertThat(result).isEqualTo(context.absentValue());
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG)
   public void computeIfAbsent_removesRefresh_present_null(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
-    node.setValue(null, cache.valueReferenceQueue());
+    node.setValue(nullValue(), cache.valueReferenceQueue());
     var keyRef = node.getKeyReference();
     var future = new CompletableFuture<Int>();
     cache.refreshes().put(keyRef, future);
 
-    var result = cache.doComputeIfAbsent(node.getKey(), keyRef,
-        k -> null, new long[1], /* recordStats= */ false);
+    var result = cache.doComputeIfAbsent(requireNonNull(node.getKey()), keyRef,
+        key -> nullValue(), new long[1], /* recordStats= */ false);
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
-  @SuppressWarnings("NullAway")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void remap_collectedKey(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    var weakKey = (Reference<?>) node.getKeyReference();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var writer = new AtomicReference<@Nullable Thread>();
+    var weakKey = (Reference<?>) node.getKeyReference();
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
@@ -3179,8 +3171,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   public void refresh_collected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    var key = cache.nodeFactory.newReferenceKey(/* key= */ null, /* referenceQueue= */ null);
+    var key = cache.nodeFactory.newReferenceKey(nullKey(), nullReferenceQueue());
     cache.refreshes().put(key, context.absentValue().toFuture());
     assertThat(context.cache().policy().refreshes()).isEmpty();
   }
@@ -3696,9 +3687,8 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void cacheFactory_null() {
-    assertThrows(NullPointerException.class, () -> LocalCacheFactory.loadFactory(null));
+    assertThrows(NullPointerException.class, () -> LocalCacheFactory.loadFactory(nullString()));
   }
 
   @Test
@@ -3795,9 +3785,8 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void nodeFactory_null() {
-    assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(/* className= */ null));
+    assertThrows(NullPointerException.class, () -> NodeFactory.loadFactory(nullString()));
   }
 
   @Test
@@ -3869,8 +3858,8 @@ public final class BoundedLocalCacheTest {
 
   @Test
   public void cleanupTask_ignore() {
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    var task = new PerformCleanupTask(null);
+    BoundedLocalCache<?, ?> cache = nullRef();
+    var task = new PerformCleanupTask(cache);
     assertThat(task.getRawResult()).isNull();
     assertThat(task.cancel(false)).isFalse();
     assertThat(task.cancel(true)).isFalse();

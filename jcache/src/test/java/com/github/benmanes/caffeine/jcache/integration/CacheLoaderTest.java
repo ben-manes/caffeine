@@ -53,9 +53,8 @@ public final class CacheLoaderTest extends AbstractJCacheTest {
   }
 
   @Test
-  @SuppressWarnings("DataFlowIssue")
   public void load_null() {
-    when(cacheLoader.load(any())).thenReturn(null);
+    when(cacheLoader.load(any())).thenReturn(nullRef());
     assertThat(jcacheLoading.get(1)).isNull();
   }
 

@@ -441,11 +441,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<V>[] result = new CompletableFuture[1];
       long startTime = asyncCache.cache().statsTicker().read();
-      @SuppressWarnings("NullAway")
-      @Nullable CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(key, k -> {
+      Function<K, @Nullable CompletableFuture<V>> function = k -> {
         result[0] = mappingFunction.apply(k);
         return result[0];
-      }, /* recordStats= */ false, /* recordLoad= */ false);
+      };
+      @Nullable CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(
+          key, function, /* recordStats= */ false, /* recordLoad= */ false);
 
       if (result[0] == null) {
         if ((future != null) && asyncCache.cache().isRecordingStats()) {

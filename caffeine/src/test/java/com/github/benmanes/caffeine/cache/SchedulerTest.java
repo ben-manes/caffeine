@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.testing.TestingExecutors.sameThreadScheduledExecutor;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -130,9 +131,9 @@ public final class SchedulerTest {
   /* --------------- guarded --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void guardedScheduler_null() {
-    assertThrows(NullPointerException.class, () -> Scheduler.guardedScheduler(null));
+    Scheduler scheduler = nullRef();
+    assertThrows(NullPointerException.class, () -> Scheduler.guardedScheduler(scheduler));
   }
 
   @Test
@@ -179,9 +180,10 @@ public final class SchedulerTest {
   /* --------------- ScheduledExecutorService --------------- */
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void scheduledExecutorService_null() {
-    assertThrows(NullPointerException.class, () -> Scheduler.forScheduledExecutorService(null));
+    @SuppressWarnings({"PMD.CloseResource", "resource"})
+    ScheduledExecutorService executor = nullRef();
+    assertThrows(NullPointerException.class, () -> Scheduler.forScheduledExecutorService(executor));
   }
 
   @Test

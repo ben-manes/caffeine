@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
+import static com.github.benmanes.caffeine.testing.Nullness.nullString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.math.BigInteger.ONE;
@@ -111,13 +112,12 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void parseDuration_exception() {
     // TimeUnit
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseTimeUnit("key", ""));
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parseTimeUnit("key", null));
+        () -> CaffeineSpec.parseTimeUnit("key", nullString()));
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseTimeUnit("key", "value"));
 
@@ -149,9 +149,8 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void parse_exception() {
-    assertThrows(NullPointerException.class, () -> CaffeineSpec.parse(null));
+    assertThrows(NullPointerException.class, () -> CaffeineSpec.parse(nullString()));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("="));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("=="));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("key="));

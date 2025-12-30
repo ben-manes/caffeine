@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -405,14 +406,12 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_null(@ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    assertThrows(NullPointerException.class, () -> expireAfterWrite.oldest(null));
+    assertThrows(NullPointerException.class, () -> expireAfterWrite.oldest(nullFunction()));
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void oldestFunc_nullResult(@ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
     var result = expireAfterWrite.oldest(stream -> null);
@@ -550,14 +549,12 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_null(@ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
-    assertThrows(NullPointerException.class, () -> expireAfterWrite.youngest(null));
+    assertThrows(NullPointerException.class, () -> expireAfterWrite.youngest(nullFunction()));
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   public void youngestFunc_nullResult(
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {

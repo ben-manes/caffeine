@@ -1,9 +1,9 @@
 @file:Suppress("PackageDirectoryMismatch")
+import net.ltgt.gradle.errorprone.errorprone
+import net.ltgt.gradle.nullaway.nullaway
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import net.ltgt.gradle.errorprone.errorprone
-import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
   `java-library`

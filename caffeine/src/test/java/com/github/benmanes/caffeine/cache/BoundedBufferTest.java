@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.BBHeader.ReadAndWriteCounterRef
 import static com.github.benmanes.caffeine.cache.Buffer.FAILED;
 import static com.github.benmanes.caffeine.cache.Buffer.FULL;
 import static com.github.benmanes.caffeine.cache.Buffer.SUCCESS;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -89,8 +90,8 @@ public final class BoundedBufferTest {
 
   @Test
   public void overflow() {
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    var buffer = new BoundedBuffer.RingBuffer<Boolean>(null);
+    Boolean first = nullRef();
+    var buffer = new BoundedBuffer.RingBuffer<>(first);
     buffer.writeCounter = Long.MAX_VALUE;
     buffer.readCounter = Long.MAX_VALUE;
 

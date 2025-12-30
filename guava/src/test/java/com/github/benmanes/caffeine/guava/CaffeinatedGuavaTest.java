@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -106,14 +107,13 @@ final class CaffeinatedGuavaTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   void cacheLoader_null() {
-    assertThrows(NullPointerException.class, () -> CaffeinatedGuava.caffeinate(null));
+    assertThrows(NullPointerException.class, () -> CaffeinatedGuava.caffeinate(nullRef()));
 
-    var caffeine1 = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> null));
+    var caffeine1 = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> nullRef()));
     assertThrows(InvalidCacheLoadException.class, () -> caffeine1.load(1));
 
-    var caffeine2 = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> null));
+    var caffeine2 = CaffeinatedGuava.caffeinate(CacheLoader.from(key -> nullRef()));
     var e1 = assertThrows(CompletionException.class, () ->
         caffeine2.asyncReload(1, 2, Runnable::run).join());
     assertThat(e1).hasCauseThat().isInstanceOf(InvalidCacheLoadException.class);
@@ -123,7 +123,7 @@ final class CaffeinatedGuavaTest {
         throw new UnsupportedOperationException();
       }
       @Override public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
-        return null;
+        return nullRef();
       }
     });
     var e2 = assertThrows(CompletionException.class, () ->
@@ -267,6 +267,13 @@ final class CaffeinatedGuavaTest {
     assertThat(caffeine.loadAll(Set.of(1, 2, 3))).isEqualTo(Map.of(1, -1, 2, -2, 3, -3));
     var e = assertThrows(error.getClass(), () -> caffeine.loadAll(Set.of(1, -1)));
     assertThat(e).isSameInstanceAs(error);
+  }
+
+  /** Returns {@code null} for use when testing null checks while satisfying null analysis tools. */
+  @SuppressWarnings({"DataFlowIssue", "NullableProblems",
+      "NullAway", "TypeParameterUnusedInFormals"})
+  private static <T> @NonNull T nullRef() {
+    return null;
   }
 
   enum IdentityLoader implements com.github.benmanes.caffeine.cache.CacheLoader<Object, Object> {

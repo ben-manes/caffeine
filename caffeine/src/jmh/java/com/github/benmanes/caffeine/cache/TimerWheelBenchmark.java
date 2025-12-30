@@ -128,14 +128,14 @@ public class TimerWheelBenchmark {
     @Override public void setVariableTime(long time) {
       this.time = time;
     }
-    @SuppressWarnings("NullAway")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     @Override public Node<Int, Int> getPreviousInVariableOrder() {
       return prev;
     }
     @Override public void setPreviousInVariableOrder(@Nullable Node<Int, Int> prev) {
       this.prev = prev;
     }
-    @SuppressWarnings("NullAway")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     @Override public Node<Int, Int> getNextInVariableOrder() {
       return next;
     }

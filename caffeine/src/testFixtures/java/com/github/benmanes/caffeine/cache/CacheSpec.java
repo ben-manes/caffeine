@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.CacheContext.intern;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
+import static com.github.benmanes.caffeine.testing.Nullness.nullMap;
+import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
@@ -422,9 +424,8 @@ public @interface CacheSpec {
     },
     /** A loader that always returns null (no mapping). */
     NULL {
-      @SuppressWarnings({"DataFlowIssue", "NullAway"})
       @Override public Int load(Int key) {
-        return null;
+        return nullValue();
       }
     },
     /** A loader that returns the key. */
@@ -464,10 +465,8 @@ public @interface CacheSpec {
       @Override public Int load(Int key) {
         throw new UnsupportedOperationException();
       }
-      @SuppressWarnings({"DataFlowIssue", "NullAway",
-        "PMD.ReturnEmptyCollectionRatherThanNull", "ReturnsNullCollection"})
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
-        return null;
+        return nullMap();
       }
     },
     /** A bulk-only loader that always returns null mappings. */
@@ -476,13 +475,11 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
-        Map<Int, @Nullable Int> result = Maps.newHashMapWithExpectedSize(keys.size());
+        Map<Int, Int> result = Maps.newHashMapWithExpectedSize(keys.size());
         for (Int key : keys) {
-          result.put(key, null);
+          result.put(key, nullValue());
         }
-        @SuppressWarnings({"NullableProblems", "NullAway"})
-        Map<Int, Int> loaded = result;
-        return loaded;
+        return result;
       }
     },
     BULK_IDENTITY {

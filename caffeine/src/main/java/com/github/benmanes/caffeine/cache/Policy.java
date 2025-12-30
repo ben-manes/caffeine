@@ -41,7 +41,7 @@ import org.jspecify.annotations.Nullable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NullMarked
-public interface Policy<K, V> {
+public interface Policy<K, V extends @Nullable Object> {
 
   /**
    * Returns whether the cache statistics are being accumulated.
@@ -268,7 +268,8 @@ public interface Policy<K, V> {
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
-    default <T> T coldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+    default <T extends @Nullable Object> T coldest(
+        Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
       throw new UnsupportedOperationException();
     }
 
@@ -334,7 +335,8 @@ public interface Policy<K, V> {
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
-    default <T> T hottest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+    default <T extends @Nullable Object> T hottest(
+        Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
       throw new UnsupportedOperationException();
     }
   }
@@ -469,7 +471,8 @@ public interface Policy<K, V> {
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
-    default <T> T oldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+    default <T extends @Nullable Object> T oldest(
+        Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
       throw new UnsupportedOperationException();
     }
 
@@ -512,7 +515,8 @@ public interface Policy<K, V> {
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
-    default <T> T youngest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+    default <T extends @Nullable Object> T youngest(
+        Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
       throw new UnsupportedOperationException();
     }
   }
@@ -719,7 +723,8 @@ public interface Policy<K, V> {
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
-    default <T> T oldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+    default <T extends @Nullable Object> T oldest(
+        Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
       throw new UnsupportedOperationException();
     }
 
@@ -762,7 +767,8 @@ public interface Policy<K, V> {
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
-    default <T> T youngest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+    default <T extends @Nullable Object> T youngest(
+        Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
       throw new UnsupportedOperationException();
     }
   }

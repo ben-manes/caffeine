@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.management;
 
+import static com.github.benmanes.caffeine.jcache.AbstractJCacheTest.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -65,9 +66,8 @@ public final class JmxRegistrationTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void sanitize() {
-    assertThat(JmxRegistration.sanitize(null)).isEmpty();
+    assertThat(JmxRegistration.sanitize(nullRef())).isEmpty();
     assertThat(JmxRegistration.sanitize("a.b")).isEqualTo("a.b");
     assertThat(JmxRegistration.sanitize("a,b")).isEqualTo("a.b");
     assertThat(JmxRegistration.sanitize("a:b")).isEqualTo("a.b");

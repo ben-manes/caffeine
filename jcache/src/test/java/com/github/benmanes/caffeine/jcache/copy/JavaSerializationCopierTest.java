@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.copy;
 
+import static com.github.benmanes.caffeine.jcache.AbstractJCacheTest.nullRef;
 import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaDeepCopyStrategies;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
@@ -57,15 +58,13 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test(dataProvider = "copier")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void null_object(Copier copier) {
-    assertThrows(NullPointerException.class, () -> copy(copier, null));
+    assertThrows(NullPointerException.class, () -> copy(copier, nullRef()));
   }
 
   @Test(dataProvider = "copier")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void null_classLoader(Copier copier) {
-    assertThrows(NullPointerException.class, () -> copier.copy(1, null));
+    assertThrows(NullPointerException.class, () -> copier.copy(1, nullRef()));
   }
 
   @Test(dataProvider = "copier")

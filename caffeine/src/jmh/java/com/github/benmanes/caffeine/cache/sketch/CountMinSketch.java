@@ -66,7 +66,7 @@ public final class CountMinSketch<E> {
    * Creates a lazily initialized frequency sketch, requiring {@link #ensureCapacity} be called
    * when the maximum size of the cache has been determined.
    */
-  @SuppressWarnings({"NullAway.Init", "PMD.UnnecessaryConstructor"})
+  @SuppressWarnings("NullAway.Init")
   public CountMinSketch() {}
 
   /**

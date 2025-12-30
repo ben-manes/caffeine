@@ -660,7 +660,6 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("DataFlowIssue")
   @CacheSpec(population = Population.EMPTY, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,

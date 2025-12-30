@@ -22,6 +22,7 @@ import static org.slf4j.event.Level.TRACE;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 import org.testng.annotations.Listeners;
@@ -100,8 +101,8 @@ public final class UnboundedLocalCacheTest {
     Integer key = 1;
     cache.refreshes().put(key, new CompletableFuture<>());
 
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    var result = cache.computeIfAbsent(key, k -> null,
+    Function<Integer, @Nullable Integer> mappingFunction = k -> null;
+    var result = cache.computeIfAbsent(key, mappingFunction,
         /* recordStats= */ false, /* recordLoad= */ false);
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(key);

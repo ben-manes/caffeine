@@ -28,6 +28,7 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executo
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -1227,14 +1228,12 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void coldestFunc_null(Eviction<Int, Int> eviction) {
-    assertThrows(NullPointerException.class, () -> eviction.coldest(null));
+    assertThrows(NullPointerException.class, () -> eviction.coldest(nullFunction()));
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void coldestFunc_nullResult(Eviction<Int, Int> eviction) {
     var result = eviction.coldest(stream -> null);
@@ -1432,14 +1431,12 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void hottestFunc_null(Eviction<Int, Int> eviction) {
-    assertThrows(NullPointerException.class, () -> eviction.hottest(null));
+    assertThrows(NullPointerException.class, () -> eviction.hottest(nullFunction()));
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   public void hottestFunc_nullResult(Eviction<Int, Int> eviction) {
     var result = eviction.hottest(stream -> null);

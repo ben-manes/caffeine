@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
+import static com.github.benmanes.caffeine.jcache.AbstractJCacheTest.nullRef;
 import static com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator.configSource;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
@@ -64,33 +65,31 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void setConfigSource_supplier() {
     Config config = Mockito.mock();
     TypesafeConfigurator.setConfigSource(() -> config);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
     assertThat(configSource().get(Mockito.mock(), Mockito.mock())).isSameInstanceAs(config);
 
-    assertThrows(NullPointerException.class, () ->
-        TypesafeConfigurator.setConfigSource((Supplier<Config>) null));
+    Supplier<Config> supplier = nullRef();
+    assertThrows(NullPointerException.class, () -> TypesafeConfigurator.setConfigSource(supplier));
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void setConfigSource_function() {
-    TypesafeConfigurator.setConfigSource((uri, loader) -> null);
+    Config config = nullRef();
+    TypesafeConfigurator.setConfigSource((uri, loader) -> config);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
 
-    assertThrows(NullPointerException.class, () ->
-        TypesafeConfigurator.setConfigSource((ConfigSource) null));
+    ConfigSource source = nullRef();
+    assertThrows(NullPointerException.class, () -> TypesafeConfigurator.setConfigSource(source));
   }
 
   @Test
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
   public void configSource_null() {
-    assertThrows(NullPointerException.class, () -> configSource().get(null, null));
-    assertThrows(NullPointerException.class, () -> configSource().get(null, classloader));
-    assertThrows(NullPointerException.class, () -> configSource().get(URI.create(""), null));
+    assertThrows(NullPointerException.class, () -> configSource().get(nullRef(), nullRef()));
+    assertThrows(NullPointerException.class, () -> configSource().get(nullRef(), classloader));
+    assertThrows(NullPointerException.class, () -> configSource().get(URI.create(""), nullRef()));
   }
 
   @Test
