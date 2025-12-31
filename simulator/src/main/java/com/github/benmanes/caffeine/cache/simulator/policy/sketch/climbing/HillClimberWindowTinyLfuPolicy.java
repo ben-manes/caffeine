@@ -31,7 +31,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -61,7 +61,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final HillClimber climber;
-  private final Admittor admittor;
+  private final Admitter admitter;
   private final int maximumSize;
 
   private final Node headWindow;
@@ -90,7 +90,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     this.initialPercentMain = percentMain;
     this.policyStats = new PolicyStats(name() + " (%s %.0f%%)",
         strategy.name().toLowerCase(US), 100 * (1.0 - initialPercentMain));
-    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
+    this.admitter = Admission.TINYLFU.from(settings.config(), policyStats);
     this.climber = strategy.create(settings.config());
 
     printSegmentSizes();
@@ -118,7 +118,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     boolean isFull = (data.size() >= maximumSize);
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
+    admitter.record(key);
 
     @Var QueueType queue = null;
     if (node == null) {
@@ -199,7 +199,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (data.size() > maximumSize) {
       Node victim = requireNonNull(headProbation.next);
-      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
+      Node evict = admitter.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
 

@@ -27,7 +27,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -49,7 +49,7 @@ public final class LinkedPolicy implements Policy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final EvictionPolicy policy;
-  final Admittor admittor;
+  final Admitter admitter;
   final long maximumSize;
   final boolean weighted;
   final Node sentinel;
@@ -59,7 +59,7 @@ public final class LinkedPolicy implements Policy {
   public LinkedPolicy(Config config, Set<Characteristic> characteristics,
       Admission admission, EvictionPolicy policy) {
     this.policyStats = new PolicyStats(admission.format(policy.label()));
-    this.admittor = admission.from(config, policyStats);
+    this.admitter = admission.from(config, policyStats);
     this.weighted = characteristics.contains(WEIGHTED);
 
     var settings = new BasicSettings(config);
@@ -88,7 +88,7 @@ public final class LinkedPolicy implements Policy {
     int weight = weighted ? event.weight() : 1;
     long key = event.key();
     Node old = data.get(key);
-    admittor.record(key);
+    admitter.record(key);
     if (old == null) {
       policyStats.recordWeightedMiss(weight);
       if (weight > maximumSize) {
@@ -120,7 +120,7 @@ public final class LinkedPolicy implements Policy {
         }
 
         Node victim = policy.findVictim(sentinel, policyStats);
-        boolean admit = admittor.admit(candidate.key, victim.key);
+        boolean admit = admitter.admit(candidate.key, victim.key);
         if (admit) {
           evictEntry(victim);
         } else {

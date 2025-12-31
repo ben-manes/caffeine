@@ -28,7 +28,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
@@ -56,7 +56,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Admittor admittor;
+  private final Admitter admitter;
   private final int maximumSize;
 
   private final Node headWindow;
@@ -87,7 +87,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   @SuppressWarnings("Varifier")
   public FeedbackWindowTinyLfuPolicy(double percentMain, FeedbackWindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
-    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
+    this.admitter = Admission.TINYLFU.from(settings.config(), policyStats);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
 
     int maxMain = (int) (maximumSize * percentMain);
@@ -134,7 +134,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
     sample++;
 
-    admittor.record(key);
+    admitter.record(key);
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -190,7 +190,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the MRU position. */
   private void onProtectedHit(Node node) {
-    admittor.record(node.key);
+    admitter.record(node.key);
     node.moveToTail(headProtected);
   }
 
@@ -213,7 +213,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     if (data.size() > maximumSize) {
       Node evict;
       Node victim = requireNonNull(headProbation.next);
-      if (admittor.admit(candidate.key, victim.key)) {
+      if (admitter.admit(candidate.key, victim.key)) {
         evict = victim;
       } else if (adapt(candidate)) {
         evict = victim;

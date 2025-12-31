@@ -41,7 +41,7 @@ import org.jspecify.annotations.Nullable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NullMarked
-public interface Policy<K, V extends @Nullable Object> {
+public interface Policy<K, V> {
 
   /**
    * Returns whether the cache statistics are being accumulated.

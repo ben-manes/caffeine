@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -48,7 +48,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Admittor admittor;
+  private final Admitter admitter;
   private final Node headWindow;
   private final Node headMain;
   private final int maxWindow;
@@ -60,7 +60,7 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
   public LruWindowTinyLfuPolicy(double percentMain, LruWindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     int maximumSize = Math.toIntExact(settings.maximumSize());
-    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
+    this.admitter = Admission.TINYLFU.from(settings.config(), policyStats);
     this.maxMain = (int) (maximumSize * percentMain);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maxWindow = maximumSize - maxMain;
@@ -85,7 +85,7 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
   public void record(long key) {
     policyStats.recordOperation();
     @Var Node node = data.get(key);
-    admittor.record(key);
+    admitter.record(key);
 
     if (node == null) {
       node = new Node(key, Status.WINDOW);
@@ -122,7 +122,7 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (sizeMain > maxMain) {
       Node victim = requireNonNull(headMain.next);
-      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
+      Node evict = admitter.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
       sizeMain--;

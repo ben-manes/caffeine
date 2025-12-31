@@ -194,17 +194,19 @@ public final class ReserializableSubject extends Subject {
 
   private void checkRemovalListener(
       BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
-    if (original.removalListener() == null) {
-      check("removalListener()").that(copy.removalListener()).isNull();
-    } else if (copy.removalListener() == null) {
-      check("removalListener()").that(copy.removalListener()).isNotNull();
-    } else if (original.evictionListener instanceof AsyncRemovalListener<?, ?>) {
-      var source = ((AsyncRemovalListener<?, ?>) original.removalListener()).delegate;
-      var target = ((AsyncRemovalListener<?, ?>) copy.removalListener()).delegate;
+    var originalListener = original.removalListener();
+    var copyListener = copy.removalListener();
+    if (originalListener == null) {
+      check("removalListener()").that(copyListener).isNull();
+      return;
+    }
+    check("removalListener()").that(copyListener).isNotNull();
+    if (originalListener instanceof AsyncRemovalListener<?, ?>) {
+      var source = ((AsyncRemovalListener<?, ?>) originalListener).delegate;
+      var target = requireNonNull((AsyncRemovalListener<?, ?>) copyListener).delegate;
       check("removalListener()").that(target).isInstanceOf(source.getClass());
     } else {
-      check("removalListener()").that(copy.removalListener())
-          .isInstanceOf(original.removalListener().getClass());
+      check("removalListener()").that(copyListener).isInstanceOf(originalListener.getClass());
     }
   }
 
@@ -212,11 +214,12 @@ public final class ReserializableSubject extends Subject {
       BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
     if (original.evictionListener == null) {
       check("evictionListener").that(copy.evictionListener).isNull();
-    } else if (copy.evictionListener == null) {
-      check("evictionListener").that(copy.evictionListener).isNotNull();
-    } else if (original.evictionListener instanceof AsyncEvictionListener<?, ?>) {
+      return;
+    }
+    check("evictionListener").that(copy.evictionListener).isNotNull();
+    if (original.evictionListener instanceof AsyncEvictionListener<?, ?>) {
       var source = ((AsyncEvictionListener<?, ?>) original.evictionListener).delegate;
-      var target = ((AsyncEvictionListener<?, ?>) copy.evictionListener).delegate;
+      var target = requireNonNull((AsyncEvictionListener<?, ?>) copy.evictionListener).delegate;
       check("evictionListener").that(target).isInstanceOf(source.getClass());
     } else {
       check("evictionListener").that(copy.evictionListener)

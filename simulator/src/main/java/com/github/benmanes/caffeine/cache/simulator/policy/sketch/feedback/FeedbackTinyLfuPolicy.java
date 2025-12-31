@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -50,7 +50,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Admittor admittor;
+  private final Admitter admitter;
   private final int maximumSize;
   private final Node head;
 
@@ -69,7 +69,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     this.policyStats = new PolicyStats(name());
     var settings = new FeedbackTinyLfuSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
-    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
+    this.admitter = Admission.TINYLFU.from(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.head = new Node();
 
@@ -93,7 +93,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     }
     sample++;
 
-    admittor.record(key);
+    admitter.record(key);
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -108,7 +108,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
   /** Adds the entry, evicting if necessary. */
   private void onMiss(long key) {
     for (int i = 0; i < gain; i++) {
-      admittor.record(key);
+      admitter.record(key);
     }
 
     var node = new Node(key);
@@ -130,7 +130,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     if (data.size() > maximumSize) {
       Node evict;
       Node victim = requireNonNull(head.next);
-      if (admittor.admit(candidate.key, victim.key)) {
+      if (admitter.admit(candidate.key, victim.key)) {
         evict = victim;
       } else if (adapt(candidate)) {
         evict = victim;

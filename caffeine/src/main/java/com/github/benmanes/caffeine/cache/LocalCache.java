@@ -22,6 +22,7 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -133,7 +134,7 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
 
   /** Notify the removal listener of a replacement if the value reference was changed. */
   @SuppressWarnings("FutureReturnValueIgnored")
-  default void notifyOnReplace(K key, @Nullable V oldValue, V newValue) {
+  default void notifyOnReplace(K key, @Nullable V oldValue, @NonNull V newValue) {
     if ((oldValue == null) || (oldValue == newValue)) {
       return;
     } else if (isAsync()) {

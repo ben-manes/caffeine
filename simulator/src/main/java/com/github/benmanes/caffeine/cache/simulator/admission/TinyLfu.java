@@ -20,7 +20,7 @@ import static java.util.Locale.US;
 import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter.KeyOnlyAdmitter;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.ClimberResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.IncrementalResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.IndicatorResetCountMin4;
@@ -37,7 +37,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TinyLfu implements KeyOnlyAdmittor {
+public final class TinyLfu implements KeyOnlyAdmitter {
   private final PolicyStats policyStats;
   private final Frequency sketch;
   private final Random random;

@@ -1,3 +1,4 @@
+@file:Suppress("PackageDirectoryMismatch")
 import net.ltgt.gradle.errorprone.errorprone
 
 plugins {

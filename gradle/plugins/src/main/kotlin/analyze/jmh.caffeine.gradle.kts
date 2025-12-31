@@ -1,4 +1,5 @@
 /** Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin */
+@file:Suppress("PackageDirectoryMismatch")
 import org.gradle.plugins.ide.eclipse.model.Classpath
 import org.gradle.plugins.ide.eclipse.model.Library
 import me.champeau.jmh.JMHTask as JmhTask

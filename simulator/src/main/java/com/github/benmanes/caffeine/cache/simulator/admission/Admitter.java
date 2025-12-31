@@ -25,7 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface Admittor {
+public interface Admitter {
 
   /** Records the access to the entry. */
   void record(AccessEvent event);
@@ -57,13 +57,13 @@ public interface Admittor {
     return admit(AccessEvent.forKey(candidateKey), AccessEvent.forKey(victimKey));
   }
 
-  /** Returns an admittor that admits every candidate. */
-  static Admittor always() {
+  /** Returns an admitter that admits every candidate. */
+  static Admitter always() {
     return AlwaysAdmit.INSTANCE;
   }
 
   /** An admission policy that does not exploit external event metadata. */
-  interface KeyOnlyAdmittor extends Admittor {
+  interface KeyOnlyAdmitter extends Admitter {
 
     @Override
     void record(long key);
@@ -83,7 +83,7 @@ public interface Admittor {
   }
 }
 
-enum AlwaysAdmit implements Admittor {
+enum AlwaysAdmit implements Admitter {
   INSTANCE;
 
   @Override public void record(long key) {}

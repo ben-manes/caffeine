@@ -3,6 +3,9 @@ permissions: {}
 on:
   schedule:
     - cron: '0 12 * * 0'
+  pull_request: {}
+  push:
+    branches: [master, v3.dev]
   workflow_dispatch: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -32,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: write # Needed to annotate commit
       actions: read # Needed for uploading security scan results
       security-events: write # Needed for uploading security scan results
     env:
@@ -47,6 +51,7 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Setup Infer
         uses: srz-zumix/setup-infer@530856effeae228d1f3c8251c91ea8348d9480ee # v1.1.1
       - name: Setup Gradle
@@ -54,9 +59,35 @@ jobs:
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-      - name: Infer
+      - name: Compute changed files
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
         shell: bash
-        run: infer -- ./gradlew compileTestJava -PearlyAccess=true --no-build-cache
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            echo "# For push events, compare with last 5 commits"
+            git diff --name-only HEAD~5..HEAD > /tmp/changed-files.txt
+          else
+            echo "# For pull request events, compare with base ref"
+            base_ref="${GITHUB_BASE_REF}"
+            git fetch origin "${base_ref}" --quiet
+            base_sha=$(git merge-base HEAD "origin/${base_ref}")
+            git diff --name-only "${base_sha}"..HEAD > /tmp/changed-files.txt
+          fi
+          cat /tmp/changed-files.txt
+      - name: Infer (changed files)
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        shell: bash
+        run: >
+          infer --changed-files-index /tmp/changed-files.txt
+          -- ./gradlew assemble -PearlyAccess=true --no-build-cache
+      - name: Infer (full)
+        if: github.event_name != 'push' && github.event_name != 'pull_request'
+        shell: bash
+        run: infer -- ./gradlew assemble -PearlyAccess=true --no-build-cache
+      - name: Check Infer report
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: srz-zumix/reviewdog-action-infer@8f269e5295951c9a8272efa76a139018ea7e89a4 # v1.1.0
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0

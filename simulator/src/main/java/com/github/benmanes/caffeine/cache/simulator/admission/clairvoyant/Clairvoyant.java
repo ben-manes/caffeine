@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter.KeyOnlyAdmitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.errorprone.annotations.Var;
@@ -45,7 +45,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Clairvoyant implements KeyOnlyAdmittor {
+public final class Clairvoyant implements KeyOnlyAdmitter {
   private static final AtomicReference<@Nullable Long2ObjectMap<IntList>> snapshot = new AtomicReference<>();
 
   private final Long2ObjectMap<@Nullable IntPriorityQueue> accessTimes;

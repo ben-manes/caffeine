@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -53,7 +53,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class S4LruPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Admittor admittor;
+  private final Admitter admitter;
   private final int maximumSize;
   private final Node[] headQ;
   private final int[] sizeQ;
@@ -63,7 +63,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
     var settings = new S4LruSettings(config);
     this.policyStats = new PolicyStats(admission.format(name()));
     this.maximumSize = Math.toIntExact(settings.maximumSize());
-    this.admittor = admission.from(config, policyStats);
+    this.admitter = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.levels = settings.levels();
     this.headQ = new Node[levels];
@@ -84,7 +84,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
+    admitter.record(key);
     if (node == null) {
       onMiss(key);
       policyStats.recordMiss();
@@ -138,7 +138,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
       policyStats.recordEviction();
 
       Node victim = requireNonNull(headQ[0].next);
-      boolean admit = admittor.admit(candidate.key, victim.key);
+      boolean admit = admitter.admit(candidate.key, victim.key);
       if (admit) {
         evictEntry(victim);
         sizeQ[0]--;

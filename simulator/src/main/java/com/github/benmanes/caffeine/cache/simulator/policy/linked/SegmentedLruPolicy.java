@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -62,7 +62,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   final PolicyStats policyStats;
   final Node headProtected;
   final Node headProbation;
-  final Admittor admittor;
+  final Admitter admitter;
   final int maxProtected;
   final int maximumSize;
 
@@ -70,7 +70,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   public SegmentedLruPolicy(Admission admission, Config config) {
     this.policyStats = new PolicyStats(admission.format(name()));
-    this.admittor = admission.from(config, policyStats);
+    this.admitter = admission.from(config, policyStats);
     var settings = new SegmentedLruSettings(config);
 
     this.headProtected = new Node();
@@ -92,7 +92,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
+    admitter.record(key);
     if (node == null) {
       onMiss(key);
     } else {
@@ -135,7 +135,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
           : headProbation.next;
       policyStats.recordEviction();
 
-      boolean admit = admittor.admit(candidate.key, victim.key);
+      boolean admit = admitter.admit(candidate.key, victim.key);
       if (admit) {
         evictEntry(victim);
       } else {

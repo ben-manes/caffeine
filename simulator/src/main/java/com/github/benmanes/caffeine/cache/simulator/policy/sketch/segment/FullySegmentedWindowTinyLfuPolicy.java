@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -48,7 +48,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Admittor admittor;
+  private final Admitter admitter;
   private final int maximumSize;
 
   private final Node headWindowProbation;
@@ -73,7 +73,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
     this.maxWindow = maximumSize - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxWindowProtected = (int) (maxWindow * settings.percentWindowProtected());
-    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
+    this.admitter = Admission.TINYLFU.from(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.headWindowProbation = new Node();
     this.headWindowProtected = new Node();
@@ -98,7 +98,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
   public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
+    admitter.record(key);
 
     if (node == null) {
       onMiss(key);
@@ -189,7 +189,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (data.size() > maximumSize) {
       Node victim = requireNonNull(headMainProbation.next);
-      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
+      Node evict = admitter.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
 

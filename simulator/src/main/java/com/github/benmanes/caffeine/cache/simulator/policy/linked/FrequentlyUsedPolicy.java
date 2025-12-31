@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -48,14 +48,14 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final EvictionPolicy policy;
   final FrequencyNode freq0;
-  final Admittor admittor;
+  final Admitter admitter;
   final int maximumSize;
 
   public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     var settings = new BasicSettings(config);
     this.policyStats = new PolicyStats(admission.format(policy.label()));
     this.maximumSize = Math.toIntExact(settings.maximumSize());
-    this.admittor = admission.from(config, policyStats);
+    this.admitter = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.policy = requireNonNull(policy);
     this.freq0 = new FrequencyNode();
@@ -78,7 +78,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
+    admitter.record(key);
     if (node == null) {
       onMiss(key);
     } else {
@@ -116,7 +116,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
       Node victim = nextVictim(candidate);
-      boolean admit = admittor.admit(candidate.key, victim.key);
+      boolean admit = admitter.admit(candidate.key, victim.key);
       if (admit) {
         evictEntry(victim);
       } else {

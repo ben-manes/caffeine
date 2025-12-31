@@ -51,7 +51,7 @@ public class ComputeBenchmark {
   String computeType;
 
   Function<Integer, Boolean> benchmarkFunction;
-  Integer[] ints;
+  final Integer[] ints;
 
   @State(Scope.Thread)
   public static class ThreadState {

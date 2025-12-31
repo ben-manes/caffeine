@@ -69,8 +69,9 @@ import com.google.errorprone.annotations.Var;
  */
 @SuppressWarnings({"PMD.PreserveStackTrace", "serial"})
 public final class GuavaCacheFromContext {
-  private GuavaCacheFromContext() {}
   private static final ThreadLocal<@Nullable Throwable> error = new ThreadLocal<>();
+
+  private GuavaCacheFromContext() {}
 
   /** Returns a Guava-backed cache. */
   @SuppressWarnings("CheckReturnValue")
@@ -145,15 +146,14 @@ public final class GuavaCacheFromContext {
     private final boolean canSnapshot;
     private final Ticker ticker;
 
-    transient StatsCounter statsCounter;
     transient @Nullable ConcurrentMap<K, V> mapView;
+    transient @Nullable StatsCounter statsCounter;
     transient @Nullable Policy<K, V> policy;
     transient @Nullable Set<K> keySet;
 
     GuavaCache(com.google.common.cache.Cache<K, V> cache, CacheContext context) {
       this.canSnapshot = context.expires() || context.refreshes();
       this.isRecordingStats = context.isRecordingStats();
-      this.statsCounter = new SimpleStatsCounter();
       this.cache = requireNonNull(cache);
       this.ticker = context.ticker();
     }
@@ -211,7 +211,7 @@ public final class GuavaCacheFromContext {
         var loaded = mappingFunction.apply(keysToLoad);
         loaded.forEach(cache::put);
         long end = ticker.read();
-        statsCounter.recordLoadSuccess(end - start);
+        statsCounter().recordLoadSuccess(end - start);
 
         var result = new LinkedHashMap<K, V>();
         for (K key : keys) {
@@ -226,7 +226,7 @@ public final class GuavaCacheFromContext {
         return Collections.unmodifiableMap(result);
       } catch (Throwable t) {
         long end = ticker.read();
-        statsCounter.recordLoadException(end - start);
+        statsCounter().recordLoadException(end - start);
         throw t;
       }
     }
@@ -265,7 +265,7 @@ public final class GuavaCacheFromContext {
 
     @Override
     public CacheStats stats() {
-      var stats = statsCounter.snapshot().plus(cache.stats());
+      var stats = statsCounter().snapshot().plus(cache.stats());
       return CacheStats.of(stats.hitCount(), stats.missCount(), stats.loadSuccessCount(),
           stats.loadExceptionCount(), stats.totalLoadTime(), stats.evictionCount(), 0);
     }
@@ -283,6 +283,10 @@ public final class GuavaCacheFromContext {
     @Override
     public Policy<K, V> policy() {
       return (policy == null) ? (policy = new GuavaPolicy()) : policy;
+    }
+
+    private StatsCounter statsCounter() {
+      return (statsCounter == null) ? (statsCounter = new SimpleStatsCounter()) : statsCounter;
     }
 
     final class AsMapView extends ForwardingConcurrentMap<K, V> {
@@ -323,21 +327,21 @@ public final class GuavaCacheFromContext {
         boolean[] present = { true };
         long now = ticker.read();
         V result = delegate().computeIfAbsent(key, k -> {
-          statsCounter.recordMisses(1);
+          statsCounter().recordMisses(1);
           present[0] = false;
           try {
             V value = mappingFunction.apply(key);
             if (value == null) {
-              statsCounter.recordLoadException(ticker.read() - now);
+              statsCounter().recordLoadException(ticker.read() - now);
             }
             return value;
           } catch (Throwable t) {
-            statsCounter.recordLoadException(ticker.read() - now);
+            statsCounter().recordLoadException(ticker.read() - now);
             throw t;
           }
         });
         if (present[0]) {
-          statsCounter.recordHits(1);
+          statsCounter().recordHits(1);
         }
         return result;
       }
@@ -350,13 +354,13 @@ public final class GuavaCacheFromContext {
           try {
             V value = remappingFunction.apply(k, v);
             if (value == null) {
-              statsCounter.recordLoadException(ticker.read() - now);
+              statsCounter().recordLoadException(ticker.read() - now);
             } else if (value == v) {
-              statsCounter.recordLoadSuccess(ticker.read() - now);
+              statsCounter().recordLoadSuccess(ticker.read() - now);
             }
             return value;
           } catch (Throwable t) {
-            statsCounter.recordLoadException(ticker.read() - now);
+            statsCounter().recordLoadException(ticker.read() - now);
             throw t;
           }
         });
@@ -370,13 +374,13 @@ public final class GuavaCacheFromContext {
           try {
             V value = remappingFunction.apply(k, v);
             if (value == null) {
-              statsCounter.recordLoadException(ticker.read() - now);
+              statsCounter().recordLoadException(ticker.read() - now);
             } else if (value == v) {
-              statsCounter.recordLoadSuccess(ticker.read() - now);
+              statsCounter().recordLoadSuccess(ticker.read() - now);
             }
             return value;
           } catch (Throwable t) {
-            statsCounter.recordLoadException(ticker.read() - now);
+            statsCounter().recordLoadException(ticker.read() - now);
             throw t;
           }
         });
@@ -390,11 +394,11 @@ public final class GuavaCacheFromContext {
           try {
             V newValue = remappingFunction.apply(k, v);
             if (newValue == null) {
-              statsCounter.recordLoadException(ticker.read() - now);
+              statsCounter().recordLoadException(ticker.read() - now);
             }
             return newValue;
           } catch (Throwable t) {
-            statsCounter.recordLoadException(ticker.read() - now);
+            statsCounter().recordLoadException(ticker.read() - now);
             throw t;
           }
         });

@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -58,7 +58,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Admittor admittor;
+  private final Admitter admitter;
   private final int maximumSize;
 
   private final Node headWindow;
@@ -74,7 +74,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   @SuppressWarnings("Varifier")
   public WindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
-    this.admittor = Admission.TINYLFU.from(settings.config(), policyStats);
+    this.admitter = Admission.TINYLFU.from(settings.config(), policyStats);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
 
     int maxMain = (int) (maximumSize * percentMain);
@@ -122,7 +122,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    admittor.record(key);
+    admitter.record(key);
 
     var node = new Node(key, Status.WINDOW);
     node.appendToTail(headWindow);
@@ -133,13 +133,13 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the MRU position in the admission window. */
   private void onWindowHit(Node node) {
-    admittor.record(node.key);
+    admitter.record(node.key);
     node.moveToTail(headWindow);
   }
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onProbationHit(Node node) {
-    admittor.record(node.key);
+    admitter.record(node.key);
 
     node.remove();
     node.status = Status.PROTECTED;
@@ -157,7 +157,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the MRU position if it falls outside of the fast-path threshold. */
   private void onProtectedHit(Node node) {
-    admittor.record(node.key);
+    admitter.record(node.key);
     node.moveToTail(headProtected);
   }
 
@@ -179,7 +179,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (data.size() > maximumSize) {
       Node victim = requireNonNull(headProbation.next);
-      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
+      Node evict = admitter.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
 

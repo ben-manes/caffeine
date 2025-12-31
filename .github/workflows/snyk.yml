@@ -2,7 +2,7 @@ name: Snyk
 permissions: {}
 on:
   push:
-    branches: [master, v2.dev, v3.dev]
+    branches: [master, v3.dev]
   workflow_dispatch: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

@@ -1,4 +1,5 @@
 /** Java object layout: https://github.com/openjdk/jol */
+@file:Suppress("PackageDirectoryMismatch")
 plugins {
   `java-library`
 }

@@ -32,26 +32,26 @@ import com.typesafe.config.Config;
  */
 @SuppressWarnings("ImmutableEnumChecker")
 public enum Admission {
-  ALWAYS((_, _) -> Admittor.always(), ""),
+  ALWAYS((_, _) -> Admitter.always(), ""),
   CLAIRVOYANT(Clairvoyant::new, "_Clairvoyant"),
   TINYLFU(TinyLfu::new, "_TinyLfu");
 
-  private final BiFunction<Config, PolicyStats, Admittor> factory;
+  private final BiFunction<Config, PolicyStats, Admitter> factory;
   private final String suffix;
 
-  Admission(BiFunction<Config, PolicyStats, Admittor> factory, String suffix) {
+  Admission(BiFunction<Config, PolicyStats, Admitter> factory, String suffix) {
     this.factory = factory;
     this.suffix = suffix;
   }
 
   /**
-   * Returns a configured admittor.
+   * Returns a configured admitter.
    *
    * @param config the configuration
    * @param policyStats the stats
    * @return an admission policy
    */
-  public Admittor from(Config config, PolicyStats policyStats) {
+  public Admitter from(Config config, PolicyStats policyStats) {
     if (this == TINYLFU) {
       var override = new BasicSettings(config).tinyLfu().sketch().toUpperCase(US);
       return Enums.getIfPresent(Admission.class, override).or(this)

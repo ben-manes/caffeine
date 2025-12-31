@@ -32,7 +32,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -61,7 +61,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   final @Nullable Node[] table;
   final EvictionPolicy policy;
   final Sample sampleStrategy;
-  final Admittor admittor;
+  final Admitter admitter;
   final int maximumSize;
   final int sampleSize;
   final Random random;
@@ -70,7 +70,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
-    this.admittor = admission.from(config, policyStats);
+    this.admitter = admission.from(config, policyStats);
 
     var settings = new SampledSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
@@ -98,7 +98,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     @Var Node node = data.get(key);
-    admittor.record(key);
+    admitter.record(key);
     long now = ++tick;
     if (node == null) {
       node = new Node(key, data.size(), now);
@@ -125,7 +125,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       Node victim = policy.select(sample, random, tick);
       policyStats.recordEviction();
 
-      if (admittor.admit(candidate.key, victim.key)) {
+      if (admitter.admit(candidate.key, victim.key)) {
         removeFromTable(victim);
         data.remove(victim.key);
       } else {
