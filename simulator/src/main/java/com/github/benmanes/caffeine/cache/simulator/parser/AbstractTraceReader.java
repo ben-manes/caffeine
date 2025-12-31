@@ -36,6 +36,7 @@ import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.jspecify.annotations.Nullable;
 import org.tukaani.xz.XZInputStream;
 
+import com.facebook.infer.annotation.SuppressLint;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
@@ -119,6 +120,7 @@ public abstract class AbstractTraceReader implements TraceReader {
     try {
       var archive = new ArchiveStreamFactory().createArchiveInputStream(input);
       var entries = new AbstractIterator<InputStream>() {
+        @SuppressLint("PULSE_RESOURCE_LEAK")
         @Override protected @Nullable InputStream computeNext() {
           try {
             return (archive.getNextEntry() == null)

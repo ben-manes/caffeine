@@ -18,6 +18,8 @@ import java.util.function.BiFunction;
 
 import org.jspecify.annotations.NullUnmarked;
 
+import com.facebook.infer.annotation.SuppressLint;
+
 import junit.framework.Test;
 
 /**
@@ -166,6 +168,7 @@ public class MapTest extends JSR166TestCase {
      * "Missing" test found while investigating JDK-8210280.
      * ant -Djsr166.tckTestClass=HashMapTest -Djsr166.methodFilter=testBug8210280 -Djsr166.runsPerTest=1000000 tck
      */
+    @SuppressLint("INEFFICIENT_KEYSET_ITERATOR")
     public void testBug8210280() {
         final ThreadLocalRandom rnd = ThreadLocalRandom.current();
         final int size1 = rnd.nextInt(32);

@@ -50,6 +50,7 @@ dependencies {
   testFixturesApi(libs.truth)
   testFixturesApi(libs.awaitility)
   testFixturesApi(libs.guava.testlib)
+  testFixturesApi(libs.infer.annotations)
   testFixturesApi(libs.bundles.slf4j.test)
 
   testFixturesImplementation(libs.testng)
@@ -340,6 +341,7 @@ testing.suites {
 
     dependencies {
       implementation(project())
+      implementation(libs.infer.annotations)
       implementation(libs.junit.jupiter.vintage)
     }
     targets.all {
@@ -381,6 +383,7 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(libs.testng)
+      implementation(libs.infer.annotations)
 
       runtimeOnly(libs.junit.jupiter.testng)
     }

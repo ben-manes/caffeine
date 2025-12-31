@@ -228,8 +228,8 @@ public final class CaffeineTest {
 
   @Test
   public void loading_nullLoader() {
-    CacheLoader<Object, Object> loader = nullRef();
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().build(loader));
+    CacheLoader<Object, Object> nullLoader = nullRef();
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().build(nullLoader));
   }
 
   /* --------------- async --------------- */
@@ -257,9 +257,9 @@ public final class CaffeineTest {
 
   @Test
   public void asyncLoader_nullLoader() {
-    CacheLoader<Object, Object> loader = nullRef();
+    CacheLoader<Object, Object> cacheLoader = nullRef();
     AsyncCacheLoader<Object, Object> asyncLoader = nullRef();
-    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().buildAsync(loader));
+    assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().buildAsync(cacheLoader));
     assertThrows(NullPointerException.class, () -> Caffeine.newBuilder().buildAsync(asyncLoader));
   }
 

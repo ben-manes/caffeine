@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -91,7 +93,7 @@ public final class ClairvoyantPolicy implements Policy {
 
   /** Performs the cache operations for the given key. */
   private void process(long key, double hitPenalty, double missPenalty) {
-    IntPriorityQueue times = accessTimes.get(key);
+    IntPriorityQueue times = requireNonNull(accessTimes.get(key));
 
     int lastAccess = times.dequeueInt();
     boolean found = data.remove(lastAccess);

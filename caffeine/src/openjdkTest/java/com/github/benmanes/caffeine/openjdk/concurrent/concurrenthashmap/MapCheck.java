@@ -55,6 +55,7 @@ import org.testng.ITestResult;
 import org.testng.annotations.Test;
 import org.testng.util.RetryAnalyzerCount;
 
+import com.facebook.infer.annotation.SuppressLint;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 /*
@@ -558,6 +559,7 @@ public class MapCheck {
         assertWithMessage("%s", s).that(s2).isEmpty();
     }
 
+    @SuppressLint("PULSE_RESOURCE_LEAK")
     static void stest(Map s, int size) throws Exception {
         if (!(s instanceof Serializable)) {
           return;

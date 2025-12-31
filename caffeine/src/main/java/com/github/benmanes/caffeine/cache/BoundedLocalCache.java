@@ -396,23 +396,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /* --------------- Removal Listener Support --------------- */
 
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
-  protected RemovalListener<K, V> removalListener() {
+  protected @Nullable RemovalListener<K, V> removalListener() {
     return null;
-  }
-
-  protected boolean hasRemovalListener() {
-    return false;
   }
 
   @Override
   public void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
-    if (!hasRemovalListener()) {
+    var removalListener = removalListener();
+    if (removalListener == null) {
       return;
     }
     Runnable task = () -> {
       try {
-        removalListener().onRemoval(key, value, cause);
+        removalListener.onRemoval(key, value, cause);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown by removal listener", t);
       }

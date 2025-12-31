@@ -34,6 +34,7 @@ dependencies {
   implementation(libs.commons.compress)
   implementation(libs.bundles.coherence)
   implementation(libs.bundles.slf4j.jdk)
+  implementation(libs.infer.annotations)
   implementation(libs.zero.allocation.hashing)
 
   compileOnly(libs.spotbugs.annotations)

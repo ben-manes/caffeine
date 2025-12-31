@@ -43,6 +43,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import com.facebook.infer.annotation.SuppressLint;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
@@ -119,6 +120,7 @@ public final class CacheManagerTest {
   }
 
   @Test
+  @SuppressLint("THREAD_SAFETY_VIOLATION")
   public void isClosed() throws InterruptedException, ExecutionException {
     @SuppressWarnings("PMD.CloseResource")
     var manager = (CacheManagerImpl) cachingProvider.getCacheManager(

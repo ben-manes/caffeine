@@ -2,6 +2,7 @@ bin
 out
 build
 target
+infer-out
 build-cache
 test-output
 jitwatch.out

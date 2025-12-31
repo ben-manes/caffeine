@@ -61,6 +61,7 @@ testing.suites {
       implementation(libs.awaitility)
       implementation(libs.jcache.guice)
       implementation(libs.guava.testlib)
+      implementation(libs.infer.annotations)
       implementation(files(testResourcesJar))
       implementation(libs.nullaway.annotations)
       implementation.bundle(libs.bundles.slf4j.nop)

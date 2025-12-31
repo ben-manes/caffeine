@@ -44,10 +44,5 @@ public final class AddRemovalListener implements Rule<LocalCacheContext> {
         .addStatement("return removalListener")
         .returns(REMOVAL_LISTENER)
         .build());
-    context.classSpec.addMethod(MethodSpec.methodBuilder("hasRemovalListener")
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("return true")
-        .returns(boolean.class)
-        .build());
   }
 }

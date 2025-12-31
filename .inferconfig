@@ -1,0 +1,9 @@
+{
+  "sarif" : true,
+  "censor-report": [
+    "NULLPTR_DEREFERENCE:!.*/.*[Tt]est.*/.*:expected null passed in tests",
+    "THREAD_SAFETY_VIOLATION:!.*/.*[Tt]est.*/.*:expected thread-safety noise in tests",
+    "THREAD_SAFETY_VIOLATION:!.*/.*[Jj]mh.*/.*:expected thread-safety noise in benchmarks",
+    "THREAD_SAFETY_VIOLATION:!caffeine/src/main/java/com/github/benmanes/caffeine/cache/BoundedLocalCache\\.java:expected thread-safety noise in BoundedLocalCache"
+  ]
+}

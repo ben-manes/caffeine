@@ -83,6 +83,7 @@
 ^\Q.github/CODEOWNERS\E$
 ^\Q.github/SECURITY.md\E$
 ^\Q.github/workflows/check-spelling.yml\E$
+^\Q.inferconfig\E$
 ^\Q.typos.toml\E$
 ^\Qgradle/config/eclipse/org.eclipse.jdt.core.prefs\E$
 ^\Qgradle/libs.versions.toml\E$
