@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
@@ -359,13 +358,17 @@ final class CacheBuilderSpecTest {
     assertThrows(IllegalArgumentException.class, () -> parse("foo=17"));
   }
 
-  @Test @Disabled // Allowed by Caffeine
+  @Test
+  @SuppressWarnings("CheckReturnValue")
   void parse_extraCommaIsInvalid() {
-    assertThrows(IllegalArgumentException.class, () -> parse("weakKeys,"));
+    // Allowed by Caffeine
+    parse("weakKeys,");
+    parse("weakKeys,");
+    parse("weakKeys,,softValues");
 
-    assertThrows(IllegalArgumentException.class, () -> parse(",weakKeys"));
-
-    assertThrows(IllegalArgumentException.class, () -> parse("weakKeys,,softValues"));
+    // assertThrows(IllegalArgumentException.class, () -> parse("weakKeys,"));
+    // assertThrows(IllegalArgumentException.class, () -> parse("weakKeys,"));
+    // assertThrows(IllegalArgumentException.class, () -> parse("weakKeys,,softValues"));
   }
 
   @Test

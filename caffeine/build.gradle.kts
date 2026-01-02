@@ -489,7 +489,7 @@ tasks.register<JavaExec>("memoryOverhead") {
 }
 
 tasks.register<Stress>("stress") {
-  group = "Cache tests"
+  group = "Verification"
   description = "Executes a stress test"
   mainClass = "com.github.benmanes.caffeine.cache.Stresser"
   inputs.files(tasks.named<JavaCompile>("compileTestJava").map { it.outputs.files })

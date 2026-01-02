@@ -87,6 +87,11 @@ tasks.withType<Test>().configureEach {
     showExceptions = true
     showCauses = true
   }
+  afterTest(KotlinClosure2<TestDescriptor, TestResult, Unit>({ descriptor, result ->
+    if (result.resultType == TestResult.ResultType.SKIPPED) {
+      throw GradleException("Do not skip tests (e.g. ${descriptor.name})")
+    }
+  }))
   javaLauncher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor
     languageVersion = javaTestVersion
