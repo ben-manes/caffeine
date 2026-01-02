@@ -7,5 +7,5 @@ dependencyCheck {
   failOnError = false
   scanBuildEnv = true
   formats = listOf("HTML", "SARIF")
-  nvd.apiKey = rootProject.findProperty("nvdApiKey") as? String
+  nvd.apiKey = providers.gradleProperty("nvdApiKey")
 }

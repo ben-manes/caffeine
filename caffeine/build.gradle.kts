@@ -300,7 +300,8 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(testFixtures(project()))
-      implementation(libs.junit.jupiter.vintage)
+
+      runtimeOnly(libs.junit.jupiter.vintage)
     }
     targets.all {
       testTask.configure {
@@ -328,7 +329,8 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(libs.jctools)
-      implementation(libs.junit.jupiter.vintage)
+
+      runtimeOnly(libs.junit.jupiter.vintage)
     }
     targets.all {
       testTask.configure {
@@ -341,8 +343,10 @@ testing.suites {
 
     dependencies {
       implementation(project())
+      implementation(libs.junit)
       implementation(libs.infer.annotations)
-      implementation(libs.junit.jupiter.vintage)
+
+      runtimeOnly(libs.junit.jupiter.vintage)
     }
     targets.all {
       testTask.configure {
@@ -398,9 +402,9 @@ testing.suites {
 
     dependencies {
       implementation(project())
-      implementation(libs.junit.jupiter.vintage)
       implementation.bundle(libs.bundles.osgi.test.compile)
 
+      runtimeOnly(libs.junit.jupiter.vintage)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
     targets.all {

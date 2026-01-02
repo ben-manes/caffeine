@@ -1626,6 +1626,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void merge_nullMappingFunction(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().merge(Int.valueOf(1), Int.valueOf(1).toFuture(), nullBiFunction()));

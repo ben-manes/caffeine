@@ -74,6 +74,8 @@ jobs:
       - name: Compile
         uses: ./.github/actions/run-gradle
         with:
+          attempt-limit: 2
+          attempt-delay: 30
           arguments: assemble
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -177,6 +179,8 @@ jobs:
       - name: Run tests
         uses: ./.github/actions/run-gradle
         with:
+          attempt-limit: 2
+          attempt-delay: 30
           java: ${{ env.MINIMUM_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -286,6 +290,8 @@ jobs:
       - name: Run tests
         uses: ./.github/actions/run-gradle
         with:
+          attempt-limit: 2
+          attempt-delay: 30
           java: ${{ env.LATEST_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

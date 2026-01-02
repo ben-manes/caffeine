@@ -1,10 +1,10 @@
 /** Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin */
 @file:Suppress("PackageDirectoryMismatch")
+import net.ltgt.gradle.errorprone.errorprone
+import net.ltgt.gradle.nullaway.nullaway
 import org.gradle.plugins.ide.eclipse.model.Classpath
 import org.gradle.plugins.ide.eclipse.model.Library
 import me.champeau.jmh.JMHTask as JmhTask
-import net.ltgt.gradle.errorprone.errorprone
-import net.ltgt.gradle.nullaway.nullaway
 
 plugins {
   idea
@@ -54,13 +54,13 @@ jmh {
   }
 
   // Benchmark parameters: Separated by '&' for parameter types, and ',' for multiple values
-  val params = findProperty("benchmarkParameters") as? String
-  if (params != null) {
-    for (token in params.split("&")) {
+  benchmarkParameters = providers.gradleProperty("benchmarkParameters").flatMap { params ->
+    val parameters = objects.mapProperty<String, ListProperty<String>>()
+    parameters.value(params.split("&").associate { token ->
       val param = token.split("=")
       require(param.size == 2) { "Expected two parts but was ${param.size} in $token" }
-      benchmarkParameters.put(param[0], objects.listProperty<String>().value(param[1].split(",")))
-    }
+      param[0] to objects.listProperty<String>().value(param[1].split(","))
+    })
   }
 
   javaLauncher = javaToolchains.launcherFor {

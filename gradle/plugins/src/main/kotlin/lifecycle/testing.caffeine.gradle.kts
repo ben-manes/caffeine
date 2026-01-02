@@ -48,15 +48,20 @@ tasks.withType<Test>().configureEach {
   // Use --debug-jvm to remotely attach to the test task
   val defaultJvmArguments = defaultJvmArgs()
   val javaAgent = mockitoAgent.map { it.asPath }
-  jvmArgumentProviders.add { defaultJvmArguments.get() }
-  jvmArgumentProviders.add { listOf("-javaagent:${javaAgent.get()}") }
-  jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+EnableDynamicAgentLoading", "-Xshare:off")
-  if (javaTestVersion.get().canCompileOrRun(25)) {
-    jvmArgs("-XX:+UseCompactObjectHeaders")
+  val useCompactObjectHeaders = javaTestVersion.filter { it.canCompileOrRun(25) }
+  jvmArgumentProviders.add {
+    buildList {
+      if (useCompactObjectHeaders.isPresent) {
+        add("-XX:+UseCompactObjectHeaders")
+      }
+      addAll(listOf("-XX:+EnableDynamicAgentLoading", "-Xshare:off",
+        "-XX:SoftRefLRUPolicyMSPerMB=0", "-javaagent:${javaAgent.get()}"))
+      addAll(defaultJvmArguments.get())
+    }
   }
 
   // Use -Pjfr to generate a profile
-  if (rootProject.hasProperty("jfr")) {
+  if (providers.gradleProperty("jfr").isPresent) {
     val relativeDir = gradle.startParameter.currentDir
     val jfr = layout.buildDirectory.file("jfr/$name.jfr")
     jvmArgumentProviders.add {

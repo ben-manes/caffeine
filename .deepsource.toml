@@ -1,5 +1,12 @@
 version = 1
 
+exclude_patterns = [
+  "**/generated/**",
+  "**/*Test*/**",
+  "**/test*/**",
+  "**/jmh/**",
+]
+
 [[analyzers]]
 name = "java"
 enabled = true

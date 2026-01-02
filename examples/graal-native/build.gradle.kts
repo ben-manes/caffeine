@@ -34,7 +34,7 @@ graalvmNative {
 }
 
 fun caffeine(): Any {
-  if (hasProperty("SNAPSHOT")) {
+  if (providers.gradleProperty("SNAPSHOT").isPresent) {
     return fileTree("../../caffeine/build/libs").also {
       require(!it.files.isEmpty()) { "Caffeine snapshot jar not found" }
     }

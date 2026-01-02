@@ -4,34 +4,49 @@ plugins {
   `java-library`
 }
 
+val compileJava by tasks.existing
 val objectLayout by configurations.registering
+
 dependencies {
   objectLayout(project)
   objectLayout(libs.java.`object`.layout)
 }
 
-val modes = mapOf(
+mapOf(
+  "estimates" to "Shows objects reachable from a given instance",
   "externals" to "Shows objects reachable from a given instance",
-  "estimates" to "Simulate the class layout in different VM modes",
   "internals" to "Show the field layout, default contents, and object header",
-  "footprint" to "Estimate the footprint of all objects reachable from a given instance",
-)
-modes.forEach { (mode, details) ->
-  tasks.register<JavaExec>(mode) {
-    group = "Object Layout"
-    description = details
+  "footprint" to "Estimate the footprint of all objects reachable from a given instance"
+).forEach { (name, details) ->
+  tasks.register<JavaObjectLayoutTask>(name) {
+    compileClasspath = compileJava.map { it.outputs.files }
     classpath(objectLayout)
+    description = details
+  }
+}
+
+@CacheableTask
+abstract class JavaObjectLayoutTask : JavaExec() {
+  @get:Input @get:Optional
+  @get:Option(option = "class", description = "The class to evaluate")
+  abstract val className: Property<String>
+  @get:InputFiles @get:CompileClasspath
+  abstract val compileClasspath: Property<FileCollection>
+
+  init {
+    group = "Object Layout"
     mainClass = "org.openjdk.jol.Main"
-    incompatibleWithConfigurationCache()
-    inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
+    jvmArgs("-XX:+EnableDynamicAgentLoading")
+    systemProperties("jdk.attach.allowAttachSelf" to "true",
+      "jdk.instrument.traceUsage" to "true", "jol.tryWithSudo" to "true")
     argumentProviders.add {
-      var className = findProperty("className") as? String
       val base = "com.github.benmanes.caffeine.cache"
-      require(className != null) { "Usage: $name -PclassName=$base.[CLASS_NAME]" }
-      if (!className.startsWith("com") && !className.startsWith("java")) {
-        className = "$base.$className"
-      }
-      listOf(name, className)
+      require(className.isPresent) { "Usage: $name -class=$base.[CLASS_NAME]" }
+      require(compileClasspath.get().asFileTree
+        .any { it.path.contains(className.get().replace('.', File.separatorChar)) }) {
+          "${className.get()} not found in classpath"
+        }
+      listOfNotNull(name, className.map { if (it.contains('.')) it else "$base.$it" }.orNull)
     }
   }
 }

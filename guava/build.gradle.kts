@@ -57,10 +57,10 @@ testing.suites {
 
     dependencies {
       implementation(project())
-      implementation(libs.junit.jupiter.vintage)
-      implementation.bundle(libs.bundles.slf4j.nop)
       implementation.bundle(libs.bundles.osgi.test.compile)
 
+      runtimeOnly(libs.junit.jupiter.vintage)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
     targets.all {

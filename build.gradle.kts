@@ -9,5 +9,5 @@ allprojects {
     major = 3, // incompatible API changes
     minor = 2, // backwards-compatible additions
     patch = 4, // backwards-compatible bug fixes
-    releaseBuild = rootProject.hasProperty("release"))
+    releaseBuild = providers.gradleProperty("release").isPresent)
 }

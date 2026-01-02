@@ -1,9 +1,9 @@
 @file:Suppress("PackageDirectoryMismatch")
 import org.revapi.gradle.RevapiAcceptAllBreaksTask
-import org.revapi.gradle.RevapiVersionOverrideTask
 import org.revapi.gradle.RevapiAcceptBreakTask
 import org.revapi.gradle.RevapiAnalyzeTask
 import org.revapi.gradle.RevapiReportTask
+import org.revapi.gradle.RevapiVersionOverrideTask
 
 plugins {
   `java-library`
@@ -24,7 +24,7 @@ val revapiTasks = listOf(
 
 revapiTasks.forEach { taskClass ->
   tasks.withType(taskClass.java).configureEach {
-    enabled = rootProject.hasProperty("revapi")
+    enabled = providers.gradleProperty("revapi").isPresent
     if (enabled) {
       incompatibleWithConfigurationCache()
     }

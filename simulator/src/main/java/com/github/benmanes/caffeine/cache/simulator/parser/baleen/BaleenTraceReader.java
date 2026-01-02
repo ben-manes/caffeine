@@ -49,7 +49,7 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
           int startSegment = Math.toIntExact(byteOffset / SEGMENT_SIZE);
           int sequence = IntMath.divide(size, SEGMENT_SIZE, RoundingMode.UP);
 
-          long startKey = ((long) Long.hashCode(block) << 32) | startSegment;
+          long startKey = (((long) Long.hashCode(block)) << 32) | startSegment;
           return LongStream.range(startKey, startKey + sequence);
         });
   }

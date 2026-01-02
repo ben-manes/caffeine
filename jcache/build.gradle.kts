@@ -89,9 +89,9 @@ testing.suites {
 
     dependencies {
       implementation(project())
-      implementation(libs.junit.jupiter.vintage)
       implementation.bundle(libs.bundles.osgi.test.compile)
 
+      runtimeOnly(libs.junit.jupiter.vintage)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
     targets.all {
@@ -122,9 +122,10 @@ testing.suites {
 
     dependencies {
       implementation(project())
-      implementation(libs.hamcrest)
-      implementation(libs.jcache.tck)
-      implementation(libs.jcache.tck) {
+
+      runtimeOnly(libs.hamcrest)
+      runtimeOnly(libs.jcache.tck)
+      runtimeOnly(libs.jcache.tck) {
         artifact { classifier = "tests" }
       }
 

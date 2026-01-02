@@ -12,7 +12,7 @@ forbiddenApis {
 
 tasks.withType<CheckForbiddenApis>().configureEach {
   val languageVersion = java.toolchain.languageVersion.get()
-  enabled = rootProject.hasProperty("forbiddenApis")
+  enabled = providers.gradleProperty("forbiddenApis").isPresent
   if (enabled) {
     forbiddenApis.failOnMissingClasses = !languageVersion.canCompileOrRun(
       JavaVersion.current().majorVersion.toInt())

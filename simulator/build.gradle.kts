@@ -14,7 +14,6 @@ dependencies {
   implementation(libs.ycsb) {
     isTransitive = false
   }
-  implementation(libs.zstd)
   implementation(libs.guava)
   implementation(libs.config)
   implementation(libs.stream)
@@ -33,11 +32,19 @@ dependencies {
   implementation(libs.commons.math3)
   implementation(libs.commons.compress)
   implementation(libs.bundles.coherence)
-  implementation(libs.bundles.slf4j.jdk)
   implementation(libs.infer.annotations)
   implementation(libs.zero.allocation.hashing)
 
   compileOnly(libs.spotbugs.annotations)
+
+  runtimeOnly(libs.zstd)
+  runtimeOnly(libs.bundles.slf4j.jdk)
+}
+
+configurations.all {
+  resolutionStrategy.dependencySubstitution {
+    substitute(module("it.unimi.dsi:fastutil")).using(module(libs.fastutil.get().toString()))
+  }
 }
 
 application {
