@@ -61,7 +61,7 @@ jmh {
       require(param.size == 2) { "Expected two parts but was ${param.size} in $token" }
       param[0] to objects.listProperty<String>().value(param[1].split(","))
     })
-  }
+  }.orElse(emptyMap())
 
   javaLauncher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor
