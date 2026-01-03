@@ -454,18 +454,19 @@ jobs:
           && steps.test-badge.outcome == 'success'
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
-          gist_url: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
-          auth: ${{ secrets.GIST_TOKEN }}
-          gist_description: Test Results
-          github_file: badge.svg
           gist_title: badge.svg
+          github_file: badge.svg
+          gist_description: Test Results
+          auth: ${{ secrets.GIST_TOKEN }}
+          gist_url: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
       - name: Publish to Codecov
-        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         if: >
           github.event_name == 'push'
           && github.event.repository.fork == false
           && endsWith(github.ref, github.event.repository.default_branch)
         with:
+          report_type: test_results
           token: ${{ secrets.CODECOV_TOKEN }}
 
   reproducibility:

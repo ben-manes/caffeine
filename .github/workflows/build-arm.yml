@@ -125,5 +125,5 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
-          arguments: ${{ matrix.suite }}
+          arguments: ${{ matrix.suite }} --rerun
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
