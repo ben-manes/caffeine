@@ -181,6 +181,7 @@ jobs:
         with:
           attempt-limit: 2
           attempt-delay: 30
+          local-cache-read-only: true
           java: ${{ env.MINIMUM_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -292,6 +293,7 @@ jobs:
         with:
           attempt-limit: 2
           attempt-delay: 30
+          local-cache-read-only: true
           java: ${{ env.LATEST_JDK }}
           arguments: ${{ matrix.suite }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -334,12 +336,14 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           arguments: assemble
+          local-cache-read-only: true
           java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Combine Jacoco Reports
         uses: ./.github/actions/run-gradle
         with:
           arguments: jacocoFullReport
+          local-cache-read-only: true
           java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Check file existence
@@ -363,6 +367,7 @@ jobs:
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
+          local-cache-read-only: true
           java: ${{ env.MINIMUM_JDK }}
           arguments: coverallsJacoco --no-configuration-cache
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -395,6 +400,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
+          local-cache-read-only: true
           java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: sonar -Dsonar.branch.name=${{ github.ref_name }} --no-parallel
@@ -485,6 +491,7 @@ jobs:
       - name: Setup Gradle
         uses: ./.github/actions/run-gradle
         with:
+          local-cache-read-only: true
           java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Verify Build Reproducibility

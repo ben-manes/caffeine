@@ -20,8 +20,8 @@ fun Project.defaultJvmArgs(): ListProperty<String> {
   val arguments = providers.zip(jvmArgs, isGraalVM()) { args, isGraalVM ->
     buildList {
       if (isGraalVM) {
+        add("-Djdk.graal.ShowConfiguration=info")
         add("-XX:+UnlockExperimentalVMOptions")
-        add("-Dgraal.ShowConfiguration=info")
         add("-XX:+UseJVMCICompiler")
         add("-XX:+EnableJVMCI")
         add("-XX:+EagerJVMCI")

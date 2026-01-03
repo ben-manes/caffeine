@@ -48,14 +48,26 @@ tasks.withType<Test>().configureEach {
   // Use --debug-jvm to remotely attach to the test task
   val defaultJvmArguments = defaultJvmArgs()
   val javaAgent = mockitoAgent.map { it.asPath }
-  val useCompactObjectHeaders = javaTestVersion.filter { it.canCompileOrRun(25) }
+  val javaVersion = javaTestVersion.map { it.asInt() }
   jvmArgumentProviders.add {
     buildList {
-      if (useCompactObjectHeaders.isPresent) {
+      addAll(listOf("-XX:+EnableDynamicAgentLoading", "-javaagent:${javaAgent.get()}",
+        "-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+UnlockDiagnosticVMOptions", "-Xshare:off"))
+      if (javaVersion.get() >= 25) {
         add("-XX:+UseCompactObjectHeaders")
       }
-      addAll(listOf("-XX:+EnableDynamicAgentLoading", "-Xshare:off",
-        "-XX:SoftRefLRUPolicyMSPerMB=0", "-javaagent:${javaAgent.get()}"))
+
+      // Randomize instruction scheduling, order of optimizations, inlining decisions,
+      // macro node expansion, type checking, and deoptimization traps
+      mapOf(
+        11 to listOf("-XX:+StressGCM", "-XX:+StressLCM"),
+        16 to listOf("-XX:+StressIGVN"),
+        17 to listOf("-XX:+StressCCP"),
+        22 to listOf("-XX:+StressIncrementalInlining"),
+        23 to listOf("-XX:+StressMacroExpansion", "-XX:+StressSecondarySupers"),
+        24 to listOf("-XX:+StressUnstableIfTraps"),
+      ).filterKeys { javaVersion.get() >= it }.forEach { (_, flags) -> addAll(flags) }
+
       addAll(defaultJvmArguments.get())
     }
   }

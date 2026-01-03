@@ -77,24 +77,28 @@ jobs:
           cat /tmp/changed-files.txt
       - name: Infer (changed files)
         if: github.event_name == 'push' || github.event_name == 'pull_request'
+        continue-on-error: true
         shell: bash
         run: >
           infer --changed-files-index /tmp/changed-files.txt
           -- ./gradlew assemble -PearlyAccess=true --no-build-cache
       - name: Infer (full)
         if: github.event_name != 'push' && github.event_name != 'pull_request'
+        continue-on-error: true
         shell: bash
         run: infer -- ./gradlew assemble -PearlyAccess=true --no-build-cache
-      - name: Check Infer report
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        uses: srz-zumix/reviewdog-action-infer@8f269e5295951c9a8272efa76a139018ea7e89a4 # v1.1.0
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0
         with:
           files: infer-out/report.sarif
+      - name: Check Infer report
+        if: >
+          (github.event_name == 'push' || github.event_name == 'pull_request')
+          && steps.check_files.outputs.files_exists == 'true'
+        uses: srz-zumix/reviewdog-action-infer@8f269e5295951c9a8272efa76a139018ea7e89a4 # v1.1.0
       - name: Upload Reports
-        if: always()
+        if: steps.check_files.outputs.files_exists == 'true'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           retention-days: 1

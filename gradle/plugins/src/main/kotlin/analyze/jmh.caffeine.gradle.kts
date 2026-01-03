@@ -106,7 +106,6 @@ tasks.named<JavaCompile>("compileJmhJava").configure {
 }
 
 tasks.named("jmhJar").configure {
-  incompatibleWithConfigurationCache()
   outputs.cacheIf { true }
 }
 

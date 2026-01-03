@@ -14,6 +14,10 @@ inputs:
   cache-encryption-key:
     required: false
     description: A Gradle cache encryption key
+  local-cache-read-only:
+    default: 'false'
+    required: false
+    description: Existing entries will be read from the local cache but none will be written
   local-build-cache:
     default: 'false'
     required: false
@@ -84,7 +88,7 @@ runs:
       uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
       with:
         add-job-summary: on-failure
-        cache-read-only: ${{ inputs.local-build-cache }}
+        cache-read-only: ${{ inputs.local-cache-read-only }}
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Restore local build cache
       uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
@@ -123,3 +127,9 @@ runs:
             exit 1
           fi
         done
+    - name: Restore to toolchain JDK (${{ steps.gradle_toolchain.outputs.version }})
+      uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+      if: always()
+      with:
+        java-version: ${{ steps.gradle_toolchain.outputs.version }}
+        distribution: temurin
