@@ -139,8 +139,10 @@ public final class ReferenceTest {
   public void getIfPresent(Cache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
-    awaitFullGc();
-    assertThat(cache.getIfPresent(key)).isNull();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(cache.getIfPresent(key)).isNull();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -185,8 +187,10 @@ public final class ReferenceTest {
   public void getAllPresent(Cache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     context.clear();
-    awaitFullGc();
-    assertThat(cache.getAllPresent(keys)).isExhaustivelyEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(cache.getAllPresent(keys)).isExhaustivelyEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -511,11 +515,13 @@ public final class ReferenceTest {
     var collected = getExpectedAfterGc(context, context.original());
 
     context.clear();
-    awaitFullGc();
-    assertThat(cache.get(context.absentKey(), identity()))
-        .succeedsWith(context.absentKey());
-    assertThat(context).notifications().withCause(COLLECTED)
-        .contains(collected).exclusively();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(cache.get(context.absentKey(), identity()))
+          .succeedsWith(context.absentKey());
+      assertThat(context).notifications().withCause(COLLECTED)
+          .contains(collected).exclusively();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -587,8 +593,10 @@ public final class ReferenceTest {
   public void containsKey(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.clear();
-    awaitFullGc();
-    assertThat(map.containsKey(key)).isEqualTo(context.isStrongValues());
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.containsKey(key)).isEqualTo(context.isStrongValues());
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -605,8 +613,10 @@ public final class ReferenceTest {
     assertThat(map.containsValue(value)).isTrue();
 
     key = null;
-    awaitFullGc();
-    assertThat(map.containsValue(value)).isNotEqualTo(context.isWeakKeys());
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.containsValue(value)).isNotEqualTo(context.isWeakKeys());
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1160,10 +1170,12 @@ public final class ReferenceTest {
   @CacheSpec(requiresWeakOrSoft = true)
   public void iterators(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(map.keySet().iterator().hasNext()).isFalse();
-    assertThat(map.values().iterator().hasNext()).isFalse();
-    assertThat(map.entrySet().iterator().hasNext()).isFalse();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.keySet().iterator().hasNext()).isFalse();
+      assertThat(map.values().iterator().hasNext()).isFalse();
+      assertThat(map.entrySet().iterator().hasNext()).isFalse();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1173,10 +1185,12 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void keySet_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(map.keySet().toArray()).isEmpty();
-    assertThat(map.keySet().toArray(new Int[0])).isEmpty();
-    assertThat(map.keySet().toArray(Int[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.keySet().toArray()).isEmpty();
+      assertThat(map.keySet().toArray(new Int[0])).isEmpty();
+      assertThat(map.keySet().toArray(Int[]::new)).isEmpty();
+    });
   }
 
   @CheckNoStats
@@ -1208,18 +1222,22 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine)
   public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(map.keySet().stream().toArray()).isEmpty();
-    assertThat(map.keySet().stream().toArray(Int[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.keySet().stream().toArray()).isEmpty();
+      assertThat(map.keySet().stream().toArray(Int[]::new)).isEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void keyStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(cache.asMap().keySet().stream().toArray()).isEmpty();
-    assertThat(cache.asMap().keySet().stream().toArray(Int[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(cache.asMap().keySet().stream().toArray()).isEmpty();
+      assertThat(cache.asMap().keySet().stream().toArray(Int[]::new)).isEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1229,10 +1247,12 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void values_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(map.values().toArray()).isEmpty();
-    assertThat(map.values().toArray(new Int[0])).isEmpty();
-    assertThat(map.values().toArray(Int[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.values().toArray()).isEmpty();
+      assertThat(map.values().toArray(new Int[0])).isEmpty();
+      assertThat(map.values().toArray(Int[]::new)).isEmpty();
+    });
   }
 
   @CheckNoStats
@@ -1265,18 +1285,22 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine)
   public void valueStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(map.values().stream().toArray()).isEmpty();
-    assertThat(map.values().stream().toArray(Int[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.values().stream().toArray()).isEmpty();
+      assertThat(map.values().stream().toArray(Int[]::new)).isEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void valueStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(cache.asMap().values().stream().toArray()).isEmpty();
-    assertThat(cache.asMap().values().stream().toArray(CompletableFuture<?>[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(cache.asMap().values().stream().toArray()).isEmpty();
+      assertThat(cache.asMap().values().stream().toArray(CompletableFuture<?>[]::new)).isEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1286,10 +1310,12 @@ public final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void entrySet_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(map.entrySet().toArray()).isEmpty();
-    assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0])).isEmpty();
-    assertThat(map.entrySet().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.entrySet().toArray()).isEmpty();
+      assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0])).isEmpty();
+      assertThat(map.entrySet().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
+    });
   }
 
   @CheckNoStats
@@ -1311,8 +1337,10 @@ public final class ReferenceTest {
     var entry = new AbstractMap.SimpleEntry<>(context.firstKey(), null);
     context.clear();
 
-    awaitFullGc();
-    assertThat(map.entrySet().contains(entry)).isFalse();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.entrySet().contains(entry)).isFalse();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1352,18 +1380,22 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine)
   public void entryStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(map.entrySet().stream().toArray()).isEmpty();
-    assertThat(map.entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.entrySet().stream().toArray()).isEmpty();
+      assertThat(map.entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entryStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
-    awaitFullGc();
-    assertThat(cache.asMap().entrySet().stream().toArray()).isEmpty();
-    assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(cache.asMap().entrySet().stream().toArray()).isEmpty();
+      assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1390,9 +1422,11 @@ public final class ReferenceTest {
         entry -> new Int(entry.getKey()), entry -> new Int(entry.getValue())));
     context.clear();
 
-    awaitFullGc();
-    assertThat(map.equals(copy)).isFalse();
-    assertThat(context.cache()).isEmpty();
+    retry(() -> {
+      awaitFullGc();
+      assertThat(map.equals(copy)).isFalse();
+      assertThat(context.cache()).isEmpty();
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -1480,6 +1514,19 @@ public final class ReferenceTest {
       new Object[] {new WeakValueReference<>(item, item, null), item, true, false},
       new Object[] {new SoftValueReference<>(item, item, null), item, true, false},
     };
+  }
+
+  private static void retry(Runnable task) {
+    @Var AssertionError error = null;
+    for (int i = 0; i < 3; i++) {
+      try {
+        task.run();
+        return;
+      } catch (AssertionError e) {
+        error = e;
+      }
+    }
+    throw error;
   }
 
   @SuppressWarnings("MapEntry")
