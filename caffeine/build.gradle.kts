@@ -470,6 +470,7 @@ tasks.register<JavaExec>("memoryOverhead") {
   group = "Benchmarks"
   description = "Evaluates cache overhead"
   mainClass = "com.github.benmanes.caffeine.cache.MemoryBenchmark"
+  systemProperties("jdk.attach.allowAttachSelf" to "true", "jol.tryWithSudo" to "true")
   val javaAgent = jammAgent.map { it.asPath }
   classpath(tasks.named("jmhJar"))
   jvmArgumentProviders.add {
@@ -483,6 +484,7 @@ tasks.register<JavaExec>("memoryOverhead") {
       "-Djdk.attach.allowAttachSelf=true",
       "-XX:+EnableDynamicAgentLoading",
       "-javaagent:${javaAgent.get()}",
+      "-XX:+UseCompactObjectHeaders",
       "-Djol.magicFieldOffset=true")
   }
 }

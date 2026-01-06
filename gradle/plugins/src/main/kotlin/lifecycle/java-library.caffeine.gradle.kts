@@ -14,6 +14,7 @@ plugins {
   id("biz.aQute.bnd.builder")
   id("object-layout.caffeine")
   id("forbidden-apis.caffeine")
+  id("dependency-analysis.caffeine")
 }
 
 dependencies {
@@ -58,9 +59,6 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<JavaExec>().configureEach {
   jvmArgs(DisableStrongEncapsulationJvmArgs)
-  if (javaRuntimeVersion.get().canCompileOrRun(25)) {
-    jvmArgs("-XX:+UseCompactObjectHeaders")
-  }
   javaLauncher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor
     languageVersion = javaRuntimeVersion

@@ -15,6 +15,7 @@ commons-text = "1.15.0"
 concurrentlinkedhashmap = "1.4.2"
 config = "1.4.5"
 coveralls = "1.2.20"
+dependency-analysis = "3.5.1"
 dependency-check = "12.1.9"
 ecj = "3.44.0"
 eclipse-collections = "13.0.0"
@@ -226,6 +227,7 @@ slf4j-test = ["slf4j-jdk-platform-logging", "slf4j-jul-bridge", "slf4j-test"]
 [plugins]
 bnd = { id = "biz.aQute.bnd", version.ref = "bnd" }
 coveralls = { id = "com.github.nbaztec.coveralls-jacoco", version.ref = "coveralls" }
+dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }
 dependency-check = { id = "org.owasp.dependencycheck", version.ref = "dependency-check" }
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
 forbidden-apis = { id = "de.thetaphi.forbiddenapis", version.ref = "forbidden-apis" }

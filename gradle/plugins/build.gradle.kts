@@ -15,6 +15,7 @@ buildscript {
 plugins {
   `kotlin-dsl`
   alias(libs.plugins.versions)
+  alias(libs.plugins.dependency.analysis)
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
@@ -39,6 +40,7 @@ dependencies {
   implementation(plugin(libs.plugins.forbidden.apis))
   implementation(plugin(libs.plugins.jmh.asProvider()))
   implementation(plugin(libs.plugins.dependency.check))
+  implementation(plugin(libs.plugins.dependency.analysis))
   implementation(plugin(libs.plugins.jvm.dependency.conflict.resolution))
 
   implementation(platform(libs.asm.bom))

@@ -36,9 +36,9 @@ abstract class JavaObjectLayoutTask : JavaExec() {
   init {
     group = "Object Layout"
     mainClass = "org.openjdk.jol.Main"
-    jvmArgs("-XX:+EnableDynamicAgentLoading")
     systemProperties("jdk.attach.allowAttachSelf" to "true",
       "jdk.instrument.traceUsage" to "true", "jol.tryWithSudo" to "true")
+    jvmArgs("-XX:+EnableDynamicAgentLoading", "-XX:+UseCompactObjectHeaders")
     argumentProviders.add {
       val base = "com.github.benmanes.caffeine.cache"
       require(className.isPresent) { "Usage: $name -class=$base.[CLASS_NAME]" }

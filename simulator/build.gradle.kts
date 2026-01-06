@@ -107,6 +107,7 @@ runTasks.forEach { task ->
     inputs.files(tasks.named<ProcessResources>("processResources").map { it.outputs.files })
     inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
     classpath(sourceSets.named("main").map { it.runtimeClasspath })
+    jvmArgs("-XX:+UseCompactObjectHeaders")
     outputs.upToDateWhen { false }
     outputs.cacheIf { false }
 

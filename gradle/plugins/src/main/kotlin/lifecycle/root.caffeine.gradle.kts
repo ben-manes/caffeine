@@ -7,6 +7,7 @@ plugins {
   id("sonarqube.caffeine")
   id("dependency-check.caffeine")
   id("io.github.gradle-nexus.publish-plugin")
+  id("com.autonomousapps.dependency-analysis")
 }
 
 nexusPublishing {

@@ -76,7 +76,7 @@ jobs:
         with:
           attempt-limit: 2
           attempt-delay: 30
-          arguments: assemble
+          arguments: :plugin:resolveExternalDependenciesMain resolveExternalDependencies assemble
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
