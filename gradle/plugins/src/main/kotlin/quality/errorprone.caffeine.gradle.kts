@@ -85,6 +85,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 fun disabledChecks() = listOf(
+  "AddNullMarkedToClass",
   "AssignmentExpression",
   "AvoidObjectArrays",
   "CannotMockMethod",

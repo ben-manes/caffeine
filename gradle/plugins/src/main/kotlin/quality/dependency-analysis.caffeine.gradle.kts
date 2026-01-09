@@ -14,5 +14,8 @@ tasks.withType<FindDeclaredProcsTask>().configureEach {
 }
 
 tasks.register("resolveExternalDependencies") {
+  group = "Dependency-analysis"
+  description = "Resolves external dependencies for compile and runtime classpaths."
   dependsOn(tasks.withType<ResolveExternalDependenciesTask>())
+  dependsOn(gradle.includedBuild("plugins").task(":resolveExternalDependencies"))
 }

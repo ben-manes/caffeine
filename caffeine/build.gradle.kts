@@ -9,7 +9,6 @@ import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
-  id("org.gradle.test-retry")
   id("java-library.caffeine")
   id("java-test-fixtures")
   id("jcstress.caffeine")
@@ -216,7 +215,6 @@ testing.suites {
               group = "Parameterized Test"
               include("com/github/benmanes/caffeine/cache/**")
 
-              retry.maxRetries = 3
               systemProperties(
                 "keys" to keys,
                 "stats" to stats,
