@@ -132,15 +132,16 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  */
 @SuppressWarnings({"AlmostJavadoc", "BadInstanceof", "BooleanLiteral", "BoxedPrimitiveEquality",
     "ClassIsInstance", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
-    "EmptyCatch", "EntryIterableToImmutableMap", "ExplicitArrayForVarargs", "FieldCanBeFinal",
-    "IdentifierName", "IdentityConversion", "IdentityHashMapBoxing", "InvalidParam",
-    "IterableIsEmpty", "JdkObsolete", "JUnitClassModifiers", "JUnitMethodDeclaration",
-    "ListRemoveFirst", "ListRemoveLast", "ModifyingCollectionWithItself",
-    "MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonFinalStaticField", "NonStaticImport",
-    "NullAway", "ParameterMissingNullable", "rawtypes", "ReferenceEquality", "resource",
-    "ReturnValueIgnored", "SelfEquals", "SequencedCollectionGetFirst", "SequencedCollectionGetLast",
-    "SystemOut", "unchecked", "UndefinedEquals", "UnnecessaryFinal", "unused", "UnusedMethod",
-    "Var", "Varifier"})
+    "DequeGetFirst", "DequePeekFirst", "DequePollFirst", "DequeRemoveFirst",
+    "DequeRemoveFirstOccurrence", "EmptyCatch", "EntryIterableToImmutableMap",
+    "ExplicitArrayForVarargs", "FieldCanBeFinal", "IdentifierName", "IdentityConversion",
+    "IdentityHashMapBoxing", "InvalidParam", "IterableIsEmpty", "JdkObsolete",
+    "JUnitClassModifiers", "JUnitMethodDeclaration", "ListRemoveFirst", "ListRemoveLast",
+    "ModifyingCollectionWithItself", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
+    "NonFinalStaticField", "NonStaticImport", "NullAway", "ParameterMissingNullable", "rawtypes",
+    "ReferenceEquality", "resource", "ReturnValueIgnored", "SelfEquals",
+    "SequencedCollectionGetFirst", "SequencedCollectionGetLast", "SystemOut", "unchecked",
+    "UndefinedEquals", "UnnecessaryFinal", "unused", "UnusedMethod", "Var", "Varifier"})
 public class MOAT {
     // Collections under test must not be initialized to contain this value,
     // and maps under test must not contain this value as a key.

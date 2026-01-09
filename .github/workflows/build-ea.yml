@@ -1,4 +1,4 @@
-name: Early Access JDK Tests
+name: Build (Early Access)
 permissions: {}
 on:
   schedule:
@@ -127,7 +127,21 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Run Tests
         env:
+          ATTEMPT_LIMIT: 2
+          ATTEMPT_DELAY: 30
           TEST_SUITE: ${{ matrix.suite }}
-        run: >
-          ./gradlew -PearlyAccess=true -Dscan.tag.${GITHUB_WORKFLOW// /_}
-          -PjavaTestVersion="$JAVA_TEST_VERSION" "$TEST_SUITE"
+        run: |
+          echo "::add-matcher::.github/problem-matcher.json"
+          for ((i=1; i<="$ATTEMPT_LIMIT"; i++)); do
+            ./gradlew -PearlyAccess=true \
+            --warning-mode all --no-problems-report \
+            -Dscan.tag.${GITHUB_WORKFLOW// /_} \
+            $(eval echo "$TEST_SUITE" | tr -d '\n') && break
+            if [ $i -lt "$ATTEMPT_LIMIT" ]; then
+              echo "Attempt $i failed. Retrying in $ATTEMPT_DELAY seconds..."
+              sleep "$ATTEMPT_DELAY"
+            else
+              echo "All attempts failed."
+              exit 1
+            fi
+          done

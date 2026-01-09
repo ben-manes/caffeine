@@ -123,6 +123,8 @@ jobs:
       - name: Run tests (${{ env.JAVA_VERSION }})
         uses: ./.github/actions/run-gradle
         with:
+          attempt-limit: 2
+          attempt-delay: 30
           java: ${{ env.JAVA_VERSION }}
           arguments: ${{ matrix.suite }} --rerun
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

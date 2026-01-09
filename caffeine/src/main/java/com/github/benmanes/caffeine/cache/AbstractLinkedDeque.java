@@ -422,7 +422,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       }
       checkForConcurrentModification();
 
-      AbstractLinkedDeque.this.remove(previous);
+      AbstractLinkedDeque.this.removeFirstOccurrence(previous);
       expectedModCount = modCount;
       previous = null;
     }

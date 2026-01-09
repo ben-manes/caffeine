@@ -52,7 +52,7 @@ fun Project.javaTestVersion(): Provider<JavaLanguageVersion> =
 fun Project.javaDistribution(): Provider<String> =
   providers.gradleProperty("javaDistribution")
 fun Project.javaVendor(): Provider<JvmVendorSpec> =
-  providers.gradleProperty("javaVendor").map(JvmVendorSpec::of)
+  providers.gradleProperty("javaVendor").filter { it.isNotBlank() }.map(JvmVendorSpec::of)
 
 val DisableStrongEncapsulationJvmArgs = buildList {
   listOf("api", "code", "file", "main", "parser", "processing", "tree", "util").forEach {

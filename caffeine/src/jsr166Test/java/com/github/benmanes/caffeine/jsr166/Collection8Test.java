@@ -56,11 +56,11 @@ import junit.framework.Test;
 @NullUnmarked
 @SuppressWarnings({"CatchAndPrintStackTrace", "CollectionAddAllToCollectionBlock",
     "CollectionForEach", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
-    "EmptyCatch", "LabelledBreakTarget", "MemberName", "MethodReferenceUsage", "MissingDefault",
-    "MissingFail", "MultiVariableDeclaration", "rawtypes", "ReturnValueIgnored",
-    "SequencedCollectionGetFirst", "StatementSwitchToExpressionSwitch", "SystemOut", "try",
-    "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses", "unused", "Var", "Varifier",
-    "YodaCondition"})
+    "DequeAddLast", "DequeRemoveFirst", "EmptyCatch", "LabelledBreakTarget", "MemberName",
+    "MethodReferenceUsage", "MissingDefault", "MissingFail", "MultiVariableDeclaration", "rawtypes",
+    "ReturnValueIgnored", "SequencedCollectionGetFirst", "StatementSwitchToExpressionSwitch",
+    "SystemOut", "try", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses", "unused", "Var",
+    "Varifier", "YodaCondition"})
 public class Collection8Test extends JSR166TestCase {
     final CollectionImplementation impl;
 

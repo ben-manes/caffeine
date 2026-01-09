@@ -1250,7 +1250,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         break;
       }
 
-      Node<K, V> demoted = accessOrderProtectedDeque().poll();
+      Node<K, V> demoted = accessOrderProtectedDeque().pollFirst();
       if (demoted == null) {
         break;
       }
@@ -2060,7 +2060,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       int threshold = (WRITE_BUFFER_MAX / 2);
       entries = new ArrayDeque<>(data.values());
       while (!entries.isEmpty() && (writeBuffer.size() < threshold)) {
-        removeNode(entries.poll(), now);
+        removeNode(entries.pollFirst(), now);
       }
     } finally {
       evictionLock.unlock();

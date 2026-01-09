@@ -3211,7 +3211,7 @@ public final class BoundedLocalCacheTest {
           var value = cache.remove(context.absentKey());
           assertThat(value).isEqualTo(context.absentValue());
         } catch (Throwable t) {
-          errors.add(t);
+          errors.addLast(t);
         }
       });
 
@@ -3220,7 +3220,7 @@ public final class BoundedLocalCacheTest {
         assertThat(node.isRetired()).isTrue();
         return null;
       } catch (Throwable t) {
-        errors.add(t);
+        errors.addLast(t);
         throw t;
       }
     }).when(stats).recordHits(1);

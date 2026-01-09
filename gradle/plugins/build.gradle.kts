@@ -1,3 +1,4 @@
+import com.autonomousapps.tasks.ResolveExternalDependenciesTask
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 
@@ -34,7 +35,6 @@ dependencies {
   implementation(plugin(libs.plugins.coveralls))
   implementation(plugin(libs.plugins.sonarqube))
   implementation(plugin(libs.plugins.jmh.report))
-  implementation(plugin(libs.plugins.test.retry))
   implementation(plugin(libs.plugins.errorprone))
   implementation(plugin(libs.plugins.nexus.publish))
   implementation(plugin(libs.plugins.forbidden.apis))
@@ -80,6 +80,10 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
       })
     }
   }
+}
+
+tasks.register("resolveExternalDependencies") {
+  dependsOn(tasks.withType<ResolveExternalDependenciesTask>())
 }
 
 fun plugin(plugin: Provider<PluginDependency>): Provider<String> {

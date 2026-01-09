@@ -70,7 +70,6 @@ runs:
         declare -A -r VENDORS=(
           ["zulu"]="Azul"
           ["temurin"]="Adoptium"
-          ["graalvm"]="GraalVM Community"
         )
         version="${INPUTS_JAVA%-ea}"
         vendor=${VENDORS["$INPUTS_DISTRIBUTION"]}

@@ -8,6 +8,9 @@ plugins {
 }
 
 tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+  filterConfigurations = Spec<Configuration> {
+    it.attributes.keySet().none { attr -> attr.name == "dagp.internal.artifacts" }
+  }
   checkBuildEnvironmentConstraints = true
   checkConstraints = true
   resolutionStrategy {
