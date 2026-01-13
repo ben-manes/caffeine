@@ -134,6 +134,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     CaffeinatedLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       this.cacheLoader = requireNonNull(cacheLoader);
     }
+    @SuppressWarnings("ConstantValue")
     @Override public CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) {
       var future = new CompletableFuture<V>();
       try {
@@ -156,6 +157,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     InternalSingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       super(cacheLoader);
     }
+    @SuppressWarnings("ConstantValue")
     @Override public V load(K key) {
       try {
         V value = cacheLoader.load(key);
@@ -180,6 +182,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     InternalBulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       super(cacheLoader);
     }
+    @SuppressWarnings("ConstantValue")
     @Override public Map<K, V> loadAll(Set<? extends K> keys) {
       try {
         Map<K, V> loaded = cacheLoader.loadAll(keys);
@@ -212,6 +215,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     ExternalSingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       super(cacheLoader);
     }
+    @SuppressWarnings("ConstantValue")
     @Override public V load(K key) throws Exception {
       V value = cacheLoader.load(key);
       if (value == null) {

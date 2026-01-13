@@ -35,7 +35,8 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings("LexicographicalAnnotationAttributeListing")
+@SuppressWarnings({"LexicographicalAnnotationAttributeListing",
+    "JavadocDeclaration", "NotNullFieldNotInitialized", "unused"})
 public class FrequencySketchBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

@@ -45,7 +45,7 @@ import com.google.errorprone.annotations.Var;
  */
 @SuppressWarnings("ClassEscapesDefinedScope")
 public final class StripedBufferTest {
-  static final Integer ELEMENT = 1;
+  private static final Integer ELEMENT = 1;
 
   @Test(dataProvider = "buffers")
   public void init_null(FakeBuffer<Integer> buffer) {
@@ -167,12 +167,12 @@ public final class StripedBufferTest {
     return buffers.toArray();
   }
 
-  static final class FakeBuffer<E> extends StripedBuffer<E> {
-    final int result;
+  private static final class FakeBuffer<E> extends StripedBuffer<E> {
+    private final int result;
 
-    int drains;
-    int writes;
-    int reads;
+    private int drains;
+    private int writes;
+    private int reads;
 
     FakeBuffer(int result) {
       this.result = result;

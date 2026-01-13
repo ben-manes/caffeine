@@ -40,6 +40,7 @@ import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.Callables;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.TestCase;
 
 /**
@@ -49,7 +50,8 @@ import junit.framework.TestCase;
  * @author mike nonemacher
  */
 @NullUnmarked
-@SuppressWarnings({"PreferJavaTimeOverload", "Varifier"})
+@SuppressWarnings({"all", "PreferJavaTimeOverload", "Varifier"})
+@SuppressFBWarnings({"LUI_USE_SINGLETON_LIST", "OCP_OVERLY_CONCRETE_PARAMETER"})
 public class CacheExpirationTest extends TestCase {
 
   private static final long EXPIRING_TIME = 1000;

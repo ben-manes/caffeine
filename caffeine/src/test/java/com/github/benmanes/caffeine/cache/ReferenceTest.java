@@ -81,6 +81,8 @@ import com.google.common.collect.Maps;
 import com.google.common.testing.EqualsTester;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The test cases for caches that support a reference eviction policy.
  *
@@ -600,7 +602,8 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("PMD.UnusedAssignment")
+  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
+  @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -1195,6 +1198,8 @@ public final class ReferenceTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
+  @SuppressWarnings("RedundantCollectionOperation")
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void keySet_contains(Map<Int, Int> map, CacheContext context) {
@@ -1218,6 +1223,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       implementation = Implementation.Caffeine)
   public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1230,6 +1236,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void keyStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
@@ -1257,6 +1264,7 @@ public final class ReferenceTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void values_contains(Map<Int, Int> map, CacheContext context) {
@@ -1281,6 +1289,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       implementation = Implementation.Caffeine)
   public void valueStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1293,6 +1302,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void valueStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
@@ -1320,6 +1330,7 @@ public final class ReferenceTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   public void entrySet_contains(Map<Int, Int> map, CacheContext context) {
@@ -1337,9 +1348,12 @@ public final class ReferenceTest {
     var entry = new AbstractMap.SimpleEntry<>(context.firstKey(), null);
     context.clear();
 
-    retry(() -> {
-      awaitFullGc();
-      assertThat(map.entrySet().contains(entry)).isFalse();
+    retry(new Runnable() {
+      @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
+      @Override public void run() {
+        awaitFullGc();
+        assertThat(map.entrySet().contains(entry)).isFalse();
+      }
     });
   }
 
@@ -1376,6 +1390,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
       implementation = Implementation.Caffeine)
   public void entryStream_toArray(Map<Int, Int> map, CacheContext context) {
@@ -1388,6 +1403,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
   public void entryStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
@@ -1517,16 +1533,13 @@ public final class ReferenceTest {
   }
 
   private static void retry(Runnable task) {
-    @Var AssertionError error = null;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       try {
         task.run();
         return;
-      } catch (AssertionError e) {
-        error = e;
-      }
+      } catch (AssertionError expected) { /* ignored */ }
     }
-    throw error;
+    task.run();
   }
 
   @SuppressWarnings("MapEntry")

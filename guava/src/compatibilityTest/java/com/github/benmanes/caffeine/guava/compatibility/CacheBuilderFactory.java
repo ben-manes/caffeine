@@ -34,6 +34,8 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Helper class for creating {@link CacheBuilder} instances with all combinations of several sets of
  * parameters.
@@ -41,7 +43,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @author mike nonemacher
  */
 @NullUnmarked
-@SuppressWarnings("Varifier")
+@SuppressWarnings({"all", "Varifier"})
+@SuppressFBWarnings({"IMC_IMMATURE_CLASS_WRONG_FIELD_ORDER", "UCF_USELESS_CONTROL_FLOW"})
 class CacheBuilderFactory {
   // Default values contain only 'null', which means don't call the CacheBuilder method (just give
   // the CacheBuilder default).

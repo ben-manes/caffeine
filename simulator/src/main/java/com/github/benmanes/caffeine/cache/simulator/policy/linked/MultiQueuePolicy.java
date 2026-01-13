@@ -82,8 +82,8 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    @Var @Nullable Node node = data.get(key);
     policyStats.recordOperation();
-    @Var Node node = data.get(key);
     if (node == null) {
       policyStats.recordMiss();
       node = out.remove(key);

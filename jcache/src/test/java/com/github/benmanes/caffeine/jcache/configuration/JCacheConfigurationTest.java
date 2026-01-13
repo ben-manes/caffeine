@@ -51,6 +51,7 @@ import com.google.common.testing.EqualsTester;
 /**
  * @author Nick Robison (github.com/nickrobison)
  */
+@SuppressWarnings("NotNullFieldNotInitialized")
 public final class JCacheConfigurationTest {
   private static final String PROVIDER_NAME = CaffeineCachingProvider.class.getName();
 

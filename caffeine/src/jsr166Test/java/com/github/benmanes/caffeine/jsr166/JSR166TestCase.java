@@ -102,6 +102,7 @@ import java.util.regex.Pattern;
 import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestResult;
@@ -195,7 +196,7 @@ import junit.textui.TestRunner;
  * </ul>
  */
 @NullUnmarked
-@SuppressWarnings({"AnnotateFormatMethod", "BooleanLiteral", "ClassEscapesDefinedScope",
+@SuppressWarnings({"all", "AnnotateFormatMethod", "BooleanLiteral", "ClassEscapesDefinedScope",
     "CollectionToArray", "ConstantField", "EffectivelyPrivate", "EmptyCatch",
     "EqualsIncompatibleType", "FunctionalInterfaceClash", "InterruptedExceptionSwallowed",
     "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta", "MemberName",
@@ -203,6 +204,17 @@ import junit.textui.TestRunner;
     "RethrowReflectiveOperationExceptionAsLinkageError", "serial", "SwitchDefault", "SystemOut",
     "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals", "UnnecessaryFinal", "unused",
     "Var", "Varifier"})
+@SuppressFBWarnings({"AI_ANNOTATION_ISSUES_NEEDS_NULLABLE", "AT_NONATOMIC_64BIT_PRIMITIVE",
+    "BED_BOGUS_EXCEPTION_DECLARATION", "DCN_NULLPOINTER_EXCEPTION",
+    "DM_BOXED_PRIMITIVE_FOR_PARSING", "DM_GC", "FORMAT_STRING_MANIPULATION",
+    "HES_EXECUTOR_NEVER_SHUTDOWN", "HES_LOCAL_EXECUTOR_SERVICE",
+    "IMC_IMMATURE_CLASS_PRINTSTACKTRACE", "IMC_IMMATURE_CLASS_WRONG_FIELD_ORDER",
+    "ITC_INHERITANCE_TYPE_CHECKING", "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE",
+    "MDM_THREAD_YIELD", "MS_PKGPROTECT", "NAB_NEEDLESS_BOXING_PARSE", "OBJECT_DESERIALIZATION",
+    "PA_PUBLIC_PRIMITIVE_ATTRIBUTE", "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
+    "SACM_STATIC_ARRAY_CREATED_IN_METHOD", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD",
+    "THROWS_METHOD_THROWS_CLAUSE_THROWABLE", "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+    "URF_UNREAD_FIELD"})
 public class JSR166TestCase extends TestCase {
 //    private static final boolean useSecurityManager =
 //        Boolean.getBoolean("jsr166.useSecurityManager");

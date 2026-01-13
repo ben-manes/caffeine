@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("EmptyMethod")
 public interface TraceWriter extends Closeable {
 
   /** Writes the header for the trace format. */

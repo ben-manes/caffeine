@@ -94,9 +94,12 @@ import org.eclipse.collections.impl.test.Verify;
 import org.eclipse.collections.impl.tuple.Tuples;
 import org.junit.jupiter.api.Test;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Ported from Eclipse Collections 11.0.
  */
+@SuppressFBWarnings({"BC_VACUOUS_INSTANCEOF", "UJM_UNJITABLE_METHOD"})
 @SuppressWarnings({"all", "deprecation", "IdentityConversion", "IsInstanceIncompatibleType",
     "NaturalOrder", "PreferredInterfaceType", "ReverseOrder", "unchecked", "YodaCondition"})
 abstract class MapIterableTestCase extends CaffeineMutableMapTestCase {

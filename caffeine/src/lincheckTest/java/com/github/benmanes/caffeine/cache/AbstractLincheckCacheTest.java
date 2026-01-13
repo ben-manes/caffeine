@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test;
  */
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
 @Param(name = "value", gen = IntGen.class, conf = "1:10")
-@SuppressWarnings({"MemberName", "PMD.AbstractClassWithoutAbstractMethod"})
+@SuppressWarnings({"MemberName", "PMD.AbstractClassWithoutAbstractMethod", "unused"})
 abstract class AbstractLincheckCacheTest {
   private final LoadingCache<Integer, Integer> cache;
 
@@ -154,12 +154,14 @@ abstract class AbstractLincheckCacheTest {
   }
 
   @Operation
-  public Integer compute(@Param(name = "key") int key, @Param(name = "value") int nextValue) {
+  public @Nullable Integer compute(@Param(name = "key") int key,
+      @Param(name = "value") int nextValue) {
     return cache.asMap().compute(key, (k, v) -> requireNonNullElse(v, 0) + nextValue);
   }
 
   @Operation
-  public Integer merge(@Param(name = "key") int key, @Param(name = "value") int nextValue) {
+  public @Nullable Integer merge(@Param(name = "key") int key,
+      @Param(name = "value") int nextValue) {
     return cache.asMap().merge(key, nextValue, (k, v) -> v + nextValue);
   }
 }

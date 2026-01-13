@@ -47,7 +47,8 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
-@SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing"})
+@SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing",
+    "JavadocDeclaration", "NotNullFieldNotInitialized"})
 public class PutRemoveBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

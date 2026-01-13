@@ -387,6 +387,7 @@ public final class CacheContext {
     return valueStrength == ReferenceType.SOFT;
   }
 
+  @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   public boolean isLoading() {
     return (loader != Loader.DISABLED);
   }

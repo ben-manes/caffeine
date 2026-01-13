@@ -1,4 +1,4 @@
-@file:Suppress("PackageDirectoryMismatch")
+@file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 plugins {
   idea
   `jvm-ecosystem`

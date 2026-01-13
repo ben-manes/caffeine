@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -53,7 +55,9 @@ import junit.framework.TestCase;
  * @author mike nonemacher
  */
 @NullUnmarked
-@SuppressWarnings({"CollectionToArray", "Varifier"})
+@SuppressWarnings({"all", "CollectionToArray", "Varifier"})
+@SuppressFBWarnings({"DLS_DEAD_LOCAL_STORE",
+    "PCAIL_POSSIBLE_CONSTANT_ALLOCATION_IN_LOOP", "PSC_PRESIZE_COLLECTIONS"})
 public class PopulatedCachesTest extends TestCase {
   // we use integers as keys; make sure the range covers some values that ARE cached by
   // Integer.valueOf(int), and some that are not cached. (127 is the highest cached value.)

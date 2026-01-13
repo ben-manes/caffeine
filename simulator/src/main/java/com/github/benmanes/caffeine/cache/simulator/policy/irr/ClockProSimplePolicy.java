@@ -150,7 +150,7 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    Node node = data.get(key);
+    @Nullable Node node = data.get(key);
     if (node == null) {
       onMiss(key);
     } else if (node.status == Status.HOT || node.status == Status.COLD) {

@@ -20,6 +20,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -30,9 +32,9 @@ import com.google.common.util.concurrent.Uninterruptibles;
 /**
  * Issue #859: Removal listener not called (due to no activity and pending work in write buffer)
  * <p>
- * While a maintenance cycle is running it disables scheduling of a clean up by concurrent writers.
+ * While a maintenance cycle is running it disables scheduling of a cleanup by concurrent writers.
  * When complete the drain status is restored to required and previously this may have had to wait
- * for other activity to trigger the clean up. That could be an excessive delay if the write buffer
+ * for other activity to trigger the cleanup. That could be an excessive delay if the write buffer
  * contains inserted entries, they expire, and a prompt removal notification is expected due to a
  * configured scheduler. To avoid this delay, the maintenance cycle should be scheduled.
  *
@@ -74,9 +76,11 @@ public final class Issue859Test {
     return new TestRun(cache, latch);
   }
 
-  static final class TestRun {
-    final Cache<Integer, Boolean> cache;
-    final CountDownLatch latch;
+  private static final class TestRun {
+    @SuppressFBWarnings("URF_UNREAD_FIELD")
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final Cache<Integer, Boolean> cache;
+    private final CountDownLatch latch;
 
     TestRun(Cache<Integer, Boolean> cache, CountDownLatch latch) {
       this.cache = cache;

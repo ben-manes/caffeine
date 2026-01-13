@@ -35,6 +35,7 @@ import com.github.benmanes.caffeine.eclipse.ConcurrentMapAdapter;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("all")
 abstract class CaffeineMutableMapTestCase {
   @Parameter CacheContext template;
 

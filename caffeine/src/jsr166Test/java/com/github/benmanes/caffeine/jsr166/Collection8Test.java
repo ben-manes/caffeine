@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 
 import org.jspecify.annotations.NullUnmarked;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.Test;
 
 /**
@@ -54,13 +55,18 @@ import junit.framework.Test;
  * An extension of CollectionTest.
  */
 @NullUnmarked
-@SuppressWarnings({"CatchAndPrintStackTrace", "CollectionAddAllToCollectionBlock",
+@SuppressWarnings({"all", "CatchAndPrintStackTrace", "CollectionAddAllToCollectionBlock",
     "CollectionForEach", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
     "DequeAddLast", "DequeRemoveFirst", "EmptyCatch", "LabelledBreakTarget", "MemberName",
     "MethodReferenceUsage", "MissingDefault", "MissingFail", "MultiVariableDeclaration", "rawtypes",
     "ReturnValueIgnored", "SequencedCollectionGetFirst", "StatementSwitchToExpressionSwitch",
     "SystemOut", "try", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses", "unused", "Var",
     "Varifier", "YodaCondition"})
+@SuppressFBWarnings({"DE_MIGHT_IGNORE", "EQ_UNUSUAL", "HES_LOCAL_EXECUTOR_SERVICE",
+    "ITC_INHERITANCE_TYPE_CHECKING", "IMC_IMMATURE_CLASS_PRINTSTACKTRACE",
+    "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE", "NP_LOAD_OF_KNOWN_NULL_VALUE",
+    "NP_NONNULL_PARAM_VIOLATION", "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE", "SPP_USE_GET0",
+    "THROWS_METHOD_THROWS_CLAUSE_THROWABLE"})
 public class Collection8Test extends JSR166TestCase {
     final CollectionImplementation impl;
 

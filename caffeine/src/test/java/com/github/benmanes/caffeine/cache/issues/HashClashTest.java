@@ -20,6 +20,8 @@ import static java.util.function.Function.identity;
 
 import java.util.Set;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -48,7 +50,7 @@ public final class HashClashTest {
   private static final boolean debug = false;
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CheckReturnValue")
+  @SuppressWarnings({"CheckReturnValue", "ResultOfMethodCallIgnored"})
   @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.ONE_FIFTY, stats = Stats.ENABLED)
   public void testCache(Cache<Long, Long> cache) {
     for (long j = 0; j < 300; ++j) {
@@ -84,7 +86,8 @@ public final class HashClashTest {
   }
 
   @SuppressWarnings("SystemOut")
-  static void printStats(Cache<Long, Long> cache) {
+  @SuppressFBWarnings("UP_UNUSED_PARAMETER")
+  private static void printStats(Cache<Long, Long> cache) {
     if (debug) {
       System.out.printf("size %,d requests %,d hit ratio %f%n",
           cache.estimatedSize(), cache.stats().requestCount(), cache.stats().hitRate());
@@ -92,7 +95,8 @@ public final class HashClashTest {
   }
 
   @SuppressWarnings("SystemOut")
-  static void printKeys(Cache<Long, Long> cache) {
+  @SuppressFBWarnings("UP_UNUSED_PARAMETER")
+  private static void printKeys(Cache<Long, Long> cache) {
     if (debug) {
       Set<Long> keys = cache.policy().eviction()
           .map(policy -> policy.hottest(Integer.MAX_VALUE).keySet())

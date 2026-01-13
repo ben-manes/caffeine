@@ -40,12 +40,15 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Statistics gathered by a policy execution. A policy can extend this class as a convenient way to
  * add custom metrics.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("unused")
 public class PolicyStats {
   private final Map<String, Metric> metrics;
   private final Stopwatch stopwatch;
@@ -63,6 +66,7 @@ public class PolicyStats {
   private long operationCount;
   private double percentAdaption;
 
+  @SuppressFBWarnings("FORMAT_STRING_MANIPULATION")
   @SuppressWarnings({"AnnotateFormatMethod", "this-escape"})
   public PolicyStats(String format, Object... args) {
     this.stopwatch = Stopwatch.createUnstarted();

@@ -445,6 +445,8 @@ public final class EvictionTest {
       weigher = CacheWeigher.ZERO, population = Population.EMPTY)
   public void put_zeroWeight(Cache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(context).hasWeightedSize(0L);
   }
 
   @Test(dataProvider = "caches")

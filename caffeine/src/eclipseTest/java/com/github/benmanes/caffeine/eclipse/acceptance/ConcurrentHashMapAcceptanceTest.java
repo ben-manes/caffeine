@@ -42,7 +42,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @NullUnmarked
 @ParameterizedClass
 @MethodSource("caches")
-@SuppressWarnings("CanIgnoreReturnValueSuggester")
+@SuppressWarnings({"all", "CanIgnoreReturnValueSuggester"})
 final class ConcurrentHashMapAcceptanceTest extends CaffeineMapAcceptanceTestCase {
 
   public <K, V> ConcurrentMutableMap<K, V> newMap(Map<K, V> other) {

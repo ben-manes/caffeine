@@ -44,16 +44,21 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 8008785
  * @summary Ensure toArray() implementations return correct results.
  * @author Mike Duigou
  */
-@SuppressWarnings({"AlmostJavadoc", "BoxedPrimitiveEquality", "CatchingUnchecked",
+@SuppressWarnings({"all", "AlmostJavadoc", "BoxedPrimitiveEquality", "CatchingUnchecked",
     "IdentityConversion", "InconsistentOverloads", "JdkObsolete", "MultiVariableDeclaration",
     "NonAtomicVolatileUpdate", "NonFinalStaticField", "rawtypes", "ReferenceEquality", "SystemOut",
     "unchecked", "UnnecessaryBoxedAssignment", "UnnecessaryParentheses", "UnusedVariable"})
+@SuppressFBWarnings({"AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE", "DM_EXIT",
+    "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE", "RC_REF_COMPARISON",
+    "THROWS_METHOD_THROWS_CLAUSE_THROWABLE", "UP_UNUSED_PARAMETER"})
 public class ToArray {
 
     /**

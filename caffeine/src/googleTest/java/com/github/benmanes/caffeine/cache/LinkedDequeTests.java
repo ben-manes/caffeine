@@ -113,6 +113,7 @@ public final class LinkedDequeTests extends TestCase {
       return new LinkedValue[length];
     }
     @CanIgnoreReturnValue
+    @SuppressWarnings("NullableProblems")
     @Override public List<LinkedValue> order(List<LinkedValue> insertionOrder) {
       return insertionOrder;
     }

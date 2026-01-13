@@ -44,6 +44,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Issue #1065: Cache listeners including writes to caches deadlock when used in ForkJoinPool
  * <p>
@@ -71,6 +73,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @author monitorjbl (Taylor Jones)
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressFBWarnings("UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR")
 public final class Issue1065Test {
   private static final int NUM_THREADS = 5;
   private static final CachingProvider provider =
@@ -99,6 +102,7 @@ public final class Issue1065Test {
   }
 
   @Test
+  @SuppressWarnings("ResultOfMethodCallIgnored")
   public void deadlock() throws Exception {
     var executor = Executors.newWorkStealingPool(NUM_THREADS);
     try {
@@ -136,6 +140,7 @@ public final class Issue1065Test {
     throw failure;
   }
 
+  @SuppressFBWarnings("NFF_NON_FUNCTIONAL_FIELD")
   private static final class Listener
       implements CacheEntryCreatedListener<String, String>, Serializable {
     private static final long serialVersionUID = 1L;

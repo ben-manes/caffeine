@@ -29,7 +29,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import com.google.common.cache.CacheBuilder;
 
 /**
- * <p>
  * {@snippet lang="shell" :
  * ./gradlew jmh -PincludePattern=BuilderBenchmark --rerun
  * }
@@ -37,7 +36,8 @@ import com.google.common.cache.CacheBuilder;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings({"MemberName", "StatementSwitchToExpressionSwitch"})
+@SuppressWarnings({"JavadocDeclaration", "MemberName",
+    "NotNullFieldNotInitialized", "StatementSwitchToExpressionSwitch", "unused"})
 public class BuilderBenchmark {
   @Param BuilderType type;
   Supplier<?> builder;

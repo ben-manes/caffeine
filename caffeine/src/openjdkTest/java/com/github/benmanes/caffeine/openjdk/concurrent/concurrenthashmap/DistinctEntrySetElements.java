@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -43,7 +45,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @summary Sets from Map.entrySet() return distinct objects for each Entry
  * @author Neil Richards <neil.richards@ngmr.net>, <neil_richards@uk.ibm.com>
  */
-@SuppressWarnings({"AlmostJavadoc", "YodaCondition"})
+@SuppressWarnings({"all", "AlmostJavadoc", "YodaCondition"})
+@SuppressFBWarnings("DMI_ENTRY_SETS_MAY_REUSE_ENTRY_OBJECTS")
 public class DistinctEntrySetElements {
 
     @Test

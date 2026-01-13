@@ -11,6 +11,7 @@ import junit.framework.Test;
 /**
  * Contains tests applicable to all Collection implementations.
  */
+@SuppressWarnings("all")
 public class CollectionTest extends JSR166TestCase {
     final CollectionImplementation impl;
 

@@ -1,4 +1,5 @@
 /** Guava compatibility adapter. The tests are forked from Guava commit e370dde. */
+@file:Suppress("UnstableApiUsage")
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
@@ -29,6 +30,7 @@ testing.suites {
     dependencies {
       implementation(libs.truth)
       implementation(libs.guava.testlib)
+      implementation(libs.spotbugs.annotations)
       implementation.bundle(libs.bundles.slf4j.nop)
 
       runtimeOnly(libs.junit.jupiter.vintage)
@@ -41,6 +43,7 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(libs.guava.testlib)
+      implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.vintage)
     }

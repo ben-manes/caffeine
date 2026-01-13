@@ -106,7 +106,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-@SuppressWarnings("serial")
+@SuppressWarnings({"RedundantSuppression", "ResultOfMethodCallIgnored", "serial", "unused"})
 abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     implements LocalCache<K, V> {
 
@@ -1106,6 +1106,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** Adapts the eviction policy to towards the optimal recency / frequency configuration. */
   @GuardedBy("evictionLock")
+  @SuppressWarnings("UnnecessaryReturnStatement")
   void climb() {
     if (!evicts()) {
       return;
@@ -2854,7 +2855,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param computeIfAbsent if an absent entry can be computed
    * @return the new value associated with the specified key, or null if none
    */
-  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+  @SuppressWarnings({"StatementWithEmptyBody", "SynchronizationOnLocalVariableOrMethodParameter"})
   @Nullable V remap(K key, Object keyRef,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {
@@ -4618,6 +4619,7 @@ final class BLCHeader {
 
   private BLCHeader() {}
 
+  @SuppressWarnings("unused")
   static class PadDrainStatus {
     byte p000, p001, p002, p003, p004, p005, p006, p007;
     byte p008, p009, p010, p011, p012, p013, p014, p015;

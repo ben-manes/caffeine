@@ -207,6 +207,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     }
   }
 
+  @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   private static boolean isGhost(@Nullable Node node) {
     return (node != null) && ((node.type == QueueType.B1) || (node.type == QueueType.B2));
   }

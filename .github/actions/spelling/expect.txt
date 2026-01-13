@@ -88,6 +88,7 @@ ful
 GCed
 gdsf
 getput
+GETRESOURCE
 GETVIDEO
 githubsecuritylab
 gitleaks
@@ -296,6 +297,7 @@ UOE
 UPPERBOUND
 usr
 uvx
+UWF
 Varifier
 vaultservice
 vmscan

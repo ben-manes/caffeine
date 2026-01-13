@@ -45,6 +45,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.testing.FutureSubject;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Issue #30: Unexpected cache misses with <code>expireAfterWrite</code> using multiple keys.
  * <p>
@@ -74,6 +76,7 @@ public final class Issue30Test {
   private static final int EPSILON = 10;
   private static final int N_THREADS = 10;
 
+  @SuppressFBWarnings("HES_EXECUTOR_NEVER_SHUTDOWN")
   private final ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
 
   @AfterClass
@@ -149,7 +152,7 @@ public final class Issue30Test {
     return assertWithMessage(message).about(future()).that(actual);
   }
 
-  static final class Loader implements AsyncCacheLoader<String, String> {
+  private static final class Loader implements AsyncCacheLoader<String, String> {
     private static final DateTimeFormatter FORMATTER =
         DateTimeFormatter.ofPattern("HH:mm:ss.SSS", US);
 
@@ -167,6 +170,7 @@ public final class Issue30Test {
       return CompletableFuture.completedFuture(source.get(key));
     }
 
+    @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
     @SuppressWarnings({"SystemOut", "TimeZoneUsage"})
     private void reportCacheMiss(String key) {
       Instant now = Instant.now();

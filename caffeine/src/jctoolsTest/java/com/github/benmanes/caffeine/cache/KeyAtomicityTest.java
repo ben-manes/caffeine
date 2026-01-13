@@ -25,9 +25,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Test;
 
-@SuppressWarnings({"IntLongMath", "LongLiteralLowerCaseSuffix",
-    "PMD.UseUnderscoresInNumericLiterals", "PreferJavaTimeOverload", "SystemOut",
-    "UseCorrectAssertInTests", "Var", "Varifier"})
+@SuppressWarnings({"all", "IntLongMath", "LongLiteralLowerCaseSuffix",
+    "PreferJavaTimeOverload", "SystemOut", "UseCorrectAssertInTests", "Var", "Varifier"})
 public class KeyAtomicityTest {
   static final int THREAD_SEGMENT = 1000000;
 

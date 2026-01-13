@@ -66,6 +66,7 @@ public final class Indicator {
     return sample;
   }
 
+  @SuppressWarnings("unused")
   public int[] getFreqs() {
     return hinter.freq;
   }

@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.MutableSet;
@@ -58,6 +60,8 @@ import com.github.benmanes.caffeine.testing.Int;
 @SuppressWarnings({"all", "CanIgnoreReturnValueSuggester", "CollectionToArray", "deprecation",
     "EqualsBrokenForNull", "EqualsUnsafeCast", "NaturalOrder", "rawtypes", "ReverseOrder",
     "unchecked", "UndefinedEquals"})
+@SuppressFBWarnings({"BC_EQUALS_METHOD_SHOULD_WORK_FOR_ALL_OBJECTS",
+    "CI_CONFUSED_INHERITANCE", "NP_EQUALS_SHOULD_HANDLE_NULL_ARGUMENT"})
 final class UnifiedMapTestCase extends MutableMapTestCase {
   protected static final Integer COLLISION_1 = 0;
   protected static final Integer COLLISION_2 = 17;

@@ -34,7 +34,8 @@ import org.openjdk.jmh.annotations.TearDown;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing"})
+@SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing",
+    "JavadocDeclaration", "NotNullFieldNotInitialized", "unused"})
 public class EvictionBenchmark {
 
   @Param({

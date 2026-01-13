@@ -23,6 +23,8 @@ import org.jspecify.annotations.Nullable;
 
 import com.google.errorprone.annotations.Immutable;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A notification of the removal of a single entry. The key and/or value may be null if they were
  * already garbage collected. This class holds strong references to the key and value, regardless
@@ -31,6 +33,7 @@ import com.google.errorprone.annotations.Immutable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Immutable(containerOf = {"K", "V"})
+@SuppressFBWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
 public final class RemovalNotification<K, V>
     extends SimpleImmutableEntry<@Nullable K, @Nullable V> {
   private static final long serialVersionUID = 1L;

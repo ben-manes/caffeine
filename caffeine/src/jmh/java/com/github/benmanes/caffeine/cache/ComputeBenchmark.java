@@ -38,7 +38,7 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  */
 @State(Scope.Benchmark)
 @SuppressWarnings({"LexicographicalAnnotationAttributeListing",
-  "MemberName", "PMD.MethodNamingConventions"})
+    "NotNullFieldNotInitialized", "MemberName", "PMD.MethodNamingConventions", "unused"})
 public class ComputeBenchmark {
   static final int SIZE = (2 << 14);
   static final int MASK = SIZE - 1;
@@ -68,7 +68,7 @@ public class ComputeBenchmark {
   }
 
   @Setup
-  @SuppressWarnings("ReturnValueIgnored")
+  @SuppressWarnings({"IfCanBeSwitch", "ReturnValueIgnored"})
   public void setup() {
     if (computeType.equals("ConcurrentHashMap")) {
       setupConcurrentHashMap();

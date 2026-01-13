@@ -149,6 +149,7 @@ final class GuardedScheduler implements Scheduler, Serializable {
   }
 
   @Override
+  @SuppressWarnings("ConstantValue")
   public Future<? extends @Nullable Object> schedule(
       Executor executor, Runnable command, long delay, TimeUnit unit) {
     try {

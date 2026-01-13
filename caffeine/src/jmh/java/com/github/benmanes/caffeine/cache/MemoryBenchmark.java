@@ -38,6 +38,8 @@ import com.google.common.math.LongMath;
 import com.google.errorprone.annotations.Var;
 import com.jakewharton.fliptables.FlipTable;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A non-JMH benchmark to compare the memory overhead of different cache implementations. Note that
  * the measurements estimate based on the current JVM configuration, e.g. 64-bit with compressed
@@ -51,8 +53,8 @@ import com.jakewharton.fliptables.FlipTable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"LexicographicalAnnotationAttributeListing",
-  "MemberName", "PMD.MethodNamingConventions", "SystemOut"})
+@SuppressWarnings({"LexicographicalAnnotationAttributeListing", "JavadocDeclaration",
+    "MemberName", "PMD.MethodNamingConventions", "SystemOut"})
 public final class MemoryBenchmark {
   // The number of entries added to minimize skew due to non-entry factors
   static final int FUZZY_SIZE = 25_000;
@@ -205,6 +207,7 @@ public final class MemoryBenchmark {
     compare("Soft Values", () -> caffeine.build().asMap(), () -> guava.build().asMap());
   }
 
+  @SuppressFBWarnings("FORMAT_STRING_MANIPULATION")
   private void compare(String label,
       Supplier<Map<Integer, Integer>> caffeine, Supplier<Map<Integer, Integer>> guava) {
     String result = FlipTable.of(HEADER.toArray(String[]::new), new String[][] {

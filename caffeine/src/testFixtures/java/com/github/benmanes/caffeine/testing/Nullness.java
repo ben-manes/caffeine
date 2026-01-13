@@ -27,9 +27,12 @@ import java.util.function.Supplier;
 
 import org.jspecify.annotations.NonNull;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
 public final class Nullness {
 
   private Nullness() {}

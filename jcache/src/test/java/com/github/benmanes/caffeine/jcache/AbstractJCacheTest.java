@@ -41,6 +41,8 @@ import com.google.common.testing.FakeTicker;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.uber.nullaway.annotations.Initializer;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A testing harness for simplifying the unit tests.
  *
@@ -106,6 +108,7 @@ public abstract class AbstractJCacheTest {
   /* --------------- Utility methods ------------- */
 
   /** Returns {@code null} for use when testing null checks while satisfying null analysis tools. */
+  @SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
   @SuppressWarnings({"DataFlowIssue", "NullableProblems",
       "NullAway", "TypeParameterUnusedInFormals"})
   public static <T> @NonNull T nullRef() {

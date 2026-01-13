@@ -1,4 +1,5 @@
 /** Cache simulator using tracing data and a family of eviction policy options. */
+@file:Suppress("UnstableApiUsage")
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 
@@ -33,9 +34,8 @@ dependencies {
   implementation(libs.commons.compress)
   implementation(libs.bundles.coherence)
   implementation(libs.infer.annotations)
+  implementation(libs.spotbugs.annotations)
   implementation(libs.zero.allocation.hashing)
-
-  compileOnly(libs.spotbugs.annotations)
 
   runtimeOnly(libs.zstd)
   runtimeOnly(libs.bundles.slf4j.jdk)

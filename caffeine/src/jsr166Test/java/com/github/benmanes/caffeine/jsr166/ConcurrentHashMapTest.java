@@ -22,12 +22,14 @@ import java.util.concurrent.ConcurrentMap;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.Test;
 
-@SuppressWarnings({"EmptyCatch", "ForEachIterable", "MemberName",
+@SuppressWarnings({"all", "EmptyCatch", "ForEachIterable", "MemberName",
     "ModifyCollectionInEnhancedForLoop", "PreferredInterfaceType", "rawtypes", "ReturnValueIgnored",
     "StatementSwitchToExpressionSwitch", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses",
     "Var", "Varifier"})
+@SuppressFBWarnings({"DCN_NULLPOINTER_EXCEPTION", "HSM_HIDING_METHOD", "WMI_WRONG_MAP_ITERATOR"})
 public class ConcurrentHashMapTest extends JSR166TestCase {
     public static void main(String[] args) {
         main(suite());

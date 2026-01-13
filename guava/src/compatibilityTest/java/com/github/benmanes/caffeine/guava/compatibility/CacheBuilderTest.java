@@ -61,6 +61,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.TestCase;
 
 /**
@@ -68,8 +69,9 @@ import junit.framework.TestCase;
  */
 @NullUnmarked
 @GwtCompatible(emulated = true)
-@SuppressWarnings({"CacheLoaderNull", "CanonicalDuration",
+@SuppressWarnings({"all", "CacheLoaderNull", "CanonicalDuration",
     "PreferJavaTimeOverload", "ThreadPriorityCheck", "Varifier"})
+@SuppressFBWarnings({"HES_LOCAL_EXECUTOR_SERVICE", "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"})
 public class CacheBuilderTest extends TestCase {
 
   public void testNewBuilder() {

@@ -885,6 +885,7 @@ public final class RefreshAfterWriteTest {
   /* --------------- invalidate --------------- */
 
   @CheckNoEvictions
+  @SuppressWarnings("resource")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
       executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
@@ -929,6 +930,7 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @SuppressWarnings("resource")
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       loader = Loader.ASYNC_INCOMPLETE, refreshAfterWrite = Expire.ONE_MINUTE)

@@ -416,6 +416,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     abstract @Nullable E computeNext();
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void remove() {
       if (previous == null) {
         throw new IllegalStateException();

@@ -14,6 +14,8 @@ import org.eclipse.collections.api.block.function.Function2;
 import org.eclipse.collections.api.block.procedure.Procedure;
 import org.eclipse.collections.impl.parallel.ProcedureFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A multi-purpose code block factory which can be used to summarize the elements of a collection
  * either via a forEach() or injectInto() call. SumProcedure returns optimized iterator blocks for
@@ -24,47 +26,59 @@ import org.eclipse.collections.impl.parallel.ProcedureFactory;
  */
 @Deprecated
 @SuppressWarnings({"all", "overloads", "unchecked"})
+@SuppressFBWarnings({"CI_CONFUSED_INHERITANCE",
+    "SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR", "SING_SINGLETON_IMPLEMENTS_SERIALIZABLE"})
 final class SumProcedure<T>
     implements Procedure<T>, Function2<Sum, T, Sum>, ProcedureFactory<SumProcedure<T>> {
   private static final long serialVersionUID = 1L;
   private static final SumProcedure<?> NUMBER = new SumProcedure<>();
 
+  @Deprecated
   protected final Sum sum;
+  @Deprecated
   protected final Function<? super T, ? extends Number> function;
 
+  @Deprecated
   public SumProcedure(Sum newSum) {
     this(newSum, null);
   }
 
+  @Deprecated
   public SumProcedure() {
     this(null, null);
   }
 
+  @Deprecated
   public SumProcedure(Sum newSum, Function<? super T, ? extends Number> function) {
     this.sum = newSum;
     this.function = function;
   }
 
+  @Deprecated
   public static <T extends Number> SumProcedure<T> number() {
     return (SumProcedure<T>) NUMBER;
   }
 
+  @Deprecated
   @Override
   public SumProcedure<T> create() {
     return new SumProcedure<>(this.sum.speciesNew(), this.function);
   }
 
+  @Deprecated
   @Override
   public Sum value(Sum argument1, T argument2) {
     return argument1.add(argument2);
   }
 
+  @Deprecated
   @Override
   @SuppressWarnings("CheckReturnValue")
   public void value(T object) {
     this.sum.add(object);
   }
 
+  @Deprecated
   public Sum getSum() {
     return this.sum;
   }

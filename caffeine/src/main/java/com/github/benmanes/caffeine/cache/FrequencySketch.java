@@ -26,6 +26,7 @@ import com.google.errorprone.annotations.Var;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings({"ConstantValue", "NotNullFieldNotInitialized"})
 final class FrequencySketch {
 
   /*

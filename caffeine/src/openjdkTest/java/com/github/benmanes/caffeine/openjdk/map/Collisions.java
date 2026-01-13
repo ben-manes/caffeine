@@ -36,13 +36,16 @@ import java.util.function.Supplier;
 
 import org.testng.annotations.Test;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 7126277
  * @run testng/othervm -Dtest.map.collisions.shortrun=true Collisions
  * @summary Ensure Maps behave well with lots of hashCode() collisions.
  */
-@SuppressWarnings({"unused", "Var", "Varifier"})
+@SuppressWarnings({"all", "unused", "Var", "Varifier"})
+@SuppressFBWarnings({"DLS_DEAD_LOCAL_STORE", "MUI_USE_CONTAINSKEY", "SPP_USE_ISEMPTY"})
 public class Collisions extends MapWithCollisionsProviders {
 
     @Test(dataProvider = "mapsWithObjects")

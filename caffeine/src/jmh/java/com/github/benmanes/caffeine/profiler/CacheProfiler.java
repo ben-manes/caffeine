@@ -69,7 +69,7 @@ public final class CacheProfiler extends ProfilerHook {
   }
 
   /** Spins forever reading from the cache. */
-  @SuppressWarnings("CheckReturnValue")
+  @SuppressWarnings({"CheckReturnValue", "ResultOfMethodCallIgnored"})
   private void reads() {
     @Var int index = random.nextInt();
     for (;;) {

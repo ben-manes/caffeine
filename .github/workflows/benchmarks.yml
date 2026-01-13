@@ -38,7 +38,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 25, 26-ea ]
+        java: [ 11, 25, 27-ea ]
         distribution: [ temurin ]
         include:
           - java: 25
@@ -89,7 +89,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 25, 26-ea ]
+        java: [ 11, 25, 27-ea ]
         distribution: [ temurin ]
         include:
           - java: 25
@@ -140,7 +140,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 25, 26-ea ]
+        java: [ 11, 25, 27-ea ]
         distribution: [ temurin ]
         include:
           - java: 25
@@ -191,7 +191,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 25, 26-ea ]
+        java: [ 11, 25, 27-ea ]
         distribution: [ temurin ]
         include:
           - java: 25
@@ -242,7 +242,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 25, 26-ea ]
+        java: [ 11, 25, 27-ea ]
         distribution: [ temurin ]
         include:
           - java: 25
@@ -292,7 +292,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 25, 26-ea ]
+        java: [ 11, 25, 27-ea ]
         distribution: [ temurin ]
         include:
           - java: 25

@@ -13,9 +13,11 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.Test;
 
-@SuppressWarnings("rawtypes")
+@SuppressWarnings({"all", "rawtypes"})
+@SuppressFBWarnings("HSM_HIDING_METHOD")
 public class KeySetTest extends JSR166TestCase {
     public static void main(String[] args) {
         main(suite());

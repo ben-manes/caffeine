@@ -1,3 +1,4 @@
+@file:Suppress("UnstableApiUsage")
 import org.gradle.api.Action
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.AttributeContainer

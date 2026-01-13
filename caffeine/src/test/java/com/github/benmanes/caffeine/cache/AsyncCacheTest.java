@@ -1560,7 +1560,7 @@ public final class AsyncCacheTest {
   }
 
   @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
-  static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
+  private static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
     throw (E) throwable;
   }
 

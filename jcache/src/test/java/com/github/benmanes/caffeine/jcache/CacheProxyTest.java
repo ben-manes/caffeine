@@ -68,9 +68,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedTimeoutException;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author github.com/kdombeck (Ken Dombeck)
  */
+@SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC_ANON")
 public final class CacheProxyTest extends AbstractJCacheTest {
   private final CloseableCacheEntryListener listener = Mockito.mock();
   private final CloseableExpiryPolicy expiry = Mockito.mock();
@@ -103,6 +106,7 @@ public final class CacheProxyTest extends AbstractJCacheTest {
   }
 
   @Test
+  @SuppressFBWarnings("SPP_NON_USEFUL_TOSTRING")
   @SuppressWarnings({"ObjectToString", "unchecked"})
   public void getConfiguration_immutable() {
     var config = jcache.getConfiguration(CaffeineConfiguration.class);

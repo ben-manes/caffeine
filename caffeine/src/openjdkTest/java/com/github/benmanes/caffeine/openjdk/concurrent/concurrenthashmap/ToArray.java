@@ -38,14 +38,17 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 4486658 8010293
  * @summary thread safety of toArray methods of collection views
  * @author Martin Buchholz
  */
-@SuppressWarnings({"AlmostJavadoc", "CollectorMutability",
-  "IdentifierName", "ShortCircuitBoolean", "UnnecessaryFinal", "Var"})
+@SuppressFBWarnings("NS_DANGEROUS_NON_SHORT_CIRCUIT")
+@SuppressWarnings({"all", "AlmostJavadoc", "CollectorMutability",
+    "IdentifierName", "ShortCircuitBoolean", "UnnecessaryFinal", "Var"})
 public class ToArray {
 
     @Test
@@ -126,7 +129,7 @@ public class ToArray {
                             .collect(Collectors.toList());
 
             // Wait for workers and foreman to complete
-            workers.forEach(CompletableFuture<?>::join);
+            workers.forEach(CompletableFuture::join);
             foreman.join();
         } finally {
             executor.shutdown();

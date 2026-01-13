@@ -198,7 +198,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
   }
 
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"FutureReturnValueIgnored", "ResultOfMethodCallIgnored"})
   default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
       long startTime, boolean recordMiss) {
     valueFuture.whenComplete((value, error) -> {
@@ -407,7 +407,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
       return prior;
     }
-    @SuppressWarnings("FutureReturnValueIgnored")
+    @SuppressWarnings({"FutureReturnValueIgnored", "ResultOfMethodCallIgnored"})
     @Override public void putAll(Map<? extends K, ? extends CompletableFuture<V>> map) {
       map.forEach(this::put);
     }
@@ -461,6 +461,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
       return future;
     }
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Override public @Nullable CompletableFuture<V> computeIfPresent(K key, BiFunction<? super K,
         ? super CompletableFuture<V>, ? extends CompletableFuture<V>> remappingFunction) {
       requireNonNull(remappingFunction);
@@ -481,6 +482,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
       return result[0];
     }
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Override public @Nullable CompletableFuture<V> compute(K key, BiFunction<? super K,
         ? super CompletableFuture<V>, ? extends CompletableFuture<V>> remappingFunction) {
       requireNonNull(remappingFunction);
@@ -501,6 +503,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
       return result[0];
     }
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Override public @Nullable CompletableFuture<V> merge(K key, CompletableFuture<V> value,
         BiFunction<? super CompletableFuture<V>, ? super CompletableFuture<V>,
             ? extends CompletableFuture<V>> remappingFunction) {
@@ -734,6 +737,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public @Nullable V putIfAbsent(K key, V value) {
       requireNonNull(value);
 
@@ -775,6 +779,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void putAll(Map<? extends K, ? extends V> map) {
       map.forEach(this::put);
     }
@@ -794,6 +799,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public boolean remove(Object key, @Nullable Object value) {
       requireNonNull(key);
       if (value == null) {
@@ -835,6 +841,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public @Nullable V replace(K key, V value) {
       requireNonNull(value);
 
@@ -868,6 +875,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public boolean replace(K key, V oldValue, V newValue) {
       requireNonNull(oldValue);
       requireNonNull(newValue);
@@ -901,6 +909,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
       requireNonNull(mappingFunction);
 
@@ -947,6 +956,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public @Nullable V computeIfPresent(K key,
         BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
       requireNonNull(remappingFunction);
@@ -979,6 +989,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public @Nullable V compute(K key,
         BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction) {
       // Keep in sync with BoundedVarExpiration.computeAsync(key, remappingFunction, expiry)
@@ -1012,6 +1023,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public @Nullable V merge(K key, V value,
         BiFunction<? super V, ? super V, ? extends @Nullable V> remappingFunction) {
       requireNonNull(value);

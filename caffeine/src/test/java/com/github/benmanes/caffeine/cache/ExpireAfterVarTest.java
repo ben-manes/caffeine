@@ -2640,12 +2640,14 @@ public final class ExpireAfterVarTest {
   }
 
   @FunctionalInterface
-  interface SerializableBiFunction extends BiFunction<Integer, Integer, Duration>, Serializable {}
+  private interface SerializableBiFunction
+    extends BiFunction<Integer, Integer, Duration>, Serializable {}
 
-  static final class ExpirationException extends RuntimeException {
+  private static final class ExpirationException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
-    public ExpirationException() {
+    @SuppressWarnings("unused")
+    ExpirationException() {
       super(/* message= */ null, /* cause= */ null,
           /* enableSuppression= */ false, /* writableStackTrace= */ false);
     }

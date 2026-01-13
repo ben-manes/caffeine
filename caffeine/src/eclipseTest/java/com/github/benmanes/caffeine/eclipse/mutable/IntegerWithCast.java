@@ -9,10 +9,13 @@
  */
 package com.github.benmanes.caffeine.eclipse.mutable;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Ported from Eclipse Collections 11.0.
  */
 @SuppressWarnings({"all", "EqualsUnsafeCast"})
+@SuppressFBWarnings("BC_EQUALS_METHOD_SHOULD_WORK_FOR_ALL_OBJECTS")
 final class IntegerWithCast {
   private final int value;
 

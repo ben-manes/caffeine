@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentMap;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.eclipse.collections.api.list.ImmutableList;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.ImmutableMapIterable;
@@ -56,6 +58,7 @@ import com.github.benmanes.caffeine.testing.Int;
  *
  * Ported from Eclipse Collections 11.0.
  */
+@SuppressFBWarnings("BC_VACUOUS_INSTANCEOF")
 @SuppressWarnings({"all", "deprecation", "unchecked"})
 abstract class MutableMapIterableTestCase extends MapIterableTestCase {
 

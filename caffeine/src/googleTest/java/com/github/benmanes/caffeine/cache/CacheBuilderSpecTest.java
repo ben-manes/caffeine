@@ -35,7 +35,7 @@ import com.google.common.testing.EqualsTester;
  *
  * @author Adam Winer
  */
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"ConstantValue", "PreferJavaTimeOverload"})
 final class CacheBuilderSpecTest {
 
   @Test
@@ -359,7 +359,7 @@ final class CacheBuilderSpecTest {
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
+  @SuppressWarnings({"CheckReturnValue", "CommentedOutCode", "ResultOfMethodCallIgnored"})
   void parse_extraCommaIsInvalid() {
     // Allowed by Caffeine
     parse("weakKeys,");

@@ -22,9 +22,9 @@ import org.jctools.queues.MpscCompoundQueue;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class MpscCompoundBuffer<E> extends ReadBuffer<E> {
-  final MessagePassingQueue<E> queue;
+  private final MessagePassingQueue<E> queue;
 
-  long reads;
+  private long reads;
 
   MpscCompoundBuffer() {
     queue = new MpscCompoundQueue<>(BUFFER_SIZE);

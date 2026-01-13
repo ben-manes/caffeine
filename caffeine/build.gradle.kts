@@ -1,3 +1,4 @@
+@file:Suppress("UnstableApiUsage")
 import com.google.common.base.CaseFormat
 import com.google.common.collect.Sets
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
@@ -50,6 +51,7 @@ dependencies {
   testFixturesApi(libs.guava.testlib)
   testFixturesApi(libs.infer.annotations)
   testFixturesApi(libs.bundles.slf4j.test)
+  testFixturesApi(libs.spotbugs.annotations)
 
   testFixturesImplementation(libs.testng)
   testFixturesImplementation(libs.jctools)
@@ -82,6 +84,7 @@ dependencies {
   javaPoetImplementation(libs.javapoet)
   javaPoetImplementation(libs.jspecify)
   javaPoetImplementation(libs.commons.lang3)
+  javaPoetImplementation(libs.spotbugs.annotations)
 
   javaPoetRuntimeOnly(libs.google.java.format)
 }
@@ -326,6 +329,8 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(libs.jctools)
+      implementation(libs.hamcrest)
+      implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.vintage)
     }
@@ -342,6 +347,7 @@ testing.suites {
       implementation(project())
       implementation(libs.junit)
       implementation(libs.infer.annotations)
+      implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.vintage)
     }
@@ -385,6 +391,7 @@ testing.suites {
       implementation(libs.truth)
       implementation(libs.testng)
       implementation(libs.infer.annotations)
+      implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.testng)
     }

@@ -33,6 +33,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A testing harness for concurrency related executions.
  * <p>
@@ -47,6 +49,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressFBWarnings("HES_EXECUTOR_NEVER_SHUTDOWN")
 public final class ConcurrentTestHarness {
   public static final ThreadFactory DAEMON_FACTORY = new ThreadFactoryBuilder()
       .setPriority(Thread.MIN_PRIORITY).setDaemon(true).build();

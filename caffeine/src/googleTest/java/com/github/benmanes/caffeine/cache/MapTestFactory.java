@@ -143,6 +143,7 @@ public final class MapTestFactory {
     }
 
     @Override
+    @SuppressWarnings("NullableProblems")
     public List<Map.Entry<String, CompletableFuture<String>>> order(
         List<Map.Entry<String, CompletableFuture<String>>> insertionOrder) {
       return insertionOrder;

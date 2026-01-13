@@ -61,7 +61,7 @@ import com.google.common.testing.EqualsTester;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class CaffeineSpecTest {
-  static final long UNSET_LONG = UNSET_INT;
+  private static final long UNSET_LONG = UNSET_INT;
 
   @Test
   public void parseInt() {
@@ -252,7 +252,7 @@ public final class CaffeineSpecTest {
     assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString().replaceAll(",", ",,")));
   }
 
-  static CaffeineSpec toSpec(CacheContext context, Function<Duration, String> formatter) {
+  private static CaffeineSpec toSpec(CacheContext context, Function<Duration, String> formatter) {
     var options = new ArrayList<String>();
     if (context.initialCapacity() != InitialCapacity.DEFAULT) {
       options.add("initialCapacity=" + context.initialCapacity().size());
@@ -290,7 +290,7 @@ public final class CaffeineSpecTest {
     return CaffeineSpec.parse(specString);
   }
 
-  static void checkInitialCapacity(CaffeineSpec spec,
+  private static void checkInitialCapacity(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder) {
     if (context.initialCapacity() == InitialCapacity.DEFAULT) {
       assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
@@ -301,7 +301,8 @@ public final class CaffeineSpecTest {
     }
   }
 
-  static void checkMaximumSize(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
+  private static void checkMaximumSize(CaffeineSpec spec,
+      CacheContext context, Caffeine<?, ?> builder) {
     if ((context.maximum() == Maximum.DISABLED) || context.isWeighted()) {
       assertThat(spec.maximumSize).isEqualTo(UNSET_LONG);
       assertThat(builder.maximumSize).isEqualTo(UNSET_LONG);
@@ -315,7 +316,8 @@ public final class CaffeineSpecTest {
     }
   }
 
-  static void checkMaximumWeight(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
+  private static void checkMaximumWeight(CaffeineSpec spec,
+      CacheContext context, Caffeine<?, ?> builder) {
     if ((context.maximum() == Maximum.DISABLED) || !context.isWeighted()) {
       assertThat(spec.maximumWeight).isEqualTo(UNSET_LONG);
       assertThat(builder.maximumWeight).isEqualTo(UNSET_LONG);
@@ -329,7 +331,8 @@ public final class CaffeineSpecTest {
     }
   }
 
-  static void checkWeakKeys(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
+  private static void checkWeakKeys(CaffeineSpec spec,
+      CacheContext context, Caffeine<?, ?> builder) {
     if (context.isStrongKeys()) {
       assertThat(spec.keyStrength).isNull();
       assertThat(builder.keyStrength).isNull();
@@ -341,7 +344,8 @@ public final class CaffeineSpecTest {
     }
   }
 
-  static void checkValueStrength(CaffeineSpec spec, CacheContext context, Caffeine<?, ?> builder) {
+  private static void checkValueStrength(CaffeineSpec spec,
+      CacheContext context, Caffeine<?, ?> builder) {
     if (context.isStrongValues()) {
       assertThat(spec.valueStrength).isNull();
       assertThat(builder.valueStrength).isNull();
@@ -361,7 +365,7 @@ public final class CaffeineSpecTest {
         CaffeineSpec.parse(spec.toParsableString() + ",softValues"));
   }
 
-  static void checkExpireAfterAccess(CaffeineSpec spec,
+  private static void checkExpireAfterAccess(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder, Epoch epoch) {
     if (context.expireAfterAccess() == Expire.DISABLED) {
       assertThat(spec.expireAfterAccess).isNull();
@@ -377,7 +381,7 @@ public final class CaffeineSpecTest {
     }
   }
 
-  static void checkExpireAfterWrite(CaffeineSpec spec,
+  private static void checkExpireAfterWrite(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder, Epoch epoch) {
     if (context.expireAfterWrite() == Expire.DISABLED) {
       assertThat(spec.expireAfterWrite).isNull();
@@ -393,7 +397,7 @@ public final class CaffeineSpecTest {
     }
   }
 
-  static void checkRefreshAfterWrite(CaffeineSpec spec,
+  private static void checkRefreshAfterWrite(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder, Epoch epoch) {
     if (context.refreshAfterWrite() == Expire.DISABLED) {
       assertThat(spec.refreshAfterWrite).isNull();
@@ -410,7 +414,7 @@ public final class CaffeineSpecTest {
   }
 
   @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
-  static CaffeineSpec reflectivelyConstruct(String spec) {
+  private static CaffeineSpec reflectivelyConstruct(String spec) {
     try {
       var constructor = CaffeineSpec.class.getDeclaredConstructor(String.class);
       constructor.setAccessible(true);
@@ -420,18 +424,18 @@ public final class CaffeineSpecTest {
     }
   }
 
-  static final class Epoch {
-    final TimeUnit unit;
-    final String symbol;
+  private static final class Epoch {
+    private final TimeUnit unit;
+    private final String symbol;
 
-    public Epoch(TimeUnit unit, String symbol) {
+    Epoch(TimeUnit unit, String symbol) {
       this.symbol = requireNonNull(symbol);
       this.unit = requireNonNull(unit);
     }
     Duration truncate(Duration duration) {
       return Duration.ofNanos(unit.toNanos(unit.convert(duration)));
     }
-    public String toUnitString(Duration duration) {
+    String toUnitString(Duration duration) {
       return unit.convert(duration) + symbol;
     }
   }

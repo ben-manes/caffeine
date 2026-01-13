@@ -32,6 +32,7 @@ import javax.management.NotificationListener;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("unused")
 public final class JCacheMBeanServerBuilder extends MBeanServerBuilder {
 
   @Override

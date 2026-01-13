@@ -43,19 +43,18 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 // Test NonBlockingHashMap via JUnit
-@SuppressWarnings({"AssertEqualsArgumentOrderChecker", "EffectivelyPrivate", "EqualsUnsafeCast",
-    "FieldMissingNullable", "ForEachIterable", "FutureReturnValueIgnored", "IdentifierName",
-    "InconsistentOverloads", "JdkObsolete", "MethodCanBeStatic", "NullAway",
-    "PMD.AppendCharacterWithChar", "PMD.AvoidFieldNameMatchingTypeName",
-    "PMD.ClassWithOnlyPrivateConstructorsShouldBeFinal", "PMD.CloseResource",
-    "PMD.CollectionTypeMismatch", "PMD.ForLoopCanBeForeach",
-    "PMD.InsufficientStringBufferDeclaration", "PMD.LocalVariableNamingConventions",
-    "PMD.LooseCoupling", "PMD.ModifierOrder", "PMD.RedundantFieldInitializer",
-    "PMD.ReplaceHashtableWithMap", "PMD.UnitTestShouldUseAfterAnnotation",
-    "PMD.UnitTestShouldUseBeforeAnnotation", "PMD.UseStringBufferForStringAppends",
-    "PMD.UseUnderscoresInNumericLiterals", "RedundantStringConversion", "SystemOut",
-    "UnnecessaryFinal", "UnnecessaryTestMethodPrefix", "Var", "Varifier", "YodaCondition"})
+@SuppressFBWarnings({"ICAST_INTEGER_MULTIPLY_CAST_TO_LONG", "MUI_CALLING_SIZE_ON_SUBCONTAINER",
+    "MUI_GET_BEFORE_REMOVE", "MUI_USE_CONTAINSKEY", "SBSC_USE_STRINGBUFFER_CONCATENATION",
+    "STT_STRING_PARSING_A_FIELD", "UCPM_USE_CHARACTER_PARAMETERIZED_METHOD",
+    "UTAO_JUNIT_ASSERTION_ODDITIES_ACTUAL_CONSTANT", "WMI_WRONG_MAP_ITERATOR"})
+@SuppressWarnings({"all", "AssertEqualsArgumentOrderChecker", "EffectivelyPrivate",
+    "EqualsUnsafeCast", "FieldMissingNullable", "ForEachIterable", "FutureReturnValueIgnored",
+    "IdentifierName", "InconsistentOverloads", "JdkObsolete", "MethodCanBeStatic", "NullAway",
+    "RedundantStringConversion", "SystemOut", "UnnecessaryFinal", "UnnecessaryTestMethodPrefix",
+    "Var", "Varifier", "YodaCondition"})
 public class NBHM_Tester2 {
 
   private static Map<String, String> _nbhm;
@@ -527,12 +526,12 @@ public class NBHM_Tester2 {
     }
 
     @Override
+    @SuppressWarnings("EqualsDoesntCheckParameterClass")
+    @SuppressFBWarnings("BC_EQUALS_METHOD_SHOULD_WORK_FOR_ALL_OBJECTS")
     public boolean equals(Object o) {
       return o != null && ((KeyBonk) o)._x // Throw CCE here
           == this._x;
     }
-
-
 
     @Override
     public String toString() {
@@ -671,6 +670,7 @@ public class NBHM_Tester2 {
 
     @Override
     @SuppressWarnings({"CollectionIncompatibleType", "unlikely-arg-type"})
+    @SuppressFBWarnings({"GC_UNRELATED_TYPES", "VA_FORMAT_STRING_USES_NEWLINE"})
     public Integer call() throws Exception {
       _barrier.await();
       int count = 0;

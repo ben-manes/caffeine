@@ -38,6 +38,8 @@ import java.util.TreeMap;
 import java.util.spi.ToolProvider;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.local.AddConstructor;
 import com.github.benmanes.caffeine.cache.local.AddDeques;
 import com.github.benmanes.caffeine.cache.local.AddExpirationTicker;
@@ -63,8 +65,6 @@ import com.palantir.javapoet.JavaFile;
 import com.palantir.javapoet.ParameterizedTypeName;
 import com.palantir.javapoet.TypeName;
 import com.palantir.javapoet.TypeSpec;
-
-import org.jspecify.annotations.Nullable;
 
 /**
  * Generates a factory that creates the cache optimized for the user specified configuration.

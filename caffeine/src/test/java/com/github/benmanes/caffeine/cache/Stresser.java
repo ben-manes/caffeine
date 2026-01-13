@@ -28,12 +28,14 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help;
@@ -49,8 +51,10 @@ import picocli.CommandLine.Option;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("SystemOut")
+@SuppressFBWarnings("DM_EXIT")
 @Command(mixinStandardHelpOptions = true)
+@SuppressWarnings({"DefaultAnnotationParam", "JavadocDeclaration",
+    "NotNullFieldNotInitialized", "SystemOut", "unused"})
 public final class Stresser implements Runnable {
   private static final String[] STATUS =
     { "Idle", "Required", "Processing -> Idle", "Processing -> Required" };
@@ -64,7 +68,7 @@ public final class Stresser implements Runnable {
       description = "The workload type: ${COMPLETION-CANDIDATES}")
   private Workload workload;
   @Option(names = "--duration", required = false, description = "The run duration (e.g. PT30S)")
-  private Duration duration;
+  private @Nullable Duration duration;
 
   private BoundedLocalCache<Integer, Integer> local;
   private LoadingCache<Integer, Integer> cache;
@@ -82,7 +86,8 @@ public final class Stresser implements Runnable {
     }
   }
 
-  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored", "PMD.DoNotTerminateVM"})
+  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored",
+      "PMD.DoNotTerminateVM", "ResultOfMethodCallIgnored"})
   private void initialize() {
     var threadFactory = new ThreadFactoryBuilder()
         .setPriority(Thread.MAX_PRIORITY)
@@ -113,7 +118,7 @@ public final class Stresser implements Runnable {
     status();
   }
 
-  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored"})
+  @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored", "ResultOfMethodCallIgnored"})
   private void execute() {
     ConcurrentTestHarness.timeTasks(workload.maxThreads, () -> {
       @Var int index = ThreadLocalRandom.current().nextInt();
@@ -134,6 +139,7 @@ public final class Stresser implements Runnable {
     });
   }
 
+  @SuppressWarnings("resource")
   private void status() {
     var evictionLock = local.evictionLock;
     int pendingWrites;

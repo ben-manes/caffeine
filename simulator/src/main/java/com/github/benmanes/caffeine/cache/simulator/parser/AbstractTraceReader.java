@@ -42,6 +42,8 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A skeletal implementation that reads the trace files into a data stream.
  *
@@ -142,6 +144,7 @@ public abstract class AbstractTraceReader implements TraceReader {
   }
 
   /** Returns the input stream for the raw file. */
+  @SuppressFBWarnings("UI_INHERITANCE_UNSAFE_GETRESOURCE")
   private InputStream openFile() throws IOException {
     var file = Path.of(filePath);
     if (Files.exists(file)) {

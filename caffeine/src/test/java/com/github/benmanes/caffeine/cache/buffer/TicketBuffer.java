@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -31,10 +33,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class TicketBuffer<E> extends ReadBuffer<E> {
-  final AtomicLong writeCounter;
-  final AtomicReference<Object>[] buffer;
+  private final AtomicLong writeCounter;
+  private final AtomicReference<Object>[] buffer;
 
-  long readCounter;
+  private long readCounter;
 
   @SuppressWarnings({"rawtypes", "unchecked"})
   TicketBuffer() {
@@ -68,6 +70,7 @@ final class TicketBuffer<E> extends ReadBuffer<E> {
   }
 
   @Override
+  @SuppressFBWarnings("AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE")
   protected void drainTo(Consumer<E> consumer) {
     for (int i = 0; i < BUFFER_SIZE; i++) {
       var index = (int) (readCounter & BUFFER_MASK);
@@ -91,7 +94,7 @@ final class TicketBuffer<E> extends ReadBuffer<E> {
     return writeCounter.get();
   }
 
-  static final class Turn {
+  private static final class Turn {
     final long id;
 
     Turn(long id) {

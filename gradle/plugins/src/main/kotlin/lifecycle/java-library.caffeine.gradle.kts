@@ -1,4 +1,4 @@
-@file:Suppress("PackageDirectoryMismatch")
+@file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
 
 plugins {

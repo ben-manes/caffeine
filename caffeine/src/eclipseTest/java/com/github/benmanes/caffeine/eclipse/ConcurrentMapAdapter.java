@@ -27,6 +27,7 @@ import org.eclipse.collections.impl.map.mutable.MapAdapter;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("all")
 public final class ConcurrentMapAdapter<K, V> extends MapAdapter<K, V>
     implements ConcurrentMutableMap<K, V> {
   private static final long serialVersionUID = 1L;

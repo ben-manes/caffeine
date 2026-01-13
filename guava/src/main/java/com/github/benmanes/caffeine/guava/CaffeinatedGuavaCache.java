@@ -219,6 +219,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     }
   }
 
+  @SuppressWarnings("NullableProblems")
   final class EntrySetView extends ForwardingSet<Entry<K, V>> {
     @Override public boolean add(Entry<K, V> entry) {
       throw new UnsupportedOperationException();

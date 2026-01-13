@@ -1,4 +1,5 @@
 /** JCache compatibility adapter. */
+@file:Suppress("UnstableApiUsage")
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import org.gradle.plugins.ide.eclipse.model.Library
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
@@ -64,6 +65,7 @@ testing.suites {
       implementation(libs.infer.annotations)
       implementation(files(testResourcesJar))
       implementation(libs.nullaway.annotations)
+      implementation(libs.spotbugs.annotations)
       implementation.bundle(libs.bundles.slf4j.nop)
 
       runtimeOnly(libs.junit.jupiter.testng)

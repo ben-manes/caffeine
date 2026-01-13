@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -36,6 +38,8 @@ public final class CacheStatsTest {
   }
 
   @Test
+  @SuppressFBWarnings("EC_NULL_ARG")
+  @SuppressWarnings("ConstantValue")
   public void empty() {
     var stats = CacheStats.of(0, 0, 0, 0, 0, 0, 0);
     checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0, 0);
@@ -49,6 +53,7 @@ public final class CacheStatsTest {
   }
 
   @Test
+  @SuppressWarnings("EqualsWithItself")
   public void populated() {
     var stats = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
     checkStats(stats, 24, 11, 11.0/24, 13, 13.0/24,

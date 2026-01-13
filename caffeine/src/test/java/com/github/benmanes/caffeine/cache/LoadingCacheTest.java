@@ -83,6 +83,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The test cases for the {@link LoadingCache} interface that simulate the most generic usages.
  * These tests do not validate eviction management, concurrency behavior, or the
@@ -437,6 +439,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void getAll_jdk8186171(CacheContext context) {
+    @SuppressFBWarnings("HE_HASHCODE_USE_OBJECT_EQUALS")
     @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
     final class Key {
       @Override public int hashCode() {
@@ -1407,7 +1410,7 @@ public final class LoadingCacheTest {
   }
 
   @Test
-  public void asyncLoadAll() throws Throwable {
+  public void asyncLoadAll() throws Exception {
     CacheLoader<Object, Object> loader = key -> key;
     assertThat(loader.asyncLoadAll(Set.of(), Runnable::run))
         .failsWith(CompletionException.class)

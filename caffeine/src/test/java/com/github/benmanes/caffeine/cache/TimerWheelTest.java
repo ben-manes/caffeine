@@ -57,6 +57,8 @@ import com.google.common.collect.Streams;
 import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -410,9 +412,12 @@ public final class TimerWheelTest {
   @Test(dataProvider = "clock")
   public void deschedule_notScheduled(long clock) {
     var timerWheel = new TimerWheel<Int, Int>();
+    var timer = new Timer(clock + 100);
 
     timerWheel.nanos = clock;
-    timerWheel.deschedule(new Timer(clock + 100));
+    timerWheel.deschedule(timer);
+    assertThat(timer.prev).isNull();
+    assertThat(timer.next).isNull();
   }
 
   @Test(dataProvider = "fuzzySchedule")
@@ -486,6 +491,7 @@ public final class TimerWheelTest {
   }
 
   @Test(dataProvider = "iterator")
+  @SuppressWarnings("ConstantValue")
   public void iterator_hasNext(
       TimerWheel<Int, Int> timerWheel, Iterable<Node<Int, Int>> iterable) {
     @Var var iterator = iterable.iterator();
@@ -505,7 +511,7 @@ public final class TimerWheelTest {
   }
 
   @DataProvider(name = "iterator")
-  @SuppressWarnings("MethodReferenceUsage")
+  @SuppressWarnings({"MethodReferenceUsage", "UnnecessaryLocalVariable"})
   public Object[][] providesIterators() {
     var ascendingTimerWheel = new TimerWheel<Int, Int>();
     var descendingTimerWheel = new TimerWheel<Int, Int>();
@@ -614,7 +620,8 @@ public final class TimerWheelTest {
   }
 
   @SuppressWarnings({"SystemOut", "unused"})
-  static void printTimerWheel(TimerWheel<?, ?> timerWheel) {
+  @SuppressFBWarnings("UPM_UNCALLED_PRIVATE_METHOD")
+  private static void printTimerWheel(TimerWheel<?, ?> timerWheel) {
     var builder = new StringBuilder();
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       var ticks = (int) (timerWheel.nanos >>> SHIFT[i]);

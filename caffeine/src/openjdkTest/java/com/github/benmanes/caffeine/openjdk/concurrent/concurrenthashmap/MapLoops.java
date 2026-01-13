@@ -49,6 +49,8 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 4486658
@@ -71,8 +73,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @library /test/lib
  * @run main/othervm/timeout=1600 -XX:LockingMode=0 -XX:+VerifyHeavyMonitors MapLoops
  */
-@SuppressWarnings({"InconsistentOverloads", "InterruptedExceptionSwallowed",
-  "NonFinalStaticField", "rawtypes", "SystemOut", "unchecked", "Var", "Varifier"})
+@SuppressWarnings({"all", "InconsistentOverloads", "InterruptedExceptionSwallowed",
+    "NonFinalStaticField", "rawtypes", "SystemOut", "unchecked", "Var", "Varifier"})
+@SuppressFBWarnings({"HES_LOCAL_EXECUTOR_SERVICE", "IMC_IMMATURE_CLASS_PRINTSTACKTRACE",
+    "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 public class MapLoops {
     static final long LONG_DELAY_MS = 10_000;
     static int nkeys       = 1000; // 10_000

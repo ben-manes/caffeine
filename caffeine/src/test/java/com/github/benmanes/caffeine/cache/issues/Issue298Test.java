@@ -47,7 +47,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  */
 @Test(groups = "isolated")
 public final class Issue298Test {
-  static final long EXPIRE_NS = Duration.ofDays(1).toNanos();
+  private static final long EXPIRE_NS = Duration.ofDays(1).toNanos();
 
   private AtomicBoolean startedLoad;
   private AtomicBoolean doLoad;

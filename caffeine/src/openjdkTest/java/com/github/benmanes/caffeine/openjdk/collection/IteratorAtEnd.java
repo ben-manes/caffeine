@@ -60,16 +60,22 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 6529795
  * @summary next() does not change iterator state if throws NoSuchElementException
  * @author Martin Buchholz
  */
-@SuppressWarnings({"AlmostJavadoc", "ClassIsInstance", "IdentifierName", "JdkObsolete",
+@SuppressWarnings({"all", "AlmostJavadoc", "ClassIsInstance", "IdentifierName", "JdkObsolete",
     "MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonFinalStaticField", "rawtypes",
     "SequencedCollectionGetFirst", "SequencedCollectionGetLast", "SystemOut", "unchecked",
     "UnnecessaryFinal", "Var", "Varifier"})
+@SuppressFBWarnings({"AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE",
+    "BED_BOGUS_EXCEPTION_DECLARATION", "IMC_IMMATURE_CLASS_PRINTSTACKTRACE",
+    "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE", "THROWS_METHOD_THROWS_CLAUSE_THROWABLE",
+    "UP_UNUSED_PARAMETER"})
 public class IteratorAtEnd {
     private static final int SIZE = 6;
 

@@ -160,6 +160,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The test cases for the implementation details of {@link BoundedLocalCache}.
  *
@@ -172,6 +174,7 @@ import com.google.errorprone.annotations.Var;
 public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("StatementWithEmptyBody")
   @CacheSpec(population = Population.FULL, removalListener = Listener.MOCKITO)
   public void clear_pendingWrites(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var populated = new boolean[1];
@@ -193,6 +196,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("StatementWithEmptyBody")
   @CacheSpec(loader = Loader.IDENTITY,
       population = Population.FULL, removalListener = Listener.MOCKITO)
   public void clear_pendingWrites_reload(BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -216,6 +220,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache).hasSize(context.initialSize());
   }
 
+  @SuppressWarnings("StatementWithEmptyBody")
   @Test(dataProvider = "caches", groups = "slow")
   @CacheSpec(loader = Loader.IDENTITY, population = Population.FULL,
       keys = ReferenceType.WEAK, removalListener = Listener.MOCKITO)
@@ -253,7 +258,8 @@ public final class BoundedLocalCacheTest {
   /* --------------- Maintenance --------------- */
 
   @Test
-  @SuppressWarnings("PMD.UnusedAssignment")
+  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
+  @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
   public void cleanupTask_allowGc() {
     @Var var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
@@ -320,6 +326,7 @@ public final class BoundedLocalCacheTest {
     var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
+    @SuppressWarnings("UnnecessaryLocalVariable")
     var invalid = IntStream.generate(ThreadLocalRandom.current()::nextInt).boxed()
         .filter(Predicate.not(valid::contains))
         .findFirst().orElseThrow();
@@ -377,6 +384,7 @@ public final class BoundedLocalCacheTest {
 
   @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MDM_LOCK_ISLOCKED")
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL,
       executor = CacheExecutor.REJECTING, executorFailure = ExecutorFailure.EXPECTED,
       removalListener = Listener.CONSUMING)
@@ -395,6 +403,7 @@ public final class BoundedLocalCacheTest {
     var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
     var valid = Set.of(IDLE, REQUIRED, PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED);
+    @SuppressWarnings("UnnecessaryLocalVariable")
     var invalid = IntStream.generate(ThreadLocalRandom.current()::nextInt).boxed()
         .filter(Predicate.not(valid::contains))
         .findFirst().orElseThrow();
@@ -403,6 +412,7 @@ public final class BoundedLocalCacheTest {
     assertThrows(IllegalStateException.class, () -> cache.shouldDrainBuffers(true));
   }
 
+  @SuppressWarnings("resource")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
   public void rescheduleCleanUpIfIncomplete_complete(
@@ -417,6 +427,7 @@ public final class BoundedLocalCacheTest {
     }
   }
 
+  @SuppressWarnings("resource")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void rescheduleCleanUpIfIncomplete_incompatible(
@@ -544,6 +555,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MDM_LOCK_ISLOCKED")
   @CacheSpec(population = Population.EMPTY)
   public void afterWrite_drainFullWriteBuffer(BoundedLocalCache<Int, Int> cache) {
     cache.drainStatus = PROCESSING_TO_IDLE;
@@ -567,6 +579,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MDM_LOCK_ISLOCKED")
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING)
   public void afterWrite_drainFullWriteBuffer_discarded(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -935,9 +948,10 @@ public final class BoundedLocalCacheTest {
     }
   }
 
-  enum Status { ALIVE, RETIRED, DEAD }
+  private enum Status { ALIVE, RETIRED, DEAD }
 
-  static void checkStatus(Node<Int, Int> node, Status expected) {
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+  private static void checkStatus(Node<Int, Int> node, Status expected) {
     synchronized (node) {
       assertThat(node.isAlive()).isEqualTo(expected == Status.ALIVE);
       assertThat(node.isRetired()).isEqualTo(expected == Status.RETIRED);
@@ -1792,18 +1806,23 @@ public final class BoundedLocalCacheTest {
   public void demoteFromMain_absent() {
     var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
+      long mainProtectedWeightedSize = 1000;
+
       @Override protected long mainProtectedMaximum() {
         return 100;
       }
       @Override protected long mainProtectedWeightedSize() {
-        return 1000;
+        return mainProtectedWeightedSize;
       }
       @Override protected AccessOrderDeque<Node<Object, Object>> accessOrderProtectedDeque() {
         return new AccessOrderDeque<>();
       }
-      @Override protected void setMainProtectedWeightedSize(long weightedSize) {}
+      @Override protected void setMainProtectedWeightedSize(long weightedSize) {
+        this.mainProtectedWeightedSize = weightedSize;
+      }
     };
     cache.demoteFromMainProtected();
+    assertThat(cache.mainProtectedWeightedSize).isEqualTo(1000);
   }
 
   @Test
@@ -2064,7 +2083,7 @@ public final class BoundedLocalCacheTest {
     checkDrainBlocks(cache, () -> eviction.setMaximum(0));
   }
 
-  void checkDrainBlocks(BoundedLocalCache<Int, Int> cache, Runnable task) {
+  private static void checkDrainBlocks(BoundedLocalCache<Int, Int> cache, Runnable task) {
     var done = new AtomicBoolean();
     var lock = cache.evictionLock;
     lock.lock();
@@ -2217,6 +2236,7 @@ public final class BoundedLocalCacheTest {
 
   @CheckMaxLogLevel(ERROR)
   @Test(dataProvider = "caches")
+  @SuppressWarnings("ConstantValue")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void put_spinToCompute(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var initialValue = cache.put(context.absentKey(), context.absentValue());
@@ -2226,7 +2246,6 @@ public final class BoundedLocalCacheTest {
     node.retire();
 
     var future = new Future<?>[1];
-    @SuppressWarnings("ConstantValue")
     var value = cache.data.compute(context.absentKey(), (k, n) -> {
       var writer = new AtomicReference<@Nullable Thread>();
       future[0] = ConcurrentTestHarness.submit(() -> {
@@ -2263,6 +2282,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
+  @SuppressFBWarnings("BC_UNCONFIRMED_CAST")
   public void isPendingEviction_async(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
@@ -2273,6 +2293,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("BC_UNCONFIRMED_CAST")
   @CacheSpec(compute = Compute.ASYNC, population = Population.EMPTY, keys = ReferenceType.STRONG)
   public void asyncCompletion_removesRefresh(AsyncCache<Int, Int> cache, CacheContext context) {
     var localCache = ((LocalAsyncCache<Int, Int>) cache).cache();
@@ -3143,7 +3164,7 @@ public final class BoundedLocalCacheTest {
   /* --------------- Refresh --------------- */
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
+  @SuppressWarnings({"CheckReturnValue", "ResultOfMethodCallIgnored"})
   public void refreshes_memoize() {
     // The refresh map is never unset once initialized and a CAS race can cause a thread's attempt
     // at initialization to fail so it re-reads for the current value. This asserts a non-null value
@@ -3154,18 +3175,21 @@ public final class BoundedLocalCacheTest {
     var signal = new CompletableFuture<@Nullable Void>().orTimeout(10, TimeUnit.SECONDS);
     var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
-    ConcurrentTestHarness.timeTasks(10, () -> {
-      while (!signal.isDone()) {
-        try {
-          cache.refreshes = null;
-          cache.refreshes();
-        } catch (NullPointerException e) {
-          signal.complete(null);
-          return;
+    ConcurrentTestHarness.timeTasks(10, new Runnable() {
+      @SuppressFBWarnings("DCN_NULLPOINTER_EXCEPTION")
+      @Override public void run() {
+        while (!signal.isDone()) {
+          try {
+            cache.refreshes = null;
+            cache.refreshes();
+          } catch (NullPointerException e) {
+            signal.complete(null);
+            return;
+          }
         }
       }
     });
-    signal.join();
+    assertThat(signal.join()).isNull();
   }
 
   @Test(dataProvider = "caches")
@@ -3362,6 +3386,7 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.refreshes).isNull();
   }
 
+  @SuppressWarnings("resource")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE)
   public void refreshIfNeeded_skip_casWriteTime(
@@ -3376,6 +3401,7 @@ public final class BoundedLocalCacheTest {
     assertThat(context.executor().submitted()).isEqualTo(executedTasks);
   }
 
+  @SuppressWarnings("resource")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE)
   public void refreshIfNeeded_skip_notAlive(
@@ -3399,6 +3425,7 @@ public final class BoundedLocalCacheTest {
     requireNonNull(context.build(key -> key));
   }
 
+  @SuppressWarnings("resource")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
       loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
@@ -3421,6 +3448,7 @@ public final class BoundedLocalCacheTest {
         .contains(context.firstKey(), context.firstKey());
   }
 
+  @SuppressWarnings("resource")
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
       loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
@@ -3857,6 +3885,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   public void cleanupTask_ignore() {
     BoundedLocalCache<?, ?> cache = nullRef();
     var task = new PerformCleanupTask(cache);
@@ -3903,9 +3932,15 @@ public final class BoundedLocalCacheTest {
   @Test
   public void node_ignored() {
     Node<Object, Object> node = Mockito.mock(CALLS_REAL_METHODS);
+
     node.setVariableTime(1L);
+    assertThat(node.getVariableTime()).isEqualTo(0L);
+
     node.setAccessTime(1L);
+    assertThat(node.getAccessTime()).isEqualTo(0L);
+
     node.setWriteTime(1L);
+    assertThat(node.getWriteTime()).isEqualTo(0L);
   }
 
   @Test
@@ -4018,30 +4053,33 @@ public final class BoundedLocalCacheTest {
   }
 
   @SuppressWarnings("unchecked")
-  static BoundedLocalCache<Object, Object> asBoundedLocalCache(CacheContext context) {
+  private static BoundedLocalCache<Object, Object> asBoundedLocalCache(CacheContext context) {
     return (BoundedLocalCache<Object, Object>) (context.isAsync()
         ? asBoundedLocalCache(context.asyncCache())
         : asBoundedLocalCache(context.cache()));
   }
 
-  static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {
+  private static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {
     return (BoundedLocalCache<K, V>) cache.asMap();
   }
 
-  static <K, V> BoundedLocalCache<K, CompletableFuture<V>> asBoundedLocalCache(
+  @SuppressFBWarnings("PDP_POORLY_DEFINED_PARAMETER")
+  private static <K, V> BoundedLocalCache<K, CompletableFuture<V>> asBoundedLocalCache(
       AsyncCache<K, V> cache) {
     var localCache = (LocalAsyncCache<K, V>) cache;
     return (BoundedLocalCache<K, CompletableFuture<V>>) localCache.cache();
   }
 
-  static final class CustomBoundedLocalCache<K, V> extends BoundedLocalCache<K, V> {
-    @SuppressWarnings("unchecked")
+  private static final class CustomBoundedLocalCache<K, V> extends BoundedLocalCache<K, V> {
+    @SuppressWarnings({"unchecked", "UnusedMethod"})
     CustomBoundedLocalCache(Caffeine<K, V> builder,
         AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
       super(builder, (AsyncCacheLoader<K, V>) cacheLoader, async);
     }
   }
-  static final class BadBoundedLocalCache<K, V> extends BoundedLocalCache<K, V> {
+
+  @SuppressWarnings("unused")
+  private static final class BadBoundedLocalCache<K, V> extends BoundedLocalCache<K, V> {
     static final LocalCacheFactory FACTORY = BadBoundedLocalCache::new;
 
     @SuppressWarnings("unchecked")
@@ -4051,15 +4089,20 @@ public final class BoundedLocalCacheTest {
       throw new IllegalStateException();
     }
   }
-  static final class BadLocalCacheFactory implements LocalCacheFactory {
+
+  @SuppressWarnings("unused")
+  private static final class BadLocalCacheFactory implements LocalCacheFactory {
     @Override public <K, V> BoundedLocalCache<K, V> newInstance(Caffeine<K, V> builder,
         @Nullable AsyncCacheLoader<? super K, V> cacheLoader, boolean async) {
       throw new IllegalStateException();
     }
   }
+
   @NullUnmarked
-  static final class BadNode extends Node<@NonNull Object, @NonNull Object> {
-    public BadNode() {
+  @SuppressWarnings("UnusedNestedClass")
+  private static final class BadNode extends Node<@NonNull Object, @NonNull Object> {
+    @SuppressWarnings("unused")
+    BadNode() {
       throw new IllegalStateException();
     }
     @Override public Object getKey() {
@@ -4078,7 +4121,7 @@ public final class BoundedLocalCacheTest {
       return null;
     }
     @Override public void setValue(Object value, ReferenceQueue<Object> referenceQueue) {}
-    @Override public boolean containsValue(@NonNull Object value) {
+    @Override public boolean containsValue(Object value) {
       return false;
     }
     @Override public boolean isAlive() {

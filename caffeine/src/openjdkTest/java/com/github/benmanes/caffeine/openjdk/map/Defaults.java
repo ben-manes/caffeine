@@ -62,6 +62,8 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 8010122 8004518 8024331 8024688
@@ -69,12 +71,18 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @author Mike Duigou
  * @run testng Defaults
  */
-@SuppressWarnings({"AlmostJavadoc", "BooleanParameter", "DirectReturn", "EmptyBlockTag",
+@SuppressWarnings({"all", "AlmostJavadoc", "BooleanParameter", "DirectReturn", "EmptyBlockTag",
     "EnumOrdinal", "IdentifierName", "IdentityConversion", "IsNull", "JdkObsolete",
     "MethodCanBeStatic", "MultiVariableDeclaration", "NullAway", "PreferredInterfaceType",
     "PreferredInterfaceType", "PreferredInterfaceType", "PrivateConstructorForUtilityClass",
     "rawtypes", "RedundantStringConversion", "unchecked", "UnnecessaryFinal", "unused",
     "Var", "Varifier", "YodaCondition"})
+@SuppressFBWarnings({"DLS_DEAD_LOCAL_STORE", "ES_COMPARING_PARAMETER_STRING_WITH_EQ",
+    "ES_COMPARING_STRINGS_WITH_EQ", "IMC_IMMATURE_CLASS_COLLECTION_RETURN",
+    "LUI_USE_SINGLETON_LIST", "PSC_PRESIZE_COLLECTIONS", "MUI_CALLING_SIZE_ON_SUBCONTAINER",
+    "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE", "PSC_SUBOPTIMAL_COLLECTION_SIZING",
+    "RC_REF_COMPARISON", "UP_UNUSED_PARAMETER", "UPM_UNCALLED_PRIVATE_METHOD",
+    "UTAO_TESTNG_ASSERTION_ODDITIES_ACTUAL_CONSTANT"})
 public class Defaults {
 
     @Test(dataProvider = "Map<IntegerEnum,String> rw=all keys=withNull values=withNull")

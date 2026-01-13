@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
  *
  * Ported from Eclipse Collections 11.0.
  */
-@SuppressWarnings("Varifier")
+@SuppressWarnings({"all", "Varifier"})
 abstract class MutableMapTestCase extends MutableMapIterableTestCase {
 
   @Test

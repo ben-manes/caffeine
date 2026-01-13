@@ -242,6 +242,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("ResultOfMethodCallIgnored")
   public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
     requireNonNull(function);
 
@@ -383,6 +384,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("ResultOfMethodCallIgnored")
   public void clear() {
     var keys = (removalListener == null) ? data.keySet() : List.copyOf(data.keySet());
     for (K key : keys) {
@@ -442,6 +444,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("ResultOfMethodCallIgnored")
   public void putAll(Map<? extends K, ? extends V> map) {
     map.forEach(this::put);
   }
@@ -709,6 +712,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void remove() {
       if (current == null) {
         throw new IllegalStateException();
@@ -888,6 +892,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void remove() {
       if (entry == null) {
         throw new IllegalStateException();
@@ -1064,6 +1069,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void remove() {
       if (entry == null) {
         throw new IllegalStateException();

@@ -43,6 +43,8 @@ import com.github.benmanes.caffeine.testing.Threads;
 import com.google.common.collect.ImmutableList;
 import com.google.common.testing.SerializableTester;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A test to assert basic concurrency characteristics by validating the internal state after load.
  *
@@ -50,6 +52,7 @@ import com.google.common.testing.SerializableTester;
  */
 @CheckMaxLogLevel(DEBUG)
 @Listeners(CacheValidationListener.class)
+@SuppressFBWarnings("NPMC_NON_PRODUCTIVE_METHOD_CALL")
 @Test(groups = "isolated", dataProviderClass = CacheProvider.class)
 public final class MultiThreadedTest {
 
@@ -68,9 +71,12 @@ public final class MultiThreadedTest {
     Threads.runTest(operations(cache, context));
   }
 
-  @SuppressWarnings({"CollectionToArray", "CollectionUndefinedEquality", "FutureReturnValueIgnored",
-      "MethodReferenceUsage", "PMD.OptimizableToArrayCall", "rawtypes", "ReturnValueIgnored",
-      "SelfEquals", "SizeGreaterThanOrEqualsZero", "unchecked"})
+  @SuppressWarnings({"CodeBlock2Expr", "CollectionToArray", "CollectionUndefinedEquality",
+      "ConstantValue", "Convert2MethodRef", "EqualsWithItself", "FutureReturnValueIgnored",
+      "MethodReferenceUsage", "PMD.OptimizableToArrayCall", "rawtypes",
+      "RedundantCollectionOperation", "ResultOfMethodCallIgnored", "ReturnValueIgnored",
+      "SelfEquals", "SizeGreaterThanOrEqualsZero", "ToArrayCallWithZeroLengthArrayArgument",
+      "unchecked"})
   private static ImmutableList<Consumer<Int>> operations(
       Cache<Int, Int> cache, CacheContext context) {
     var builder = new ImmutableList.Builder<Consumer<Int>>();

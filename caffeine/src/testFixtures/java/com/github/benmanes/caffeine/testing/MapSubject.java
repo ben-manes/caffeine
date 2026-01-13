@@ -30,11 +30,14 @@ import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Ordered;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Additional propositions for {@link Map} subjects.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressFBWarnings("NM_SAME_SIMPLE_NAME_AS_SUPERCLASS")
 public final class MapSubject extends com.google.common.truth.MapSubject {
   @SuppressWarnings("ImmutableMemberCollection")
   private final @Nullable Map<?, ?> actual;

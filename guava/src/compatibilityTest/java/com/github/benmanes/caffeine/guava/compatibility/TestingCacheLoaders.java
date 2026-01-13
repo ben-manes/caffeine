@@ -37,6 +37,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @author mike nonemacher
  */
 @NullUnmarked
+@SuppressWarnings("all")
 @GwtCompatible(emulated = true)
 public class TestingCacheLoaders {
 

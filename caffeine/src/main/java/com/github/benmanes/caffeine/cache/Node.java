@@ -31,6 +31,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings({"EmptyMethod", "unused"})
 abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
@@ -128,6 +129,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
    * Atomically sets the variable time to the given updated value if the current value equals the
    * expected value and returns if the update was successful.
    */
+  @SuppressWarnings("UnusedReturnValue")
   public boolean casVariableTime(long expect, long update) {
     throw new UnsupportedOperationException();
   }

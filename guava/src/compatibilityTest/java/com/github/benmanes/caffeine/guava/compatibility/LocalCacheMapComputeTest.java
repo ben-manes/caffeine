@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -35,7 +37,8 @@ import junit.framework.TestCase;
  * Test Java8 map.compute in concurrent cache context.
  */
 @NullUnmarked
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressFBWarnings("SS_SHOULD_BE_STATIC")
+@SuppressWarnings({"all", "PreferJavaTimeOverload"})
 public class LocalCacheMapComputeTest extends TestCase {
   final int count = 10000;
   final String delimiter = "-";

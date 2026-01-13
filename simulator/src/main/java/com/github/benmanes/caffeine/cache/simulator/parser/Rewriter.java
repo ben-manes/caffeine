@@ -42,7 +42,6 @@ import picocli.CommandLine.Option;
  * A simple utility to rewrite traces into the format used by other simulators. This lets us run
  * multiple simulators in parallel for a quick-and-dirty analysis, rather than port their code into
  * Java.
- *
  * {@snippet lang="shell" :
  * ./gradlew :simulator:rewrite -q \
  *    --inputFormat=? \
@@ -53,6 +52,7 @@ import picocli.CommandLine.Option;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings({"NotNullFieldNotInitialized", "unused"})
 @Command(mixinStandardHelpOptions = true)
 public final class Rewriter implements Runnable {
   @Option(names = "--inputFiles", required = true, split = ",", description = "The trace input "
@@ -88,6 +88,7 @@ public final class Rewriter implements Runnable {
     }
   }
 
+  @SuppressWarnings("ConstantValue")
   private static String[] argumentsWithDefaults(String[] args) {
     var params = new ArrayList<>(Arrays.asList(args));
     if (params.contains("--inputFormat")) {

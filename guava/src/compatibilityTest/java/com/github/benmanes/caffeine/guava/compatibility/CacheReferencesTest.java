@@ -20,6 +20,8 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.lang.ref.WeakReference;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -40,7 +42,8 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
-@SuppressWarnings({"MapEntry", "Var", "Varifier"})
+@SuppressWarnings({"all", "MapEntry", "Var", "Varifier"})
+@SuppressFBWarnings("ES_COMPARING_STRINGS_WITH_EQ")
 public class CacheReferencesTest extends TestCase {
 
   private static final CacheLoader<Key,String> KEY_TO_STRING_LOADER =

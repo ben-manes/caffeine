@@ -22,9 +22,9 @@ import org.jctools.queues.atomic.MpmcAtomicArrayQueue;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class MpmcArrayBuffer<E> extends ReadBuffer<E> {
-  final MessagePassingQueue<E> queue;
+  private final MessagePassingQueue<E> queue;
 
-  long reads;
+  private long reads;
 
   MpmcArrayBuffer() {
     queue = new MpmcAtomicArrayQueue<>(BUFFER_SIZE);

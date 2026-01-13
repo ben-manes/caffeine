@@ -1,4 +1,4 @@
-@file:Suppress("PackageDirectoryMismatch")
+@file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
@@ -18,6 +18,7 @@ dependencies {
 
   jcstressImplementation(libs.jcstress)
   jcstressImplementation(libs.jspecify)
+  jcstressImplementation(libs.spotbugs.annotations)
   jcstressImplementation(libs.errorprone.annotations)
   jcstressImplementation(files(tasks.jar.map { it.archiveFile }))
 }

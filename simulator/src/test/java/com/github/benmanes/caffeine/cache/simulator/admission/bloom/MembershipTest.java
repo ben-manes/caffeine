@@ -26,6 +26,8 @@ import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
@@ -143,6 +145,7 @@ final class MembershipTest {
   }
 
   /** Displays the rows as a pretty printed table. */
+  @SuppressFBWarnings("CRLF_INJECTION_LOGS")
   private static void printTable(List<String[]> rows) {
     var data = new String[rows.size()][HEADERS.length];
     for (int i = 0; i < rows.size(); i++) {

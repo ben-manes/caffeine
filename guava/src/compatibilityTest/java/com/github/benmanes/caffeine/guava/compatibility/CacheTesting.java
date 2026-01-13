@@ -33,12 +33,16 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.FakeTicker;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A collection of utilities for {@link Cache} testing.
  *
  * @author mike nonemacher
  */
-@SuppressWarnings({"GuardedByChecker", "PreferJavaTimeOverload"})
+@SuppressFBWarnings({"ITC_INHERITANCE_TYPE_CHECKING",
+    "NP_NONNULL_PARAM_VIOLATION", "UP_UNUSED_PARAMETER"})
+@SuppressWarnings({"all", "GuardedByChecker", "PreferJavaTimeOverload"})
 class CacheTesting {
 
   private CacheTesting() {}

@@ -44,16 +44,22 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 6306829
  * @summary Verify assertions in get() javadocs
  * @author Martin Buchholz
  */
-@SuppressWarnings({"AlmostJavadoc", "BooleanParameter", "EmptyCatch", "identity",
+@SuppressWarnings({"all", "AlmostJavadoc", "BooleanParameter", "EmptyCatch", "identity",
     "InconsistentOverloads", "JdkObsolete", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
     "NonFinalStaticField", "NullAway", "ParameterMissingNullable", "SystemOut",
     "UnnecessaryParentheses", "UnusedVariable"})
+@SuppressFBWarnings({"AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE",
+    "BED_BOGUS_EXCEPTION_DECLARATION", "DCN_NULLPOINTER_EXCEPTION",
+    "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE", "MUI_USE_CONTAINSKEY",
+    "THROWS_METHOD_THROWS_CLAUSE_THROWABLE", "UP_UNUSED_PARAMETER"})
 public class Get {
 
     @Test

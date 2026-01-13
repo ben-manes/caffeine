@@ -334,7 +334,7 @@ public final class CaffeineSpec {
   }
 
   /** Returns a parsed {@link TimeUnit} value. */
-  @SuppressWarnings("StatementSwitchToExpressionSwitch")
+  @SuppressWarnings({"ConstantValue", "StatementSwitchToExpressionSwitch"})
   static TimeUnit parseTimeUnit(String key, String value) {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s omitted", key);
     char lastChar = Character.toLowerCase(value.charAt(value.length() - 1));

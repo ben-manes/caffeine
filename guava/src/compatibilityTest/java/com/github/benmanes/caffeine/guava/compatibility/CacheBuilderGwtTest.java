@@ -43,6 +43,7 @@ import com.google.common.collect.Sets;
 import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.TestCase;
 
 /**
@@ -53,7 +54,8 @@ import junit.framework.TestCase;
  */
 @NullUnmarked
 @GwtCompatible
-@SuppressWarnings({"PreferJavaTimeOverload", "Var", "Varifier"})
+@SuppressWarnings({"all", "PreferJavaTimeOverload", "Var", "Varifier"})
+@SuppressFBWarnings({"BED_BOGUS_EXCEPTION_DECLARATION", "PSC_PRESIZE_COLLECTIONS"})
 public class CacheBuilderGwtTest extends TestCase {
 
   private FakeTicker fakeTicker;
@@ -450,7 +452,6 @@ public class CacheBuilderGwtTest extends TestCase {
     assertFalse(cache.asMap().values().contains(20));
   }
 
-  @SuppressWarnings("CollectionAddAllToCollectionBlock")
   public void testAsMapKeySet() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)

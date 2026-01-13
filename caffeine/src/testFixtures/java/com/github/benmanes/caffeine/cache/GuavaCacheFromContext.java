@@ -64,6 +64,8 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -159,7 +161,7 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public @Nullable V getIfPresent(Object key) {
+    public @Nullable V getIfPresent(K key) {
       return cache.getIfPresent(key);
     }
 
@@ -439,6 +441,7 @@ public final class GuavaCacheFromContext {
         long snapshotAt = canSnapshot ? ticker.read() : 0L;
         return new GuavaCacheEntry<>(key, value, snapshotAt);
       }
+      @SuppressWarnings("RedundantUnmodifiable")
       @Override public Map<K, CompletableFuture<V>> refreshes() {
         return Collections.unmodifiableMap(Collections.emptyMap());
       }
@@ -510,6 +513,7 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
+    @SuppressFBWarnings("ITC_INHERITANCE_TYPE_CHECKING")
     public CompletableFuture<V> refresh(K key) {
       error.remove();
       cache.refresh(key);
@@ -536,6 +540,7 @@ public final class GuavaCacheFromContext {
       return composeResult(result);
     }
 
+    @SuppressWarnings("RedundantUnmodifiable")
     CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<@Nullable V>> futures) {
       if (futures.isEmpty()) {
         return CompletableFuture.completedFuture(
@@ -603,7 +608,7 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    @SuppressWarnings("PMD.ExceptionAsFlowControl")
+    @SuppressWarnings({"ConstantValue", "PMD.ExceptionAsFlowControl"})
     public V load(K key) throws Exception {
       try {
         error.remove();
@@ -651,6 +656,7 @@ public final class GuavaCacheFromContext {
     }
   }
 
+  @SuppressFBWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
   static final class GuavaCacheEntry<K, V>
       extends SimpleImmutableEntry<K, V> implements CacheEntry<K, V> {
     private static final long serialVersionUID = 1L;

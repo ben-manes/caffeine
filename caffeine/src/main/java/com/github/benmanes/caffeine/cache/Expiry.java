@@ -97,7 +97,6 @@ public interface Expiry<K, V> {
    * Returns an {@code Expiry} that specifies that the entry should be automatically removed from
    * the cache once the duration has elapsed after the entry's creation. The expiration time is
    * not modified when the entry is updated or read.
-   *
    * {@snippet class=com.github.benmanes.caffeine.cache.Snippets region=expiry_creating lang=java}
    *
    * @param <K> the key type
@@ -114,7 +113,6 @@ public interface Expiry<K, V> {
    * Returns an {@code Expiry} that specifies that the entry should be automatically removed from
    * the cache once the duration has elapsed after the entry's creation or replacement of its value.
    * The expiration time is not modified when the entry is read.
-   *
    * {@snippet class=com.github.benmanes.caffeine.cache.Snippets region=expiry_writing lang=java}
    *
    * @param <K> the key type
@@ -131,7 +129,6 @@ public interface Expiry<K, V> {
    * Returns an {@code Expiry} that specifies that the entry should be automatically removed from
    * the cache once the duration has elapsed after the entry's creation, replacement of its value,
    * or after it was last read.
-   *
    * {@snippet class=com.github.benmanes.caffeine.cache.Snippets region=expiry_accessing lang=java}
    *
    * @param <K> the key type

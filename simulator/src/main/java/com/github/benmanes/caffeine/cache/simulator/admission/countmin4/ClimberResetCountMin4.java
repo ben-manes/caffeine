@@ -124,6 +124,7 @@ public final class ClimberResetCountMin4 extends CountMin4 {
     }
   }
 
+  @SuppressWarnings("unused")
   public int getStep() {
     return step;
   }

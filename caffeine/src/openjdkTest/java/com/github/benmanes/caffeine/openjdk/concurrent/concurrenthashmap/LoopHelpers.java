@@ -35,7 +35,7 @@ package com.github.benmanes.caffeine.openjdk.concurrent.concurrenthashmap;
 /**
  * Misc utilities in JSR166 performance tests
  */
-@SuppressWarnings({"PrivateConstructorForUtilityClass", "Var", "Varifier"})
+@SuppressWarnings({"all", "PrivateConstructorForUtilityClass", "Var", "Varifier"})
 class LoopHelpers {
 
     // Some mindless computation to do between synchronizations...

@@ -25,6 +25,8 @@ import java.util.concurrent.RejectedExecutionException;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jspecify.annotations.Nullable;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Some common removal listener implementations for tests.
  *
@@ -88,6 +90,7 @@ public final class RemovalListeners {
       removed.add(new RemovalNotification<>(key, value, cause));
     }
 
+    @SuppressFBWarnings("IMC_IMMATURE_CLASS_COLLECTION_RETURN")
     public Collection<RemovalNotification<K, V>> removed() {
       return removed;
     }

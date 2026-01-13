@@ -46,7 +46,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @run testng MapBinToFromTreeTest
  */
 @Test
-@SuppressWarnings({"CollectorMutability", "DirectReturn", "NullAway", "rawtypes", "Varifier"})
+@SuppressWarnings({"all", "CollectorMutability",
+    "DirectReturn", "NullAway", "rawtypes", "Varifier"})
 public class MapBinToFromTreeTest {
 
     // Initial capacity of map

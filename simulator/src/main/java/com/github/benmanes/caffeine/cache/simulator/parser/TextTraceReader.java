@@ -24,6 +24,8 @@ import java.util.stream.Stream;
 
 import com.google.common.io.Closeables;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A skeletal implementation that reads the trace file line by line as textual data.
  *
@@ -36,6 +38,7 @@ public abstract class TextTraceReader extends AbstractTraceReader {
   }
 
   /** Returns a stream of each line in the trace file. */
+  @SuppressFBWarnings("OS_OPEN_STREAM")
   @SuppressWarnings("PMD.CloseResource")
   protected Stream<String> lines() {
     InputStream input = readFile();

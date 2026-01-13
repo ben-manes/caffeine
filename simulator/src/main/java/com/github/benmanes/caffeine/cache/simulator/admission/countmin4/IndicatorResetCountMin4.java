@@ -66,6 +66,7 @@ public final class IndicatorResetCountMin4 implements Frequency {
     return (int) (ind * 30);
   }
 
+  @SuppressWarnings("unused")
   public int getEventsToCount() {
     return sketch.getEventsToCount();
   }

@@ -116,8 +116,8 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     boolean isFull = (data.size() >= maximumSize);
+    @Nullable Node node = data.get(key);
     policyStats.recordOperation();
-    Node node = data.get(key);
     admitter.record(key);
 
     @Var QueueType queue = null;

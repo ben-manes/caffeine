@@ -76,7 +76,7 @@ public final class GDWheelPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    @Var Node node = data.get(event.key());
+    @Var @Nullable Node node = data.get(event.key());
     policyStats.recordOperation();
     if (node == null) {
       policyStats.recordWeightedMiss(event.weight());
@@ -230,6 +230,7 @@ public final class GDWheelPolicy implements Policy {
     }
 
     /** Returns if the queue is empty. */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isEmpty() {
       return (next == this);
     }

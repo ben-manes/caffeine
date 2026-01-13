@@ -53,15 +53,20 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 6415641 6377302
  * @summary Concurrent collections are permitted to lie about their size
  * @author Martin Buchholz
  */
-@SuppressWarnings({"AlmostJavadoc", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
+@SuppressWarnings({"all", "AlmostJavadoc", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
     "NonFinalStaticField", "rawtypes", "serial", "SystemOut", "unchecked", "UnnecessaryFinal",
     "unused", "UnusedNestedClass", "UnusedVariable", "Var"})
+@SuppressFBWarnings({"AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE",
+    "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE", "IMC_IMMATURE_CLASS_PRINTSTACKTRACE",
+    "THROWS_METHOD_THROWS_CLAUSE_THROWABLE", "UP_UNUSED_PARAMETER"})
 public class BiggernYours {
     static final Random rnd = new Random(18675309);
 

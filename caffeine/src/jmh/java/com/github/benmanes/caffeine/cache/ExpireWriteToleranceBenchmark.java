@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -41,7 +42,8 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing"})
+@SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing",
+    "NotNullFieldNotInitialized", "unused"})
 public class ExpireWriteToleranceBenchmark {
   static final int SIZE = (2 << 14);
   static final int MASK = SIZE - 1;
@@ -67,7 +69,7 @@ public class ExpireWriteToleranceBenchmark {
   }
 
   @Setup
-  @SuppressWarnings("ReturnValueIgnored")
+  @SuppressWarnings({"IfCanBeSwitch", "ReturnValueIgnored"})
   public void setup() {
     if (mapType.equals("ConcurrentHashMap")) {
       map = new ConcurrentHashMap<>(INITIAL_CAPACITY);
@@ -105,13 +107,13 @@ public class ExpireWriteToleranceBenchmark {
   }
 
   @Benchmark @Threads(NUM_THREADS)
-  public Integer put(ThreadState threadState) {
+  public @Nullable Integer put(ThreadState threadState) {
     var key = ints[threadState.index++ & MASK];
     return map.put(key, key);
   }
 
   @Benchmark @Threads(NUM_THREADS)
-  public Integer replace(ThreadState threadState) {
+  public @Nullable Integer replace(ThreadState threadState) {
     var key = ints[threadState.index++ & MASK];
     return map.replace(key, key);
   }
@@ -123,12 +125,12 @@ public class ExpireWriteToleranceBenchmark {
   }
 
   @Benchmark @Threads(NUM_THREADS)
-  public Integer compute(ThreadState threadState) {
+  public @Nullable Integer compute(ThreadState threadState) {
     return map.compute(ints[threadState.index++ & MASK], (k, v) -> k);
   }
 
   @Benchmark @Threads(NUM_THREADS)
-  public Integer computeIfPresent(ThreadState threadState) {
+  public @Nullable Integer computeIfPresent(ThreadState threadState) {
     return map.computeIfPresent(ints[threadState.index++ & MASK], (k, v) -> k);
   }
 

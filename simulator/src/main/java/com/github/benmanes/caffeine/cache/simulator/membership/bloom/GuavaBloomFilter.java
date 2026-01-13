@@ -25,6 +25,7 @@ import com.typesafe.config.Config;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("UnstableApiUsage")
 public final class GuavaBloomFilter implements Membership {
   private final long expectedInsertions;
   private final double fpp;

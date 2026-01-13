@@ -45,9 +45,12 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableSet;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressFBWarnings("SEC_SIDE_EFFECT_CONSTRUCTOR")
 public final class JavaSerializationCopierTest {
 
   @Test(dataProvider = "nullArgs")

@@ -30,7 +30,7 @@ import com.google.errorprone.annotations.Var;
  */
 @SuppressWarnings("ClassEscapesDefinedScope")
 public final class FrequencySketchTest {
-  final Integer item = ThreadLocalRandom.current().nextInt();
+  private final Integer item = ThreadLocalRandom.current().nextInt();
 
   @Test
   public void construct() {

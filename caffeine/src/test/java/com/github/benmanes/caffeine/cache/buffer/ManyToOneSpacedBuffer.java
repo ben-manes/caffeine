@@ -27,14 +27,14 @@ import com.google.errorprone.annotations.Var;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteCounterRef<E> {
-  static final VarHandle BUFFER = MethodHandles.arrayElementVarHandle(Object[].class);
+  private static final VarHandle BUFFER = MethodHandles.arrayElementVarHandle(Object[].class);
 
   // Assume 4-byte references and 64-byte cache line (16 elements per line)
-  static final int SPACED_SIZE = BUFFER_SIZE << 4;
-  static final int SPACED_MASK = SPACED_SIZE - 1;
-  static final int OFFSET = 16;
+  private static final int SPACED_SIZE = BUFFER_SIZE << 4;
+  private static final int SPACED_MASK = SPACED_SIZE - 1;
+  private static final int OFFSET = 16;
 
-  final Object[] buffer;
+  private final Object[] buffer;
 
   ManyToOneSpacedBuffer() {
     buffer = new Object[SPACED_SIZE];
@@ -96,7 +96,7 @@ final class ManyToOneSpacedHeader {
 
   private ManyToOneSpacedHeader() {}
 
-  @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
+  @SuppressWarnings({"PMD.AbstractClassWithoutAbstractMethod", "unused"})
   abstract static class PadReadCounter<E> extends ReadBuffer<E> {
     byte p000, p001, p002, p003, p004, p005, p006, p007;
     byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -120,6 +120,7 @@ final class ManyToOneSpacedHeader {
     volatile long readCounter;
   }
 
+  @SuppressWarnings("unused")
   abstract static class PadWriteCounter<E> extends ReadCounterRef<E> {
     byte p120, p121, p122, p123, p124, p125, p126, p127;
     byte p128, p129, p130, p131, p132, p133, p134, p135;

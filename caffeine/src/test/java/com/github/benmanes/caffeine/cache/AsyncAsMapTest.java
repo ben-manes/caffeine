@@ -77,7 +77,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-import org.eclipse.collections.impl.factory.Sets;
 import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
@@ -95,7 +94,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.Var;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * The test cases for the {@link AsyncCache#asMap()} view and its serializability. These tests do
@@ -106,6 +108,7 @@ import com.google.errorprone.annotations.Var;
 @CheckNoEvictions @CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
+@SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
 public final class AsyncAsMapTest {
   // Statistics are recorded only for computing methods for loadSuccess and loadFailure
 
@@ -1782,6 +1785,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("EC_NULL_ARG")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void equals_null(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().equals(null)).isFalse();
@@ -1898,6 +1902,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void keySet_contains_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().keySet().contains(context.absentKey())).isFalse();
@@ -1905,6 +1910,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void keySet_contains_present(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1930,6 +1936,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   public void keySet_clear(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().keySet().clear();
     assertThat(cache).isEmpty();
@@ -2036,6 +2043,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   public void keySet_remove_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.asMap().keySet().remove(null));
   }
@@ -2043,6 +2051,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   public void keySet_remove_none(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().keySet().remove(context.absentKey())).isFalse();
     assertThat(cache.synchronous().asMap()).isEqualTo(context.original());
@@ -2051,6 +2060,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL)
+  @SuppressWarnings("RedundantCollectionOperation")
   public void keySet_remove(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().keySet().remove(context.firstKey())).isTrue();
     var expected = new HashMap<>(context.original());
@@ -2336,6 +2346,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   public void keyStream_toArray(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().keySet().stream().toArray(Int[]::new)).asList()
         .containsExactlyElementsIn(context.original().keySet());
@@ -2385,7 +2396,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CollectionUndefinedEquality")
+  @SuppressWarnings({"CollectionUndefinedEquality", "RedundantCollectionOperation"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void values_contains_absent(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().values().contains(context.absentValue().toFuture())).isFalse();
@@ -2393,7 +2404,7 @@ public final class AsyncAsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CollectionUndefinedEquality")
+  @SuppressWarnings({"CollectionUndefinedEquality", "RedundantCollectionOperation"})
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void values_contains_present(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -2420,6 +2431,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   public void values_clear(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().values().clear();
     assertThat(cache).isEmpty();
@@ -2861,6 +2873,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   public void valueStream_toArray(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().values().stream().toArray(CompletableFuture<?>[]::new)).asList()
         .containsExactlyElementsIn(ImmutableList.copyOf(cache.asMap().values()));
@@ -3018,6 +3031,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   public void entrySet_clear(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().entrySet().clear();
     assertThat(cache).isEmpty();
@@ -3489,6 +3503,7 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   public void entryStream_toArray(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).asList()
         .containsExactlyElementsIn(ImmutableList.copyOf(cache.asMap().entrySet()));
@@ -3496,6 +3511,7 @@ public final class AsyncAsMapTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   public void entryStream_toArray_async_incomplete(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<@Nullable Int>();
@@ -3537,6 +3553,7 @@ public final class AsyncAsMapTest {
   // writeThroughEntry_serialize() - CompletableFuture is not serializable
 
   private static final class BrokenEqualityFuture<T> extends CompletableFuture<T> {
+    @SuppressFBWarnings("EQ_ALWAYS_FALSE")
     @Override public boolean equals(Object o) {
       return false;
     }

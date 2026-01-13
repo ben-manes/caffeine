@@ -24,6 +24,8 @@ import com.github.benmanes.caffeine.cache.Feature;
 import com.github.benmanes.caffeine.cache.Rule;
 import com.google.common.base.CaseFormat;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Adds the cache inheritance hierarchy.
  *
@@ -47,6 +49,7 @@ public final class AddSubtype implements Rule<LocalCacheContext> {
     }
   }
 
+  @SuppressFBWarnings("POTENTIAL_XML_INJECTION")
   private static String getJavaDoc(LocalCacheContext context) {
     var doc = new StringBuilder(200);
     doc.append("<em>WARNING: GENERATED CODE</em>\n\n"

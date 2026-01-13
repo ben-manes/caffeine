@@ -45,6 +45,8 @@ import com.google.common.testing.GcFinalization;
 import com.google.common.testing.NullPointerTester;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -71,7 +73,8 @@ public final class InternerTest {
   }
 
   @Test
-  @SuppressWarnings("PMD.UnusedAssignment")
+  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
+  @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
   public void intern_weak_replace() {
     @Var var canonical = new Int(1);
     var other = new Int(1);
@@ -89,7 +92,8 @@ public final class InternerTest {
   }
 
   @Test
-  @SuppressWarnings("PMD.UnusedAssignment")
+  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
+  @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
   public void intern_weak_remove() {
     @Var var canonical = new Int(1);
     var next = new Int(2);
@@ -236,7 +240,7 @@ public final class InternerTest {
   }
 
   @DataProvider(name = "interners")
-  Object[] providesInterners() {
+  public Object[] providesInterners() {
     return new Object[] { Interner.newStrongInterner(), Interner.newWeakInterner() };
   }
 }

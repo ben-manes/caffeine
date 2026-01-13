@@ -28,15 +28,17 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 @RunWith(Parameterized.class)
-@SuppressWarnings({"IdentifierName", "MethodCanBeStatic", "PMD.LooseCoupling",
-    "PMD.UseUnderscoresInNumericLiterals", "PreferredInterfaceType"})
+@SuppressWarnings({"all", "IdentifierName", "MethodCanBeStatic", "PreferredInterfaceType"})
 public class NBHMRemoveTest {
 
   public static final Long TEST_KEY_OTHER = 123777L;
   public static final Long TEST_KEY_0 = 0L;
 
   @Parameterized.Parameters
+  @SuppressFBWarnings("IMC_IMMATURE_CLASS_COLLECTION_RETURN")
   public static Collection<Object[]> parameters() {
     ArrayList<Object[]> list = new ArrayList<>();
     // Verify the test assumptions against JDK reference implementations, useful for debugging

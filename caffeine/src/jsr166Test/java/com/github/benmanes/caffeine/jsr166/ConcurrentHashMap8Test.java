@@ -29,12 +29,15 @@ import org.jspecify.annotations.NullUnmarked;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
 @NullUnmarked
-@SuppressWarnings({"EmptyCatch", "IdentityConversion", "PreferredInterfaceType",
-  "rawtypes", "try", "unchecked", "UnnecessaryFinal", "unused", "Var", "Varifier"})
+@SuppressWarnings({"all", "EmptyCatch", "IdentityConversion", "PreferredInterfaceType",
+    "rawtypes", "try", "unchecked", "UnnecessaryFinal", "unused", "Var", "Varifier"})
+@SuppressFBWarnings({"BC_IMPOSSIBLE_CAST", "DCN_NULLPOINTER_EXCEPTION",
+    "HES_LOCAL_EXECUTOR_SERVICE", "HSM_HIDING_METHOD", "LUI_USE_SINGLETON_LIST"})
 public class ConcurrentHashMap8Test extends JSR166TestCase {
     public static void main(String[] args) {
         main(suite());

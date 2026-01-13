@@ -24,6 +24,7 @@ import com.google.common.collect.Range;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings({"DefaultAnnotationParam", "NewClassNamingConvention"})
 final class FrequencySketchFuzzer {
   // These tests require the environment variable JAZZER_FUZZ=1 to try new input arguments
   static final Range<Integer> FREQUENCY_RANGE = Range.closed(0, 15);

@@ -100,6 +100,8 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug     6207984 6272521 6192552 6269713 6197726 6260652 5073546 4137464
@@ -130,9 +132,9 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * An engineer fixing a regression could add their regression test here and
  * simultaneously test all other implementations.
  */
-@SuppressWarnings({"AlmostJavadoc", "BadInstanceof", "BooleanLiteral", "BoxedPrimitiveEquality",
-    "ClassIsInstance", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
-    "DequeGetFirst", "DequePeekFirst", "DequePollFirst", "DequeRemoveFirst",
+@SuppressWarnings({"all", "AlmostJavadoc", "BadInstanceof", "BooleanLiteral",
+    "BoxedPrimitiveEquality", "ClassIsInstance", "CollectionIsEmpty", "CollectionToArray",
+    "CollectorMutability", "DequeGetFirst", "DequePeekFirst", "DequePollFirst", "DequeRemoveFirst",
     "DequeRemoveFirstOccurrence", "EmptyCatch", "EntryIterableToImmutableMap",
     "ExplicitArrayForVarargs", "FieldCanBeFinal", "IdentifierName", "IdentityConversion",
     "IdentityHashMapBoxing", "InvalidParam", "IterableIsEmpty", "JdkObsolete",
@@ -142,6 +144,13 @@ import com.github.benmanes.caffeine.cache.Caffeine;
     "ReferenceEquality", "resource", "ReturnValueIgnored", "SelfEquals",
     "SequencedCollectionGetFirst", "SequencedCollectionGetLast", "SystemOut", "unchecked",
     "UndefinedEquals", "UnnecessaryFinal", "unused", "UnusedMethod", "Var", "Varifier"})
+@SuppressFBWarnings({"AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE", "BC_VACUOUS_INSTANCEOF",
+    "CC_CYCLOMATIC_COMPLEXITY", "DCN_NULLPOINTER_EXCEPTION", "DLS_DEAD_LOCAL_STORE",
+    "DMI_VACUOUS_SELF_COLLECTION_CALL", "GC_UNRELATED_TYPES", "IMC_IMMATURE_CLASS_PRINTSTACKTRACE",
+    "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE", "LUI_USE_SINGLETON_LIST", "LUI_VACUOUS_ADDALL",
+    "MUI_CALLING_SIZE_ON_SUBCONTAINER", "OBJECT_DESERIALIZATION", "RC_REF_COMPARISON",
+    "RFI_SET_ACCESSIBLE", "SA_LOCAL_SELF_COMPARISON", "SF_SWITCH_FALLTHROUGH", "SPP_USE_ISEMPTY",
+    "THROWS_METHOD_THROWS_CLAUSE_THROWABLE", "UP_UNUSED_PARAMETER"})
 public class MOAT {
     // Collections under test must not be initialized to contain this value,
     // and maps under test must not contain this value as a key.

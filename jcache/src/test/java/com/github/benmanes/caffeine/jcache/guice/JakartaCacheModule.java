@@ -91,12 +91,14 @@ final class JakartaCacheModule extends AbstractModule {
   }
 
   private static final class JakartaCachePutInterceptor extends CachePutInterceptor {
+    @SuppressWarnings("unused")
     @Inject void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }
   }
 
   private static final class JakartaCacheResultInterceptor extends CacheResultInterceptor {
+    @SuppressWarnings("unused")
     @Inject void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }
@@ -104,12 +106,14 @@ final class JakartaCacheModule extends AbstractModule {
 
   private static final class JakartaCacheRemoveEntryInterceptor
       extends CacheRemoveEntryInterceptor {
+    @SuppressWarnings("unused")
     @Inject void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }
   }
 
   private static final class JakartaCacheRemoveAllInterceptor extends CacheRemoveAllInterceptor {
+    @SuppressWarnings("unused")
     @Inject void inject(CacheContextSource<MethodInvocation> cacheContextSource) {
       setCacheContextSource(cacheContextSource);
     }

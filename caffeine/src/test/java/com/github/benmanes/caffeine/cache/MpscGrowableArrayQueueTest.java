@@ -27,9 +27,12 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressFBWarnings("SEC_SIDE_EFFECT_CONSTRUCTOR")
 @SuppressWarnings({"ClassEscapesDefinedScope", "PMD.LooseCoupling"})
 public final class MpscGrowableArrayQueueTest {
   private static final int NUM_PRODUCERS = 10;
@@ -128,6 +131,7 @@ public final class MpscGrowableArrayQueueTest {
   }
 
   @Test(dataProvider = "full")
+  @SuppressWarnings("StatementWithEmptyBody")
   public void poll_toEmpty(MpscGrowableArrayQueue<Integer> queue) {
     while (queue.poll() != null) { /* consume */ }
     assertThat(queue).isEmpty();
@@ -145,6 +149,7 @@ public final class MpscGrowableArrayQueueTest {
   }
 
   @Test(dataProvider = "full")
+  @SuppressWarnings("StatementWithEmptyBody")
   public void relaxedPoll_toEmpty(MpscGrowableArrayQueue<Integer> queue) {
     while (queue.relaxedPoll() != null) { /* consume */ }
     assertThat(queue).isEmpty();
@@ -222,6 +227,7 @@ public final class MpscGrowableArrayQueueTest {
   /* --------------- Concurrency --------------- */
 
   @Test(dataProvider = "empty")
+  @SuppressWarnings("StatementWithEmptyBody")
   public void oneProducer_oneConsumer(MpscGrowableArrayQueue<Integer> queue) {
     var started = new AtomicInteger();
     var finished = new AtomicInteger();
@@ -261,6 +267,7 @@ public final class MpscGrowableArrayQueueTest {
   }
 
   @Test(dataProvider = "empty")
+  @SuppressWarnings("StatementWithEmptyBody")
   public void manyProducers_oneConsumer(MpscGrowableArrayQueue<Integer> queue) {
     var started = new AtomicInteger();
     var finished = new AtomicInteger();
@@ -330,7 +337,7 @@ public final class MpscGrowableArrayQueueTest {
     return new Object[][] {{ makePopulated(FULL_SIZE) }};
   }
 
-  static MpscGrowableArrayQueue<Integer> makePopulated(int items) {
+  private static MpscGrowableArrayQueue<Integer> makePopulated(int items) {
     var queue = new MpscGrowableArrayQueue<Integer>(4, FULL_SIZE);
     for (int i = 0; i < items; i++) {
       queue.add(i);

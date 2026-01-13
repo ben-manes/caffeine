@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.testng.annotations.DataProvider;
 
 import com.google.common.collect.ImmutableSet;
@@ -74,6 +76,7 @@ public final class CacheProvider {
    * Returns the test case parameters based on the method parameter types or an empty array if
    * incompatible.
    */
+  @SuppressFBWarnings("UCC_UNRELATED_COLLECTION_CONTENTS")
   private Object[] asTestCases(CacheContext context) {
     @Var boolean intern = true;
     CacheGenerator.initialize(context);

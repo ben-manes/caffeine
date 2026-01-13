@@ -25,6 +25,8 @@ import com.github.benmanes.caffeine.cache.LocalAsyncCache.AbstractCacheView;
 import com.google.common.testing.GcFinalization;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A hook to reset internal details of the cache implementation.
  *
@@ -41,7 +43,8 @@ public final class Reset {
    * Tries to perform a garbage collection cycle that includes the processing of weak and soft
    * references.
    */
-  @SuppressWarnings("PMD.UnusedAssignment")
+  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
+  @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
   public static void awaitFullGc() {
     @Var var target = new Object();
     var cleaned = new CountDownLatch(1);
@@ -55,6 +58,7 @@ public final class Reset {
   }
 
   /** Forces the eviction jitter to be predictable. */
+  @SuppressFBWarnings("RFI_SET_ACCESSIBLE")
   @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   public static void resetThreadLocalRandom() {
     try {
@@ -73,6 +77,7 @@ public final class Reset {
   }
 
   /** Clears the internal state of the cache and becomes unusable. */
+  @SuppressFBWarnings("CWO_CLOSED_WITHOUT_OPENED")
   public static void destroy(Cache<?, ?> cache) {
     var local = (cache instanceof AbstractCacheView<?, ?>)
         ? ((AbstractCacheView<?, ?>) cache).asyncCache().cache()

@@ -49,6 +49,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -60,7 +62,7 @@ final class CaffeinatedGuavaTest {
     SerializableTester.reserialize(CaffeinatedGuava.build(
         Caffeine.newBuilder(), IdentityLoader.INSTANCE));
     SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder(),
-        CacheLoader.from((Serializable & Function<Object, Object>) key -> key)));
+        CacheLoader.from((Function<Object, Object> & Serializable) key -> key)));
   }
 
   @Test
@@ -270,6 +272,7 @@ final class CaffeinatedGuavaTest {
   }
 
   /** Returns {@code null} for use when testing null checks while satisfying null analysis tools. */
+  @SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
   @SuppressWarnings({"DataFlowIssue", "NullableProblems",
       "NullAway", "TypeParameterUnusedInFormals"})
   private static <T> @NonNull T nullRef() {

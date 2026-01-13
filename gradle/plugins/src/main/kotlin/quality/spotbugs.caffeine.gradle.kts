@@ -1,4 +1,4 @@
-@file:Suppress("PackageDirectoryMismatch")
+@file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 import com.github.spotbugs.snom.Confidence.LOW
 import com.github.spotbugs.snom.SpotBugsTask
 import com.github.spotbugs.snom.Effort.MAX
@@ -48,5 +48,13 @@ tasks.withType<SpotBugsTask>().configureEach {
     languageVersion = javaRuntimeVersion()
     implementation = java.toolchain.implementation
     nativeImageCapable = java.toolchain.nativeImageCapable
+  }
+
+  val runtimeVersion = javaRuntimeVersion().map { it.asInt() }
+  val javaVersion = java.toolchain.languageVersion.map { it.asInt() }
+  doFirst {
+    require(javaVersion.get() >= runtimeVersion.get()) {
+      "Requires Java ${runtimeVersion.get()} or higher (use -PjavaVersion=${runtimeVersion.get()})."
+    }
   }
 }

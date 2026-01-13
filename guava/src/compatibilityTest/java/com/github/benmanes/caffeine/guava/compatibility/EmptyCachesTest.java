@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -48,6 +50,8 @@ import junit.framework.TestCase;
  * @author mike nonemacher
  */
 @NullUnmarked
+@SuppressWarnings("all")
+@SuppressFBWarnings("PCAIL_POSSIBLE_CONSTANT_ALLOCATION_IN_LOOP")
 public class EmptyCachesTest extends TestCase {
 
   public void testEmpty() {

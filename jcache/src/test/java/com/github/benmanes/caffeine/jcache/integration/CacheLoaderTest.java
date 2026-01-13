@@ -42,6 +42,7 @@ import com.google.common.collect.Maps;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("NotNullFieldNotInitialized")
 public final class CacheLoaderTest extends AbstractJCacheTest {
   private CacheLoader<Integer, Integer> cacheLoader;
   private ExpiryPolicy expiry;

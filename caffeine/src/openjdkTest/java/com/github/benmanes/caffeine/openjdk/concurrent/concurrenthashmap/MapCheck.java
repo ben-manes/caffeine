@@ -58,15 +58,23 @@ import org.testng.util.RetryAnalyzerCount;
 import com.facebook.infer.annotation.SuppressLint;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 4486658
  * @run main/timeout=240 MapCheck
  * @summary Times and checks basic map operations
  */
-@SuppressWarnings({"BooleanLiteral", "CatchingUnchecked", "NonFinalStaticField", "NullAway",
+@SuppressWarnings({"all", "BooleanLiteral", "CatchingUnchecked", "NonFinalStaticField", "NullAway",
     "rawtypes", "resource", "SystemOut", "unchecked", "UnnecessarilyFullyQualified",
     "UnnecessaryParentheses", "unused", "Var", "Varifier"})
+@SuppressFBWarnings({"AI_ANNOTATION_ISSUES_NEEDS_NULLABLE", "DLS_DEAD_LOCAL_STORE",
+    "ICAST_INTEGER_MULTIPLY_CAST_TO_LONG", "IMC_IMMATURE_CLASS_PRINTSTACKTRACE",
+    "IMC_IMMATURE_CLASS_WRONG_FIELD_ORDER", "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE",
+    "IOI_USE_OF_FILE_STREAM_CONSTRUCTORS", "NCMU_NON_COLLECTION_METHOD_USE",
+    "OBJECT_DESERIALIZATION", "OS_OPEN_STREAM", "PMB_POSSIBLE_MEMORY_BLOAT",
+    "STT_STRING_PARSING_A_FIELD", "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"})
 public class MapCheck {
 
     static final int absentSize = 1 << 17;

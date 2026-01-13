@@ -36,7 +36,8 @@ import com.google.errorprone.annotations.Var;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings("ClassEscapesDefinedScope")
+@SuppressWarnings({"ClassEscapesDefinedScope",
+    "JavadocDeclaration", "NotNullFieldNotInitialized", "unused"})
 public class TimerWheelBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

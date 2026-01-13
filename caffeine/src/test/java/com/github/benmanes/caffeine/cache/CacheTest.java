@@ -102,6 +102,8 @@ import com.google.common.testing.EqualsTester;
 import com.google.common.testing.NullPointerTester;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The test cases for the {@link Cache} interface that simulate the most generic usages. These
  * tests do not validate eviction management, concurrency behavior, or the {@link Cache#asMap()}
@@ -341,6 +343,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void getAllPresent_jdk8186171(Cache<Object, Int> cache, CacheContext context) {
+    @SuppressFBWarnings("HE_HASHCODE_USE_OBJECT_EQUALS")
     @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
     final class Key {
       @Override public int hashCode() {
@@ -430,14 +433,14 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   public void getAll_immutable_result(Cache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.firstMiddleLastKeys(), bulkMappingFunction());
+    var result = cache.getAll(context.firstMiddleLastKeys(), CacheTest::bulkMapping);
     assertThrows(UnsupportedOperationException.class, result::clear);
   }
 
   @CacheSpec
   @Test(dataProvider = "caches")
   public void getAll_nullLookup(Cache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.firstMiddleLastKeys(), bulkMappingFunction());
+    var result = cache.getAll(context.firstMiddleLastKeys(), CacheTest::bulkMapping);
     assertThat(result.containsValue(null)).isFalse();
     assertThat(result.containsKey(null)).isFalse();
     assertThat(result.get(null)).isNull();
@@ -482,7 +485,7 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   public void getAll_absent(Cache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.absentKeys(), bulkMappingFunction());
+    var result = cache.getAll(context.absentKeys(), CacheTest::bulkMapping);
 
     int count = context.absentKeys().size();
     assertThat(result).hasSize(count);
@@ -497,7 +500,7 @@ public final class CacheTest {
     expect.put(context.firstKey(), context.firstKey().negate());
     expect.put(context.middleKey(), context.middleKey().negate());
     expect.put(context.lastKey(), context.lastKey().negate());
-    var result = cache.getAll(expect.keySet(), bulkMappingFunction());
+    var result = cache.getAll(expect.keySet(), CacheTest::bulkMapping);
 
     assertThat(result).containsExactlyEntriesIn(expect);
     assertThat(context).stats().hits(expect.size()).misses(0).success(0).failures(0);
@@ -507,7 +510,7 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void getAll_present_full(Cache<Int, Int> cache, CacheContext context) {
-    var result = cache.getAll(context.original().keySet(), bulkMappingFunction());
+    var result = cache.getAll(context.original().keySet(), CacheTest::bulkMapping);
     assertThat(result).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(result.size()).misses(0).success(0).failures(0);
   }
@@ -546,7 +549,7 @@ public final class CacheTest {
         Ints.saturatedCast(context.maximum().max() - context.initialSize())));
     var keys = Iterables.concat(absentKeys, absentKeys,
         context.original().keySet(), context.original().keySet());
-    var result = cache.getAll(keys, bulkMappingFunction());
+    var result = cache.getAll(keys, CacheTest::bulkMapping);
     assertThat(result).containsExactlyKeys(keys);
 
     long hits;
@@ -569,7 +572,7 @@ public final class CacheTest {
     var keys = new ArrayList<>(context.absentKeys());
     Collections.shuffle(keys);
 
-    var result = cache.getAll(keys, bulkMappingFunction());
+    var result = cache.getAll(keys, CacheTest::bulkMapping);
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
@@ -581,7 +584,7 @@ public final class CacheTest {
     keys.addAll(context.absentKeys());
     Collections.shuffle(keys);
 
-    var result = cache.getAll(keys, bulkMappingFunction());
+    var result = cache.getAll(keys, CacheTest::bulkMapping);
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
@@ -592,7 +595,7 @@ public final class CacheTest {
     var keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
 
-    var result = cache.getAll(keys, bulkMappingFunction());
+    var result = cache.getAll(keys, CacheTest::bulkMapping);
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
@@ -603,13 +606,14 @@ public final class CacheTest {
     keys.addAll(context.absentKeys());
     Collections.shuffle(keys);
 
-    var result = List.copyOf(cache.getAll(keys, bulkMappingFunction()).keySet());
+    var result = List.copyOf(cache.getAll(keys, CacheTest::bulkMapping).keySet());
     assertThat(result.subList(0, keys.size())).containsExactlyElementsIn(keys).inOrder();
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void getAll_jdk8186171(CacheContext context) {
+    @SuppressFBWarnings("HE_HASHCODE_USE_OBJECT_EQUALS")
     @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
     final class Key {
       @Override public int hashCode() {
@@ -631,13 +635,11 @@ public final class CacheTest {
     assertThat(result).containsExactly(key, value);
   }
 
-  static Function<Set<? extends Int>, ImmutableMap<Int, Int>> bulkMappingFunction() {
-    return keys -> {
-      ImmutableMap<Int, Int> result = keys.stream()
-          .collect(toImmutableMap(identity(), Int::negate));
-      CacheContext.interner().putAll(result);
-      return result;
-    };
+  private static ImmutableMap<Int, Int> bulkMapping(Set<? extends Int> keys) {
+    ImmutableMap<Int, Int> result = keys.stream()
+        .collect(toImmutableMap(identity(), Int::negate));
+    CacheContext.interner().putAll(result);
+    return result;
   }
 
   /* --------------- put --------------- */
@@ -828,8 +830,9 @@ public final class CacheTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void invalidateAll_empty(Cache<Int, Int> cache) {
+  public void invalidateAll_empty(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll(Set.of());
+    assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
   @Test(dataProvider = "caches")
@@ -894,8 +897,9 @@ public final class CacheTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void cleanUp(Cache<Int, Int> cache) {
+  public void cleanUp(Cache<Int, Int> cache, CacheContext context) {
     cache.cleanUp();
+    assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
   /* --------------- misc --------------- */
@@ -1156,6 +1160,11 @@ public final class CacheTest {
     assertThat(cache.policy().refreshes().get(null)).isNull();
   }
 
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
+  private static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
+    throw (E) throwable;
+  }
+
   /* --------------- Policy: CacheEntry --------------- */
 
   @Test
@@ -1188,10 +1197,5 @@ public final class CacheTest {
       }
     }
     tester.testEquals();
-  }
-
-  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
-  static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
-    throw (E) throwable;
   }
 }

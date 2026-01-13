@@ -1,5 +1,5 @@
 /** Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin */
-@file:Suppress("PackageDirectoryMismatch")
+@file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 import org.gradle.plugins.ide.eclipse.model.Classpath

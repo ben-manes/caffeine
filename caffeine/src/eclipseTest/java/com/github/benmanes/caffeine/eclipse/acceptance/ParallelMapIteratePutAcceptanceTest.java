@@ -33,12 +33,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Ported from Eclipse Collections 11.0.
  */
 @ParameterizedClass
 @MethodSource("caches")
-@SuppressWarnings({"ThreadPriorityCheck", "Var", "Varifier"})
+@SuppressFBWarnings({"DM_GC", "HES_LOCAL_EXECUTOR_SERVICE"})
+@SuppressWarnings({"all", "ThreadPriorityCheck", "Var", "Varifier"})
 final class ParallelMapIteratePutAcceptanceTest extends CaffeineMapAcceptanceTestCase {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ParallelMapIteratePutAcceptanceTest.class);

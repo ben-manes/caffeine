@@ -9,7 +9,7 @@ package com.github.benmanes.caffeine.jsr166;
 import java.util.Collection;
 
 /** Allows tests to work with different Collection implementations. */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings({"all", "rawtypes"})
 public interface CollectionImplementation {
     /** Returns the Collection class. */
     public Class<?> klazz();

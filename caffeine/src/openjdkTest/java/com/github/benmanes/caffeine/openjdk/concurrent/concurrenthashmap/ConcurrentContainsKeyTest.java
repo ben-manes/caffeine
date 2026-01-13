@@ -35,6 +35,8 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @test
  * @bug 8028564
@@ -43,8 +45,9 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * when entries are held within one bin that is a tree
  */
 @Test
-@SuppressWarnings({"AlmostJavadoc", "ClassNamedLikeTypeParameter", "EmptyCatch",
-  "IdentifierName", "InvalidBlockTag", "rawtypes", "StreamOfArray", "Varifier"})
+@SuppressWarnings({"all", "AlmostJavadoc", "ClassNamedLikeTypeParameter", "EmptyCatch",
+    "IdentifierName", "InvalidBlockTag", "rawtypes", "StreamOfArray", "Varifier"})
+@SuppressFBWarnings({"EQ_COMPARETO_USE_OBJECT_EQUALS", "HE_HASHCODE_USE_OBJECT_EQUALS"})
 public class ConcurrentContainsKeyTest {
 
     // The number of entries for each thread to place in a map

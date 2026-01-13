@@ -9,6 +9,8 @@
  */
 package com.github.benmanes.caffeine.eclipse.mutable;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A mutable sum which uses an int as the storage mechanism.
  *
@@ -16,6 +18,8 @@ package com.github.benmanes.caffeine.eclipse.mutable;
  */
 @Deprecated
 @SuppressWarnings({"all", "EqualsBrokenForNull", "EqualsUnsafeCast"})
+@SuppressFBWarnings({"BC_EQUALS_METHOD_SHOULD_WORK_FOR_ALL_OBJECTS",
+    "NP_EQUALS_SHOULD_HANDLE_NULL_ARGUMENT"})
 final class IntegerSum implements Sum {
   private static final long serialVersionUID = 1L;
 

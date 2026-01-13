@@ -37,6 +37,8 @@ import java.util.TreeMap;
 import java.util.spi.ToolProvider;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.node.AddConstructors;
 import com.github.benmanes.caffeine.cache.node.AddDeques;
 import com.github.benmanes.caffeine.cache.node.AddExpiration;
@@ -58,8 +60,6 @@ import com.palantir.javapoet.JavaFile;
 import com.palantir.javapoet.ParameterizedTypeName;
 import com.palantir.javapoet.TypeName;
 import com.palantir.javapoet.TypeSpec;
-
-import org.jspecify.annotations.Nullable;
 
 /**
  * Generates the cache entry's specialized type. These entries are optimized for the configuration

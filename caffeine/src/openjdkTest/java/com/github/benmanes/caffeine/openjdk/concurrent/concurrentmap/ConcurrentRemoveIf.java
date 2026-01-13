@@ -52,7 +52,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @summary Test removeIf on views of concurrent maps
  */
 @Test
-@SuppressWarnings({"CanonicalAnnotationSyntax",
+@SuppressWarnings({"all", "CanonicalAnnotationSyntax",
     "InterruptedExceptionSwallowed", "Varifier", "VoidMissingNullable"})
 public class ConcurrentRemoveIf {
     static final int K = 100;

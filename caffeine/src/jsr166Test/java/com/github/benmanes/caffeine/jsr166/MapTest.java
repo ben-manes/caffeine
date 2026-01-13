@@ -20,14 +20,17 @@ import org.jspecify.annotations.NullUnmarked;
 
 import com.facebook.infer.annotation.SuppressLint;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.Test;
 
 /**
  * Contains tests applicable to all Map implementations.
  */
 @NullUnmarked
-@SuppressWarnings({"rawtypes", "unchecked", "UnnecessaryFinal",
+@SuppressWarnings({"all", "rawtypes", "unchecked", "UnnecessaryFinal",
     "UnnecessaryParentheses", "Var", "Varifier"})
+@SuppressFBWarnings({"EQ_COMPARETO_USE_OBJECT_EQUALS", "HE_HASHCODE_USE_OBJECT_EQUALS",
+    "PSC_PRESIZE_COLLECTIONS", "THROWS_METHOD_THROWS_CLAUSE_THROWABLE", "WMI_WRONG_MAP_ITERATOR"})
 public class MapTest extends JSR166TestCase {
     final MapImplementation impl;
 

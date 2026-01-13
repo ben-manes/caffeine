@@ -46,6 +46,7 @@ public final class AdaptSizeTraceReader extends TextTraceReader {
   }
 
   @Override
+  @SuppressWarnings("UnstableApiUsage")
   public Stream<AccessEvent> events() {
     return lines()
         .map(line -> line.split(" ", 3))

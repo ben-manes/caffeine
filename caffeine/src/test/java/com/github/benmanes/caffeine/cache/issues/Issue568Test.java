@@ -91,6 +91,7 @@ public final class Issue568Test {
    * containing a non-null key, non-null value, and collected removal cause.
    */
   @Test
+  @SuppressWarnings("ExtractMethodRecommender")
   public void resurrect() throws InterruptedException {
     var error = new AtomicReference<@Nullable RuntimeException>();
     Cache<String, Object> cache = Caffeine.newBuilder()

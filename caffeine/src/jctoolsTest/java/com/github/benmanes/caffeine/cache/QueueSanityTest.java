@@ -27,11 +27,14 @@ import org.jctools.util.Pow2;
 import org.junit.Before;
 import org.junit.Test;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author nitsanw@yahoo.com (Nitsan Wakart)
  */
-@SuppressWarnings({"deprecation", "PMD.AbstractClassWithoutAbstractMethod",
-    "PreferJavaTimeOverload", "ThreadPriorityCheck", "Var", "Varifier"})
+@SuppressWarnings({"all", "deprecation", "PreferJavaTimeOverload",
+    "ThreadPriorityCheck", "Var", "Varifier"})
+@SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
 public abstract class QueueSanityTest {
   public static final int SIZE = 8192 * 2;
 

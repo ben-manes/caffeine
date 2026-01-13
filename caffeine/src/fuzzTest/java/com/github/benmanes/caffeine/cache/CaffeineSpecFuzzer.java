@@ -24,6 +24,7 @@ import com.code_intelligence.jazzer.mutation.annotation.NotNull;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings({"DefaultAnnotationParam", "NewClassNamingConvention"})
 final class CaffeineSpecFuzzer {
 
   // These tests require the environment variable JAZZER_FUZZ=1 to try new input arguments

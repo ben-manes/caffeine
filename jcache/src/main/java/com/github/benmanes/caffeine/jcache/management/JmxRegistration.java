@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache.management;
 
+import org.jspecify.annotations.Nullable;
+
 import static java.util.Locale.US;
 
 import java.lang.management.ManagementFactory;
@@ -105,7 +107,7 @@ public final class JmxRegistration {
   }
 
   /** Returns a sanitized string for use as a management bean name. */
-  static String sanitize(String name) {
+  static String sanitize(@Nullable String name) {
     return (name == null) ? "" : name.replaceAll("[,:=\n]", ".");
   }
 

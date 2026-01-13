@@ -35,6 +35,8 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The test cases for the implementation details of {@link UnboundedLocalCache}.
  *
@@ -67,14 +69,17 @@ public final class UnboundedLocalCacheTest {
     // again.
     var signal = new CompletableFuture<@Nullable Void>().orTimeout(10, TimeUnit.SECONDS);
     var cache = new UnboundedLocalCache<>(Caffeine.newBuilder(), /* isAsync= */ false);
-    ConcurrentTestHarness.timeTasks(10, () -> {
-      while (!signal.isDone()) {
-        try {
-          cache.refreshes = null;
-          assertThat(cache.refreshes()).isNotNull();
-        } catch (NullPointerException e) {
-          signal.complete(null);
-          return;
+    ConcurrentTestHarness.timeTasks(10, new Runnable() {
+      @SuppressFBWarnings("DCN_NULLPOINTER_EXCEPTION")
+      @Override public void run() {
+        while (!signal.isDone()) {
+          try {
+            cache.refreshes = null;
+            assertThat(cache.refreshes()).isNotNull();
+          } catch (NullPointerException e) {
+            signal.complete(null);
+            return;
+          }
         }
       }
     });

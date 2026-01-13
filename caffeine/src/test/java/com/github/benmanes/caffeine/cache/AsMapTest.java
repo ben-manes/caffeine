@@ -81,7 +81,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-import org.eclipse.collections.impl.factory.Sets;
 import org.jspecify.annotations.Nullable;
 import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
@@ -100,8 +99,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.testing.SerializableTester;
 import com.google.errorprone.annotations.Var;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * The test cases for the {@link Cache#asMap()} view and its serializability. These tests do not
@@ -1764,6 +1766,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("EC_NULL_ARG")
   @SuppressWarnings({"ConstantExpression", "ConstantValue"})
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void equals_null(Map<Int, Int> map) {
@@ -1893,6 +1896,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
   @SuppressWarnings("RedundantCollectionOperation")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void keySet_contains_absent(Map<Int, Int> map, CacheContext context) {
@@ -1901,6 +1905,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
   @SuppressWarnings("RedundantCollectionOperation")
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -3197,6 +3202,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_contains_nullKey(Map<Int, Int> map, CacheContext context) {
@@ -3206,6 +3212,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_contains_nullValue(Map<Int, Int> map, CacheContext context) {
@@ -3215,6 +3222,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_contains_absent(Map<Int, Int> map, CacheContext context) {
     var entry = Map.entry(context.absentKey(), context.absentValue());
@@ -3223,6 +3231,7 @@ public final class AsMapTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   public void entrySet_contains_present(Map<Int, Int> map, CacheContext context) {
@@ -3920,6 +3929,7 @@ public final class AsMapTest {
   }
 
   private static final class BrokenEquality {
+    @SuppressFBWarnings("EQ_ALWAYS_FALSE")
     @Override public boolean equals(Object o) {
       return false;
     }

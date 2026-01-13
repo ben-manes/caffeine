@@ -91,8 +91,8 @@ public final class DClockPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    @Nullable Node node = data.get(key);
     policyStats.recordOperation();
-    Node node = data.get(key);
     if (node == null) {
       onMiss(key);
     } else if (node.status == Status.NON_RESIDENT) {

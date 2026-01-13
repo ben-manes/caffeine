@@ -53,12 +53,8 @@ public final class OSGiTest {
 
   @Test
   public void sanity() {
-    var loader = new CacheLoader<Integer, Integer>() {
-      @Override public Integer load(Integer key) {
-        return -key;
-      }
-    };
-    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder(), loader);
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder(), CacheLoader.from(key -> -key));
     assertEquals(-1, cache.getUnchecked(1).intValue());
   }
 }

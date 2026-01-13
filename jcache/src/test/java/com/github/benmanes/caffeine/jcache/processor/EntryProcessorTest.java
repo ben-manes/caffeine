@@ -43,6 +43,8 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @author chrisstockton (Chris Stockton)
  * @author ben.manes@gmail.com (Ben Manes)
@@ -106,6 +108,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     assertThat(value).isNull();
   }
 
+  @SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
   private static Object process(MutableEntry<Integer, Integer> entry) {
     var value = 1 + firstNonNull(entry.getValue(), 0);
     entry.setValue(value);

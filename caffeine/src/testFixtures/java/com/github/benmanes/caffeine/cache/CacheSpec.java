@@ -291,21 +291,21 @@ public @interface CacheSpec {
       @SuppressWarnings("unchecked")
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
         return Expiry.creating(
-            (Serializable & BiFunction<K, V, Duration>) (k, v) -> expiryTime.duration());
+            (BiFunction<K, V, Duration> & Serializable) (k, v) -> expiryTime.duration());
       }
     },
     WRITE {
       @SuppressWarnings("unchecked")
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
         return Expiry.writing(
-            (Serializable & BiFunction<K, V, Duration>) (k, v) -> expiryTime.duration());
+            (BiFunction<K, V, Duration> & Serializable) (k, v) -> expiryTime.duration());
       }
     },
     ACCESS {
       @SuppressWarnings("unchecked")
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
         return Expiry.accessing(
-            (Serializable & BiFunction<K, V, Duration>) (k, v) -> expiryTime.duration());
+            (BiFunction<K, V, Duration> & Serializable) (k, v) -> expiryTime.duration());
       }
     };
 
@@ -750,12 +750,13 @@ public @interface CacheSpec {
           Int key, Executor executor) throws Exception {
         return loader.asyncLoad(key, executor);
       }
-      private Object readResolve() {
+      Object readResolve() {
         return requireNonNull(loader).asyncLoader;
       }
     }
 
-    private static final class BulkSerializableAsyncCacheLoader extends SerializableAsyncCacheLoader {
+    private static final class BulkSerializableAsyncCacheLoader
+        extends SerializableAsyncCacheLoader {
       private static final long serialVersionUID = 1L;
 
       BulkSerializableAsyncCacheLoader(Loader loader) {
@@ -797,13 +798,11 @@ public @interface CacheSpec {
     // Use with caution as may be unpredictable during tests if awaiting completion
     THREADED(() -> new TrackingExecutor(ConcurrentTestHarness.executor)),
     // Cache implementations must avoid corrupting internal state due to rejections
-    REJECTING(() -> {
-      return new TrackingExecutor(new ForkJoinPool() {
-        @Override public void execute(Runnable task) {
-          throw new RejectedExecutionException();
-        }
-      });
-    });
+    REJECTING(() -> new TrackingExecutor(new ForkJoinPool() {
+      @Override public void execute(Runnable task) {
+        throw new RejectedExecutionException();
+      }
+    }));
 
     private final Supplier<@Nullable TrackingExecutor> executor;
 

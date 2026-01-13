@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.eclipse.ConcurrentMapAdapter;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("all")
 abstract class CaffeineMapAcceptanceTestCase {
   @Parameter Supplier<Caffeine<Object, Object>> supplier;
 

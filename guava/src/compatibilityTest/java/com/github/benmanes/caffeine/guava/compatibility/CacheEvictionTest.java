@@ -33,6 +33,7 @@ import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.
 import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.TestCase;
 
 /**
@@ -41,6 +42,9 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
+@SuppressWarnings("all")
+@SuppressFBWarnings({"HE_HASHCODE_USE_OBJECT_EQUALS",
+    "LUI_USE_SINGLETON_LIST", "OCP_OVERLY_CONCRETE_PARAMETER"})
 public class CacheEvictionTest extends TestCase {
   static final int MAX_SIZE = 100;
 

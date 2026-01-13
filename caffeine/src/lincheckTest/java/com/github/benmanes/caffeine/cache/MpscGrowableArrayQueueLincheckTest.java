@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"JUnitClassModifiers", "PMD.JUnit5TestShouldBePackagePrivate"})
+@SuppressWarnings({"JUnitClassModifiers", "PMD.JUnit5TestShouldBePackagePrivate", "unused"})
 @Param(name = "element", gen = IntGen.class, conf = "1:5")
 public final class MpscGrowableArrayQueueLincheckTest {
   private final Queue<Integer> queue;

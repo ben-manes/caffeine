@@ -92,8 +92,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    @Var @Nullable Node node = data.get(key);
     policyStats.recordOperation();
-    @Var Node node = data.get(key);
     if (node == null) {
       node = new Node(key);
       data.put(key,node);

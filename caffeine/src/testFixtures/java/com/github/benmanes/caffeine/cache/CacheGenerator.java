@@ -142,6 +142,7 @@ public final class CacheGenerator {
   }
 
   /** Returns the set of options filtered if a specific type is specified. */
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private static <T extends Enum<T>> ImmutableSet<T> filterTypes(Optional<T> type, T[] options) {
     return type.isPresent()
         ? Sets.intersection(Sets.immutableEnumSet(Arrays.asList(options)),

@@ -96,8 +96,8 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    @Nullable Node node = data.get(key);
     policyStats.recordOperation();
-    Node node = data.get(key);
     admitter.record(key);
 
     if (node == null) {

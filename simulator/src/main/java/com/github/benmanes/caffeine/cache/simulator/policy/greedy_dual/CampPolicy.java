@@ -77,7 +77,7 @@ public final class CampPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    var node = data.get(event.key());
+    @Nullable Node node = data.get(event.key());
     requestCount++;
     if (node == null) {
       policyStats.recordWeightedMiss(event.weight());

@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.jspecify.annotations.Nullable;
 import org.openjdk.jcstress.annotations.Actor;
 import org.openjdk.jcstress.annotations.Expect;
@@ -57,6 +59,8 @@ public final class IntermittentNull {
   public static class Simple {
     private static final VarHandle VALUE;
 
+    @SuppressWarnings("CanBeFinal")
+    @SuppressFBWarnings("URF_UNREAD_FIELD")
     volatile Value value = new Value("ok");
 
     @Actor

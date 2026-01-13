@@ -45,20 +45,19 @@ import com.google.errorprone.annotations.Var;
  */
 @Test(groups = "isolated")
 public final class Solr10141Test {
-  static final int blocksInTest = 400;
-  static final int maxEntries = blocksInTest / 2;
-
-  static final int nThreads = 64;
-  static final int nReads = 10_000_000;
-  static final int readsPerThread = nReads / nThreads;
+  private static final int NUM_THREADS = 64;
+  private static final int BLOCKS_IN_TEST = 400;
+  private static final int NUM_READS = 10_000_000;
+  private static final int MAX_ENTRIES = BLOCKS_IN_TEST / 2;
+  private static final int READS_PER_THREAD = NUM_READS / NUM_THREADS;
 
   // odds (1 in N) of the next block operation being on the same block as the previous operation...
   // helps flush concurrency issues
-  static final int readLastBlockOdds = 10;
+  private static final int READ_LAST_BLOCK_ODDS = 10;
   // sometimes insert a new entry for the key even if one was found
-  static final boolean updateAnyway = true;
+  private static final boolean UPDATE_ANYWAY = true;
 
-  final Random rnd = new Random();
+  private final Random rnd = new Random();
 
   @Test
   public void eviction() {
@@ -79,16 +78,16 @@ public final class Solr10141Test {
     Cache<Long, Val> cache = Caffeine.newBuilder()
         .executor(ConcurrentTestHarness.executor)
         .removalListener(listener)
-        .maximumSize(maxEntries)
+        .maximumSize(MAX_ENTRIES)
         .build();
     var lastBlock = new AtomicLong();
     var maxObservedSize = new AtomicLong();
     var failed = new ConcurrentLinkedQueue<Throwable>();
-    ConcurrentTestHarness.timeTasks(nThreads, new Runnable() {
+    ConcurrentTestHarness.timeTasks(NUM_THREADS, new Runnable() {
       @Override public void run() {
         try {
           var r = new Random(rnd.nextLong());
-          for (int i = 0; i < readsPerThread; i++) {
+          for (int i = 0; i < READS_PER_THREAD; i++) {
             test(r);
           }
         } catch (Throwable e) {
@@ -97,8 +96,8 @@ public final class Solr10141Test {
       }
 
       void test(Random r) {
-        @Var long block = r.nextInt(blocksInTest);
-        if (readLastBlockOdds > 0 && r.nextInt(readLastBlockOdds) == 0) {
+        @Var long block = r.nextInt(BLOCKS_IN_TEST);
+        if (READ_LAST_BLOCK_ODDS > 0 && r.nextInt(READ_LAST_BLOCK_ODDS) == 0) {
           // some percent of the time, try to read the last block another
           block = lastBlock.get();
         }
@@ -112,7 +111,7 @@ public final class Solr10141Test {
           assertThat(k).isEqualTo(v.key);
         }
 
-        if ((v == null) || (updateAnyway && r.nextBoolean())) {
+        if ((v == null) || (UPDATE_ANYWAY && r.nextBoolean())) {
           v = new Val(k);
           cache.put(k, v);
           inserts.incrementAndGet();
@@ -130,7 +129,7 @@ public final class Solr10141Test {
 
     var message = String.format(US,
         "entries=%,d inserts=%,d removals=%,d hits=%,d maxEntries=%,d maxObservedSize=%,d%n",
-        cache.estimatedSize(), inserts.get(), removals.get(), hits.get(), maxEntries,
+        cache.estimatedSize(), inserts.get(), removals.get(), hits.get(), MAX_ENTRIES,
         maxObservedSize.get());
     assertWithMessage(message).that(failed).isEmpty();
   }
@@ -155,11 +154,11 @@ public final class Solr10141Test {
         .maximumSize(Integer.MAX_VALUE)
         .removalListener(listener)
         .build();
-    ConcurrentTestHarness.timeTasks(nThreads, new Runnable() {
+    ConcurrentTestHarness.timeTasks(NUM_THREADS, new Runnable() {
       @Override public void run() {
         try {
           var r = new Random(rnd.nextLong());
-          for (int i = 0; i < readsPerThread; i++) {
+          for (int i = 0; i < READS_PER_THREAD; i++) {
             test(r);
           }
         } catch (Throwable e) {
@@ -167,13 +166,13 @@ public final class Solr10141Test {
         }
       }
       void test(Random r) {
-        long k = r.nextInt(blocksInTest);
+        long k = r.nextInt(BLOCKS_IN_TEST);
         @Var Val v = cache.getIfPresent(k);
         if (v != null) {
           assertThat(k).isEqualTo(v.key);
         }
 
-        if ((v == null) || (updateAnyway && r.nextBoolean())) {
+        if ((v == null) || (UPDATE_ANYWAY && r.nextBoolean())) {
           v = new Val(k);
           cache.put(k, v);
           inserts.incrementAndGet();
@@ -190,9 +189,9 @@ public final class Solr10141Test {
     assertThat(failed).isEmpty();
   }
 
-  static final class Val {
-    final AtomicBoolean live;
-    final long key;
+  private static final class Val {
+    private final AtomicBoolean live;
+    private final long key;
 
     Val(long key) {
       this.live = new AtomicBoolean(true);

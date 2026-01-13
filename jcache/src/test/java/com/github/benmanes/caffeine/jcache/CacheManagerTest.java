@@ -53,6 +53,7 @@ import com.typesafe.config.ConfigFactory;
  * @author eiden (Christoffer Eide)
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("NotNullFieldNotInitialized")
 public final class CacheManagerTest {
   private static final String PROVIDER_NAME = CaffeineCachingProvider.class.getName();
 

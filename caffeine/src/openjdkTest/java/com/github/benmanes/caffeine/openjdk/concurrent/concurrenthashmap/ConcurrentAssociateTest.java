@@ -43,6 +43,8 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * @test
  * @bug 8028564
@@ -52,9 +54,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @modules java.management
  */
 @Test
-@SuppressWarnings({"ClassNamedLikeTypeParameter", "EmptyCatch", "IdentifierName",
+@SuppressWarnings({"all", "ClassNamedLikeTypeParameter", "EmptyCatch", "IdentifierName",
     "InterruptedExceptionSwallowed", "InvalidBlockTag", "rawtypes", "StreamOfArray", "SystemOut",
     "UnnecessaryFinal", "Var", "Varifier", "YodaCondition"})
+@SuppressFBWarnings({"HE_HASHCODE_USE_OBJECT_EQUALS", "THROWS_METHOD_THROWS_CLAUSE_THROWABLE"})
 public class ConcurrentAssociateTest {
 
     /** Maximum time (in seconds) to wait for a test method to complete. */

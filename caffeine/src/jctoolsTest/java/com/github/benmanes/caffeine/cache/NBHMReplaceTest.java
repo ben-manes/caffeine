@@ -13,7 +13,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 
@@ -22,11 +22,11 @@ public class NBHMReplaceTest {
 
   @Test
   public void replaceOnEmptyUnboundedMap() {
-    assertEquals(null, Caffeine.newBuilder().build().asMap().replace("k", "v"));
+    assertNull(Caffeine.newBuilder().build().asMap().replace("k", "v"));
   }
 
   @Test
   public void replaceOnEmptyBoundedMap() {
-    assertEquals(null, Caffeine.newBuilder().maximumSize(100).build().asMap().replace("k", "v"));
+    assertNull(Caffeine.newBuilder().maximumSize(100).build().asMap().replace("k", "v"));
   }
 }

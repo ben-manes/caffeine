@@ -64,6 +64,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.common.util.concurrent.Uninterruptibles;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.TestCase;
 
 /**
@@ -72,8 +73,10 @@ import junit.framework.TestCase;
  * @author mike nonemacher
  */
 @NullUnmarked
-@SuppressWarnings({"CacheLoaderNull", "PreferJavaTimeOverload",
-    "ThreadPriorityCheck", "Var", "Varifier"})
+@SuppressWarnings({"all", "CacheLoaderNull",
+    "PreferJavaTimeOverload", "ThreadPriorityCheck", "Var", "Varifier"})
+@SuppressFBWarnings({"AFBR_ABNORMAL_FINALLY_BLOCK_RETURN",
+    "LUI_USE_SINGLETON_LIST", "MOM_MISLEADING_OVERLOAD_MODEL", "UP_UNUSED_PARAMETER"})
 public class CacheLoadingTest extends TestCase {
   static final Logger logger = Logger.getLogger(
       "com.github.benmanes.caffeine.cache.BoundedLocalCache");

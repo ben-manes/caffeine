@@ -1538,6 +1538,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("RedundantCollectionOperation")
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1581,6 +1582,7 @@ public final class ExpirationTest {
 
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1596,6 +1598,7 @@ public final class ExpirationTest {
 
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1662,7 +1665,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @SuppressWarnings("CollectionUndefinedEquality")
+  @SuppressWarnings({"CollectionUndefinedEquality", "RedundantCollectionOperation"})
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1706,6 +1709,7 @@ public final class ExpirationTest {
 
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1721,6 +1725,7 @@ public final class ExpirationTest {
 
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1830,6 +1835,7 @@ public final class ExpirationTest {
 
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -1845,6 +1851,7 @@ public final class ExpirationTest {
 
   @CheckMaxLogLevel(WARN)
   @Test(dataProvider = "caches")
+  @SuppressWarnings("SimplifyStreamApiCallChains")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },

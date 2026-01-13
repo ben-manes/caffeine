@@ -902,11 +902,12 @@ public final class LinkedDequeTest {
     }
   }
 
-  static final class LinkedValue implements AccessOrder<LinkedValue>, WriteOrder<LinkedValue> {
-    final int value;
+  private static final class LinkedValue
+      implements AccessOrder<LinkedValue>, WriteOrder<LinkedValue> {
+    private final int value;
 
-    @Nullable LinkedValue prev;
-    @Nullable LinkedValue next;
+    private @Nullable LinkedValue prev;
+    private @Nullable LinkedValue next;
 
     LinkedValue(int value) {
       this.value = value;

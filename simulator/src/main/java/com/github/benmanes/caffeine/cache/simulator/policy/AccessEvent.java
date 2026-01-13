@@ -26,6 +26,8 @@ import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Immutable;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The key and metadata for accessing a cache.
  *
@@ -70,6 +72,7 @@ public class AccessEvent {
   }
 
   @Override
+  @SuppressFBWarnings("FE_FLOATING_POINT_EQUALITY")
   public boolean equals(@Nullable Object o) {
     return (o instanceof AccessEvent event)
         && (key() == event.key())
@@ -123,6 +126,7 @@ public class AccessEvent {
     }
   }
 
+  @SuppressFBWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
   private static final class WeightedAccessEvent extends AccessEvent {
     private final int weight;
 
@@ -136,6 +140,7 @@ public class AccessEvent {
     }
   }
 
+  @SuppressFBWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
   private static final class PenaltiesAccessEvent extends AccessEvent {
     private final double missPenalty;
     private final double hitPenalty;

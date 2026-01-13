@@ -9,12 +9,15 @@
  */
 package com.github.benmanes.caffeine.eclipse.acceptance;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.Serializable;
 
 /**
  * Ported from Eclipse Collections 11.0.
  */
-@SuppressWarnings({"EqualsGetClass", "IdentityConversion", "Varifier"})
+@SuppressFBWarnings("DM_BOXED_PRIMITIVE_FOR_COMPARE")
+@SuppressWarnings({"all", "EqualsGetClass", "IdentityConversion", "Varifier"})
 final class CollidingInt implements Serializable, Comparable<CollidingInt> {
   private static final long serialVersionUID = 1L;
   private final int value;

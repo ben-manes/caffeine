@@ -44,6 +44,7 @@ import com.github.benmanes.caffeine.cache.buffer.ReadBuffer;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
+@SuppressWarnings({"DefaultAnnotationParam", "NotNullFieldNotInitialized", "unused"})
 public class ReadBufferBenchmark {
 
   @Param BufferType bufferType;

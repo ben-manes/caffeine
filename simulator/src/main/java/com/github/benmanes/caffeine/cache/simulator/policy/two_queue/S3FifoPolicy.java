@@ -94,7 +94,7 @@ public final class S3FifoPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    @Var Node node;
+    @Var @Nullable Node node;
     if ((node = dataSmall.get(event.key())) != null) {
       onHit(event, node, change -> sizeSmall += change);
     } else if ((node = dataMain.get(event.key())) != null) {

@@ -42,8 +42,12 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-@SuppressWarnings({"MultiVariableDeclaration", "NonAtomicVolatileUpdate",
-  "NonFinalStaticField", "SystemOut"})
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
+@SuppressWarnings({"all", "MultiVariableDeclaration",
+    "NonAtomicVolatileUpdate", "NonFinalStaticField", "SystemOut"})
+@SuppressFBWarnings({"AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE",
+    "IMC_IMMATURE_CLASS_PRINTSTACKTRACE", "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE"})
 public class ConcurrentModification {
     static volatile int passed = 0, failed = 0;
 

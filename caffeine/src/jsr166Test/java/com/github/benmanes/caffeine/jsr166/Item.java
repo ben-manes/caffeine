@@ -5,12 +5,15 @@
  */
 package com.github.benmanes.caffeine.jsr166;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.util.Comparator;
 
 /**
  * A simple element class for collections etc
  */
-@SuppressWarnings({"NonOverridingEquals", "serial"})
+@SuppressWarnings({"all", "NonOverridingEquals", "serial"})
+@SuppressFBWarnings({"SE_COMPARATOR_SHOULD_BE_SERIALIZABLE", "SE_NO_SERIALVERSIONID"})
 public final class Item extends Number implements Comparable<Item> {
     public final int value;
     public Item(int v) { value = v; }

@@ -39,6 +39,8 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -50,8 +52,9 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @summary Map.Entry implementations need to comply with Map.Entry.hashCode() defined behaviour.
  * @author ngmr
  */
-@SuppressWarnings({"AlmostJavadoc", "ComparableType",
+@SuppressWarnings({"all", "AlmostJavadoc", "ComparableType",
     "JdkObsolete", "rawtypes", "unchecked", "Var"})
+@SuppressFBWarnings("EQ_COMPARETO_USE_OBJECT_EQUALS")
 public class EntryHashCode {
     private static final int TEST_SIZE = 100;
 

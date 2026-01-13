@@ -44,6 +44,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Shared utilities for multithreaded tests.
  *
@@ -79,6 +81,7 @@ public final class Threads {
     }
   }
 
+  @SuppressFBWarnings("CRLF_INJECTION_LOGS")
   public static void handleTimeout(Queue<String> failures, ExecutorService es, TimeoutException e) {
     for (var trace : Thread.getAllStackTraces().values()) {
       for (var element : trace) {

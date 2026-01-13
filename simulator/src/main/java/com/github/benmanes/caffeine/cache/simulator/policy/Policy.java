@@ -40,6 +40,7 @@ public interface Policy {
   PolicyStats stats();
 
   /** The policy's name. */
+  @SuppressWarnings("ConstantValue")
   default String name() {
     PolicySpec policySpec = getClass().getAnnotation(PolicySpec.class);
     if ((policySpec != null) && isNotBlank(policySpec.name())) {

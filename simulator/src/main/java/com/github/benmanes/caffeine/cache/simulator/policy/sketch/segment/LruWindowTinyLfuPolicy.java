@@ -83,8 +83,8 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    @Var @Nullable Node node = data.get(key);
     policyStats.recordOperation();
-    @Var Node node = data.get(key);
     admitter.record(key);
 
     if (node == null) {

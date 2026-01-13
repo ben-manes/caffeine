@@ -34,13 +34,16 @@ import com.github.benmanes.caffeine.testing.FutureSubject;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The test cases for the Javadoc external code snippets.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(groups = "isolated")
-@SuppressWarnings({"Convert2MethodRef", "PMD.LambdaCanBeMethodReference"})
+@SuppressWarnings({"Convert2MethodRef",
+    "NewClassNamingConvention", "PMD.LambdaCanBeMethodReference"})
 public final class Snippets {
 
   @Test
@@ -256,12 +259,14 @@ public final class Snippets {
     assertThat(tenYoungestKeys).isEmpty();
   }
 
+  @SuppressFBWarnings("UP_UNUSED_PARAMETER")
   @SuppressWarnings({"unused", "UnusedVariable"})
   private static CompletableFuture<ImmutableMap<? extends Key, Graph>> createExpensiveGraphsAsync(
       Set<? extends Key> keys, Executor executor) {
     return CompletableFuture.completedFuture(createExpensiveGraphs(keys));
   }
 
+  @SuppressFBWarnings("UP_UNUSED_PARAMETER")
   @SuppressWarnings({"unused", "UnusedVariable"})
   private static CompletableFuture<Graph> createExpensiveGraphAsync(Key key, Executor executor) {
     return CompletableFuture.completedFuture(Graph.INSTANCE);
@@ -271,24 +276,28 @@ public final class Snippets {
     return Maps.toMap(keys, key -> Graph.INSTANCE);
   }
 
+  @SuppressFBWarnings("UP_UNUSED_PARAMETER")
   @SuppressWarnings({"unused", "UnusedVariable"})
   private static Graph createExpensiveGraph(Key key) {
     return Graph.INSTANCE;
   }
 
   @SuppressWarnings("ClassNamedLikeTypeParameter")
-  enum K { INSTANCE }
+  private enum K { INSTANCE }
 
-  enum Key { INSTANCE }
+  private enum Key { INSTANCE }
 
-  enum Graph { INSTANCE;
-    public OffsetDateTime createdOn() {
+  @SuppressWarnings("MethodCanBeStatic")
+  private enum Graph {
+    INSTANCE;
+
+    private OffsetDateTime createdOn() {
       return OffsetDateTime.MIN;
     }
-    public OffsetDateTime modifiedOn() {
+    private OffsetDateTime modifiedOn() {
       return OffsetDateTime.MIN;
     }
-    public boolean isDirected() {
+    private boolean isDirected() {
       return true;
     }
   }

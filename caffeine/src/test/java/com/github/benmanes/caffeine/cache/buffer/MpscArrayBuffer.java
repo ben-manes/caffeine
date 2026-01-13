@@ -22,9 +22,9 @@ import org.jctools.queues.atomic.MpscAtomicArrayQueue;
  */
 @SuppressWarnings("PMD.LooseCoupling")
 final class MpscArrayBuffer<E> extends ReadBuffer<E> {
-  final MpscAtomicArrayQueue<E> queue;
+  private final MpscAtomicArrayQueue<E> queue;
 
-  long reads;
+  private long reads;
 
   MpscArrayBuffer() {
     queue = new MpscAtomicArrayQueue<>(BUFFER_SIZE);

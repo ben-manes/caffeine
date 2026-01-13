@@ -36,6 +36,8 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /*
  * @test
  * @bug 6612102
@@ -49,9 +51,12 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  *
  * It would be good to add more "Lockstep-style" tests to this file.
  */
-@SuppressWarnings({"MultiVariableDeclaration", "NonAtomicVolatileUpdate", "NonAtomicVolatileUpdate",
-    "rawtypes", "RedundantStringConversion", "SequencedCollectionGetFirst",
-    "SequencedCollectionGetLast", "SystemOut", "unchecked", "UnnecessaryFinal", "Var", "Varifier"})
+@SuppressWarnings({"all", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
+    "NonAtomicVolatileUpdate", "rawtypes", "RedundantStringConversion",
+    "SequencedCollectionGetFirst", "SequencedCollectionGetLast", "SystemOut",
+    "unchecked", "UnnecessaryFinal", "Var", "Varifier"})
+@SuppressFBWarnings({"AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE", "VO_VOLATILE_INCREMENT",
+    "IMC_IMMATURE_CLASS_PRINTSTACKTRACE", "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE"})
 public class LockStep {
     void mapsEqual(Map m1, Map m2) {
         equal(m1, m2);

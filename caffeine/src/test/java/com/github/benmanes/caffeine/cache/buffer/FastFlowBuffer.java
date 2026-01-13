@@ -27,9 +27,9 @@ import com.google.errorprone.annotations.Var;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
-  static final VarHandle BUFFER = MethodHandles.arrayElementVarHandle(Object[].class);
+  private static final VarHandle BUFFER = MethodHandles.arrayElementVarHandle(Object[].class);
 
-  final Object[] buffer;
+  private final Object[] buffer;
 
   public FastFlowBuffer() {
     buffer = new Object[BUFFER_SIZE];
@@ -97,6 +97,7 @@ final class FastFlowHeader {
 
   private FastFlowHeader() {}
 
+  @SuppressWarnings("unused")
   abstract static class PadReadCache<E> extends ReadBuffer<E> {
     byte p000, p001, p002, p003, p004, p005, p006, p007;
     byte p008, p009, p010, p011, p012, p013, p014, p015;
@@ -120,6 +121,7 @@ final class FastFlowHeader {
     volatile long readCache;
   }
 
+  @SuppressWarnings("unused")
   abstract static class PadReadCounter<E> extends ReadCacheRef<E> {
     byte p120, p121, p122, p123, p124, p125, p126, p127;
     byte p128, p129, p130, p131, p132, p133, p134, p135;
@@ -143,6 +145,7 @@ final class FastFlowHeader {
     volatile long readCounter;
   }
 
+  @SuppressWarnings("unused")
   abstract static class PadWriteCounter<E> extends ReadCounterRef<E> {
     byte p240, p241, p242, p243, p244, p245, p246, p247;
     byte p248, p249, p250, p251, p252, p253, p254, p255;

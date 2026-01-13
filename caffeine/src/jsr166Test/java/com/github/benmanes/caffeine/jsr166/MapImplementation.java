@@ -9,7 +9,7 @@ package com.github.benmanes.caffeine.jsr166;
 import java.util.Map;
 
 /** Allows tests to work with different Map implementations. */
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"all", "rawtypes", "unchecked"})
 public interface MapImplementation {
     /** Returns the Map implementation class. */
     public Class<?> klazz();

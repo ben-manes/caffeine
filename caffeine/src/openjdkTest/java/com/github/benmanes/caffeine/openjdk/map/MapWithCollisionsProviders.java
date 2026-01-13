@@ -36,9 +36,13 @@ import org.testng.annotations.DataProvider;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-@SuppressWarnings({"CanIgnoreReturnValueSuggester", "DirectReturn", "DoubleBraceInitialization",
-    "MixedArrayDimensions", "PreferredInterfaceType", "serial", "UnusedVariable", "Var", "Varifier",
-    "YodaCondition"})
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
+@SuppressWarnings({"all", "CanIgnoreReturnValueSuggester", "DirectReturn",
+    "DoubleBraceInitialization", "MixedArrayDimensions", "PreferredInterfaceType",
+    "serial", "UnusedVariable", "Var", "Varifier", "YodaCondition"})
+@SuppressFBWarnings({"IMC_IMMATURE_CLASS_COLLECTION_RETURN",
+    "NAB_NEEDLESS_BOXING_PARSE", "UP_UNUSED_PARAMETER"})
 public class MapWithCollisionsProviders {
 
     private static final int TEST_SIZE

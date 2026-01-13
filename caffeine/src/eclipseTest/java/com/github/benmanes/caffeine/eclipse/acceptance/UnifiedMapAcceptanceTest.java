@@ -37,13 +37,17 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Ported from Eclipse Collections 11.0.
  */
 @ParameterizedClass
 @MethodSource("caches")
-@SuppressWarnings({"CatchFail", "deprecation", "rawtypes",
+@SuppressWarnings({"all", "CatchFail", "deprecation", "rawtypes",
     "ThreadPriorityCheck", "unchecked", "Var", "Varifier"})
+@SuppressFBWarnings({"CRLF_INJECTION_LOGS", "CVAA_CONTRAVARIANT_ELEMENT_ASSIGNMENT",
+    "DLS_DEAD_LOCAL_STORE_OF_NULL", "PSC_PRESIZE_COLLECTIONS"})
 final class UnifiedMapAcceptanceTest extends CaffeineMapAcceptanceTestCase {
   private static final Logger LOGGER = LoggerFactory.getLogger(UnifiedMapAcceptanceTest.class);
 

@@ -20,6 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.math.IntMath;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A probabilistic multiset for estimating the popularity of an element within a time window. The
  * maximum frequency of an element is limited to 15 (4-bits) and an aging process periodically
@@ -27,6 +29,8 @@ import com.google.errorprone.annotations.Var;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressFBWarnings("UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR")
+@SuppressWarnings({"ConstantValue", "NotNullFieldNotInitialized"})
 public final class CountMinSketch<E> {
 
   /*

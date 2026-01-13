@@ -25,13 +25,17 @@ import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
 import com.google.common.cache.RemovalNotification;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Utility {@link RemovalListener} implementations intended for use in testing.
  *
  * @author mike nonemacher
  */
 @NullUnmarked
+@SuppressWarnings("all")
 @GwtCompatible(emulated = true)
+@SuppressFBWarnings("UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR")
 class TestingRemovalListeners {
 
   private TestingRemovalListeners() {}

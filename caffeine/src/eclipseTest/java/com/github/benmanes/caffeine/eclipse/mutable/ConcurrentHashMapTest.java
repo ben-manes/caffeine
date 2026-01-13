@@ -47,6 +47,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * JUnit test for {@link ConcurrentHashMap}.
  *
@@ -55,6 +57,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @NullUnmarked
 @ParameterizedClass
 @MethodSource("caches")
+@SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC_ANON")
 @SuppressWarnings({"all", "CanIgnoreReturnValueSuggester",
     "ExplicitArrayForVarargs", "IdentityConversion", "unchecked"})
 final class ConcurrentHashMapTest extends ConcurrentHashMapTestCase {

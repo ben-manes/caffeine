@@ -22,12 +22,10 @@ import static com.google.common.util.concurrent.MoreExecutors.shutdownAndAwaitTe
 
 import java.time.Duration;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -46,37 +44,39 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
 public final class Issue412Test {
   private static final int NUM_THREADS = 5;
 
-  private Cache<Integer, Boolean> cache;
-  private ExecutorService executor;
-  private AtomicBoolean collected;
-  private Integer[] ints;
-  private Random random;
+  private final Integer[] ints;
+  private final Random random;
 
-  @BeforeMethod
-  public void before() {
-    executor = Executors.newCachedThreadPool(DAEMON_FACTORY);
-    collected = new AtomicBoolean();
-    cache = Caffeine.newBuilder()
-        .expireAfterWrite(Duration.ofNanos(10))
-        .removalListener((k, v, cause) -> {
-          if (cause == RemovalCause.COLLECTED) {
-            collected.set(true);
-          }
-        })
-        .executor(executor)
-        .build();
+  public Issue412Test() {
     ints = generateSequence();
     random = new Random();
   }
 
   @Test
   public void expire_remove() {
-    timeTasks(NUM_THREADS, this::addRemoveAndExpire);
-    shutdownAndAwaitTermination(executor, 1, TimeUnit.MINUTES);
-    assertThat(collected.get()).isFalse();
+    @SuppressWarnings("PMD.CloseResource")
+    var executor = Executors.newCachedThreadPool(DAEMON_FACTORY);
+    try {
+      var collected = new AtomicBoolean();
+      Cache<Integer, Boolean> cache = Caffeine.newBuilder()
+          .expireAfterWrite(Duration.ofNanos(10))
+          .removalListener((k, v, cause) -> {
+            if (cause == RemovalCause.COLLECTED) {
+              collected.set(true);
+            }
+          })
+          .executor(executor)
+          .build();
+
+      timeTasks(NUM_THREADS, () -> addRemoveAndExpire(cache));
+      shutdownAndAwaitTermination(executor, 1, TimeUnit.MINUTES);
+      assertThat(collected.get()).isFalse();
+    } finally {
+      executor.shutdownNow();
+    }
   }
 
-  private void addRemoveAndExpire() {
+  private void addRemoveAndExpire(Cache<Integer, Boolean> cache) {
     int mask = (ints.length - 1);
     @Var int index = random.nextInt();
     for (int i = 0; i < (10 * ints.length); i++) {
