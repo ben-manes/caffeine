@@ -40,7 +40,6 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(groups = "isolated")
 public final class Issue412Test {
   private static final int NUM_THREADS = 5;
 

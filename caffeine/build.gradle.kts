@@ -1,6 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 import com.google.common.base.CaseFormat
-import com.google.common.collect.Sets
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
@@ -168,6 +167,8 @@ tasks.named<JavaCompile>("compileJmhJava").configure {
 
 testing.suites {
   named<JvmTestSuite>("test") {
+    useTestNG(libs.versions.testng)
+
     dependencies {
       implementation(libs.ycsb) {
         isTransitive = false
@@ -195,51 +196,27 @@ testing.suites {
     targets {
       named("test") {
         testTask.configure {
-          maxHeapSize = "3g"
-          useTestNG {
-            includeGroups("isolated")
-          }
-        }
-      }
-      all {
-        useTestNG(libs.versions.testng)
-
-        testTask.configure {
-          testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs })
-          classpath = files(
-            sourceSets.named("test").map { it.runtimeClasspath },
+          classpath = files(sourceSets.named("test").map { it.runtimeClasspath },
             sourceSets.named("codeGen").map { it.runtimeClasspath })
-        }
-      }
-      for (scenario in Scenario.all()) {
-        scenario.apply {
-          targets.register(testName()) {
-            testTask.configure {
-              group = "Parameterized Test"
-              include("com/github/benmanes/caffeine/cache/**")
+          testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs })
+          maxParallelForks = Runtime.getRuntime().availableProcessors()
+          jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
+            "--add-opens", "java.base/java.lang=ALL-UNNAMED")
 
-              systemProperties(
-                "keys" to keys,
-                "stats" to stats,
-                "values" to values,
-                "compute" to compute,
-                "implementation" to implementation)
-              jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
-                "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-                "-XX:-ExplicitGCInvokesConcurrent")
-              if (slow == Slow.Enabled) {
-                maxParallelForks = Runtime.getRuntime().availableProcessors()
-                useTestNG {
-                  includeGroups.add("slow")
-                }
-              } else {
-                useTestNG {
-                  parallel = "methods"
-                  excludeGroups("slow", "isolated")
-                  threadCount = Runtime.getRuntime().availableProcessors()
-                }
-              }
-            }
+          val testOptions = listOf("implementation", "compute", "keys", "values", "stats")
+            .associateWith { providers.gradleProperty(it) }
+          inputs.properties(testOptions.filterValues { it.isPresent })
+          systemProperties(testOptions.mapValues { it.value.orNull })
+
+          var shardingOptions = mapOf(
+            "shardCount" to providers.gradleProperty("shardCount")
+              .map { it.toIntOrNull() }.getOrElse(1).coerceAtLeast(1),
+            "shardIndex" to providers.gradleProperty("shardIndex")
+              .map { it.toIntOrNull() }.getOrElse(0))
+          inputs.properties(shardingOptions)
+          systemProperties(shardingOptions)
+          useTestNG {
+            listeners.add("com.github.benmanes.caffeine.cache.ShardingMethodInterceptor")
           }
         }
       }
@@ -568,57 +545,3 @@ abstract class Stress : JavaExec() {
     }
   }
 }
-
-data class Scenario(val implementation: Implementation,
-                    val keys: KeyStrength, val values: ValueStrength,
-                    val stats: Stats, val compute: Compute, val slow: Slow) {
-  companion object {
-    fun all(): List<Scenario> {
-      return Sets.cartesianProduct(
-        Slow.entries.toSet(),
-        Stats.entries.toSet(),
-        Compute.entries.toSet(),
-        KeyStrength.entries.toSet(),
-        ValueStrength.entries.toSet(),
-        Implementation.entries.toSet(),
-      ).map { features ->
-        Scenario(
-          slow = features[0] as Slow,
-          stats = features[1] as Stats,
-          compute = features[2] as Compute,
-          keys = features[3] as KeyStrength,
-          values = features[4] as ValueStrength,
-          implementation = features[5] as Implementation)
-      }.filter { it.isValid() }
-    }
-  }
-
-  fun testName(): String = buildString {
-    append(keys.name.lowercase()).append("Keys")
-    append("And").append(values).append("Values")
-    if (stats == Stats.Enabled) {
-      append("Stats")
-    }
-    append(compute)
-    append(implementation)
-    if (slow == Slow.Enabled) {
-      append("Slow")
-    }
-    append("Test")
-  }
-
-  fun isValid(): Boolean {
-    val guavaIncompatible = (implementation == Implementation.Guava) && (compute == Compute.Async)
-    val asyncIncompatible = (compute == Compute.Async) && (values != ValueStrength.Strong)
-    val noSlowTests = (slow == Slow.Enabled)
-      && (keys == KeyStrength.Strong) && (values == ValueStrength.Strong)
-    return !guavaIncompatible && !asyncIncompatible && !noSlowTests
-  }
-}
-
-enum class Implementation { Caffeine, Guava }
-enum class ValueStrength { Strong, Weak, Soft }
-enum class KeyStrength { Strong, Weak }
-enum class Stats { Enabled, Disabled }
-enum class Slow { Enabled, Disabled }
-enum class Compute { Async, Sync }

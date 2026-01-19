@@ -57,7 +57,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @author yurgis2
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(groups = "isolated")
 @Listeners(CacheValidationListener.class)
 public final class Issue30Test {
   private static final boolean DEBUG = false;

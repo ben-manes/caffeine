@@ -220,8 +220,8 @@ public final class BoundedLocalCacheTest {
     assertThat(cache).hasSize(context.initialSize());
   }
 
+  @Test(dataProvider = "caches")
   @SuppressWarnings("StatementWithEmptyBody")
-  @Test(dataProvider = "caches", groups = "slow")
   @CacheSpec(loader = Loader.IDENTITY, population = Population.FULL,
       keys = ReferenceType.WEAK, removalListener = Listener.MOCKITO)
   public void clear_pendingWrites_weakKeys(
@@ -1315,7 +1315,7 @@ public final class BoundedLocalCacheTest {
     assertThat(100.0 * allow / (allow + reject)).isIn(Range.open(0.2, 2.0));
   }
 
-  @Test(groups = "isolated")
+  @Test
   public void evict_update() {
     Int key = Int.valueOf(0);
     Int oldValue = Int.valueOf(1);
@@ -2174,7 +2174,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches", groups = "isolated")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       refreshAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED,
@@ -3264,7 +3264,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches", groups = "isolated")
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
@@ -3470,7 +3470,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches", groups = "isolated")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
       compute = Compute.ASYNC, stats = Stats.DISABLED)
   public void refresh_startReloadBeforeLoadCompletion(CacheContext context) {
@@ -3741,7 +3741,7 @@ public final class BoundedLocalCacheTest {
         /* cacheLoader= */ null, /* isAsync= */ false));
   }
 
-  @Test(groups = "isolated")
+  @Test
   public void cacheFactory_exception() throws Throwable {
     try {
       LocalCacheFactory factory = Mockito.mock();
@@ -3758,7 +3758,7 @@ public final class BoundedLocalCacheTest {
     }
   }
 
-  @Test(groups = "isolated")
+  @Test
   public void cacheFactory_error() throws Throwable {
     try {
       LocalCacheFactory factory = Mockito.mock();

@@ -24,12 +24,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import org.testng.annotations.DataProvider;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.Var;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * A data provider that generates caches based on the test method's parameters and the

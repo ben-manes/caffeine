@@ -43,7 +43,6 @@ import com.google.errorprone.annotations.Var;
  * @author yseeley@gmail.com (Yonik Seeley)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(groups = "isolated")
 public final class Solr10141Test {
   private static final int NUM_THREADS = 64;
   private static final int BLOCKS_IN_TEST = 400;

@@ -1599,7 +1599,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
-  @Test(dataProvider = "caches", groups = "isolated")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
   public void putIfAbsent_incomplete_null(AsyncCache<Int, @Nullable Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {

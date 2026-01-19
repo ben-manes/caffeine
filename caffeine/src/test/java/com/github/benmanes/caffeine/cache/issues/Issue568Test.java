@@ -33,7 +33,6 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
  *
  * @author jhorvitz@google.com (Justin Horvitz)
  */
-@Test(groups = "isolated")
 public final class Issue568Test {
 
   /**

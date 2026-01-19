@@ -90,7 +90,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @CheckMaxLogLevel(TRACE)
 @Listeners(CacheValidationListener.class)
-@Test(groups = "slow", dataProviderClass = CacheProvider.class)
+@Test(dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
 
   // These tests require that the JVM uses a garbage collection algorithm that can immediately
@@ -1170,7 +1170,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void iterators(Map<Int, Int> map, CacheContext context) {
     context.clear();
     retry(() -> {
@@ -1207,7 +1210,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void keySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
     awaitFullGc();
@@ -1215,7 +1221,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
     awaitFullGc();
@@ -1224,8 +1233,11 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @SuppressWarnings("SimplifyStreamApiCallChains")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
-      implementation = Implementation.Caffeine)
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void keyStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     retry(() -> {
@@ -1237,7 +1249,10 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @SuppressWarnings("SimplifyStreamApiCallChains")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void keyStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
     retry(() -> {
@@ -1273,7 +1288,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void valueSpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
     awaitFullGc();
@@ -1281,7 +1299,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
     awaitFullGc();
@@ -1290,8 +1311,11 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @SuppressWarnings("SimplifyStreamApiCallChains")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
-      implementation = Implementation.Caffeine)
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void valueStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     retry(() -> {
@@ -1303,7 +1327,10 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @SuppressWarnings("SimplifyStreamApiCallChains")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void valueStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
     retry(() -> {
@@ -1358,7 +1385,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void entrySet_equals(Map<Int, Int> map, CacheContext context) {
     var expected = context.absent();
     map.putAll(expected);
@@ -1374,7 +1404,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void entrySpliterator_forEachRemaining(Map<Int, Int> map, CacheContext context) {
     context.clear();
     awaitFullGc();
@@ -1382,7 +1415,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void entrySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     context.clear();
     awaitFullGc();
@@ -1391,8 +1427,11 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @SuppressWarnings("SimplifyStreamApiCallChains")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
-      implementation = Implementation.Caffeine)
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void entryStream_toArray(Map<Int, Int> map, CacheContext context) {
     context.clear();
     retry(() -> {
@@ -1404,7 +1443,10 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @SuppressWarnings("SimplifyStreamApiCallChains")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void entryStream_toArray_async(AsyncCache<Int, Int> cache, CacheContext context) {
     context.clear();
     retry(() -> {
@@ -1415,7 +1457,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void equals(Map<Int, Int> map, CacheContext context) {
     var expected = context.absent();
     map.putAll(expected);
@@ -1432,7 +1477,10 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, requiresWeakOrSoft = true)
+      population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void equals_cleanUp(Map<Int, Int> map, CacheContext context) {
     var copy = context.original().entrySet().stream().collect(toImmutableMap(
         entry -> new Int(entry.getKey()), entry -> new Int(entry.getValue())));
@@ -1446,7 +1494,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void hashCode(Map<Int, Int> map, CacheContext context) {
     var expected = context.absent();
     map.putAll(expected);
@@ -1460,7 +1511,10 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true)
+  @CacheSpec(population = Population.FULL, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      stats = Stats.ENABLED, removalListener = Listener.DISABLED)
   public void toString(Map<Int, Int> map, CacheContext context) {
     var expected = context.absent();
     map.putAll(expected);

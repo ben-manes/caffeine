@@ -15,13 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.google.common.base.Preconditions.checkState;
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.math.NumberUtils.toInt;
 
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.Strings;
 
@@ -44,6 +44,9 @@ final class Options {
   private final Optional<ReferenceType> keys;
   private final Optional<Compute> compute;
   private final Optional<Stats> stats;
+  private final boolean isFiltered;
+  private final int shardCount;
+  private final int shardIndex;
 
   private Options(Properties properties) {
     implementation = option(Implementation.class, "implementation", properties);
@@ -51,9 +54,10 @@ final class Options {
     compute = option(Compute.class, "compute", properties);
     keys = option(ReferenceType.class, "keys", properties);
     stats = option(Stats.class, "stats", properties);
-    var settings = List.of(implementation, compute, keys, values, stats);
-    checkState(settings.stream().allMatch(Optional::isEmpty)
-        || settings.stream().allMatch(Optional::isPresent), "Inconsistent settings: %s", settings);
+    shardIndex = toInt(System.getProperty("shardIndex"), 0);
+    shardCount = Math.max(toInt(System.getProperty("shardCount"), 1), 1);
+    isFiltered = Stream.of(implementation, compute, keys, values, stats)
+        .anyMatch(Optional::isPresent);
   }
 
   private static <T extends Enum<T>> Optional<T> option(
@@ -75,28 +79,43 @@ final class Options {
     return SYSTEM_PROPERTY_OPTIONS;
   }
 
-  /** The implementation, or all if unset. */
-  Optional<Implementation> implementation() {
+  /** Returns the implementation filter, or all if unset. */
+  public Optional<Implementation> implementation() {
     return implementation;
   }
 
-  /** The reference type, or all if unset. */
-  Optional<ReferenceType> keys() {
+  /** Returns the key reference type filter, or all if unset. */
+  public Optional<ReferenceType> keys() {
     return keys;
   }
 
-  /** The reference type, or all if unset. */
-  Optional<ReferenceType> values() {
+  /** Returns the value reference type filter, or all if unset. */
+  public Optional<ReferenceType> values() {
     return values;
   }
 
-  /** The computation type, or all if unset. */
-  Optional<Compute> compute() {
+  /** Returns the computation type filter, or all if unset. */
+  public Optional<Compute> compute() {
     return compute;
   }
 
-  /** The statistics type, or all if unset. */
-  Optional<Stats> stats() {
+  /** Returns the statistics type filter, or all if unset. */
+  public Optional<Stats> stats() {
     return stats;
+  }
+
+  /** Returns if any filters are applied. */
+  public boolean isFiltered() {
+    return isFiltered;
+  }
+
+  /** Returns the total number of shards. */
+  public int shardCount() {
+    return shardCount;
+  }
+
+  /** Returns this shard's index. */
+  public int shardIndex() {
+    return shardIndex;
   }
 }

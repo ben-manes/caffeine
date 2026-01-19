@@ -45,7 +45,6 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(groups = "isolated")
 public final class Issue298Test {
   private static final long EXPIRE_NS = Duration.ofDays(1).toNanos();
 

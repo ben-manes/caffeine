@@ -65,7 +65,7 @@ public final class FrequencySketchTest {
     assertThat(sketch.blockMask).isEqualTo(((2 * size) >> 3) - 1);
   }
 
-  @Test(dataProvider = "sketch", groups = "isolated")
+  @Test(dataProvider = "sketch")
   public void ensureCapacity_maximum(FrequencySketch sketch) {
     int size = Integer.MAX_VALUE / 10 + 1;
     sketch.ensureCapacity(size);

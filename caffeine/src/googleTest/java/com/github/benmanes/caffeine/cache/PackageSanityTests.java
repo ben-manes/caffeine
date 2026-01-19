@@ -27,8 +27,8 @@ import com.google.common.testing.AbstractPackageSanityTests;
 public final class PackageSanityTests extends AbstractPackageSanityTests {
 
   public PackageSanityTests() {
-    var ignore = Set.of("Benchmark", "Context", "CacheValidationListener",
-        "Generator", "Spec", "Specifications", "Stresser", "Subject", "Test");
+    var ignore = Set.of("Benchmark", "CacheValidationListener", "Context", "Generator",
+        "ShardingMethodInterceptor", "Spec", "Specifications", "Stresser", "Subject", "Test");
 
     publicApiOnly();
     setDefault(CacheLoader.class, key -> key);

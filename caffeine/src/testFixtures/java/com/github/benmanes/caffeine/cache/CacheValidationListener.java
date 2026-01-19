@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
@@ -133,7 +134,15 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
         .filter(CacheContext.class::isInstance)
         .findFirst().map(CacheContext.class::cast)
         .orElse(null);
-    if (context != null) {
+    if (context == null) {
+      for (var param : testResult.getParameters()) {
+        if (param instanceof Cache<?, ?>) {
+          assertThat((Cache<?, ?>) param).isValid();
+        } else if (param instanceof AsyncCache<?, ?>) {
+          assertThat((AsyncCache<?, ?>) param).isValid();
+        }
+      }
+    } else {
       awaitExecutor(context);
 
       checkNoStats(testResult, context);

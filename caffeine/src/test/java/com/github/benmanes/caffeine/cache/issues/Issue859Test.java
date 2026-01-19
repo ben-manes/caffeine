@@ -20,14 +20,14 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.google.common.util.concurrent.Uninterruptibles;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Issue #859: Removal listener not called (due to no activity and pending work in write buffer)
@@ -41,7 +41,6 @@ import com.google.common.util.concurrent.Uninterruptibles;
  * @author mario-schwede-hivemq (Mario Schwede)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(groups = "isolated")
 public final class Issue859Test {
   private static final int NUMBER_OF_RUNS = 100_000;
   private static final int NUMBER_OF_KEYS = 10;

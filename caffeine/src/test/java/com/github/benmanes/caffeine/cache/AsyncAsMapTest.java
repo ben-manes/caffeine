@@ -612,7 +612,7 @@ public final class AsyncAsMapTest {
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
-  @Test(dataProvider = "caches", groups = "isolated")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY)
   public void putIfAbsent_incomplete_null(
       AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
@@ -1243,7 +1243,7 @@ public final class AsyncAsMapTest {
     assertThat(cache).hasSize(1 + context.original().size());
   }
 
-  @Test(dataProvider = "caches", groups = "isolated")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING)
   public void computeIfAbsent_incomplete_null(
     AsyncCache<Int, @Nullable Int> cache, CacheContext context) {

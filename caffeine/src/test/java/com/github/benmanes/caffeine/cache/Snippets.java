@@ -41,7 +41,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(groups = "isolated")
 @SuppressWarnings({"Convert2MethodRef",
     "NewClassNamingConvention", "PMD.LambdaCanBeMethodReference"})
 public final class Snippets {
