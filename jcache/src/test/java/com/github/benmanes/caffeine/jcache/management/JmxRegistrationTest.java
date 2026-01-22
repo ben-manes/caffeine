@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.management;
 
-import static com.github.benmanes.caffeine.jcache.AbstractJCacheTest.nullRef;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,17 +33,20 @@ import javax.management.MBeanServer;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class JmxRegistrationTest {
+final class JmxRegistrationTest {
 
-  @Test(dataProvider = "registerExceptions")
-  public void register_error(Class<? extends Throwable> throwableType) throws JMException {
+  @ParameterizedTest
+  @ValueSource(classes = {InstanceAlreadyExistsException.class,
+      MBeanRegistrationException.class, NotCompliantMBeanException.class})
+  void register_error(Class<? extends Throwable> throwableType) throws JMException {
     var name = new ObjectName("");
     var bean = new JCacheStatisticsMXBean();
     MBeanServer server = Mockito.mock();
@@ -51,8 +54,9 @@ public final class JmxRegistrationTest {
     assertThrows(CacheException.class, () -> JmxRegistration.register(server, name, bean));
   }
 
-  @Test(dataProvider = "unregisterExceptions")
-  public void unregister_error(Class<? extends Throwable> throwableType) throws JMException {
+  @ParameterizedTest
+  @ValueSource(classes = {InstanceNotFoundException.class, MBeanRegistrationException.class})
+  void unregister_error(Class<? extends Throwable> throwableType) throws JMException {
     var name = new ObjectName("");
     MBeanServer server = Mockito.mock();
     when(server.queryNames(any(), any())).thenReturn(Set.of(name));
@@ -61,34 +65,17 @@ public final class JmxRegistrationTest {
   }
 
   @Test
-  public void newObjectName_malformed() {
+  void newObjectName_malformed() {
     assertThrows(CacheException.class, () -> JmxRegistration.newObjectName("a=b"));
   }
 
   @Test
-  public void sanitize() {
+  void sanitize() {
     assertThat(JmxRegistration.sanitize(nullRef())).isEmpty();
     assertThat(JmxRegistration.sanitize("a.b")).isEqualTo("a.b");
     assertThat(JmxRegistration.sanitize("a,b")).isEqualTo("a.b");
     assertThat(JmxRegistration.sanitize("a:b")).isEqualTo("a.b");
     assertThat(JmxRegistration.sanitize("a=b")).isEqualTo("a.b");
     assertThat(JmxRegistration.sanitize("a\nb")).isEqualTo("a.b");
-  }
-
-  @DataProvider(name = "registerExceptions")
-  public Object[] providesRegisterExceptions() {
-    return new Object[] {
-        InstanceAlreadyExistsException.class,
-        MBeanRegistrationException.class,
-        NotCompliantMBeanException.class,
-    };
-  }
-
-  @DataProvider(name = "unregisterExceptions")
-  public Object[] providesUnregisterExceptions() {
-    return new Object[] {
-        MBeanRegistrationException.class,
-        InstanceNotFoundException.class,
-    };
   }
 }

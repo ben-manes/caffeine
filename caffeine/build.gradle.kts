@@ -1,5 +1,4 @@
 @file:Suppress("UnstableApiUsage")
-import com.google.common.base.CaseFormat
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
@@ -116,22 +115,21 @@ val compileCodeGenJava by tasks.existing(JavaCompile::class) {
 }
 
 val generateLocalCaches by tasks.registering(JavaExec::class) {
-  codeGenerationTask("LocalCache")
+  codeGenerationTask("LocalCache", "local-cache")
 }
 
 val generateNodes by tasks.registering(JavaExec::class) {
-  codeGenerationTask("Node")
+  codeGenerationTask("Node", "node")
 }
 
-fun JavaExec.codeGenerationTask(generator: String) {
-  val directory = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, generator)
+private fun JavaExec.codeGenerationTask(generator: String, directory: String) {
   mainClass = "com.github.benmanes.caffeine.cache.${generator}FactoryGenerator"
   val outputDir = layout.buildDirectory.dir("generated/sources/$directory")
   classpath(sourceSets.named("javaPoet").map { it.runtimeClasspath })
   argumentProviders.add { listOf(outputDir.absolutePath().get()) }
   inputs.files(compileJavaPoetJava.map { it.outputs.files })
-  outputs.dir(outputDir)
   outputs.cacheIf { true }
+  outputs.dir(outputDir)
 }
 
 tasks.named<JavaCompile>("compileJava").configure {

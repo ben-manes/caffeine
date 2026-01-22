@@ -26,10 +26,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
 import javax.cache.Cache;
-import javax.cache.Caching;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
-import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -56,10 +54,8 @@ public final class JCacheProfiler {
   public void start() {
     var configuration = new CaffeineConfiguration<Integer, Boolean>()
         .setMaximumSize(OptionalLong.of(KEYS));
-    try (var provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
-         var cacheManager = provider.getCacheManager(
-             provider.getDefaultURI(), provider.getDefaultClassLoader());
-         var cache = cacheManager.createCache("profiler", configuration)) {
+    try (var fixture = JCacheFixture.builder().build();
+         var cache = fixture.cacheManager().createCache("profiler", configuration)) {
       run(cache);
     }
   }

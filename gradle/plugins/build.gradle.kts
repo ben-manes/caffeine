@@ -46,6 +46,7 @@ dependencies {
   implementation(platform(libs.asm.bom))
   implementation(platform(libs.grpc.bom))
   implementation(platform(libs.okio.bom))
+  implementation(platform(libs.slf4j.bom))
   implementation(platform(libs.kotlin.bom))
   implementation(platform(libs.okhttp.bom))
   implementation(platform(libs.jackson.bom))
@@ -69,7 +70,8 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
     componentSelection {
       val ignoredGroups = listOf("com.beust", "org.apache.logging.log4j",
         "org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
-      val stable = setOf("com.fasterxml.jackson", "com.google.protobuf", "com.squareup.okhttp3")
+      val stable = setOf("com.fasterxml.jackson", "com.google.protobuf",
+        "com.squareup.okhttp3", "org.slf4j")
       val isNonStable = "^[0-9,.v-]+(-r)?$".toRegex()
       all(Action<ComponentSelectionWithCurrent> {
         if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
@@ -86,12 +88,12 @@ tasks.register("resolveExternalDependencies") {
   dependsOn(tasks.withType<ResolveExternalDependenciesTask>())
 }
 
-fun plugin(plugin: Provider<PluginDependency>): Provider<String> {
+private fun plugin(plugin: Provider<PluginDependency>): Provider<String> {
   // https://docs.gradle.org/current/userguide/plugins.html#sec:plugin_markers
   return plugin.map { "${it.pluginId}:${it.pluginId}.gradle.plugin:${it.version}" }
 }
 
-fun setProjectEncoding() {
+private fun setProjectEncoding() {
   val prefs = file(".settings/org.eclipse.core.resources.prefs")
   if (!prefs.exists()) {
     prefs.parentFile.mkdirs()

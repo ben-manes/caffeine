@@ -25,9 +25,8 @@ import com.github.benmanes.caffeine.cache.Scheduler;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TestScheduler implements Scheduler {
-
-  @Override
-  public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
+  @Override public Future<?> schedule(
+      Executor executor, Runnable command, long delay, TimeUnit unit) {
     return Scheduler.disabledScheduler().schedule(executor, command, delay, unit);
   }
 }

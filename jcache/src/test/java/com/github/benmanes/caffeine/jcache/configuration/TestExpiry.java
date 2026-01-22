@@ -21,20 +21,15 @@ import com.github.benmanes.caffeine.cache.Expiry;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TestExpiry implements Expiry<Integer, Integer> {
-
-  @Override
-  public long expireAfterCreate(Integer key, Integer value, long currentTime) {
+  @Override public long expireAfterCreate(Integer key, Integer value, long currentTime) {
     return Long.MAX_VALUE;
   }
-
-  @Override
-  public long expireAfterUpdate(Integer key, Integer value,
+  @Override public long expireAfterUpdate(Integer key, Integer value,
       long currentTime, long currentDuration) {
     return Long.MAX_VALUE;
   }
-
-  @Override
-  public long expireAfterRead(Integer key, Integer value, long currentTime, long currentDuration) {
+  @Override public long expireAfterRead(Integer key, Integer value,
+      long currentTime, long currentDuration) {
     return Long.MAX_VALUE;
   }
 }

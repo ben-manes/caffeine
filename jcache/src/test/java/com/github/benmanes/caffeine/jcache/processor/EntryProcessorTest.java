@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache.processor;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -35,11 +37,9 @@ import javax.cache.integration.CacheWriter;
 import javax.cache.processor.MutableEntry;
 
 import org.jspecify.annotations.Nullable;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
-import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
-import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
@@ -49,63 +49,61 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @author chrisstockton (Chris Stockton)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class EntryProcessorTest extends AbstractJCacheTest {
-  private final Map<Integer, Integer> map = new HashMap<>();
+final class EntryProcessorTest {
 
-  private int loads;
-  private int writes;
-
-  @BeforeMethod
-  public void beforeMethod() {
-    map.clear();
-    loads = 0;
-    writes = 0;
-  }
-
-  @Override
-  protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    var config = new CaffeineConfiguration<Integer, Integer>();
-    config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(FIVE_MINUTES));
-    config.setCacheLoaderFactory(MapLoader::new);
-    config.setCacheWriterFactory(MapWriter::new);
-    config.setTickerFactory(() -> ticker::read);
-    config.setMaximumSize(OptionalLong.of(200));
-    config.setWriteThrough(true);
-    config.setReadThrough(true);
-    return config;
+  private static JCacheFixture jcacheFixture(MapLoader loader, MapWriter writer) {
+    return JCacheFixture.builder()
+        .loading(config -> {
+          config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(FIVE_MINUTES));
+          config.setCacheLoaderFactory(() -> loader);
+          config.setCacheWriterFactory(() -> writer);
+          config.setMaximumSize(OptionalLong.of(200));
+          config.setWriteThrough(true);
+          config.setReadThrough(true);
+        }).build();
   }
 
   @Test
-  public void reload() {
-    var value1 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
-    assertThat(loads).isEqualTo(1);
-    assertThat(value1).isNull();
+  void reload() {
+    var map = new HashMap<Integer, Integer>();
+    var loader = new MapLoader(map);
+    var writer = new MapWriter(map);
+    try (var fixture = jcacheFixture(loader, writer)) {
+      var value1 = fixture.jcacheLoading().invoke(KEY_1, (entry, arguments) -> process(entry));
+      assertThat(loader.loads).isEqualTo(1);
+      assertThat(value1).isNull();
 
-    ticker.advance(Duration.ofMinutes(1));
-    var value2 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
-    assertThat(loads).isEqualTo(1);
-    assertThat(value2).isNull();
+      fixture.ticker().advance(Duration.ofMinutes(1));
+      var value2 = fixture.jcacheLoading().invoke(KEY_1, (entry, arguments) -> process(entry));
+      assertThat(loader.loads).isEqualTo(1);
+      assertThat(value2).isNull();
 
-    // Expire the entry
-    ticker.advance(Duration.ofMinutes(5));
+      // Expire the entry
+      fixture.ticker().advance(Duration.ofMinutes(5));
 
-    var value3 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
-    assertThat(loads).isEqualTo(2);
-    assertThat(value3).isNull();
+      var value3 = fixture.jcacheLoading().invoke(KEY_1, (entry, arguments) -> process(entry));
+      assertThat(loader.loads).isEqualTo(2);
+      assertThat(value3).isNull();
 
-    ticker.advance(Duration.ofMinutes(1));
-    var value4 = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
-    assertThat(loads).isEqualTo(2);
-    assertThat(value4).isNull();
+      fixture.ticker().advance(Duration.ofMinutes(1));
+      var value4 = fixture.jcacheLoading().invoke(KEY_1, (entry, arguments) -> process(entry));
+      assertThat(loader.loads).isEqualTo(2);
+      assertThat(value4).isNull();
+    }
   }
 
   @Test
-  public void writeOccursForInitialLoadOfEntry() {
-    map.put(KEY_1, 100);
-    var value = jcache.invoke(KEY_1, (entry, arguments) -> process(entry));
-    assertThat(writes).isEqualTo(1);
-    assertThat(loads).isEqualTo(1);
-    assertThat(value).isNull();
+  void writeOccursForInitialLoadOfEntry() {
+    var map = new HashMap<Integer, Integer>();
+    var loader = new MapLoader(map);
+    var writer = new MapWriter(map);
+    try (var fixture = jcacheFixture(loader, writer)) {
+      map.put(KEY_1, 100);
+      var value = fixture.jcacheLoading().invoke(KEY_1, (entry, arguments) -> process(entry));
+      assertThat(writer.writes).isEqualTo(1);
+      assertThat(loader.loads).isEqualTo(1);
+      assertThat(value).isNull();
+    }
   }
 
   @SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
@@ -115,32 +113,15 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     return nullRef();
   }
 
-  final class MapWriter implements CacheWriter<Integer, Integer> {
+  @SuppressWarnings("ImmutableMemberCollection")
+  private static final class MapLoader implements CacheLoader<Integer, Integer> {
+    private final Map<Integer, Integer> map;
 
-    @Override
-    public void write(Cache.Entry<? extends Integer, ? extends Integer> entry) {
-      writes++;
-      map.put(entry.getKey(), entry.getValue());
+    private int loads;
+
+    MapLoader(Map<Integer, Integer> map) {
+      this.map = requireNonNull(map);
     }
-
-    @Override
-    public void writeAll(Collection<Cache.Entry<? extends Integer, ? extends Integer>> entries) {
-      entries.forEach(this::write);
-    }
-
-    @Override
-    @SuppressWarnings("SuspiciousMethodCalls")
-    public void delete(Object key) {
-      map.remove(key);
-    }
-
-    @Override
-    public void deleteAll(Collection<?> keys) {
-      keys.forEach(this::delete);
-    }
-  }
-
-  final class MapLoader implements CacheLoader<Integer, Integer> {
     @Override public @Nullable Integer load(Integer key) {
       loads++;
       return map.get(key);
@@ -148,6 +129,31 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     @Override public ImmutableMap<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
       return Streams.stream(keys).collect(
           toImmutableMap(identity(), key -> requireNonNull(load(key))));
+    }
+  }
+
+  private static final class MapWriter implements CacheWriter<Integer, Integer> {
+    private final Map<Integer, Integer> map;
+
+    private int writes;
+
+    MapWriter(Map<Integer, Integer> map) {
+      this.map = requireNonNull(map);
+    }
+    @Override public void write(Cache.Entry<? extends Integer, ? extends Integer> entry) {
+      writes++;
+      map.put(entry.getKey(), entry.getValue());
+    }
+    @Override public void writeAll(
+        Collection<Cache.Entry<? extends Integer, ? extends Integer>> entries) {
+      entries.forEach(this::write);
+    }
+    @SuppressWarnings("SuspiciousMethodCalls")
+    @Override public void delete(Object key) {
+      map.remove(key);
+    }
+    @Override public void deleteAll(Collection<?> keys) {
+      keys.forEach(this::delete);
     }
   }
 }

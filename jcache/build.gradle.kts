@@ -57,7 +57,6 @@ testing.suites {
     dependencies {
       implementation(libs.guice)
       implementation(libs.truth)
-      implementation(libs.testng)
       implementation(libs.mockito)
       implementation(libs.awaitility)
       implementation(libs.jcache.guice)
@@ -68,19 +67,22 @@ testing.suites {
       implementation(libs.spotbugs.annotations)
       implementation.bundle(libs.bundles.slf4j.nop)
 
-      runtimeOnly(libs.junit.jupiter.testng)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
     targets {
       named("test") {
         testTask.configure {
-          systemProperty("testng.excludedGroups", "isolated")
+          useJUnitPlatform {
+            excludeTags("isolated")
+          }
         }
       }
       register("isolatedTest") {
         testTask.configure {
+          useJUnitPlatform {
+            includeTags("isolated")
+          }
           forkEvery = 1
-          systemProperty("testng.groups", "isolated")
           maxParallelForks = 2 * Runtime.getRuntime().availableProcessors()
         }
       }

@@ -36,7 +36,7 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   }
 }
 
-fun isNonStable(version: String): Boolean {
+private fun isNonStable(version: String): Boolean {
   val stableKeyword = listOf("RELEASE", "FINAL", "GA", "JRE").any {
     version.uppercase().contains(it)
   }

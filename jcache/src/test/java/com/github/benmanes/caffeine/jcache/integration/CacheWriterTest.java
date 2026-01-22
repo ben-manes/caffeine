@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.jcache.integration;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,107 +35,133 @@ import java.util.Map;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
 
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(singleThreaded = true)
-public final class CacheWriterTest extends AbstractJCacheTest {
-  private final CloseableCacheWriter writer = Mockito.mock();
+final class CacheWriterTest {
 
-  @Override
-  protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
+  private static JCacheFixture jcacheFixture(CloseableCacheWriter writer) {
     Mockito.reset(writer);
-    var configuration = new CaffeineConfiguration<Integer, Integer>();
-    configuration.setCacheWriterFactory(() -> writer);
-    configuration.setWriteThrough(true);
-    return configuration;
+    return JCacheFixture.builder()
+        .configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+        }).build();
   }
 
   @Test
-  public void put_fails() {
-    doThrow(CacheWriterException.class).when(writer).write(any());
-    assertThrows(CacheWriterException.class, () -> jcache.put(KEY_1, VALUE_1));
+  void put_fails() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      doThrow(CacheWriterException.class).when(writer).write(any());
+      assertThrows(CacheWriterException.class, () -> fixture.jcache().put(KEY_1, VALUE_1));
+    }
   }
 
   @Test
-  public void putAll_empty() {
-    jcache.putAll(Map.of());
-    verifyNoInteractions(writer);
+  void putAll_empty() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      fixture.jcache().putAll(Map.of());
+      verifyNoInteractions(writer);
+    }
   }
 
   @Test
-  public void putAll_fails() {
-    doThrow(CacheWriterException.class).when(writer).writeAll(any());
-    var map = new HashMap<Integer, Integer>();
-    map.put(KEY_1, VALUE_1);
+  void putAll_fails() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      doThrow(CacheWriterException.class).when(writer).writeAll(any());
+      var map = new HashMap<Integer, Integer>();
+      map.put(KEY_1, VALUE_1);
 
-    assertThrows(CacheWriterException.class, () -> jcache.putAll(map));
-    assertThat(map).containsExactly(KEY_1, VALUE_1);
+      assertThrows(CacheWriterException.class, () -> fixture.jcache().putAll(map));
+      assertThat(map).containsExactly(KEY_1, VALUE_1);
+    }
   }
 
   @Test
-  public void putAll_fails_immutable() {
-    doThrow(CacheWriterException.class).when(writer).writeAll(any());
-    var map = Map.of(KEY_1, VALUE_1);
+  void putAll_fails_immutable() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      doThrow(CacheWriterException.class).when(writer).writeAll(any());
+      var map = Map.of(KEY_1, VALUE_1);
 
-    assertThrows(CacheWriterException.class, () -> jcache.putAll(map));
-    assertThat(map).containsExactly(KEY_1, VALUE_1);
+      assertThrows(CacheWriterException.class, () -> fixture.jcache().putAll(map));
+      assertThat(map).containsExactly(KEY_1, VALUE_1);
+    }
   }
 
   @Test
-  public void replace_fails() {
-    jcache.put(KEY_1, VALUE_1);
+  void replace_fails() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      fixture.jcache().put(KEY_1, VALUE_1);
 
-    doThrow(CacheWriterException.class).when(writer).write(any());
-    assertThrows(CacheWriterException.class, () -> jcache.replace(KEY_1, VALUE_1, VALUE_2));
+      doThrow(CacheWriterException.class).when(writer).write(any());
+      assertThrows(CacheWriterException.class, () ->
+          fixture.jcache().replace(KEY_1, VALUE_1, VALUE_2));
+    }
   }
 
   @Test
-  public void remove_fails() {
-    jcache.put(KEY_1, VALUE_1);
+  void remove_fails() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      fixture.jcache().put(KEY_1, VALUE_1);
 
-    doThrow(CacheWriterException.class).when(writer).delete(any());
-    assertThrows(CacheWriterException.class, () -> jcache.remove(KEY_1));
+      doThrow(CacheWriterException.class).when(writer).delete(any());
+      assertThrows(CacheWriterException.class, () -> fixture.jcache().remove(KEY_1));
+    }
   }
 
   @Test
-  public void removeAll_fails() {
-    doThrow(CacheWriterException.class).when(writer).deleteAll(any());
-    var keys = new HashSet<Integer>();
-    keys.add(KEY_1);
+  void removeAll_fails() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      doThrow(CacheWriterException.class).when(writer).deleteAll(any());
+      var keys = new HashSet<Integer>();
+      keys.add(KEY_1);
 
-    assertThrows(CacheWriterException.class, () -> jcache.removeAll(keys));
+      assertThrows(CacheWriterException.class, () -> fixture.jcache().removeAll(keys));
+    }
   }
 
   @Test
-  public void close_fails() throws IOException {
-    doThrow(IOException.class).when(writer).close();
-    jcache.close();
+  void close_fails() throws IOException {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      doThrow(IOException.class).when(writer).close();
+      fixture.jcache().close();
 
-    verify(writer, atLeastOnce()).close();
+      verify(writer, atLeastOnce()).close();
+    }
   }
 
   @Test
-  public void disabled() {
+  void hasCacheWriter() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      var noWriter = new CaffeineConfiguration<>(fixture.jcacheConfiguration())
+          .setCacheWriterFactory(null);
+      assertThat(noWriter.hasCacheWriter()).isFalse();
+      assertThat(fixture.jcacheConfiguration().hasCacheWriter()).isTrue();
+    }
+  }
+
+  @Test
+  void disabled() {
     DisabledCacheWriter.get().write(null);
     DisabledCacheWriter.get().writeAll(null);
     DisabledCacheWriter.get().delete(null);
     DisabledCacheWriter.get().deleteAll(null);
   }
 
-  @Test
-  public void hasCacheWriter() {
-    var noWriter = new CaffeineConfiguration<>(jcacheConfiguration)
-        .setCacheWriterFactory(null);
-    assertThat(noWriter.hasCacheWriter()).isFalse();
-    assertThat(jcacheConfiguration.hasCacheWriter()).isTrue();
-  }
-
-  interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}
+  private interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}
 }

@@ -28,7 +28,7 @@ eclipse {
 }
 
 /** Exclude module-info and package-info when compiling through Eclipse. */
-fun excludeInfoFiles(classpath: Classpath) {
+private fun excludeInfoFiles(classpath: Classpath) {
   classpath.entries.filterIsInstance<SourceFolder>().forEach { sourceFolder ->
     val excludes = sourceFolder.excludes.toMutableList()
     excludes += "module-info.java"
@@ -40,7 +40,7 @@ fun excludeInfoFiles(classpath: Classpath) {
 }
 
 /** Adds preferences to the Eclipse project. */
-fun addPreferences(path: String, preferences: Map<String, String>) {
+private fun addPreferences(path: String, preferences: Map<String, String>) {
   val settings = file(".settings/$path")
   if (!settings.exists()) {
     settings.parentFile.mkdirs()

@@ -29,18 +29,19 @@ import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.event.EventType;
 
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.testng.annotations.Test;
 
 import com.google.common.testing.EqualsTester;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class EventTypeFilterTest {
+final class EventTypeFilterTest {
 
   @Test
-  public void evaluate_compatible() {
+  void evaluate_compatible() {
     CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
     CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
     var filter = new EventTypeFilter<>(listener, underlying);
@@ -57,7 +58,7 @@ public final class EventTypeFilterTest {
   }
 
   @Test
-  public void evaluate_incompatible() {
+  void evaluate_incompatible() {
     CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
     CacheEntryListener<Integer, Integer> listener = Mockito.mock();
     var filter = new EventTypeFilter<>(listener, underlying);
@@ -69,9 +70,9 @@ public final class EventTypeFilterTest {
     }
   }
 
-  @Test(groups = "isolated")
+  @Test @Tag("isolated")
   @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
-  public void evaluate_unknownEventType() {
+  void evaluate_unknownEventType() {
     CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
     CacheEntryListener<Integer, Integer> listener = Mockito.mock();
     var filter = new EventTypeFilter<>(listener, underlying);
@@ -89,7 +90,7 @@ public final class EventTypeFilterTest {
   }
 
   @Test
-  public void equals() {
+  void equals() {
     CacheEntryCreatedListener<Integer, Integer> create = events -> {};
     CacheEntryUpdatedListener<Integer, Integer> update = events -> {};
     CacheEntryEventFilter<Integer, Integer> none = event -> false;

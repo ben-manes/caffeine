@@ -15,20 +15,26 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.EXPIRY_DURATION;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.START_TIME;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
-import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
 import com.github.benmanes.caffeine.jcache.Expirable;
-import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -47,365 +53,417 @@ import com.google.common.util.concurrent.MoreExecutors;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(singleThreaded = true)
-public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
+final class JCacheCreationExpiryTest {
 
-  @Override
-  protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    var configuration = new CaffeineConfiguration<Integer, Integer>();
-    configuration.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
-        new javax.cache.expiry.Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis())));
-    configuration.setExecutorFactory(MoreExecutors::directExecutor);
-    configuration.setTickerFactory(() -> ticker::read);
-    configuration.setStatisticsEnabled(true);
-    return configuration;
+  private static JCacheFixture jcacheFixture() {
+    return JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
+                new javax.cache.expiry.Duration(MILLISECONDS, EXPIRY_DURATION.toMillis())));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setStatisticsEnabled(true);
+        }).build();
   }
 
   /* --------------- containsKey --------------- */
 
   @Test
-  public void containsKey_expired() {
-    jcache.put(KEY_1, VALUE_1);
-    ticker.setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
+  void containsKey_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.ticker().setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
 
-    assertThat(jcache.containsKey(KEY_1)).isFalse();
-    assertThat(getExpirable(jcache, KEY_1)).isNull();
+      assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+    }
   }
 
   /* --------------- get --------------- */
 
   @Test
-  public void get_expired() {
-    jcache.put(KEY_1, VALUE_1);
-    ticker.setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
+  void get_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.ticker().setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
 
-    assertThat(jcache.get(KEY_1)).isNull();
-    assertThat(getExpirable(jcache, KEY_1)).isNull();
+      assertThat(fixture.jcache().get(KEY_1)).isNull();
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+    }
   }
 
   /* --------------- get (loading) --------------- */
 
   @Test
-  public void get_loading_absent() {
-    assertThat(jcacheLoading.get(KEY_1)).isEqualTo(KEY_1);
-    Expirable<Integer> expirable = getExpirable(jcacheLoading, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+  void get_loading_absent() {
+    try (var fixture = jcacheFixture()) {
+      assertThat(fixture.jcacheLoading().get(KEY_1)).isEqualTo(KEY_1);
+      Expirable<Integer> expirable = getExpirable(fixture.jcacheLoading(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+
+    }
   }
 
   @Test
-  public void get_loading_expired() {
-    jcacheLoading.put(KEY_1, VALUE_1);
-    advancePastExpiry();
+  void get_loading_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcacheLoading().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
 
-    assertThat(jcacheLoading.get(KEY_1)).isEqualTo(KEY_1);
-    Expirable<Integer> expirable = getExpirable(jcacheLoading, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+      assertThat(fixture.jcacheLoading().get(KEY_1)).isEqualTo(KEY_1);
+      Expirable<Integer> expirable = getExpirable(fixture.jcacheLoading(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
   }
 
   @Test
-  public void get_loading_expired_lazy() {
-    cacheManager.enableStatistics(jcacheLoading.getName(), false);
+  void get_loading_expired_lazy() {
+    try (var fixture = jcacheFixture()) {
+      fixture.cacheManager().enableStatistics(fixture.jcacheLoading().getName(), false);
 
-    jcacheLoading.put(KEY_1, VALUE_1);
-    ticker.setAutoIncrementStep(Duration.ofMillis((long) (EXPIRY_DURATION.toMillis() / 1.5)));
+      fixture.jcacheLoading().put(KEY_1, VALUE_1);
+      fixture.ticker().setAutoIncrementStep(
+          Duration.ofMillis((long) (EXPIRY_DURATION.toMillis() / 1.5)));
 
-    assertThat(jcacheLoading.get(KEY_1)).isEqualTo(KEY_1);
+      assertThat(fixture.jcacheLoading().get(KEY_1)).isEqualTo(KEY_1);
+    }
   }
 
   @Test
-  public void get_loading_present() {
-    jcacheLoading.put(KEY_1, VALUE_1);
-    advanceHalfExpiry();
+  void get_loading_present() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcacheLoading().put(KEY_1, VALUE_1);
+      fixture.advanceHalfExpiry();
 
-    assertThat(jcacheLoading.get(KEY_1)).isEqualTo(VALUE_1);
-    Expirable<Integer> expirable = getExpirable(jcacheLoading, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+      assertThat(fixture.jcacheLoading().get(KEY_1)).isEqualTo(VALUE_1);
+      Expirable<Integer> expirable = getExpirable(fixture.jcacheLoading(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+    }
   }
 
   /* --------------- getAndPut --------------- */
 
   @Test
-  public void getAndPut_absent() {
-    assertThat(jcache.getAndPut(KEY_1, VALUE_1)).isNull();
+  void getAndPut_absent() {
+    try (var fixture = jcacheFixture()) {
+      assertThat(fixture.jcache().getAndPut(KEY_1, VALUE_1)).isNull();
 
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
   }
 
   @Test
-  public void getAndPut_expired() {
-    jcache.put(KEY_1, VALUE_1);
-    advancePastExpiry();
+  void getAndPut_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
 
-    assertThat(jcache.getAndPut(KEY_1, VALUE_1)).isNull();
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+      assertThat(fixture.jcache().getAndPut(KEY_1, VALUE_1)).isNull();
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
   }
 
   @Test
-  public void getAndPut_present() {
-    jcache.put(KEY_1, VALUE_1);
-    advanceHalfExpiry();
+  void getAndPut_present() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advanceHalfExpiry();
 
-    assertThat(jcache.getAndPut(KEY_1, VALUE_2)).isEqualTo(VALUE_1);
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+      assertThat(fixture.jcache().getAndPut(KEY_1, VALUE_2)).isEqualTo(VALUE_1);
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+    }
   }
 
   /* --------------- put --------------- */
 
   @Test
-  public void put_absent() {
-    jcache.put(KEY_1, VALUE_1);
+  void put_absent() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
 
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
   }
 
   @Test
-  public void put_expired() {
-    jcache.put(KEY_1, VALUE_1);
-    advancePastExpiry();
+  void put_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
 
-    jcache.put(KEY_1, VALUE_2);
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+      fixture.jcache().put(KEY_1, VALUE_2);
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
   }
 
   @Test
-  public void put_present() {
-    jcache.put(KEY_1, VALUE_1);
-    advanceHalfExpiry();
+  void put_present() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advanceHalfExpiry();
 
-    jcache.put(KEY_1, VALUE_2);
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+      fixture.jcache().put(KEY_1, VALUE_2);
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+    }
   }
 
   /* --------------- putAll --------------- */
 
   @Test
-  public void putAll_absent() {
-    jcache.putAll(entries);
+  void putAll_absent() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().putAll(JCacheFixture.ENTRIES);
 
-    for (Integer key : keys) {
-      Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable).isNotNull();
-      assertThat(expirable.getExpireTimeMillis())
-          .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+      for (Integer key : JCacheFixture.KEYS) {
+        Expirable<Integer> expirable = getExpirable(fixture.jcache(), key);
+        assertThat(expirable).isNotNull();
+        assertThat(expirable.getExpireTimeMillis())
+            .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      }
     }
   }
 
   @Test
-  public void putAll_expired() {
-    jcache.putAll(entries);
-    advancePastExpiry();
+  void putAll_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().putAll(JCacheFixture.ENTRIES);
+      fixture.advancePastExpiry();
 
-    jcache.putAll(entries);
-    for (Integer key : keys) {
-      Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable).isNotNull();
-      assertThat(expirable.getExpireTimeMillis())
-          .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+      fixture.jcache().putAll(JCacheFixture.ENTRIES);
+      for (Integer key : JCacheFixture.KEYS) {
+        Expirable<Integer> expirable = getExpirable(fixture.jcache(), key);
+        assertThat(expirable).isNotNull();
+        assertThat(expirable.getExpireTimeMillis())
+            .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      }
     }
   }
 
   @Test
-  public void putAll_present() {
-    jcache.putAll(entries);
-    advanceHalfExpiry();
+  void putAll_present() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().putAll(JCacheFixture.ENTRIES);
+      fixture.advanceHalfExpiry();
 
-    jcache.putAll(entries);
-    for (Integer key : keys) {
-      Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable).isNotNull();
-      assertThat(expirable.getExpireTimeMillis())
-          .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+      fixture.jcache().putAll(JCacheFixture.ENTRIES);
+      for (Integer key : JCacheFixture.KEYS) {
+        Expirable<Integer> expirable = getExpirable(fixture.jcache(), key);
+        assertThat(expirable).isNotNull();
+        assertThat(expirable.getExpireTimeMillis())
+            .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+      }
     }
   }
 
   /* --------------- putIfAbsent --------------- */
 
   @Test
-  public void putIfAbsent_absent() {
-    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
+  void putIfAbsent_absent() {
+    try (var fixture = jcacheFixture()) {
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_1)).isTrue();
 
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
-  }
-
-  @Test
-  public void putIfAbsent_expired() {
-    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
-    advancePastExpiry();
-
-    assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isTrue();
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.get()).isEqualTo(VALUE_2);
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
-  }
-
-  @Test
-  public void putIfAbsent_expired_lazy() {
-    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
-
-    ticker.setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
-    assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isTrue();
-  }
-
-  @Test
-  public void putIfAbsent_present() {
-    assertThat(jcache.putIfAbsent(KEY_1, VALUE_1)).isTrue();
-    advanceHalfExpiry();
-
-    assertThat(jcache.putIfAbsent(KEY_1, VALUE_2)).isFalse();
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
-  }
-
-  /* --------------- invoke --------------- */
-
-  @Test
-  public void invoke_absent() {
-    var result = jcache.invoke(KEY_1, (entry, args) -> {
-      entry.setValue(VALUE_2);
-      return nullRef();
-    });
-    assertThat(result).isNull();
-
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
-  }
-
-  @Test
-  public void invoke_expired() {
-    jcache.put(KEY_1, VALUE_1);
-    advancePastExpiry();
-
-    var result = jcache.invoke(KEY_1, (entry, args) -> {
-      entry.setValue(VALUE_2);
-      return nullRef();
-    });
-    assertThat(result).isNull();
-
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
-  }
-
-  @Test
-  public void invoke_present() {
-    jcache.put(KEY_1, VALUE_1);
-    advanceHalfExpiry();
-
-    var result = jcache.invoke(KEY_1, (entry, args) -> {
-      entry.setValue(VALUE_2);
-      return nullRef();
-    });
-    assertThat(result).isNull();
-
-    Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable).isNotNull();
-    assertThat(expirable.getExpireTimeMillis())
-        .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
-  }
-
-  /* --------------- invokeAll --------------- */
-
-  @Test
-  public void invokeAll_absent() {
-    var result = jcache.invokeAll(keys, (entry, args) -> {
-      entry.setValue(VALUE_2);
-      return nullRef();
-    });
-    assertThat(result).isEmpty();
-
-    for (Integer key : keys) {
-      Expirable<Integer> expirable = getExpirable(jcache, key);
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
       assertThat(expirable).isNotNull();
       assertThat(expirable.getExpireTimeMillis())
-          .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
     }
   }
 
   @Test
-  public void invokeAll_expired() {
-    jcache.putAll(entries);
-    advancePastExpiry();
+  void putIfAbsent_expired() {
+    try (var fixture = jcacheFixture()) {
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_1)).isTrue();
+      fixture.advancePastExpiry();
 
-    var result = jcache.invokeAll(keys, (entry, args) -> {
-      entry.setValue(VALUE_2);
-      return nullRef();
-    });
-    assertThat(result).isEmpty();
-
-    for (Integer key : keys) {
-      Expirable<Integer> expirable = getExpirable(jcache, key);
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_2)).isTrue();
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
       assertThat(expirable).isNotNull();
+      assertThat(expirable.get()).isEqualTo(VALUE_2);
       assertThat(expirable.getExpireTimeMillis())
-          .isEqualTo(currentTime().plus(EXPIRY_DURATION).toMillis());
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
     }
   }
 
   @Test
-  public void invokeAll_present() {
-    jcache.putAll(entries);
-    advanceHalfExpiry();
+  void putIfAbsent_expired_lazy() {
+    try (var fixture = jcacheFixture()) {
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_1)).isTrue();
 
-    var result = jcache.invokeAll(keys, (entry, args) -> {
-      entry.setValue(VALUE_2);
-      return nullRef();
-    });
-    assertThat(result).isEmpty();
+      fixture.ticker().setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_2)).isTrue();
+    }
+  }
 
-    for (Integer key : keys) {
-      Expirable<Integer> expirable = getExpirable(jcache, key);
+  @Test
+  void putIfAbsent_present() {
+    try (var fixture = jcacheFixture()) {
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_1)).isTrue();
+      fixture.advanceHalfExpiry();
+
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_2)).isFalse();
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
       assertThat(expirable).isNotNull();
       assertThat(expirable.getExpireTimeMillis())
           .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
     }
   }
 
+  /* --------------- invoke --------------- */
+
   @Test
-  public void iterator() {
-    jcache.put(KEY_1, VALUE_1);
-    var expirable1 = requireNonNull(getExpirable(jcache, KEY_1));
-    advanceHalfExpiry();
+  void invoke_absent() {
+    try (var fixture = jcacheFixture()) {
+      var result = fixture.jcache().invoke(KEY_1, (entry, args) -> {
+        entry.setValue(VALUE_2);
+        return nullRef();
+      });
+      assertThat(result).isNull();
 
-    jcache.put(KEY_2, VALUE_2);
-    var expirable2 = requireNonNull(getExpirable(jcache, KEY_2));
-    assertThat(jcache).hasSize(2);
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
+  }
 
-    advanceHalfExpiry();
-    assertThat(jcache).hasSize(1);
-    expirable2.setExpireTimeMillis(expirable1.getExpireTimeMillis());
-    assertThat(jcache).hasSize(0);
+  @Test
+  void invoke_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+
+      var result = fixture.jcache().invoke(KEY_1, (entry, args) -> {
+        entry.setValue(VALUE_2);
+        return nullRef();
+      });
+      assertThat(result).isNull();
+
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
+  }
+
+  @Test
+  void invoke_present() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advanceHalfExpiry();
+
+      var result = fixture.jcache().invoke(KEY_1, (entry, args) -> {
+        entry.setValue(VALUE_2);
+        return nullRef();
+      });
+      assertThat(result).isNull();
+
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+    }
+  }
+
+  /* --------------- invokeAll --------------- */
+
+  @Test
+  void invokeAll_absent() {
+    try (var fixture = jcacheFixture()) {
+      var result = fixture.jcache().invokeAll(JCacheFixture.KEYS, (entry, args) -> {
+        entry.setValue(VALUE_2);
+        return nullRef();
+      });
+      assertThat(result).isEmpty();
+
+      for (Integer key : JCacheFixture.KEYS) {
+        Expirable<Integer> expirable = getExpirable(fixture.jcache(), key);
+        assertThat(expirable).isNotNull();
+        assertThat(expirable.getExpireTimeMillis())
+            .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      }
+    }
+  }
+
+  @Test
+  void invokeAll_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().putAll(JCacheFixture.ENTRIES);
+      fixture.advancePastExpiry();
+
+      var result = fixture.jcache().invokeAll(JCacheFixture.KEYS, (entry, args) -> {
+        entry.setValue(VALUE_2);
+        return nullRef();
+      });
+      assertThat(result).isEmpty();
+
+      for (Integer key : JCacheFixture.KEYS) {
+        Expirable<Integer> expirable = getExpirable(fixture.jcache(), key);
+        assertThat(expirable).isNotNull();
+        assertThat(expirable.getExpireTimeMillis())
+            .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      }
+    }
+  }
+
+  @Test
+  void invokeAll_present() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().putAll(JCacheFixture.ENTRIES);
+      fixture.advanceHalfExpiry();
+
+      var result = fixture.jcache().invokeAll(JCacheFixture.KEYS, (entry, args) -> {
+        entry.setValue(VALUE_2);
+        return nullRef();
+      });
+      assertThat(result).isEmpty();
+
+      for (Integer key : JCacheFixture.KEYS) {
+        Expirable<Integer> expirable = getExpirable(fixture.jcache(), key);
+        assertThat(expirable).isNotNull();
+        assertThat(expirable.getExpireTimeMillis())
+            .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+      }
+    }
+  }
+
+  @Test
+  void iterator() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      var expirable1 = requireNonNull(getExpirable(fixture.jcache(), KEY_1));
+      fixture.advanceHalfExpiry();
+
+      fixture.jcache().put(JCacheFixture.KEY_2, VALUE_2);
+      var expirable2 = requireNonNull(getExpirable(fixture.jcache(), JCacheFixture.KEY_2));
+      assertThat(fixture.jcache()).hasSize(2);
+
+      fixture.advanceHalfExpiry();
+      assertThat(fixture.jcache()).hasSize(1);
+      expirable2.setExpireTimeMillis(expirable1.getExpireTimeMillis());
+      assertThat(fixture.jcache()).hasSize(0);
+    }
   }
 }

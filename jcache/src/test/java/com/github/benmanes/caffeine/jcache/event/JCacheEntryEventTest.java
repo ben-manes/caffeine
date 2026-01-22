@@ -25,8 +25,8 @@ import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.EventType;
 
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.testng.annotations.Test;
 
 import com.google.common.collect.testing.IteratorFeature;
 import com.google.common.collect.testing.IteratorTester;
@@ -34,10 +34,10 @@ import com.google.common.collect.testing.IteratorTester;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class JCacheEntryEventTest {
+final class JCacheEntryEventTest {
 
   @Test
-  public void unwrap_fail() {
+  void unwrap_fail() {
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
           1, /* hasOldValue= */ true, 2, 3);
@@ -46,7 +46,7 @@ public final class JCacheEntryEventTest {
   }
 
   @Test
-  public void unwrap() {
+  void unwrap() {
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
           1, /* hasOldValue= */ true, 2, 3);
@@ -55,7 +55,7 @@ public final class JCacheEntryEventTest {
   }
 
   @Test
-  public void isOldValueAvailable_false() {
+  void isOldValueAvailable_false() {
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       var entry = new JCacheEntryEvent<>(cache, EventType.CREATED,
           1, /* hasOldValue= */ false, null, 3);
@@ -64,7 +64,7 @@ public final class JCacheEntryEventTest {
   }
 
   @Test
-  public void isOldValueAvailable() {
+  void isOldValueAvailable() {
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
           1, /* hasOldValue= */ true, 2, 3);
@@ -73,7 +73,7 @@ public final class JCacheEntryEventTest {
   }
 
   @Test
-  public void getOldValue() {
+  void getOldValue() {
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
           1, /* hasOldValue= */ true, 2, 3);
@@ -82,7 +82,7 @@ public final class JCacheEntryEventTest {
   }
 
   @Test
-  public void iterable() {
+  void iterable() {
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
           1, /* hasOldValue= */ true, 2, 3);

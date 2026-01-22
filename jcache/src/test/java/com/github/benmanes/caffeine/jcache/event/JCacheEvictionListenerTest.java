@@ -20,17 +20,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import java.util.Arrays;
-import java.util.Iterator;
-
 import javax.cache.Cache;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryRemovedListener;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mockito;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.jcache.Expirable;
@@ -39,10 +36,11 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class JCacheEvictionListenerTest {
+final class JCacheEvictionListenerTest {
 
-  @Test(dataProvider = "notifications")
-  public void publishIfEvicted(Integer key, Expirable<Integer> value, RemovalCause cause) {
+  @ParameterizedTest
+  @EnumSource(names = {"COLLECTED", "EXPIRED", "SIZE"})
+  void publishIfEvicted(RemovalCause cause) {
     var statistics = new JCacheStatisticsMXBean();
     EvictionListener entryListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
@@ -55,7 +53,7 @@ public final class JCacheEvictionListenerTest {
     }
     statistics.enable(true);
 
-    listener.onRemoval(key, value, cause);
+    listener.onRemoval(1, new Expirable<>(2, 3), cause);
     if (cause.wasEvicted()) {
       if (cause == RemovalCause.EXPIRED) {
         verify(entryListener).onExpired(any());
@@ -67,14 +65,6 @@ public final class JCacheEvictionListenerTest {
       verify(entryListener, never()).onRemoved(any());
       assertThat(statistics.getCacheEvictions()).isEqualTo(0L);
     }
-  }
-
-  @DataProvider(name = "notifications")
-  public Iterator<Object[]> providesNotifications() {
-    return Arrays.stream(RemovalCause.values())
-        .filter(RemovalCause::wasEvicted)
-        .map(cause -> new Object[] { 1, new Expirable<>(2, 3), cause })
-        .iterator();
   }
 
   interface EvictionListener extends CacheEntryRemovedListener<Integer, Integer>,

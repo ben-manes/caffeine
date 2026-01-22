@@ -27,18 +27,19 @@ import com.google.common.hash.Hashing;
 import com.google.common.math.IntMath;
 
 /**
- * An interceptor that partitions the test suite so that only an exclusive subset of methods are run
- * by this shard.
+ * An interceptor that partitions the test suite so that this shard runs an exclusive subset of
+ * methods.
  * <p>
- * The test methods are evenly distributed, but the number of test executions per shard will vary by
- * the number of method invocations, e.g. due to parameterized testing. Method granularity
- * outperforms sharding within the parameterized test generator due to the startup overhead of
- * the filtering the Cartesian product. Also, the multi-threaded tests saturate the host CPUs so if
- * distributed then all shards are penalized, which lowers overall throughput due to starving the
- * Gradle task's parallel forks.
+ * The test methods are evenly distributed, but the number of test executions per shard varies
+ * based on the number of method invocations (e.g., due to parameterized testing). Method-level
+ * granularity outperforms sharding within the parameterized test generator due to the startup
+ * overhead of filtering the Cartesian product. Additionally, multithreaded tests saturate the host
+ * CPUs; when distributed across shards, all shards are penalized, lowering overall throughput by
+ * starving the Gradle task's parallel forks.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("unused")
 public final class ShardingMethodInterceptor implements IMethodInterceptor {
 
   @Override
@@ -49,8 +50,8 @@ public final class ShardingMethodInterceptor implements IMethodInterceptor {
     }
     return methods.stream()
         .filter(method -> {
-          if (options.isFiltered() && hasCacheSpec(method)) {
-            return true;
+          if (options.isFiltered()) {
+            return hasCacheSpec(method);
           }
           int hash = Hashing.farmHashFingerprint64()
               .hashUnencodedChars(method.getMethod().getQualifiedName()).asInt();

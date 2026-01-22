@@ -16,25 +16,24 @@
 package com.github.benmanes.caffeine.jcache.guice;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
+
+import java.util.function.Consumer;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
-import javax.cache.Caching;
 import javax.cache.annotation.CacheResolverFactory;
 import javax.cache.annotation.CacheResult;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.integration.CacheLoader;
-import javax.cache.spi.CachingProvider;
 
 import org.jsr107.ri.annotations.DefaultCacheResolverFactory;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.FactoryCreator;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
-import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -48,38 +47,37 @@ import jakarta.inject.Inject;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.CloseResource")
-public final class JCacheGuiceTest {
-  @Inject CachingProvider cachingProvider;
-  @Inject CacheManager cacheManager;
-  @Inject Service service;
+final class JCacheGuiceTest {
 
-  @BeforeMethod
-  public void beforeMethod() {
-    var module = Modules.override(new JakartaCacheModule()).with(new CaffeineJCacheModule());
-    Guice.createInjector(module).injectMembers(this);
-  }
-
-  @AfterClass
-  public void afterClass() {
-    TypesafeConfigurator.setFactoryCreator(FactoryBuilder::factoryOf);
-    cachingProvider.close();
-    cacheManager.close();
+  @Test
+  void factory() {
+    runTest(injector -> {
+      var cacheManager = injector.getInstance(CacheManager.class);
+      Cache<Integer, Integer> cache = cacheManager.getCache("guice");
+      var result = cache.getAll(ImmutableSet.of(1, 2, 3));
+      assertThat(result).containsExactly(1, 1, 2, 2, 3, 3);
+    });
   }
 
   @Test
-  public void factory() {
-    Cache<Integer, Integer> cache = cacheManager.getCache("guice");
-    var result = cache.getAll(ImmutableSet.of(1, 2, 3));
-    assertThat(result).containsExactly(1, 1, 2, 2, 3, 3);
+  void annotations() {
+    runTest(injector -> {
+      var service = injector.getInstance(Service.class);
+      for (int i = 0; i < 10; i++) {
+        assertThat(service.get()).isEqualTo(1);
+      }
+      assertThat(service.times).isEqualTo(1);
+    });
   }
 
-  @Test
-  public void annotations() {
-    for (int i = 0; i < 10; i++) {
-      assertThat(service.get()).isEqualTo(1);
+  private static void runTest(Consumer<Injector> test) {
+    try (var fixture = JCacheFixture.builder().build()) {
+      var module = Modules.override(new JakartaCacheModule())
+          .with(new CaffeineJCacheModule(fixture.cacheManager()));
+      test.accept(Guice.createInjector(module));
+    } finally {
+      TypesafeConfigurator.setFactoryCreator(FactoryBuilder::factoryOf);
     }
-    assertThat(service.times).isEqualTo(1);
   }
 
   public static class Service {
@@ -95,7 +93,7 @@ public final class JCacheGuiceTest {
     private final Service service;
 
     @Inject
-    InjectedCacheLoader(Service service) {
+    private InjectedCacheLoader(Service service) {
       this.service = service;
     }
 
@@ -110,11 +108,11 @@ public final class JCacheGuiceTest {
     }
   }
 
-  static final class GuiceFactoryCreator implements FactoryCreator {
-    final Injector injector;
+  private static final class GuiceFactoryCreator implements FactoryCreator {
+    private final Injector injector;
 
     @Inject
-    GuiceFactoryCreator(Injector injector) {
+    private GuiceFactoryCreator(Injector injector) {
       this.injector = injector;
     }
 
@@ -130,23 +128,19 @@ public final class JCacheGuiceTest {
     }
   }
 
-  static final class CaffeineJCacheModule extends AbstractModule {
+  private static final class CaffeineJCacheModule extends AbstractModule {
+    private final CacheManager cacheManager;
 
-    @Override protected void configure() {
-      configureCachingProvider();
-      requestStaticInjection(TypesafeConfigurator.class);
-      bind(FactoryCreator.class).to(GuiceFactoryCreator.class);
+    private CaffeineJCacheModule(CacheManager cacheManager) {
+      this.cacheManager = requireNonNull(cacheManager);
     }
 
-    /** Resolves the annotations to the provider as multiple are on the IDE's classpath. */
-    void configureCachingProvider() {
-      var provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
-      var cacheManager = provider.getCacheManager(
-          provider.getDefaultURI(), provider.getDefaultClassLoader());
-      cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
-      bind(CacheResolverFactory.class).toInstance(new DefaultCacheResolverFactory(cacheManager));
+    @Override protected void configure() {
+      requestStaticInjection(TypesafeConfigurator.class);
+
       bind(CacheManager.class).toInstance(cacheManager);
-      bind(CachingProvider.class).toInstance(provider);
+      bind(FactoryCreator.class).to(GuiceFactoryCreator.class);
+      bind(CacheResolverFactory.class).toInstance(new DefaultCacheResolverFactory(cacheManager));
     }
   }
 }

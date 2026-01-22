@@ -84,7 +84,7 @@ tasks.withType<JavaCompile>().configureEach {
   }
 }
 
-fun disabledChecks() = listOf(
+private fun disabledChecks() = listOf(
   "AddNullMarkedToClass",
   "AssignmentExpression",
   "AvoidObjectArrays",
@@ -104,7 +104,7 @@ fun disabledChecks() = listOf(
   "UngroupedOverloads",
 )
 @Suppress("CanConvertToMultiDollarString")
-fun disabledRules() = listOf(
+private fun disabledRules() = listOf(
   "ImmutableListRules\\\$ImmutableListBuilder",
   "ImmutableListRules\\\$ImmutableListOf\\d*",
   "ImmutableMapRules\\\$ImmutableMapBuilder",

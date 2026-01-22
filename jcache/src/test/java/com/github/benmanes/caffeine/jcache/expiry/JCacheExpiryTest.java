@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -24,52 +27,42 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Expiry;
-import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
-import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 
 /**
  * The test cases that ensure the variable expiry policy is configured.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Test(singleThreaded = true)
-@SuppressWarnings("unchecked")
-public final class JCacheExpiryTest extends AbstractJCacheTest {
+final class JCacheExpiryTest {
   private static final long ONE_MINUTE = TimeUnit.MINUTES.toNanos(1);
 
-  private final Expiry<Integer, Integer> expiry = Mockito.mock();
-
-  @BeforeMethod
-  public void setup() {
-    Mockito.reset(expiry);
+  private static JCacheFixture jcacheFixture(Expiry<Integer, Integer> expiry) {
     when(expiry.expireAfterCreate(anyInt(), anyInt(), anyLong())).thenReturn(ONE_MINUTE);
     when(expiry.expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong())).thenReturn(ONE_MINUTE);
     when(expiry.expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong())).thenReturn(ONE_MINUTE);
-  }
-
-  @Override
-  protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    var configuration = new CaffeineConfiguration<Integer, Integer>();
-    configuration.setExpiryFactory(Optional.of(() -> expiry));
-    configuration.setTickerFactory(() -> ticker::read);
-    return configuration;
+    return JCacheFixture.builder()
+        .configure(config -> config.setExpiryFactory(Optional.of(() -> expiry)))
+        .build();
   }
 
   @Test
-  public void configured() {
-    jcache.put(KEY_1, VALUE_1);
-    verify(expiry).expireAfterCreate(anyInt(), anyInt(), anyLong());
+  void configured() {
+    Expiry<Integer, Integer> expiry = Mockito.mock();
+    try (var fixture = jcacheFixture(expiry)) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      verify(expiry).expireAfterCreate(anyInt(), anyInt(), anyLong());
 
-    jcache.put(KEY_1, VALUE_2);
-    verify(expiry).expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong());
+      fixture.jcache().put(KEY_1, VALUE_2);
+      verify(expiry).expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong());
 
-    var value = jcache.get(KEY_1);
-    assertThat(value).isEqualTo(VALUE_2);
-    verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
+      var value = fixture.jcache().get(KEY_1);
+      assertThat(value).isEqualTo(VALUE_2);
+      verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
+    }
   }
 }

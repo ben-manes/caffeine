@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Stream;
 
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryCreatedListener;
@@ -32,18 +33,20 @@ import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.event.EventType;
 
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class EventTypeAwareListenerTest {
+final class EventTypeAwareListenerTest {
 
-  @Test(groups = "isolated")
+  @Test @Tag("isolated")
   @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
-  public void isCompatible_unknownEventType() throws IOException {
+  void isCompatible_unknownEventType() throws IOException {
     CacheEntryListener<Integer, Integer> listener = Mockito.mock();
     try (var forwarder = new EventTypeAwareListener<>(listener);
          var eventTypes = Mockito.mockStatic(EventType.class)) {
@@ -56,9 +59,9 @@ public final class EventTypeAwareListenerTest {
     }
   }
 
-  @Test(groups = "isolated")
+  @Test @Tag("isolated")
   @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
-  public void dispatch_unknownEventType() throws IOException {
+  void dispatch_unknownEventType() throws IOException {
     CacheEntryListener<Integer, Integer> listener = Mockito.mock();
     try (var forwarder = new EventTypeAwareListener<>(listener);
          var eventTypes = Mockito.mockStatic(EventType.class);
@@ -74,7 +77,7 @@ public final class EventTypeAwareListenerTest {
   }
 
   @Test
-  public void suppress() throws IOException {
+  void suppress() throws IOException {
     CacheEntryListener<Integer, Integer> delegate = Mockito.mock();
     try (var listener = new EventTypeAwareListener<>(delegate)) {
       listener.onCreated(List.of());
@@ -86,7 +89,7 @@ public final class EventTypeAwareListenerTest {
   }
 
   @Test
-  public void closed() throws IOException {
+  void closed() throws IOException {
     CacheEntryListener<Integer, Integer> listener = Mockito.mock();
     try (var forwarder = new EventTypeAwareListener<>(listener);
         Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -97,8 +100,8 @@ public final class EventTypeAwareListenerTest {
     }
   }
 
-  @Test(dataProvider = "exceptions")
-  public void created_failure(Throwable error) throws IOException {
+  @ParameterizedTest @MethodSource("exceptions")
+  void created_failure(Throwable error) throws IOException {
     CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock(answer -> { throw error; });
     try (var forwarder = new EventTypeAwareListener<>(listener);
         Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -108,8 +111,8 @@ public final class EventTypeAwareListenerTest {
     verify(listener).onCreated(anyIterable());
   }
 
-  @Test(dataProvider = "exceptions")
-  public void updated_failure(Throwable error) throws IOException {
+  @ParameterizedTest @MethodSource("exceptions")
+  void updated_failure(Throwable error) throws IOException {
     CacheEntryUpdatedListener<Integer, Integer> listener = Mockito.mock(answer -> { throw error; });
     try (var forwarder = new EventTypeAwareListener<>(listener);
         Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -119,8 +122,8 @@ public final class EventTypeAwareListenerTest {
     verify(listener).onUpdated(anyIterable());
   }
 
-  @Test(dataProvider = "exceptions")
-  public void removed_failure(Throwable error) throws IOException {
+  @ParameterizedTest @MethodSource("exceptions")
+  void removed_failure(Throwable error) throws IOException {
     CacheEntryRemovedListener<Integer, Integer> listener = Mockito.mock(answer -> { throw error; });
     try (var forwarder = new EventTypeAwareListener<>(listener);
         Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -130,8 +133,8 @@ public final class EventTypeAwareListenerTest {
     verify(listener).onRemoved(anyIterable());
   }
 
-  @Test(dataProvider = "exceptions")
-  public void expired_failure(Throwable error) throws IOException {
+  @ParameterizedTest @MethodSource("exceptions")
+  void expired_failure(Throwable error) throws IOException {
     CacheEntryExpiredListener<Integer, Integer> listener = Mockito.mock(answer -> { throw error; });
     try (var forwarder = new EventTypeAwareListener<>(listener);
         Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -141,8 +144,7 @@ public final class EventTypeAwareListenerTest {
     verify(listener).onExpired(anyIterable());
   }
 
-  @DataProvider(name = "exceptions")
-  public Object[] providesExceptions() {
-    return new Object[] { new Exception(), new Throwable() };
+  static Stream<Throwable> exceptions() {
+    return Stream.of(new Exception(), new Throwable());
   }
 }

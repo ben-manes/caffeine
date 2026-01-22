@@ -22,6 +22,7 @@ dependencies {
 testing.suites.withType<JvmTestSuite>().configureEach {
   dependencies {
     implementation(platform(libs.asm.bom))
+    implementation(platform(libs.slf4j.bom))
     implementation(platform(libs.kotlin.bom))
     implementation(platform(libs.junit.jupiter.bom))
   }

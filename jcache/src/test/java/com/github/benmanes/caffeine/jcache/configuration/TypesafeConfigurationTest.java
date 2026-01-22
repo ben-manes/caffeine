@@ -15,11 +15,12 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
-import static com.github.benmanes.caffeine.jcache.AbstractJCacheTest.nullRef;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator.configSource;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
@@ -34,17 +35,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import javax.cache.Cache;
-import javax.cache.Caching;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.testng.SkipException;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator.Configurator;
 import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
 import com.google.common.collect.Iterables;
@@ -55,17 +55,16 @@ import com.typesafe.config.ConfigFactory;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TypesafeConfigurationTest {
-  final ClassLoader classloader = Thread.currentThread().getContextClassLoader();
-  final ConfigSource defaultConfigSource = configSource();
+final class TypesafeConfigurationTest {
+  static final ConfigSource defaultConfigSource = configSource();
 
-  @BeforeMethod
-  public void before() {
+  @AfterEach
+  void afterEach() {
     TypesafeConfigurator.setConfigSource(defaultConfigSource);
   }
 
   @Test
-  public void setConfigSource_supplier() {
+  void setConfigSource_supplier() {
     Config config = Mockito.mock();
     TypesafeConfigurator.setConfigSource(() -> config);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
@@ -76,7 +75,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void setConfigSource_function() {
+  void setConfigSource_function() {
     Config config = nullRef();
     TypesafeConfigurator.setConfigSource((uri, loader) -> config);
     assertThat(configSource()).isNotSameInstanceAs(defaultConfigSource);
@@ -86,14 +85,16 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_null() {
+  void configSource_null() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     assertThrows(NullPointerException.class, () -> configSource().get(nullRef(), nullRef()));
     assertThrows(NullPointerException.class, () -> configSource().get(nullRef(), classloader));
     assertThrows(NullPointerException.class, () -> configSource().get(URI.create(""), nullRef()));
   }
 
   @Test
-  public void configSource_load() {
+  void configSource_load() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     assertThat(configSource().get(URI.create(getClass().getSimpleName()), classloader))
         .isSameInstanceAs(ConfigFactory.load());
     assertThat(configSource().get(URI.create(getClass().getName()), classloader))
@@ -105,7 +106,8 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_jar_present() {
+  void configSource_jar_present() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     var inferred = configSource().get(URI.create("extra.properties"), classloader);
     assertThat(inferred.getInt("caffeine.jcache.jar.policy.maximum.size")).isEqualTo(500);
     assertThat(inferred.hasPath("caffeine.jcache.default.key-type")).isTrue();
@@ -118,7 +120,8 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_jar_absent() {
+  void configSource_jar_absent() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("extra-absent.conf"), classloader));
 
@@ -129,7 +132,8 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_jar_invalid() {
+  void configSource_jar_invalid() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     assertThrows(ConfigException.Parse.class, () ->
         configSource().get(URI.create("extra-invalid.conf"), classloader));
 
@@ -141,7 +145,8 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_classpath_present() {
+  void configSource_classpath_present() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     var inferred = configSource().get(URI.create("custom.properties"), classloader);
     assertThat(inferred.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
     assertThat(inferred.hasPath("caffeine.jcache.default.key-type")).isTrue();
@@ -154,7 +159,8 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_classpath_absent() {
+  void configSource_classpath_absent() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("absent.conf"), classloader));
     assertThrows(ConfigException.IO.class, () ->
@@ -164,7 +170,8 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_classpath_invalid() {
+  void configSource_classpath_invalid() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     assertThrows(ConfigException.Parse.class, () ->
         configSource().get(URI.create("invalid.conf"), classloader));
     assertThrows(ConfigException.Parse.class, () ->
@@ -172,7 +179,8 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_file() throws URISyntaxException {
+  void configSource_file() throws URISyntaxException {
+    var classloader = Thread.currentThread().getContextClassLoader();
     var resource = requireNonNull(getClass().getResource("/custom.properties"));
     var config = configSource().get(resource.toURI(), classloader);
     assertThat(config.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
@@ -181,19 +189,21 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void configSource_file_absent() {
+  void configSource_file_absent() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("file:/absent.conf"), classloader));
   }
 
   @Test
-  public void configSource_file_invalid() {
+  void configSource_file_invalid() {
+    var classloader = Thread.currentThread().getContextClassLoader();
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("file:/invalid.conf"), classloader));
   }
 
   @Test
-  public void defaults() {
+  void defaults() {
     CaffeineConfiguration<Integer, Integer> defaults =
         TypesafeConfigurator.defaults(ConfigFactory.load());
     assertThat(defaults.getKeyType()).isEqualTo(Object.class);
@@ -203,7 +213,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void cacheNames() {
+  void cacheNames() {
     assertThat(TypesafeConfigurator.cacheNames(ConfigFactory.empty())).isEmpty();
 
     var names = TypesafeConfigurator.cacheNames(ConfigFactory.load());
@@ -212,7 +222,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void isSet_customized_null() {
+  void isSet_customized_null() {
     Config root = Mockito.mock();
     Config merged = Mockito.mock();
     Config customized = Mockito.mock();
@@ -228,18 +238,18 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void illegalPath() {
+  void illegalPath() {
     assertThat(TypesafeConfigurator.from(ConfigFactory.load(), "#")).isEmpty();
   }
 
   @Test
-  public void invalidCache() {
+  void invalidCache() {
     assertThrows(IllegalStateException.class, () ->
         TypesafeConfigurator.from(ConfigFactory.load(), "invalid-cache"));
   }
 
   @Test
-  public void testCache() {
+  void cache1() {
     Optional<CaffeineConfiguration<Integer, Integer>> config =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
     assertThat(config).isEqualTo(
@@ -248,7 +258,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void testCache2() {
+  void cache2() {
     Optional<CaffeineConfiguration<Integer, Integer>> config1 =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
     Optional<CaffeineConfiguration<Integer, Integer>> config2 =
@@ -266,7 +276,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void testCache3() {
+  void cache3() {
     Optional<CaffeineConfiguration<Integer, Integer>> config3 =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-3");
 
@@ -278,7 +288,7 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void testCache4() {
+  void cache4() {
     Optional<CaffeineConfiguration<Integer, Integer>> config4 =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-4");
 
@@ -290,9 +300,9 @@ public final class TypesafeConfigurationTest {
   }
 
   @Test
-  public void getCache() {
-    try (Cache<Integer, Integer> cache = Caching.getCachingProvider()
-        .getCacheManager().getCache("test-cache")) {
+  void getCache() {
+    try (var fixture = JCacheFixture.builder().build();
+        Cache<Integer, Integer> cache = fixture.cacheManager().getCache("test-cache")) {
       assertThat(cache).isNotNull();
 
       @SuppressWarnings("unchecked")
@@ -302,19 +312,15 @@ public final class TypesafeConfigurationTest {
     }
   }
 
-  private URI getJarResource(String resourceName) {
+  private static URI getJarResource(String resourceName) {
+    var classloader = Thread.currentThread().getContextClassLoader();
     var url = classloader.getResource(resourceName);
     assertThat(url).isNotNull();
 
-    try {
-      var uri = url.toURI();
-      if (!Objects.equals(uri.getScheme(), "jar")) {
-        throw new SkipException("This test must be run through the build system");
-      }
-      return uri;
-    } catch (URISyntaxException e) {
-      throw new AssertionError(e);
-    }
+    var uri = URI.create(url.toString());
+    assumeTrue(Objects.equals(uri.getScheme(), "jar"),
+        "This test must be run through the build system");
+    return uri;
   }
 
   static void checkTestCache(CaffeineConfiguration<?, ?> config) {

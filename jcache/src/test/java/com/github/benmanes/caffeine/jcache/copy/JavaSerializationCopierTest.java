@@ -15,11 +15,12 @@
  */
 package com.github.benmanes.caffeine.jcache.copy;
 
-import static com.github.benmanes.caffeine.jcache.AbstractJCacheTest.nullRef;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaDeepCopyStrategies;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,12 +37,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.cache.CacheException;
 
-import org.jspecify.annotations.Nullable;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -51,45 +54,45 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressFBWarnings("SEC_SIDE_EFFECT_CONSTRUCTOR")
-public final class JavaSerializationCopierTest {
+final class JavaSerializationCopierTest {
 
-  @Test(dataProvider = "nullArgs")
-  public void constructor_null(Set<Class<?>> immutableClasses,
+  @ParameterizedTest @MethodSource("nullArgs")
+  void constructor_null(Set<Class<?>> immutableClasses,
       Map<Class<?>, Function<Object, Object>> deepCopyStrategies) {
     assertThrows(NullPointerException.class, () ->
         new JavaSerializationCopier(immutableClasses, deepCopyStrategies));
   }
 
-  @Test(dataProvider = "copier")
-  public void null_object(Copier copier) {
+  @ParameterizedTest @MethodSource("copiers")
+  void null_object(Copier copier) {
     assertThrows(NullPointerException.class, () -> copy(copier, nullRef()));
   }
 
-  @Test(dataProvider = "copier")
-  public void null_classLoader(Copier copier) {
+  @ParameterizedTest @MethodSource("copiers")
+  void null_classLoader(Copier copier) {
     assertThrows(NullPointerException.class, () -> copier.copy(1, nullRef()));
   }
 
-  @Test(dataProvider = "copier")
-  public void serializable_fail(JavaSerializationCopier copier) {
+  @ParameterizedTest @MethodSource("copiers")
+  void serializable_fail(JavaSerializationCopier copier) {
     assertThrows(UncheckedIOException.class, () -> copier.serialize(new Object()));
   }
 
   @Test
-  public void deserializable_resolveClass() {
+  void deserializable_resolveClass() {
     var copier = new JavaSerializationCopier();
     var copy = copier.copy(ImmutableSet.of(), ClassLoader.getPlatformClassLoader());
     assertThat(copy).isInstanceOf(ImmutableSet.class);
   }
 
-  @Test(dataProvider = "copier")
-  public void deserializable_badData(JavaSerializationCopier copier) {
+  @ParameterizedTest @MethodSource("copiers")
+  void deserializable_badData(JavaSerializationCopier copier) {
     assertThrows(CacheException.class, () ->
         copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader()));
   }
 
   @Test
-  public void deserializable_classNotFound() {
+  void deserializable_classNotFound() {
     var copier = new JavaSerializationCopier() {
       @Override protected ObjectInputStream newInputStream(
           InputStream in, ClassLoader classLoader) throws IOException {
@@ -105,21 +108,21 @@ public final class JavaSerializationCopierTest {
         copier.roundtrip(100, Thread.currentThread().getContextClassLoader()));
   }
 
-  @Test(dataProvider = "copier")
-  public void mutable(Copier copier) {
+  @ParameterizedTest @MethodSource("copiers")
+  void mutable(Copier copier) {
     var ints = new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4));
     assertThat(copy(copier, ints)).containsExactlyElementsIn(ints).inOrder();
   }
 
   @Test
-  public void immutable() {
+  void immutable() {
     String text = "test";
     assertThat(copy(new JavaSerializationCopier(), text)).isSameInstanceAs(text);
     assertThat(copy(new JavaSerializationCopier(), Month.JANUARY)).isSameInstanceAs(Month.JANUARY);
   }
 
   @Test
-  public void canDeeplyCopy() {
+  void canDeeplyCopy() {
     var copier = new JavaSerializationCopier();
     assertThat(copier.canDeeplyCopy(Object.class)).isFalse();
     for (var clazz : javaDeepCopyStrategies().keySet()) {
@@ -127,35 +130,35 @@ public final class JavaSerializationCopierTest {
     }
   }
 
-  @Test(dataProvider = "copier")
+  @ParameterizedTest @MethodSource("copiers")
   @SuppressWarnings({"JavaUtilDate", "PMD.ReplaceJavaUtilDate", "UndefinedEquals"})
-  public void deepCopy_date(Copier copier) {
+  void deepCopy_date(Copier copier) {
     var date = new Date();
     assertThat(copy(copier, date)).isEqualTo(date);
   }
 
-  @Test(dataProvider = "copier")
+  @ParameterizedTest @MethodSource("copiers")
   @SuppressWarnings({"JavaUtilDate", "PMD.ReplaceJavaUtilDate"})
-  public void deepCopy_calendar(Copier copier) {
+  void deepCopy_calendar(Copier copier) {
     var calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), US);
     calendar.setTime(new Date());
     assertThat(copy(copier, calendar)).isEqualTo(calendar);
   }
 
-  @Test(dataProvider = "copier")
-  public void array_primitive(Copier copier) {
+  @ParameterizedTest @MethodSource("copiers")
+  void array_primitive(Copier copier) {
     int[] ints = { 0, 1, 2, 3, 4 };
     assertThat(copy(copier, ints)).isEqualTo(ints);
   }
 
-  @Test(dataProvider = "copier")
-  public void array_immutable(Copier copier) {
+  @ParameterizedTest @MethodSource("copiers")
+  void array_immutable(Copier copier) {
     Integer[] ints = { 0, 1, 2, 3, 4 };
     assertThat(copy(copier, ints)).asList().containsExactlyElementsIn(ints).inOrder();
   }
 
-  @Test(dataProvider = "copier")
-  public void array_mutable(Copier copier) {
+  @ParameterizedTest @MethodSource("copiers")
+  void array_mutable(Copier copier) {
     Object[] array = { new ArrayList<>(List.of(0, 1, 2, 3, 4)) };
     assertThat(copy(copier, array)).asList().containsExactlyElementsIn(array).inOrder();
   }
@@ -164,16 +167,13 @@ public final class JavaSerializationCopierTest {
     return copier.copy(object, Thread.currentThread().getContextClassLoader());
   }
 
-  @DataProvider(name = "copier")
-  public Object[] providesCopiers() {
-    return new Object[] {
+  static Stream<Copier> copiers() {
+    return Stream.of(
         new JavaSerializationCopier(),
-        new JavaSerializationCopier(Set.of(), Map.of())
-    };
+        new JavaSerializationCopier(Set.of(), Map.of()));
   }
 
-  @DataProvider(name = "nullArgs")
-  public @Nullable Object[][] providesNullArgs() {
-    return new @Nullable Object[][] { { null, null }, { null, Map.of() }, { Set.of(), null } };
+  static Stream<Arguments> nullArgs() {
+    return Stream.of(arguments(null, null), arguments(null, Map.of()), arguments(Set.of(), null));
   }
 }

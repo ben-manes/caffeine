@@ -17,16 +17,16 @@ package com.github.benmanes.caffeine.jcache.management;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("MemberName")
-public final class JCacheStatisticsMXBeanTest {
+@SuppressWarnings("IdentifierName")
+final class JCacheStatisticsMXBeanTest {
 
   @Test
-  public void clear() {
+  void clear() {
     var stats = new JCacheStatisticsMXBean();
     stats.recordHits(1);
     stats.recordMisses(1);

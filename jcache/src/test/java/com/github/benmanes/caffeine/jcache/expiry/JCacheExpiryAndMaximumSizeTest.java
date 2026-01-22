@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -29,13 +32,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryRemovedListener;
 
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Expiry;
-import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
-import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -44,59 +45,53 @@ import com.google.common.util.concurrent.MoreExecutors;
  *
  * @author github.com/kdombeck (Ken Dombeck)
  */
-@Test(singleThreaded = true)
-@SuppressWarnings("unchecked")
-public final class JCacheExpiryAndMaximumSizeTest extends AbstractJCacheTest {
+final class JCacheExpiryAndMaximumSizeTest {
   private static final long ONE_MINUTE = TimeUnit.MINUTES.toNanos(1);
   private static final int MAXIMUM = 10;
 
-  private final Expiry<Integer, Integer> expiry = Mockito.mock();
-  private final AtomicInteger removed = new AtomicInteger();
-
-  @BeforeMethod
-  public void setup() {
-    Mockito.reset(expiry);
+  private static JCacheFixture jcacheFixture(
+      Expiry<Integer, Integer> expiry, AtomicInteger removed) {
     when(expiry.expireAfterCreate(anyInt(), anyInt(), anyLong())).thenReturn(ONE_MINUTE);
     when(expiry.expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong())).thenReturn(ONE_MINUTE);
     when(expiry.expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong())).thenReturn(ONE_MINUTE);
-  }
-
-  @Override
-  protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
-    CacheEntryRemovedListener<Integer, Integer> listener = events -> removed.incrementAndGet();
-
-    var configuration = new CaffeineConfiguration<Integer, Integer>();
-
-    configuration.setMaximumSize(OptionalLong.of(MAXIMUM));
-    var listenerConfiguration = new MutableCacheEntryListenerConfiguration<>(() -> listener,
-        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ true);
-    configuration.addCacheEntryListenerConfiguration(listenerConfiguration);
-    configuration.setExecutorFactory(MoreExecutors::directExecutor);
-
-    configuration.setExpiryFactory(Optional.of(() -> expiry));
-    configuration.setTickerFactory(() -> ticker::read);
-
-    return configuration;
+    return JCacheFixture.builder()
+        .configure(config -> {
+          config.setMaximumSize(OptionalLong.of(MAXIMUM));
+          CacheEntryRemovedListener<Integer, Integer> listener =
+              events -> removed.incrementAndGet();
+          var listenerConfiguration = new MutableCacheEntryListenerConfiguration<>(() -> listener,
+              /* filterFactory= */ null, /* isOldValueRequired= */ false,
+              /* isSynchronous= */ true);
+          config.addCacheEntryListenerConfiguration(listenerConfiguration);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setExpiryFactory(Optional.of(() -> expiry));
+        }).build();
   }
 
   @Test
-  public void expiry() {
-    jcache.put(KEY_1, VALUE_1);
-    verify(expiry).expireAfterCreate(anyInt(), anyInt(), anyLong());
+  void expiry() {
+    Expiry<Integer, Integer> expiry = Mockito.mock();
+    try (var fixture = jcacheFixture(expiry, new AtomicInteger())) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      verify(expiry).expireAfterCreate(anyInt(), anyInt(), anyLong());
 
-    jcache.put(KEY_1, VALUE_2);
-    verify(expiry).expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong());
+      fixture.jcache().put(KEY_1, VALUE_2);
+      verify(expiry).expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong());
 
-    var value = jcache.get(KEY_1);
-    assertThat(value).isEqualTo(VALUE_2);
-    verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
-  }
-
-  @Test
-  public void size() {
-    for (int i = 0; i < 2 * MAXIMUM; i++) {
-      jcache.put(i, i);
+      var value = fixture.jcache().get(KEY_1);
+      assertThat(value).isEqualTo(VALUE_2);
+      verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
     }
-    assertThat(removed.get()).isEqualTo(MAXIMUM);
+  }
+
+  @Test
+  void size() {
+    var removed = new AtomicInteger();
+    try (var fixture = jcacheFixture(Mockito.mock(), removed)) {
+      for (int i = 0; i < 2 * MAXIMUM; i++) {
+        fixture.jcache().put(i, i);
+      }
+      assertThat(removed.get()).isEqualTo(MAXIMUM);
+    }
   }
 }

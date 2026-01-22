@@ -1,7 +1,7 @@
 [versions]
 asm = "9.9.1"
 awaitility = "4.3.0"
-bcel = "6.11.0"
+bcel = "6.12.0"
 bnd = "7.2.1"
 bouncycastle-jdk18on = "1.83"
 cache2k = "2.6.1.Final"
@@ -94,7 +94,7 @@ spotbugs-contrib = "7.7.4"
 spotbugs-plugin = "6.4.8"
 stream = "2.9.8"
 tcache = "2.0.1"
-testng = "7.11.0"
+testng = "7.12.0"
 truth = "1.4.5"
 versions = "0.53.0"
 xz = "1.11"
@@ -191,6 +191,7 @@ pmd = { module = "net.sourceforge.pmd:pmd", version.ref = "pmd" }
 pmd-ant = { module = "net.sourceforge.pmd:pmd-ant", version.ref = "pmd" }
 pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
 protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+slf4j-bom = { module = "org.slf4j:slf4j-bom", version.ref = "slf4j" }
 slf4j-jdk-platform-logging = { module = "org.slf4j:slf4j-jdk-platform-logging", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
 slf4j-jcl-bridge = { module = "org.slf4j:jcl-over-slf4j", version.ref = "slf4j" }

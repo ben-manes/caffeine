@@ -23,38 +23,38 @@ import java.util.Optional;
 
 import javax.cache.Cache;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class EntryProcessorEntryTest {
-  final EntryProcessorEntry<Integer, Integer> entry =
+final class EntryProcessorEntryTest {
+  private static final EntryProcessorEntry<Integer, Integer> ENTRY =
       new EntryProcessorEntry<>(1, 2, Optional.empty());
 
   @Test
-  public void unwrap_fail() {
-    assertThrows(IllegalArgumentException.class, () -> entry.unwrap(Map.Entry.class));
+  void unwrap_fail() {
+    assertThrows(IllegalArgumentException.class, () -> ENTRY.unwrap(Map.Entry.class));
   }
 
   @Test
-  public void unwrap() {
-    assertThat(entry.unwrap(Cache.Entry.class)).isSameInstanceAs(entry);
+  void unwrap() {
+    assertThat(ENTRY.unwrap(Cache.Entry.class)).isSameInstanceAs(ENTRY);
   }
 
   @Test
   @SuppressWarnings("EqualsWithItself")
-  public void equals() {
-    assertThat(entry.equals(entry)).isTrue();
+  void equals() {
+    assertThat(ENTRY.equals(ENTRY)).isTrue();
   }
 
   @Test
-  public void hash() {
-    assertThat(entry.hashCode()).isEqualTo(entry.hashCode());
+  void hash() {
+    assertThat(ENTRY.hashCode()).isEqualTo(ENTRY.hashCode());
   }
 
   @Test
-  public void string() {
-    assertThat(entry.toString()).isEqualTo(Map.entry(1, 2).toString());
+  void string() {
+    assertThat(ENTRY.toString()).isEqualTo(Map.entry(1, 2).toString());
   }
 }

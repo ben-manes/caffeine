@@ -26,20 +26,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import javax.cache.Cache;
-import javax.cache.Caching;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.integration.CacheLoader;
-import javax.cache.spi.CachingProvider;
 
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
-import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -73,39 +69,15 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @author monitorjbl (Taylor Jones)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressFBWarnings("UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR")
-public final class Issue1065Test {
+final class Issue1065Test {
   private static final int NUM_THREADS = 5;
-  private static final CachingProvider provider =
-      Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
-
-  Cache<String, String> fallback;
-  Cache<String, String> cache;
-
-  @BeforeMethod
-  public void before() {
-    fallback = provider.getCacheManager()
-        .createCache("fallback", new MutableConfiguration<>());
-    cache = provider.getCacheManager().createCache("primary",
-        new MutableConfiguration<String, String>()
-            .addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
-                FactoryBuilder.factoryOf(new Listener(fallback)), FactoryBuilder.factoryOf(
-                    event -> true), /* isOldValueRequired= */ true, /* isSynchronous= */ true))
-            .setCacheLoaderFactory(new FactoryBuilder.SingletonFactory<>(new Loader()))
-            .setReadThrough(true));
-  }
-
-  @AfterMethod
-  public void after() {
-    fallback.close();
-    cache.close();
-  }
 
   @Test
   @SuppressWarnings("ResultOfMethodCallIgnored")
-  public void deadlock() throws Exception {
+  void deadlock() throws Exception {
     var executor = Executors.newWorkStealingPool(NUM_THREADS);
-    try {
+    try (var fixture = JCacheFixture.builder().build();
+        var cache = newCache(fixture)) {
       for (int i = 0; i < 500; i++) {
         var threads = new ConcurrentLinkedQueue<Thread>();
         var futures = new CompletableFuture<?>[NUM_THREADS];
@@ -127,6 +99,18 @@ public final class Issue1065Test {
     } finally {
       executor.shutdownNow();
     }
+  }
+
+  private static Cache<String, String> newCache(JCacheFixture fixture) {
+    var fallback = fixture.cacheManager()
+        .createCache("fallback", new MutableConfiguration<String, String>());
+    return fixture.cacheManager().createCache("primary",
+        new MutableConfiguration<String, String>()
+            .addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+                FactoryBuilder.factoryOf(new Listener(fallback)), FactoryBuilder.factoryOf(
+                    event -> true), /* isOldValueRequired= */ true, /* isSynchronous= */ true))
+            .setCacheLoaderFactory(new FactoryBuilder.SingletonFactory<>(new Loader()))
+            .setReadThrough(true));
   }
 
   private static void fail(int iteration, Collection<Thread> threads) {

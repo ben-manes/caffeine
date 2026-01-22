@@ -23,44 +23,44 @@ import java.util.List;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.testing.EqualsTester;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class JCacheExpiryPolicyTest {
-  final ExpiryPolicy eternal = new JCacheExpiryPolicy(
+final class JCacheExpiryPolicyTest {
+  static final ExpiryPolicy eternal = new JCacheExpiryPolicy(
       Duration.ETERNAL, Duration.ETERNAL, Duration.ETERNAL);
-  final ExpiryPolicy temporal = new JCacheExpiryPolicy(
+  static final ExpiryPolicy temporal = new JCacheExpiryPolicy(
       Duration.ONE_DAY, Duration.ONE_HOUR, Duration.ONE_MINUTE);
 
   @Test
-  public void creation() {
+  void creation() {
     assertThat(eternal.getExpiryForCreation()).isEqualTo(Duration.ETERNAL);
     assertThat(temporal.getExpiryForCreation()).isEqualTo(Duration.ONE_DAY);
   }
 
   @Test
-  public void update() {
+  void update() {
     assertThat(eternal.getExpiryForUpdate()).isEqualTo(Duration.ETERNAL);
     assertThat(temporal.getExpiryForUpdate()).isEqualTo(Duration.ONE_HOUR);
   }
 
   @Test
-  public void access() {
+  void access() {
     assertThat(eternal.getExpiryForAccess()).isEqualTo(Duration.ETERNAL);
     assertThat(temporal.getExpiryForAccess()).isEqualTo(Duration.ONE_MINUTE);
   }
 
   @Test
-  public void equals_wrongType() {
+  void equals_wrongType() {
     assertThat(eternal.equals(new Object())).isFalse();
   }
 
   @Test
-  public void equals() {
+  void equals() {
     var tester = new EqualsTester();
     var durations = List.of(Duration.ETERNAL, Duration.ONE_DAY, Duration.ONE_HOUR);
     for (var creation : durations) {
@@ -76,7 +76,7 @@ public final class JCacheExpiryPolicyTest {
   }
 
   @Test
-  public void hash() {
+  void hash() {
     var hashes = new HashSet<Integer>();
     var durations = List.of(Duration.ETERNAL, Duration.ONE_DAY, Duration.ONE_HOUR);
     for (var creation : durations) {

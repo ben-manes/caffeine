@@ -19,18 +19,17 @@ import java.util.Map;
 
 import javax.cache.integration.CacheLoader;
 
-import org.jspecify.annotations.NullUnmarked;
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@NullUnmarked
 public final class TestCacheLoader implements CacheLoader<Integer, Integer> {
   @Override public Integer load(Integer key) {
-    return null;
+    return JCacheFixture.nullRef();
   }
-  @SuppressWarnings({"PMD.ReturnEmptyCollectionRatherThanNull", "ReturnsNullCollection"})
+  @SuppressWarnings("ReturnsNullCollection")
   @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-    return null;
+    return JCacheFixture.nullRef();
   }
 }

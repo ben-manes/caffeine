@@ -15,13 +15,14 @@
  */
 package com.github.benmanes.caffeine.jcache.event;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static javax.cache.event.EventType.CREATED;
 import static javax.cache.event.EventType.EXPIRED;
 import static javax.cache.event.EventType.REMOVED;
 import static javax.cache.event.EventType.UPDATED;
-import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -47,9 +48,11 @@ import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
-import org.testng.annotations.AfterTest;
-import org.testng.annotations.Test;
 
 import com.google.common.collect.Iterables;
 import com.google.common.testing.EqualsTester;
@@ -58,17 +61,14 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class EventDispatcherTest {
-  final ExecutorService executorService = Executors.newCachedThreadPool(
+@TestInstance(PER_CLASS)
+final class EventDispatcherTest {
+  @AutoClose("shutdown")
+  private final ExecutorService executorService = Executors.newCachedThreadPool(
       new ThreadFactoryBuilder().setDaemon(true).build());
 
-  @AfterTest
-  public void afterTest() {
-    executorService.shutdownNow();
-  }
-
   @Test
-  public void register_noListener() {
+  void register_noListener() {
     var configuration = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
         /* listenerFactory= */ null, /* filterFactory= */ null,
         /* isOldValueRequired= */ false, /* isSynchronous= */ false);
@@ -78,7 +78,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void register_twice() {
+  void register_twice() {
     CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var configuration = new MutableCacheEntryListenerConfiguration<>(
@@ -90,7 +90,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void register_equality() {
+  void register_equality() {
     CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
     CacheEntryUpdatedListener<Integer, Integer> updatedListener = Mockito.mock();
     var c1 = new MutableCacheEntryListenerConfiguration<>(
@@ -115,7 +115,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void deregister() {
+  void deregister() {
     CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var configuration = new MutableCacheEntryListenerConfiguration<>(
@@ -127,7 +127,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void publishCreated() {
+  void publishCreated() {
     CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -141,7 +141,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void publishUpdated() {
+  void publishUpdated() {
     CacheEntryUpdatedListener<Integer, Integer> updatedListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -156,7 +156,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void publishRemoved() {
+  void publishRemoved() {
     CacheEntryRemovedListener<Integer, Integer> removedListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -171,7 +171,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void publishExpired() {
+  void publishExpired() {
     CacheEntryExpiredListener<Integer, Integer> expiredListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
@@ -185,8 +185,8 @@ public final class EventDispatcherTest {
         .flatMap(queue -> queue.entrySet().stream())).isEmpty();
   }
 
-  @Test(invocationCount = 25)
-  public void ordered() {
+  @RepeatedTest(25)
+  void ordered() {
     var start = new AtomicBoolean();
     var next = new AtomicBoolean();
     var running = new AtomicBoolean();
@@ -235,8 +235,8 @@ public final class EventDispatcherTest {
     }
   }
 
-  @Test(invocationCount = 25)
-  public void parallel_keys() {
+  @RepeatedTest(25)
+  void parallel_keys() {
     var execute = new AtomicBoolean();
     var received1 = new AtomicBoolean();
     var received2 = new AtomicBoolean();
@@ -284,8 +284,8 @@ public final class EventDispatcherTest {
     }
   }
 
-  @Test(invocationCount = 25)
-  public void parallel_listeners() {
+  @RepeatedTest(25)
+  void parallel_listeners() {
     var execute = new AtomicBoolean();
     var run = new AtomicBoolean();
     var done = new AtomicBoolean();
@@ -321,7 +321,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void awaitSynchronous() {
+  void awaitSynchronous() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     dispatcher.pending.get().add(CompletableFuture.completedFuture(null));
     dispatcher.awaitSynchronous();
@@ -329,7 +329,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void awaitSynchronous_failure() {
+  void awaitSynchronous_failure() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var future = new CompletableFuture<@Nullable Void>();
     future.completeExceptionally(new RuntimeException());
@@ -340,7 +340,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void awaitSynchronous_nested() {
+  void awaitSynchronous_nested() {
     var primary = new EventDispatcher<Integer, Integer>(Runnable::run);
     var secondary = new EventDispatcher<Integer, Integer>(Runnable::run);
 
@@ -366,7 +366,7 @@ public final class EventDispatcherTest {
   }
 
   @Test
-  public void ignoreSynchronous() {
+  void ignoreSynchronous() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     dispatcher.pending.get().add(CompletableFuture.completedFuture(null));
 
