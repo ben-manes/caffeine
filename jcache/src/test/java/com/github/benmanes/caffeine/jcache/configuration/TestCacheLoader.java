@@ -15,21 +15,21 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
+
 import java.util.Map;
 
 import javax.cache.integration.CacheLoader;
-
-import com.github.benmanes.caffeine.jcache.JCacheFixture;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TestCacheLoader implements CacheLoader<Integer, Integer> {
   @Override public Integer load(Integer key) {
-    return JCacheFixture.nullRef();
+    return nullRef();
   }
   @SuppressWarnings("ReturnsNullCollection")
   @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-    return JCacheFixture.nullRef();
+    return nullRef();
   }
 }

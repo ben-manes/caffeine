@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEYS;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_3;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.START_TIME;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_3;
@@ -28,6 +29,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
+import static java.util.Locale.US;
 import static javax.cache.expiry.Duration.ETERNAL;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -51,6 +53,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -302,6 +305,8 @@ final class CacheProxyTest {
       assertThat(expirable).isNotNull();
       assertThat(expirable.isEternal()).isTrue();
       assertThat(fixture.jcache().containsKey(KEY_1)).isTrue();
+      assertThat(expirable.toString()).isEqualTo(String.format(
+          US, "Expirable{value=%s, expireTimeMillis=%,d}", VALUE_1, Long.MAX_VALUE));
     }
   }
 
@@ -316,6 +321,9 @@ final class CacheProxyTest {
       assertThat(expirable).isNotNull();
       assertThat(expirable.isEternal()).isFalse();
       assertThat(fixture.jcache().containsKey(KEY_1)).isTrue();
+      assertThat(expirable.toString()).isEqualTo(String.format(
+          US, "Expirable{value=%s, expireTimeMillis=%,d}", VALUE_1,
+          START_TIME.toMillis() + TimeUnit.MINUTES.toMillis(5)));
     }
   }
 
