@@ -25,7 +25,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -43,7 +44,8 @@ import com.google.errorprone.annotations.Var;
  * @author yseeley@gmail.com (Yonik Seeley)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Solr10141Test {
+@Isolated
+final class Solr10141Test {
   private static final int NUM_THREADS = 64;
   private static final int BLOCKS_IN_TEST = 400;
   private static final int NUM_READS = 10_000_000;
@@ -59,7 +61,7 @@ public final class Solr10141Test {
   private final Random rnd = new Random();
 
   @Test
-  public void eviction() {
+  void eviction() {
     var hits = new AtomicLong();
     var inserts = new AtomicLong();
     var removals = new AtomicLong();
@@ -134,7 +136,7 @@ public final class Solr10141Test {
   }
 
   @Test
-  public void clear() {
+  void clear() {
     var inserts = new AtomicLong();
     var removals = new AtomicLong();
     var failed = new ConcurrentLinkedQueue<Throwable>();

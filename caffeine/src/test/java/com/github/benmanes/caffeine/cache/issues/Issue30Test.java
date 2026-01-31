@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.future;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Locale.US;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -31,19 +32,17 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Listeners;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AutoClose;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
+import com.github.benmanes.caffeine.cache.AsyncCacheSubject;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import com.github.benmanes.caffeine.cache.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.testing.FutureSubject;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -57,50 +56,41 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @author yurgis2
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Listeners(CacheValidationListener.class)
-public final class Issue30Test {
+@Isolated
+@TestInstance(PER_CLASS)
+final class Issue30Test {
   private static final boolean DEBUG = false;
 
-  private static final String A_KEY = "foo";
-  private static final String A_ORIGINAL = "foo0";
-  private static final String A_UPDATE_1 = "foo1";
-  private static final String A_UPDATE_2 = "foo2";
+  private static final String A_KEY = "a_key";
+  private static final String A_ORIGINAL = "a_original";
+  private static final String A_UPDATE_1 = "a_update_1";
+  private static final String A_UPDATE_2 = "a_update_2";
 
-  private static final String B_KEY = "bar";
-  private static final String B_ORIGINAL = "bar0";
-  private static final String B_UPDATE_1 = "bar1";
-  private static final String B_UPDATE_2 = "bar2";
+  private static final String B_KEY = "b_key";
+  private static final String B_ORIGINAL = "b_original";
+  private static final String B_UPDATE_1 = "b_update_1";
+  private static final String B_UPDATE_2 = "b_update_2";
 
   private static final int TTL = 100;
   private static final int EPSILON = 10;
   private static final int N_THREADS = 10;
 
+  @AutoClose("shutdown")
   @SuppressFBWarnings("HES_EXECUTOR_NEVER_SHUTDOWN")
   private final ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
 
-  @AfterClass
-  public void afterClass() {
-    MoreExecutors.shutdownAndAwaitTermination(executor, 1, TimeUnit.MINUTES);
-  }
-
-  @DataProvider(name = "params")
-  public Object[][] providesCache() {
+  @RepeatedTest(100)
+  void expiration() throws InterruptedException {
     var source = new ConcurrentHashMap<String, String>();
     var lastLoad = new ConcurrentHashMap<String, Instant>();
     AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofMillis(TTL))
         .executor(executor)
         .buildAsync(new Loader(source, lastLoad));
-    return new Object[][] {{ cache, source, lastLoad }};
-  }
-
-  @Test(dataProvider = "params", invocationCount = 100, threadPoolSize = N_THREADS)
-  public void expiration(AsyncLoadingCache<String, String> cache,
-      ConcurrentMap<String, String> source, ConcurrentMap<String, Instant> lastLoad)
-          throws InterruptedException {
     initialValues(cache, source, lastLoad);
     firstUpdate(cache, source);
     secondUpdate(cache, source);
+    AsyncCacheSubject.assertThat(cache).isValid();
   }
 
   private static void initialValues(AsyncLoadingCache<String, String> cache,

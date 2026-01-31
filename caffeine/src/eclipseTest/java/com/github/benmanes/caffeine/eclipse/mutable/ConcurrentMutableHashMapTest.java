@@ -31,7 +31,14 @@ import org.eclipse.collections.impl.test.Verify;
 import org.eclipse.collections.impl.tuple.ImmutableEntry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.MethodSource;
+
+import com.github.benmanes.caffeine.cache.CacheSpec;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 
 /**
  * JUnit test for {@link ConcurrentMutableHashMap}.
@@ -39,8 +46,11 @@ import org.junit.jupiter.params.provider.MethodSource;
  * Ported from Eclipse Collections 11.0.
  */
 @ParameterizedClass
-@MethodSource("caches")
 @SuppressWarnings({"all", "unchecked"})
+@CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+    weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
+    evictionListener = Listener.DISABLED, stats = Stats.ENABLED,
+    keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
 final class ConcurrentMutableHashMapTest extends ConcurrentHashMapTestCase {
 
   @Test

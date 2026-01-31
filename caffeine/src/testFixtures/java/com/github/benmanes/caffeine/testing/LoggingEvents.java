@@ -20,15 +20,19 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.event.Level;
 
 import com.github.valfirst.slf4jtest.LoggingEvent;
+import com.github.valfirst.slf4jtest.TestLogger;
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.ForwardingList;
 import com.google.common.collect.ImmutableList;
@@ -42,6 +46,9 @@ import com.google.errorprone.annotations.Var;
  */
 @SuppressWarnings("PMD.LooseCoupling")
 public final class LoggingEvents extends ForwardingList<LoggingEvent> {
+  private static final @Nullable Field ALL_LOGGING_EVENTS = FieldUtils.getDeclaredField(
+      TestLogger.class, "allLoggingEvents", /* forceAccess= */ true);
+
   private final List<Predicate<LoggingEvent>> predicates;
   private final ImmutableList<LoggingEvent> events;
 
@@ -142,5 +149,19 @@ public final class LoggingEvents extends ForwardingList<LoggingEvent> {
       assertThat(results).hasSize(events.size());
     }
     return results;
+  }
+
+  /** Free memory by clearing the thread-local log events. */
+  public static void cleanUp() {
+    TestLoggerFactory.getAllLoggingEvents().clear();
+    TestLoggerFactory.clear();
+    try {
+      if (ALL_LOGGING_EVENTS != null) {
+        for (var logger : TestLoggerFactory.getAllTestLoggers().values()) {
+          var allLoggingEvents = (Collection<?>) ALL_LOGGING_EVENTS.get(logger);
+          allLoggingEvents.clear();
+        }
+      }
+    } catch (IllegalAccessException | SecurityException expected) { /* ignored */ }
   }
 }

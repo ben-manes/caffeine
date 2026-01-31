@@ -20,7 +20,7 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.timeTas
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
-import static org.testng.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Collection;

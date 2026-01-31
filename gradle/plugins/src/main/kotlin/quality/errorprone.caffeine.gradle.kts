@@ -51,7 +51,7 @@ tasks.withType<JavaCompile>().configureEach {
 
   options.apply {
     errorprone {
-      isEnabled = isEarlyAccess().map { !it }
+      enabled = isEarlyAccess().map { !it }
       allDisabledChecksAsWarnings = true
       allSuggestionsAsWarnings = true
 
@@ -77,7 +77,7 @@ tasks.withType<JavaCompile>().configureEach {
         checkOptionalEmptiness = true
         suggestSuppressions = true
         checkContracts = true
-        isJSpecifyMode = true
+        jspecifyMode = true
         error()
       }
     }

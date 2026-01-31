@@ -16,15 +16,23 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.Arrays;
-import java.util.Iterator;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
-import org.testng.annotations.DataProvider;
+import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.support.ParameterDeclaration;
+import org.junit.jupiter.params.support.ParameterDeclarations;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.Var;
@@ -37,39 +45,32 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CacheProvider {
+public final class CacheProvider implements ArgumentsProvider {
   private static final ImmutableSet<Class<?>> GUAVA_INCOMPATIBLE = ImmutableSet.of(
       AsyncCache.class, AsyncLoadingCache.class, BoundedLocalCache.class, Policy.Eviction.class,
       Policy.FixedExpiration.class, Policy.VarExpiration.class, Policy.FixedRefresh.class);
-
-  private final Parameter[] parameters;
-  private final Method testMethod;
-
-  private CacheProvider(Method testMethod) {
-    this.parameters = testMethod.getParameters();
-    this.testMethod = testMethod;
-  }
+  public static final Namespace NAMESPACE = Namespace.create(CacheProvider.class);
 
   /** Returns the lazily generated test parameters. */
-  @DataProvider(name = "caches")
-  public static Iterator<Object[]> providesCaches(Method testMethod) {
-    return new CacheProvider(testMethod).getTestCases();
-  }
-
-  /** Returns the parameters for the test case scenarios. */
-  private Iterator<Object[]> getTestCases() {
-    return scenarios()
-        .map(this::asTestCases)
-        .filter(params -> params.length > 0)
-        .iterator();
+  @Override public Stream<? extends Arguments> provideArguments(
+      ParameterDeclarations parameters, ExtensionContext extension) {
+    var cacheSpec = findAnnotation(parameters.getSourceElement(), CacheSpec.class)
+        .or(() -> extension.getTestClass().flatMap(test -> findAnnotation(test, CacheSpec.class)))
+        .orElseThrow(() -> new AssertionError("@CacheSpec not found"));
+    var params = parameters.getAll();
+    return scenarios(params, cacheSpec)
+        .map(context -> asTestCases(params, extension, context))
+        .filter(Objects::nonNull);
   }
 
   /** Returns the test scenarios. */
-  private Stream<CacheContext> scenarios() {
-    var cacheSpec = checkNotNull(testMethod.getAnnotation(CacheSpec.class), "@CacheSpec not found");
-    var generator = new CacheGenerator(cacheSpec, Options.fromSystemProperties(),
-        isLoadingOnly(), isAsyncOnly(), isGuavaCompatible());
-    return generator.generate();
+  private static Stream<CacheContext> scenarios(
+      Collection<ParameterDeclaration> parameters, CacheSpec cacheSpec) {
+    return CacheGenerator.forCacheSpec(cacheSpec)
+        .isGuavaCompatible(isGuavaCompatible(parameters))
+        .isLoadingOnly(isLoadingOnly(parameters))
+        .isAsyncOnly(isAsyncOnly(parameters))
+        .generate();
   }
 
   /**
@@ -77,15 +78,17 @@ public final class CacheProvider {
    * incompatible.
    */
   @SuppressFBWarnings("UCC_UNRELATED_COLLECTION_CONTENTS")
-  private Object[] asTestCases(CacheContext context) {
-    @Var boolean intern = true;
+  private static @Nullable Arguments asTestCases(List<ParameterDeclaration> parameters,
+      ExtensionContext extension, CacheContext context) {
+    @Var boolean store = true;
     CacheGenerator.initialize(context);
-    var params = new Object[parameters.length];
-    for (int i = 0; i < parameters.length; i++) {
-      var clazz = parameters[i].getType();
+    var params = new Object[parameters.size()];
+    for (int i = 0; i < params.length; i++) {
+      var parameter = parameters.get(i);
+      var clazz = parameter.getParameterType();
       if (clazz.isInstance(context)) {
         params[i] = context;
-        intern = false;
+        store = false;
       } else if (clazz.isInstance(context.cache())) {
         params[i] = context.cache();
       } else if (context.isAsync() && clazz.isInstance(context.asyncCache())) {
@@ -94,7 +97,7 @@ public final class CacheProvider {
         params[i] = context.cache().asMap();
       } else if (clazz.isAssignableFrom(BoundedLocalCache.class)) {
         if (!(context.cache().asMap() instanceof BoundedLocalCache)) {
-          return new Object[] {};
+          return null;
         }
         params[i] = context.cache().asMap();
       } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
@@ -104,44 +107,49 @@ public final class CacheProvider {
       } else if (clazz.isAssignableFrom(Policy.FixedRefresh.class)) {
         params[i] = context.cache().policy().refreshAfterWrite().orElseThrow();
       } else if (clazz.isAssignableFrom(Policy.FixedExpiration.class)) {
-        if (parameters[i].isAnnotationPresent(ExpireAfterAccess.class)) {
+        if (parameter.getAnnotatedElement().isAnnotationPresent(ExpireAfterAccess.class)) {
           params[i] = context.cache().policy().expireAfterAccess().orElseThrow();
-        } else if (parameters[i].isAnnotationPresent(ExpireAfterWrite.class)) {
+        } else if (parameter.getAnnotatedElement().isAnnotationPresent(ExpireAfterWrite.class)) {
           params[i] = context.cache().policy().expireAfterWrite().orElseThrow();
         } else {
           throw new AssertionError("FixedExpiration must have a qualifier annotation");
         }
       }
-      if (params[i] == null) {
-        checkNotNull(params[i], "Unknown parameter type: %s", clazz);
-      }
+      checkNotNull(params[i], "Unknown parameter type: %s", clazz);
     }
-    if (intern) {
-      // Retain a strong reference to the context throughout the test execution so that the
-      // cache entries are not collected due to the test not accepting the context parameter
-      CacheContext.intern(context);
+    var displayName = context.toString();
+    if (store) {
+      // If the cache context is not used as an argument then store it for the validation listener
+      // to recover. This allows for both performing an integrity check as well as ensuring that
+      // the cache entries are not collected prematurely due to weak/soft reference collection.
+      var key = StringUtils.substringBetween(displayName, "{", "}");
+      extension.getStore(NAMESPACE).put(key, context);
     }
-    return params;
+    return argumentSet(displayName, params);
   }
 
   /** Returns if the test parameters requires an asynchronous cache. */
-  private boolean isAsyncOnly() {
-    return hasParameterOfType(AsyncCache.class);
+  private static boolean isAsyncOnly(Collection<ParameterDeclaration> parameters) {
+    return hasParameterOfType(AsyncCache.class, parameters);
   }
 
   /** Returns if the test parameters requires a loading cache. */
-  private boolean isLoadingOnly() {
-    return hasParameterOfType(AsyncLoadingCache.class) || hasParameterOfType(LoadingCache.class);
+  private static boolean isLoadingOnly(Collection<ParameterDeclaration> parameters) {
+    return hasParameterOfType(AsyncLoadingCache.class, parameters)
+        || hasParameterOfType(LoadingCache.class, parameters);
   }
 
   /** Returns if the required cache is compatible with the Guava test adapters. */
-  private boolean isGuavaCompatible() {
-    return Arrays.stream(parameters)
-        .noneMatch(parameter -> GUAVA_INCOMPATIBLE.contains(parameter.getType()));
+  private static boolean isGuavaCompatible(Collection<ParameterDeclaration> parameters) {
+    return parameters.stream()
+        .noneMatch(parameter -> GUAVA_INCOMPATIBLE.contains(parameter.getParameterType()));
   }
 
   /** Returns if the class matches a parameter type. */
-  private boolean hasParameterOfType(Class<?> clazz) {
-    return Arrays.stream(parameters).map(Parameter::getType).anyMatch(clazz::isAssignableFrom);
+  private static boolean hasParameterOfType(Class<?> clazz,
+      Collection<ParameterDeclaration> parameters) {
+    return parameters.stream()
+        .map(ParameterDeclaration::getParameterType)
+        .anyMatch(clazz::isAssignableFrom);
   }
 }

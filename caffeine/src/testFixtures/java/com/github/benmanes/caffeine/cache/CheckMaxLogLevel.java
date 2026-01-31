@@ -22,6 +22,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.event.Level;
 
 /**
@@ -31,6 +32,7 @@ import org.slf4j.event.Level;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Target({METHOD, TYPE}) @Retention(RUNTIME)
+@ExtendWith(CacheValidationListener.class)
 public @interface CheckMaxLogLevel {
   Level value();
 }

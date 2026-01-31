@@ -27,14 +27,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.base.MoreObjects;
@@ -44,11 +44,11 @@ import com.google.errorprone.annotations.Var;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("ClassEscapesDefinedScope")
-public final class StripedBufferTest {
+final class StripedBufferTest {
   private static final Integer ELEMENT = 1;
 
-  @Test(dataProvider = "buffers")
-  public void init_null(FakeBuffer<Integer> buffer) {
+  @ParameterizedTest @MethodSource("buffers")
+  void init_null(FakeBuffer<Integer> buffer) {
     assertThat(buffer.table).isNull();
 
     var result = buffer.offer(ELEMENT);
@@ -56,9 +56,9 @@ public final class StripedBufferTest {
     assertThat(result).isEqualTo(SUCCESS);
   }
 
-  @Test(dataProvider = "buffers")
+  @ParameterizedTest @MethodSource("buffers")
   @SuppressWarnings({"rawtypes", "unchecked"})
-  public void init_empty(FakeBuffer<Integer> buffer) {
+  void init_empty(FakeBuffer<Integer> buffer) {
     buffer.table = new Buffer[0];
 
     var result = buffer.offer(ELEMENT);
@@ -67,7 +67,7 @@ public final class StripedBufferTest {
   }
 
   @Test
-  public void expand() {
+  void expand() {
     var buffer = new FakeBuffer<Integer>(FAILED);
     assertThat(buffer.offer(ELEMENT)).isEqualTo(SUCCESS);
 
@@ -84,7 +84,7 @@ public final class StripedBufferTest {
 
   @Test
   @SuppressWarnings({"rawtypes", "unchecked"})
-  public void expand_exceeds() {
+  void expand_exceeds() {
     var striped = new FakeBuffer<>(FAILED);
     var buffer = Mockito.mock(Buffer.class);
     when(buffer.offer(any())).thenReturn(FAILED);
@@ -97,7 +97,7 @@ public final class StripedBufferTest {
 
   @Test
   @SuppressWarnings("ThreadPriorityCheck")
-  public void expand_concurrent() {
+  void expand_concurrent() {
     var buffer = new FakeBuffer<Boolean>(FAILED);
     ConcurrentTestHarness.timeTasks(10 * NCPU, () -> {
       for (int i = 0; i < 1000; i++) {
@@ -108,9 +108,9 @@ public final class StripedBufferTest {
     assertThat(buffer.table).hasLength(MAXIMUM_TABLE_SIZE);
   }
 
-  @Test(dataProvider = "buffers")
   @SuppressWarnings("ThreadPriorityCheck")
-  public void produce(FakeBuffer<Integer> buffer) {
+  @ParameterizedTest @MethodSource("buffers")
+  void produce(FakeBuffer<Integer> buffer) {
     ConcurrentTestHarness.timeTasks(NCPU, () -> {
       for (int i = 0; i < 10; i++) {
         assertThat(buffer.offer(ELEMENT)).isAnyOf(SUCCESS, FULL, FAILED);
@@ -121,8 +121,8 @@ public final class StripedBufferTest {
     assertThat(requireNonNull(buffer.table).length).isAtMost(MAXIMUM_TABLE_SIZE);
   }
 
-  @Test(dataProvider = "buffers")
-  public void drain(FakeBuffer<Integer> buffer) {
+  @ParameterizedTest @MethodSource("buffers")
+  void drain(FakeBuffer<Integer> buffer) {
     buffer.drainTo(e -> {});
     assertThat(buffer.drains).isEqualTo(0);
 
@@ -134,7 +134,7 @@ public final class StripedBufferTest {
   }
 
   @Test
-  public void counts() {
+  void counts() {
     var buffer = new FakeBuffer<Integer>(SUCCESS);
     assertThat(buffer.writes()).isEqualTo(0);
     assertThat(buffer.reads()).isEqualTo(0);
@@ -152,19 +152,13 @@ public final class StripedBufferTest {
   }
 
   @Test
-  public void findVarHandle_absent() {
+  void findVarHandle_absent() {
     assertThrows(ExceptionInInitializerError.class, () ->
         findVarHandle(StripedBuffer.class, "absent", int.class));
   }
 
-  @DataProvider(name = "buffers")
-  public Object[] providesBuffers() {
-    var results = List.of(SUCCESS, FAILED, FULL);
-    var buffers = new ArrayList<Buffer<Integer>>();
-    for (var result : results) {
-      buffers.add(new FakeBuffer<>(result));
-    }
-    return buffers.toArray();
+  private static Stream<Buffer<Integer>> buffers() {
+    return Stream.of(new FakeBuffer<>(SUCCESS), new FakeBuffer<>(FAILED), new FakeBuffer<>(FULL));
   }
 
   private static final class FakeBuffer<E> extends StripedBuffer<E> {

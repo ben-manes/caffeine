@@ -20,7 +20,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -41,12 +42,13 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @author mario-schwede-hivemq (Mario Schwede)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Issue859Test {
+@Isolated
+final class Issue859Test {
   private static final int NUMBER_OF_RUNS = 100_000;
   private static final int NUMBER_OF_KEYS = 10;
 
   @Test
-  public void scheduleIfPendingWrites() {
+  void scheduleIfPendingWrites() {
     var runs = new ArrayList<TestRun>();
     for (int i = 1; i <= NUMBER_OF_RUNS; i++) {
       runs.add(runTest());

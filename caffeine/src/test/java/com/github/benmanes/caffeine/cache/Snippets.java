@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.testing.FutureSubject;
 import com.google.common.collect.ImmutableMap;
@@ -43,11 +43,11 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @SuppressWarnings({"Convert2MethodRef",
     "NewClassNamingConvention", "PMD.LambdaCanBeMethodReference"})
-public final class Snippets {
+final class Snippets {
 
   @Test
   @SuppressWarnings({"NullAway", "SystemOut"})
-  public void builder() {
+  void builder() {
     // @start region=builder
     LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
         .maximumSize(10_000)
@@ -61,7 +61,7 @@ public final class Snippets {
   }
 
   @Test
-  public void loader_basic() {
+  void loader_basic() {
     // @start region=loader_basic
     CacheLoader<Key, Graph> loader = key -> createExpensiveGraph(key);
     LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
@@ -71,7 +71,7 @@ public final class Snippets {
   }
 
   @Test
-  public void loader_bulk() {
+  void loader_bulk() {
     // @start region=loader_bulk
     CacheLoader<Key, Graph> loader = CacheLoader.bulk(keys -> createExpensiveGraphs(keys));
     LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
@@ -81,7 +81,7 @@ public final class Snippets {
   }
 
   @Test
-  public void asyncLoader_basic() {
+  void asyncLoader_basic() {
     // @start region=asyncLoader_basic
     AsyncCacheLoader<Key, Graph> loader = (key, executor) ->
         createExpensiveGraphAsync(key, executor);
@@ -92,7 +92,7 @@ public final class Snippets {
   }
 
   @Test
-  public void asyncLoader_bulk_sync() {
+  void asyncLoader_bulk_sync() {
     // @start region=asyncLoader_bulk_sync
     AsyncCacheLoader<Key, Graph> loader = AsyncCacheLoader.bulk(
         keys -> createExpensiveGraphs(keys));
@@ -103,7 +103,7 @@ public final class Snippets {
   }
 
   @Test
-  public void asyncLoader_bulk_async() {
+  void asyncLoader_bulk_async() {
     // @start region=asyncLoader_bulk_async
     AsyncCacheLoader<Key, Graph> loader = AsyncCacheLoader.bulk(
         (keys, executor) -> createExpensiveGraphsAsync(keys, executor));
@@ -115,7 +115,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("TimeZoneUsage")
-  public void expiry() {
+  void expiry() {
     // @start region=expiry
     LoadingCache<Key, Graph> cache = Caffeine.newBuilder()
         .expireAfter(Expiry.creating((Key key, Graph graph) ->
@@ -128,7 +128,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("TimeZoneUsage")
-  public void expiry_creating() {
+  void expiry_creating() {
     // @start region=expiry_creating
     Expiry<Key, Graph> expiry = Expiry.creating((key, graph) ->
         Duration.between(Instant.now(), graph.createdOn().plusHours(5)));
@@ -142,7 +142,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("TimeZoneUsage")
-  public void expiry_writing() {
+  void expiry_writing() {
     // @start region=expiry_writing
     Expiry<Key, Graph> expiry = Expiry.writing((key, graph) ->
         Duration.between(Instant.now(), graph.modifiedOn().plusHours(5)));
@@ -156,7 +156,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("TimeZoneUsage")
-  public void expiry_accessing() {
+  void expiry_accessing() {
     // @start region=expiry_accessing
     Expiry<Key, Graph> expiry = Expiry.accessing((key, graph) ->
         graph.isDirected() ? Duration.ofHours(1) : Duration.ofHours(3));
@@ -170,7 +170,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("CollectorMutability")
-  public void eviction_coldest() {
+  void eviction_coldest() {
     Cache<K, Graph> cache = Caffeine.newBuilder()
         .maximumSize(1000)
         .build();
@@ -185,7 +185,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("CollectorMutability")
-  public void eviction_hottest() {
+  void eviction_hottest() {
     Cache<K, Graph> cache = Caffeine.newBuilder()
         .maximumSize(1000)
         .build();
@@ -200,7 +200,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("CollectorMutability")
-  public void expireFixed_oldest() {
+  void expireFixed_oldest() {
     Cache<K, Graph> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofDays(1))
         .build();
@@ -215,7 +215,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("CollectorMutability")
-  public void expireFixed_youngest() {
+  void expireFixed_youngest() {
     Cache<K, Graph> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofDays(1))
         .build();
@@ -230,7 +230,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("CollectorMutability")
-  public void expireVar_oldest() {
+  void expireVar_oldest() {
     Cache<K, Graph> cache = Caffeine.newBuilder()
         .expireAfter(Expiry.creating((key, value) -> Duration.ofDays(1)))
         .build();
@@ -245,7 +245,7 @@ public final class Snippets {
 
   @Test
   @SuppressWarnings("CollectorMutability")
-  public void expireVar_youngest() {
+  void expireVar_youngest() {
     Cache<K, Graph> cache = Caffeine.newBuilder()
         .expireAfter(Expiry.creating((key, value) -> Duration.ofDays(1)))
         .build();

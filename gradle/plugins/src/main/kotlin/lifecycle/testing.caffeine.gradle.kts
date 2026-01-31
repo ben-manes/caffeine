@@ -3,7 +3,6 @@ import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
-import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
 
 plugins {
   `java-library`
@@ -78,7 +77,8 @@ tasks.withType<Test>().configureEach {
     val relativeDir = gradle.startParameter.currentDir
     val jfr = layout.buildDirectory.file("jfr/$name.jfr")
     jvmArgumentProviders.add {
-      listOf("-XX:StartFlightRecording=filename=${jfr.absolutePath().get()}")
+      listOf("-XX:StartFlightRecording=filename=${jfr.absolutePath().get()}",
+        "-XX:StartFlightRecording:jdk.ObjectCount#enabled=true")
     }
     doFirst {
       jfr.get().asFile.parentFile.mkdirs()
@@ -94,17 +94,12 @@ tasks.withType<Test>().configureEach {
     html.required = isCI().map { !it }
   }
   testLogging {
-    events(SKIPPED, FAILED)
     exceptionFormat = FULL
     showStackTraces = true
     showExceptions = true
     showCauses = true
+    events(FAILED)
   }
-  afterTest(KotlinClosure2<TestDescriptor, TestResult, Unit>({ descriptor, result ->
-    if (result.resultType == TestResult.ResultType.SKIPPED) {
-      throw GradleException("Do not skip tests (e.g. ${descriptor.name})")
-    }
-  }))
   javaLauncher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor
     languageVersion = javaTestVersion
@@ -116,12 +111,7 @@ tasks.withType<Test>().configureEach {
 tasks.withType<JavaCompile>().configureEach {
   if (name.endsWith("TestJava")) {
     options.errorprone.nullaway {
-      customInitializerAnnotations.addAll(listOf(
-        "org.testng.annotations.BeforeClass",
-        "org.testng.annotations.BeforeMethod"))
-      externalInitAnnotations.addAll(listOf(
-        "org.mockito.testng.MockitoSettings",
-        "picocli.CommandLine.Command"))
+      externalInitAnnotations.add("picocli.CommandLine.Command")
       excludedFieldAnnotations.addAll(listOf(
         "org.junit.jupiter.params.Parameter",
         "jakarta.inject.Inject",

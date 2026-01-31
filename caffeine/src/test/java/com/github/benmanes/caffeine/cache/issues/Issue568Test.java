@@ -13,7 +13,7 @@
  */
 package com.github.benmanes.caffeine.cache.issues;
 
-import static com.github.benmanes.caffeine.cache.Reset.awaitFullGc;
+import static com.github.benmanes.caffeine.testing.Awaits.awaitFullGc;
 
 import java.lang.ref.Reference;
 import java.util.ArrayList;
@@ -21,7 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.jspecify.annotations.Nullable;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -33,7 +34,8 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
  *
  * @author jhorvitz@google.com (Justin Horvitz)
  */
-public final class Issue568Test {
+@Isolated
+final class Issue568Test {
 
   /**
    * When an entry is updated then a concurrent reader should observe either the old or new value.
@@ -43,7 +45,7 @@ public final class Issue568Test {
    * assist the garbage collector.
    */
   @Test
-  public void intermittentNull() throws InterruptedException {
+  void intermittentNull() throws InterruptedException {
     Cache<String, String> cache = Caffeine.newBuilder()
         .executor(ConcurrentTestHarness.executor)
         .weakValues()
@@ -91,7 +93,7 @@ public final class Issue568Test {
    */
   @Test
   @SuppressWarnings("ExtractMethodRecommender")
-  public void resurrect() throws InterruptedException {
+  void resurrect() throws InterruptedException {
     var error = new AtomicReference<@Nullable RuntimeException>();
     Cache<String, Object> cache = Caffeine.newBuilder()
         .weakValues()

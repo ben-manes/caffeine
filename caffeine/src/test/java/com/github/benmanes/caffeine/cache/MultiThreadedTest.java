@@ -26,8 +26,8 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
-import org.testng.annotations.Listeners;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
@@ -50,13 +50,12 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Isolated
 @CheckMaxLogLevel(DEBUG)
-@Listeners(CacheValidationListener.class)
-@Test(dataProviderClass = CacheProvider.class)
 @SuppressFBWarnings("NPMC_NON_PRODUCTIVE_METHOD_CALL")
-public final class MultiThreadedTest {
+final class MultiThreadedTest {
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       maximumSize = {Maximum.DISABLED, Maximum.FULL},
       weigher = {CacheWeigher.DISABLED, CacheWeigher.RANDOM},
@@ -67,11 +66,11 @@ public final class MultiThreadedTest {
       expiry = CacheExpiry.DISABLED,
       expiryTime = Expire.ONE_MILLISECOND, keys = ReferenceType.STRONG,
       removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED)
-  public void concurrent_expiryDisabled(Cache<Int, Int> cache, CacheContext context) {
+  void concurrent_expiryDisabled(Cache<Int, Int> cache, CacheContext context) {
     Threads.runTest(operations(cache, context));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       maximumSize = {Maximum.DISABLED, Maximum.FULL},
       weigher = {CacheWeigher.DISABLED, CacheWeigher.RANDOM},
@@ -81,11 +80,11 @@ public final class MultiThreadedTest {
       refreshAfterWrite = {Expire.DISABLED, Expire.ONE_MILLISECOND},
       expiry = CacheExpiry.CREATE, expiryTime = Expire.ONE_MILLISECOND, keys = ReferenceType.STRONG,
       removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED)
-  public void concurrent_expiryCreate(Cache<Int, Int> cache, CacheContext context) {
+  void concurrent_expiryCreate(Cache<Int, Int> cache, CacheContext context) {
     Threads.runTest(operations(cache, context));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       maximumSize = {Maximum.DISABLED, Maximum.FULL},
       weigher = {CacheWeigher.DISABLED, CacheWeigher.RANDOM},
@@ -95,11 +94,11 @@ public final class MultiThreadedTest {
       refreshAfterWrite = {Expire.DISABLED, Expire.ONE_MILLISECOND},
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MILLISECOND, keys = ReferenceType.STRONG,
       removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED)
-  public void concurrent_expiryWrite(Cache<Int, Int> cache, CacheContext context) {
+  void concurrent_expiryWrite(Cache<Int, Int> cache, CacheContext context) {
     Threads.runTest(operations(cache, context));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       maximumSize = {Maximum.DISABLED, Maximum.FULL},
       weigher = {CacheWeigher.DISABLED, CacheWeigher.RANDOM},
@@ -109,7 +108,7 @@ public final class MultiThreadedTest {
       refreshAfterWrite = {Expire.DISABLED, Expire.ONE_MILLISECOND},
       expiry = CacheExpiry.ACCESS, expiryTime = Expire.ONE_MILLISECOND, keys = ReferenceType.STRONG,
       removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED)
-  public void concurrent_expiryAccess(Cache<Int, Int> cache, CacheContext context) {
+  void concurrent_expiryAccess(Cache<Int, Int> cache, CacheContext context) {
     Threads.runTest(operations(cache, context));
   }
 

@@ -28,7 +28,6 @@ tasks.withType<Pmd>().configureEach {
     xml.required = false
     html.required = true
   }
-  isConsoleOutput = true
 
   if (name.contains("Test")) {
     ruleSetConfig = resources.text.fromFile(

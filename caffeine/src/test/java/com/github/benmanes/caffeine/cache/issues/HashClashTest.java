@@ -20,18 +20,15 @@ import static java.util.function.Function.identity;
 
 import java.util.Set;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
-import org.testng.annotations.Listeners;
-import org.testng.annotations.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.CacheProvider;
 import com.github.benmanes.caffeine.cache.CacheSpec;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
-import com.github.benmanes.caffeine.cache.CacheValidationListener;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * CASSANDRA-11452: Hash collisions cause the cache to not admit new entries.
@@ -39,9 +36,7 @@ import com.github.benmanes.caffeine.cache.CacheValidationListener;
  * @author Branimir Lambov (github.com/blambov)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Listeners(CacheValidationListener.class)
-@Test(dataProviderClass = CacheProvider.class)
-public final class HashClashTest {
+final class HashClashTest {
   private static final int STEP = 5;
   private static final long LONG_1 = 1L;
   private static final long ITERS = 200_000;
@@ -49,10 +44,10 @@ public final class HashClashTest {
 
   private static final boolean debug = false;
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @SuppressWarnings({"CheckReturnValue", "ResultOfMethodCallIgnored"})
   @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.ONE_FIFTY, stats = Stats.ENABLED)
-  public void testCache(Cache<Long, Long> cache) {
+  void clash(Cache<Long, Long> cache) {
     for (long j = 0; j < 300; ++j) {
       cache.get(1L, identity());
       cache.get(j, identity());

@@ -56,7 +56,7 @@ abstract class EclipseJavaCompile @Inject constructor(
           "-encoding", "UTF-8",
           "-enableJavadoc",
           "-failOnWarning",
-          "--release", "24",
+          "--release", "25",
           "-proc:none",
           "-d", "none"))
         addAll(sources)

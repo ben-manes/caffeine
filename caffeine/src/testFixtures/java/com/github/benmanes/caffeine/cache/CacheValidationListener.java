@@ -15,142 +15,170 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
-import static org.testng.ITestResult.FAILURE;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.jspecify.annotations.Nullable;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
+import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
+import org.junit.jupiter.api.extension.InvocationInterceptor;
+import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.slf4j.bridge.SLF4JBridgeHandler;
-import org.testng.IInvokedMethod;
-import org.testng.IInvokedMethodListener;
-import org.testng.ISuite;
-import org.testng.ISuiteListener;
-import org.testng.ITestContext;
-import org.testng.ITestResult;
-import org.testng.TestRunner;
-import org.testng.internal.TestResult;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
-import com.github.benmanes.caffeine.cache.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
-import com.github.benmanes.caffeine.cache.Policy.Eviction;
-import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
-import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
+import com.github.benmanes.caffeine.testing.LoggingEvents;
 import com.github.benmanes.caffeine.testing.TrackingExecutor;
-import com.github.valfirst.slf4jtest.TestLogger;
-import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.Var;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CacheValidationListener implements ISuiteListener, IInvokedMethodListener {
-  private static final @Nullable Field ALL_LOGGING_EVENTS = FieldUtils.getDeclaredField(
-      TestLogger.class, "allLoggingEvents", /* forceAccess= */ true);
-  private static final Object[] EMPTY_PARAMS = {};
-
-  private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
-  private static final AtomicBoolean detailedParams = new AtomicBoolean(false);
-  private static final ITestContext testngContext = Mockito.mock();
-
-  private final List<Collection<?>> resultQueues = new CopyOnWriteArrayList<>();
-  private final AtomicBoolean beforeCleanup = new AtomicBoolean();
+public final class CacheValidationListener implements
+    BeforeTestExecutionCallback, InvocationInterceptor, AfterTestExecutionCallback {
+  private static final Namespace NAMESPACE = Namespace.create(CacheValidationListener.class);
 
   @Override
-  public void onStart(ISuite suite) {
-    SLF4JBridgeHandler.removeHandlersForRootLogger();
-    SLF4JBridgeHandler.install();
+  public void beforeTestExecution(ExtensionContext extension) {
+    if (!SLF4JBridgeHandler.isInstalled()) {
+      SLF4JBridgeHandler.removeHandlersForRootLogger();
+      SLF4JBridgeHandler.install();
+    }
+    cleanUp();
   }
 
   @Override
-  public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
-    TestLoggerFactory.getAllLoggingEvents().clear();
-    TestLoggerFactory.clear();
-
-    if (beforeCleanup.get()
-        || !beforeCleanup.compareAndSet(/* expectedValue= */ false, /* newValue= */ true)) {
-      return;
-    }
-
-    // Remove unused test results
-    if (testResult.getTestContext() instanceof TestRunner) {
-      var runner = (TestRunner) testResult.getTestContext();
-      resultQueues.add(runner.getFailedButWithinSuccessPercentageTests().getAllResults());
-      resultQueues.add(runner.getSkippedTests().getAllResults());
-      resultQueues.add(runner.getPassedTests().getAllResults());
-      resultQueues.add(runner.getFailedTests().getAllResults());
-    }
+  public <T> T interceptTestClassConstructor(Invocation<T> invocation,
+      ReflectiveInvocationContext<Constructor<T>> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    return intercept(invocation, invocationContext, extensionContext);
   }
 
   @Override
-  public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
+  @SuppressWarnings("NullAway")
+  public void interceptBeforeAllMethod(Invocation<@Nullable Void> invocation,
+      ReflectiveInvocationContext<Method> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    intercept(invocation, invocationContext, extensionContext);
+  }
+
+  @Override
+  @SuppressWarnings("NullAway")
+  public void interceptBeforeEachMethod(Invocation<@Nullable Void> invocation,
+      ReflectiveInvocationContext<Method> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    intercept(invocation, invocationContext, extensionContext);
+  }
+
+  @Override @SuppressWarnings("NullAway")
+  public void interceptTestMethod(Invocation<@Nullable Void> invocation,
+      ReflectiveInvocationContext<Method> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    intercept(invocation, invocationContext, extensionContext);
+  }
+
+  @Override
+  public <T> T interceptTestFactoryMethod(Invocation<T> invocation,
+      ReflectiveInvocationContext<Method> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    return intercept(invocation, invocationContext, extensionContext);
+  }
+
+  @Override @SuppressWarnings("NullAway")
+  public void interceptTestTemplateMethod(Invocation<@Nullable Void> invocation,
+      ReflectiveInvocationContext<Method> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    intercept(invocation, invocationContext, extensionContext);
+  }
+
+  @Override
+  @SuppressWarnings("NullAway")
+  public void interceptAfterEachMethod(Invocation<@Nullable Void> invocation,
+      ReflectiveInvocationContext<Method> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    intercept(invocation, invocationContext, extensionContext);
+  }
+
+  @Override
+  @SuppressWarnings("NullAway")
+  public void interceptAfterAllMethod(Invocation<@Nullable Void> invocation,
+      ReflectiveInvocationContext<Method> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    intercept(invocation, invocationContext, extensionContext);
+  }
+
+  @CanIgnoreReturnValue
+  private static <T extends @Nullable Object> T intercept(Invocation<T> invocation,
+      ReflectiveInvocationContext<?> invocationContext,
+      ExtensionContext extensionContext) throws Throwable {
+    cleanUp();
+    captureContext(invocationContext, extensionContext);
+    return invocation.proceed();
+  }
+
+  /** Extracts the {@link CacheContext} from the environment and stores it for validation. */
+  private static void captureContext(ReflectiveInvocationContext<?> invocationContext,
+      ExtensionContext extensionContext) {
+    var key = StringUtils.substringBetween(extensionContext.getDisplayName(), "{", "}");
+    if (key != null) {
+      @Var var extension = Optional.of(extensionContext);
+      do {
+        var context = extension
+            .map(ext -> ext.getStore(CacheProvider.NAMESPACE))
+            .map(store -> store.remove(key, CacheContext.class));
+        if (context.isPresent()) {
+          extensionContext.getStore(NAMESPACE).put("cacheContext", context.orElseThrow());
+          return;
+        }
+        extension = extension.flatMap(ExtensionContext::getParent);
+      } while (extension.isPresent());
+    }
+    invocationContext.getArguments().stream()
+        .filter(CacheContext.class::isInstance)
+        .findAny().ifPresent(context ->
+            extensionContext.getStore(NAMESPACE).put("cacheContext", context));
+  }
+
+  @Override
+  public void afterTestExecution(ExtensionContext extension) {
     try {
-      if (testResult.isSuccess()) {
-        validate(testResult);
-      } else {
-        showDetailedTestParameters();
+      if (extension.getExecutionException().isEmpty()) {
+        var context = extension.getStore(NAMESPACE).get("cacheContext", CacheContext.class);
+        validate(extension, context);
       }
-    } catch (Throwable caught) {
-      showDetailedTestParameters();
-      testResult.setStatus(FAILURE);
-      testResult.setThrowable(new AssertionError(getTestName(method), caught));
     } finally {
-      cleanUp(testResult);
-    }
-  }
-
-  /** Shows the test method parameters in the test report. */
-  private static void showDetailedTestParameters() {
-    if (!detailedParams.get()) {
-      detailedParams.set(true);
+      cleanUp();
     }
   }
 
   /** Validates the internal state of the cache. */
-  private static void validate(ITestResult testResult) {
-    CacheContext context = Stream
-        .concat(Arrays.stream(testResult.getParameters()),
-            CacheContext.interner().values().stream())
-        .filter(CacheContext.class::isInstance)
-        .findFirst().map(CacheContext.class::cast)
-        .orElse(null);
+  private static void validate(ExtensionContext extension, @Nullable CacheContext context) {
     if (context == null) {
-      for (var param : testResult.getParameters()) {
-        if (param instanceof Cache<?, ?>) {
-          assertThat((Cache<?, ?>) param).isValid();
-        } else if (param instanceof AsyncCache<?, ?>) {
-          assertThat((AsyncCache<?, ?>) param).isValid();
-        }
-      }
+      checkLogger(extension);
     } else {
       awaitExecutor(context);
-
-      checkNoStats(testResult, context);
-      checkExecutor(testResult, context);
-      checkNoEvictions(testResult, context);
+      checkLogger(extension);
+      checkNoStats(extension, context);
+      checkExecutor(extension, context);
+      checkNoEvictions(extension, context);
       assertThat(context.cache()).isValid();
     }
-    checkLogger(testResult);
   }
 
   /** Waits until the executor has completed all of the submitted work. */
@@ -158,7 +186,6 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
   private static void awaitExecutor(CacheContext context) {
     if (context.executorType() != CacheExecutor.DEFAULT) {
       context.executor().resume();
-
       if ((context.executorType() != CacheExecutor.DIRECT)
           && (context.executorType() != CacheExecutor.DISCARDING)
           && (context.executor().submitted() != context.executor().completed())) {
@@ -168,152 +195,55 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
   }
 
-  /** Returns the name of the executed test. */
-  private static String getTestName(IInvokedMethod method) {
-    return StringUtils.substringAfterLast(method.getTestMethod().getTestClass().getName(), ".")
-        + "#" + method.getTestMethod().getConstructorOrMethod().getName();
-  }
-
   /** Checks whether the {@link TrackingExecutor} had unexpected failures. */
   @SuppressWarnings("resource")
-  private static void checkExecutor(ITestResult testResult, CacheContext context) {
-    var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    var cacheSpec = testMethod.getAnnotation(CacheSpec.class);
-    if ((cacheSpec == null) || (context.executorType() == CacheExecutor.DEFAULT)) {
-      return;
-    }
-
-    if (cacheSpec.executorFailure() == ExecutorFailure.EXPECTED) {
-      assertThat(context.executor().failed()).isGreaterThan(0);
-    } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
-      assertThat(context.executor().failed()).isEqualTo(0);
+  private static void checkExecutor(ExtensionContext extension, CacheContext context) {
+    var cacheSpec = annotation(extension, CacheSpec.class).orElseThrow();
+    if (context.executorType() != CacheExecutor.DEFAULT) {
+      if (cacheSpec.executorFailure() == ExecutorFailure.EXPECTED) {
+        assertThat(context.executor().failed()).isGreaterThan(0);
+      } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
+        assertThat(context.executor().failed()).isEqualTo(0);
+      }
     }
   }
 
   /** Checks the statistics if {@link CheckNoStats} is found. */
-  private static void checkNoStats(ITestResult testResult, CacheContext context) {
-    var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class)
-        || testResult.getTestClass().getRealClass().isAnnotationPresent(CheckNoStats.class);
-    if (!checkNoStats) {
-      return;
+  private static void checkNoStats(ExtensionContext extension, CacheContext context) {
+    if (annotation(extension, CheckNoStats.class).isPresent()) {
+      assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
     }
-
-    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
   }
 
   /** Checks the statistics if {@link CheckNoEvictions} is found. */
-  private static void checkNoEvictions(ITestResult testResult, CacheContext context) {
-    var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    boolean checkNoEvictions = testMethod.isAnnotationPresent(CheckNoEvictions.class)
-        || testResult.getTestClass().getRealClass().isAnnotationPresent(CheckNoEvictions.class);
-    if (!checkNoEvictions) {
-      return;
+  private static void checkNoEvictions(ExtensionContext extension, CacheContext context) {
+    if (annotation(extension, CheckNoEvictions.class).isPresent()) {
+      assertThat(context).removalNotifications().hasNoEvictions();
+      assertThat(context).evictionNotifications().isEmpty();
     }
-
-    assertThat(context).removalNotifications().hasNoEvictions();
-    assertThat(context).evictionNotifications().isEmpty();
   }
 
   /** Checks that no logs above the specified level were emitted. */
-  private static void checkLogger(ITestResult testResult) {
-    var testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    var checkMaxLogLevel = Optional.ofNullable(testMethod.getAnnotation(CheckMaxLogLevel.class))
-        .orElseGet(() -> testResult.getTestClass()
-            .getRealClass().getAnnotation(CheckMaxLogLevel.class));
-    if (checkMaxLogLevel != null) {
+  private static void checkLogger(ExtensionContext extension) {
+    annotation(extension, CheckMaxLogLevel.class).ifPresent(checkMaxLogLevel -> {
       assertWithMessage("maxLevel=%s", checkMaxLogLevel.value()).that(logEvents()
           .filter(event -> event.getLevel().toInt() > checkMaxLogLevel.value().toInt()))
           .isEmpty();
-    }
+    });
   }
 
   /** Free memory by clearing unused resources after test execution. */
-  private void cleanUp(ITestResult testResult) {
-    resultQueues.forEach(Collection::clear);
-    TestLoggerFactory.clear();
-    resetMocks(testResult);
-    resetCache(testResult);
-    clearLogger();
-
-    boolean briefParams = !detailedParams.get();
-    if (testResult.isSuccess() && briefParams) {
-      clearTestResults(testResult);
-    }
-
-    stringifyParams(testResult, briefParams);
-    dedupTestName(testResult, briefParams);
+  private static void cleanUp() {
     CacheContext.interner().clear();
+    LoggingEvents.cleanUp();
   }
 
-  private static void dedupTestName(ITestResult testResult, boolean briefParams) {
-    if ((testResult.getName() != null) && briefParams) {
-      testResult.setTestName(simpleNames.get(testResult.getName(), Object::toString));
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private static void resetMocks(ITestResult testResult) {
-    for (Object param : testResult.getParameters()) {
-      if (param instanceof CacheContext) {
-        var context = (CacheContext) param;
-        if (context.expiryType() == CacheExpiry.MOCKITO) {
-          Mockito.clearInvocations(context.expiry());
-        }
-        if (context.schedulerType() == CacheScheduler.MOCKITO) {
-          Mockito.clearInvocations(context.scheduler());
-        }
-      }
-    }
-  }
-
-  private static void resetCache(ITestResult testResult) {
-    for (Object param : testResult.getParameters()) {
-      if (param instanceof CacheContext) {
-        var context = (CacheContext) param;
-        if (context.isCaffeine()) {
-          Reset.destroy(context.cache());
-        }
-      }
-    }
-  }
-
-  private static void clearLogger() {
-    if (ALL_LOGGING_EVENTS == null) {
-      return;
-    }
-    try {
-      for (var logger : TestLoggerFactory.getAllTestLoggers().values()) {
-        var allLoggingEvents = (Collection<?>) ALL_LOGGING_EVENTS.get(logger);
-        allLoggingEvents.clear();
-      }
-    } catch (IllegalAccessException | SecurityException expected) {
-      /* ignored */
-    }
-  }
-
-  private static void clearTestResults(ITestResult testResult) {
-    testResult.setParameters(EMPTY_PARAMS);
-    if (testResult instanceof TestResult) {
-      var result = (TestResult) testResult;
-      result.setContext(testngContext);
-    }
-  }
-
-  private static void stringifyParams(ITestResult testResult, boolean briefParams) {
-    Object[] params = testResult.getParameters();
-    for (int i = 0; i < params.length; i++) {
-      Object param = params[i];
-      if ((param instanceof AsyncCache<?, ?>) || (param instanceof Cache<?, ?>)
-          || (param instanceof Map<?, ?>) || (param instanceof Eviction<?, ?>)
-          || (param instanceof FixedExpiration<?, ?>) || (param instanceof VarExpiration<?, ?>)
-          || ((param instanceof CacheContext) && briefParams)) {
-        params[i] = simpleNames.get(param.getClass(), key -> ((Class<?>) key).getSimpleName());
-      } else if (param instanceof CacheContext) {
-        params[i] = simpleNames.get(param.toString(), Object::toString);
-      } else {
-        params[i] = String.valueOf(param);
-      }
-    }
+  private static <T extends Annotation> Optional<T> annotation(
+      ExtensionContext extension, Class<T> clazz) {
+    return findAnnotation(extension.getTestMethod(), clazz)
+        .or(() -> findAnnotation(extension.getTestClass(), clazz))
+        .or(() -> extension.getEnclosingTestClasses().stream()
+            .flatMap(enclosing -> findAnnotation(enclosing, clazz).stream())
+            .findAny());
   }
 }

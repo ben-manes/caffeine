@@ -50,8 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
-import org.testng.annotations.Listeners;
-import org.testng.annotations.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
@@ -76,17 +75,15 @@ import com.google.errorprone.annotations.Var;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @CheckMaxLogLevel(TRACE)
-@Listeners(CacheValidationListener.class)
-@Test(dataProviderClass = CacheProvider.class)
-public final class RefreshAfterWriteTest {
+final class RefreshAfterWriteTest {
 
   /* --------------- refreshIfNeeded --------------- */
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
-  public void refreshIfNeeded_nonblocking(CacheContext context) {
+  void refreshIfNeeded_nonblocking(CacheContext context) {
     Int key = context.absentKey();
     Int original = intern(Int.valueOf(1));
     Int refresh1 = intern(original.add(1));
@@ -126,11 +123,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
-  public void refreshIfNeeded_failure(CacheContext context) {
+  void refreshIfNeeded_failure(CacheContext context) {
     Int key = context.absentKey();
     var reloads = new AtomicInteger();
     var cache = context.build(new CacheLoader<Int, Int>() {
@@ -156,12 +153,12 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       loader = Loader.REFRESH_INTERRUPTED, refreshAfterWrite = Expire.ONE_MINUTE,
       executor = CacheExecutor.DIRECT)
-  public void refreshIfNeeded_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshIfNeeded_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
 
@@ -170,9 +167,9 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING)
-  public void refreshIfNeeded_replace(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshIfNeeded_replace(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentKey());
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
@@ -185,10 +182,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
       removalListener = Listener.CONSUMING, loader = Loader.NULL)
-  public void refreshIfNeeded_remove(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshIfNeeded_remove(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.absentKey());
@@ -201,11 +198,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       refreshAfterWrite = Expire.ONE_MINUTE, population = Population.EMPTY,
       removalListener = Listener.CONSUMING)
-  public void refreshIfNeeded_noChange(CacheContext context) {
+  void refreshIfNeeded_noChange(CacheContext context) {
     var cache = context.build(new CacheLoader<Int, Int>() {
       @Override public Int load(Int key) {
         throw new IllegalStateException();
@@ -224,11 +221,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)
-  public void refreshIfNeeded_replaced(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshIfNeeded_replaced(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
@@ -247,14 +244,14 @@ public final class RefreshAfterWriteTest {
         .exclusively();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MILLISECOND, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE, mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
       expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
       expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
-  public void refreshIfNeeded_expired(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshIfNeeded_expired(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(10));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
@@ -274,11 +271,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)
-  public void refreshIfNeeded_absent_newValue(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshIfNeeded_absent_newValue(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
@@ -300,11 +297,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE, executor = CacheExecutor.THREADED)
-  public void refreshIfNeeded_absent_nullValue(
+  void refreshIfNeeded_absent_nullValue(
       LoadingCache<Int, @Nullable Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
@@ -324,11 +321,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       keys = ReferenceType.WEAK, refreshAfterWrite = Expire.ONE_MINUTE,
       removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
-  public void refreshIfNeeded_weakKeyRemoved(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshIfNeeded_weakKeyRemoved(LoadingCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     cache.put(key, context.absentValue());
 
@@ -346,10 +343,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void refreshIfNeeded_cancel_noLog(CacheContext context) {
+  void refreshIfNeeded_cancel_noLog(CacheContext context) {
     var cacheLoader = new CacheLoader<Int, Int>() {
       @Override public Int load(Int key) {
         throw new AssertionError();
@@ -373,10 +370,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void refreshIfNeeded_timeout_noLog(CacheContext context) {
+  void refreshIfNeeded_timeout_noLog(CacheContext context) {
     var cacheLoader = new CacheLoader<Int, Int>() {
       @Override public Int load(Int key) {
         throw new AssertionError();
@@ -401,11 +398,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void refreshIfNeeded_error_log(CacheContext context) {
+  void refreshIfNeeded_error_log(CacheContext context) {
     var expected = new RuntimeException();
     CacheLoader<Int, Int> cacheLoader = key -> { throw expected; };
     LoadingCache<Int, Int> cache = context.isAsync()
@@ -425,11 +422,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void refreshIfNeeded_nullFuture(CacheContext context) {
+  void refreshIfNeeded_nullFuture(CacheContext context) {
     var refreshed = new AtomicBoolean();
     var loader = new CacheLoader<Int, Int>() {
       @Override public Int load(Int key) {
@@ -463,10 +460,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(loader = Loader.ASYNC_INCOMPLETE,
       refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER)
-  public void refreshIfNeeded_slowLoad(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshIfNeeded_slowLoad(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     cache.synchronous().asMap().put(context.absentKey(), context.absentKey());
 
     context.ticker().advance(Duration.ofHours(1));
@@ -489,10 +486,10 @@ public final class RefreshAfterWriteTest {
   /* --------------- getIfPresent --------------- */
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getIfPresent_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
+  void getIfPresent_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getIfPresent(context.middleKey())).isEqualTo(context.middleKey().negate());
     context.ticker().advance(Duration.ofSeconds(45));
@@ -505,10 +502,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getIfPresent_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
+  void getIfPresent_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getIfPresent(context.middleKey())).isEqualTo(context.middleKey().negate());
     context.ticker().advance(Duration.ofSeconds(45));
@@ -527,10 +524,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NEGATIVE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getIfPresent_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  void getIfPresent_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getIfPresent(context.middleKey())).succeedsWith(context.middleKey().negate());
     context.ticker().advance(Duration.ofSeconds(45));
@@ -545,10 +542,10 @@ public final class RefreshAfterWriteTest {
   /* --------------- getAllPresent --------------- */
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,  loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
-  public void getAllPresent_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
+  void getAllPresent_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     var results = cache.getAllPresent(context.firstMiddleLastKeys());
 
@@ -564,10 +561,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getAllPresent_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
+  void getAllPresent_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     var expected = cache.getAllPresent(context.firstMiddleLastKeys());
     context.ticker().advance(Duration.ofSeconds(45));
@@ -589,10 +586,10 @@ public final class RefreshAfterWriteTest {
   /* --------------- getFunc --------------- */
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
-  public void getFunc_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
+  void getFunc_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey(), identity());
     assertThat(value).isEqualTo(context.original().get(context.firstKey()));
@@ -607,10 +604,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
       population = { Population.PARTIAL, Population.FULL })
-  public void getFunc_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
+  void getFunc_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> mappingFunction = key -> requireNonNull(context.original().get(key));
     context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey(), mappingFunction);
@@ -629,10 +626,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
-  public void getFunc_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  void getFunc_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> mappingFunction = key -> requireNonNull(context.original().get(key));
     context.ticker().advance(Duration.ofSeconds(30));
     cache.get(context.firstKey(), mappingFunction).join();
@@ -648,10 +645,10 @@ public final class RefreshAfterWriteTest {
   /* --------------- get --------------- */
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
-  public void get_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
+  void get_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
@@ -666,10 +663,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
       population = { Population.PARTIAL, Population.FULL })
-  public void get_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
+  void get_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
@@ -687,10 +684,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
-  public void get_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  void get_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
     cache.get(context.firstKey()).join();
     cache.get(context.absentKey()).join();
@@ -706,11 +703,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
       compute = Compute.ASYNC)
-  public void get_sameFuture(CacheContext context) {
+  void get_sameFuture(CacheContext context) {
     var done = new AtomicBoolean();
     var cache = context.buildAsync((Int key) -> {
       await().untilTrue(done);
@@ -731,10 +728,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
-  public void get_slowRefresh(CacheContext context) {
+  void get_slowRefresh(CacheContext context) {
     Int key = context.absentKey();
     Int originalValue = context.absentValue();
     Int refreshedValue = intern(originalValue.add(1));
@@ -763,9 +760,9 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NULL)
-  public void get_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  void get_null(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     Int key = Int.valueOf(1);
     cache.synchronous().put(key, key);
     context.ticker().advance(Duration.ofMinutes(2));
@@ -777,10 +774,10 @@ public final class RefreshAfterWriteTest {
   /* --------------- getAll --------------- */
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
-  public void getAll_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
+  void getAll_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = List.of(context.firstKey(), context.absentKey());
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getAll(keys)).containsExactly(
@@ -797,10 +794,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
       population = { Population.PARTIAL, Population.FULL })
-  public void getAll_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
+  void getAll_delayed(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
     var expected = Maps.toMap(context.firstMiddleLastKeys(), Int::negate);
     context.ticker().advance(Duration.ofSeconds(30));
@@ -822,10 +819,10 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
-  public void getAll_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+  void getAll_async(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var keys = List.of(context.firstKey(), context.absentKey());
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(cache.getAll(keys).join()).containsExactly(
@@ -847,10 +844,10 @@ public final class RefreshAfterWriteTest {
   /* --------------- put --------------- */
 
   @CheckNoEvictions
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
       executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
-  public void put(CacheContext context) {
+  void put(CacheContext context) {
     var started = new AtomicBoolean();
     var refresh = new AtomicBoolean();
     Int key = context.absentKey();
@@ -885,11 +882,11 @@ public final class RefreshAfterWriteTest {
   /* --------------- invalidate --------------- */
 
   @CheckNoEvictions
+  @ParameterizedTest
   @SuppressWarnings("resource")
-  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
       executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
-  public void invalidate(CacheContext context) {
+  void invalidate(CacheContext context) {
     var started = new AtomicBoolean();
     var refresh = new AtomicBoolean();
     Int key = context.absentKey();
@@ -930,11 +927,11 @@ public final class RefreshAfterWriteTest {
   }
 
   @CheckNoEvictions
+  @ParameterizedTest
   @SuppressWarnings("resource")
-  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       loader = Loader.ASYNC_INCOMPLETE, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
     @Var int submitted;
 
@@ -968,10 +965,10 @@ public final class RefreshAfterWriteTest {
 
   /* --------------- Policy: refreshes --------------- */
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
       refreshAfterWrite = Expire.ONE_MINUTE, population = Population.FULL)
-  public void refreshes(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshes(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.getIfPresent(context.firstKey());
     assertThat(cache.policy().refreshes()).hasSize(1);
@@ -986,11 +983,11 @@ public final class RefreshAfterWriteTest {
     assertThat(cache).containsEntry(context.firstKey(), Int.MAX_VALUE);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
       refreshAfterWrite = Expire.ONE_MINUTE, population = Population.FULL)
-  public void refreshes_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
+  void refreshes_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.getIfPresent(context.firstKey());
     assertThat(value).isNotNull();
@@ -1005,49 +1002,49 @@ public final class RefreshAfterWriteTest {
 
   /* --------------- Policy: refreshAfterWrite --------------- */
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void getRefreshesAfter(FixedRefresh<Int, Int> refreshAfterWrite) {
+  void getRefreshesAfter(FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(1);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(1);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshAfter_negative(FixedRefresh<Int, Int> refreshAfterWrite) {
+  void setRefreshAfter_negative(FixedRefresh<Int, Int> refreshAfterWrite) {
     var duration = Duration.ofMinutes(-2);
     assertThrows(IllegalArgumentException.class, () ->
         refreshAfterWrite.setRefreshesAfter(duration));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshAfter_excessive(FixedRefresh<Int, Int> refreshAfterWrite) {
+  void setRefreshAfter_excessive(FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(ChronoUnit.FOREVER.getDuration());
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.NANOSECONDS)).isEqualTo(Long.MAX_VALUE);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @SuppressWarnings("PreferJavaTimeOverload")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshesAfter(FixedRefresh<Int, Int> refreshAfterWrite) {
+  void setRefreshesAfter(FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(2, TimeUnit.MINUTES);
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(2);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(2);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void setRefreshesAfter_duration(FixedRefresh<Int, Int> refreshAfterWrite) {
+  void setRefreshesAfter_duration(FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(Duration.ofMinutes(2));
     assertThat(refreshAfterWrite.getRefreshesAfter().toMinutes()).isEqualTo(2);
     assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES)).isEqualTo(2);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       refreshAfterWrite = Expire.ONE_MINUTE)
-  public void ageOf(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+  void ageOf(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(0);
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(30);
@@ -1055,10 +1052,10 @@ public final class RefreshAfterWriteTest {
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS)).hasValue(75);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       refreshAfterWrite = Expire.ONE_MINUTE)
-  public void ageOf_duration(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+  void ageOf_duration(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     // Truncated to seconds to ignore the LSB (nanosecond) used for refreshAfterWrite's lock
     assertThat(refreshAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(0);
     context.ticker().advance(Duration.ofSeconds(30));
@@ -1067,29 +1064,29 @@ public final class RefreshAfterWriteTest {
     assertThat(refreshAfterWrite.ageOf(context.firstKey()).orElseThrow().toSeconds()).isEqualTo(75);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
-  public void ageOf_absent(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+  void ageOf_absent(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(context.absentKey())).isEmpty();
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
-  public void ageOf_expired(Cache<Int, Int> cache,
+  void ageOf_expired(Cache<Int, Int> cache,
       CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(Duration.ofMinutes(2));
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void ageOf_async(AsyncCache<Int, Int> cache,
+  void ageOf_async(AsyncCache<Int, Int> cache,
       CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);

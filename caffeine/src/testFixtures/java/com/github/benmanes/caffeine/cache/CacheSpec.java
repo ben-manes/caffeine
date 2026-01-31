@@ -19,7 +19,9 @@ import static com.github.benmanes.caffeine.cache.CacheContext.intern;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
 import static com.github.benmanes.caffeine.testing.Nullness.nullMap;
 import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
+import static java.lang.annotation.ElementType.CONSTRUCTOR;
 import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
@@ -48,6 +50,8 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.RemovalListeners.ConsumingRemovalListener;
@@ -61,12 +65,14 @@ import com.google.common.util.concurrent.testing.TestingExecutors;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
- * The cache test specification so that a {@link org.testng.annotations.DataProvider} can construct
- * the maximum number of cache combinations to test against.
+ * The specification so that the maximum number of useful cache combinations can be tested against.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Target(METHOD) @Retention(RUNTIME)
+@Retention(RUNTIME)
+@Target({CONSTRUCTOR, METHOD, TYPE})
+@ArgumentsSource(CacheProvider.class)
+@ExtendWith(CacheValidationListener.class)
 @SuppressWarnings({"ImmutableEnumChecker", "MemberName"})
 public @interface CacheSpec {
 

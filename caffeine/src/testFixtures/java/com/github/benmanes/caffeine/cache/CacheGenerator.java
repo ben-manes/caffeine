@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,30 +63,28 @@ public final class CacheGenerator {
   private final boolean isLoadingOnly;
   private final boolean isGuavaCompatible;
 
-  public CacheGenerator(CacheSpec cacheSpec) {
-    this(cacheSpec, Options.fromSystemProperties(),
-        /* isLoadingOnly= */ false, /* isAsyncOnly= */ false, /* isGuavaCompatible= */ true);
+  private CacheGenerator(Builder builder) {
+    this.isGuavaCompatible = builder.isGuavaCompatible;
+    this.isLoadingOnly = builder.isLoadingOnly;
+    this.isAsyncOnly = builder.isAsyncOnly;
+    this.cacheSpec = builder.cacheSpec;
+    this.options = builder.options;
   }
 
-  CacheGenerator(CacheSpec cacheSpec, Options options,
-      boolean isLoadingOnly, boolean isAsyncOnly, boolean isGuavaCompatible) {
-    this.isGuavaCompatible = isGuavaCompatible;
-    this.isLoadingOnly = isLoadingOnly;
-    this.isAsyncOnly = isAsyncOnly;
-    this.cacheSpec = cacheSpec;
-    this.options = options;
-  }
-
-  /** Returns a lazy stream so that the test case is GC-able after use. */
-  public Stream<CacheContext> generate() {
-    return combinations().stream()
-        .map(this::newCacheContext)
-        .filter(this::isCompatible);
+  public static Builder forCacheSpec(CacheSpec cacheSpec) {
+    return new Builder(cacheSpec, Options.fromSystemProperties());
   }
 
   /** Creates the cache and associates it with the context. */
   public static void initialize(CacheContext context) {
     populate(context, newCache(context));
+  }
+
+  /** Returns a lazy stream so that the test case is GC-able after use. */
+  private Stream<CacheContext> generate() {
+    return combinations().stream()
+        .map(this::newCacheContext)
+        .filter(this::isCompatible);
   }
 
   /** Returns the Cartesian set of the possible cache configurations. */
@@ -272,5 +272,34 @@ public final class CacheGenerator {
       builder.add(Map.entry(value, value.negate()));
     }
     return builder.build();
+  }
+
+  public static final class Builder {
+    private final CacheSpec cacheSpec;
+    private final Options options;
+
+    private boolean isGuavaCompatible;
+    private boolean isLoadingOnly;
+    private boolean isAsyncOnly;
+
+    private Builder(CacheSpec cacheSpec, Options options) {
+      this.cacheSpec = requireNonNull(cacheSpec);
+      this.options = requireNonNull(options);
+    }
+    public Builder isGuavaCompatible(boolean isGuavaCompatible) {
+      this.isGuavaCompatible = isGuavaCompatible;
+      return this;
+    }
+    public Builder isLoadingOnly(boolean isLoadingOnly) {
+      this.isLoadingOnly = isLoadingOnly;
+      return this;
+    }
+    public Builder isAsyncOnly(boolean isAsyncOnly) {
+      this.isAsyncOnly = isAsyncOnly;
+      return this;
+    }
+    public Stream<CacheContext> generate() {
+      return new CacheGenerator(this).generate();
+    }
   }
 }

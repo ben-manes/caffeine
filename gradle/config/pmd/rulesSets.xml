@@ -81,6 +81,7 @@
     <exclude name="CouplingBetweenObjects"/>
     <exclude name="AvoidDeeplyNestedIfStmts"/>
     <exclude name="AvoidRethrowingException"/>
+    <exclude name="PublicMemberInNonPublicType"/>
     <exclude name="AbstractClassWithoutAnyMethod"/>
     <exclude name="AvoidThrowingRawExceptionTypes"/>
   </rule>

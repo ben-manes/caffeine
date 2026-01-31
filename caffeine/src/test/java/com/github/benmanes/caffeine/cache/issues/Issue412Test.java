@@ -26,7 +26,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -40,7 +41,8 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Issue412Test {
+@Isolated
+final class Issue412Test {
   private static final int NUM_THREADS = 5;
 
   private final Integer[] ints;
@@ -52,7 +54,7 @@ public final class Issue412Test {
   }
 
   @Test
-  public void expire_remove() {
+  void expire_remove() {
     @SuppressWarnings("PMD.CloseResource")
     var executor = Executors.newCachedThreadPool(DAEMON_FACTORY);
     try {

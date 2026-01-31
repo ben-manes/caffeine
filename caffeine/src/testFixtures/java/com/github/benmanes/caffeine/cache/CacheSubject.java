@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.CacheSubject.CleanUpSubject.CLEANUP_FACTORY;
 import static com.github.benmanes.caffeine.cache.LocalCacheSubject.syncLocal;
 import static com.github.benmanes.caffeine.cache.ReserializableSubject.syncReserializable;
-import static com.github.benmanes.caffeine.cache.Reset.awaitFullGc;
+import static com.github.benmanes.caffeine.testing.Awaits.awaitFullGc;
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.truth.Truth.assertAbout;

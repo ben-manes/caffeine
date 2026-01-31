@@ -18,11 +18,10 @@ package com.github.benmanes.caffeine.apache;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Stream;
 
 import org.apache.commons.collections4.map.AbstractMapTest;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CacheContext;
@@ -40,7 +39,9 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ParameterizedClass
-@MethodSource("caches")
+@CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+    weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
+    evictionListener = Listener.DISABLED, stats = Stats.ENABLED)
 final class ApacheMapTest<K, V> extends AbstractMapTest<ConcurrentMap<K, V>, K, V> {
   final CacheContext template;
 
@@ -66,12 +67,7 @@ final class ApacheMapTest<K, V> extends AbstractMapTest<ConcurrentMap<K, V>, K, 
     var cache = (Cache<K, V>) context.cache();
     return cache.asMap();
   }
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
-      evictionListener = Listener.DISABLED, stats = Stats.ENABLED)
-  static Stream<CacheContext> caches() throws NoSuchMethodException {
-    var cacheSpec = ApacheMapTest.class.getDeclaredMethod("caches")
-        .getAnnotation(CacheSpec.class);
-    return new CacheGenerator(cacheSpec).generate();
-  }
+  @Nested final class MapKeySetTest extends TestMapKeySet {}
+  @Nested final class MapValuesTest extends TestMapValues {}
+  @Nested final class MapEntrySetTest extends TestMapEntrySet {}
 }

@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.jspecify.annotations.Nullable;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
@@ -43,7 +43,7 @@ import com.google.common.util.concurrent.ListenableFutureTask;
  *
  * @author boschb (Robert Bosch)
  */
-public final class Issue193Test {
+final class Issue193Test {
   private final String testKey = Issue193Test.class.getSimpleName();
   private final AtomicLong counter = new AtomicLong(0);
   private final FakeTicker ticker = new FakeTicker();
@@ -72,7 +72,7 @@ public final class Issue193Test {
   }
 
   @Test
-  public void invalidateDuringRefreshRemovalCheck() {
+  void invalidateDuringRefreshRemovalCheck() {
     var removed = new ArrayList<@Nullable Long>();
     AsyncLoadingCache<String, Long> cache = Caffeine.newBuilder()
         .removalListener(

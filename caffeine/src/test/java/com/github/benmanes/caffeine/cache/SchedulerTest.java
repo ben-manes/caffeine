@@ -32,8 +32,6 @@ import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
-import java.util.Iterator;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -41,15 +39,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Listeners;
-import org.testng.annotations.Test;
 
 import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.testing.NullPointerTester;
@@ -59,23 +58,22 @@ import com.google.common.util.concurrent.Futures;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @CheckMaxLogLevel(TRACE)
-@Listeners(CacheValidationListener.class)
-public final class SchedulerTest {
+final class SchedulerTest {
   private final NullPointerTester npeTester = new NullPointerTester();
 
-  @BeforeMethod @AfterMethod
-  public void reset() {
+  @BeforeEach @AfterEach
+  void reset() {
     TestLoggerFactory.clear();
   }
 
-  @Test(dataProvider = "schedulers")
-  public void scheduler_null(Scheduler scheduler) {
+  @ParameterizedTest @MethodSource("schedulers")
+  void scheduler_null(Scheduler scheduler) {
     npeTester.testAllPublicInstanceMethods(scheduler);
   }
 
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "runnableSchedulers")
-  public void scheduler_exception(Scheduler scheduler) {
+  @ParameterizedTest @MethodSource("runnableSchedulers")
+  void scheduler_exception(Scheduler scheduler) {
     var thread = new AtomicReference<@Nullable Thread>();
     Executor executor = task -> {
       thread.set(Thread.currentThread());
@@ -95,8 +93,8 @@ public final class SchedulerTest {
     }
   }
 
-  @Test(dataProvider = "runnableSchedulers")
-  public void scheduler(Scheduler scheduler) {
+  @ParameterizedTest @MethodSource("runnableSchedulers")
+  void scheduler(Scheduler scheduler) {
     var executed = new AtomicBoolean();
     Runnable task = () -> executed.set(true);
     var future = scheduler.schedule(executor, task, 1L, TimeUnit.NANOSECONDS);
@@ -107,14 +105,14 @@ public final class SchedulerTest {
   /* --------------- disabled --------------- */
 
   @Test
-  public void disabledScheduler() {
+  void disabledScheduler() {
     var future = Scheduler.disabledScheduler()
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future).isSameInstanceAs(DisabledFuture.instance());
   }
 
   @Test
-  public void disabledFuture() throws InterruptedException, ExecutionException, TimeoutException {
+  void disabledFuture() throws InterruptedException, ExecutionException, TimeoutException {
     assertThat(DisabledFuture.instance().get(0, TimeUnit.SECONDS)).isNull();
     assertThat(DisabledFuture.instance().isCancelled()).isFalse();
     assertThat(DisabledFuture.instance().cancel(false)).isFalse();
@@ -124,26 +122,26 @@ public final class SchedulerTest {
   }
 
   @Test
-  public void disabledFuture_null() {
+  void disabledFuture_null() {
     npeTester.testAllPublicInstanceMethods(DisabledFuture.instance());
   }
 
   /* --------------- guarded --------------- */
 
   @Test
-  public void guardedScheduler_null() {
+  void guardedScheduler_null() {
     Scheduler scheduler = nullRef();
     assertThrows(NullPointerException.class, () -> Scheduler.guardedScheduler(scheduler));
   }
 
   @Test
-  public void guardedScheduler_twice() {
+  void guardedScheduler_twice() {
     var scheduler = Scheduler.guardedScheduler(Scheduler.systemScheduler());
     assertThat(scheduler).isSameInstanceAs(Scheduler.guardedScheduler(scheduler));
   }
 
   @Test
-  public void guardedScheduler_nullFuture() {
+  void guardedScheduler_nullFuture() {
     @SuppressWarnings("PMD.CloseResource")
     ScheduledExecutorService scheduledExecutor = Mockito.mock();
     var scheduler = Scheduler.forScheduledExecutorService(scheduledExecutor);
@@ -157,7 +155,7 @@ public final class SchedulerTest {
   }
 
   @Test
-  public void guardedScheduler() {
+  void guardedScheduler() {
     var future = Scheduler.guardedScheduler((r, e, d, u) -> Futures.immediateVoidFuture())
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future).isSameInstanceAs(Futures.immediateVoidFuture());
@@ -165,7 +163,7 @@ public final class SchedulerTest {
 
   @Test
   @CheckMaxLogLevel(WARN)
-  public void guardedScheduler_exception() {
+  void guardedScheduler_exception() {
     var future = Scheduler.guardedScheduler((r, e, d, u) -> { throw new IllegalStateException(); })
         .schedule(Runnable::run, () -> {}, 1, TimeUnit.MINUTES);
     assertThat(future).isSameInstanceAs(DisabledFuture.instance());
@@ -180,14 +178,14 @@ public final class SchedulerTest {
   /* --------------- ScheduledExecutorService --------------- */
 
   @Test
-  public void scheduledExecutorService_null() {
+  void scheduledExecutorService_null() {
     @SuppressWarnings({"PMD.CloseResource", "resource"})
     ScheduledExecutorService executor = nullRef();
     assertThrows(NullPointerException.class, () -> Scheduler.forScheduledExecutorService(executor));
   }
 
   @Test
-  public void scheduledExecutorService_schedule() {
+  void scheduledExecutorService_schedule() {
     @SuppressWarnings("PMD.CloseResource")
     ScheduledExecutorService scheduledExecutor = Mockito.mock();
     var task = ArgumentCaptor.forClass(Runnable.class);
@@ -208,7 +206,7 @@ public final class SchedulerTest {
   }
 
   @Test
-  public void scheduledExecutorService_shutdown() {
+  void scheduledExecutorService_shutdown() {
     @SuppressWarnings("PMD.CloseResource")
     ScheduledExecutorService scheduledExecutor = Mockito.mock();
     Executor executor = Mockito.mock();
@@ -225,24 +223,18 @@ public final class SchedulerTest {
 
   /* --------------- providers --------------- */
 
-  @DataProvider(name = "schedulers")
-  public Iterator<Scheduler> providesSchedulers() {
-    var schedulers = Set.of(
+  private static Stream<Scheduler> schedulers() {
+    return Stream.of(
         Scheduler.forScheduledExecutorService(sameThreadScheduledExecutor()),
         Scheduler.forScheduledExecutorService(scheduledExecutor),
         Scheduler.disabledScheduler(),
         Scheduler.systemScheduler());
-    return schedulers.iterator();
   }
 
-  @DataProvider(name = "runnableSchedulers")
-  public Iterator<Scheduler> providesRunnableSchedulers() {
-    var schedulers = Set.of(
+  private static Stream<Scheduler> runnableSchedulers() {
+    return Stream.of(
         Scheduler.forScheduledExecutorService(sameThreadScheduledExecutor()),
         Scheduler.forScheduledExecutorService(scheduledExecutor),
         Scheduler.systemScheduler());
-    return schedulers.stream()
-        .filter(scheduler -> scheduler != Scheduler.disabledScheduler())
-        .iterator();
   }
 }

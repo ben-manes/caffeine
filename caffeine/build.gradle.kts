@@ -46,12 +46,12 @@ dependencies {
 
   testFixturesApi(libs.truth)
   testFixturesApi(libs.awaitility)
+  testFixturesApi(libs.junit.jupiter)
   testFixturesApi(libs.guava.testlib)
   testFixturesApi(libs.infer.annotations)
   testFixturesApi(libs.bundles.slf4j.test)
   testFixturesApi(libs.spotbugs.annotations)
 
-  testFixturesImplementation(libs.testng)
   testFixturesImplementation(libs.jctools)
   testFixturesImplementation(libs.mockito)
   testFixturesImplementation(libs.commons.lang3)
@@ -165,7 +165,7 @@ tasks.named<JavaCompile>("compileJmhJava").configure {
 
 testing.suites {
   named<JvmTestSuite>("test") {
-    useTestNG(libs.versions.testng)
+    useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
       implementation(libs.ycsb) {
@@ -178,7 +178,6 @@ testing.suites {
       implementation(libs.picocli)
       implementation(libs.lincheck)
       implementation(libs.awaitility)
-      implementation(libs.junit.jupiter)
       implementation(libs.commons.lang3)
       implementation(libs.guava.testlib)
       implementation(libs.commons.collections4)
@@ -197,9 +196,10 @@ testing.suites {
           classpath = files(sourceSets.named("test").map { it.runtimeClasspath },
             sourceSets.named("codeGen").map { it.runtimeClasspath })
           testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs })
-          maxParallelForks = Runtime.getRuntime().availableProcessors()
-          jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
+          jvmArgs("-Djunit.jupiter.extensions.autodetection.enabled=true",
+            "-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
             "--add-opens", "java.base/java.lang=ALL-UNNAMED")
+          maxParallelForks = Runtime.getRuntime().availableProcessors()
 
           val testOptions = listOf("implementation", "compute", "keys", "values", "stats")
             .associateWith { providers.gradleProperty(it) }
@@ -213,9 +213,6 @@ testing.suites {
               .map { it.toIntOrNull() }.getOrElse(0))
           inputs.properties(shardingOptions)
           systemProperties(shardingOptions)
-          useTestNG {
-            listeners.add("com.github.benmanes.caffeine.cache.ShardingMethodInterceptor")
-          }
         }
       }
     }
@@ -233,6 +230,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        doNotSkipTests()
         useParallelJUnitJupiter()
       }
     }
@@ -247,6 +245,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        doNotSkipTests()
         useParallelJUnitJupiter()
       }
     }
@@ -262,6 +261,7 @@ testing.suites {
     targets.all {
       testTask.configure {
         environment("JAZZER_FUZZ", "1")
+        doNotSkipTests()
         failFast = true
         forkEvery = 1
       }
@@ -279,6 +279,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        doNotSkipTests()
         useParallelJUnitJupiter()
       }
     }
@@ -292,6 +293,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        doNotSkipTests()
         useParallelJUnitJupiter()
       }
     }
@@ -310,6 +312,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        doNotSkipTests()
         useParallelJUnitJupiter()
       }
     }
@@ -327,6 +330,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        doNotSkipTests()
         useParallelJUnitJupiter()
       }
     }
@@ -345,6 +349,7 @@ testing.suites {
         onlyIf { isEnabled.get() }
         useParallelJUnitJupiter()
         maxHeapSize = "3g"
+        doNotSkipTests()
         failFast = true
 
         systemProperties(providers.systemPropertiesPrefixedBy("lincheck").get())
@@ -371,6 +376,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        doNotSkipTests()
         useParallelJUnitJupiter()
       }
     }
@@ -387,6 +393,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        doNotSkipTests()
         useParallelJUnitJupiter()
         val relativeDir = projectDir
         inputs.files(jar.map { it.outputs.files })

@@ -45,7 +45,14 @@ import org.eclipse.collections.impl.tuple.ImmutableEntry;
 import org.jspecify.annotations.NullUnmarked;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.MethodSource;
+
+import com.github.benmanes.caffeine.cache.CacheSpec;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -56,10 +63,13 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @NullUnmarked
 @ParameterizedClass
-@MethodSource("caches")
 @SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC_ANON")
 @SuppressWarnings({"all", "CanIgnoreReturnValueSuggester",
     "ExplicitArrayForVarargs", "IdentityConversion", "unchecked"})
+@CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+    weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
+    evictionListener = Listener.DISABLED, stats = Stats.ENABLED,
+    keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
 final class ConcurrentHashMapTest extends ConcurrentHashMapTestCase {
   public static final MutableMap<Integer, MutableBag<Integer>> SMALL_BAG_MUTABLE_MAP =
       Interval.oneTo(100).groupBy(each -> each % 10).toMap(HashBag::new);

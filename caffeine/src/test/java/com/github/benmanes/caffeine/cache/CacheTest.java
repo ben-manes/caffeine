@@ -65,10 +65,10 @@ import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Triple;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
-import org.testng.annotations.Listeners;
-import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
@@ -112,39 +112,37 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @CheckNoEvictions @CheckMaxLogLevel(TRACE)
-@Listeners(CacheValidationListener.class)
-@Test(dataProviderClass = CacheProvider.class)
-public final class CacheTest {
+final class CacheTest {
 
   /* --------------- size --------------- */
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void estimatedSize(Cache<Int, Int> cache, CacheContext context) {
+  void estimatedSize(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.estimatedSize()).isEqualTo(context.initialSize());
   }
 
   /* --------------- getIfPresent --------------- */
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getIfPresent_nullKey(Cache<Int, Int> cache) {
+  void getIfPresent_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.getIfPresent(nullKey()));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getIfPresent_absent(Cache<Int, Int> cache, CacheContext context) {
+  void getIfPresent_absent(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getIfPresent(context.absentKey())).isNull();
     assertThat(context).stats().hits(0).misses(1).success(0).failures(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getIfPresent_present(Cache<Int, Int> cache, CacheContext context) {
+  void getIfPresent_present(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.getIfPresent(context.firstKey())).isNotNull();
     assertThat(cache.getIfPresent(context.middleKey())).isNotNull();
     assertThat(cache.getIfPresent(context.lastKey())).isNotNull();
@@ -155,36 +153,36 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void get_nullKey(Cache<Int, Int> cache) {
+  @ParameterizedTest
+  void get_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.get(nullKey(), identity()));
   }
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void get_nullLoader(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void get_nullLoader(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.get(context.absentKey(), nullFunction()));
   }
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void get_nullKeyAndLoader(Cache<Int, Int> cache) {
+  @ParameterizedTest
+  void get_nullKeyAndLoader(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.get(nullKey(), nullFunction()));
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void get_absent_null(Cache<Int, @Nullable Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void get_absent_null(Cache<Int, @Nullable Int> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey(), k -> nullValue())).isNull();
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
   }
 
   @CacheSpec
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
-  public void get_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void get_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
     var error = assertThrows(Exception.class, () ->
         cache.get(context.absentKey(), key -> { throw uncheckedThrow(new IOException()); }));
     if (context.isSync() && context.isCaffeine()) {
@@ -197,8 +195,8 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
-  public void get_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void get_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         cache.get(context.absentKey(), key -> { throw new IllegalStateException(); }));
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
@@ -206,25 +204,25 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
-  public void get_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void get_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(ExpectedError.class, () ->
         cache.get(context.absentKey(), key -> { throw ExpectedError.INSTANCE; }));
     assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void get_absent(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void get_absent(Cache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     Int value = cache.get(key, k -> context.absentValue());
     assertThat(value).isEqualTo(context.absentValue());
     assertThat(context).stats().hits(0).misses(1).success(1).failures(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void get_present(Cache<Int, Int> cache, CacheContext context) {
+  void get_present(Cache<Int, Int> cache, CacheContext context) {
     Function<Int, Int> loader = key -> { throw new RuntimeException(); };
     assertThat(cache.get(context.firstKey(), loader))
         .isEqualTo(context.original().get(context.firstKey()));
@@ -238,29 +236,29 @@ public final class CacheTest {
   /* --------------- getAllPresent --------------- */
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_iterable_null(Cache<Int, Int> cache) {
+  void getAllPresent_iterable_null(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.getAllPresent(nullCollection()));
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_iterable_nullKey(Cache<Int, Int> cache) {
+  void getAllPresent_iterable_nullKey(Cache<Int, Int> cache) {
     var keys = Collections.singletonList(nullKey());
     assertThrows(NullPointerException.class, () -> cache.getAllPresent(keys));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_iterable_empty(Cache<Int, Int> cache) {
+  void getAllPresent_iterable_empty(Cache<Int, Int> cache) {
     assertThat(cache.getAllPresent(List.of())).isExhaustivelyEmpty();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_absent(Cache<Int, Int> cache, CacheContext context) {
+  void getAllPresent_absent(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAllPresent(context.absentKeys());
     assertThat(result).isExhaustivelyEmpty();
 
@@ -269,25 +267,25 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void getAllPresent_immutable(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAllPresent_immutable(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAllPresent(context.firstMiddleLastKeys());
     assertThrows(UnsupportedOperationException.class, result::clear);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_nullLookup(Cache<Int, Int> cache, CacheContext context) {
+  void getAllPresent_nullLookup(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAllPresent(context.firstMiddleLastKeys());
     assertThat(result.containsValue(null)).isFalse();
     assertThat(result.containsKey(null)).isFalse();
     assertThat(result.get(null)).isNull();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_present_partial(Cache<Int, Int> cache, CacheContext context) {
+  void getAllPresent_present_partial(Cache<Int, Int> cache, CacheContext context) {
     var expect = new HashMap<Int, Int>();
     expect.put(context.firstKey(), context.original().get(context.firstKey()));
     expect.put(context.middleKey(), context.original().get(context.middleKey()));
@@ -297,19 +295,19 @@ public final class CacheTest {
     assertThat(context).stats().hits(expect.size()).misses(0).success(0).failures(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_present_full(Cache<Int, Int> cache, CacheContext context) {
+  void getAllPresent_present_full(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAllPresent(context.original().keySet());
     assertThat(result).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(result.size()).misses(0).success(0).failures(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_duplicates(Cache<Int, Int> cache, CacheContext context) {
+  void getAllPresent_duplicates(Cache<Int, Int> cache, CacheContext context) {
     var keys = Iterables.concat(
         context.absentKeys(), context.absentKeys(),
         context.original().keySet(), context.original().keySet());
@@ -329,10 +327,10 @@ public final class CacheTest {
     assertThat(context).stats().hits(hits).misses(misses).success(0).failures(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAllPresent_ordered(Cache<Int, Int> cache, CacheContext context) {
+  void getAllPresent_ordered(Cache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
 
@@ -340,9 +338,9 @@ public final class CacheTest {
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY)
-  public void getAllPresent_jdk8186171(Cache<Object, Int> cache, CacheContext context) {
+  void getAllPresent_jdk8186171(Cache<Object, Int> cache, CacheContext context) {
     @SuppressFBWarnings("HE_HASHCODE_USE_OBJECT_EQUALS")
     @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
     final class Key {
@@ -365,8 +363,8 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void getAllPresent_async_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAllPresent_async_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
     var keys = Sets.union(context.original().keySet(), ImmutableSet.of(context.absentKey()));
@@ -379,40 +377,40 @@ public final class CacheTest {
 
   /* --------------- getAll --------------- */
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_null(Cache<Int, Int> cache) {
+  void getAll_iterable_null(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.getAll(nullCollection(), keys -> { throw new AssertionError(); }));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_nullKey(Cache<Int, Int> cache) {
+  void getAll_iterable_nullKey(Cache<Int, Int> cache) {
     var keys = Collections.singletonList(nullKey());
     assertThrows(NullPointerException.class, () ->
         cache.getAll(keys, k -> { throw new AssertionError(); }));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_iterable_empty(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_iterable_empty(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(List.of(), keys -> { throw new AssertionError(); });
     assertThat(result).isExhaustivelyEmpty();
     assertThat(context).stats().hits(0).misses(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_function_null(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_function_null(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
         cache.getAll(context.absentKeys(), nullFunction()));
   }
 
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_function_nullValue(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_function_nullValue(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
         cache.getAll(context.absentKeys(), keys -> nullMap()));
     int misses = context.loader().isBulk() ? 1 : context.absentKeys().size();
@@ -421,8 +419,8 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
-  public void getAll_immutable_keys(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAll_immutable_keys(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(UnsupportedOperationException.class, () -> {
       cache.getAll(context.absentKeys(), keys -> {
         throw assertThrows(UnsupportedOperationException.class, keys::clear);
@@ -431,15 +429,15 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void getAll_immutable_result(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAll_immutable_result(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.firstMiddleLastKeys(), CacheTest::bulkMapping);
     assertThrows(UnsupportedOperationException.class, result::clear);
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void getAll_nullLookup(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAll_nullLookup(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.firstMiddleLastKeys(), CacheTest::bulkMapping);
     assertThat(result.containsValue(null)).isFalse();
     assertThat(result.containsKey(null)).isFalse();
@@ -448,8 +446,8 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
-  public void getAll_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAll_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
     var error = assertThrows(Exception.class, () ->
         cache.getAll(context.absentKeys(), keys -> { throw uncheckedThrow(new IOException()); }));
     if (context.isSync()) {
@@ -464,8 +462,8 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
-  public void getAll_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAll_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         cache.getAll(context.absentKeys(), keys -> { throw new IllegalStateException(); }));
     int misses = context.absentKeys().size();
@@ -474,8 +472,8 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
-  public void getAll_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAll_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(ExpectedError.class, () ->
         cache.getAll(context.absentKeys(), keys -> { throw ExpectedError.INSTANCE; }));
     int misses = context.absentKeys().size();
@@ -483,8 +481,8 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void getAll_absent(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAll_absent(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.absentKeys(), CacheTest::bulkMapping);
 
     int count = context.absentKeys().size();
@@ -492,10 +490,10 @@ public final class CacheTest {
     assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_present_partial(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_present_partial(Cache<Int, Int> cache, CacheContext context) {
     var expect = new HashMap<Int, Int>();
     expect.put(context.firstKey(), context.firstKey().negate());
     expect.put(context.middleKey(), context.middleKey().negate());
@@ -506,18 +504,18 @@ public final class CacheTest {
     assertThat(context).stats().hits(expect.size()).misses(0).success(0).failures(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_present_full(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_present_full(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(context.original().keySet(), CacheTest::bulkMapping);
     assertThat(result).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(result.size()).misses(0).success(0).failures(0);
   }
 
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  @Test(dataProvider = "caches")
-  public void getAll_exceeds(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void getAll_exceeds(Cache<Int, Int> cache, CacheContext context) {
     var result = cache.getAll(Set.of(context.absentKey()), keys -> context.absent());
 
     var expected = new ImmutableMap.Builder<Int, Int>()
@@ -529,9 +527,9 @@ public final class CacheTest {
     assertThat(result).containsExactlyEntriesIn(Map.of(context.absentKey(), context.absentValue()));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_different(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_different(Cache<Int, Int> cache, CacheContext context) {
     var actual = Maps.uniqueIndex(context.absentKeys(), key -> intern(key.negate()));
     var result = cache.getAll(context.absentKeys(), keys -> actual);
 
@@ -541,10 +539,10 @@ public final class CacheTest {
     assertThat(context).stats().hits(0).misses(actual.size()).success(1).failures(0);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_duplicates(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_duplicates(Cache<Int, Int> cache, CacheContext context) {
     var absentKeys = ImmutableSet.copyOf(Iterables.limit(context.absentKeys(),
         Ints.saturatedCast(context.maximum().max() - context.initialSize())));
     var keys = Iterables.concat(absentKeys, absentKeys,
@@ -565,10 +563,10 @@ public final class CacheTest {
     assertThat(context).stats().hits(hits).misses(misses);
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_present_ordered_absent(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_present_ordered_absent(Cache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.absentKeys());
     Collections.shuffle(keys);
 
@@ -576,10 +574,10 @@ public final class CacheTest {
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_present_ordered_partial(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_present_ordered_partial(Cache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     keys.addAll(context.absentKeys());
     Collections.shuffle(keys);
@@ -588,10 +586,10 @@ public final class CacheTest {
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_present_ordered_present(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_present_ordered_present(Cache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
 
@@ -599,9 +597,9 @@ public final class CacheTest {
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getAll_present_ordered_exceeds(Cache<Int, Int> cache, CacheContext context) {
+  void getAll_present_ordered_exceeds(Cache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
     keys.addAll(context.absentKeys());
     Collections.shuffle(keys);
@@ -610,9 +608,9 @@ public final class CacheTest {
     assertThat(result.subList(0, keys.size())).containsExactlyElementsIn(keys).inOrder();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY)
-  public void getAll_jdk8186171(CacheContext context) {
+  void getAll_jdk8186171(CacheContext context) {
     @SuppressFBWarnings("HE_HASHCODE_USE_OBJECT_EQUALS")
     @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
     final class Key {
@@ -644,17 +642,17 @@ public final class CacheTest {
 
   /* --------------- put --------------- */
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void put_insert(Cache<Int, Int> cache, CacheContext context) {
+  void put_insert(Cache<Int, Int> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
     assertThat(cache).hasSize(context.initialSize() + 1);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void put_replace_sameValue(Cache<Int, Int> cache, CacheContext context) {
+  void put_replace_sameValue(Cache<Int, Int> cache, CacheContext context) {
     var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = context.original().get(key);
@@ -667,9 +665,9 @@ public final class CacheTest {
         .contains(replaced).exclusively();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void put_replace_sameInstance(Cache<Int, Int> cache, CacheContext context) {
+  void put_replace_sameInstance(Cache<Int, Int> cache, CacheContext context) {
     var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       Int value = requireNonNull(context.original().get(key));
@@ -687,9 +685,9 @@ public final class CacheTest {
     }
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void put_replace_differentValue(Cache<Int, Int> cache, CacheContext context) {
+  void put_replace_differentValue(Cache<Int, Int> cache, CacheContext context) {
     var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, context.absentValue());
@@ -702,31 +700,31 @@ public final class CacheTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void put_nullKey(Cache<Int, Int> cache, CacheContext context) {
+  void put_nullKey(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.put(nullKey(), context.absentValue()));
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void put_nullValue(Cache<Int, Int> cache, CacheContext context) {
+  void put_nullValue(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () -> cache.put(context.absentKey(), nullValue()));
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void put_nullKeyAndValue(Cache<Int, Int> cache) {
+  void put_nullKeyAndValue(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.put(nullKey(), nullValue()));
   }
 
   /* --------------- put all --------------- */
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void putAll_insert(Cache<Int, Int> cache, CacheContext context) {
+  void putAll_insert(Cache<Int, Int> cache, CacheContext context) {
     int startKey = context.original().size() + 1;
     var entries = IntStream
         .range(startKey, 100 + startKey)
@@ -736,9 +734,9 @@ public final class CacheTest {
     assertThat(cache).hasSize(100 + context.initialSize());
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void putAll_replace(Cache<Int, Int> cache, CacheContext context) {
+  void putAll_replace(Cache<Int, Int> cache, CacheContext context) {
     var entries = new HashMap<>(context.original());
     entries.replaceAll((key, value) -> intern(value.add(1)));
     cache.putAll(entries);
@@ -747,9 +745,9 @@ public final class CacheTest {
         .contains(context.original()).exclusively();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.PARTIAL, Population.FULL })
-  public void putAll_mixed(Cache<Int, Int> cache, CacheContext context) {
+  void putAll_mixed(Cache<Int, Int> cache, CacheContext context) {
     var entries = new HashMap<Int, Int>();
     var replaced = new HashMap<Int, Int>();
     context.original().forEach((var key, @Var var value) -> {
@@ -771,33 +769,33 @@ public final class CacheTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void putAll_empty(Cache<Int, Int> cache, CacheContext context) {
+  void putAll_empty(Cache<Int, Int> cache, CacheContext context) {
     cache.putAll(Map.of());
     assertThat(cache).hasSize(context.initialSize());
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void putAll_null(Cache<Int, Int> cache) {
+  void putAll_null(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.putAll(nullMap()));
   }
 
   /* --------------- invalidate --------------- */
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void invalidate_absent(Cache<Int, Int> cache, CacheContext context) {
+  void invalidate_absent(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidate(context.absentKey());
     assertThat(cache).hasSize(context.initialSize());
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void invalidate_present(Cache<Int, Int> cache, CacheContext context) {
+  void invalidate_present(Cache<Int, Int> cache, CacheContext context) {
     var removed = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       cache.invalidate(key);
@@ -810,17 +808,17 @@ public final class CacheTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void invalidate_nullKey(Cache<Int, Int> cache) {
+  void invalidate_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.invalidate(nullKey()));
   }
 
   /* --------------- invalidateAll --------------- */
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void invalidateAll(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void invalidateAll(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
     assertThat(cache).isEmpty();
     assertThat(context).removalNotifications().withCause(EXPLICIT)
@@ -828,16 +826,16 @@ public final class CacheTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void invalidateAll_empty(Cache<Int, Int> cache, CacheContext context) {
+  void invalidateAll_empty(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll(Set.of());
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.PARTIAL, Population.FULL })
-  public void invalidateAll_partial(Cache<Int, Int> cache, CacheContext context) {
+  void invalidateAll_partial(Cache<Int, Int> cache, CacheContext context) {
     var removals = ImmutableMap.copyOf(Maps.filterKeys(
         cache.asMap(), key -> (key.intValue() % 2) == 0));
     cache.invalidateAll(removals.keySet());
@@ -846,9 +844,9 @@ public final class CacheTest {
         .contains(removals).exclusively();
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void invalidateAll_full(Cache<Int, Int> cache, CacheContext context) {
+  void invalidateAll_full(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll(context.original().keySet());
     assertThat(cache).isEmpty();
     assertThat(context).removalNotifications().withCause(EXPLICIT)
@@ -857,27 +855,27 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void invalidateAll_null(Cache<Int, Int> cache) {
+  @ParameterizedTest
+  void invalidateAll_null(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.invalidateAll(nullCollection()));
   }
 
   @CheckNoStats
+  @ParameterizedTest
   @CheckMaxLogLevel(ERROR)
-  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
       executorFailure = ExecutorFailure.IGNORED, executor = CacheExecutor.REJECTING,
       removalListener = Listener.CONSUMING)
-  public void invalidateAll_removalListener_rejected(Cache<Int, Int> cache, CacheContext context) {
+  void invalidateAll_removalListener_rejected(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.original()).exclusively();
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = Listener.MOCKITO)
-  public void invalidateAll_removalListener_writeback(Cache<Int, Int> cache, CacheContext context) {
+  void invalidateAll_removalListener_writeback(Cache<Int, Int> cache, CacheContext context) {
     Answer<?> writeback = invocation -> {
       cache.put(invocation.getArgument(0), invocation.getArgument(0));
       return null;
@@ -896,18 +894,18 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void cleanUp(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void cleanUp(Cache<Int, Int> cache, CacheContext context) {
     cache.cleanUp();
     assertThat(cache).containsExactlyEntriesIn(context.original());
   }
 
   /* --------------- misc --------------- */
 
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.SINGLETON, removalListener = Listener.REJECTING)
-  public void removalListener_error_log(Cache<Int, Int> cache) {
+  void removalListener_error_log(Cache<Int, Int> cache) {
     cache.invalidateAll();
     assertThat(logEvents()
         .withMessage("Exception thrown by removal listener")
@@ -917,12 +915,12 @@ public final class CacheTest {
         .hasSize(1);
   }
 
+  @ParameterizedTest
   @CheckMaxLogLevel(ERROR)
-  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
       executor = CacheExecutor.REJECTING, executorFailure = ExecutorFailure.EXPECTED,
       removalListener = Listener.CONSUMING)
-  public void removalListener_submit_error_log(Cache<Int, Int> cache) {
+  void removalListener_submit_error_log(Cache<Int, Int> cache) {
     cache.invalidateAll();
     assertThat(logEvents()
         .withMessage("Exception thrown when submitting removal listener")
@@ -933,11 +931,11 @@ public final class CacheTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.DISABLED,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       expiry = CacheExpiry.DISABLED, stats = Stats.DISABLED)
-  public void ticker_noStats(CacheContext context) {
+  void ticker_noStats(CacheContext context) {
     var caffeineTicker = Mockito.mock(Ticker.class);
     var guavaTicker = Mockito.mock(com.google.common.base.Ticker.class);
     when(guavaTicker.read()).thenAnswer(invocation -> context.ticker().read());
@@ -968,16 +966,16 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void serialize(Cache<Int, Int> cache) {
+  @ParameterizedTest
+  void serialize(Cache<Int, Int> cache) {
     assertThat(cache).isReserialize();
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
-  public void readObject(CacheContext context) throws NoSuchMethodException {
+  void readObject(CacheContext context) throws NoSuchMethodException {
     var cache = context.isAsync() ? context.asyncCache() : context.cache();
     var readObject = cache.getClass().getDeclaredMethod("readObject", ObjectInputStream.class);
     readObject.setAccessible(true);
@@ -994,8 +992,8 @@ public final class CacheTest {
   private final NullPointerTester npeTester = new NullPointerTester();
 
   @CacheSpec
-  @Test(dataProvider = "caches")
-  public void nullParameters(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void nullParameters(Cache<Int, Int> cache, CacheContext context) {
     checkNullPointer(cache);
     checkNullPointer(cache.asMap());
     checkNullPointer(cache.stats());
@@ -1059,8 +1057,8 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void stats(Cache<Int, Int> cache, CacheContext context) {
+  @ParameterizedTest
+  void stats(Cache<Int, Int> cache, CacheContext context) {
     var stats = cache.stats()
         .plus(CacheStats.of(1, 2, 3, 4, 5, 6, 7)
         .minus(CacheStats.of(6, 5, 4, 3, 2, 1, 0)));
@@ -1071,24 +1069,24 @@ public final class CacheTest {
   /* --------------- Policy: getIfPresentQuietly --------------- */
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getIfPresentQuietly_nullKey(Cache<Int, Int> cache) {
+  void getIfPresentQuietly_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () -> cache.policy().getIfPresentQuietly(nullKey()));
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getIfPresentQuietly_absent(Cache<Int, Int> cache, CacheContext context) {
+  void getIfPresentQuietly_absent(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.policy().getIfPresentQuietly(context.absentKey())).isNull();
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
+  void getIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       assertThat(cache.policy().getIfPresentQuietly(key)).isEqualTo(context.original().get(key));
     }
@@ -1097,34 +1095,34 @@ public final class CacheTest {
   /* --------------- Policy: getEntryIfPresentQuietly --------------- */
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getEntryIfPresentQuietly_nullKey(Cache<Int, Int> cache) {
+  void getEntryIfPresentQuietly_nullKey(Cache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.policy().getEntryIfPresentQuietly(nullKey()));
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getEntryIfPresentQuietly_absent(Cache<Int, Int> cache, CacheContext context) {
+  void getEntryIfPresentQuietly_absent(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.policy().getEntryIfPresentQuietly(context.absentKey())).isNull();
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  public void getEntryIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
+  void getEntryIfPresentQuietly_present(Cache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       var entry = requireNonNull(cache.policy().getEntryIfPresentQuietly(key));
       assertThat(context).containsEntry(entry);
     }
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY)
-  public void getEntryIfPresentQuietly_async(AsyncCache<Int, Int> cache, CacheContext context) {
+  void getEntryIfPresentQuietly_async(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
     assertThat(cache.synchronous().policy().getEntryIfPresentQuietly(context.absentKey())).isNull();
@@ -1139,22 +1137,22 @@ public final class CacheTest {
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void refreshes_empty(Cache<Int, Int> cache) {
+  @ParameterizedTest
+  void refreshes_empty(Cache<Int, Int> cache) {
     assertThat(cache.policy().refreshes()).isExhaustivelyEmpty();
   }
 
   @CacheSpec
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  public void refreshes_unmodifiable(Cache<Int, Int> cache) {
+  @ParameterizedTest
+  void refreshes_unmodifiable(Cache<Int, Int> cache) {
     assertThrows(UnsupportedOperationException.class, () -> cache.policy().refreshes().clear());
   }
 
   @CacheSpec
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @SuppressWarnings("CollectionUndefinedEquality")
-  public void refreshes_nullLookup(Cache<Int, Int> cache) {
+  void refreshes_nullLookup(Cache<Int, Int> cache) {
     assertThat(cache.policy().refreshes().containsValue(null)).isFalse();
     assertThat(cache.policy().refreshes().containsKey(null)).isFalse();
     assertThat(cache.policy().refreshes().get(null)).isNull();
@@ -1168,13 +1166,13 @@ public final class CacheTest {
   /* --------------- Policy: CacheEntry --------------- */
 
   @Test
-  public void cacheEntry_setValue() {
+  void cacheEntry_setValue() {
     var entry = SnapshotEntry.forEntry(1, 2);
     assertThrows(UnsupportedOperationException.class, () -> entry.setValue(3));
   }
 
   @Test
-  public void cacheEntry_equals_hashCode_toString() {
+  void cacheEntry_equals_hashCode_toString() {
     long snapshot = 100;
     int weight = 200;
     long expiresAt = 300;

@@ -15,16 +15,25 @@
  */
 package com.github.benmanes.caffeine.testing;
 
+import java.lang.ref.Cleaner;
+import java.lang.ref.SoftReference;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 
 import org.awaitility.Awaitility;
 import org.awaitility.core.ConditionFactory;
+
+import com.google.common.testing.GcFinalization;
+import com.google.errorprone.annotations.Var;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Awaits {
   private static final Duration ONE_MILLISECOND = Duration.ofMillis(1);
+  private static final Cleaner CLEANER = Cleaner.create();
 
   private Awaits() {}
 
@@ -34,5 +43,23 @@ public final class Awaits {
         .pollDelay(ONE_MILLISECOND)
         .pollInterval(ONE_MILLISECOND)
         .pollExecutorService(ConcurrentTestHarness.executor);
+  }
+
+  /**
+   * Tries to perform a garbage collection cycle that includes the processing of weak and soft
+   * references.
+   */
+  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
+  @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
+  public static void awaitFullGc() {
+    @Var var target = new Object();
+    var cleaned = new CountDownLatch(1);
+    var ref = new SoftReference<>(target);
+    CLEANER.register(target, cleaned::countDown);
+    target = null;
+
+    GcFinalization.awaitFullGc();
+    GcFinalization.await(cleaned);
+    GcFinalization.awaitDone(() -> ref.get() == null);
   }
 }

@@ -17,19 +17,22 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import java.util.stream.Stream;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CacheStatsTest {
+final class CacheStatsTest {
 
-  @Test(dataProvider = "badArgs")
-  public void invalid(int hitCount, int missCount, int loadSuccessCount, int loadFailureCount,
+  @ParameterizedTest @MethodSource("badArgs")
+  void invalid(int hitCount, int missCount, int loadSuccessCount, int loadFailureCount,
       int totalLoadTime, int evictionCount, int evictionWeight) {
     assertThrows(IllegalArgumentException.class, () -> {
       CacheStats.of(hitCount, missCount, loadSuccessCount,
@@ -38,9 +41,8 @@ public final class CacheStatsTest {
   }
 
   @Test
-  @SuppressFBWarnings("EC_NULL_ARG")
   @SuppressWarnings("ConstantValue")
-  public void empty() {
+  void empty() {
     var stats = CacheStats.of(0, 0, 0, 0, 0, 0, 0);
     checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0, 0);
 
@@ -54,7 +56,7 @@ public final class CacheStatsTest {
 
   @Test
   @SuppressWarnings("EqualsWithItself")
-  public void populated() {
+  void populated() {
     var stats = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
     checkStats(stats, 24, 11, 11.0/24, 13, 13.0/24,
         17, 19, 19.0/36, 17 + 19, 23, 23.0/(17 + 19), 27, 54);
@@ -71,7 +73,7 @@ public final class CacheStatsTest {
   }
 
   @Test
-  public void minus() {
+  void minus() {
     var one = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
     var two = CacheStats.of(53, 47, 43, 41, 37, 31, 62);
 
@@ -82,7 +84,7 @@ public final class CacheStatsTest {
   }
 
   @Test
-  public void plus() {
+  void plus() {
     var one = CacheStats.of(11, 13, 15, 13, 11, 9, 18);
     var two = CacheStats.of(53, 47, 41, 39, 37, 35, 70);
 
@@ -94,7 +96,7 @@ public final class CacheStatsTest {
   }
 
   @Test
-  public void overflow() {
+  void overflow() {
     var max = CacheStats.of(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE,
         Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
     checkStats(max.plus(max), Long.MAX_VALUE, Long.MAX_VALUE, 1.0, Long.MAX_VALUE, 1.0,
@@ -103,14 +105,14 @@ public final class CacheStatsTest {
   }
 
   @Test
-  public void underflow() {
+  void underflow() {
     var max = CacheStats.of(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE,
         Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
     assertThat(CacheStats.empty().minus(max)).isEqualTo(CacheStats.empty());
   }
 
   @Test
-  public void saturatedAdd() {
+  void saturatedAdd() {
     // Should never be allowed to have negative parameter, but added as a safety check
     assertThat(CacheStats.saturatedAdd(10, 5)).isEqualTo(15);
     assertThat(CacheStats.saturatedAdd(10, -5)).isEqualTo(5);
@@ -140,16 +142,14 @@ public final class CacheStatsTest {
     assertThat(stats.evictionWeight()).isEqualTo(evictionWeight);
   }
 
-  @DataProvider(name = "badArgs")
-  public Object[][] providesBadArgs() {
-    return new Object[][] {
-        { -1,  0,  0,  0,  0,  0,  0, },
-        {  0, -1,  0,  0,  0,  0,  0, },
-        {  0,  0, -1,  0,  0,  0,  0, },
-        {  0,  0,  0, -1,  0,  0,  0, },
-        {  0,  0,  0,  0, -1,  0,  0, },
-        {  0,  0,  0,  0,  0, -1,  0, },
-        {  0,  0,  0,  0,  0,  0, -1, },
-    };
+  private static Stream<Arguments> badArgs() {
+    return Stream.of(
+        arguments(-1,  0,  0,  0,  0,  0,  0),
+        arguments( 0, -1,  0,  0,  0,  0,  0),
+        arguments( 0,  0, -1,  0,  0,  0,  0),
+        arguments( 0,  0,  0, -1,  0,  0,  0),
+        arguments( 0,  0,  0,  0, -1,  0,  0),
+        arguments( 0,  0,  0,  0,  0, -1,  0),
+        arguments( 0,  0,  0,  0,  0,  0, -1));
   }
 }

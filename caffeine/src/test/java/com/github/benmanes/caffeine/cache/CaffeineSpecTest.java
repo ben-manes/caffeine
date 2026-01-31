@@ -37,8 +37,8 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import org.jspecify.annotations.Nullable;
-import org.testng.annotations.Listeners;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
@@ -58,13 +58,11 @@ import com.google.common.testing.EqualsTester;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Listeners(CacheValidationListener.class)
-@Test(dataProviderClass = CacheProvider.class)
-public final class CaffeineSpecTest {
+final class CaffeineSpecTest {
   private static final long UNSET_LONG = UNSET_INT;
 
   @Test
-  public void parseInt() {
+  void parseInt() {
     parseNumber(CaffeineSpec::parseInt);
 
     assertThat(CaffeineSpec.parseInt("key", Integer.toString(Integer.MAX_VALUE)))
@@ -78,7 +76,7 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  public void parseLong() {
+  void parseLong() {
     parseNumber(CaffeineSpec::parseLong);
 
     assertThat(CaffeineSpec.parseLong("key", Long.toString(Integer.MAX_VALUE)))
@@ -112,7 +110,7 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  public void parseDuration_exception() {
+  void parseDuration_exception() {
     // TimeUnit
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseTimeUnit("key", ""));
@@ -149,7 +147,7 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  public void parse_exception() {
+  void parse_exception() {
     assertThrows(NullPointerException.class, () -> CaffeineSpec.parse(nullString()));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("="));
     assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("=="));
@@ -163,7 +161,7 @@ public final class CaffeineSpecTest {
   }
 
   @Test
-  public void toBuilder_invalidKeyStrength() {
+  void toBuilder_invalidKeyStrength() {
     var spec = CaffeineSpec.parse("");
     spec.keyStrength = Strength.SOFT;
     assertThrows(IllegalStateException.class, spec::toBuilder);
@@ -171,7 +169,7 @@ public final class CaffeineSpecTest {
 
   @Test
   @SuppressWarnings("SequencedCollectionGetFirst")
-  public void equals() {
+  void equals() {
     var configurations = Lists.cartesianProduct(IntStream.range(0, 9)
         .mapToObj(i -> ImmutableList.of(false, true)).collect(toImmutableList()));
     var hashes = new LinkedHashSet<Integer>();
@@ -194,35 +192,35 @@ public final class CaffeineSpecTest {
     assertThat(hashes).hasSize(configurations.size());
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
       compute = Compute.SYNC, removalListener = Listener.DISABLED)
-  public void seconds(CacheContext context) {
+  void seconds(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.SECONDS, "s"));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
       compute = Compute.SYNC, removalListener = Listener.DISABLED)
-  public void minutes(CacheContext context) {
+  void minutes(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.MINUTES, "m"));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
       compute = Compute.SYNC, removalListener = Listener.DISABLED)
-  public void hours(CacheContext context) {
+  void hours(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.HOURS, "h"));
   }
 
-  @Test(dataProvider = "caches")
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
       compute = Compute.SYNC, removalListener = Listener.DISABLED)
-  public void days(CacheContext context) {
+  void days(CacheContext context) {
     runScenarios(context, new Epoch(TimeUnit.DAYS, "d"));
   }
 

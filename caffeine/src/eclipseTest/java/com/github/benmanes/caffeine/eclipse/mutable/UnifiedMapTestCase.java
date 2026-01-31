@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.MutableSet;
@@ -48,20 +46,31 @@ import org.eclipse.collections.impl.utility.ArrayIterate;
 import org.eclipse.collections.impl.utility.Iterate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.MethodSource;
 
+import com.github.benmanes.caffeine.cache.CacheSpec;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.testing.Int;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Ported from Eclipse Collections 11.0.
  */
 @ParameterizedClass
-@MethodSource("caches")
 @SuppressWarnings({"all", "CanIgnoreReturnValueSuggester", "CollectionToArray", "deprecation",
     "EqualsBrokenForNull", "EqualsUnsafeCast", "NaturalOrder", "rawtypes", "ReverseOrder",
     "unchecked", "UndefinedEquals"})
 @SuppressFBWarnings({"BC_EQUALS_METHOD_SHOULD_WORK_FOR_ALL_OBJECTS",
     "CI_CONFUSED_INHERITANCE", "NP_EQUALS_SHOULD_HANDLE_NULL_ARGUMENT"})
+@CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+    weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
+    evictionListener = Listener.DISABLED, stats = Stats.ENABLED,
+    keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
 final class UnifiedMapTestCase extends MutableMapTestCase {
   protected static final Integer COLLISION_1 = 0;
   protected static final Integer COLLISION_2 = 17;

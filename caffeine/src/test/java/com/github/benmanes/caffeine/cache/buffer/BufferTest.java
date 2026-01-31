@@ -18,10 +18,10 @@ package com.github.benmanes.caffeine.cache.buffer;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Arrays;
-import java.util.Iterator;
+import java.util.stream.Stream;
 
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
@@ -32,18 +32,11 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("JavadocReference")
-public final class BufferTest {
+final class BufferTest {
 
-  @DataProvider
-  public Iterator<Object[]> buffers() {
-    return Arrays.stream(BufferType.values())
-        .map(factory -> new Object[] { factory.create() })
-        .iterator();
-  }
-
-  @Test(dataProvider = "buffers")
   @SuppressWarnings("ThreadPriorityCheck")
-  public void offer(ReadBuffer<Boolean> buffer) {
+  @ParameterizedTest @MethodSource("buffers")
+  void offer(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
         int added = buffer.offer(true);
@@ -55,8 +48,8 @@ public final class BufferTest {
     assertThat(recorded).isEqualTo(ReadBuffer.BUFFER_SIZE);
   }
 
-  @Test(dataProvider = "buffers")
-  public void drain(ReadBuffer<Boolean> buffer) {
+  @ParameterizedTest @MethodSource("buffers")
+  void drain(ReadBuffer<Boolean> buffer) {
     for (int i = 0; i < 2 * ReadBuffer.BUFFER_SIZE; i++) {
       int added = buffer.offer(true);
       assertThat(added).isAnyOf(ReadBuffer.SUCCESS, ReadBuffer.FULL);
@@ -67,9 +60,9 @@ public final class BufferTest {
     assertThat(drained).isEqualTo(recorded);
   }
 
-  @Test(dataProvider = "buffers")
   @SuppressWarnings("ThreadPriorityCheck")
-  public void recordAndDrain(ReadBuffer<Boolean> buffer) {
+  @ParameterizedTest @MethodSource("buffers")
+  void recordAndDrain(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
         int result = buffer.offer(true);
@@ -83,5 +76,9 @@ public final class BufferTest {
     long drained = buffer.reads();
     long recorded = buffer.writes();
     assertThat(drained).isEqualTo(recorded);
+  }
+
+  private static Stream<ReadBuffer<Boolean>> buffers() {
+    return Arrays.stream(BufferType.values()).map(BufferType::create);
   }
 }

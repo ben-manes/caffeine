@@ -15,21 +15,12 @@
  */
 package com.github.benmanes.caffeine.eclipse.mutable;
 
-import java.util.stream.Stream;
-
 import org.eclipse.collections.api.map.ConcurrentMutableMap;
 import org.junit.jupiter.params.Parameter;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CacheContext;
 import com.github.benmanes.caffeine.cache.CacheGenerator;
-import com.github.benmanes.caffeine.cache.CacheSpec;
-import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.eclipse.ConcurrentMapAdapter;
 
 /**
@@ -78,15 +69,5 @@ abstract class CaffeineMutableMapTestCase {
     map.put(key3, value3);
     map.put(key4, value4);
     return map;
-  }
-
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      weigher = CacheWeigher.DISABLED, removalListener = Listener.DISABLED,
-      evictionListener = Listener.DISABLED, stats = Stats.ENABLED,
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  protected static Stream<CacheContext> caches() throws NoSuchMethodException {
-    var cacheSpec = CaffeineMutableMapTestCase.class.getDeclaredMethod("caches")
-        .getAnnotation(CacheSpec.class);
-    return new CacheGenerator(cacheSpec).generate();
   }
 }

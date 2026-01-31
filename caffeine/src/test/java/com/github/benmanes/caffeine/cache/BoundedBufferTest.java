@@ -27,8 +27,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.BBHeader.ReadAndWriteCounterRef;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -39,15 +38,11 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("ClassEscapesDefinedScope")
-public final class BoundedBufferTest {
+final class BoundedBufferTest {
 
-  @DataProvider
-  public Object[][] buffer() {
-    return new Object[][] {{ new BoundedBuffer<Boolean>() }};
-  }
-
-  @Test(dataProvider = "buffer")
-  public void offer(BoundedBuffer<Boolean> buffer) {
+  @Test
+  void offer() {
+    var buffer = new BoundedBuffer<Boolean>();
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 100; i++) {
         assertThat(buffer.offer(true)).isAnyOf(SUCCESS, FULL, FAILED);
@@ -57,8 +52,9 @@ public final class BoundedBufferTest {
     assertThat(buffer.writes()).isEqualTo(buffer.size());
   }
 
-  @Test(dataProvider = "buffer")
-  public void drain(BoundedBuffer<Boolean> buffer) {
+  @Test
+  void drain() {
+    var buffer = new BoundedBuffer<Boolean>();
     for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
       assertThat(buffer.offer(true)).isAnyOf(SUCCESS, FULL);
     }
@@ -68,9 +64,10 @@ public final class BoundedBufferTest {
     assertThat(read[0]).isEqualTo(buffer.writes());
   }
 
-  @Test(dataProvider = "buffer")
+  @Test
   @SuppressWarnings("ThreadPriorityCheck")
-  public void offerAndDrain(BoundedBuffer<Boolean> buffer) {
+  void offerAndDrain() {
+    var buffer = new BoundedBuffer<Boolean>();
     var lock = new ReentrantLock();
     var reads = new AtomicInteger();
     ConcurrentTestHarness.timeTasks(10, () -> {
@@ -89,7 +86,7 @@ public final class BoundedBufferTest {
   }
 
   @Test
-  public void overflow() {
+  void overflow() {
     Boolean first = nullRef();
     var buffer = new BoundedBuffer.RingBuffer<>(first);
     buffer.writeCounter = Long.MAX_VALUE;
@@ -109,14 +106,14 @@ public final class BoundedBufferTest {
 
   @Test
   @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
-  public void reflectivelyConstruct() throws ReflectiveOperationException {
+  void reflectivelyConstruct() throws ReflectiveOperationException {
     var constructor = BBHeader.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();
   }
 
   @Test
-  public void findVarHandle_absent() {
+  void findVarHandle_absent() {
     assertThrows(ExceptionInInitializerError.class, () ->
         findVarHandle(ReadAndWriteCounterRef.class, "absent", int.class));
   }

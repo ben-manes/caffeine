@@ -28,20 +28,20 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.testng.annotations.Test;
 
 import com.google.common.primitives.Ints;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class PacerTest {
+final class PacerTest {
   private static final long ONE_MINUTE_IN_NANOS = TimeUnit.MINUTES.toNanos(1);
   private static final long NOW = ThreadLocalRandom.current().nextLong();
 
   @Test
-  public void schedule_initialize() {
+  void schedule_initialize() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
     Runnable command = Mockito.mock();
@@ -59,7 +59,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void schedule_initialize_recurse() {
+  void schedule_initialize_recurse() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
     Runnable command = Mockito.mock();
@@ -83,7 +83,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void schedule_cancel_schedule() {
+  void schedule_cancel_schedule() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
     Runnable command = Mockito.mock();
@@ -113,7 +113,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void schedule_completedFuture_reschedules() {
+  void schedule_completedFuture_reschedules() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
     Runnable command = Mockito.mock();
@@ -135,7 +135,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void scheduled_afterNextFireTime_skip() {
+  void scheduled_afterNextFireTime_skip() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
     Runnable command = Mockito.mock();
@@ -157,7 +157,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void schedule_beforeNextFireTime_skip() {
+  void schedule_beforeNextFireTime_skip() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
     Runnable command = Mockito.mock();
@@ -181,7 +181,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void schedule_beforeNextFireTime_minimumDelay() {
+  void schedule_beforeNextFireTime_minimumDelay() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
     Runnable command = Mockito.mock();
@@ -210,7 +210,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void schedule_beforeNextFireTime_customDelay() {
+  void schedule_beforeNextFireTime_customDelay() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
     Runnable command = Mockito.mock();
@@ -239,7 +239,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void cancel_initialize() {
+  void cancel_initialize() {
     var pacer = new Pacer(Mockito.mock());
 
     pacer.cancel();
@@ -249,7 +249,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void cancel_scheduled() {
+  void cancel_scheduled() {
     Future<?> future = Mockito.mock();
     var pacer = new Pacer(Mockito.mock());
 
@@ -264,7 +264,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void isScheduled_nullFuture() {
+  void isScheduled_nullFuture() {
     var pacer = new Pacer(Mockito.mock());
 
     pacer.future = null;
@@ -272,7 +272,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void isScheduled_doneFuture() {
+  void isScheduled_doneFuture() {
     var pacer = new Pacer(Mockito.mock());
 
     pacer.future = DisabledFuture.instance();
@@ -280,7 +280,7 @@ public final class PacerTest {
   }
 
   @Test
-  public void isScheduled_inFlight() {
+  void isScheduled_inFlight() {
     var pacer = new Pacer(Mockito.mock());
 
     pacer.future = new CompletableFuture<>();

@@ -96,7 +96,7 @@ tasks.withType<JmhTask>().configureEach {
 }
 
 tasks.named<JavaCompile>("jmhCompileGeneratedClasses").configure {
-  options.errorprone.isEnabled = false
+  options.errorprone.enabled = false
 }
 
 tasks.named<JavaCompile>("compileJmhJava").configure {

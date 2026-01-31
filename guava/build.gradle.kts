@@ -16,6 +16,7 @@ val caffeineOsgiBundle by configurations.registering {
 dependencies {
   api(project(":caffeine"))
   api(libs.guava)
+
   caffeineOsgiBundle(project(":caffeine", "osgiBundleElements"))
 }
 
@@ -35,6 +36,11 @@ testing.suites {
 
       runtimeOnly(libs.junit.jupiter.vintage)
     }
+    targets.all {
+      testTask {
+        doNotSkipTests()
+      }
+    }
   }
   register("compatibilityTest", JvmTestSuite::class) {
     useJUnitJupiter(libs.versions.junit.jupiter)
@@ -47,12 +53,22 @@ testing.suites {
 
       runtimeOnly(libs.junit.jupiter.vintage)
     }
+    targets.all {
+      testTask {
+        doNotSkipTests()
+      }
+    }
   }
   register("moduleTest", JvmTestSuite::class) {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
       implementation(project())
+    }
+    targets.all {
+      testTask {
+        doNotSkipTests()
+      }
     }
   }
   register<JvmTestSuite>("osgiTest") {
@@ -72,6 +88,7 @@ testing.suites {
         val guavaJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
         inputs.files(caffeineOsgiJarFile)
         inputs.files(guavaJarFile)
+        doNotSkipTests()
 
         val relativeDir = projectDir
         val versions = libs.versions

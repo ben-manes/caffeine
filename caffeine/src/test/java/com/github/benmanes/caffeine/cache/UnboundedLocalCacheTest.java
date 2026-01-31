@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
-import org.testng.annotations.Listeners;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
@@ -43,16 +43,14 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @CheckMaxLogLevel(TRACE)
-@Listeners(CacheValidationListener.class)
-@Test(dataProviderClass = CacheProvider.class)
-public final class UnboundedLocalCacheTest {
+final class UnboundedLocalCacheTest {
 
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.DISABLED,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  @Test(dataProvider = "caches")
-  public void noPolicy(Cache<Integer, Integer> cache) {
+  @ParameterizedTest
+  void noPolicy(Cache<Integer, Integer> cache) {
     assertThat(cache.policy().eviction()).isEmpty();
     assertThat(cache.policy().expireAfterWrite()).isEmpty();
     assertThat(cache.policy().expireAfterAccess()).isEmpty();
@@ -60,7 +58,7 @@ public final class UnboundedLocalCacheTest {
   }
 
   @Test
-  public void refreshes_memoize() {
+  void refreshes_memoize() {
     // The refresh map is never unset once initialized and a CAS race can cause a thread's attempt
     // at initialization to fail so it re-reads for the current value. This asserts a non-null value
     // for NullAway's static analysis. We can test the failed CAS scenario by resetting the field
@@ -87,7 +85,7 @@ public final class UnboundedLocalCacheTest {
   }
 
   @Test
-  public void computeIfAbsent_discardsRefresh() {
+  void computeIfAbsent_discardsRefresh() {
     var cache = new UnboundedLocalCache<Integer, Integer>(
         Caffeine.newBuilder(), /* isAsync= */ false);
     Integer key = 1;
@@ -100,7 +98,7 @@ public final class UnboundedLocalCacheTest {
   }
 
   @Test
-  public void computeIfAbsent_discardsRefresh_null() {
+  void computeIfAbsent_discardsRefresh_null() {
     var cache = new UnboundedLocalCache<Integer, Integer>(
         Caffeine.newBuilder(), /* isAsync= */ false);
     Integer key = 1;
@@ -114,7 +112,7 @@ public final class UnboundedLocalCacheTest {
   }
 
   @Test
-  public void findVarHandle_absent() {
+  void findVarHandle_absent() {
     assertThrows(ExceptionInInitializerError.class, () ->
         findVarHandle(UnboundedLocalCache.class, "absent", int.class));
   }

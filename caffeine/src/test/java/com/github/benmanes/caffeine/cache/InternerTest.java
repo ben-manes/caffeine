@@ -32,11 +32,13 @@ import java.lang.ref.WeakReference;
 import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
-import org.testng.Assert;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -50,15 +52,15 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class InternerTest {
+final class InternerTest {
 
-  @Test(dataProvider = "interners")
-  public void intern_null(Interner<Int> interner) {
+  @ParameterizedTest @MethodSource("interners")
+  void intern_null(Interner<Int> interner) {
     assertThrows(NullPointerException.class, () -> interner.intern(nullValue()));
   }
 
-  @Test(dataProvider = "interners")
-  public void intern(Interner<Int> interner) {
+  @ParameterizedTest @MethodSource("interners")
+  void intern(Interner<Int> interner) {
     var canonical = new Int(1);
     var other = new Int(1);
 
@@ -75,7 +77,7 @@ public final class InternerTest {
   @Test
   @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
   @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
-  public void intern_weak_replace() {
+  void intern_weak_replace() {
     @Var var canonical = new Int(1);
     var other = new Int(1);
 
@@ -94,7 +96,7 @@ public final class InternerTest {
   @Test
   @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
   @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
-  public void intern_weak_remove() {
+  void intern_weak_remove() {
     @Var var canonical = new Int(1);
     var next = new Int(2);
 
@@ -111,7 +113,7 @@ public final class InternerTest {
   }
 
   @Test
-  public void intern_weak_cleanup() {
+  void intern_weak_cleanup() {
     var interner = (WeakInterner<Int>) Interner.<Int>newWeakInterner();
     interner.cache.drainStatus = BoundedLocalCache.REQUIRED;
 
@@ -128,7 +130,7 @@ public final class InternerTest {
 
   @Test
   @SuppressWarnings("ConstantValue")
-  public void intern_weak_retry() {
+  void intern_weak_retry() {
     var canonical = new Int(1);
     var other = new Int(1);
 
@@ -159,7 +161,7 @@ public final class InternerTest {
   }
 
   @Test
-  public void intern_strong_present() {
+  void intern_strong_present() {
     var result = new AtomicReference<@Nullable Int>();
     var writer = new AtomicReference<@Nullable Thread>();
     var interner = (StrongInterner<Int>) Interner.<Int>newStrongInterner();
@@ -180,12 +182,12 @@ public final class InternerTest {
   }
 
   @Test
-  public void nullPointerExceptions() {
+  void nullPointerExceptions() {
     new NullPointerTester().testAllPublicStaticMethods(Interner.class);
   }
 
   @Test
-  public void factory() {
+  void factory() {
     assertThat(Interned.FACTORY.newReferenceKey(new Object(), nullReferenceQueue()))
         .isInstanceOf(WeakKeyEqualsReference.class);
     assertThat(Interned.FACTORY.newNode(nullKey(), nullValue(), nullReferenceQueue(), 1, 1))
@@ -199,7 +201,7 @@ public final class InternerTest {
   }
 
   @Test
-  public void interned() {
+  void interned() {
     var node = new Interned<Object, Boolean>(new WeakReference<>(nullKey()));
     assertThat(node.isAlive()).isTrue();
     assertThat(node.getValue()).isTrue();
@@ -229,7 +231,7 @@ public final class InternerTest {
       };
       assertThat(cache).whenCleanedUp().hasSize(size);
     } else {
-      Assert.fail();
+      Assertions.fail();
     }
   }
 
@@ -239,8 +241,7 @@ public final class InternerTest {
     }
   }
 
-  @DataProvider(name = "interners")
-  public Object[] providesInterners() {
-    return new Object[] { Interner.newStrongInterner(), Interner.newWeakInterner() };
+  static Stream<Interner<Int>> interners() {
+    return Stream.of(Interner.newStrongInterner(), Interner.newWeakInterner());
   }
 }

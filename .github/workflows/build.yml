@@ -59,7 +59,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -82,13 +82,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       suites: ${{ steps.set-matrix.outputs.suites }}
+      suites-latest: ${{ steps.set-matrix.outputs.suites-latest }}
     steps:
       - id: set-matrix
         env:
           TOTAL_SHARDS: 50
-          ADDITIONAL_SUITES: |
-            caffeine:fuzzTest --tests FrequencySketchFuzzer
-            caffeine:fuzzTest --tests CaffeineSpecFuzzer
+          COMMON_SUITES: |
             caffeine:lincheckTest
             caffeine:eclipseTest
             caffeine:jctoolsTest
@@ -101,17 +100,25 @@ jobs:
             simulator:check
             jcache:check
             guava:check
+          MINIMUM_ONLY_SUITES: |
+            caffeine:fuzzTest --tests FrequencySketchFuzzer
+            caffeine:fuzzTest --tests CaffeineSpecFuzzer
         run: |
-          SHARDS=$(seq 0 $((TOTAL_SHARDS - 1)) \
+          BASE_MATRIX=$(seq 0 $((TOTAL_SHARDS - 1)) \
             | jq -R -c --arg count "$TOTAL_SHARDS" \
               '"caffeine:test -PshardCount=" + $count + " -PshardIndex=" + .' \
             | jq -s -c '.')
-          ADDITIONAL_SUITES_JSON=$(echo "$ADDITIONAL_SUITES" \
+          COMMON_JSON=$(echo "$COMMON_SUITES" \
             | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          COMBINED=$(echo "$SHARDS" "$ADDITIONAL_SUITES_JSON" \
+          MINIMUM_ONLY_JSON=$(echo "$MINIMUM_ONLY_SUITES" \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          ALL_SUITES=$(echo "$BASE_MATRIX" "$COMMON_JSON" "$MINIMUM_ONLY_JSON" \
             | jq -s 'add' -c)
-          echo "suites=$COMBINED" >> $GITHUB_OUTPUT
-          echo "$COMBINED" | jq
+          echo "suites=$ALL_SUITES" >> $GITHUB_OUTPUT
+          LATEST_SUITES=$(echo "$BASE_MATRIX" "$COMMON_JSON" \
+            | jq -s 'add' -c)
+          echo "suites-latest=$LATEST_SUITES" >> $GITHUB_OUTPUT
+          echo "$ALL_SUITES" | jq
 
   tests-minimum:
     name: Tests (Minimum JDK)
@@ -125,7 +132,7 @@ jobs:
         suite: ${{ fromJson(needs.setup.outputs.suites) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -182,10 +189,10 @@ jobs:
       contents: read
     strategy:
       matrix:
-        suite: ${{ fromJson(needs.setup.outputs.suites) }}
+        suite: ${{ fromJson(needs.setup.outputs.suites-latest) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -212,7 +219,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -320,7 +327,7 @@ jobs:
       checks: write # Needed to annotate commit
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -385,7 +392,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -419,7 +426,7 @@ jobs:
       id-token: write # Needed for signing
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block

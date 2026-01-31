@@ -32,12 +32,13 @@ import junit.framework.TestSuite;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings({"JUnitClassModifiers", "JUnitMethodDeclaration",
+    "PMD.JUnit4SuitesShouldUseSuiteAnnotation"})
 public final class CaffeineMapTests extends TestCase {
 
-  @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")
   public static Test suite() {
     var suite = new TestSuite();
-    new CacheGenerator(cacheSpec()).generate().parallel()
+    CacheGenerator.forCacheSpec(cacheSpec()).generate().parallel()
         .flatMap(MapTestFactory::makeTests)
         .sorted(Comparator.comparing(TestSuite::getName))
         .forEachOrdered(suite::addTest);

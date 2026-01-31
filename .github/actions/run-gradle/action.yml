@@ -84,13 +84,13 @@ runs:
         echo "version=$version" >> $GITHUB_OUTPUT
         echo "vendor=$vendor" >> $GITHUB_OUTPUT
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+      uses: gradle/actions/setup-gradle@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # v5.0.1
       with:
         add-job-summary: on-failure
         cache-read-only: ${{ inputs.local-cache-read-only }}
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Restore local build cache
-      uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
       if: ${{ inputs.local-build-cache == 'true' }}
       with:
         path: ~/.gradle/caches/build-cache-*
