@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test;
  */
 @Param(name = "key", gen = IntGen.class, conf = "1:5")
 @Param(name = "value", gen = IntGen.class, conf = "1:10")
-@SuppressWarnings({"MemberName", "PMD.AbstractClassWithoutAbstractMethod", "unused"})
+@SuppressWarnings({"IdentifierName", "PMD.AbstractClassWithoutAbstractMethod", "unused"})
 abstract class AbstractLincheckCacheTest {
   private final LoadingCache<Integer, Integer> cache;
 

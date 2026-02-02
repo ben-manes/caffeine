@@ -32,7 +32,7 @@ import org.slf4j.event.Level;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Target({METHOD, TYPE}) @Retention(RUNTIME)
-@ExtendWith(CacheValidationListener.class)
+@ExtendWith(CacheValidationInterceptor.class)
 public @interface CheckMaxLogLevel {
   Level value();
 }

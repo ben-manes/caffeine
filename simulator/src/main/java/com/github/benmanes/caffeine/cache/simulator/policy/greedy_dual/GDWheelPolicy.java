@@ -45,7 +45,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author himelbrand@gmail.com (Omri Himelbrand)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("MemberName")
+@SuppressWarnings("IdentifierName")
 @PolicySpec(name = "greedy-dual.GDWheel", characteristics = WEIGHTED)
 public final class GDWheelPolicy implements Policy {
   private final Long2ObjectMap<Node> data;

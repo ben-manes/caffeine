@@ -283,7 +283,7 @@ public class LocalLoadingCacheTest extends TestCase {
   }
 
   // Bug in JDK8; fixed but not released as of 1.8.0_25-b17
-  @SuppressWarnings("MemberName")
+  @SuppressWarnings("IdentifierName")
   public void disabled_testRecursiveComputation() throws InterruptedException {
     AtomicReference<LoadingCache<Integer, String>> cacheRef =
         new AtomicReference<LoadingCache<Integer, String>>();

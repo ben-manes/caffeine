@@ -24,7 +24,7 @@ import com.google.errorprone.annotations.Var;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-@SuppressWarnings("MemberName")
+@SuppressWarnings("IdentifierName")
 final class HashFunctionParser {
   // currently, chain is bounded to be 64.
   private static final int fpSize = 8; // this implementation assumes byte.

@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 
 /**
  * A test method with this annotation has indicated that no statistics should have been recorded
- * and the {@link CacheValidationListener} should verify that expectation.
+ * and the {@link CacheValidationInterceptor} should verify that expectation.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

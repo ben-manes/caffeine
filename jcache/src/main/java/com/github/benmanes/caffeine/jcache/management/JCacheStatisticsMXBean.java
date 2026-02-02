@@ -25,7 +25,7 @@ import javax.cache.management.CacheStatisticsMXBean;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("MemberName")
+@SuppressWarnings("IdentifierName")
 public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
   private final LongAdder puts = new LongAdder();
   private final LongAdder hits = new LongAdder();

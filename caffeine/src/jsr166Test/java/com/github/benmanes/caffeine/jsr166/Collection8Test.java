@@ -57,7 +57,7 @@ import junit.framework.Test;
 @NullUnmarked
 @SuppressWarnings({"all", "CatchAndPrintStackTrace", "CollectionAddAllToCollectionBlock",
     "CollectionForEach", "CollectionIsEmpty", "CollectionToArray", "CollectorMutability",
-    "DequeAddLast", "DequeRemoveFirst", "EmptyCatch", "LabelledBreakTarget", "MemberName",
+    "DequeAddLast", "DequeRemoveFirst", "EmptyCatch", "IdentifierName", "LabelledBreakTarget",
     "MethodReferenceUsage", "MissingDefault", "MissingFail", "MultiVariableDeclaration", "rawtypes",
     "ReturnValueIgnored", "SequencedCollectionGetFirst", "StatementSwitchToExpressionSwitch",
     "SystemOut", "try", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses", "unused", "Var",

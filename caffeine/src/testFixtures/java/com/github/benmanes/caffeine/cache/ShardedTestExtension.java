@@ -42,7 +42,6 @@ import com.google.common.math.IntMath;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("unused")
 public final class ShardedTestExtension implements ExecutionCondition {
   private static final ConcurrentMap<String, Boolean> IS_MATCH = new ConcurrentHashMap<>(10_000);
   private static final ConditionEvaluationResult MATCHING_SHARD = enabled("Matching sharded");

@@ -42,9 +42,9 @@ import site.ycsb.generator.ScrambledZipfianGenerator;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
-@SuppressWarnings({"CanonicalAnnotationSyntax", "LexicographicalAnnotationAttributeListing",
-    "JavadocDeclaration", "NotNullFieldNotInitialized", "MemberName",
-    "PMD.MethodNamingConventions", "unused"})
+@SuppressWarnings({"CanonicalAnnotationSyntax", "IdentifierName",
+    "LexicographicalAnnotationAttributeListing", "JavadocDeclaration",
+    "NotNullFieldNotInitialized", "PMD.MethodNamingConventions", "unused"})
 public class GetPutBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

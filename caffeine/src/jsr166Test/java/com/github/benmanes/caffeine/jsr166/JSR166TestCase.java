@@ -198,8 +198,8 @@ import junit.textui.TestRunner;
 @NullUnmarked
 @SuppressWarnings({"all", "AnnotateFormatMethod", "BooleanLiteral", "ClassEscapesDefinedScope",
     "CollectionToArray", "ConstantField", "EffectivelyPrivate", "EmptyCatch",
-    "EqualsIncompatibleType", "FunctionalInterfaceClash", "InterruptedExceptionSwallowed",
-    "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta", "MemberName",
+    "EqualsIncompatibleType", "FunctionalInterfaceClash", "IdentifierName",
+    "InterruptedExceptionSwallowed", "JavaUtilDate", "JUnit3FloatingPointComparisonWithoutDelta",
     "NonFinalStaticField", "NumericEquality", "rawtypes", "ReferenceEquality",
     "RethrowReflectiveOperationExceptionAsLinkageError", "serial", "SwitchDefault", "SystemOut",
     "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals", "UnnecessaryFinal", "unused",

@@ -41,7 +41,7 @@ import net.jodah.expiringmap.ExpiringMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("MemberName")
+@SuppressWarnings("IdentifierName")
 public enum CacheType {
 
   /* --------------- Unbounded --------------- */

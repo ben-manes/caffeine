@@ -36,11 +36,12 @@ import java.util.concurrent.Executors;
 import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Isolated;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
-import com.github.benmanes.caffeine.cache.AsyncCacheSubject;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.CacheValidationInterceptor;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.testing.FutureSubject;
 
@@ -58,6 +59,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @Isolated
 @TestInstance(PER_CLASS)
+@ExtendWith(CacheValidationInterceptor.class)
 final class Issue30Test {
   private static final boolean DEBUG = false;
 
@@ -90,7 +92,6 @@ final class Issue30Test {
     initialValues(cache, source, lastLoad);
     firstUpdate(cache, source);
     secondUpdate(cache, source);
-    AsyncCacheSubject.assertThat(cache).isValid();
   }
 
   private static void initialValues(AsyncLoadingCache<String, String> cache,

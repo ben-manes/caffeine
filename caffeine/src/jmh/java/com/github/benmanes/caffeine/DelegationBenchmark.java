@@ -34,7 +34,7 @@ import com.google.common.collect.ForwardingMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings({"MemberName", "PMD.MethodNamingConventions", "unused"})
+@SuppressWarnings({"IdentifierName", "PMD.MethodNamingConventions", "unused"})
 public class DelegationBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;

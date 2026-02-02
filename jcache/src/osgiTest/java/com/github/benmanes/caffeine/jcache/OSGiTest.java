@@ -41,7 +41,7 @@ import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @RunWith(PaxExam.class)
-@SuppressWarnings("MemberName")
+@SuppressWarnings("IdentifierName")
 @ExamReactorStrategy(PerMethod.class)
 public final class OSGiTest {
   private static final String PROVIDER_NAME =

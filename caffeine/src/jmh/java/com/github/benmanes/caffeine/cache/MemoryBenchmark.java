@@ -53,8 +53,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"LexicographicalAnnotationAttributeListing", "JavadocDeclaration",
-    "MemberName", "PMD.MethodNamingConventions", "SystemOut"})
+@SuppressWarnings({"IdentifierName", "LexicographicalAnnotationAttributeListing",
+    "JavadocDeclaration", "PMD.MethodNamingConventions", "SystemOut"})
 public final class MemoryBenchmark {
   // The number of entries added to minimize skew due to non-entry factors
   static final int FUZZY_SIZE = 25_000;

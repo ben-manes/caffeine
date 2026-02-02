@@ -75,7 +75,7 @@ testing.suites {
           useJUnitPlatform {
             excludeTags("isolated")
           }
-          doNotSkipTests()
+          failOnSkippedTests()
         }
       }
       register("isolatedTest") {
@@ -84,7 +84,7 @@ testing.suites {
             includeTags("isolated")
           }
           forkEvery = 1
-          doNotSkipTests()
+          failOnSkippedTests()
           maxParallelForks = 2 * Runtime.getRuntime().availableProcessors()
         }
       }
@@ -106,7 +106,7 @@ testing.suites {
         val jcacheJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
         inputs.files(caffeineOsgiJarFile)
         inputs.files(jcacheJarFile)
-        doNotSkipTests()
+        failOnSkippedTests()
 
         val relativeDir = projectDir
         val versions = libs.versions
@@ -142,7 +142,7 @@ testing.suites {
       testTask.configure {
         inputs.files(unzipTestKit.map { it.outputs.files })
         testClassesDirs = layout.buildDirectory.files("tck")
-        doNotSkipTests()
+        failOnSkippedTests()
 
         doFirst {
           val pkg = "com.github.benmanes.caffeine.jcache"

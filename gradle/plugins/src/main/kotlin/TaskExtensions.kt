@@ -20,13 +20,16 @@ fun Task.incompatibleWithConfigurationCache() {
 }
 
 fun Test.useParallelJUnitJupiter() {
+  val threadCount = Runtime.getRuntime().availableProcessors()
   systemProperties(
+    "testng.parallel" to "methods",
+    "testng.threadCount" to threadCount.toString(),
     "junit.jupiter.execution.parallel.enabled" to "true",
     "junit.jupiter.execution.parallel.mode.default" to "concurrent",
     "junit.jupiter.execution.parallel.mode.classes.default" to "concurrent")
 }
 
-fun Test.doNotSkipTests() {
+fun Test.failOnSkippedTests() {
   testLogging.events(SKIPPED)
   afterTest(KotlinClosure2<TestDescriptor, TestResult, Unit>({ descriptor, result ->
     if (result.resultType == TestResult.ResultType.SKIPPED) {

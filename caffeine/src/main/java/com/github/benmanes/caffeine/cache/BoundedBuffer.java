@@ -123,7 +123,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
 }
 
 /** The namespace for field padding through inheritance. */
-@SuppressWarnings({"MemberName", "MultiVariableDeclaration"})
+@SuppressWarnings({"IdentifierName", "MultiVariableDeclaration"})
 final class BBHeader {
 
   private BBHeader() {}

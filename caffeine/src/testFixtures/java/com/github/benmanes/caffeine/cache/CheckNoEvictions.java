@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 
 /**
  * A test class or method with this annotation has indicated that no eviction notifications should
- * have been recorded and the {@link CacheValidationListener} should verify that expectation.
+ * have been recorded and the {@link CacheValidationInterceptor} should verify that expectation.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

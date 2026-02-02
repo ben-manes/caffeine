@@ -43,7 +43,7 @@ jobs:
     steps:
       - id: set-matrix
         env:
-          TOTAL_SHARDS: 50
+          TOTAL_SHARDS: 40
           ADDITIONAL_SUITES: |
             caffeine:eclipseTest
             caffeine:jctoolsTest
@@ -101,11 +101,11 @@ jobs:
         env:
           ATTEMPT_LIMIT: 2
           ATTEMPT_DELAY: 30
-          TEST_SUITE: ${{ matrix.suite }} --rerun
+          TEST_SUITE: ${{ matrix.suite }}
         run: |
           echo "::add-matcher::.github/problem-matcher.json"
           for ((i=1; i<="$ATTEMPT_LIMIT"; i++)); do
-            ./gradlew -PearlyAccess=true \
+            ./gradlew --rerun-tasks -PearlyAccess=true \
             --warning-mode all --no-problems-report \
             -Dscan.tag.${GITHUB_WORKFLOW// /_} \
             $(eval echo "$TEST_SUITE" | tr -d '\n') && break

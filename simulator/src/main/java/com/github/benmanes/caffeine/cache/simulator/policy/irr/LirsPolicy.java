@@ -55,7 +55,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @PolicySpec(name = "irr.Lirs")
-@SuppressWarnings("MemberName")
+@SuppressWarnings("IdentifierName")
 public final class LirsPolicy implements KeyOnlyPolicy {
   // Enable to print out the internal state
   private static final boolean debug = false;

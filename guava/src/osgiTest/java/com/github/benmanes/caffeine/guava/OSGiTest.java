@@ -37,7 +37,7 @@ import com.google.common.cache.LoadingCache;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @RunWith(PaxExam.class)
-@SuppressWarnings("MemberName")
+@SuppressWarnings("IdentifierName")
 @ExamReactorStrategy(PerMethod.class)
 public final class OSGiTest {
 

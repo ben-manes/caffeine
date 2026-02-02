@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 
@@ -122,10 +123,16 @@ public final class CacheProvider implements ArgumentsProvider {
       // If the cache context is not used as an argument then store it for the validation listener
       // to recover. This allows for both performing an integrity check as well as ensuring that
       // the cache entries are not collected prematurely due to weak/soft reference collection.
-      var key = StringUtils.substringBetween(displayName, "{", "}");
-      extension.getStore(NAMESPACE).put(key, context);
+      var key = getStoreKey(displayName);
+      if (key != null) {
+        extension.getStore(NAMESPACE).put(key, context);
+      }
     }
     return argumentSet(displayName, params);
+  }
+
+  public static @Nullable String getStoreKey(String displayName) {
+    return StringUtils.substringBetween(requireNonNull(displayName), "{", "}");
   }
 
   /** Returns if the test parameters requires an asynchronous cache. */

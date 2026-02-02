@@ -62,7 +62,7 @@ testing.suites {
     }
     targets.all {
       testTask {
-        doNotSkipTests()
+        failOnSkippedTests()
       }
     }
   }

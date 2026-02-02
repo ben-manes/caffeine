@@ -49,7 +49,7 @@ import com.google.errorprone.annotations.Var;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings({"MemberName", "NotNullFieldNotInitialized",
+@SuppressWarnings({"IdentifierName", "NotNullFieldNotInitialized",
     "PMD.MethodNamingConventions", "unused"})
 public class SlotLookupBenchmark {
   static final int ARENA_SIZE = 2 << 6;

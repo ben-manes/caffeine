@@ -4614,7 +4614,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 }
 
 /** The namespace for field padding through inheritance. */
-@SuppressWarnings({"MemberName", "MultiVariableDeclaration"})
+@SuppressWarnings({"IdentifierName", "MultiVariableDeclaration"})
 final class BLCHeader {
 
   private BLCHeader() {}

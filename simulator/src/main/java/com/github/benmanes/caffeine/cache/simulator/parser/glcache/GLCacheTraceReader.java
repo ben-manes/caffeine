@@ -31,7 +31,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("MemberName")
+@SuppressWarnings("IdentifierName")
 public final class GLCacheTraceReader extends BinaryTraceReader {
 
   public GLCacheTraceReader(String filePath) {

@@ -1983,7 +1983,7 @@ public class CacheLoadingTest extends TestCase {
   }
 
   // ConcurrentHashMap does not support this, as it returns the removed entry
-  @SuppressWarnings("MemberName")
+  @SuppressWarnings("IdentifierName")
   public void disabled_testInvalidateDuringLoading() throws InterruptedException {
     // computation starts; invalidate() is called on the key being computed, computation finishes
     CountDownLatch computationStarted = new CountDownLatch(2);
@@ -2036,7 +2036,7 @@ public class CacheLoadingTest extends TestCase {
   }
 
   // ConcurrentHashMap does not support this, as it returns the removed entry
-  @SuppressWarnings("MemberName")
+  @SuppressWarnings("IdentifierName")
   public void disabled_testInvalidateAndReloadDuringLoading() throws InterruptedException {
     // computation starts; clear() is called, computation finishes
     CountDownLatch computationStarted = new CountDownLatch(2);

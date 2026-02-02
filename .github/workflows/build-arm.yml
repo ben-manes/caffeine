@@ -44,7 +44,7 @@ jobs:
     steps:
       - id: set-matrix
         env:
-          TOTAL_SHARDS: 50
+          TOTAL_SHARDS: 40
           ADDITIONAL_SUITES: |
             caffeine:eclipseTest
             caffeine:jctoolsTest

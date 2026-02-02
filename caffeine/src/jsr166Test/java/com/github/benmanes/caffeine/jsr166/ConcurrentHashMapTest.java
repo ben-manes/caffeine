@@ -25,7 +25,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.Test;
 
-@SuppressWarnings({"all", "EmptyCatch", "ForEachIterable", "MemberName",
+@SuppressWarnings({"all", "EmptyCatch", "ForEachIterable", "IdentifierName",
     "ModifyCollectionInEnhancedForLoop", "PreferredInterfaceType", "rawtypes", "ReturnValueIgnored",
     "StatementSwitchToExpressionSwitch", "unchecked", "UnnecessaryFinal", "UnnecessaryParentheses",
     "Var", "Varifier"})

@@ -1,7 +1,7 @@
 [versions]
 caffeine = "3.2.3"
 h2 = "2.4.240"
-hibernate = "7.3.0.CR1"
+hibernate = "8.0.0.Alpha1"
 junit-jupiter = "6.1.0-M1"
 log4j2-core = "3.0.0-beta3"
 log4j2-slf4j2 = "3.0.0-beta2"

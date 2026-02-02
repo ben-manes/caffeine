@@ -233,7 +233,7 @@ public class CacheEvictionTest extends TestCase {
   }
 
   // Caffeine uses W-TinyLfu, not Lru
-  @SuppressWarnings("MemberName")
+  @SuppressWarnings("IdentifierName")
   public void disabled_testEviction_lru() {
     // test lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
@@ -267,7 +267,7 @@ public class CacheEvictionTest extends TestCase {
   }
 
   // Caffeine uses W-TinyLfu, not Lru
-  @SuppressWarnings("MemberName")
+  @SuppressWarnings("IdentifierName")
   public void disabled_testEviction_weightedLru() {
     // test weighted lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();

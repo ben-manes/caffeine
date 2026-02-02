@@ -36,7 +36,7 @@ import com.google.common.cache.CacheBuilder;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
-@SuppressWarnings({"JavadocDeclaration", "MemberName",
+@SuppressWarnings({"IdentifierName", "JavadocDeclaration",
     "NotNullFieldNotInitialized", "StatementSwitchToExpressionSwitch", "unused"})
 public class BuilderBenchmark {
   @Param BuilderType type;

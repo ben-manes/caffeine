@@ -38,7 +38,7 @@ testing.suites {
     }
     targets.all {
       testTask {
-        doNotSkipTests()
+        failOnSkippedTests()
       }
     }
   }
@@ -55,7 +55,7 @@ testing.suites {
     }
     targets.all {
       testTask {
-        doNotSkipTests()
+        failOnSkippedTests()
       }
     }
   }
@@ -67,7 +67,7 @@ testing.suites {
     }
     targets.all {
       testTask {
-        doNotSkipTests()
+        failOnSkippedTests()
       }
     }
   }
@@ -88,7 +88,7 @@ testing.suites {
         val guavaJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
         inputs.files(caffeineOsgiJarFile)
         inputs.files(guavaJarFile)
-        doNotSkipTests()
+        failOnSkippedTests()
 
         val relativeDir = projectDir
         val versions = libs.versions

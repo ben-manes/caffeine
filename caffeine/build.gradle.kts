@@ -106,7 +106,7 @@ val compileCodeGenJava by tasks.existing(JavaCompile::class) {
     errorprone {
       disable("FieldMissingNullable")
       disable("MissingOverride")
-      disable("MemberName")
+      disable("IdentifierName")
       disable("Varifier")
       disable("Var")
       nullaway.disable()
@@ -199,7 +199,6 @@ testing.suites {
           jvmArgs("-Djunit.jupiter.extensions.autodetection.enabled=true",
             "-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
             "--add-opens", "java.base/java.lang=ALL-UNNAMED")
-          maxParallelForks = Runtime.getRuntime().availableProcessors()
 
           val testOptions = listOf("implementation", "compute", "keys", "values", "stats")
             .associateWith { providers.gradleProperty(it) }
@@ -213,6 +212,7 @@ testing.suites {
               .map { it.toIntOrNull() }.getOrElse(0))
           inputs.properties(shardingOptions)
           systemProperties(shardingOptions)
+          useParallelJUnitJupiter()
         }
       }
     }
@@ -230,7 +230,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        doNotSkipTests()
+        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -245,7 +245,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        doNotSkipTests()
+        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -260,8 +260,15 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
+        maxParallelForks = Runtime.getRuntime().availableProcessors()
+        // https://github.com/CodeIntelligenceTesting/jazzer/issues/1035
+        if (java.toolchain.languageVersion.get().canCompileOrRun(25)) {
+          configure<JacocoTaskExtension> {
+            isEnabled = false
+          }
+        }
         environment("JAZZER_FUZZ", "1")
-        doNotSkipTests()
+        failOnSkippedTests()
         failFast = true
         forkEvery = 1
       }
@@ -279,7 +286,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        doNotSkipTests()
+        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -293,7 +300,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        doNotSkipTests()
+        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -312,7 +319,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        doNotSkipTests()
+        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -330,7 +337,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        doNotSkipTests()
+        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -348,8 +355,8 @@ testing.suites {
         testLogging.events(STARTED)
         onlyIf { isEnabled.get() }
         useParallelJUnitJupiter()
+        failOnSkippedTests()
         maxHeapSize = "3g"
-        doNotSkipTests()
         failFast = true
 
         systemProperties(providers.systemPropertiesPrefixedBy("lincheck").get())
@@ -376,7 +383,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        doNotSkipTests()
+        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -393,7 +400,7 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        doNotSkipTests()
+        failOnSkippedTests()
         useParallelJUnitJupiter()
         val relativeDir = projectDir
         inputs.files(jar.map { it.outputs.files })
