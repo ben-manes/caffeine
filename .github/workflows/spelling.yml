@@ -114,4 +114,4 @@ jobs:
         with:
           persist-credentials: false
       - name: Typos
-        uses: crate-ci/typos@93cbdb2d23269548cf0db0f74d0bc6a09a3f0d5c # v1.43.0
+        uses: crate-ci/typos@3a4d65230db538caabac6e156599c8ba8380ff07 # v1.43.1

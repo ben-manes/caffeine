@@ -16,17 +16,17 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Objects.requireNonNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
@@ -35,6 +35,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.support.ParameterDeclaration;
 import org.junit.jupiter.params.support.ParameterDeclarations;
 
+import com.google.common.base.Equivalence;
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.Var;
 
@@ -118,21 +119,29 @@ public final class CacheProvider implements ArgumentsProvider {
       }
       checkNotNull(params[i], "Unknown parameter type: %s", clazz);
     }
-    var displayName = context.toString();
     if (store) {
       // If the cache context is not used as an argument then store it for the validation listener
       // to recover. This allows for both performing an integrity check as well as ensuring that
       // the cache entries are not collected prematurely due to weak/soft reference collection.
-      var key = getStoreKey(displayName);
+      var key = getStoreKey(Arrays.asList(params));
       if (key != null) {
         extension.getStore(NAMESPACE).put(key, context);
       }
     }
-    return argumentSet(displayName, params);
+    return argumentSet(context.toString(), params);
   }
 
-  public static @Nullable String getStoreKey(String displayName) {
-    return StringUtils.substringBetween(requireNonNull(displayName), "{", "}");
+  /** Returns a key to the invocation's {@link CacheContext}, or null if not applicable. */
+  @SuppressWarnings("SequencedCollectionGetFirst")
+  public static @Nullable Object getStoreKey(List<Object> arguments) {
+    if (arguments.isEmpty()) {
+      return null;
+    } else if (arguments.size() == 1) {
+      return Equivalence.identity().wrap(arguments.get(0));
+    }
+    return arguments.stream()
+        .map(Equivalence.identity()::wrap)
+        .collect(toImmutableList());
   }
 
   /** Returns if the test parameters requires an asynchronous cache. */

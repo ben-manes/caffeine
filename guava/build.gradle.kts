@@ -32,9 +32,9 @@ testing.suites {
       implementation(libs.truth)
       implementation(libs.guava.testlib)
       implementation(libs.spotbugs.annotations)
-      implementation.bundle(libs.bundles.slf4j.nop)
 
       runtimeOnly(libs.junit.jupiter.vintage)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.all {
       testTask {

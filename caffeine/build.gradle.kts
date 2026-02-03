@@ -196,8 +196,7 @@ testing.suites {
           classpath = files(sourceSets.named("test").map { it.runtimeClasspath },
             sourceSets.named("codeGen").map { it.runtimeClasspath })
           testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs })
-          jvmArgs("-Djunit.jupiter.extensions.autodetection.enabled=true",
-            "-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
+          jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
             "--add-opens", "java.base/java.lang=ALL-UNNAMED")
 
           val testOptions = listOf("implementation", "compute", "keys", "values", "stats")
@@ -257,6 +256,7 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(libs.jazzer)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.all {
       testTask.configure {
@@ -297,6 +297,7 @@ testing.suites {
     dependencies {
       implementation(project())
       implementation(libs.guava)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.all {
       testTask.configure {
@@ -316,6 +317,7 @@ testing.suites {
       implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.vintage)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.all {
       testTask.configure {
@@ -334,6 +336,7 @@ testing.suites {
       implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.vintage)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.all {
       testTask.configure {
@@ -348,6 +351,7 @@ testing.suites {
     dependencies {
       implementation(project())
       implementation(libs.lincheck)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.all {
       testTask.configure {
@@ -380,6 +384,7 @@ testing.suites {
       implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.testng)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.all {
       testTask.configure {
@@ -396,6 +401,7 @@ testing.suites {
       implementation.bundle(libs.bundles.osgi.test.compile)
 
       runtimeOnly(libs.junit.jupiter.vintage)
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
     targets.all {

@@ -32,7 +32,7 @@ configurations.all {
   resolutionStrategy.eachDependency {
     if ((requested.group in junitJupiterGroups)
         && (java.toolchain.languageVersion.get().asInt() < 17)) {
-      useVersion("5.13.2")
+      useVersion("5.14.2")
     }
   }
 }
@@ -52,7 +52,8 @@ tasks.withType<Test>().configureEach {
   jvmArgumentProviders.add {
     buildList {
       addAll(listOf("-XX:+EnableDynamicAgentLoading", "-javaagent:${javaAgent.get()}",
-        "-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+UnlockDiagnosticVMOptions", "-Xshare:off"))
+        "-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+UnlockDiagnosticVMOptions", "-Xshare:off",
+        "-Djunit.jupiter.extensions.autodetection.enabled=true"))
       if (javaVersion.get() >= 25) {
         add("-XX:+UseCompactObjectHeaders")
       }

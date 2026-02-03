@@ -78,7 +78,7 @@ public final class CacheValidationInterceptor implements BeforeAllCallback, Invo
       invocation.proceed();
       validate(invocationContext, extensionContext);
     } finally {
-      cleanUp(extensionContext);
+      cleanUp(invocationContext, extensionContext);
     }
   }
 
@@ -104,7 +104,7 @@ public final class CacheValidationInterceptor implements BeforeAllCallback, Invo
         return Optional.of((CacheContext) argument);
       }
     }
-    var key = CacheProvider.getStoreKey(extensionContext.getDisplayName());
+    var key = CacheProvider.getStoreKey(invocationContext.getArguments());
     return (key == null)
         ? Optional.empty()
         : Optional.ofNullable(extensionContext.getStore(NAMESPACE).get(key, CacheContext.class));
@@ -178,15 +178,20 @@ public final class CacheValidationInterceptor implements BeforeAllCallback, Invo
   }
 
   /** Free memory by clearing unused resources after test execution. */
-  private static void cleanUp(ExtensionContext extensionContext) {
-    removeCacheContextFromStore(extensionContext);
+  private static void cleanUp(
+      ReflectiveInvocationContext<?> invocationContext, ExtensionContext extensionContext) {
+    removeCacheContextFromStore(invocationContext, extensionContext);
     CacheContext.interner().clear();
     LoggingEvents.cleanUp();
   }
 
   /** Removes the {@link CacheContext} from the environment. */
-  private static void removeCacheContextFromStore(ExtensionContext extensionContext) {
-    var key = CacheProvider.getStoreKey(extensionContext.getDisplayName());
+  private static void removeCacheContextFromStore(
+      ReflectiveInvocationContext<?> invocationContext, ExtensionContext extensionContext) {
+    if (invocationContext.getArguments().stream().anyMatch(CacheContext.class::isInstance)) {
+      return; // not stored
+    }
+    var key = CacheProvider.getStoreKey(invocationContext.getArguments());
     if (key == null) {
       return;
     }

@@ -65,8 +65,8 @@ testing.suites {
       implementation(files(testResourcesJar))
       implementation(libs.nullaway.annotations)
       implementation(libs.spotbugs.annotations)
-      implementation.bundle(libs.bundles.slf4j.nop)
 
+      runtimeOnly.bundle(libs.bundles.slf4j.nop)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
     targets {
