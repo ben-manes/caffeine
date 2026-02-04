@@ -70,7 +70,7 @@ final class Solr10141Test {
       assertThat(v).isNotNull();
       assertThat(v.key).isEqualTo(k);
       if (!v.live.compareAndSet(/* expectedValue= */ true, /* newValue= */ false)) {
-        throw new RuntimeException(String.format(US,
+        throw new IllegalStateException(String.format(US,
             "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
       }
       removals.incrementAndGet();
@@ -145,7 +145,7 @@ final class Solr10141Test {
       assertThat(v).isNotNull();
       assertThat(v.key).isEqualTo(k);
       if (!v.live.compareAndSet(/* expectedValue= */ true, /* newValue= */ false)) {
-        throw new RuntimeException(String.format(US,
+        throw new IllegalStateException(String.format(US,
             "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
       }
       removals.incrementAndGet();

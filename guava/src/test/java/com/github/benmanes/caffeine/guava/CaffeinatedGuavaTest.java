@@ -99,7 +99,7 @@ final class CaffeinatedGuavaTest {
         Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
         new CacheLoader<>() {
           @Override public Integer load(Integer key) throws Exception {
-            throw new Exception();
+            throw new IllegalStateException();
           }
         });
     cache.put(1, 1);

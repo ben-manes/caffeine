@@ -223,7 +223,7 @@ final class CacheTest {
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void get_present(Cache<Int, Int> cache, CacheContext context) {
-    Function<Int, Int> loader = key -> { throw new RuntimeException(); };
+    Function<Int, Int> loader = key -> { throw new AssertionError(); };
     assertThat(cache.get(context.firstKey(), loader))
         .isEqualTo(context.original().get(context.firstKey()));
     assertThat(cache.get(context.middleKey(), loader))

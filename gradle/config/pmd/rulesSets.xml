@@ -83,7 +83,6 @@
     <exclude name="AvoidRethrowingException"/>
     <exclude name="PublicMemberInNonPublicType"/>
     <exclude name="AbstractClassWithoutAnyMethod"/>
-    <exclude name="AvoidThrowingRawExceptionTypes"/>
   </rule>
 
   <rule ref="category/java/documentation.xml">

@@ -103,7 +103,6 @@
     <exclude name="PublicMemberInNonPublicType"/>
     <exclude name="AbstractClassWithoutAnyMethod"/>
     <exclude name="AvoidCatchingGenericException"/>
-    <exclude name="AvoidThrowingRawExceptionTypes"/>
   </rule>
 
   <rule ref="category/java/documentation.xml">
@@ -115,7 +114,6 @@
 
   <rule ref="category/java/errorprone.xml">
     <exclude name="EqualsNull"/>
-    <exclude name="DontImportSun"/>
     <exclude name="NullAssignment"/>
     <exclude name="AssignmentInOperand"/>
     <exclude name="UseProperClassLoader"/>

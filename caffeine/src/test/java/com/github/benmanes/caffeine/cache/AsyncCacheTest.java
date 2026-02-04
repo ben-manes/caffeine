@@ -244,7 +244,7 @@ final class AsyncCacheTest {
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void getFunc_present(AsyncCache<Int, Int> cache, CacheContext context) {
-    Function<Int, Int> loader = key -> { throw new RuntimeException(); };
+    Function<Int, Int> loader = key -> { throw new AssertionError(); };
     assertThat(cache.get(context.firstKey(), loader))
         .succeedsWith(context.original().get(context.firstKey()));
     assertThat(cache.get(context.middleKey(), loader))
@@ -376,7 +376,7 @@ final class AsyncCacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void getBiFunc_present(AsyncCache<Int, Int> cache, CacheContext context) {
     BiFunction<Int, Executor, CompletableFuture<Int>> loader =
-        (key, executor) -> { throw new RuntimeException(); };
+        (key, executor) -> { throw new AssertionError(); };
     assertThat(cache.get(context.firstKey(), loader))
         .succeedsWith(context.original().get(context.firstKey()));
     assertThat(cache.get(context.middleKey(), loader))

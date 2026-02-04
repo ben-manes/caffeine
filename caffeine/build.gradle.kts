@@ -138,9 +138,6 @@ tasks.named<JavaCompile>("compileJava").configure {
   finalizedBy(compileCodeGenJava)
   options.apply {
     compilerArgs.addAll(listOf("-Xlint:-auxiliaryclass", "-Xlint:-exports"))
-    errorprone {
-      disable("CheckReturnValue")
-    }
   }
 }
 
