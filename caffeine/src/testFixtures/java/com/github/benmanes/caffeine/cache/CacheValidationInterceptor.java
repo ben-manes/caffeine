@@ -30,7 +30,6 @@ import java.lang.reflect.Method;
 import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
@@ -47,10 +46,9 @@ import com.google.errorprone.annotations.Var;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CacheValidationInterceptor implements BeforeAllCallback, InvocationInterceptor {
+public final class CacheValidationInterceptor implements InvocationInterceptor {
 
-  @Override
-  public void beforeAll(ExtensionContext context) {
+  static {
     if (!SLF4JBridgeHandler.isInstalled()) {
       SLF4JBridgeHandler.removeHandlersForRootLogger();
       SLF4JBridgeHandler.install();
