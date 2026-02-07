@@ -60,11 +60,6 @@ testing.suites {
     dependencies {
       implementation(libs.truth)
     }
-    targets.all {
-      testTask {
-        failOnSkippedTests()
-      }
-    }
   }
 }
 

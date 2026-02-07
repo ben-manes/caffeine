@@ -72,8 +72,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 @Retention(RUNTIME)
 @Target({CONSTRUCTOR, METHOD, TYPE})
 @ArgumentsSource(CacheProvider.class)
+@ExtendWith(CacheValidationInterceptor.class)
 @SuppressWarnings({"IdentifierName", "ImmutableEnumChecker"})
-@ExtendWith({CacheValidationInterceptor.class, ShardedTestExtension.class})
 public @interface CacheSpec {
 
   /* --------------- Compute --------------- */

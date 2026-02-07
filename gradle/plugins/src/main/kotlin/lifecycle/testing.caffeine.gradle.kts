@@ -3,6 +3,7 @@ import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
+import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
 
 plugins {
   `java-library`
@@ -28,11 +29,13 @@ testing.suites.withType<JvmTestSuite>().configureEach {
 }
 
 configurations.all {
-  val junitJupiterGroups = listOf("org.junit", "org.junit.jupiter", "org.junit.vintage")
+  val junitJupiterGroups = setOf("org.junit", "org.junit.jupiter", "org.junit.vintage")
   resolutionStrategy.eachDependency {
-    if ((requested.group in junitJupiterGroups)
-        && (java.toolchain.languageVersion.get().asInt() < 17)) {
-      useVersion("5.14.2")
+    if (java.toolchain.languageVersion.get().asInt() < 17) {
+      when (requested.group) {
+        in junitJupiterGroups -> useVersion("5.14.2")
+        "org.junit.platform" -> useVersion("1.14.2")
+      }
     }
   }
 }
@@ -95,11 +98,19 @@ tasks.withType<Test>().configureEach {
     html.required = isCI().map { !it }
   }
   testLogging {
+    events(FAILED, SKIPPED)
     exceptionFormat = FULL
     showStackTraces = true
     showExceptions = true
     showCauses = true
-    events(FAILED)
+
+    addTestListener(object : TestListener {
+      override fun afterTest(descriptor: TestDescriptor, result: TestResult) {
+        if (result.resultType == TestResult.ResultType.SKIPPED) {
+          throw GradleException("Do not skip tests (e.g. ${descriptor.name})")
+        }
+      }
+    })
   }
   javaLauncher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor

@@ -1,45 +1,47 @@
-name: Semgrep
+name: Bearer
 permissions: {}
-on:
-  pull_request: {}
-  push:
-    branches: [master, v3.dev]
-  workflow_dispatch: {}
+on: [ push, pull_request, workflow_dispatch ]
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  semgrep:
-    name: Scan
+  bearer:
+    name: Bearer
     runs-on: ubuntu-latest
     permissions:
       contents: read
       actions: read # Needed for uploading security scan results
       security-events: write # Needed for uploading security scan results
-    container:
-      # Incompatible with Harden Runner
-      image: returntocorp/semgrep
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.cycode.com:443
+            api.github.com:443
+            github.com:443
+            raw.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - run: semgrep scan --sarif --output=results.sarif
-        env:
-          SEMGREP_RULES: >-
-            p/java
-            p/github-actions
-            p/semgrep-rule-lints
-            p/semgrep-misconfigurations
+      - name: Bearer
+        uses: bearer/bearer-action@828eeb928ce2f4a7ca5ed57fb8b59508cb8c79bc # v2
+        continue-on-error: true
+        with:
+          format: sarif
+          output: results.sarif
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0
         with:
           files: results.sarif
-      - name: Upload SARIF file for GitHub Advanced Security Dashboard
+      - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@45cbd0c69e560cd9e7cd7f8c32362050c9b7ded2 # v4.32.2
         if: steps.check_files.outputs.files_exists == 'true'
-        continue-on-error: true
         with:
           sarif_file: results.sarif

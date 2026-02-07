@@ -36,11 +36,6 @@ testing.suites {
       runtimeOnly(libs.junit.jupiter.vintage)
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
-    targets.all {
-      testTask {
-        failOnSkippedTests()
-      }
-    }
   }
   register("compatibilityTest", JvmTestSuite::class) {
     useJUnitJupiter(libs.versions.junit.jupiter)
@@ -53,22 +48,12 @@ testing.suites {
 
       runtimeOnly(libs.junit.jupiter.vintage)
     }
-    targets.all {
-      testTask {
-        failOnSkippedTests()
-      }
-    }
   }
   register("moduleTest", JvmTestSuite::class) {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
     dependencies {
       implementation(project())
-    }
-    targets.all {
-      testTask {
-        failOnSkippedTests()
-      }
     }
   }
   register<JvmTestSuite>("osgiTest") {
@@ -88,7 +73,6 @@ testing.suites {
         val guavaJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
         inputs.files(caffeineOsgiJarFile)
         inputs.files(guavaJarFile)
-        failOnSkippedTests()
 
         val relativeDir = projectDir
         val versions = libs.versions

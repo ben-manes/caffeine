@@ -28,7 +28,7 @@ public final class PackageSanityTests extends AbstractPackageSanityTests {
 
   public PackageSanityTests() {
     var ignore = Set.of("Benchmark", "CacheValidationInterceptor", "Context", "Generator",
-        "ShardedTestExtension", "Spec", "Specifications", "Stresser", "Subject", "Test");
+        "ShardedTestFilter", "Spec", "Specifications", "Stresser", "Subject", "Test");
 
     publicApiOnly();
     setDefault(CacheLoader.class, key -> key);

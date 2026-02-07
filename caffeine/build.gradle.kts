@@ -55,6 +55,7 @@ dependencies {
   testFixturesImplementation(libs.jctools)
   testFixturesImplementation(libs.mockito)
   testFixturesImplementation(libs.commons.lang3)
+  testFixturesImplementation(libs.junit.platform.launcher)
 
   testImplementation(sourceSets.named("codeGen").map { it.output })
 
@@ -226,7 +227,6 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -241,7 +241,6 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -265,7 +264,6 @@ testing.suites {
           }
         }
         environment("JAZZER_FUZZ", "1")
-        failOnSkippedTests()
         failFast = true
         forkEvery = 1
       }
@@ -283,7 +281,6 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -298,7 +295,6 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -318,7 +314,6 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -337,7 +332,6 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -356,7 +350,6 @@ testing.suites {
         testLogging.events(STARTED)
         onlyIf { isEnabled.get() }
         useParallelJUnitJupiter()
-        failOnSkippedTests()
         maxHeapSize = "3g"
         failFast = true
 
@@ -385,7 +378,6 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        failOnSkippedTests()
         useParallelJUnitJupiter()
       }
     }
@@ -403,7 +395,6 @@ testing.suites {
     }
     targets.all {
       testTask.configure {
-        failOnSkippedTests()
         useParallelJUnitJupiter()
         val relativeDir = projectDir
         inputs.files(jar.map { it.outputs.files })

@@ -51,8 +51,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @SuppressFBWarnings("HES_EXECUTOR_NEVER_SHUTDOWN")
 public final class ConcurrentTestHarness {
-  public static final ThreadFactory DAEMON_FACTORY = new ThreadFactoryBuilder()
-      .setPriority(Thread.MIN_PRIORITY).setDaemon(true).build();
+  public static final ThreadFactory DAEMON_FACTORY =
+      new ThreadFactoryBuilder().setDaemon(true).build();
   public static final ScheduledExecutorService scheduledExecutor =
       Executors.newSingleThreadScheduledExecutor(DAEMON_FACTORY);
   public static final ExecutorService executor = Executors.newCachedThreadPool(DAEMON_FACTORY);

@@ -42,7 +42,7 @@ jobs:
       JAVA_VERSION: 25
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
+        uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -96,7 +96,7 @@ jobs:
         if: >
           (github.event_name == 'push' || github.event_name == 'pull_request')
           && steps.check_files.outputs.files_exists == 'true'
-        uses: srz-zumix/reviewdog-action-infer@8f269e5295951c9a8272efa76a139018ea7e89a4 # v1.1.0
+        uses: srz-zumix/reviewdog-action-infer@67cc69fad6e2342a5a7b255b2c00268c9e1f4f70 # v1.3.0
       - name: Upload Reports
         if: steps.check_files.outputs.files_exists == 'true'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -105,7 +105,7 @@ jobs:
           name: infer-reports
           path: 'infer-out/report.*'
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@6bc82e05fd0ea64601dd4b465378bbcf57de0314 # v4.32.1
+        uses: github/codeql-action/upload-sarif@45cbd0c69e560cd9e7cd7f8c32362050c9b7ded2 # v4.32.2
         if: steps.check_files.outputs.files_exists == 'true'
         continue-on-error: true
         with:

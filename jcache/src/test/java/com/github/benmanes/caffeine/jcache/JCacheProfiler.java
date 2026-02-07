@@ -77,8 +77,8 @@ public final class JCacheProfiler {
     };
 
     @SuppressWarnings("PMD.CloseResource")
-    var executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder()
-        .setPriority(Thread.MIN_PRIORITY).setDaemon(true).build());
+    var executor = Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder().setDaemon(true).build());
     try {
       scheduleStatusTask();
       for (int i = 0; i < THREADS; i++) {

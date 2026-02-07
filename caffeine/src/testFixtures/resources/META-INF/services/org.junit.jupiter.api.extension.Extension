@@ -1,2 +1,1 @@
 com.github.benmanes.caffeine.cache.CacheValidationInterceptor
-com.github.benmanes.caffeine.cache.ShardedTestExtension

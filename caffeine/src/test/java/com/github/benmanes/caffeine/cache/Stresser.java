@@ -89,11 +89,8 @@ public final class Stresser implements Runnable {
   @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored",
       "PMD.DoNotTerminateVM", "ResultOfMethodCallIgnored"})
   private void initialize() {
-    var threadFactory = new ThreadFactoryBuilder()
-        .setPriority(Thread.MAX_PRIORITY)
-        .setDaemon(true)
-        .build();
-    scheduler = Executors.newSingleThreadScheduledExecutor(threadFactory);
+    scheduler = Executors.newSingleThreadScheduledExecutor(
+        new ThreadFactoryBuilder().setDaemon(true).build());
     scheduler.scheduleAtFixedRate(this::status, STATUS_INTERVAL, STATUS_INTERVAL, SECONDS);
     if (duration != null) {
       System.out.printf(US, "Executing for %s%n%n", duration);
