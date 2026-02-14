@@ -20,7 +20,6 @@ env:
     downloads.gradle-dn.com:443
     gds.oracle.com:443
     github.com:443
-    jcenter.bintray.com:443
     objects.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443
@@ -140,7 +139,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: >
             simulator:run
-            -Dcaffeine.simulator.report.output=$GITHUB_WORKSPACE/simulation.md
+            -Dcaffeine.simulator.report.output=${{ github.workspace }}/simulation.md
             -Dcaffeine.simulator.files.paths.0=corda:trace_vaultservice.gz
             -Dcaffeine.simulator.files.paths.1=lirs:loop.trace.gz
             -Dcaffeine.simulator.files.paths.2=corda:trace_vaultservice.gz

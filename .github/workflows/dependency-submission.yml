@@ -2,7 +2,7 @@ name: Submit Dependency Graph (direct push)
 permissions: {}
 on: [ push ]
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -27,7 +27,6 @@ jobs:
             downloads.gradle.org:443
             downloads.gradle-dn.com:443
             github.com:443
-            jcenter.bintray.com:443
             objects.githubusercontent.com:443
             plugins.gradle.org:443
             plugins-artifacts.gradle.org:443

@@ -5,7 +5,7 @@ on:
     - cron: '0 12 * * 4'
   workflow_dispatch: {}
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -17,7 +17,6 @@ env:
     downloads.gradle.org:443
     downloads.gradle-dn.com:443
     github.com:443
-    jcenter.bintray.com:443
     objects.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443
@@ -31,6 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     env:
       JAVA_VERSION: 25
     steps:

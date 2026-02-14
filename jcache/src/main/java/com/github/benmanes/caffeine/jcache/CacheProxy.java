@@ -563,6 +563,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
+    boolean[] found = { false };
 
     boolean[] removed = { false };
     cache.asMap().computeIfPresent(key, (k, expirable) -> {
@@ -574,6 +575,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         statistics.recordEvictions(1L);
         return null;
       }
+
+      found[0] = true;
       if (oldValue.equals(expirable.get())) {
         publishToCacheWriter(writer::delete, () -> key);
         dispatcher.publishRemoved(this, key, expirable.get());
@@ -587,6 +590,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (statsEnabled) {
       if (removed[0]) {
         statistics.recordRemovals(1L);
+        statistics.recordHits(1L);
+      } else if (found[0]) {
         statistics.recordHits(1L);
       } else {
         statistics.recordMisses(1L);
@@ -646,7 +651,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       found[0] = true;
       Expirable<V> result;
       if (oldValue.equals(expirable.get())) {
-        publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, expirable.get()));
+        publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, newValue));
         dispatcher.publishUpdated(this, key, expirable.get(), copyOf(newValue));
         @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {
@@ -1009,10 +1014,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           return t;
         }
         outer.addSuppressed(t);
-        return outer;
       }
     }
-    return null;
+    return outer;
   }
 
   @Override

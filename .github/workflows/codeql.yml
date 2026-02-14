@@ -44,7 +44,6 @@ jobs:
             downloads.gradle.org:443
             downloads.gradle-dn.com:443
             github.com:443
-            jcenter.bintray.com:443
             objects.githubusercontent.com:443
             plugins.gradle.org:443
             plugins-artifacts.gradle.org:443

@@ -28,7 +28,7 @@ public final class EntryProxy<K, V> extends SimpleImmutableEntry<K, V>
     implements Cache.Entry<K, V> {
   private static final long serialVersionUID = 1L;
 
-  EntryProxy(K key, V value) {
+  public EntryProxy(K key, V value) {
     super(key, value);
   }
 
