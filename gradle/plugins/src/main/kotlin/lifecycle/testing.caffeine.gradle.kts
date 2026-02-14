@@ -81,8 +81,8 @@ tasks.withType<Test>().configureEach {
     val relativeDir = gradle.startParameter.currentDir
     val jfr = layout.buildDirectory.file("jfr/$name.jfr")
     jvmArgumentProviders.add {
-      listOf("-XX:StartFlightRecording=filename=${jfr.absolutePath().get()}",
-        "-XX:StartFlightRecording:jdk.ObjectCount#enabled=true")
+      val flags = listOf("filename=${jfr.absolutePath().get()}", "jdk.ObjectCount#enabled=true")
+      listOf("-XX:StartFlightRecording=${flags.joinToString(",")}")
     }
     doFirst {
       jfr.get().asFile.parentFile.mkdirs()

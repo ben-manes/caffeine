@@ -58,7 +58,7 @@ public final class Synthetic {
       case "hotspot" -> {
         var hotspot = settings.synthetic().hotspot();
         yield hotspot(hotspot.lowerBound(), hotspot.upperBound(),
-            hotspot.hotOpnFraction(), hotspot.hotsetFraction(), events);
+            hotspot.hotsetFraction(), hotspot.hotOpnFraction(), events);
       }
       case "zipfian" ->
         zipfian(settings.synthetic().zipfian().items(),

@@ -84,8 +84,6 @@ public class PolicyStats {
     addMetric(new Metric.Builder()
         .name("Misses").value(this::missCount).type(NUMBER).required(true));
     addMetric(new Metric.Builder()
-        .name("Misses").value(this::missCount).type(NUMBER).required(true));
-    addMetric(new Metric.Builder()
         .name("Requests").value(this::requestCount).type(NUMBER).required(true));
     addMetric(new Metric.Builder()
         .name("Evictions").value(this::evictionCount).type(NUMBER).required(true));
@@ -276,7 +274,7 @@ public class PolicyStats {
 
   public double weightedMissRate() {
     long requestsWeight = requestsWeight();
-    return (requestsWeight == 0) ? 1.0 : (double) missesWeight / requestsWeight;
+    return (requestsWeight == 0) ? 0.0 : (double) missesWeight / requestsWeight;
   }
 
   public double admissionRate() {

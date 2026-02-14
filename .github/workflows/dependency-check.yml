@@ -41,7 +41,6 @@ jobs:
             downloads.gradle.org:443
             downloads.gradle-dn.com:443
             github.com:443
-            jcenter.bintray.com:443
             jeremylong.github.io:443
             nvd.nist.gov:443
             objects.githubusercontent.com:443

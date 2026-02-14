@@ -41,7 +41,6 @@ jobs:
             errorprone.info:443
             github.com:443
             guava.dev:443
-            jcenter.bintray.com:443
             jspecify.dev:443
             lightbend.github.io:443
             objects.githubusercontent.com:443

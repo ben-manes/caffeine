@@ -6,7 +6,7 @@ on:
     - cron: '0 0 * * 3'
   workflow_dispatch: {}
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
@@ -46,6 +46,7 @@ jobs:
         env:
           TOTAL_SHARDS: 40
           ADDITIONAL_SUITES: |
+            caffeine:lincheckTest
             caffeine:eclipseTest
             caffeine:jctoolsTest
             caffeine:openjdkTest
