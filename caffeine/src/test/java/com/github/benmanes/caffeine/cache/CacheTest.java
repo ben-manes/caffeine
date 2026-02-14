@@ -180,8 +180,8 @@ final class CacheTest {
   }
 
   @CacheSpec
-  @CheckMaxLogLevel(WARN)
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   void get_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
     var error = assertThrows(Exception.class, () ->
         cache.get(context.absentKey(), key -> { throw uncheckedThrow(new IOException()); }));
@@ -194,8 +194,8 @@ final class CacheTest {
   }
 
   @CacheSpec
-  @CheckMaxLogLevel(WARN)
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   void get_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         cache.get(context.absentKey(), key -> { throw new IllegalStateException(); }));
@@ -203,8 +203,8 @@ final class CacheTest {
   }
 
   @CacheSpec
-  @CheckMaxLogLevel(WARN)
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   void get_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(ExpectedError.class, () ->
         cache.get(context.absentKey(), key -> { throw ExpectedError.INSTANCE; }));
@@ -407,8 +407,8 @@ final class CacheTest {
         cache.getAll(context.absentKeys(), nullFunction()));
   }
 
-  @CheckMaxLogLevel(WARN)
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void getAll_function_nullValue(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
@@ -418,8 +418,8 @@ final class CacheTest {
   }
 
   @CacheSpec
-  @CheckMaxLogLevel(WARN)
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   void getAll_immutable_keys(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(UnsupportedOperationException.class, () -> {
       cache.getAll(context.absentKeys(), keys -> {
@@ -445,8 +445,8 @@ final class CacheTest {
   }
 
   @CacheSpec
-  @CheckMaxLogLevel(WARN)
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   void getAll_absent_throwsCheckedException(Cache<Int, Int> cache, CacheContext context) {
     var error = assertThrows(Exception.class, () ->
         cache.getAll(context.absentKeys(), keys -> { throw uncheckedThrow(new IOException()); }));
@@ -461,8 +461,8 @@ final class CacheTest {
   }
 
   @CacheSpec
-  @CheckMaxLogLevel(WARN)
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   void getAll_absent_throwsRuntimeException(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         cache.getAll(context.absentKeys(), keys -> { throw new IllegalStateException(); }));
@@ -471,8 +471,8 @@ final class CacheTest {
   }
 
   @CacheSpec
-  @CheckMaxLogLevel(WARN)
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   void getAll_absent_throwsError(Cache<Int, Int> cache, CacheContext context) {
     assertThrows(ExpectedError.class, () ->
         cache.getAll(context.absentKeys(), keys -> { throw ExpectedError.INSTANCE; }));

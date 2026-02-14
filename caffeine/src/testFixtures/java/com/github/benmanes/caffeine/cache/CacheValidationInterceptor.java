@@ -111,6 +111,10 @@ public final class CacheValidationInterceptor implements InvocationInterceptor {
   /** Returns the {@link CacheContext} from the environment. */
   private static void checkCache(
       ReflectiveInvocationContext<?> invocationContext, Optional<CacheContext> cacheContext) {
+    if (cacheContext.isPresent()) {
+      assertThat(cacheContext.orElseThrow().cache()).isValid();
+      return;
+    }
     for (var argument : invocationContext.getArguments()) {
       if (argument instanceof Cache<?, ?>) {
         assertThat((Cache<?, ?>) argument).isValid();
@@ -120,8 +124,6 @@ public final class CacheValidationInterceptor implements InvocationInterceptor {
         return;
       }
     }
-    cacheContext.map(CacheContext::cache)
-        .ifPresent(cache -> assertThat(cache).isValid());
   }
 
   /** Waits until the executor has completed all of the submitted work. */

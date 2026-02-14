@@ -76,6 +76,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     }
 
     @Var int count = 0;
+    int size = result.size();
     try {
       for (var iter = result.entrySet().iterator(); iter.hasNext();) {
         Map.Entry<K, @Nullable V> entry = iter.next();
@@ -89,7 +90,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         }
       }
     } catch (Throwable t) {
-      cache().statsCounter().recordMisses(result.size() - count);
+      cache().statsCounter().recordMisses(size - count);
       throw t;
     }
     @SuppressWarnings("NullableProblems")

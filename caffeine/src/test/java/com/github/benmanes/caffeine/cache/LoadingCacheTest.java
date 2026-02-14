@@ -36,6 +36,7 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFuture;
 import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
 import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Map.entry;
@@ -56,6 +57,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -258,13 +260,30 @@ final class LoadingCacheTest {
   @CheckNoEvictions
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
+  @SuppressWarnings("UnnecessaryMethodReference")
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   void getAll_absent_throwsException_iterable(
       LoadingCache<Int, Int> cache, CacheContext context) {
-    assertThrows(IllegalStateException.class, () ->
-        cache.getAll(() -> context.absentKeys().iterator()));
+    assertThrows(IllegalStateException.class, () -> cache.getAll(context.absentKeys()::iterator));
     int misses = context.absentKeys().size();
     int loadFailures = (context.loader().isBulk() || context.isSync()) ? 1 : misses;
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine)
+  void getAll_absent_throwsException_notFound(CacheContext context) {
+    int index = ThreadLocalRandom.current().nextInt(context.absentKeys().size());
+    var badKey = Iterables.get(context.absentKeys(), index);
+    LoadingCache<Int, @Nullable Int> cache = context.build(key -> {
+      checkState(!key.equals(badKey), "Expected failure");
+      return null;
+    });
+    assertThrows(IllegalStateException.class, () -> cache.getAll(context.absentKeys()));
+    int misses = context.absentKeys().size();
+    int loadFailures = context.isSync() ? (index + 1) : misses;
     assertThat(context).stats().hits(0).misses(misses).success(0).failures(loadFailures);
   }
 

@@ -117,7 +117,7 @@ runs:
           ./gradlew -Dorg.gradle.java.installations.auto-download=$AUTO_DOWNLOAD \
             --warning-mode all --no-problems-report \
             -Dscan.tag.${GITHUB_WORKFLOW// /_} \
-            $(eval echo "$INPUTS_ARGUMENTS" | tr -d '\n') && break
+            ${INPUTS_ARGUMENTS//$'\n'/ } && break
           if [ $i -lt $INPUTS_ATTEMPT_LIMIT ]; then
             echo "Attempt $i failed. Retrying in $INPUTS_ATTEMPT_DELAY seconds..."
             sleep $INPUTS_ATTEMPT_DELAY
