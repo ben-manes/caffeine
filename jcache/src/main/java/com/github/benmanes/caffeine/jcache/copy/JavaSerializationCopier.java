@@ -36,9 +36,11 @@ import org.jspecify.annotations.NullMarked;
 /**
  * A strategy that uses Java serialization if a fast path approach is not applicable.
  * <p>
- * Beware that native serialization is slow and is provided for completeness. In practice, it is
- * recommended that a higher performance alternative is used, which is provided by numerous external
- * libraries.
+ * Beware that Java serialization is slow, can be insecure, and is provided due to being required
+ * by JSR-107. In practice, it is recommended that a higher performance alternative is used, which
+ * is provided by numerous external libraries. If serialization must be used then consider enabling
+ * <a href="http://docs.oracle.com/en/java/javase/25/core/serialization-filtering1.html">
+ * Serialization Filtering</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

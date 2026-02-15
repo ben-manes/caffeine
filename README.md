@@ -49,15 +49,14 @@ In addition, Caffeine offers the following extensions:
 
 Use Caffeine in a community provided integration:
 
+* [Spring Cache][spring]: Simple, modern, productive Java
 * [Play Framework][play]: High velocity web framework
 * [Micronaut][micronaut]: A modern, full-stack framework
-* [Spring Cache][spring]: As of Spring 4.3 & Boot 1.4
 * [Coroutines][caffeine-coroutines]: Kotlin Coroutines extension
 * [Bootique][bootique]: A fast, simple Java platform
 * [Quarkus][quarkus]: Supersonic Subatomic Java
 * [Camel][camel]: Routing and mediation engine
 * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
-* [ScalaCache][scala-cache]: Simple caching in Scala
 * [JHipster][jhipster]: Generate, develop, deploy
 * [Aedile][aedile]: Kotlin wrapper for Caffeine
 
@@ -127,7 +126,7 @@ Snapshots of the development version are available in
 [simulator]: https://github.com/ben-manes/caffeine/wiki/Simulator
 [guava-adapter]: https://github.com/ben-manes/caffeine/wiki/Guava
 [jsr107]: https://github.com/ben-manes/caffeine/wiki/JCache
-[maven]: https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine
+[maven]: https://central.sonatype.com/artifact/com.github.ben-manes.caffeine/caffeine
 [releases]: https://github.com/ben-manes/caffeine/releases
 [snapshots]: https://central.sonatype.org/publish/publish-portal-snapshots/#consuming-snapshot-releases-for-your-project
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
@@ -138,8 +137,7 @@ Snapshots of the development version are available in
 [modern-cache-2]: https://highscalability.com/blog/2019/2/25/design-of-a-modern-cachepart-deux.html
 [modern-cache-slides]: https://docs.google.com/presentation/d/1NlDxyXsUG1qlVHMl4vsUUBQfAJ2c2NsFPNPr2qymIBs
 [HighScalability]: https://highscalability.com
-[spring]: https://docs.spring.io/spring/docs/current/spring-framework-reference/integration.html#cache-store-configuration-caffeine
-[scala-cache]: https://github.com/cb372/scalacache
+[spring]: https://docs.spring.io/spring-framework/reference/integration/cache/store-configuration.html#cache-store-configuration-caffeine
 [scaffeine]: https://github.com/blemale/scaffeine
 [kafka]: https://kafka.apache.org
 [hbase]: https://hbase.apache.org

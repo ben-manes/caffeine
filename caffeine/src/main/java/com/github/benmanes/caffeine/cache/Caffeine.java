@@ -640,8 +640,8 @@ public final class Caffeine<K, V> {
    *        automatically removed
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
-   * @throws IllegalStateException if the time to live or variable expiration was already set
-   * @throws ArithmeticException for durations greater than +/- approximately 292 years
+   * @throws IllegalStateException if {@link #expireAfterWrite} or
+   *        {@link #expireAfter(Expiry)} was already set
    */
   @CanIgnoreReturnValue
   public Caffeine<K, V> expireAfterWrite(Duration duration) {
@@ -665,7 +665,8 @@ public final class Caffeine<K, V> {
    * @param unit the unit that {@code duration} is expressed in
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
-   * @throws IllegalStateException if the time to live or variable expiration was already set
+   * @throws IllegalStateException if {@link #expireAfterWrite} or
+   *        {@link #expireAfter(Expiry)} was already set
    */
   @CanIgnoreReturnValue
   public Caffeine<K, V> expireAfterWrite(long duration, TimeUnit unit) {
@@ -701,8 +702,8 @@ public final class Caffeine<K, V> {
    *        automatically removed
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
-   * @throws IllegalStateException if the time to idle or variable expiration was already set
-   * @throws ArithmeticException for durations greater than +/- approximately 292 years
+   * @throws IllegalStateException if {@link #expireAfterAccess} or
+   *        {@link #expireAfter(Expiry)} was already set
    */
   @CanIgnoreReturnValue
   public Caffeine<K, V> expireAfterAccess(Duration duration) {
@@ -729,7 +730,8 @@ public final class Caffeine<K, V> {
    * @param unit the unit that {@code duration} is expressed in
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
-   * @throws IllegalStateException if the time to idle or variable expiration was already set
+   * @throws IllegalStateException if {@link #expireAfterAccess} or
+   *        {@link #expireAfter(Expiry)} was already set
    */
   @CanIgnoreReturnValue
   public Caffeine<K, V> expireAfterAccess(long duration, TimeUnit unit) {
@@ -752,7 +754,7 @@ public final class Caffeine<K, V> {
   /**
    * Specifies that each entry should be automatically removed from the cache once a duration has
    * elapsed after the entry's creation, the most recent replacement of its value, or its last
-   * read. The expiration time is reset by all cache read and write operations (including
+   * read. The expiration time is reevaluated by all cache read and write operations (including
    * {@code Cache.asMap().get(Object)} and {@code Cache.asMap().put(K, V)}), but not by operations
    * on the collection-views of {@link Cache#asMap}.
    * <p>
@@ -822,7 +824,6 @@ public final class Caffeine<K, V> {
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is zero or negative
    * @throws IllegalStateException if the refresh interval was already set
-   * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
   @CanIgnoreReturnValue
   public Caffeine<K, V> refreshAfterWrite(Duration duration) {
