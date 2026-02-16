@@ -252,6 +252,7 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(libs.jazzer)
+      implementation(libs.mockito)
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.all {
