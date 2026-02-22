@@ -52,14 +52,14 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     if (tinyCache.contains(key) || ((window != null) && window.contains(key))) {
-      tinyCache.recordItem(key);
+      tinyCache.recordItem();
       policyStats.recordHit();
     } else {
       @Var boolean evicted = tinyCache.addItem(key);
       if (!evicted && (window != null)) {
         evicted = window.addItem(key);
       }
-      tinyCache.recordItem(key);
+      tinyCache.recordItem();
       policyStats.recordMiss();
       if (evicted) {
         policyStats.recordEviction();

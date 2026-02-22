@@ -41,7 +41,7 @@ dependencies {
   runtimeOnly(libs.bundles.slf4j.jdk)
 }
 
-configurations.all {
+configurations.configureEach {
   resolutionStrategy.dependencySubstitution {
     substitute(module("it.unimi.dsi:fastutil")).using(module(libs.fastutil.get().toString()))
   }

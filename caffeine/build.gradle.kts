@@ -88,7 +88,7 @@ dependencies {
   javaPoetRuntimeOnly(libs.google.java.format)
 }
 
-configurations.all {
+configurations.configureEach {
   resolutionStrategy {
     if (java.toolchain.languageVersion.get().asInt() < 17) {
       force("${libs.eclipse.collections.testutils.get().module}:12.0.0")
@@ -225,7 +225,7 @@ testing.suites {
         artifact { classifier = "tests" }
       }
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         useParallelJUnitJupiter()
       }
@@ -239,7 +239,7 @@ testing.suites {
       implementation(testFixtures(project()))
       implementation(libs.eclipse.collections.testutils)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         useParallelJUnitJupiter()
       }
@@ -255,7 +255,7 @@ testing.suites {
       implementation(libs.mockito)
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         maxParallelForks = Runtime.getRuntime().availableProcessors()
         // https://github.com/CodeIntelligenceTesting/jazzer/issues/1035
@@ -280,7 +280,7 @@ testing.suites {
 
       runtimeOnly(libs.junit.jupiter.vintage)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         useParallelJUnitJupiter()
       }
@@ -294,7 +294,7 @@ testing.suites {
       implementation(libs.guava)
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         useParallelJUnitJupiter()
       }
@@ -313,7 +313,7 @@ testing.suites {
       runtimeOnly(libs.junit.jupiter.vintage)
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         useParallelJUnitJupiter()
       }
@@ -331,7 +331,7 @@ testing.suites {
       runtimeOnly(libs.junit.jupiter.vintage)
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         useParallelJUnitJupiter()
       }
@@ -345,7 +345,7 @@ testing.suites {
       implementation(libs.lincheck)
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         val isEnabled = isEarlyAccess().map { !it }
         testLogging.events(STARTED)
@@ -377,7 +377,7 @@ testing.suites {
       runtimeOnly(libs.junit.jupiter.testng)
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         useParallelJUnitJupiter()
       }
@@ -394,7 +394,7 @@ testing.suites {
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         useParallelJUnitJupiter()
         val relativeDir = projectDir

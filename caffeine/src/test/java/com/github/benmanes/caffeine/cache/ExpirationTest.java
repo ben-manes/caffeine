@@ -77,6 +77,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Range;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The test cases for caches that support an expiration policy.
  *
@@ -1497,6 +1499,22 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void keySet_contains(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(10));
+    for (var key : context.original().keySet()) {
+      assertThat(map.keySet().contains(key)).isFalse();
+    }
+  }
+
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
@@ -1624,6 +1642,21 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void values_contains(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(10));
+    for (var value : context.original().values()) {
+      assertThat(map.values().contains(value)).isFalse();
+    }
+  }
+
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, expiryTime = Expire.ONE_MINUTE,
       population = {Population.SINGLETON, Population.PARTIAL, Population.FULL},
       mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
@@ -1748,6 +1781,22 @@ final class ExpirationTest {
     assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0])).isEmpty();
     assertThat(map.entrySet().toArray(Map.Entry<?, ?>[]::new)).isEmpty();
     assertThat(map.entrySet().toArray()).isEmpty();
+  }
+
+  @ParameterizedTest
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void entrySet_contains(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(10));
+    for (var entry : context.original().entrySet()) {
+      assertThat(map.entrySet().contains(entry)).isFalse();
+    }
   }
 
   @ParameterizedTest

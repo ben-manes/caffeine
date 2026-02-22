@@ -98,7 +98,7 @@ testing.suites {
       runtimeOnly(libs.junit.jupiter.vintage)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         val caffeineOsgiJarFile = layout.file(caffeineOsgiBundle.map { it.singleFile })
         val jcacheJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
@@ -135,7 +135,7 @@ testing.suites {
 
       runtimeOnly(libs.junit.jupiter.vintage)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         inputs.files(unzipTestKit.map { it.outputs.files })
         testClassesDirs = layout.buildDirectory.files("tck")

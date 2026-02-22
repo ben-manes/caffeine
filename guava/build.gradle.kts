@@ -67,7 +67,7 @@ testing.suites {
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
       runtimeOnly.bundle(libs.bundles.osgi.test.runtime)
     }
-    targets.all {
+    targets.configureEach {
       testTask.configure {
         val caffeineOsgiJarFile = layout.file(caffeineOsgiBundle.map { it.singleFile })
         val guavaJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }

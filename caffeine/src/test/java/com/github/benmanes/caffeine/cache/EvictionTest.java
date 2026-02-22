@@ -70,6 +70,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
+import com.google.common.math.IntMath;
 import com.google.errorprone.annotations.Var;
 
 /**
@@ -935,9 +936,9 @@ final class EvictionTest {
     long weightedSize = eviction.weightedSize().orElseThrow()
         + Math.abs(context.absentValue().intValue());
     cache.asMap().merge(context.absentKey(),
-        context.absentKey(), (key, value) -> context.absentValue());
+        context.absentKey(), (key, value) -> context.absentKey().add(1));
     assertThat(eviction.weightOf(context.absentKey()))
-        .hasValue(Math.abs(context.absentValue().intValue()));
+        .hasValue(IntMath.saturatedAbs(context.absentKey().intValue()));
     assertThat(context).hasWeightedSize(weightedSize);
   }
 

@@ -92,8 +92,7 @@ public final class TinyCacheWithGhostCache {
     return removedOffset;
   }
 
-  @SuppressWarnings("unused")
-  public void recordItem(long item) {
+  public void recordItem() {
     if (ghostCache.countItem(hashFunc.fpaux.value) < sampleSize) {
       ghostCache.addItem(hashFunc.fpaux.value);
     }

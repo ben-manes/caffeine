@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission.countmin64;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 /**
@@ -65,14 +66,17 @@ public final class CountMin64TinyLfu implements Frequency {
   }
 
   private void resetIfNeeded() {
-    if (size > sampleSize) {
-      size /= 2;
-      for (int i = 0; i < sketch.depth; i++) {
-        for (int j = 0; j < sketch.width; j++) {
-          size -= ((int) sketch.table[i][j]) & 1;
-          sketch.table[i][j] >>>= 1;
-        }
+    if (size <= sampleSize) {
+      return;
+    }
+
+    @Var int oddCount = 0;
+    for (int i = 0; i < sketch.depth; i++) {
+      for (int j = 0; j < sketch.width; j++) {
+        oddCount += ((int) sketch.table[i][j]) & 1;
+        sketch.table[i][j] >>>= 1;
       }
     }
+    size = (size / 2) - (oddCount / sketch.depth);
   }
 }

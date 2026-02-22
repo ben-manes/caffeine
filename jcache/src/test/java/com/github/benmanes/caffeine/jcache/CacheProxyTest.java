@@ -30,7 +30,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static javax.cache.expiry.Duration.ETERNAL;
+import static javax.cache.expiry.Duration.ONE_DAY;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
@@ -434,10 +436,19 @@ final class CacheProxyTest {
   void setAccessExpireTime_eternal() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
+      when(expiry.getExpiryForCreation()).thenReturn(ONE_DAY);
       when(expiry.getExpiryForAccess()).thenReturn(ETERNAL);
-      var expirable = new Expirable<>(KEY_1, 0);
+      fixture.jcache().put(KEY_1, VALUE_1);
+
+      var expirable = requireNonNull(getExpirable(fixture.jcache(), KEY_1));
+      assertThat(expirable.isEternal()).isFalse();
+
       fixture.jcache().setAccessExpireTime(KEY_1, expirable, 0);
-      assertThat(expirable.getExpireTimeMillis()).isEqualTo(Long.MAX_VALUE);
+      assertThat(expirable.isEternal()).isTrue();
+
+      var policy = fixture.jcache().cache.policy().expireVariably().orElseThrow();
+      assertThat(policy.getExpiresAfter(KEY_1, TimeUnit.NANOSECONDS).orElseThrow())
+          .isAtLeast(Long.MAX_VALUE >> 1);
     }
   }
 

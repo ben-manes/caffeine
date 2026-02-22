@@ -777,8 +777,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL)
-  void nodeToCacheEntry_notAlive(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void nodeToCacheEntry_notAlive(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (var node : cache.data.values()) {
       if ((node.getKeyReference().hashCode() % 2) == 0) {
         node.retire();
@@ -793,8 +792,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
-  void nodeToCacheEntry_collectedKey(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void nodeToCacheEntry_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var weakKey = (Reference<?>) node.getKeyReference();
     weakKey.clear();
@@ -803,12 +801,35 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT})
-  void nodeToCacheEntry_collectedValue(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void nodeToCacheEntry_collectedValue(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var weakValue = (Reference<?>) node.getValueReference();
     weakValue.clear();
     assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expiryTime = Expire.ONE_MINUTE, population = Population.FULL)
+  void nodeToCacheEntry_expiration(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v));
+      assertThat(entry.expiresAfter()).isEqualTo(Duration.ofMinutes(1));
+    }
+
+    context.ticker().advance(Duration.ofSeconds(30));
+    for (var node : cache.data.values()) {
+      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v));
+      assertThat(entry.expiresAfter()).isEqualTo(Duration.ofSeconds(30));
+    }
+
+    context.ticker().advance(Duration.ofMinutes(1));
+    for (var node : cache.data.values()) {
+      assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
+    }
   }
 
   /* --------------- Eviction --------------- */
@@ -4078,14 +4099,19 @@ final class BoundedLocalCacheTest {
 
   @Test
   void snapshotEntry() {
-    assertThat(SnapshotEntry.forEntry(1, 2)).isInstanceOf(SnapshotEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 0, 0)).isInstanceOf(SnapshotEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 0, 0)).isInstanceOf(WeightedEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 3, 0)).isInstanceOf(ExpirableEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 3, 0)).isInstanceOf(ExpirableWeightedEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 3, 4))
-        .isInstanceOf(RefreshableExpirableEntry.class);
-    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 3, 4)).isInstanceOf(CompleteEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2).getClass()).isEqualTo(SnapshotEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 0, 0).getClass())
+        .isEqualTo(RefreshableExpirableEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, Long.MAX_VALUE, Long.MAX_VALUE).getClass())
+        .isEqualTo(WeightedEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 3, Long.MAX_VALUE).getClass())
+        .isEqualTo(ExpirableEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 3, Long.MAX_VALUE).getClass())
+        .isEqualTo(ExpirableWeightedEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 1, 3, 4).getClass())
+        .isEqualTo(RefreshableExpirableEntry.class);
+    assertThat(SnapshotEntry.forEntry(1, 2, 0, 2, 3, 4).getClass())
+        .isEqualTo(CompleteEntry.class);
   }
 
   @SuppressWarnings("unchecked")

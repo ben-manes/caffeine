@@ -63,9 +63,6 @@ final class HashFunctionParser {
     fpaux.set = (int) ((h & Long.MAX_VALUE) % nrSets);
 
     fpaux.value = (item << 1) | 1;
-    if (item == 0) {
-      fpaux.value = 1;
-    }
     return fpaux;
   }
 }

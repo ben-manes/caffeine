@@ -91,8 +91,8 @@ public final class Indicator {
     int count;
 
     public void increment(int i) {
-      sum += i;
       count++;
+      sum += i;
       freq[i]++;
     }
 
@@ -102,7 +102,7 @@ public final class Indicator {
     }
 
     public double getAverage() {
-      return sum / (double) count;
+      return (count == 0) ? 0.0 : (sum / (double) count);
     }
   }
 

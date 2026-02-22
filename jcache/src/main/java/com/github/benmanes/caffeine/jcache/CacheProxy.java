@@ -1179,18 +1179,24 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return;
       } else if (duration.isZero()) {
         expirable.setExpireTimeMillis(0L);
+        cache.policy().expireVariably().ifPresent(policy ->
+            policy.setExpiresAfter(key, 0L, TimeUnit.NANOSECONDS));
       } else if (duration.isEternal()) {
         expirable.setExpireTimeMillis(Long.MAX_VALUE);
+        cache.policy().expireVariably().ifPresent(policy ->
+            policy.setExpiresAfter(key, Long.MAX_VALUE, TimeUnit.NANOSECONDS));
       } else {
         if (currentTimeMillis == 0L) {
           currentTimeMillis = currentTimeMillis();
         }
-        long expireTimeMillis = duration.getAdjustedTime(currentTimeMillis);
+        @Var long expireTimeMillis = duration.getAdjustedTime(currentTimeMillis);
+        expireTimeMillis = ((expireTimeMillis == 0L) || (expireTimeMillis == Long.MAX_VALUE))
+            ? (expireTimeMillis - 1)
+            : expireTimeMillis;
         expirable.setExpireTimeMillis(expireTimeMillis);
+        cache.policy().expireVariably().ifPresent(policy ->
+            policy.setExpiresAfter(key, duration.getDurationAmount(), duration.getTimeUnit()));
       }
-      cache.policy().expireVariably().ifPresent(policy -> {
-        policy.setExpiresAfter(key, duration.getDurationAmount(), duration.getTimeUnit());
-      });
     } catch (RuntimeException e) {
       logger.log(Level.WARNING, "Failed to set the entry's expiration time", e);
     }
@@ -1213,7 +1219,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       } else if (duration.isEternal()) {
         return Long.MAX_VALUE;
       }
-      return duration.getAdjustedTime(currentTimeMillis());
+      long expireTimeMillis = duration.getAdjustedTime(currentTimeMillis());
+      return ((expireTimeMillis == 0L) || (expireTimeMillis == Long.MAX_VALUE))
+          ? (expireTimeMillis - 1)
+          : expireTimeMillis;
     } catch (RuntimeException e) {
       logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
       return Long.MIN_VALUE;

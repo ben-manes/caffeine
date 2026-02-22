@@ -28,7 +28,7 @@ testing.suites.withType<JvmTestSuite>().configureEach {
   }
 }
 
-configurations.all {
+configurations.configureEach {
   val junitJupiterGroups = setOf("org.junit", "org.junit.jupiter", "org.junit.vintage")
   resolutionStrategy.eachDependency {
     if (java.toolchain.languageVersion.get().asInt() < 17) {
