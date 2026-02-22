@@ -2378,7 +2378,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           notifyEviction(key, oldValue, RemovalCause.EXPIRED);
         } else if (onlyIfAbsent) {
           mayUpdate = false;
-          varTime = expireAfterRead(prior, key, value, expiry, now);
+          varTime = expireAfterRead(prior, key, oldValue, expiry, now);
         } else {
           varTime = expireAfterUpdate(prior, key, value, expiry, now);
         }

@@ -2980,12 +2980,12 @@ final class BoundedLocalCacheTest {
       node.setVariableTime(context.ticker().read() + currentDuration);
     }
 
-    var expected = context.original().get(context.firstKey());
+    var expected = requireNonNull(context.original().get(context.firstKey()));
     await().untilAsserted(() -> assertThat(result.get()).isEqualTo(expected));
     assertThat(node.getVariableTime()).isEqualTo(
         context.ticker().read() + context.expiryTime().timeNanos());
     verify(context.expiry()).expireAfterRead(context.firstKey(),
-        context.absentValue(), context.ticker().read(), currentDuration);
+        expected, context.ticker().read(), currentDuration);
     verifyNoMoreInteractions(context.expiry());
   }
 
