@@ -157,6 +157,7 @@ kotlin
 Kout
 ksh
 ktest
+ktlint
 kts
 KVNo
 KVV
@@ -212,11 +213,13 @@ proactively
 PSMS
 PTL
 putremove
+qlty
 qls
 QMETA
 qodana
 Qth
 Qube
+radarlint
 rawtypes
 redefaults
 refault
@@ -279,6 +282,7 @@ tree'ification
 treeified
 treeifying
 trivy
+trufflehog
 ttl
 typedef
 Typesafe

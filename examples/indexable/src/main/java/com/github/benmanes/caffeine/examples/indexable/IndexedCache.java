@@ -182,7 +182,7 @@ public final class IndexedCache<K, V> {
     public IndexedCache<K, V> build(Function<K, V> mappingFunction) {
       checkState(hasPrimary, "The primary indexing function is required");
       requireNonNull(mappingFunction, "The mapping function to load the value is required");
-      return new IndexedCache<K, V>(cacheBuilder, mappingFunction,
+      return new IndexedCache<>(cacheBuilder, mappingFunction,
           Collections.unmodifiableSequencedSet(indexers));
     }
   }

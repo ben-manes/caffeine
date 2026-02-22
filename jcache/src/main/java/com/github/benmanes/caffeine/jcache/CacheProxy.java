@@ -990,7 +990,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       CompletableFuture
           .allOf(inFlight.toArray(CompletableFuture[]::new))
           .get(10, TimeUnit.SECONDS);
-    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+    } catch (ExecutionException | TimeoutException e) {
+      thrown = e;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       thrown = e;
     }
     inFlight.clear();

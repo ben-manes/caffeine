@@ -41,10 +41,10 @@ public class User {
   private String name;
 
   @OneToMany(mappedBy = "assignee")
-  private List<Project> projects = new ArrayList<Project>();
+  private List<Project> projects = new ArrayList<>();
 
   @ManyToMany
-  private List<Skill> skills = new ArrayList<Skill>();
+  private List<Skill> skills = new ArrayList<>();
 
   public long getId() {
     return id;

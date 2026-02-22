@@ -1,0 +1,111 @@
+name: Qlty
+permissions: {}
+on: [ push, pull_request, workflow_dispatch ]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Qlty Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # Needed for uploading security scan results
+      security-events: write # Needed for uploading security scan results
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+        with:
+          disable-sudo: true
+          allowed-endpoints: >
+            api.github.com:443
+            api.segment.io:443
+            cdp.customer.io:443
+            github-proxy.qlty.sh:443
+            github.com:443
+            qlty-releases.s3.amazonaws.com:443
+            qlty.sh:443
+            radarlint-releases.s3.amazonaws.com:443
+            release-assets.githubusercontent.com:443
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Install Qlty
+        uses: qltysh/qlty-action/install@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
+      - name: Setup Qlty
+        run: |
+          qlty init --skip-plugins -n
+          qlty plugins enable ktlint radarlint-java radarlint-kotlin trufflehog
+      - name: Run Qlty Check
+        continue-on-error: true
+        run: |
+          qlty check --no-fail --no-formatters --sarif . > results.sarif
+          # Remove invalid tool.driver.notifications array which causes sarif validation failures
+          if [ -f results.sarif ]; then
+            tmp=$(mktemp)
+            jq 'del(.runs[].tool.driver.notifications) | del(.runs[].results[].taxa[].name)' \
+              results.sarif > "$tmp" && mv "$tmp" results.sarif
+          fi
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0
+        with:
+          files: results.sarif
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@89a39a4e59826350b863aa6b6252a07ad50cf83e # v4.32.4
+        if: steps.check_files.outputs.files_exists == 'true'
+        with:
+          sarif_file: results.sarif
+
+  smells:
+    name: Qlty Smells
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # Needed for uploading security scan results
+      security-events: write # Needed for uploading security scan results
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            api.segment.io:443
+            cdp.customer.io:443
+            github.com:443
+            qlty-releases.s3.amazonaws.com:443
+            qlty.sh:443
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Install Qlty
+        uses: qltysh/qlty-action/install@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
+      - name: Setup Qlty
+        run: |
+          qlty init --skip-plugins -n
+          qlty plugins enable ktlint radarlint-java radarlint-kotlin trufflehog
+      - name: Run Qlty Smells
+        continue-on-error: true
+        run: |
+          qlty smells --include-tests --sarif . > results.sarif
+          # Remove invalid tool.driver.notifications array which causes sarif validation failures
+          if [ -f results.sarif ]; then
+            tmp=$(mktemp)
+            jq 'del(.runs[].tool.driver.notifications) | del(.runs[].results[].taxa[].name)' \
+              results.sarif > "$tmp" && mv "$tmp" results.sarif
+          fi
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0
+        with:
+          files: results.sarif
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@89a39a4e59826350b863aa6b6252a07ad50cf83e # v4.32.4
+        if: steps.check_files.outputs.files_exists == 'true'
+        with:
+          sarif_file: results.sarif

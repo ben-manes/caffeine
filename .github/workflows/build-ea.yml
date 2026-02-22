@@ -108,7 +108,7 @@ jobs:
             ./gradlew --rerun-tasks -PearlyAccess=true \
             --warning-mode all --no-problems-report \
             -Dscan.tag.${GITHUB_WORKFLOW// /_} \
-            $(eval echo "$TEST_SUITE" | tr -d '\n') && break
+            ${TEST_SUITE//$'\n'/ } && break
             if [ $i -lt "$ATTEMPT_LIMIT" ]; then
               echo "Attempt $i failed. Retrying in $ATTEMPT_DELAY seconds..."
               sleep "$ATTEMPT_DELAY"
