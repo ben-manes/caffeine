@@ -94,12 +94,9 @@ final class FrequencySketch {
       return;
     }
 
+    sampleSize = (maximumSize == 0) ? 10 : (int) Math.min(10L * maximum, Integer.MAX_VALUE);
     table = new long[Math.max(Caffeine.ceilingPowerOfTwo(maximum), 8)];
-    sampleSize = (maximumSize == 0) ? 10 : (10 * maximum);
     blockMask = (table.length >>> 3) - 1;
-    if (sampleSize <= 0) {
-      sampleSize = Integer.MAX_VALUE;
-    }
     size = 0;
   }
 
@@ -218,11 +215,11 @@ final class FrequencySketch {
 
   /** Reduces every counter by half of its original value. */
   void reset() {
-    @Var int count = 0;
+    @Var long count = 0;
     for (int i = 0; i < table.length; i++) {
       count += Long.bitCount(table[i] & ONE_MASK);
       table[i] = (table[i] >>> 1) & RESET_MASK;
     }
-    size = (size - (count >>> 2)) >>> 1;
+    size = (int) ((size - (count >>> 2)) >>> 1);
   }
 }
