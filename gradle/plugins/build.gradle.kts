@@ -84,10 +84,6 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   }
 }
 
-tasks.register("resolveExternalDependencies") {
-  dependsOn(tasks.withType<ResolveExternalDependenciesTask>())
-}
-
 private fun plugin(plugin: Provider<PluginDependency>): Provider<String> {
   // https://docs.gradle.org/current/userguide/plugins.html#sec:plugin_markers
   return plugin.map { "${it.pluginId}:${it.pluginId}.gradle.plugin:${it.version}" }

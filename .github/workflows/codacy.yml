@@ -17,7 +17,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+        uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
         with:
           disable-sudo-and-containers: false
           egress-policy: block
@@ -55,13 +55,13 @@ jobs:
         run: jq -c '.runs |= unique_by({tool, invocations, results})' < /tmp/results.sarif > codacy.sarif
       - name: Upload Reports
         if: steps.check_files.outputs.files_exists == 'true'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           retention-days: 1
           name: SARIF file
           path: codacy.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@89a39a4e59826350b863aa6b6252a07ad50cf83e # v4.32.4
+        uses: github/codeql-action/upload-sarif@c793b717bc78562f491db7b0e93a3a178b099162 # v4.32.5
         if: steps.check_files.outputs.files_exists == 'true'
         continue-on-error: true
         with:
