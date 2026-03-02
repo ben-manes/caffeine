@@ -22,9 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,7 @@ import com.google.common.base.Function;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -76,6 +79,71 @@ final class CaffeinatedGuavaTest {
   @Test
   void hasMethod_notFound() {
     assertThat(CaffeinatedGuava.hasMethod(CacheLoader.from(k -> k), "abc")).isFalse();
+  }
+
+  @Test
+  void bulkLoad() throws ReflectiveOperationException, ExecutionException {
+    var cache = CaffeinatedGuava.build(Caffeine.newBuilder(), new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new IllegalStateException();
+      }
+      @Override public ImmutableMap<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        return Maps.toMap(ImmutableSet.copyOf(keys), key -> -key);
+      }
+    });
+    var nullBulkLoad = getNullBulkLoad(cache);
+    assertThat(nullBulkLoad.get()).isNull();
+    assertThat(cache.getAll(ImmutableList.of(1, 2, 3)))
+        .isEqualTo(ImmutableMap.of(1, -1, 2, -2, 3, -3));
+    assertThat(nullBulkLoad.get()).isNull();
+  }
+
+  @Test
+  void bulkLoad_nullKey() throws ReflectiveOperationException {
+    var cache = CaffeinatedGuava.build(Caffeine.newBuilder(), new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new IllegalStateException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        var result = new HashMap<Integer, Integer>();
+        for (var key : keys) {
+          result.put(null, -key);
+        }
+        return result;
+      }
+    });
+    var nullBulkLoad = getNullBulkLoad(cache);
+    assertThat(nullBulkLoad.get()).isNull();
+    assertThrows(InvalidCacheLoadException.class, () -> cache.getAll(ImmutableList.of(1, 2, 3)));
+    assertThat(nullBulkLoad.get()).isNull();
+  }
+
+  @Test
+  void bulkLoad_nullValue() throws ReflectiveOperationException {
+    var cache = CaffeinatedGuava.build(Caffeine.newBuilder(), new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new IllegalStateException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        var result = new HashMap<Integer, Integer>();
+        for (var key : keys) {
+          result.put(key, null);
+        }
+        return result;
+      }
+    });
+    var nullBulkLoad = getNullBulkLoad(cache);
+    assertThat(nullBulkLoad.get()).isNull();
+    assertThrows(InvalidCacheLoadException.class, () -> cache.getAll(ImmutableList.of(1, 2, 3)));
+    assertThat(nullBulkLoad.get()).isNull();
+  }
+
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+  private static ThreadLocal<?> getNullBulkLoad(LoadingCache<Integer, Integer> cache)
+      throws NoSuchFieldException, IllegalAccessException {
+    var field = cache.getClass().getDeclaredField("nullBulkLoad");
+    field.setAccessible(true);
+    return (ThreadLocal<?>) field.get(cache);
   }
 
   @Test

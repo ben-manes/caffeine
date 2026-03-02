@@ -45,7 +45,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 @SuppressWarnings("serial")
 final class CaffeinatedGuavaLoadingCache<K, V>
     extends CaffeinatedGuavaCache<K, V> implements LoadingCache<K, V> {
-  private static final ThreadLocal<Boolean> nullBulkLoad = ThreadLocal.withInitial(() -> false);
+  private static final ThreadLocal<Boolean> nullBulkLoad = new ThreadLocal<>();
   private static final long serialVersionUID = 1L;
 
   private final com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache;
@@ -93,8 +93,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   public ImmutableMap<K, V> getAll(Iterable<? extends K> keys) throws ExecutionException {
     try {
       Map<K, V> result = cache.getAll(keys);
-      if (nullBulkLoad.get()) {
-        nullBulkLoad.set(false);
+      if (nullBulkLoad.get() != null) {
         throw new InvalidCacheLoadException("null key or value");
       }
       for (K key : keys) {
@@ -111,6 +110,8 @@ final class CaffeinatedGuavaLoadingCache<K, V>
       throw new UncheckedExecutionException(e);
     } catch (Error e) {
       throw new ExecutionError(e);
+    } finally {
+      nullBulkLoad.remove();
     }
   }
 
