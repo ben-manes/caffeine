@@ -4,6 +4,8 @@ rules:
   dangerous-triggers:
     ignore:
       - dependency-submission-pr-retrieve.yml
+  secrets-outside-env:
+    disable: true
   unpinned-images:
     ignore:
       - semgrep.yml

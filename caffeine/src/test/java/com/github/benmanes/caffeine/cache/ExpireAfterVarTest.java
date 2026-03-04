@@ -878,6 +878,42 @@ final class ExpireAfterVarTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      evictionListener = Listener.CONSUMING)
+  void computeIfAbsent_replaceExpired_expiryFails(
+      Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        cache.asMap().computeIfAbsent(context.firstKey(), identity()));
+
+    // The eviction should be committed: the entry is removed and
+    // both eviction and removal listeners are notified
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
+      expiryTime = Expire.ONE_MINUTE)
+  void computeIfAbsent_expired_functionThrows(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().computeIfAbsent(context.firstKey(), k -> {
+          throw new IllegalStateException();
+        }));
+
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()));
+  }
+
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   void computeIfAbsent_expiryFails_async(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -2218,6 +2254,42 @@ final class ExpireAfterVarTest {
         .withLevel(WARN)
         .exclusively())
         .hasSize(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      evictionListener = Listener.CONSUMING)
+  void compute_replaceExpired_expiryFails(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        cache.asMap().compute(context.firstKey(), (k, v) -> context.absentValue()));
+
+    // The eviction should be committed: the entry is removed and
+    // both eviction and removal listeners are notified
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO,
+      expiryTime = Expire.ONE_MINUTE)
+  void compute_expired_functionThrows(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().compute(context.firstKey(), (k, v) -> {
+          assertThat(v).isNull();
+          throw new IllegalStateException();
+        }));
+
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()));
   }
 
   @ParameterizedTest

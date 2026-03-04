@@ -559,6 +559,7 @@ final class TimerWheelTest {
     var ascending = Streams.stream(timerWheel.iterator())
         .limit(range + 1).map(Node::getKey).collect(toImmutableList());
     assertThat(ascending).containsExactlyElementsIn(keys);
+    @SuppressWarnings("null")
     var ascendingSnapshot = snapshot(timerWheel, /* ascending= */ true).stream()
         .map(TimerWheelTest::longToInt).collect(toImmutableList());
     assertThat(ascending).containsExactlyElementsIn(ascendingSnapshot).inOrder();
@@ -566,6 +567,7 @@ final class TimerWheelTest {
     var descending = Streams.stream(timerWheel.descendingIterator())
         .limit(range + 1).map(Node::getKey).collect(toImmutableList());
     assertThat(descending).containsExactlyElementsIn(keys);
+    @SuppressWarnings("null")
     var descendingSnapshot = snapshot(timerWheel, /* ascending= */ false).stream()
         .map(TimerWheelTest::longToInt).collect(toImmutableList());
     assertThat(descending).containsExactlyElementsIn(descendingSnapshot).inOrder();

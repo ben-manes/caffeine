@@ -1139,6 +1139,25 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      evictionListener = Listener.CONSUMING)
+  void computeIfAbsent_weigherFails_expired(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().computeIfAbsent(context.firstKey(), identity()));
+
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()));
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.MOCKITO },
@@ -1390,6 +1409,25 @@ final class ExpirationTest {
         .flatMap(policy -> policy.ageOf(context.firstKey())));
     assertThat(variable).isEqualTo(cache.policy().expireVariably()
         .flatMap(policy -> policy.getExpiresAfter(context.firstKey())));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      evictionListener = Listener.CONSUMING)
+  void compute_weigherFails_expired(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().compute(context.firstKey(), (k, v) -> context.absentValue()));
+
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()));
   }
 
   @ParameterizedTest

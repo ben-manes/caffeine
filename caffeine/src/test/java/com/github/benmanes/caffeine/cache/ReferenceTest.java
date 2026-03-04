@@ -964,6 +964,7 @@ final class ReferenceTest {
         .thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () -> map.computeIfAbsent(key, identity()));
     assertThat(map).doesNotContainKey(key);
+    assertThat(context).notifications().withCause(COLLECTED).contains(key, null);
   }
 
   @ParameterizedTest
@@ -1113,6 +1114,7 @@ final class ReferenceTest {
         .thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () -> map.compute(key, (k, v) -> k));
     assertThat(map).doesNotContainKey(key);
+    assertThat(context).notifications().withCause(COLLECTED).contains(key, null);
   }
 
   @ParameterizedTest

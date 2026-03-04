@@ -83,6 +83,7 @@ final class FrequencySketchFuzzer {
     return hasReset;
   }
 
+  @SuppressWarnings("null")
   private static boolean increment(FuzzedDataProvider data,
       FrequencySketch sketch, Map<Integer, Integer> counts, boolean hasReset) {
     int item = data.consumeInt();

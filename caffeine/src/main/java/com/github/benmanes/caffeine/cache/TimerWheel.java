@@ -90,6 +90,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    */
   public void advance(BoundedLocalCache<K, V> cache, @Var long currentTimeNanos) {
     @Var long previousTimeNanos = nanos;
+    long originalTimeNanos = nanos;
     nanos = currentTimeNanos;
 
     // If wrapping then temporarily shift the clock for a positive comparison. We assume that the
@@ -111,7 +112,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
         expire(cache, i, previousTicks, delta);
       }
     } catch (Throwable t) {
-      nanos = previousTimeNanos;
+      nanos = originalTimeNanos;
       throw t;
     }
   }

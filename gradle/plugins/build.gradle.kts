@@ -1,4 +1,3 @@
-import com.autonomousapps.tasks.ResolveExternalDependenciesTask
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
 

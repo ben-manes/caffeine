@@ -171,6 +171,7 @@ testing.suites {
       }
       implementation(libs.guava)
       implementation(libs.jazzer)
+      implementation(libs.testng)
       implementation(libs.jctools)
       implementation(libs.mockito)
       implementation(libs.picocli)
@@ -202,7 +203,7 @@ testing.suites {
           inputs.properties(testOptions.filterValues { it.isPresent })
           systemProperties(testOptions.mapValues { it.value.orNull })
 
-          var shardingOptions = mapOf(
+          val shardingOptions = mapOf(
             "shardCount" to providers.gradleProperty("shardCount")
               .map { it.toIntOrNull() }.getOrElse(1).coerceAtLeast(1),
             "shardIndex" to providers.gradleProperty("shardIndex")
@@ -510,7 +511,7 @@ eclipse {
               file(collections4Sources.map { sources -> sources.singleFile }))
           }
 
-        val testRegex = "src/(.*Test|testFixtures)/java".toRegex()
+        val testRegex = "src/(.*Test|testFixtures)/(java|resources)".toRegex()
         entries.filterIsInstance<SourceFolder>()
           .filter { testRegex.matches(it.path) }
           .forEach {

@@ -65,6 +65,7 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -305,6 +306,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         + "contract can lead to non-deterministic behavior (key: %s, key type: %s, "
         + "node type: %s, cache type: %s).", key, key.getClass().getName(),
         node.getClass().getSimpleName(), getClass().getSimpleName());
+  }
+
+  /** Throws the exception, wrapping checked exceptions in a {@link CompletionException}. */
+  static void throwException(Throwable t) {
+    if (t instanceof RuntimeException) {
+      throw (RuntimeException) t;
+    } else if (t instanceof Error) {
+      throw (Error) t;
+    }
+    throw new CompletionException(t);
   }
 
   /* --------------- Shared --------------- */
@@ -1780,7 +1791,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   void onAccess(Node<K, V> node) {
     if (evicts()) {
       var keyRef = node.getKeyReferenceOrNull();
-      if (keyRef == null) {
+      if ((keyRef == null) || !node.isAlive()) {
         return;
       }
       frequencySketch().increment(keyRef);
@@ -2551,7 +2562,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
         setAccessTime(n, expirationTime);
         setVariableTime(n, varTime);
-
         discardRefresh(k);
         return n;
       }
@@ -2693,6 +2703,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Nullable Node<K, V>[] removed = new Node[1];
+    @Nullable Throwable[] exception = new Throwable[1];
 
     int[] weight = new int[2]; // old, new
     @Nullable RemovalCause[] cause = new RemovalCause[1];
@@ -2731,27 +2742,36 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         cause[0] = actualCause;
         notifyEviction(nodeKey[0], oldValue[0], actualCause);
-        newValue[0] = mappingFunction.apply(key);
-        if (newValue[0] == null) {
+
+        try {
+          newValue[0] = mappingFunction.apply(key);
+          if (newValue[0] == null) {
+            discardRefresh(k);
+            removed[0] = n;
+            n.retire();
+            return null;
+          }
+          now[0] = expirationTicker().read();
+          weight[1] = weigher.weigh(key, newValue[0]);
+          long varTime = expireAfterCreate(key, newValue[0], expiry(), now[0]);
+
+          n.setValue(newValue[0], valueReferenceQueue());
+          n.setWeight(weight[1]);
+
+          long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
+          setAccessTime(n, expirationTime);
+          setWriteTime(n, expirationTime);
+          setVariableTime(n, varTime);
           discardRefresh(k);
+          return n;
+        } catch (Throwable e) {
+          newValue[0] = null;
+          discardRefresh(k);
+          exception[0] = e;
           removed[0] = n;
           n.retire();
           return null;
         }
-        now[0] = expirationTicker().read();
-        weight[1] = weigher.weigh(key, newValue[0]);
-        long varTime = expireAfterCreate(key, newValue[0], expiry(), now[0]);
-
-        n.setValue(newValue[0], valueReferenceQueue());
-        n.setWeight(weight[1]);
-
-        long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
-        setAccessTime(n, expirationTime);
-        setWriteTime(n, expirationTime);
-        setVariableTime(n, varTime);
-
-        discardRefresh(k);
-        return n;
       }
     });
 
@@ -2762,6 +2782,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (node == null) {
       if (removed[0] != null) {
         afterWrite(new RemovalTask(removed[0]));
+      }
+      if (exception[0] != null) {
+        throwException(exception[0]);
       }
       return null;
     }
@@ -2867,6 +2890,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable V[] newValue = (V[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Nullable Node<K, V>[] removed = new Node[1];
+    @Nullable Throwable[] exception = new Throwable[1];
 
     var weight = new int[2]; // old, new
     var cause = new RemovalCause[1];
@@ -2913,44 +2937,56 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }
         }
 
-        newValue[0] = remappingFunction.apply(nodeKey[0],
-            (cause[0] == null) ? oldValue[0] : null);
-        if (newValue[0] == null) {
-          if (cause[0] == null) {
-            cause[0] = RemovalCause.EXPLICIT;
-            discardRefresh(kr);
+        boolean wasEvicted = (cause[0] != null);
+        try {
+          newValue[0] = remappingFunction.apply(nodeKey[0],
+              (cause[0] == null) ? oldValue[0] : null);
+
+          if (newValue[0] == null) {
+            if (cause[0] == null) {
+              cause[0] = RemovalCause.EXPLICIT;
+              discardRefresh(kr);
+            }
+            removed[0] = n;
+            n.retire();
+            return null;
           }
+
+          long varTime;
+          weight[0] = n.getWeight();
+          weight[1] = weigher.weigh(key, newValue[0]);
+          now[0] = expirationTicker().read();
+          if (cause[0] == null) {
+            if (newValue[0] != oldValue[0]) {
+              cause[0] = RemovalCause.REPLACED;
+            }
+            varTime = expireAfterUpdate(n, key, newValue[0], expiry, now[0]);
+          } else {
+            varTime = expireAfterCreate(key, newValue[0], expiry, now[0]);
+          }
+
+          n.setValue(newValue[0], valueReferenceQueue());
+          n.setWeight(weight[1]);
+
+          long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
+          exceedsTolerance[0] = exceedsWriteTimeTolerance(n, varTime, expirationTime);
+          if (((cause[0] != null) && cause[0].wasEvicted()) || exceedsTolerance[0]) {
+            setWriteTime(n, expirationTime);
+          }
+          setAccessTime(n, expirationTime);
+          setVariableTime(n, varTime);
+          discardRefresh(kr);
+          return n;
+        } catch (Throwable e) {
+          if (!wasEvicted) {
+            throw e;
+          }
+          newValue[0] = null;
+          exception[0] = e;
           removed[0] = n;
           n.retire();
           return null;
         }
-
-        long varTime;
-        weight[0] = n.getWeight();
-        weight[1] = weigher.weigh(key, newValue[0]);
-        now[0] = expirationTicker().read();
-        if (cause[0] == null) {
-          if (newValue[0] != oldValue[0]) {
-            cause[0] = RemovalCause.REPLACED;
-          }
-          varTime = expireAfterUpdate(n, key, newValue[0], expiry, now[0]);
-        } else {
-          varTime = expireAfterCreate(key, newValue[0], expiry, now[0]);
-        }
-
-        n.setValue(newValue[0], valueReferenceQueue());
-        n.setWeight(weight[1]);
-
-        long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
-        exceedsTolerance[0] = exceedsWriteTimeTolerance(n, varTime, expirationTime);
-        if (((cause[0] != null) && cause[0].wasEvicted()) || exceedsTolerance[0]) {
-          setWriteTime(n, expirationTime);
-        }
-        setAccessTime(n, expirationTime);
-        setVariableTime(n, varTime);
-
-        discardRefresh(kr);
-        return n;
       }
     });
 
@@ -2984,6 +3020,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     }
 
+    if (exception[0] != null) {
+      throwException(exception[0]);
+    }
     return newValue[0];
   }
 

@@ -2731,6 +2731,26 @@ final class BoundedLocalCacheTest {
     }
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON,
+      initialCapacity = InitialCapacity.FULL, maximumSize = Maximum.UNREACHABLE)
+  void frequencySketch_onAccess_afterRemoval(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var lookupKey = cache.nodeFactory.newLookupKey(context.firstKey());
+    var node = requireNonNull(cache.data.get(lookupKey));
+    var keyRef = node.getKeyReference();
+    int freqBefore = cache.frequencySketch().frequency(keyRef);
+
+    // Access the key to buffer a read, then remove before the buffer is drained
+    requireNonNull(cache.get(context.firstKey()));
+    var oldValue = cache.remove(context.firstKey());
+    assertThat(oldValue).isNotNull();
+    cache.cleanUp();
+
+    // The frequency should not be incremented for the removed entry's buffered read
+    assertThat(cache.frequencySketch().frequency(keyRef)).isEqualTo(freqBefore);
+  }
+
   @Test
   void frequencySketch_admit_strongKeys() {
     var builder = Caffeine.newBuilder()
