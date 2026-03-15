@@ -159,6 +159,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
+import com.google.common.testing.FakeTicker;
 import com.google.common.testing.GcFinalization;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -2441,6 +2442,65 @@ final class BoundedLocalCacheTest {
         .contains(context.absentKey(), null)
         .exclusively();
     cache.data.remove(keyReference);
+  }
+
+  @Test
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+  void putIfAbsent_accessTime_notCorruptedByAsyncValue() {
+    var ticker = new FakeTicker();
+    AsyncCache<Int, Int> asyncCache = Caffeine.newBuilder()
+        .expireAfterAccess(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .buildAsync();
+    var cache = asBoundedLocalCache(asyncCache);
+
+    var key = Int.valueOf(1);
+    asyncCache.put(key, CompletableFuture.completedFuture(Int.valueOf(100)));
+    var lookupKey = cache.nodeFactory.newLookupKey(key);
+    var node = requireNonNull(cache.data.get(lookupKey));
+
+    // Expire the entry so that put()'s fast path falls through to the synchronized block
+    ticker.advance(Duration.ofMinutes(2));
+    long now = ticker.read();
+
+    // Force the slow path: hold the node lock so the putIfAbsent thread blocks on it after the fast
+    // path fails (entry is expired). Then un-expire the entry and release. The writer enters the
+    // synchronized block, finds the entry alive (mayUpdate=false), and computes expirationTime,
+    // which must be based on the existing value, not the unstored new value.
+    var writer = new AtomicReference<@Nullable Thread>();
+    var started = new AtomicBoolean();
+    var incomplete = new CompletableFuture<Int>();
+
+    CompletableFuture<?> writerDone;
+    synchronized (node) {
+      writerDone = CompletableFuture.runAsync(() -> {
+        writer.set(Thread.currentThread());
+        await().untilTrue(started);
+        asyncCache.asMap().putIfAbsent(key, incomplete);
+      }, ConcurrentTestHarness.executor);
+
+      // Signal the writer to proceed, then wait for it to block on synchronized(node)
+      started.set(true);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && (thread.getState() == BLOCKED);
+      });
+
+      // Un-expire the entry while the writer is blocked on the node lock
+      node.setAccessTime(now);
+    }
+
+    // Wait for the writer to complete putIfAbsent before reading the access time
+    writerDone.join();
+
+    // Read the access time before any get() call, which would overwrite it
+    long accessTime = node.getAccessTime();
+
+    // The access time must reflect 'now', not now+ASYNC_EXPIRY (~220 years). Before the fix,
+    // isComputingAsync(value) used the new incomplete future to compute expirationTime, which
+    // corrupted the access time to ~220 years and prevented expiration.
+    assertThat(accessTime).isAtMost(now + TimeUnit.MINUTES.toNanos(1));
   }
 
   @ParameterizedTest

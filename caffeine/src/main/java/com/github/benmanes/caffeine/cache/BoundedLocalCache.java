@@ -2394,7 +2394,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           varTime = expireAfterUpdate(prior, key, value, expiry, now);
         }
 
-        long expirationTime = isComputingAsync(value) ? (now + ASYNC_EXPIRY) : now;
+        long expirationTime = isComputingAsync(mayUpdate ? value : oldValue)
+            ? (now + ASYNC_EXPIRY)
+            : now;
         if (mayUpdate) {
           exceedsTolerance = exceedsWriteTimeTolerance(prior, varTime, now);
           if (expired || exceedsTolerance) {
@@ -2568,6 +2570,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     });
 
     if ((node == null) || (nodeKey[0] == null) || (oldValue[0] == null)) {
+      if (node != null) {
+        scheduleDrainBuffers();
+      }
       return null;
     }
 
@@ -2635,6 +2640,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     });
 
     if ((node == null) || (nodeKey[0] == null) || (prevValue[0] == null)) {
+      if (node != null) {
+        scheduleDrainBuffers();
+      }
       return false;
     }
 
@@ -2965,7 +2973,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             varTime = expireAfterCreate(key, newValue[0], expiry, now[0]);
           }
 
-          n.setValue(newValue[0], valueReferenceQueue());
+          if (newValue[0] != oldValue[0]) {
+            n.setValue(newValue[0], valueReferenceQueue());
+          }
           n.setWeight(weight[1]);
 
           long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];

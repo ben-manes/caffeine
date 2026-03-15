@@ -106,6 +106,7 @@ jobs:
           echo "::add-matcher::.github/problem-matcher.json"
           for ((i=1; i<="$ATTEMPT_LIMIT"; i++)); do
             ./gradlew --rerun-tasks -PearlyAccess=true \
+            -PjavaTestVersion="$JAVA_TEST_VERSION" \
             --warning-mode all --no-problems-report \
             -Dscan.tag.${GITHUB_WORKFLOW// /_} \
             ${TEST_SUITE//$'\n'/ } && break
