@@ -120,6 +120,7 @@ import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedPolicy.FixedExpireAfterWrite;
+import com.github.benmanes.caffeine.cache.BoundedLocalCache.ComputeContext;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.PerformCleanupTask;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
@@ -2631,7 +2632,7 @@ final class BoundedLocalCacheTest {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
       var result = cache.doComputeIfAbsent(requireNonNull(node.getKey()), node.getKeyReference(),
-          key -> context.absentValue(), /* now= */ new long[1], /* recordStats= */ false);
+          key -> context.absentValue(), new ComputeContext<>(0L), /* recordStats= */ false);
       assertThat(result).isEqualTo(context.absentValue());
     }, ConcurrentTestHarness.executor);
     synchronized (node) {
@@ -2657,8 +2658,8 @@ final class BoundedLocalCacheTest {
     var future = new CompletableFuture<Int>();
     cache.refreshes().put(keyRef, future);
 
-    var result = cache.doComputeIfAbsent(context.absentKey(),
-        keyRef, key -> context.absentValue(), new long[1], /* recordStats= */ false);
+    var result = cache.doComputeIfAbsent(context.absentKey(), keyRef,
+        key -> context.absentValue(), new ComputeContext<>(0L), /* recordStats= */ false);
     assertThat(result).isEqualTo(context.absentValue());
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -2672,8 +2673,8 @@ final class BoundedLocalCacheTest {
     cache.refreshes().put(keyRef, future);
 
     Function<Int, @Nullable Int> function = key -> null;
-    var result = cache.doComputeIfAbsent(context.absentKey(),
-        keyRef, function, new long[1], /* recordStats= */ false);
+    var result = cache.doComputeIfAbsent(context.absentKey(), keyRef,
+        function, new ComputeContext<>(0L), /* recordStats= */ false);
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -2689,7 +2690,7 @@ final class BoundedLocalCacheTest {
     cache.refreshes().put(keyRef, future);
 
     var result = cache.doComputeIfAbsent(requireNonNull(node.getKey()), keyRef,
-        key -> context.absentValue(), new long[1], /* recordStats= */ false);
+        key -> context.absentValue(), new ComputeContext<>(0L), /* recordStats= */ false);
     assertThat(result).isEqualTo(context.absentValue());
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -2705,7 +2706,7 @@ final class BoundedLocalCacheTest {
     cache.refreshes().put(keyRef, future);
 
     var result = cache.doComputeIfAbsent(requireNonNull(node.getKey()), keyRef,
-        key -> nullValue(), new long[1], /* recordStats= */ false);
+        key -> nullValue(), new ComputeContext<>(0L), /* recordStats= */ false);
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -2724,7 +2725,7 @@ final class BoundedLocalCacheTest {
       await().untilTrue(started);
       var result = cache.remap(context.firstKey(), node.getKeyReference(),
           (k, v) -> context.absentValue(), context.expiresVariably() ? context.expiry() : null,
-          /* now= */ new long[1], /* computeIfAbsent= */ true);
+          new ComputeContext<>(0L), /* computeIfAbsent= */ true);
       assertThat(result).isEqualTo(context.absentValue());
     }, ConcurrentTestHarness.executor);
     synchronized (node) {

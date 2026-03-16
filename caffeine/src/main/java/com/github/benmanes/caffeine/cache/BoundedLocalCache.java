@@ -1024,11 +1024,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @SuppressWarnings({"GuardedByChecker", "SynchronizationOnLocalVariableOrMethodParameter"})
   boolean evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] value = (V[]) new Object[1];
-    var removed = new boolean[1];
-    var resurrect = new boolean[1];
-    var actualCause = new RemovalCause[1];
+    var ctx = new EvictContext<V>();
     var keyReference = node.getKeyReference();
 
     data.computeIfPresent(keyReference, (k, n) -> {
@@ -1036,18 +1032,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return n;
       }
       synchronized (node) {
-        value[0] = node.getValue();
+        ctx.value = node.getValue();
 
-        if ((key == null) || (value[0] == null)) {
-          actualCause[0] = RemovalCause.COLLECTED;
+        if ((key == null) || (ctx.value == null)) {
+          ctx.cause = RemovalCause.COLLECTED;
         } else if (cause == RemovalCause.COLLECTED) {
-          resurrect[0] = true;
+          ctx.resurrect = true;
           return node;
         } else {
-          actualCause[0] = cause;
+          ctx.cause = cause;
         }
 
-        if (actualCause[0] == RemovalCause.EXPIRED) {
+        if (ctx.cause == RemovalCause.EXPIRED) {
           @Var boolean expired = false;
           if (expiresAfterAccess()) {
             expired |= ((now - node.getAccessTime()) >= expiresAfterAccessNanos());
@@ -1059,27 +1055,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             expired |= ((now - node.getVariableTime()) >= 0);
           }
           if (!expired) {
-            resurrect[0] = true;
+            ctx.resurrect = true;
             return node;
           }
-        } else if (actualCause[0] == RemovalCause.SIZE) {
+        } else if (ctx.cause == RemovalCause.SIZE) {
           int weight = node.getWeight();
           if (weight == 0) {
-            resurrect[0] = true;
+            ctx.resurrect = true;
             return node;
           }
         }
 
-        notifyEviction(key, value[0], actualCause[0]);
+        notifyEviction(key, ctx.value, ctx.cause);
         discardRefresh(keyReference);
-        removed[0] = true;
+        ctx.removed = true;
         node.retire();
         return null;
       }
     });
 
     // The entry is no longer eligible for eviction
-    if (resurrect[0]) {
+    if (ctx.resurrect) {
       return false;
     }
 
@@ -1107,9 +1103,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       makeDead(node);
     }
 
-    if (removed[0]) {
-      statsCounter().recordEviction(node.getWeight(), actualCause[0]);
-      notifyRemoval(key, value[0], actualCause[0]);
+    if (ctx.removed) {
+      var removeCause = requireNonNull(ctx.cause);
+      statsCounter().recordEviction(node.getWeight(), removeCause);
+      notifyRemoval(key, ctx.value, removeCause);
     }
 
     return true;
@@ -2097,28 +2094,26 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @SuppressWarnings({"GuardedByChecker", "SynchronizationOnLocalVariableOrMethodParameter"})
   void removeNode(Node<K, V> node, long now) {
     K key = node.getKey();
-    var cause = new RemovalCause[1];
+    var ctx = new EvictContext<V>();
     var keyReference = node.getKeyReference();
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] value = (V[]) new Object[1];
 
     data.computeIfPresent(keyReference, (k, n) -> {
       if (n != node) {
         return n;
       }
       synchronized (node) {
-        value[0] = node.getValue();
+        ctx.value = node.getValue();
 
-        if ((key == null) || (value[0] == null)) {
-          cause[0] = RemovalCause.COLLECTED;
+        if ((key == null) || (ctx.value == null)) {
+          ctx.cause = RemovalCause.COLLECTED;
         } else if (hasExpired(node, now)) {
-          cause[0] = RemovalCause.EXPIRED;
+          ctx.cause = RemovalCause.EXPIRED;
         } else {
-          cause[0] = RemovalCause.EXPLICIT;
+          ctx.cause = RemovalCause.EXPLICIT;
         }
 
-        if (cause[0].wasEvicted()) {
-          notifyEviction(key, value[0], cause[0]);
+        if (ctx.cause.wasEvicted()) {
+          notifyEviction(key, ctx.value, ctx.cause);
         }
 
         discardRefresh(node.getKeyReference());
@@ -2147,8 +2142,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       makeDead(node);
     }
 
-    if (cause[0] != null) {
-      notifyRemoval(key, value[0], cause[0]);
+    if (ctx.cause != null) {
+      notifyRemoval(key, ctx.value, ctx.cause);
     }
   }
 
@@ -2437,44 +2432,37 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @Override
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public @Nullable V remove(Object key) {
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    Node<K, V>[] node = new Node[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable K[] oldKey = (K[]) new Object[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] oldValue = (V[]) new Object[1];
-    @Nullable RemovalCause[] cause = new RemovalCause[1];
+    var ctx = new RemoveContext<K, V>();
     Object lookupKey = nodeFactory.newLookupKey(key);
-
     data.computeIfPresent(lookupKey, (k, n) -> {
       synchronized (n) {
         requireIsAlive(key, n);
-        oldKey[0] = n.getKey();
-        oldValue[0] = n.getValue();
+        ctx.oldKey = n.getKey();
+        ctx.oldValue = n.getValue();
         RemovalCause actualCause;
-        if ((oldKey[0] == null) || (oldValue[0] == null)) {
+        if ((ctx.oldKey == null) || (ctx.oldValue == null)) {
           actualCause = RemovalCause.COLLECTED;
         } else if (hasExpired(n, expirationTicker().read())) {
           actualCause = RemovalCause.EXPIRED;
         } else {
-          actualCause= RemovalCause.EXPLICIT;
+          actualCause = RemovalCause.EXPLICIT;
         }
         if (actualCause.wasEvicted()) {
-          notifyEviction(oldKey[0], oldValue[0], actualCause);
+          notifyEviction(ctx.oldKey, ctx.oldValue, actualCause);
         }
-        cause[0] = actualCause;
+        ctx.cause = actualCause;
         discardRefresh(k);
-        node[0] = n;
+        ctx.node = n;
         n.retire();
         return null;
       }
     });
 
-    if (cause[0] != null) {
-      afterWrite(new RemovalTask(node[0]));
-      notifyRemoval(oldKey[0], oldValue[0], cause[0]);
+    if (ctx.cause != null) {
+      afterWrite(new RemovalTask(requireNonNull(ctx.node)));
+      notifyRemoval(ctx.oldKey, ctx.oldValue, ctx.cause);
     }
-    return (cause[0] == RemovalCause.EXPLICIT) ? oldValue[0] : null;
+    return (ctx.cause == RemovalCause.EXPLICIT) ? ctx.oldValue : null;
   }
 
   @Override
@@ -2485,46 +2473,40 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return false;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    @Nullable Node<K, V>[] removed = new Node[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable K[] oldKey = (K[]) new Object[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] oldValue = (V[]) new Object[1];
-    RemovalCause[] cause = new RemovalCause[1];
+    var ctx = new RemoveContext<K, V>();
     Object lookupKey = nodeFactory.newLookupKey(key);
-
     data.computeIfPresent(lookupKey, (kR, node) -> {
       synchronized (node) {
         requireIsAlive(key, node);
-        oldKey[0] = node.getKey();
-        oldValue[0] = node.getValue();
-        if ((oldKey[0] == null) || (oldValue[0] == null)) {
-          cause[0] = RemovalCause.COLLECTED;
+        ctx.oldKey = node.getKey();
+        ctx.oldValue = node.getValue();
+        if ((ctx.oldKey == null) || (ctx.oldValue == null)) {
+          ctx.cause = RemovalCause.COLLECTED;
         } else if (hasExpired(node, expirationTicker().read())) {
-          cause[0] = RemovalCause.EXPIRED;
+          ctx.cause = RemovalCause.EXPIRED;
         } else if (node.containsValue(value)) {
-          cause[0] = RemovalCause.EXPLICIT;
+          ctx.cause = RemovalCause.EXPLICIT;
         } else {
           return node;
         }
-        if (cause[0].wasEvicted()) {
-          notifyEviction(oldKey[0], oldValue[0], cause[0]);
+        if (ctx.cause.wasEvicted()) {
+          notifyEviction(ctx.oldKey, ctx.oldValue, ctx.cause);
         }
         discardRefresh(kR);
-        removed[0] = node;
+        ctx.node = node;
         node.retire();
         return null;
       }
     });
 
-    if (removed[0] == null) {
+    if (ctx.node == null) {
       return false;
     }
-    afterWrite(new RemovalTask(removed[0]));
-    notifyRemoval(oldKey[0], oldValue[0], cause[0]);
+    var removeCause = requireNonNull(ctx.cause);
+    afterWrite(new RemovalTask(ctx.node));
+    notifyRemoval(ctx.oldKey, ctx.oldValue, removeCause);
 
-    return (cause[0] == RemovalCause.EXPLICIT);
+    return (removeCause == RemovalCause.EXPLICIT);
   }
 
   @Override
@@ -2532,34 +2514,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   public @Nullable V replace(K key, V value) {
     requireNonNull(key);
     requireNonNull(value);
-
-    var now = new long[1];
-    var oldWeight = new int[1];
-    var exceedsTolerance = new boolean[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable K[] nodeKey = (K[]) new Object[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] oldValue = (V[]) new Object[1];
+    var ctx = new ReplaceContext<K, V>();
     int weight = weigher.weigh(key, value);
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
         requireIsAlive(key, n);
-        nodeKey[0] = n.getKey();
-        oldValue[0] = n.getValue();
-        oldWeight[0] = n.getWeight();
-        if ((nodeKey[0] == null) || (oldValue[0] == null)
-            || hasExpired(n, now[0] = expirationTicker().read())) {
-          oldValue[0] = null;
+        ctx.nodeKey = n.getKey();
+        ctx.oldValue = n.getValue();
+        ctx.oldWeight = n.getWeight();
+        if ((ctx.nodeKey == null) || (ctx.oldValue == null)
+            || hasExpired(n, ctx.now = expirationTicker().read())) {
+          ctx.oldValue = null;
           return n;
         }
 
-        long varTime = expireAfterUpdate(n, key, value, expiry(), now[0]);
+        long varTime = expireAfterUpdate(n, key, value, expiry(), ctx.now);
         n.setValue(value, valueReferenceQueue());
         n.setWeight(weight);
 
-        long expirationTime = isComputingAsync(value) ? (now[0] + ASYNC_EXPIRY) : now[0];
-        exceedsTolerance[0] = exceedsWriteTimeTolerance(n, varTime, expirationTime);
-        if (exceedsTolerance[0]) {
+        long expirationTime = isComputingAsync(value) ? (ctx.now + ASYNC_EXPIRY) : ctx.now;
+        ctx.exceedsTolerance = exceedsWriteTimeTolerance(n, varTime, expirationTime);
+        if (ctx.exceedsTolerance) {
           setWriteTime(n, expirationTime);
         }
         setAccessTime(n, expirationTime);
@@ -2569,22 +2544,22 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     });
 
-    if ((node == null) || (nodeKey[0] == null) || (oldValue[0] == null)) {
+    if ((node == null) || (ctx.nodeKey == null) || (ctx.oldValue == null)) {
       if (node != null) {
         scheduleDrainBuffers();
       }
       return null;
     }
 
-    int weightedDifference = (weight - oldWeight[0]);
-    if (exceedsTolerance[0] || (weightedDifference != 0)) {
+    int weightedDifference = (weight - ctx.oldWeight);
+    if (ctx.exceedsTolerance || (weightedDifference != 0)) {
       afterWrite(new UpdateTask(node, weightedDifference));
     } else {
-      afterRead(node, now[0], /* recordHit= */ false);
+      afterRead(node, ctx.now, /* recordHit= */ false);
     }
 
-    notifyOnReplace(nodeKey[0], oldValue[0], value);
-    return oldValue[0];
+    notifyOnReplace(ctx.nodeKey, ctx.oldValue, value);
+    return ctx.oldValue;
   }
 
   @Override
@@ -2598,35 +2573,27 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(key);
     requireNonNull(oldValue);
     requireNonNull(newValue);
-
-    var now = new long[1];
-    var oldWeight = new int[1];
-    var exceedsTolerance = new boolean[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable K[] nodeKey = (K[]) new Object[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] prevValue = (V[]) new Object[1];
-
+    var ctx = new ReplaceContext<K, V>();
     int weight = weigher.weigh(key, newValue);
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
         requireIsAlive(key, n);
-        nodeKey[0] = n.getKey();
-        prevValue[0] = n.getValue();
-        oldWeight[0] = n.getWeight();
-        if ((nodeKey[0] == null) || (prevValue[0] == null) || !n.containsValue(oldValue)
-            || hasExpired(n, now[0] = expirationTicker().read())) {
-          prevValue[0] = null;
+        ctx.nodeKey = n.getKey();
+        ctx.oldValue = n.getValue();
+        ctx.oldWeight = n.getWeight();
+        if ((ctx.nodeKey == null) || (ctx.oldValue == null) || !n.containsValue(oldValue)
+            || hasExpired(n, ctx.now = expirationTicker().read())) {
+          ctx.oldValue = null;
           return n;
         }
 
-        long varTime = expireAfterUpdate(n, key, newValue, expiry(), now[0]);
+        long varTime = expireAfterUpdate(n, key, newValue, expiry(), ctx.now);
         n.setValue(newValue, valueReferenceQueue());
         n.setWeight(weight);
 
-        long expirationTime = isComputingAsync(newValue) ? (now[0] + ASYNC_EXPIRY) : now[0];
-        exceedsTolerance[0] = exceedsWriteTimeTolerance(n, varTime, expirationTime);
-        if (exceedsTolerance[0]) {
+        long expirationTime = isComputingAsync(newValue) ? (ctx.now + ASYNC_EXPIRY) : ctx.now;
+        ctx.exceedsTolerance = exceedsWriteTimeTolerance(n, varTime, expirationTime);
+        if (ctx.exceedsTolerance) {
           setWriteTime(n, expirationTime);
         }
         setAccessTime(n, expirationTime);
@@ -2639,21 +2606,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return n;
     });
 
-    if ((node == null) || (nodeKey[0] == null) || (prevValue[0] == null)) {
+    if ((node == null) || (ctx.nodeKey == null) || (ctx.oldValue == null)) {
       if (node != null) {
         scheduleDrainBuffers();
       }
       return false;
     }
 
-    int weightedDifference = (weight - oldWeight[0]);
-    if (exceedsTolerance[0] || (weightedDifference != 0)) {
+    int weightedDifference = (weight - ctx.oldWeight);
+    if (ctx.exceedsTolerance || (weightedDifference != 0)) {
       afterWrite(new UpdateTask(node, weightedDifference));
     } else {
-      afterRead(node, now[0], /* recordHit= */ false);
+      afterRead(node, ctx.now, /* recordHit= */ false);
     }
 
-    notifyOnReplace(nodeKey[0], prevValue[0], newValue);
+    notifyOnReplace(ctx.nodeKey, ctx.oldValue, newValue);
     return true;
   }
 
@@ -2664,9 +2631,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     BiFunction<K, V, V> remappingFunction = (key, oldValue) ->
         requireNonNull(function.apply(key, oldValue));
     for (K key : keySet()) {
-      long[] now = { expirationTicker().read() };
       Object lookupKey = nodeFactory.newLookupKey(key);
-      remap(key, lookupKey, remappingFunction, expiry(), now, /* computeIfAbsent= */ false);
+      remap(key, lookupKey, remappingFunction, expiry(),
+          new ComputeContext<>(expirationTicker().read()), /* computeIfAbsent= */ false);
     }
   }
 
@@ -2695,39 +2662,30 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       mappingFunction = statsAware(mappingFunction, recordLoad);
     }
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    return doComputeIfAbsent(key, keyRef, mappingFunction, new long[] { now }, recordStats);
+    return doComputeIfAbsent(key, keyRef, mappingFunction,
+        new ComputeContext<>(now), recordStats);
   }
 
   /** Returns the current value from a computeIfAbsent invocation. */
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Nullable V doComputeIfAbsent(K key, Object keyRef,
-      Function<? super K, ? extends @Nullable V> mappingFunction, long[/* 1 */] now,
-      boolean recordStats) {
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] oldValue = (V[]) new Object[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] newValue = (V[]) new Object[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable K[] nodeKey = (K[]) new Object[1];
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    @Nullable Node<K, V>[] removed = new Node[1];
-    @Nullable Throwable[] exception = new Throwable[1];
-
-    int[] weight = new int[2]; // old, new
-    @Nullable RemovalCause[] cause = new RemovalCause[1];
+      Function<? super K, ? extends @Nullable V> mappingFunction,
+      ComputeContext<K, V> ctx, boolean recordStats) {
     Node<K, V> node = data.compute(keyRef, (k, n) -> {
       if (n == null) {
-        newValue[0] = mappingFunction.apply(key);
-        if (newValue[0] == null) {
+        ctx.newValue = mappingFunction.apply(key);
+        if (ctx.newValue == null) {
           discardRefresh(k);
           return null;
         }
-        now[0] = expirationTicker().read();
-        weight[1] = weigher.weigh(key, newValue[0]);
+        ctx.now = expirationTicker().read();
+        ctx.newWeight = weigher.weigh(key, ctx.newValue);
         var created = nodeFactory.newNode(key, keyReferenceQueue(),
-            newValue[0], valueReferenceQueue(), weight[1], now[0]);
-        long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
-        setVariableTime(created, expireAfterCreate(key, newValue[0], expiry(), now[0]));
+            ctx.newValue, valueReferenceQueue(), ctx.newWeight, ctx.now);
+        long expirationTime = isComputingAsync(ctx.newValue)
+            ? ctx.now + ASYNC_EXPIRY
+            : ctx.now;
+        setVariableTime(created, expireAfterCreate(key, ctx.newValue, expiry(), ctx.now));
         setAccessTime(created, expirationTime);
         setWriteTime(created, expirationTime);
         discardRefresh(k);
@@ -2736,83 +2694,84 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       synchronized (n) {
         requireIsAlive(key, n);
-        nodeKey[0] = n.getKey();
-        weight[0] = n.getWeight();
-        oldValue[0] = n.getValue();
+        ctx.nodeKey = n.getKey();
+        ctx.oldValue = n.getValue();
+        ctx.oldWeight = n.getWeight();
         RemovalCause actualCause;
-        if ((nodeKey[0] == null) || (oldValue[0] == null)) {
+        if ((ctx.nodeKey == null) || (ctx.oldValue == null)) {
           actualCause = RemovalCause.COLLECTED;
-        } else if (hasExpired(n, now[0])) {
+        } else if (hasExpired(n, ctx.now)) {
           actualCause = RemovalCause.EXPIRED;
         } else {
           return n;
         }
 
-        cause[0] = actualCause;
-        notifyEviction(nodeKey[0], oldValue[0], actualCause);
+        ctx.cause = actualCause;
+        notifyEviction(ctx.nodeKey, ctx.oldValue, actualCause);
 
         try {
-          newValue[0] = mappingFunction.apply(key);
-          if (newValue[0] == null) {
+          ctx.newValue = mappingFunction.apply(key);
+          if (ctx.newValue == null) {
             discardRefresh(k);
-            removed[0] = n;
+            ctx.removed = n;
             n.retire();
             return null;
           }
-          now[0] = expirationTicker().read();
-          weight[1] = weigher.weigh(key, newValue[0]);
-          long varTime = expireAfterCreate(key, newValue[0], expiry(), now[0]);
+          ctx.now = expirationTicker().read();
+          ctx.newWeight = weigher.weigh(key, ctx.newValue);
+          long varTime = expireAfterCreate(key, ctx.newValue, expiry(), ctx.now);
 
-          n.setValue(newValue[0], valueReferenceQueue());
-          n.setWeight(weight[1]);
+          n.setValue(ctx.newValue, valueReferenceQueue());
+          n.setWeight(ctx.newWeight);
 
-          long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
+          long expirationTime = isComputingAsync(ctx.newValue)
+              ? (ctx.now + ASYNC_EXPIRY) : ctx.now;
           setAccessTime(n, expirationTime);
           setWriteTime(n, expirationTime);
           setVariableTime(n, varTime);
           discardRefresh(k);
           return n;
         } catch (Throwable e) {
-          newValue[0] = null;
+          ctx.newValue = null;
           discardRefresh(k);
-          exception[0] = e;
-          removed[0] = n;
+          ctx.exception = e;
+          ctx.removed = n;
           n.retire();
           return null;
         }
       }
     });
 
-    if (cause[0] != null) {
-      statsCounter().recordEviction(weight[0], cause[0]);
-      notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
+    if (ctx.cause != null) {
+      statsCounter().recordEviction(ctx.oldWeight, ctx.cause);
+      notifyRemoval(ctx.nodeKey, ctx.oldValue, ctx.cause);
     }
     if (node == null) {
-      if (removed[0] != null) {
-        afterWrite(new RemovalTask(removed[0]));
+      if (ctx.removed != null) {
+        afterWrite(new RemovalTask(ctx.removed));
       }
-      if (exception[0] != null) {
-        throwException(exception[0]);
+      if (ctx.exception != null) {
+        throwException(ctx.exception);
       }
       return null;
     }
-    if ((oldValue[0] != null) && (newValue[0] == null)) {
-      if (!isComputingAsync(oldValue[0])) {
-        tryExpireAfterRead(node, key, oldValue[0], expiry(), now[0]);
-        setAccessTime(node, now[0]);
+    if ((ctx.oldValue != null) && (ctx.newValue == null)) {
+      if (!isComputingAsync(ctx.oldValue)) {
+        tryExpireAfterRead(node, key, ctx.oldValue, expiry(), ctx.now);
+        setAccessTime(node, ctx.now);
       }
 
-      afterRead(node, now[0], /* recordHit= */ recordStats);
-      return oldValue[0];
+      afterRead(node, ctx.now, /* recordHit= */ recordStats);
+      return ctx.oldValue;
     }
-    if ((oldValue[0] == null) && (cause[0] == null)) {
-      afterWrite(new AddTask(node, weight[1]));
+    if ((ctx.oldValue == null) && (ctx.cause == null)) {
+      afterWrite(new AddTask(node, ctx.newWeight));
     } else {
-      int weightedDifference = (weight[1] - weight[0]);
+      int weightedDifference = (ctx.newWeight - ctx.oldWeight);
       afterWrite(new UpdateTask(node, weightedDifference));
     }
 
-    return newValue[0];
+    return ctx.newValue;
   }
 
   @Override
@@ -2835,7 +2794,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
         statsAware(remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
     return remap(key, lookupKey, statsAwareRemappingFunction,
-        expiry(), new long[] { now }, /* computeIfAbsent= */ false);
+        expiry(), new ComputeContext<>(now), /* computeIfAbsent= */ false);
   }
 
   @Override
@@ -2846,12 +2805,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
-    long[] now = { expirationTicker().read() };
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
         statsAware(remappingFunction, recordLoad, recordLoadFailure);
     return remap(key, keyRef, statsAwareRemappingFunction,
-        expiry, now, /* computeIfAbsent= */ true);
+        expiry, new ComputeContext<>(expirationTicker().read()), /* computeIfAbsent= */ true);
   }
 
   @Override
@@ -2861,13 +2819,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(value);
     requireNonNull(remappingFunction);
 
-    long[] now = { expirationTicker().read() };
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> mergeFunction =
         (k, oldValue) -> (oldValue == null)
           ? value
           : statsAware(remappingFunction).apply(oldValue, value);
-    return remap(key, keyRef, mergeFunction, expiry(), now, /* computeIfAbsent= */ true);
+    return remap(key, keyRef, mergeFunction, expiry(),
+        new ComputeContext<>(expirationTicker().read()), /* computeIfAbsent= */ true);
   }
 
   /**
@@ -2882,44 +2840,34 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param keyRef the key to associate with or a lookup only key if not {@code computeIfAbsent}
    * @param remappingFunction the function to compute a value
    * @param expiry the calculator for the expiration time
-   * @param now the current time, according to the ticker
+   * @param ctx the mutable context for passing state to and from the {@link ConcurrentHashMap}
+   *        compute lambda, with {@link ComputeContext#now} set to the current ticker time
    * @param computeIfAbsent if an absent entry can be computed
    * @return the new value associated with the specified key, or null if none
    */
   @SuppressWarnings({"StatementWithEmptyBody", "SynchronizationOnLocalVariableOrMethodParameter"})
   @Nullable V remap(K key, Object keyRef,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
-      @Nullable Expiry<? super K, ? super V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable K[] nodeKey = (K[]) new Object[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] oldValue = (V[]) new Object[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] newValue = (V[]) new Object[1];
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    @Nullable Node<K, V>[] removed = new Node[1];
-    @Nullable Throwable[] exception = new Throwable[1];
-
-    var weight = new int[2]; // old, new
-    var cause = new RemovalCause[1];
-    var exceedsTolerance = new boolean[1];
-
+      @Nullable Expiry<? super K, ? super V> expiry,
+      ComputeContext<K, V> ctx, boolean computeIfAbsent) {
     Node<K, V> node = data.compute(keyRef, (kr, n) -> {
       if (n == null) {
         if (!computeIfAbsent) {
           return null;
         }
-        newValue[0] = remappingFunction.apply(key, null);
-        if (newValue[0] == null) {
+        ctx.newValue = remappingFunction.apply(key, null);
+        if (ctx.newValue == null) {
           return null;
         }
-        now[0] = expirationTicker().read();
-        weight[1] = weigher.weigh(key, newValue[0]);
-        long varTime = expireAfterCreate(key, newValue[0], expiry, now[0]);
-        var created = nodeFactory.newNode(keyRef, newValue[0],
-            valueReferenceQueue(), weight[1], now[0]);
+        ctx.now = expirationTicker().read();
+        ctx.newWeight = weigher.weigh(key, ctx.newValue);
+        long varTime = expireAfterCreate(key, ctx.newValue, expiry, ctx.now);
+        var created = nodeFactory.newNode(keyRef, ctx.newValue,
+            valueReferenceQueue(), ctx.newWeight, ctx.now);
 
-        long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
+        long expirationTime = isComputingAsync(ctx.newValue)
+            ? ctx.now + ASYNC_EXPIRY
+            : ctx.now;
         setAccessTime(created, expirationTime);
         setWriteTime(created, expirationTime);
         setVariableTime(created, varTime);
@@ -2929,58 +2877,60 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       synchronized (n) {
         requireIsAlive(key, n);
-        nodeKey[0] = n.getKey();
-        oldValue[0] = n.getValue();
-        if ((nodeKey[0] == null) || (oldValue[0] == null)) {
-          cause[0] = RemovalCause.COLLECTED;
+        ctx.nodeKey = n.getKey();
+        ctx.oldValue = n.getValue();
+        if ((ctx.nodeKey == null) || (ctx.oldValue == null)) {
+          ctx.cause = RemovalCause.COLLECTED;
         } else if (hasExpired(n, expirationTicker().read())) {
-          cause[0] = RemovalCause.EXPIRED;
+          ctx.cause = RemovalCause.EXPIRED;
         }
-        if (cause[0] != null) {
-          notifyEviction(nodeKey[0], oldValue[0], cause[0]);
+        if (ctx.cause != null) {
+          notifyEviction(ctx.nodeKey, ctx.oldValue, ctx.cause);
           if (!computeIfAbsent) {
-            removed[0] = n;
+            ctx.removed = n;
             n.retire();
             return null;
           }
         }
 
-        boolean wasEvicted = (cause[0] != null);
+        boolean wasEvicted = (ctx.cause != null);
         try {
-          newValue[0] = remappingFunction.apply(nodeKey[0],
-              (cause[0] == null) ? oldValue[0] : null);
+          ctx.newValue = remappingFunction.apply(ctx.nodeKey,
+              (ctx.cause == null) ? ctx.oldValue : null);
 
-          if (newValue[0] == null) {
-            if (cause[0] == null) {
-              cause[0] = RemovalCause.EXPLICIT;
+          if (ctx.newValue == null) {
+            if (ctx.cause == null) {
+              ctx.cause = RemovalCause.EXPLICIT;
               discardRefresh(kr);
             }
-            removed[0] = n;
+            ctx.removed = n;
             n.retire();
             return null;
           }
 
           long varTime;
-          weight[0] = n.getWeight();
-          weight[1] = weigher.weigh(key, newValue[0]);
-          now[0] = expirationTicker().read();
-          if (cause[0] == null) {
-            if (newValue[0] != oldValue[0]) {
-              cause[0] = RemovalCause.REPLACED;
+          ctx.oldWeight = n.getWeight();
+          ctx.newWeight = weigher.weigh(key, ctx.newValue);
+          ctx.now = expirationTicker().read();
+          if (ctx.cause == null) {
+            if (ctx.newValue != ctx.oldValue) {
+              ctx.cause = RemovalCause.REPLACED;
             }
-            varTime = expireAfterUpdate(n, key, newValue[0], expiry, now[0]);
+            varTime = expireAfterUpdate(n, key, ctx.newValue, expiry, ctx.now);
           } else {
-            varTime = expireAfterCreate(key, newValue[0], expiry, now[0]);
+            varTime = expireAfterCreate(key, ctx.newValue, expiry, ctx.now);
           }
 
-          if (newValue[0] != oldValue[0]) {
-            n.setValue(newValue[0], valueReferenceQueue());
+          if (ctx.newValue != ctx.oldValue) {
+            n.setValue(ctx.newValue, valueReferenceQueue());
           }
-          n.setWeight(weight[1]);
+          n.setWeight(ctx.newWeight);
 
-          long expirationTime = isComputingAsync(newValue[0]) ? (now[0] + ASYNC_EXPIRY) : now[0];
-          exceedsTolerance[0] = exceedsWriteTimeTolerance(n, varTime, expirationTime);
-          if (((cause[0] != null) && cause[0].wasEvicted()) || exceedsTolerance[0]) {
+          long expirationTime = isComputingAsync(ctx.newValue)
+              ? ctx.now + ASYNC_EXPIRY
+              : ctx.now;
+          ctx.exceedsTolerance = exceedsWriteTimeTolerance(n, varTime, expirationTime);
+          if (((ctx.cause != null) && ctx.cause.wasEvicted()) || ctx.exceedsTolerance) {
             setWriteTime(n, expirationTime);
           }
           setAccessTime(n, expirationTime);
@@ -2991,49 +2941,49 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           if (!wasEvicted) {
             throw e;
           }
-          newValue[0] = null;
-          exception[0] = e;
-          removed[0] = n;
+          ctx.newValue = null;
+          ctx.exception = e;
+          ctx.removed = n;
           n.retire();
           return null;
         }
       }
     });
 
-    if (cause[0] != null) {
-      if (cause[0] == RemovalCause.REPLACED) {
-        requireNonNull(newValue[0]);
-        notifyOnReplace(key, oldValue[0], newValue[0]);
+    if (ctx.cause != null) {
+      if (ctx.cause == RemovalCause.REPLACED) {
+        requireNonNull(ctx.newValue);
+        notifyOnReplace(key, ctx.oldValue, ctx.newValue);
       } else {
-        if (cause[0].wasEvicted()) {
-          statsCounter().recordEviction(weight[0], cause[0]);
+        if (ctx.cause.wasEvicted()) {
+          statsCounter().recordEviction(ctx.oldWeight, ctx.cause);
         }
-        notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
+        notifyRemoval(ctx.nodeKey, ctx.oldValue, ctx.cause);
       }
     }
 
-    if (removed[0] != null) {
-      afterWrite(new RemovalTask(removed[0]));
+    if (ctx.removed != null) {
+      afterWrite(new RemovalTask(ctx.removed));
     } else if (node == null) {
       // absent and not computable
-    } else if ((oldValue[0] == null) && (cause[0] == null)) {
-      afterWrite(new AddTask(node, weight[1]));
+    } else if ((ctx.oldValue == null) && (ctx.cause == null)) {
+      afterWrite(new AddTask(node, ctx.newWeight));
     } else {
-      int weightedDifference = weight[1] - weight[0];
-      if (exceedsTolerance[0] || (weightedDifference != 0)) {
+      int weightedDifference = ctx.newWeight - ctx.oldWeight;
+      if (ctx.exceedsTolerance || (weightedDifference != 0)) {
         afterWrite(new UpdateTask(node, weightedDifference));
       } else {
-        afterRead(node, now[0], /* recordHit= */ false);
-        if ((cause[0] != null) && cause[0].wasEvicted()) {
+        afterRead(node, ctx.now, /* recordHit= */ false);
+        if ((ctx.cause != null) && ctx.cause.wasEvicted()) {
           scheduleDrainBuffers();
         }
       }
     }
 
-    if (exception[0] != null) {
-      throwException(exception[0]);
+    if (ctx.exception != null) {
+      throwException(ctx.exception);
     }
-    return newValue[0];
+    return ctx.newValue;
   }
 
   @Override
@@ -3290,6 +3240,51 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         : now + Long.MAX_VALUE;
     int weight = node.getPolicyWeight();
     return SnapshotEntry.forEntry(key, value, now, weight, now + expiresAfter, refreshableAt);
+  }
+
+  /** Mutable context for passing state between a lambda and the caller. */
+  static final class EvictContext<V> {
+    @Nullable RemovalCause cause;
+    @Nullable V value;
+    boolean resurrect;
+    boolean removed;
+  }
+
+  /** Mutable context for passing state between a lambda and the caller. */
+  static final class RemoveContext<K, V> {
+    @Nullable K oldKey;
+    @Nullable V oldValue;
+    @Nullable Node<K, V> node;
+    @Nullable RemovalCause cause;
+  }
+
+  /** Mutable context for passing state between a lambda and the caller. */
+  static final class ReplaceContext<K, V> {
+    @Nullable K nodeKey;
+    @Nullable V oldValue;
+
+    long now;
+    int oldWeight;
+    boolean exceedsTolerance;
+  }
+
+  /** Mutable context for passing state between a lambda and the caller. */
+  static final class ComputeContext<K, V> {
+    @Nullable K nodeKey;
+    @Nullable V oldValue;
+    @Nullable V newValue;
+    @Nullable Node<K, V> removed;
+    @Nullable RemovalCause cause;
+    @Nullable Throwable exception;
+
+    long now;
+    int oldWeight;
+    int newWeight;
+    boolean exceedsTolerance;
+
+    ComputeContext(long now) {
+      this.now = now;
+    }
   }
 
   /** A function that produces an unmodifiable map up to the limit in stream order. */
