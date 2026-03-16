@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.copy;
 
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaDeepCopyStrategies;
+import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaImmutableClasses;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import java.io.UncheckedIOException;
@@ -89,6 +91,32 @@ final class JavaSerializationCopierTest {
   void deserializable_badData(JavaSerializationCopier copier) {
     assertThrows(CacheException.class, () ->
         copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader()));
+  }
+
+  @Test
+  void deserializable_rejected() {
+    ObjectInputFilter rejectAll = info -> ObjectInputFilter.Status.REJECTED;
+    var copier = new JavaSerializationCopier(
+        javaImmutableClasses(), javaDeepCopyStrategies(), rejectAll);
+    assertThrows(CacheException.class, () ->
+        copier.roundtrip(100, Thread.currentThread().getContextClassLoader()));
+  }
+
+  @Test
+  void deserializable_allowed() {
+    ObjectInputFilter allowJavaLang = info -> {
+      var clazz = info.serialClass();
+      if (clazz == null) {
+        return ObjectInputFilter.Status.ALLOWED;
+      }
+      return clazz.getName().startsWith("java.lang.")
+          ? ObjectInputFilter.Status.ALLOWED
+          : ObjectInputFilter.Status.REJECTED;
+    };
+    var copier = new JavaSerializationCopier(
+        javaImmutableClasses(), javaDeepCopyStrategies(), allowJavaLang);
+    assertThat(copier.roundtrip(100, Thread.currentThread().getContextClassLoader()))
+        .isEqualTo(100);
   }
 
   @Test

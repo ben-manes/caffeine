@@ -5,6 +5,7 @@ set -eux
     ecj \
     assemble \
     pmd -Ppmd \
+    revapi -Prevapi \
     spotbugs -Pspotbugs \
     forbiddenApis -PforbiddenApis \
     --warning-mode all --continue \

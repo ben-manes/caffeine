@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
@@ -32,28 +33,39 @@ import java.util.function.Function;
 import javax.cache.CacheException;
 
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A strategy that uses Java serialization if a fast path approach is not applicable.
  * <p>
  * Beware that Java serialization is slow, can be insecure, and is provided due to being required
  * by JSR-107. In practice, it is recommended that a higher performance alternative is used, which
- * is provided by numerous external libraries. If serialization must be used then consider enabling
+ * is provided by numerous external libraries. If serialization must be used then consider supplying
+ * an {@link ObjectInputFilter} or enabling
  * <a href="http://docs.oracle.com/en/java/javase/25/core/serialization-filtering1.html">
- * Serialization Filtering</a>.
+ * Serialization Filtering</a> to restrict the classes that can be deserialized.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NullMarked
 public class JavaSerializationCopier extends AbstractCopier<byte[]> {
+  private final @Nullable ObjectInputFilter objectInputFilter;
 
   public JavaSerializationCopier() {
-    super();
+    this(javaImmutableClasses(), javaDeepCopyStrategies());
   }
 
   public JavaSerializationCopier(Set<Class<?>> immutableClasses,
       Map<Class<?>, Function<Object, Object>> deepCopyStrategies) {
     super(immutableClasses, deepCopyStrategies);
+    this.objectInputFilter = null;
+  }
+
+  public JavaSerializationCopier(Set<Class<?>> immutableClasses,
+      Map<Class<?>, Function<Object, Object>> deepCopyStrategies,
+      ObjectInputFilter objectInputFilter) {
+    super(immutableClasses, deepCopyStrategies);
+    this.objectInputFilter = objectInputFilter;
   }
 
   @Override
@@ -83,7 +95,11 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
   // @VisibleForTesting
   ObjectInputStream newInputStream(
       InputStream in, ClassLoader classLoader) throws IOException {
-    return new ClassLoaderAwareObjectInputStream(in, classLoader);
+    var stream = new ClassLoaderAwareObjectInputStream(in, classLoader);
+    if (objectInputFilter != null) {
+      stream.setObjectInputFilter(objectInputFilter);
+    }
+    return stream;
   }
 
   /** An {@linkplain ObjectInputStream} that instantiates using the supplied classloader. */

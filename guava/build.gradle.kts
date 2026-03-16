@@ -31,6 +31,7 @@ testing.suites {
     dependencies {
       implementation(libs.truth)
       implementation(libs.guava.testlib)
+      implementation(libs.commons.lang3)
       implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.vintage)
