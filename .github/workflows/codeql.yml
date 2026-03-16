@@ -6,9 +6,9 @@ concurrency:
 
 on:
   push:
-    branches: [master]
+    branches: [master, v3.dev]
   pull_request:
-    branches: [master]
+    branches: [master, v3.dev]
   schedule:
     - cron: '0 0 * * 4'
   workflow_dispatch: {}

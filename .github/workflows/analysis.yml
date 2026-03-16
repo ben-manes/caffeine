@@ -77,6 +77,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read # Needed for uploading security scan results
+      security-events: write # Needed for uploading security scan results
     env:
       JAVA_VERSION: 25
     steps:
@@ -85,7 +87,9 @@ jobs:
         with:
           disable-sudo-and-containers: true
           egress-policy: block
-          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+          allowed-endpoints: >
+            ${{ env.ALLOWED_ENDPOINTS }}
+            uploads.github.com:443
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -103,6 +107,25 @@ jobs:
           retention-days: 1
           name: pmd-reports
           path: '**/build/reports/pmd/*.html'
+      - name: Collect and merge SARIF
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p pmd-sarif
+          find . -path '*/build/reports/pmd/*.json' -exec cp {} pmd-sarif/ \;
+          if ls pmd-sarif/*.json 1>/dev/null 2>&1; then
+            jq -s '{"$schema": .[0]."$schema", version: .[0].version,
+              runs: [{tool: .[0].runs[0].tool,
+                results: [.[].runs[0].results[]?]}]}' \
+              pmd-sarif/*.json > pmd-combined.sarif
+          fi
+      - name: Upload result to GitHub Code Scanning
+        if: always() && hashFiles('pmd-combined.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4.33.0
+        with:
+          sarif_file: pmd-combined.sarif
+          category: pmd
 
   revapi:
     name: Revapi
@@ -134,6 +157,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read # Needed for uploading security scan results
+      security-events: write # Needed for uploading security scan results
     env:
       JAVA_VERSION: 25
     steps:
@@ -142,7 +167,9 @@ jobs:
         with:
           disable-sudo-and-containers: true
           egress-policy: block
-          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
+          allowed-endpoints: >
+            ${{ env.ALLOWED_ENDPOINTS }}
+            uploads.github.com:443
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -160,3 +187,22 @@ jobs:
           retention-days: 1
           name: spotbugs-reports
           path: '**/build/reports/spotbugs/*.html'
+      - name: Collect and merge SARIF
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p spotbugs-sarif
+          find . -path '*/build/reports/spotbugs/*.sarif' -exec cp {} spotbugs-sarif/ \;
+          if ls spotbugs-sarif/*.sarif 1>/dev/null 2>&1; then
+            jq -s '{"$schema": .[0]."$schema", version: .[0].version,
+              runs: [{tool: .[0].runs[0].tool,
+                results: [.[].runs[0].results[]?]}]}' \
+              spotbugs-sarif/*.sarif > spotbugs-combined.sarif
+          fi
+      - name: Upload result to GitHub Code Scanning
+        if: always() && hashFiles('spotbugs-combined.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4.33.0
+        with:
+          sarif_file: spotbugs-combined.sarif
+          category: spotbugs

@@ -43,6 +43,9 @@ tasks.withType<SpotBugsTask>().configureEach {
   reports.create("html") {
     required = true
   }
+  reports.create("sarif") {
+    required = true
+  }
   launcher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor
     languageVersion = javaRuntimeVersion()
