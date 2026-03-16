@@ -2504,6 +2504,41 @@ final class BoundedLocalCacheTest {
     assertThat(accessTime).isAtMost(now + TimeUnit.MINUTES.toNanos(1));
   }
 
+  @Test
+  void compute_expiredEntry_evictionWeightRecorded() {
+    var ticker = new FakeTicker();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .maximumWeight(100)
+        .weigher((Int k, Int v) -> v.intValue())
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .recordStats()
+        .build();
+
+    // Insert entries with known weights
+    cache.put(Int.valueOf(1), Int.valueOf(3));
+    cache.put(Int.valueOf(2), Int.valueOf(7));
+
+    // Expire all entries
+    ticker.advance(Duration.ofMinutes(2));
+
+    // compute() has no fast path for expired entries, so it enters remap where the expired entry
+    // is evicted. The remapping function sees null (expired) and returns null, triggering the
+    // eviction recording. Previously, ctx.oldWeight was not set before the eviction check, so
+    // recordEviction logged weight 0 instead of the actual entry weight.
+    assertThat(cache.asMap().compute(Int.valueOf(1), (k, v) -> {
+      assertThat(v).isNull();
+      return null;
+    })).isNull();
+    assertThat(cache.asMap().compute(Int.valueOf(2), (k, v) -> {
+      assertThat(v).isNull();
+      return null;
+    })).isNull();
+
+    assertThat(cache.stats().evictionWeight()).isEqualTo(10);
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   void remove_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {

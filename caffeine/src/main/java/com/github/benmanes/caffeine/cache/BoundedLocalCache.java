@@ -2879,6 +2879,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireIsAlive(key, n);
         ctx.nodeKey = n.getKey();
         ctx.oldValue = n.getValue();
+        ctx.oldWeight = n.getWeight();
         if ((ctx.nodeKey == null) || (ctx.oldValue == null)) {
           ctx.cause = RemovalCause.COLLECTED;
         } else if (hasExpired(n, expirationTicker().read())) {
@@ -2887,6 +2888,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (ctx.cause != null) {
           notifyEviction(ctx.nodeKey, ctx.oldValue, ctx.cause);
           if (!computeIfAbsent) {
+            discardRefresh(kr);
             ctx.removed = n;
             n.retire();
             return null;
@@ -2901,15 +2903,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           if (ctx.newValue == null) {
             if (ctx.cause == null) {
               ctx.cause = RemovalCause.EXPLICIT;
-              discardRefresh(kr);
             }
+            discardRefresh(kr);
             ctx.removed = n;
             n.retire();
             return null;
           }
 
           long varTime;
-          ctx.oldWeight = n.getWeight();
           ctx.newWeight = weigher.weigh(key, ctx.newValue);
           ctx.now = expirationTicker().read();
           if (ctx.cause == null) {
@@ -2942,6 +2943,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             throw e;
           }
           ctx.newValue = null;
+          discardRefresh(kr);
           ctx.exception = e;
           ctx.removed = n;
           n.retire();
