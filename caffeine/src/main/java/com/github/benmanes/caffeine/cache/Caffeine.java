@@ -918,8 +918,9 @@ public final class Caffeine<K, V> {
    * {@link ClassCastException} being thrown by a cache operation at some <i>undefined</i> point in
    * the future.
    * <p>
-   * <b>Warning:</b> any exception thrown by {@code evictionListener} will <i>not</i> be propagated
-   * to the {@code Cache} user, only logged via a {@link Logger}.
+   * <b>Warning:</b> The {@code evictionListener} <b>must not</b> attempt to update any other
+   * mappings of this cache. In addition, any exception thrown will <i>not</i> be propagated to the
+   * {@code Cache} user, only logged via a {@link Logger}.
    * <p>
    * This feature cannot be used in conjunction when {@link #weakKeys()} is combined with
    * {@link #buildAsync}.

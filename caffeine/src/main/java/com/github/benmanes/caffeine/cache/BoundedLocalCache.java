@@ -1142,7 +1142,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
-    int requestCount = hitsInSample() + missesInSample();
+    long requestCount = (long) hitsInSample() + missesInSample();
     if (requestCount < frequencySketch().sampleSize) {
       return;
     }

@@ -33,8 +33,8 @@ configurations.configureEach {
   resolutionStrategy.eachDependency {
     if (java.toolchain.languageVersion.get().asInt() < 17) {
       when (requested.group) {
-        in junitJupiterGroups -> useVersion("5.14.2")
-        "org.junit.platform" -> useVersion("1.14.2")
+        in junitJupiterGroups -> useVersion("5.14.3")
+        "org.junit.platform" -> useVersion("1.14.3")
       }
     }
   }

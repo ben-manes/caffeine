@@ -2189,6 +2189,34 @@ final class BoundedLocalCacheTest {
     assertThat(cache.windowMaximum()).isLessThan(windowMaximum);
   }
 
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
+  void adapt_overflowingSampleCount(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    prepareForAdaption(cache, context, /* recencyBias= */ false);
+
+    // Set hits and misses so their int sum overflows, wrapping to negative. The long sum
+    // still exceeds sampleSize, so the hill climber should trigger an adjustment.
+    int hits = (Integer.MAX_VALUE / 2) + 1;
+    int misses = (Integer.MAX_VALUE / 2) + 1;
+    assertThat((long) hits + misses).isGreaterThan(Integer.MAX_VALUE);
+    assertThat(hits + misses).isLessThan(0); // int overflow wraps negative
+
+    cache.setPreviousSampleHitRate(0.80);
+    cache.setHitsInSample(hits);
+    cache.setMissesInSample(misses);
+
+    long windowMaximum = cache.windowMaximum();
+    long protectedMaximum = cache.mainProtectedMaximum();
+    cache.climb();
+
+    // The adjustment should have been made despite the overflowing int sum
+    assertThat(cache.windowMaximum()).isNotEqualTo(windowMaximum);
+    assertThat(cache.mainProtectedMaximum()).isNotEqualTo(protectedMaximum);
+    assertThat(cache.hitsInSample()).isEqualTo(0);
+    assertThat(cache.missesInSample()).isEqualTo(0);
+  }
+
   private static void prepareForAdaption(BoundedLocalCache<Int, Int> cache,
       CacheContext context, boolean recencyBias) {
     cache.setStepSize((recencyBias ? 1 : -1) * Math.abs(cache.stepSize()));

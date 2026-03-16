@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
@@ -62,7 +61,8 @@ public interface LoadingCache<K, V extends @Nullable Object> extends Cache<K, V>
    * @throws NullPointerException if the specified key is null
    * @throws IllegalStateException if the computation detectably attempts a recursive update to this
    *         cache that would otherwise never complete
-   * @throws CompletionException if a checked exception was thrown while loading the value
+   * @throws java.util.concurrent.CompletionException if a checked exception was thrown while
+   *         loading the value
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping
    *         is left unestablished
    */
@@ -88,7 +88,8 @@ public interface LoadingCache<K, V extends @Nullable Object> extends Cache<K, V>
    * @param keys the keys whose associated values are to be returned
    * @return an unmodifiable mapping of keys to values for the specified keys in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element
-   * @throws CompletionException if a checked exception was thrown while loading the value
+   * @throws java.util.concurrent.CompletionException if a checked exception was thrown while
+   *         loading the value
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
    *         {@link CacheLoader#loadAll} returns {@code null}, or returns a map containing null keys
    *         or values. In all cases, the mapping is left unestablished.
