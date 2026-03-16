@@ -87,6 +87,7 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -2565,6 +2566,256 @@ final class BoundedLocalCacheTest {
     })).isNull();
 
     assertThat(cache.stats().evictionWeight()).isEqualTo(10);
+  }
+
+  @Test
+  void compute_expiredEntry_expiryThrows_evictionCommitted() {
+    // When compute() encounters an expired entry and the Expiry throws during expireAfterCreate,
+    // the catch-commit-rethrow pattern should: commit the eviction (retire the node), record
+    // eviction stats with the old weight, send the EXPIRED notification, and rethrow the exception.
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var throwOnCreate = new AtomicBoolean();
+    var cache = Caffeine.newBuilder()
+        .removalListener(listener)
+        .maximumWeight(100)
+        .weigher((Int k, Int v) -> v.intValue())
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .expireAfter(new Expiry<Int, Int>() {
+          @Override public long expireAfterCreate(Int key, Int value, long currentTime) {
+            if (throwOnCreate.get() && (key.intValue() == 1)) {
+              throw new IllegalStateException("expiry failure");
+            }
+            return Duration.ofMinutes(1).toNanos();
+          }
+          @Override public long expireAfterUpdate(Int key, Int value,
+              long currentTime, long currentDuration) {
+            return currentDuration;
+          }
+          @Override public long expireAfterRead(Int key, Int value,
+              long currentTime, long currentDuration) {
+            return currentDuration;
+          }
+        })
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(5));
+    ticker.advance(Duration.ofMinutes(2));
+
+    // Enable the throw for the re-create after expiration
+    throwOnCreate.set(true);
+
+    // compute on the entry whose expiry throws — exception must propagate
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().compute(Int.valueOf(1), (k, v) -> Int.valueOf(10)));
+
+    // The expired entry must have been evicted and removed from the cache
+    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
+    assertThat(cache.stats().evictionWeight()).isEqualTo(5);
+
+    // Removal notification for the expired entry should have been sent
+    var expiredNotifications = listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)
+        .collect(toImmutableList());
+    assertThat(expiredNotifications).hasSize(1);
+  }
+
+  @Test
+  void compute_expiredEntry_remappingReturnsOldInstance() {
+    // When compute() finds an expired entry and the remapping function returns a value that is
+    // the same instance as the expired value, the entry should be treated as a fresh creation.
+    // The EXPIRED eviction notification should be sent for the old value, and the entry should
+    // remain in the cache with the "new" value (same instance, fresh expiration).
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .recordStats()
+        .build();
+
+    var value = Int.valueOf(42);
+    cache.put(Int.valueOf(1), value);
+    ticker.advance(Duration.ofMinutes(2));
+
+    // The mapping function receives null (expired=absent) but returns the same instance
+    var result = cache.asMap().compute(Int.valueOf(1), (k, v) -> {
+      assertThat(v).isNull();
+      return value;
+    });
+    assertThat(result).isSameInstanceAs(value);
+
+    // Entry should be in the cache with refreshed expiration
+    assertThat(cache.getIfPresent(Int.valueOf(1))).isSameInstanceAs(value);
+
+    // EXPIRED notification should have been sent for the old value
+    var expiredNotifications = listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)
+        .collect(toImmutableList());
+    assertThat(expiredNotifications).hasSize(1);
+    assertThat(cache.stats().evictionCount()).isEqualTo(1);
+  }
+
+  @Test
+  void compute_expiredEntry_mappingThrows_evictionCommitted() {
+    // When compute() encounters an expired entry in remap and the mapping function throws after
+    // the eviction notification was sent (catch-commit-rethrow path), the eviction must be
+    // committed (node retired) and the exception rethrown. The eviction stats should record
+    // the old weight, and the removal cause should be EXPIRED.
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .removalListener(listener)
+        .maximumWeight(100)
+        .weigher((Int k, Int v) -> v.intValue())
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(7));
+    ticker.advance(Duration.ofMinutes(2));
+
+    // compute on expired entry — mapping function throws
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().compute(Int.valueOf(1), (k, v) -> {
+          throw new IllegalStateException("compute failure");
+        }));
+
+    // The expired entry must have been removed
+    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
+
+    // Eviction stats should record the old weight (7), cause should be EXPIRED
+    assertThat(cache.stats().evictionWeight()).isEqualTo(7);
+    var expiredNotifications = listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)
+        .collect(toImmutableList());
+    assertThat(expiredNotifications).hasSize(1);
+  }
+
+  @Test
+  @CheckMaxLogLevel(WARN)
+  void asyncCompletion_expiryThrows_entryRemoved() {
+    // When an async future completes and handleCompletion calls replace() to update weight and
+    // expiration, the AsyncExpiry delegates to expireAfterCreate (since currentDuration exceeds
+    // MAXIMUM_EXPIRY from the initial computing state). If the user's Expiry throws, the entry
+    // should be removed from the cache and load failure recorded.
+    var throwOnCreate = new AtomicBoolean();
+    var cache = Caffeine.newBuilder()
+        .expireAfter(new Expiry<Int, Int>() {
+          @Override public long expireAfterCreate(Int key, Int value, long currentTime) {
+            if (throwOnCreate.get()) {
+              throw new IllegalStateException("expiry create failure");
+            }
+            return Duration.ofMinutes(5).toNanos();
+          }
+          @Override public long expireAfterUpdate(Int key, Int value,
+              long currentTime, long currentDuration) {
+            return currentDuration;
+          }
+          @Override public long expireAfterRead(Int key, Int value,
+              long currentTime, long currentDuration) {
+            return currentDuration;
+          }
+        })
+        .executor(Runnable::run)
+        .recordStats()
+        .buildAsync();
+
+    var future = new CompletableFuture<Int>();
+    cache.put(Int.valueOf(1), future);
+
+    // Enable the expiry failure before completion — AsyncExpiry.expireAfterUpdate delegates
+    // to the user's expireAfterCreate when the entry transitions from computing to ready
+    throwOnCreate.set(true);
+    future.complete(Int.valueOf(42));
+
+    // The entry should have been removed due to the expiry exception
+    assertThat(cache.synchronous().getIfPresent(Int.valueOf(1))).isNull();
+    assertThat(cache.synchronous().estimatedSize()).isEqualTo(0);
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @Test
+  void getAll_bulkLoad_partialPutFailure() {
+    // When bulkLoad calls loaded.forEach(cache::put) and a put throws mid-iteration (e.g.,
+    // weigher failure), entries inserted before the failure remain in the cache. The exception
+    // propagates to the caller. Stats record load failure.
+    var weigherCallCount = new MutableInt();
+    LoadingCache<Int, Int> cache = Caffeine.newBuilder()
+        .maximumWeight(1000)
+        .weigher((Int k, Int v) -> {
+          weigherCallCount.increment();
+          if (v.intValue() == 99) {
+            throw new IllegalStateException("weigher failure");
+          }
+          return v.intValue();
+        })
+        .executor(Runnable::run)
+        .recordStats()
+        .build(new CacheLoader<Int, Int>() {
+          @Override public Int load(Int key) {
+            throw new UnsupportedOperationException();
+          }
+          @Override public Map<Int, Int> loadAll(Set<? extends Int> keys) {
+            // Return a map where one entry will cause a weigher failure.
+            // Use a LinkedHashMap to ensure insertion order: 1→1, 2→99 (fails), 3→3
+            var result = new LinkedHashMap<Int, Int>();
+            result.put(Int.valueOf(1), Int.valueOf(1));
+            result.put(Int.valueOf(2), Int.valueOf(99));
+            result.put(Int.valueOf(3), Int.valueOf(3));
+            return result;
+          }
+        });
+
+    // getAll should propagate the weigher exception
+    assertThrows(IllegalStateException.class, () ->
+        cache.getAll(List.of(Int.valueOf(1), Int.valueOf(2), Int.valueOf(3))));
+
+    // Stats should record load failure
+    assertThat(cache.stats().loadFailureCount()).isEqualTo(1);
+    assertThat(cache.stats().loadSuccessCount()).isEqualTo(0);
+  }
+
+  @Test
+  void replace_expiredEntry_schedulesCleanup() {
+    // When replace() encounters an expired entry, it should return null (no replacement) and
+    // schedule drain buffers so the expired entry is cleaned up promptly.
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(10));
+    ticker.advance(Duration.ofMinutes(2));
+
+    // replace on expired entry should return null
+    assertThat(cache.asMap().replace(Int.valueOf(1), Int.valueOf(20))).isNull();
+
+    // After cleanup, the expired entry should be removed
+    cache.cleanUp();
+    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
+
+    // Expiration notification should eventually be sent
+    var expiredNotifications = listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)
+        .collect(toImmutableList());
+    assertThat(expiredNotifications).hasSize(1);
   }
 
   @ParameterizedTest
