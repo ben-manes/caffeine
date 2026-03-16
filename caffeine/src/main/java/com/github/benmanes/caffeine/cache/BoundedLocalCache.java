@@ -2680,8 +2680,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
         ctx.now = expirationTicker().read();
         ctx.newWeight = weigher.weigh(key, ctx.newValue);
-        var created = nodeFactory.newNode(key, keyReferenceQueue(),
-            ctx.newValue, valueReferenceQueue(), ctx.newWeight, ctx.now);
+        var created = nodeFactory.newNode(k, ctx.newValue,
+            valueReferenceQueue(), ctx.newWeight, ctx.now);
         long expirationTime = isComputingAsync(ctx.newValue)
             ? ctx.now + ASYNC_EXPIRY
             : ctx.now;
