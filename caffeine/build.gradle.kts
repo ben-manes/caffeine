@@ -410,6 +410,7 @@ testing.suites {
         useParallelJUnitJupiter()
         val relativeDir = projectDir
         inputs.files(jar.map { it.outputs.files })
+          .withPathSensitivity(PathSensitivity.RELATIVE)
         val jarPath = jar.flatMap { it.archiveFile }.relativePathFrom(relativeDir)
         doFirst { systemProperty("caffeine.osgi.jar", jarPath.get()) }
       }
@@ -421,6 +422,7 @@ tasks.named<Jar>("jar").configure {
   from(sourceSets.named("main").map { it.output })
   from(sourceSets.named("codeGen").map { it.output })
   inputs.files(compileCodeGenJava.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine",
     "Import-Package" to "",
@@ -432,7 +434,9 @@ tasks.named<Jar>("jar").configure {
 
 tasks.named<Jar>("sourcesJar").configure {
   inputs.files(generateLocalCaches.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   inputs.files(generateNodes.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   from(sourceSets.named("codeGen").map { it.allSource })
 }
 
@@ -493,6 +497,7 @@ tasks.register<Stress>("stress") {
   description = "Executes a stress test"
   mainClass = "com.github.benmanes.caffeine.cache.Stresser"
   inputs.files(tasks.named<JavaCompile>("compileTestJava").map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   classpath(
     sourceSets.named("codeGen").map { it.runtimeClasspath },
     sourceSets.named("test").map { it.runtimeClasspath })
