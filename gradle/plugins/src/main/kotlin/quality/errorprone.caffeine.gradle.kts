@@ -48,6 +48,7 @@ val downloadCaffeine by tasks.registering {
 
 tasks.withType<JavaCompile>().configureEach {
   inputs.files(downloadCaffeine.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
 
   options.apply {
     errorprone {
