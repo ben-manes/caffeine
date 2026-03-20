@@ -190,6 +190,7 @@ tasks.named<Jar>("jar").configure {
 
 tasks.named<Javadoc>("javadoc").configure {
   inputs.files(unzipJCacheJavaDoc.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   javadocOptions {
     addBooleanOption("Xdoclint:all,-missing", true)
     linksOffline("https://static.javadoc.io/javax.cache/cache-api/${libs.versions.jcache.get()}/",
