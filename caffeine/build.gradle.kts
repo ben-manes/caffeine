@@ -99,6 +99,7 @@ configurations.configureEach {
 val compileCodeGenJava by tasks.existing(JavaCompile::class) {
   classpath = files(sourceSets.named("main").map { it.runtimeClasspath + it.output })
   inputs.files(compileJava.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
 
   options.apply {
     compilerArgs.remove("-parameters")
@@ -127,15 +128,22 @@ private fun JavaExec.codeGenerationTask(generator: String, directory: String) {
   mainClass = "com.github.benmanes.caffeine.cache.${generator}FactoryGenerator"
   val outputDir = layout.buildDirectory.dir("generated/sources/$directory")
   classpath(sourceSets.named("javaPoet").map { it.runtimeClasspath })
-  argumentProviders.add { listOf(outputDir.absolutePath().get()) }
+  argumentProviders.add(object : CommandLineArgumentProvider {
+    @get:Internal
+    val outputDirectory: Provider<Directory> = outputDir
+    override fun asArguments() = listOf(outputDirectory.get().asFile.absolutePath)
+  })
   inputs.files(compileJavaPoetJava.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   outputs.cacheIf { true }
   outputs.dir(outputDir)
 }
 
 tasks.named<JavaCompile>("compileJava").configure {
   inputs.files(tasks.named<JavaExec>("generateLocalCaches").map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   inputs.files(tasks.named<JavaExec>("generateNodes").map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   finalizedBy(compileCodeGenJava)
   options.apply {
     compilerArgs.addAll(listOf("-Xlint:-auxiliaryclass", "-Xlint:-exports"))
@@ -144,7 +152,9 @@ tasks.named<JavaCompile>("compileJava").configure {
 
 tasks.named<JavaCompile>("compileTestJava").configure {
   inputs.files(compileCodeGenJava.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   inputs.files(jar.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -400,6 +410,7 @@ testing.suites {
         useParallelJUnitJupiter()
         val relativeDir = projectDir
         inputs.files(jar.map { it.outputs.files })
+          .withPathSensitivity(PathSensitivity.RELATIVE)
         val jarPath = jar.flatMap { it.archiveFile }.relativePathFrom(relativeDir)
         doFirst { systemProperty("caffeine.osgi.jar", jarPath.get()) }
       }
@@ -411,6 +422,7 @@ tasks.named<Jar>("jar").configure {
   from(sourceSets.named("main").map { it.output })
   from(sourceSets.named("codeGen").map { it.output })
   inputs.files(compileCodeGenJava.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   bundle.bnd(mapOf(
     "Bundle-SymbolicName" to "com.github.ben-manes.caffeine",
     "Import-Package" to "",
@@ -422,7 +434,9 @@ tasks.named<Jar>("jar").configure {
 
 tasks.named<Jar>("sourcesJar").configure {
   inputs.files(generateLocalCaches.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   inputs.files(generateNodes.map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   from(sourceSets.named("codeGen").map { it.allSource })
 }
 
@@ -483,6 +497,7 @@ tasks.register<Stress>("stress") {
   description = "Executes a stress test"
   mainClass = "com.github.benmanes.caffeine.cache.Stresser"
   inputs.files(tasks.named<JavaCompile>("compileTestJava").map { it.outputs.files })
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   classpath(
     sourceSets.named("codeGen").map { it.runtimeClasspath },
     sourceSets.named("test").map { it.runtimeClasspath })

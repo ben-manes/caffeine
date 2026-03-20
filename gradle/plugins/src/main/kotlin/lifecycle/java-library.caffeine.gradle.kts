@@ -1,5 +1,6 @@
 @file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
 plugins {
   `java-library`
@@ -112,7 +113,7 @@ tasks.withType<Javadoc>().configureEach {
     use()
     noTimestamp()
     addStringOption("-link-modularity-mismatch", "info")
-    addStringOption("-snippet-path", snippetPath.asFile.absolutePath)
+    // -snippet-path is set in doFirst to avoid absolute path in cache key
     addStringOption("-release", java.toolchain.languageVersion.get().toString())
     links(
       "https://jspecify.dev/docs/api/",
@@ -125,7 +126,12 @@ tasks.withType<Javadoc>().configureEach {
       linksOffline("https://static.javadoc.io/$group/caffeine/$version/",
         relativePath(caffeine.layout.buildDirectory.dir("docs/javadoc")))
       inputs.files(caffeine.tasks.withType<Javadoc>().map { it.outputs.files })
+        .withPathSensitivity(RELATIVE)
     }
+  }
+  doFirst {
+    (options as StandardJavadocDocletOptions)
+      .addStringOption("-snippet-path", snippetPath.asFile.absolutePath)
   }
   javadocTool = javaToolchains.javadocToolFor {
     vendor = java.toolchain.vendor
