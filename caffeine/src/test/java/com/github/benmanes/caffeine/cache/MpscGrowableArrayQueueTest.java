@@ -16,10 +16,13 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueue.findVarHandle;
-import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -234,7 +237,7 @@ final class MpscGrowableArrayQueueTest {
   }
 
   @Test
-  void getNextBufferSize_invali() {
+  void getNextBufferSize_invalid() {
     var queue = makePopulated(FULL_SIZE);
     var buffer = new Integer[FULL_SIZE + 1];
     assertThrows(IllegalStateException.class, () -> queue.getNextBufferSize(buffer));
@@ -260,27 +263,22 @@ final class MpscGrowableArrayQueueTest {
   @SuppressWarnings("StatementWithEmptyBody")
   void oneProducer_oneConsumer() {
     var queue = makePopulated(0);
-    var started = new AtomicInteger();
-    var finished = new AtomicInteger();
-
-    ConcurrentTestHarness.execute(() -> {
-      started.incrementAndGet();
-      await().untilAsserted(() -> assertThat(started.get()).isEqualTo(2));
+    var latch = new CountDownLatch(2);
+    var producer = CompletableFuture.runAsync(() -> {
+      latch.countDown();
+      awaitUninterruptibly(latch);
       for (int i = 0; i < PRODUCE; i++) {
         while (!queue.offer(i)) { /* produce */ }
       }
-      finished.incrementAndGet();
-    });
-    ConcurrentTestHarness.execute(() -> {
-      started.incrementAndGet();
-      await().untilAsserted(() -> assertThat(started.get()).isEqualTo(2));
+    }, executor);
+    var consumer = CompletableFuture.runAsync(() -> {
+      latch.countDown();
+      awaitUninterruptibly(latch);
       for (int i = 0; i < PRODUCE; i++) {
         while (queue.poll() == null) { /* consume */ }
       }
-      finished.incrementAndGet();
-    });
-
-    await().untilAsserted(() -> assertThat(finished.get()).isEqualTo(2));
+    }, executor);
+    CompletableFuture.allOf(producer, consumer).join();
     assertThat(queue).isEmpty();
   }
 
@@ -302,28 +300,22 @@ final class MpscGrowableArrayQueueTest {
   @SuppressWarnings("StatementWithEmptyBody")
   void manyProducers_oneConsumer() {
     var queue = makePopulated(0);
-    var started = new AtomicInteger();
-    var finished = new AtomicInteger();
-
-    ConcurrentTestHarness.execute(() -> {
-      started.incrementAndGet();
-      await().untilAsserted(() -> assertThat(started.get()).isEqualTo(NUM_PRODUCERS + 1));
+    var latch = new CountDownLatch(NUM_PRODUCERS + 1);
+    var consumer = CompletableFuture.runAsync(() -> {
+      latch.countDown();
+      awaitUninterruptibly(latch);
       for (int i = 0; i < (NUM_PRODUCERS * PRODUCE); i++) {
         while (queue.poll() == null) { /* consume */ }
       }
-      finished.incrementAndGet();
-    });
-
+    }, executor);
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
-      started.incrementAndGet();
-      await().untilAsserted(() -> assertThat(started.get()).isEqualTo(NUM_PRODUCERS + 1));
+      latch.countDown();
+      awaitUninterruptibly(latch);
       for (int i = 0; i < PRODUCE; i++) {
         while (!queue.offer(i)) { /* produce */ }
       }
-      finished.incrementAndGet();
     });
-
-    await().untilAsserted(() -> assertThat(finished.get()).isEqualTo(NUM_PRODUCERS + 1));
+    consumer.join();
     assertThat(queue).isEmpty();
   }
 

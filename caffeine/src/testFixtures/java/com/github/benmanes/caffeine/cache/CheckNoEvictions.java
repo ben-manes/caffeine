@@ -22,6 +22,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+import org.junit.jupiter.api.extension.ExtendWith;
+
 /**
  * A test class or method with this annotation has indicated that no eviction notifications should
  * have been recorded and the {@link CacheValidationInterceptor} should verify that expectation.
@@ -29,4 +31,5 @@ import java.lang.annotation.Target;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Target({METHOD, TYPE}) @Retention(RUNTIME)
+@ExtendWith(CacheValidationInterceptor.class)
 public @interface CheckNoEvictions {}

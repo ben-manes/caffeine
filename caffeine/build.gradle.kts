@@ -74,7 +74,7 @@ dependencies {
   jmh(libs.ehcache3)
   jmh(libs.hazelcast)
   jmh(libs.jackrabbit)
-  jmh(libs.flip.tables)
+  jmh(libs.ascii.table)
   jmh(libs.expiring.map)
   jmh(libs.bundles.coherence)
   jmh(libs.java.`object`.layout)
@@ -272,14 +272,6 @@ testing.suites {
         javaLauncher.unset()
         incompatibleWithConfigurationCache()
         maxParallelForks = Runtime.getRuntime().availableProcessors()
-
-        val shardingOptions = mapOf(
-          "shardCount" to providers.gradleProperty("shardCount")
-            .map { it.toIntOrNull() }.getOrElse(1).coerceAtLeast(1),
-          "shardIndex" to providers.gradleProperty("shardIndex")
-            .map { it.toIntOrNull() }.getOrElse(0))
-        inputs.properties(shardingOptions)
-        systemProperties(shardingOptions)
       }
     }
   }

@@ -12,10 +12,10 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
-import static com.github.benmanes.caffeine.guava.compatibility.CacheTesting.checkEmpty;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.identityLoader;
+import static com.github.benmanes.caffeine.guava.CacheTesting.checkEmpty;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.identityLoader;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -32,8 +32,8 @@ import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.github.benmanes.caffeine.guava.compatibility.CacheBuilderFactory.DurationSpec;
-import com.github.benmanes.caffeine.guava.compatibility.CacheBuilderFactory.Strength;
+import com.github.benmanes.caffeine.guava.CacheBuilderFactory.DurationSpec;
+import com.github.benmanes.caffeine.guava.CacheBuilderFactory.Strength;
 import com.google.common.base.Function;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;

@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
@@ -586,28 +587,28 @@ final class AsyncAsMapTest {
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY)
   void putIfAbsent_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
-    var done = new AtomicBoolean();
     var started = new AtomicBoolean();
-    var writer = new AtomicReference<@Nullable Thread>();
+    var writing = new AtomicBoolean();
     var future = new CompletableFuture<@Nullable Int>();
+    var writer = new AtomicReference<@Nullable Thread>();
 
     cache.put(context.absentKey(), future);
-    ConcurrentTestHarness.execute(() -> {
+    var putIfAbsent = CompletableFuture.runAsync(() -> {
       writer.set(Thread.currentThread());
       started.set(true);
+      await().untilTrue(writing);
       var result = cache.synchronous().asMap()
           .putIfAbsent(context.absentKey(), context.absentValue());
       assertThat(result).isNull();
-      done.set(true);
-    });
+    }, executor);
+
+    writing.set(true);
     await().untilTrue(started);
-    var threadState = EnumSet.of(BLOCKED, WAITING);
-    await().until(() -> {
-      var thread = writer.get();
-      return (thread != null) && threadState.contains(thread.getState());
-    });
+    var thread = requireNonNull(writer.get());
+    await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
+
     future.complete(null);
-    await().untilTrue(done);
+    assertThat(putIfAbsent).succeedsWithNull();
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 

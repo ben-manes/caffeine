@@ -4,7 +4,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.net/ruleset_2_0_0.xsd">
   <description>PMD rules for Caffeine tests</description>
-  <exclude-pattern>.*/guava/compatibility/.*</exclude-pattern>
+  <exclude-pattern>.*/compatibilityTest/.*</exclude-pattern>
   <exclude-pattern>.*/eclipse/.*</exclude-pattern>
   <exclude-pattern>.*/openjdk/.*</exclude-pattern>
   <exclude-pattern>.*/jsr166/.*</exclude-pattern>

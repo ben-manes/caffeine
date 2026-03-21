@@ -15,9 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
+import static com.github.benmanes.caffeine.cache.buffer.ReadBuffer.BUFFER_SIZE;
+import static com.github.benmanes.caffeine.cache.buffer.ReadBuffer.FAILED;
+import static com.github.benmanes.caffeine.cache.buffer.ReadBuffer.FULL;
+import static com.github.benmanes.caffeine.cache.buffer.ReadBuffer.SUCCESS;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,22 +42,26 @@ final class BufferTest {
   @SuppressWarnings("ThreadPriorityCheck")
   @ParameterizedTest @MethodSource("buffers")
   void offer(ReadBuffer<Boolean> buffer) {
+    var invalid = new AtomicReference<Integer>();
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
         int added = buffer.offer(true);
-        assertThat(added).isAnyOf(ReadBuffer.SUCCESS, ReadBuffer.FAILED, ReadBuffer.FULL);
+        if ((added != SUCCESS) && (added != FULL) && (added != FAILED)) {
+          invalid.set(added);
+        }
         Thread.yield();
       }
     });
     long recorded = buffer.writes();
-    assertThat(recorded).isEqualTo(ReadBuffer.BUFFER_SIZE);
+    assertThat(invalid.get()).isNull();
+    assertThat(recorded).isEqualTo(BUFFER_SIZE);
   }
 
   @ParameterizedTest @MethodSource("buffers")
   void drain(ReadBuffer<Boolean> buffer) {
-    for (int i = 0; i < 2 * ReadBuffer.BUFFER_SIZE; i++) {
+    for (int i = 0; i < 2 * BUFFER_SIZE; i++) {
       int added = buffer.offer(true);
-      assertThat(added).isAnyOf(ReadBuffer.SUCCESS, ReadBuffer.FULL);
+      assertThat(added).isAnyOf(SUCCESS, FULL);
     }
     buffer.drain();
     long drained = buffer.reads();
@@ -66,7 +75,7 @@ final class BufferTest {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
         int result = buffer.offer(true);
-        if (result == ReadBuffer.FULL) {
+        if (result == FULL) {
           buffer.drain();
         }
         Thread.yield();

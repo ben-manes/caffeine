@@ -12,7 +12,7 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
 import com.github.benmanes.caffeine.cache.Weigher;
 

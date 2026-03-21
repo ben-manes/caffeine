@@ -27,7 +27,7 @@ dependencies {
   implementation(libs.hazelcast)
   implementation(libs.jfreechart)
   implementation(libs.fast.filter)
-  implementation(libs.flip.tables)
+  implementation(libs.ascii.table)
   implementation(libs.expiring.map)
   implementation(libs.commons.lang3)
   implementation(libs.commons.math3)

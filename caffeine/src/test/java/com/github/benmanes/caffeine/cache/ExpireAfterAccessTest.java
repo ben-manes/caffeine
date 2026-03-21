@@ -381,15 +381,15 @@ final class ExpireAfterAccessTest {
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE)
   void ageOf_async(AsyncCache<Int, Int> cache,
-      CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterWrite) {
+      CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
-    assertThat(expireAfterWrite.ageOf(context.absentKey()).orElseThrow())
+    assertThat(expireAfterAccess.ageOf(context.absentKey()).orElseThrow())
         .isAtLeast(Duration.ofNanos(-Async.ASYNC_EXPIRY));
 
     future.complete(Int.valueOf(2));
     context.ticker().advance(Duration.ofSeconds(30));
-    assertThat(expireAfterWrite.ageOf(context.absentKey()).orElseThrow())
+    assertThat(expireAfterAccess.ageOf(context.absentKey()).orElseThrow())
         .isIn(Range.closed(Duration.ofSeconds(30), Duration.ofSeconds(31)));
   }
 

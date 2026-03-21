@@ -34,10 +34,10 @@ import com.google.common.collect.Range;
  * @author guus@bloemsma.net (Guus C. Bloemsma)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CoalescingBulkLoaderTest {
+final class CoalescingBulkLoaderTest {
 
   @Test
-  public void maxTime() {
+  void maxTime() {
     var maxTime = Duration.ofMillis(50);
     var end = new AtomicReference<Long>();
     var loader = new CoalescingBulkLoader.Builder<Integer, Integer>()
@@ -59,7 +59,7 @@ public final class CoalescingBulkLoaderTest {
   }
 
   @Test
-  public void maxSize() {
+  void maxSize() {
     int maxSize = 5;
     int requests = 5 * maxSize;
     var maxTime = Duration.ofSeconds(1);

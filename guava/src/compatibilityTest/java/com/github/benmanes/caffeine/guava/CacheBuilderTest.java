@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.constantLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.identityLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.countingRemovalListener;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.nullRemovalListener;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.queuingRemovalListener;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingWeighers.constantWeigher;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.constantLoader;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.identityLoader;
+import static com.github.benmanes.caffeine.guava.TestingRemovalListeners.countingRemovalListener;
+import static com.github.benmanes.caffeine.guava.TestingRemovalListeners.nullRemovalListener;
+import static com.github.benmanes.caffeine.guava.TestingRemovalListeners.queuingRemovalListener;
+import static com.github.benmanes.caffeine.guava.TestingWeighers.constantWeigher;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -46,8 +46,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.CountingRemovalListener;
-import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.QueuingRemovalListener;
+import com.github.benmanes.caffeine.guava.TestingRemovalListeners.CountingRemovalListener;
+import com.github.benmanes.caffeine.guava.TestingRemovalListeners.QueuingRemovalListener;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
 import com.google.common.cache.CacheLoader;

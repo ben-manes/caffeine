@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.freva.asciitable.AsciiTable.FANCY_ASCII;
+import static com.github.freva.asciitable.HorizontalAlign.LEFT;
+import static com.github.freva.asciitable.HorizontalAlign.RIGHT;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.math.RoundingMode.HALF_EVEN;
 import static java.util.Locale.US;
@@ -28,6 +31,8 @@ import java.util.stream.IntStream;
 import org.github.jamm.MemoryMeter;
 import org.openjdk.jol.info.GraphLayout;
 
+import com.github.freva.asciitable.AsciiTable;
+import com.github.freva.asciitable.Column;
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
 import com.google.common.cache.CacheBuilder;
@@ -36,7 +41,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.LongMath;
 import com.google.errorprone.annotations.Var;
-import com.jakewharton.fliptables.FlipTable;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -57,13 +61,13 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
     "JavadocDeclaration", "PMD.MethodNamingConventions", "SystemOut"})
 public final class MemoryBenchmark {
   // The number of entries added to minimize skew due to non-entry factors
-  static final int FUZZY_SIZE = 25_000;
+  private static final int FUZZY_SIZE = 25_000;
   // The maximum size, which is larger than the fuzzy factor due to Guava's early eviction
-  static final int MAXIMUM_SIZE = 2 * FUZZY_SIZE;
+  private static final int MAXIMUM_SIZE = 2 * FUZZY_SIZE;
   // The pre-computed entries to store into the cache when computing the per-entry overhead
-  static final ImmutableMap<Integer, Integer> workingSet = IntStream.range(0, FUZZY_SIZE)
+  private static final ImmutableMap<Integer, Integer> workingSet = IntStream.range(0, FUZZY_SIZE)
       .boxed().collect(toImmutableMap(identity(), i -> -i));
-  static final ImmutableList<String> HEADER = ImmutableList.of(
+  private static final ImmutableList<String> HEADERS = ImmutableList.of(
       "Cache",
       "Baseline (MemoryMeter)", "Per Entry (MemoryMeter)",
       "Baseline (ObjectLayout)", "Per Entry (ObjectLayout)");
@@ -210,7 +214,12 @@ public final class MemoryBenchmark {
   @SuppressFBWarnings("FORMAT_STRING_MANIPULATION")
   private void compare(String label,
       Supplier<Map<Integer, Integer>> caffeine, Supplier<Map<Integer, Integer>> guava) {
-    String result = FlipTable.of(HEADER.toArray(String[]::new), new String[][] {
+    var columns = HEADERS.stream()
+        .map(header -> new Column()
+            .header(header)
+            .dataAlign(header.equals("Cache") ? LEFT : RIGHT))
+        .toArray(Column[]::new);
+    String result = AsciiTable.getTable(FANCY_ASCII, columns, new String[][] {
       formatRow("Caffeine", evaluate(caffeine, meter::measureDeep), evaluate(caffeine, layout)),
       formatRow("Guava", evaluate(guava, meter::measureDeep), evaluate(guava, layout))
     });

@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import javax.cache.Cache;
@@ -54,17 +53,12 @@ final class JCacheEvictionListenerTest {
     statistics.enable(true);
 
     listener.onRemoval(1, new Expirable<>(2, 3), cause);
-    if (cause.wasEvicted()) {
-      if (cause == RemovalCause.EXPIRED) {
-        verify(entryListener).onExpired(any());
-      } else {
-        verify(entryListener).onRemoved(any());
-      }
-      assertThat(statistics.getCacheEvictions()).isEqualTo(1L);
+    if (cause == RemovalCause.EXPIRED) {
+      verify(entryListener).onExpired(any());
     } else {
-      verify(entryListener, never()).onRemoved(any());
-      assertThat(statistics.getCacheEvictions()).isEqualTo(0L);
+      verify(entryListener).onRemoved(any());
     }
+    assertThat(statistics.getCacheEvictions()).isEqualTo(1L);
   }
 
   interface EvictionListener extends CacheEntryRemovedListener<Integer, Integer>,

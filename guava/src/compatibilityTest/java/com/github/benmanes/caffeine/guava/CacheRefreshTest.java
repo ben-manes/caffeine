@@ -12,14 +12,13 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.incrementingLoader;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.incrementingLoader;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.IncrementingLoader;
+import com.github.benmanes.caffeine.guava.TestingCacheLoaders.IncrementingLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.MoreExecutors;

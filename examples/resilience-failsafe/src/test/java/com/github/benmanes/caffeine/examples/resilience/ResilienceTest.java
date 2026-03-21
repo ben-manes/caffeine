@@ -39,7 +39,7 @@ import dev.failsafe.TimeoutExceededException;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ResilienceTest {
+final class ResilienceTest {
 
   /*
    * Synchronous:
@@ -50,7 +50,7 @@ public final class ResilienceTest {
    */
 
   @Test
-  public void retry_sync() {
+  void retry_sync() {
     // Given the resilience policy
     Cache<Integer, String> cache = Caffeine.newBuilder().build();
     var retryPolicy = RetryPolicy.builder()
@@ -77,7 +77,7 @@ public final class ResilienceTest {
   }
 
   @Test
-  public void fallback_sync() {
+  void fallback_sync() {
     // Given the resilience policy
     Cache<Integer, String> cache = Caffeine.newBuilder().build();
     var retryPolicy = RetryPolicy.<String>builder()
@@ -97,7 +97,7 @@ public final class ResilienceTest {
   }
 
   @Test
-  public void timeout_sync() {
+  void timeout_sync() {
     // Given the resilience policy
     Cache<Integer, String> cache = Caffeine.newBuilder().build();
     var retryPolicy = RetryPolicy.builder()
@@ -133,7 +133,7 @@ public final class ResilienceTest {
    */
 
   @Test
-  public void retry_async() {
+  void retry_async() {
     // Given the resilience policy
     AsyncCache<Integer, String> cache = Caffeine.newBuilder().buildAsync();
     var result = cache.get(1, (key, executor) -> {
@@ -160,7 +160,7 @@ public final class ResilienceTest {
   }
 
   @Test
-  public void fallback_async() {
+  void fallback_async() {
     AsyncCache<Integer, String> cache = Caffeine.newBuilder().buildAsync();
     var result = cache.get(1, (key, executor) -> {
       // Given the resilience policy
@@ -181,7 +181,7 @@ public final class ResilienceTest {
   }
 
   @Test
-  public void timeout_async() {
+  void timeout_async() {
     // Given the resilience policy
     AsyncCache<Integer, String> cache = Caffeine.newBuilder().buildAsync();
     var result = cache.get(1, (key, executor) ->

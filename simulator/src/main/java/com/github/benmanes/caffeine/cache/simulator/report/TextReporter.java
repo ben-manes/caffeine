@@ -47,10 +47,12 @@ import com.typesafe.config.Config;
 public abstract class TextReporter implements Reporter {
   private final Set<Characteristic> characteristics;
   private final BasicSettings settings;
+  private final Metrics metrics;
 
-  protected TextReporter(Config config, Set<Characteristic> characteristics) {
+  protected TextReporter(Config config, Set<Characteristic> characteristics, Metrics metrics) {
     this.characteristics = requireNonNull(characteristics);
     this.settings = new BasicSettings(config);
+    this.metrics = requireNonNull(metrics);
   }
 
   @Override
@@ -102,7 +104,9 @@ public abstract class TextReporter implements Reporter {
   }
 
   /** Returns the configuration for how to work with metrics. */
-  protected abstract Metrics metrics();
+  protected Metrics metrics() {
+    return metrics;
+  }
 
   /** Writes an aggregated report. */
   protected abstract void write(Writer writer,

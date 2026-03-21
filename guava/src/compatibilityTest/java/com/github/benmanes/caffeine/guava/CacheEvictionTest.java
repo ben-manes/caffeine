@@ -12,13 +12,13 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.identityLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.countingRemovalListener;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingWeighers.constantWeigher;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingWeighers.intKeyWeigher;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingWeighers.intValueWeigher;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.identityLoader;
+import static com.github.benmanes.caffeine.guava.TestingRemovalListeners.countingRemovalListener;
+import static com.github.benmanes.caffeine.guava.TestingWeighers.constantWeigher;
+import static com.github.benmanes.caffeine.guava.TestingWeighers.intKeyWeigher;
+import static com.github.benmanes.caffeine.guava.TestingWeighers.intValueWeigher;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 
@@ -28,8 +28,8 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.IdentityLoader;
-import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.CountingRemovalListener;
+import com.github.benmanes.caffeine.guava.TestingCacheLoaders.IdentityLoader;
+import com.github.benmanes.caffeine.guava.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.MoreExecutors;
 

@@ -31,13 +31,13 @@ import com.google.common.testing.FakeTicker;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class IndexedCacheTest {
+final class IndexedCacheTest {
   private final Set<User> users = Set.of(
       new User(1, "john.doe", "+1 (555) 555-5555"),
       new User(2, "jane.doe", "+1 (777) 777-7777"));
 
   @Test
-  public void basicUsage() {
+  void basicUsage() {
     var ticker = new FakeTicker();
     var cache = new IndexedCache.Builder<UserKey, User>()
         .addSecondaryKey(user -> new UserByLogin(user.login()))

@@ -12,7 +12,7 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
 import java.util.Collections;
 import java.util.List;

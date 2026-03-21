@@ -35,7 +35,7 @@ import com.google.common.testing.FakeTicker;
 final class RefreshAfterWriteFrayTest {
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void refresh_completion_concurrentPut() throws InterruptedException {
+  void completion_concurrentPut() throws InterruptedException {
     var ticker = new FakeTicker();
     LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
         .refreshAfterWrite(Duration.ofMinutes(1))
@@ -62,7 +62,7 @@ final class RefreshAfterWriteFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void refresh_completion_concurrentEviction() throws InterruptedException {
+  void completion_concurrentEviction() throws InterruptedException {
     var ticker = new FakeTicker();
     LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
         .refreshAfterWrite(Duration.ofMinutes(1))
@@ -124,7 +124,7 @@ final class RefreshAfterWriteFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void refresh_exception_concurrentGet() throws InterruptedException {
+  void exception_concurrentGet() throws InterruptedException {
     var ticker = new FakeTicker();
     var callCount = new AtomicInteger();
     LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
@@ -169,7 +169,7 @@ final class RefreshAfterWriteFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void refresh_concurrentInvalidate() throws InterruptedException {
+  void concurrentInvalidate() throws InterruptedException {
     var ticker = new FakeTicker();
     LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
         .refreshAfterWrite(Duration.ofMinutes(1))
@@ -193,7 +193,7 @@ final class RefreshAfterWriteFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void refresh_concurrentCompute() throws InterruptedException {
+  void concurrentCompute() throws InterruptedException {
     var ticker = new FakeTicker();
     LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
         .refreshAfterWrite(Duration.ofMinutes(1))

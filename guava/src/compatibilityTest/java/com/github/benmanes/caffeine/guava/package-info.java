@@ -1,6 +1,6 @@
 @NullMarked
 @CheckReturnValue
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
 import org.jspecify.annotations.NullMarked;
 

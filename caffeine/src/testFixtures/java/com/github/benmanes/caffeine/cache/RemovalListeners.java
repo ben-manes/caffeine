@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jspecify.annotations.Nullable;
@@ -58,12 +59,12 @@ public final class RemovalListeners {
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    public int rejected;
+    public AtomicInteger rejected = new AtomicInteger();
 
     @Override
     public void onRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
       validate(key, value, cause);
-      rejected++;
+      rejected.incrementAndGet();
       throw new RejectedExecutionException("Rejected eviction of " +
           new RemovalNotification<>(key, value, cause));
     }

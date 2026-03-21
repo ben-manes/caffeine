@@ -26,6 +26,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
@@ -62,7 +63,6 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
-import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
@@ -105,7 +105,7 @@ final class RefreshAfterWriteTest {
     });
     cache.put(key, original);
     context.ticker().advance(duration);
-    ConcurrentTestHarness.execute(() -> assertThat(cache.get(key)).isAnyOf(original, refresh1));
+    var future = CompletableFuture.supplyAsync(() -> cache.get(key), executor);
     await().untilAsserted(() -> assertThat(reloads.get()).isEqualTo(1));
 
     assertThat(cache.get(key)).isEqualTo(original);
@@ -113,6 +113,7 @@ final class RefreshAfterWriteTest {
 
     Int refreshed = cache.get(key);
     assertThat(refreshed).isAnyOf(original, refresh1);
+    assertThat(future.join()).isAnyOf(original, refresh1);
 
     await().untilAsserted(() -> assertThat(reloads.get()).isEqualTo(1));
     await().untilAsserted(() -> assertThat(cache).containsEntry(key, refresh1));

@@ -85,7 +85,7 @@ public final class LocalCacheSubject extends Subject {
       var bounded = (BoundedLocalManualCache<Object, Object>) actual;
       checkBounded(bounded.cache);
     } else if (actual instanceof BoundedLocalAsyncCache<?, ?>) {
-      var bounded = (BoundedLocalAsyncCache) actual;
+      var bounded = (BoundedLocalAsyncCache<?, ?>) actual;
       checkBounded(bounded.cache);
     } else if (actual instanceof UnboundedLocalCache<?, ?>) {
       var unbounded = (UnboundedLocalCache<?, ?>) actual;
@@ -99,7 +99,7 @@ public final class LocalCacheSubject extends Subject {
     } else if (actual instanceof LoadingCacheView) {
       var async = ((LoadingCacheView<?, ?>) actual).asyncCache();
       if (async instanceof BoundedLocalAsyncLoadingCache<?, ?>) {
-        var bounded = (BoundedLocalAsyncLoadingCache) async;
+        var bounded = (BoundedLocalAsyncLoadingCache<?, ?>) async;
         checkBounded(bounded.cache);
       } else if (async instanceof UnboundedLocalAsyncLoadingCache<?, ?>) {
         var unbounded = (UnboundedLocalAsyncLoadingCache<?, ?>) async;
@@ -108,7 +108,7 @@ public final class LocalCacheSubject extends Subject {
     } else if (actual instanceof LocalAsyncCache.AsMapView<?, ?>) {
       var asMap = (LocalAsyncCache.AsMapView<?, ?>) actual;
       if (asMap.delegate instanceof BoundedLocalCache<?, ?>) {
-        var bounded = (BoundedLocalCache) asMap.delegate;
+        var bounded = (BoundedLocalCache<?, ?>) asMap.delegate;
         checkBounded(bounded);
       } else if (asMap.delegate instanceof UnboundedLocalCache<?, ?>) {
         var unbounded = (UnboundedLocalCache<?, ?>) asMap.delegate;
@@ -129,7 +129,7 @@ public final class LocalCacheSubject extends Subject {
 
   /* --------------- Bounded --------------- */
 
-  private void checkBounded(BoundedLocalCache<Object, Object> bounded) {
+  private <K, V> void checkBounded(BoundedLocalCache<K, V> bounded) {
     drain(bounded);
     checkReadBuffer(bounded);
 
@@ -139,7 +139,7 @@ public final class LocalCacheSubject extends Subject {
     checkEvictionDeque(bounded);
   }
 
-  private static void drain(BoundedLocalCache<Object, Object> bounded) {
+  private static <K, V> void drain(BoundedLocalCache<K, V> bounded) {
     @Var long adjustment = 0;
     for (;;) {
       bounded.cleanUp();
@@ -154,19 +154,19 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private static void checkReadBuffer(BoundedLocalCache<Object, Object> bounded) {
+  private static <K, V> void checkReadBuffer(BoundedLocalCache<K, V> bounded) {
     if (!tryDrainBuffers(bounded)) {
       await().pollInSameThread().until(() -> tryDrainBuffers(bounded));
     }
   }
 
-  private static boolean tryDrainBuffers(BoundedLocalCache<Object, Object> bounded) {
+  private static <K, V> boolean tryDrainBuffers(BoundedLocalCache<K, V> bounded) {
     bounded.cleanUp();
     var buffer = bounded.readBuffer;
     return (buffer.size() == 0) && (buffer.reads() == buffer.writes());
   }
 
-  private void checkCache(BoundedLocalCache<Object, Object> bounded) {
+  private <K, V> void checkCache(BoundedLocalCache<K, V> bounded) {
     @Var long remainingNanos = TimeUnit.SECONDS.toNanos(5);
     for (;;) {
       long end = System.nanoTime() + remainingNanos;
@@ -206,7 +206,7 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private void checkTimerWheel(BoundedLocalCache<Object, Object> bounded) {
+  private <K, V> void checkTimerWheel(BoundedLocalCache<K, V> bounded) {
     if (!bounded.expiresVariable()) {
       return;
     } else if (!doesTimerWheelMatch(bounded)) {
@@ -241,7 +241,7 @@ public final class LocalCacheSubject extends Subject {
     check("cache.size() == timerWheel.size()").that(bounded).hasSize(seen.size());
   }
 
-  private static boolean doesTimerWheelMatch(BoundedLocalCache<Object, Object> bounded) {
+  private static <K, V> boolean doesTimerWheelMatch(BoundedLocalCache<K, V> bounded) {
     bounded.evictionLock.lock();
     try {
       var seen = Collections.newSetFromMap(new IdentityHashMap<>(bounded.size()));
@@ -263,11 +263,11 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private void checkEvictionDeque(BoundedLocalCache<Object, Object> bounded) {
+  private <K, V> void checkEvictionDeque(BoundedLocalCache<K, V> bounded) {
     if (bounded.evicts()) {
       long mainProbation = bounded.weightedSize()
           - bounded.windowWeightedSize() - bounded.mainProtectedWeightedSize();
-      var deques = new ImmutableTable.Builder<String, Long, LinkedDeque<Node<Object, Object>>>()
+      var deques = new ImmutableTable.Builder<String, Long, LinkedDeque<Node<K, V>>>()
           .put("window", bounded.windowWeightedSize(), bounded.accessOrderWindowDeque())
           .put("probation", mainProbation, bounded.accessOrderProbationDeque())
           .put("protected", bounded.mainProtectedWeightedSize(),
@@ -293,15 +293,15 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private void checkLinks(BoundedLocalCache<Object, Object> bounded,
-      ImmutableTable<String, Long, LinkedDeque<Node<Object, Object>>> deques) {
+  private <K, V> void checkLinks(BoundedLocalCache<K, V> bounded,
+      ImmutableTable<String, Long, LinkedDeque<Node<K, V>>> deques) {
     if (!doLinksMatch(bounded, deques.values())) {
       await().pollInSameThread().until(() -> doLinksMatch(bounded, deques.values()));
     }
 
     @Var int totalSize = 0;
     @Var long totalWeightedSize = 0;
-    Set<Node<Object, Object>> seen = Collections.newSetFromMap(
+    Set<Node<K, V>> seen = Collections.newSetFromMap(
         new IdentityHashMap<>(bounded.size()));
     for (var cell : deques.cellSet()) {
       var deque = requireNonNull(cell.getValue());
@@ -321,11 +321,11 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private boolean doLinksMatch(BoundedLocalCache<Object, Object> bounded,
-      Collection<LinkedDeque<Node<Object, Object>>> deques) {
+  private <K, V> boolean doLinksMatch(BoundedLocalCache<K, V> bounded,
+      Collection<LinkedDeque<Node<K, V>>> deques) {
     bounded.evictionLock.lock();
     try {
-      Set<Node<Object, Object>> seen = Collections.newSetFromMap(
+      Set<Node<K, V>> seen = Collections.newSetFromMap(
           new IdentityHashMap<>(bounded.size()));
       for (var deque : deques) {
         scanLinks(bounded, deque, seen);
@@ -337,8 +337,8 @@ public final class LocalCacheSubject extends Subject {
   }
 
   @CanIgnoreReturnValue
-  private long scanLinks(BoundedLocalCache<Object, Object> bounded,
-      LinkedDeque<Node<Object, Object>> deque, Set<Node<Object, Object>> seen) {
+  private <K, V> long scanLinks(BoundedLocalCache<K, V> bounded,
+      LinkedDeque<Node<K, V>> deque, Set<Node<K, V>> seen) {
     @Var long weightedSize = 0;
     @Var Node<?, ?> prev = null;
     for (var node : deque) {
@@ -352,7 +352,7 @@ public final class LocalCacheSubject extends Subject {
     return weightedSize;
   }
 
-  private void checkNode(BoundedLocalCache<Object, Object> bounded, Node<Object, Object> node) {
+  private <K, V> void checkNode(BoundedLocalCache<K, V> bounded, Node<K, V> node) {
     var key = node.getKey();
     var value = node.getValue();
     checkKey(bounded, node, key, value);
@@ -361,8 +361,8 @@ public final class LocalCacheSubject extends Subject {
     checkRefreshAfterWrite(bounded, node);
   }
 
-  private void checkKey(BoundedLocalCache<Object, Object> bounded,
-      Node<Object, Object> node, @Nullable Object key, @Nullable Object value) {
+  private <K, V> void checkKey(BoundedLocalCache<K, V> bounded,
+      Node<K, V> node, @Nullable K key, @Nullable V value) {
     if (bounded.collectKeys()) {
       if ((key != null) && (value != null)) {
         check("bounded").that(bounded.data).containsKey(node.getKeyReference());
@@ -385,8 +385,8 @@ public final class LocalCacheSubject extends Subject {
     check("data").that(bounded.data).containsEntry(node.getKeyReference(), node);
   }
 
-  private void checkValue(BoundedLocalCache<Object, Object> bounded,
-      Node<Object, Object> node, @Nullable Object key, @Nullable Object value) {
+  private <K, V> void checkValue(BoundedLocalCache<K, V> bounded,
+      Node<K, V> node, @Nullable K key, @Nullable V value) {
     if (!bounded.collectValues()) {
       check("value").that(value).isNotNull();
       if ((key != null) && !bounded.hasExpired(node, bounded.expirationTicker().read())) {
@@ -408,8 +408,8 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private void checkWeight(BoundedLocalCache<Object, Object> bounded,
-      Node<Object, Object> node, @Nullable Object key, @Nullable Object value) {
+  private <K, V> void checkWeight(BoundedLocalCache<K, V> bounded,
+      Node<K, V> node, @Nullable K key, @Nullable V value) {
     check("node.getWeight").that(node.getWeight()).isAtLeast(0);
     if ((key == null) || (value == null)) {
       return;
@@ -428,8 +428,7 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
-  private void checkRefreshAfterWrite(
-      BoundedLocalCache<Object, Object> bounded, Node<Object, Object> node) {
+  private <K, V> void checkRefreshAfterWrite(BoundedLocalCache<K, V> bounded, Node<K, V> node) {
     if (bounded.refreshAfterWrite()) {
       check("node.getWriteTime()").that(node.getWriteTime()).isNotEqualTo(Long.MAX_VALUE);
     }

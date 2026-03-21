@@ -1,4 +1,5 @@
 [versions]
+ascii-table = "1.9.0"
 asm = "9.9.1"
 awaitility = "4.3.0"
 bcel = "6.12.0"
@@ -30,7 +31,6 @@ fastutil = "8.5.18"
 felix-framework = "7.0.5"
 felix-scr = "2.2.14"
 findsecbugs = "1.14.0"
-flip-tables = "1.1.1"
 forbidden-apis = "3.10"
 fray = "0.8.2"
 google-java-format = "1.35.0"
@@ -104,6 +104,7 @@ zero-allocation-hashing = "2026.0"
 zstd = "1.5.7-7"
 
 [libraries]
+ascii-table = { module = "com.github.freva:ascii-table", version.ref = "ascii-table" }
 asm-bom = { module = "org.ow2.asm:asm-bom", version.ref = "asm" }
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 bcel = { module = "org.apache.bcel:bcel", version.ref = "bcel" }
@@ -133,7 +134,6 @@ fastutil = { module = "it.unimi.dsi:fastutil-core", version.ref = "fastutil" }
 felix-framework = { module = "org.apache.felix:org.apache.felix.framework", version.ref = "felix-framework" }
 felix-scr = { module = "org.apache.felix:org.apache.felix.scr", version.ref = "felix-scr" }
 findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
-flip-tables = { module = "com.jakewharton.fliptables:fliptables", version.ref = "flip-tables" }
 fray-junit = { module = "org.pastalab.fray:fray-junit", version.ref = "fray" }
 google-java-format = { module = "com.google.googlejavaformat:google-java-format", version.ref = "google-java-format" }
 grpc-bom = { module = "io.grpc:grpc-bom", version.ref = "grpc" }

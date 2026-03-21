@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission.bloom;
 
+import static com.github.freva.asciitable.AsciiTable.FANCY_ASCII;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Locale.US;
@@ -26,19 +27,17 @@ import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
+import com.github.freva.asciitable.AsciiTable;
+import com.github.freva.asciitable.Column;
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.Var;
-import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -50,9 +49,8 @@ import it.unimi.dsi.fastutil.ints.IntList;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class MembershipTest {
-  private static final Logger logger = LoggerFactory.getLogger(MembershipTest.class);
-
-  private static final String[] HEADERS = { "Type", "Capacity", "Insertions", "False Positives" };
+  private static final ImmutableList<String> HEADERS = ImmutableList.of(
+      "Type", "Capacity", "Insertions", "False Positives");
   private static final double EXPECTED_INSERTIONS_MULTIPLIER = 0.5;
   private static final double FPP = 0.03;
 
@@ -145,12 +143,14 @@ final class MembershipTest {
   }
 
   /** Displays the rows as a pretty printed table. */
-  @SuppressFBWarnings("CRLF_INJECTION_LOGS")
+  @SuppressWarnings("SystemOut")
   private static void printTable(List<String[]> rows) {
-    var data = new String[rows.size()][HEADERS.length];
-    for (int i = 0; i < rows.size(); i++) {
-      data[i] = rows.get(i);
-    }
-    logger.info("\n{}", FlipTable.of(HEADERS, data));
+    var table = AsciiTable.builder().border(FANCY_ASCII);
+    var columns = HEADERS.stream()
+        .map(header -> new Column().header(header)
+            .with((String[] row) -> row[HEADERS.indexOf(header)]))
+        .toList();
+    IO.println();
+    IO.println(table.data(rows, columns));
   }
 }

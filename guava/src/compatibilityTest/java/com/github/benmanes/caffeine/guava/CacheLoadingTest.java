@@ -12,14 +12,14 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.bulkLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.constantLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.errorLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.exceptionLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.identityLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.countingRemovalListener;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.bulkLoader;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.constantLoader;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.errorLoader;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.exceptionLoader;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.identityLoader;
+import static com.github.benmanes.caffeine.guava.TestingRemovalListeners.countingRemovalListener;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -43,8 +43,8 @@ import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.IdentityLoader;
-import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.CountingRemovalListener;
+import com.github.benmanes.caffeine.guava.TestingCacheLoaders.IdentityLoader;
+import com.github.benmanes.caffeine.guava.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.CacheStats;

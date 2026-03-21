@@ -15,5 +15,10 @@ dependencies {
         constraints.add(name, library.module.toString()).version { require(library.version!!) }
       }
     }
+    resolutionStrategy.eachDependency {
+      when (requested.group) {
+        in libs.slf4j.bom.get().group -> useVersion(libs.versions.slf4j.asProvider().get())
+      }
+    }
   }
 }

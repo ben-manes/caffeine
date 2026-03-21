@@ -36,7 +36,7 @@ import com.google.common.testing.FakeTicker;
 final class AsyncCacheFrayTest {
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_completion_triggersReplace() throws InterruptedException {
+  void completion_triggersReplace() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(10)
@@ -56,7 +56,7 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_exceptionalCompletion_cleanup() throws InterruptedException {
+  void exceptionalCompletion_cleanup() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(10)
@@ -81,7 +81,7 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_completion_duringEviction() throws InterruptedException {
+  void completion_duringEviction() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(3)
@@ -107,7 +107,7 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_completion_concurrentPut() throws InterruptedException {
+  void completion_concurrentPut() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(10)
@@ -131,7 +131,7 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_bulkLoad_concurrentSingleGet() throws InterruptedException {
+  void bulkLoad_concurrentSingleGet() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(10)
@@ -157,7 +157,7 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_bulkLoad_threeWayOverlap() throws InterruptedException {
+  void bulkLoad_threeWayOverlap() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(20)
@@ -189,11 +189,11 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_weight_transition_zeroToReal() throws InterruptedException {
+  void weight_transition_zeroToReal() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .weigher((Integer k, Integer v) -> v)
         .executor(Runnable::run)
         .maximumWeight(50)
-        .weigher((Integer k, Integer v) -> v)
         .buildAsync();
 
     var threadA = new Thread(() -> cache.get(1, k -> 5));
@@ -214,7 +214,7 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_expiry_delegation() throws InterruptedException {
+  void expiry_delegation() throws InterruptedException {
     var ticker = new FakeTicker();
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .expireAfter(Expiry.creating((key, value) -> Duration.ofMinutes(10)))
@@ -242,7 +242,7 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_cancellation_cleanup() throws InterruptedException {
+  void cancellation_cleanup() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(10)
@@ -270,7 +270,7 @@ final class AsyncCacheFrayTest {
 
   /** Async variant of eviction_resurrection_computeIfAbsent. In-flight futures use ASYNC_EXPIRY. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_eviction_resurrection_computeIfAbsent() throws InterruptedException {
+  void eviction_resurrection_computeIfAbsent() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(3)
@@ -296,11 +296,11 @@ final class AsyncCacheFrayTest {
 
   /** Async weighted variant — tests AsyncWeigher weight=0 for in-flight combined with eviction. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void async_weighted_eviction_convergence() throws InterruptedException {
+  void weighted_eviction_convergence() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .weigher((Integer k, Integer v) -> v)
         .executor(Runnable::run)
         .maximumWeight(20)
-        .weigher((Integer k, Integer v) -> v)
         .buildAsync();
     cache.put(1, CompletableFuture.completedFuture(5));
     cache.put(2, CompletableFuture.completedFuture(5));

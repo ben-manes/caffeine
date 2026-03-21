@@ -40,7 +40,15 @@ import de.siegmar.fastcsv.writer.CsvWriter;
 public final class CsvReporter extends TextReporter {
 
   public CsvReporter(Config config, Set<Characteristic> characteristics) {
-    super(config, characteristics);
+    var metrics = Metrics.builder()
+        .percentFormatter(value -> String.format(US, "%.2f", 100 * value))
+        .doubleFormatter(value -> String.format(US, "%.2f", value))
+        .longFormatter(Long::toString)
+        .objectFormatter(object -> (object instanceof Stopwatch stopwatch)
+            ? Long.toString(stopwatch.elapsed(TimeUnit.MILLISECONDS))
+            : (object == null) ? "" : object.toString())
+        .build();
+    super(config, characteristics, metrics);
   }
 
   @Override
@@ -55,18 +63,5 @@ public final class CsvReporter extends TextReporter {
             .toList());
       }
     }
-  }
-
-  @Override
-  protected Metrics metrics() {
-    return Metrics.builder()
-        .percentFormatter(value -> String.format(US, "%.2f", 100 * value))
-        .doubleFormatter(value -> String.format(US, "%.2f", value))
-        .longFormatter(Long::toString)
-        .objectFormatter(object -> {
-          return (object instanceof Stopwatch stopwatch)
-              ? Long.toString(stopwatch.elapsed(TimeUnit.MILLISECONDS))
-              : String.valueOf(object);
-        }).build();
   }
 }

@@ -108,12 +108,12 @@ public final class CacheContext {
   private @Nullable Int firstKey;
   private @Nullable Int middleKey;
   private @Nullable Int lastKey;
-  private long initialSize;
 
   // Generated on-demand
-  private @Nullable Int absentKey;
-  private @Nullable Int absentValue;
-  private @Nullable Map<Int, Int> absent;
+  private volatile long initialSize;
+  private volatile @Nullable Int absentKey;
+  private volatile @Nullable Int absentValue;
+  private volatile @Nullable Map<Int, Int> absent;
 
   /** A copy constructor that does not include the cache instance or any generated fields. */
   @SuppressWarnings("CopyConstructorMissesField")
@@ -285,24 +285,40 @@ public final class CacheContext {
   }
 
   public Int absentKey() {
-    return (absentKey == null) ? (absentKey = nextAbsentKey()) : absentKey;
+    if (absentKey != null) {
+      return absentKey;
+    }
+    synchronized (this) {
+      return (absentKey == null) ? (absentKey = nextAbsentKey()) : absentKey;
+    }
   }
 
   public Int absentValue() {
-    return (absentValue == null) ? (absentValue = absentKey().negate()) : absentValue;
+    if (absentValue != null) {
+      return absentValue;
+    }
+    synchronized (this) {
+      return (absentValue == null) ? (absentValue = absentKey().negate()) : absentValue;
+    }
   }
 
   public Map<Int, Int> absent() {
     if (absent != null) {
       return absent;
     }
-    absent = new LinkedHashMap<>();
-    absent.put(absentKey(), absentValue());
-    do {
-      Int key = nextAbsentKey();
-      absent.put(key, key.negate());
-    } while (absent.size() < 10);
-    return absent;
+    synchronized (this) {
+      if (absent != null) {
+        return absent;
+      }
+      var map = new LinkedHashMap<Int, Int>();
+      map.put(absentKey(), absentValue());
+      do {
+        Int key = nextAbsentKey();
+        map.put(key, key.negate());
+      } while (map.size() < 10);
+      absent = map;
+      return map;
+    }
   }
 
   public Set<Int> absentKeys() {

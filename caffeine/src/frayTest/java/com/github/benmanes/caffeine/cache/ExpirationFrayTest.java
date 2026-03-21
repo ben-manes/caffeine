@@ -32,7 +32,7 @@ import com.google.common.testing.FakeTicker;
 final class ExpirationFrayTest {
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void expiredEntry_replace_schedulesCleanup() throws InterruptedException {
+  void replace_schedulesCleanup() throws InterruptedException {
     var ticker = new FakeTicker();
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofMinutes(1))
@@ -56,7 +56,7 @@ final class ExpirationFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void expiredEntry_computeIfAbsent_handlesExpired() throws InterruptedException {
+  void computeIfAbsent_handlesExpired() throws InterruptedException {
     var ticker = new FakeTicker();
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofMinutes(1))
@@ -84,7 +84,7 @@ final class ExpirationFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void expiredEntry_compute_twoThreads() throws InterruptedException {
+  void compute_twoThreads() throws InterruptedException {
     var ticker = new FakeTicker();
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofMinutes(1))
@@ -110,7 +110,7 @@ final class ExpirationFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void expiredEntry_put_fastPath_vs_slowPath() throws InterruptedException {
+  void put_fastPath_vs_slowPath() throws InterruptedException {
     var ticker = new FakeTicker();
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofMinutes(1))
@@ -235,7 +235,7 @@ final class ExpirationFrayTest {
 
   /** Variable expiry variant of expiredEntry_computeIfAbsent_handlesExpired. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void expiredEntry_computeIfAbsent_variableExpiry() throws InterruptedException {
+  void computeIfAbsent_variableExpiry() throws InterruptedException {
     var ticker = new FakeTicker();
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .expireAfter(Expiry.writing((key, value) -> Duration.ofMinutes(1)))
@@ -264,7 +264,7 @@ final class ExpirationFrayTest {
 
   /** Weighted + expiration variant — tests weight accounting on expired entry compute. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void expiredEntry_compute_weighted() throws InterruptedException {
+  void compute_weighted() throws InterruptedException {
     var ticker = new FakeTicker();
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofMinutes(1))

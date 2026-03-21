@@ -4,6 +4,8 @@ on:
   pull_request: {}
   push:
     branches: [master, v3.dev]
+  schedule:
+    - cron: '33 19 * * 1'
   workflow_dispatch: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -27,16 +29,60 @@ jobs:
           persist-credentials: false
       - run: semgrep scan --sarif --output=results.sarif
         env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
           SEMGREP_RULES: >-
-            p/java
+            p/ci
+            p/command-injection
+            p/cwe-top-25
+            p/default
+            p/findsecbugs
             p/github-actions
-            p/semgrep-rule-lints
+            p/insecure-transport
+            p/java
+            p/jwt
+            p/lockfiles
+            p/mschwager.java-security-rules
+            p/owasp-top-ten
+            p/pawayf.semgrep-java-sec-rules
+            p/r2c-best-practices
+            p/r2c-ci
+            p/r2c-security-audit
+            p/secrets
             p/semgrep-misconfigurations
+            p/semgrep-rule-ci
+            p/semgrep-rule-lints
+            p/sql-injection
+            p/supply-chain
+            p/trailofbits
+            p/xss
+      - name: Fix non-numeric security-severity values in SARIF
+        if: always()
+        run: |
+          if [ -f results.sarif ]; then
+            jq '
+              def fix_severity:
+                {"CRITICAL":"9.0","Critical":"9.0","HIGH":"7.0","High":"7.0",
+                 "MEDIUM":"5.0","Medium":"5.0","LOW":"3.0","Low":"3.0",
+                 "INFO":"1.0","Info":"1.0"};
+              .runs[].tool.driver.rules |= [.[] |
+                if .properties."security-severity" then
+                  .properties."security-severity" |= (fix_severity[.] // .)
+                else . end |
+                if (.id | length) > 255 then .id |= .[:255] else . end]
+            ' results.sarif > results.tmp && mv results.tmp results.sarif
+          fi
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0
         with:
           files: results.sarif
+      - name: Upload artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: steps.check_files.outputs.files_exists == 'true'
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 1
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
         uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
         if: steps.check_files.outputs.files_exists == 'true'

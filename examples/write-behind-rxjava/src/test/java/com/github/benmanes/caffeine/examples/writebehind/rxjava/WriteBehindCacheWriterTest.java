@@ -36,10 +36,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  *
  * @author wim.deblauwe@gmail.com (Wim Deblauwe)
  */
-public final class WriteBehindCacheWriterTest {
+final class WriteBehindCacheWriterTest {
 
   @Test
-  public void singleKey() {
+  void singleKey() {
     var writerCalled = new AtomicBoolean();
 
     // Given this cache...
@@ -62,7 +62,7 @@ public final class WriteBehindCacheWriterTest {
   }
 
   @Test
-  public void multipleKeys() {
+  void multipleKeys() {
     var numberOfEntries = new AtomicInteger();
 
     // Given this cache...
@@ -87,7 +87,7 @@ public final class WriteBehindCacheWriterTest {
   }
 
   @Test
-  public void singleKey_mostRecent() {
+  void singleKey_mostRecent() {
     var timeInWriteBehind = new AtomicReference<ZonedDateTime>();
     var numberOfEntries = new AtomicInteger();
 

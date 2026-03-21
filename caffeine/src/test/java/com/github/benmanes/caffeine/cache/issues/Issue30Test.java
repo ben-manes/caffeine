@@ -130,12 +130,12 @@ final class Issue30Test {
     source.put(A_KEY, A_UPDATE_2);
     source.put(B_KEY, B_UPDATE_2);
 
-    assertThat("serve cached first updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
-    assertThat("serve cached first updated value", cache.get(B_KEY)).succeedsWith(B_UPDATE_1);
+    assertThat("serve cached second updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
+    assertThat("serve cached second updated value", cache.get(B_KEY)).succeedsWith(B_UPDATE_1);
 
     Thread.sleep(EPSILON); // sleep for less than expiration
-    assertThat("serve cached first updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
-    assertThat("serve cached first updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
+    assertThat("serve cached second updated value", cache.get(A_KEY)).succeedsWith(A_UPDATE_1);
+    assertThat("serve cached second updated value", cache.get(B_KEY)).succeedsWith(B_UPDATE_1);
   }
 
   private static FutureSubject assertThat(String message, CompletableFuture<?> actual) {

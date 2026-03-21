@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.junit.jupiter.api.Test;
@@ -43,11 +44,16 @@ final class BoundedBufferTest {
   @Test
   void offer() {
     var buffer = new BoundedBuffer<Boolean>();
+    var invalid = new AtomicReference<Integer>();
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 100; i++) {
-        assertThat(buffer.offer(true)).isAnyOf(SUCCESS, FULL, FAILED);
+        int added = buffer.offer(true);
+        if ((added != SUCCESS) && (added != FULL) && (added != FAILED)) {
+          invalid.set(added);
+        }
       }
     });
+    assertThat(invalid.get()).isNull();
     assertThat(buffer.writes()).isGreaterThan(0);
     assertThat(buffer.writes()).isEqualTo(buffer.size());
   }

@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
@@ -403,18 +404,15 @@ final class AsMapTest {
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = cache.synchronous().asMap().put(key, newValue);
-      assertThat(result).isNull();
-      done.set(true);
-    });
+      return cache.synchronous().asMap().put(key, newValue);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWithNull();
     assertThat(cache).containsEntry(key, newValue);
   }
 
@@ -570,18 +568,15 @@ final class AsMapTest {
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = cache.synchronous().asMap().putIfAbsent(key, newValue);
-      assertThat(result).isNull();
-      done.set(true);
-    });
+      return cache.synchronous().asMap().putIfAbsent(key, newValue);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWithNull();
     assertThat(cache).containsEntry(key, newValue);
   }
 
@@ -627,18 +622,15 @@ final class AsMapTest {
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = cache.synchronous().asMap().remove(key);
-      assertThat(result).isNull();
-      done.set(true);
-    });
+      return cache.synchronous().asMap().remove(key);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWithNull();
     assertThat(cache).doesNotContainKey(key);
   }
 
@@ -713,26 +705,22 @@ final class AsMapTest {
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
-  void removeConditionally_async_null(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  void removeConditionally_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     Int newValue = context.absentValue();
     var future = new CompletableFuture<@Nullable Int>();
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      boolean result = cache.synchronous().asMap().remove(key, newValue);
-      assertThat(result).isFalse();
-      done.set(true);
-    });
+      return cache.synchronous().asMap().remove(key, newValue);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWith(false);
     assertThat(cache).doesNotContainKey(key);
   }
 
@@ -829,18 +817,15 @@ final class AsMapTest {
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = cache.synchronous().asMap().replace(key, newValue);
-      assertThat(result).isNull();
-      done.set(true);
-    });
+      return cache.synchronous().asMap().replace(key, newValue);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWithNull();
     assertThat(cache).doesNotContainKey(key);
   }
 
@@ -998,18 +983,15 @@ final class AsMapTest {
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      boolean replaced = cache.synchronous().asMap().replace(key, key, newValue);
-      assertThat(replaced).isFalse();
-      done.set(true);
-    });
+      return cache.synchronous().asMap().replace(key, key, newValue);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWith(false);
     assertThat(cache).doesNotContainKey(key);
   }
 
@@ -1183,18 +1165,15 @@ final class AsMapTest {
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = cache.synchronous().asMap().computeIfAbsent(key, k -> newValue);
-      assertThat(result).isEqualTo(newValue);
-      done.set(true);
-    });
+      return cache.synchronous().asMap().computeIfAbsent(key, k -> newValue);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWith(newValue);
     assertThat(cache).containsEntry(key, newValue);
   }
 
@@ -1358,18 +1337,15 @@ final class AsMapTest {
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = cache.synchronous().asMap().computeIfPresent(key, (k, oldValue) -> newValue);
-      assertThat(result).isNull();
-      done.set(true);
-    });
+      return cache.synchronous().asMap().computeIfPresent(key, (k, oldValue) -> newValue);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWithNull();
     assertThat(cache).doesNotContainKey(key);
   }
 
@@ -1519,26 +1495,22 @@ final class AsMapTest {
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
-  void compute_async_null(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  void compute_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     Int newValue = context.absentValue();
     var future = new CompletableFuture<@Nullable Int>();
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var compute = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = cache.synchronous().asMap().compute(key, (k, oldValue) -> newValue);
-      assertThat(result).isEqualTo(newValue);
-      done.set(true);
-    });
+      return cache.synchronous().asMap().compute(key, (k, oldValue) -> newValue);
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(compute).succeedsWith(newValue);
     assertThat(cache).containsEntry(key, newValue);
   }
 
@@ -1700,27 +1672,23 @@ final class AsMapTest {
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
-  void merge_async_null(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  void merge_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.absentKey();
     Int newValue = context.absentValue();
     var future = new CompletableFuture<@Nullable Int>();
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = cache.synchronous().asMap()
+      return cache.synchronous().asMap()
           .merge(key, newValue, (k, oldValue) -> newValue.add(1));
-      assertThat(result).isEqualTo(newValue);
-      done.set(true);
-    });
+    }, executor);
 
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWith(newValue);
     assertThat(cache).containsEntry(key, newValue);
   }
 

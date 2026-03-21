@@ -12,12 +12,12 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
-import static com.github.benmanes.caffeine.guava.compatibility.CacheTesting.checkEmpty;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.constantLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.exceptionLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.queuingRemovalListener;
+import static com.github.benmanes.caffeine.guava.CacheTesting.checkEmpty;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.constantLoader;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.exceptionLoader;
+import static com.github.benmanes.caffeine.guava.TestingRemovalListeners.queuingRemovalListener;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,7 +26,7 @@ import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.QueuingRemovalListener;
+import com.github.benmanes.caffeine.guava.TestingRemovalListeners.QueuingRemovalListener;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalCause;

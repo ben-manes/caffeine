@@ -27,7 +27,7 @@ tasks.withType<Pmd>().configureEach {
   reports {
     xml.required = false
     html.required = true
-    sarif.required = true
+    sarif.required = isCI()
   }
 
   if (name.contains("Test")) {

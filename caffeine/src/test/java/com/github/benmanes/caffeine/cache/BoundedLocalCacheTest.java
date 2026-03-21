@@ -42,6 +42,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.Awaits.awaitFullGc;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
@@ -475,14 +476,12 @@ final class BoundedLocalCacheTest {
     var pacer = requireNonNull(cache.pacer());
     pacer.cancel();
 
-    var done = new AtomicBoolean();
     cache.evictionLock.lock();
     try {
-      ConcurrentTestHarness.execute(() -> {
+      var future = CompletableFuture.runAsync(() -> {
         cache.rescheduleCleanUpIfIncomplete();
-        done.set(true);
-      });
-      await().untilTrue(done);
+      }, executor);
+      assertThat(future).succeedsWithNull();
       verifyNoInteractions(context.scheduler());
       await().untilAsserted(() -> assertThat(cache.drainStatus).isEqualTo(REQUIRED));
     } finally {
@@ -948,21 +947,20 @@ final class BoundedLocalCacheTest {
       var lookupKey = cache.nodeFactory.newLookupKey(oldEntry.getKey());
       var node = requireNonNull(cache.data.get(lookupKey));
       checkStatus(node, Status.ALIVE);
-      ConcurrentTestHarness.execute(() -> {
+      var future = CompletableFuture.runAsync(() -> {
         var value = cache.put(newEntry.getKey(), newEntry.getValue());
         assertThat(value).isNull();
 
         assertThat(cache.remove(oldEntry.getKey())).isEqualTo(oldEntry.getValue());
         removed.set(true);
-      });
+      }, executor);
 
-      await().untilAsserted(() -> assertThat(cache).doesNotContainKey(oldEntry.getKey()));
-      await().untilTrue(removed);
-      await().until(() -> {
-        synchronized (node) {
-          return !node.isAlive();
-        }
-      });
+      future.join();
+      assertThat(cache).doesNotContainKey(oldEntry.getKey());
+      assertThat(removed.get()).isTrue();
+      synchronized (node) {
+        assertThat(node.isAlive()).isFalse();
+      }
       checkStatus(node, Status.RETIRED);
       cache.cleanUp();
 
@@ -1204,11 +1202,9 @@ final class BoundedLocalCacheTest {
       var expected = cache.accessOrderWindowDeque().getFirst();
       var key = requireNonNull(expected.getKey());
 
-      ConcurrentTestHarness.execute(() -> {
-        var value = cache.remove(key);
-        assertThat(value).isNotNull();
-      });
-      await().until(() -> !cache.containsKey(key));
+      var future = CompletableFuture.supplyAsync(() -> cache.remove(key), executor);
+      assertThat(future.join()).isNotNull();
+      assertThat(cache).doesNotContainKey(key);
       assertThat(expected.isRetired()).isTrue();
 
       cache.setWindowMaximum(cache.windowMaximum() - 1);
@@ -1231,11 +1227,9 @@ final class BoundedLocalCacheTest {
       var expected = cache.accessOrderProbationDeque().getFirst();
       var key = requireNonNull(expected.getKey());
 
-      ConcurrentTestHarness.execute(() -> {
-        var value = cache.remove(key);
-        assertThat(value).isNotNull();
-      });
-      await().until(() -> !cache.containsKey(key));
+      var future = CompletableFuture.supplyAsync(() -> cache.remove(key), executor);
+      assertThat(future.join()).isNotNull();
+      assertThat(cache).doesNotContainKey(key);
       assertThat(expected.isRetired()).isTrue();
 
       cache.setWindowMaximum(cache.windowMaximum() - 1);
@@ -1392,8 +1386,8 @@ final class BoundedLocalCacheTest {
       cache.put(key, oldValue);
       started.set(true);
 
-      ConcurrentTestHarness.execute(() -> {
-        var value = localCache.compute(key, (k, v) -> {
+      var future = CompletableFuture.supplyAsync(() -> {
+        return localCache.compute(key, (k, v) -> {
           if (started.get()) {
             writing.set(true);
             await().untilAsserted(() -> assertThat(evictor.getState()).isEqualTo(BLOCKED));
@@ -1401,18 +1395,17 @@ final class BoundedLocalCacheTest {
           previousValue.set(v);
           return newValue;
         });
-        assertThat(value).isEqualTo(newValue);
-      });
+      }, executor);
       await().untilTrue(writing);
 
       var node = localCache.data.values().iterator().next();
       var evicted = localCache.evictEntry(node, SIZE, 0);
       assertThat(evicted).isTrue();
 
-      await().untilAsserted(() -> assertThat(evictedValue.get()).isEqualTo(newValue));
-      await().untilAsserted(() -> assertThat(previousValue.get()).isEqualTo(oldValue));
-      await().untilAsserted(() ->
-          assertThat(removedValues.get()).isEqualTo(oldValue.add(newValue)));
+      assertThat(future).succeedsWith(newValue);
+      assertThat(evictedValue.get()).isEqualTo(newValue);
+      assertThat(previousValue.get()).isEqualTo(oldValue);
+      assertThat(removedValues.get()).isEqualTo(oldValue.add(newValue));
     }
   }
 
@@ -1520,28 +1513,25 @@ final class BoundedLocalCacheTest {
     ref.enqueue();
 
     var started = new AtomicBoolean();
-    var done = new AtomicBoolean();
+    var writing = new AtomicBoolean();
     var evictor = new AtomicReference<@Nullable Thread>();
+    var future = CompletableFuture.runAsync(() -> {
+      evictor.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(writing);
+      cache.cleanUp();
+    }, executor);
     var computed = cache.compute(key, (k, v) -> {
+      writing.set(true);
       assertThat(v).isNull();
-      ConcurrentTestHarness.execute(() -> {
-        evictor.set(Thread.currentThread());
-        started.set(true);
-        cache.cleanUp();
-        done.set(true);
-      });
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = evictor.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
-
+      var thread = requireNonNull(evictor.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       return newValue;
     });
-    assertThat(computed).isEqualTo(newValue);
-    await().untilTrue(done);
 
+    assertThat(future).succeedsWithNull();
+    assertThat(computed).isEqualTo(newValue);
     assertThat(node.getValue()).isEqualTo(newValue);
     assertThat(context).notifications().withCause(COLLECTED)
         .contains(key, null).exclusively();
@@ -1557,28 +1547,24 @@ final class BoundedLocalCacheTest {
     var value = intern(List.of(key));
     cache.put(key, value);
 
+    var writing = new AtomicBoolean();
     var started = new AtomicBoolean();
-    var done = new AtomicBoolean();
     var evictor = new AtomicReference<@Nullable Thread>();
+    var future = CompletableFuture.runAsync(() -> {
+      evictor.set(Thread.currentThread());
+      await().untilTrue(writing);
+      started.set(true);
+      cache.policy().eviction().orElseThrow().setMaximum(0);
+    }, executor);
     cache.asMap().compute(key, (k, v) -> {
-      ConcurrentTestHarness.execute(() -> {
-        evictor.set(Thread.currentThread());
-        started.set(true);
-        cache.policy().eviction().orElseThrow().setMaximum(0);
-        done.set(true);
-      });
-
+      writing.set(true);
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = evictor.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
-
+      var thread = requireNonNull(evictor.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       return List.of();
     });
-    await().untilTrue(done);
 
+    assertThat(future).succeedsWithNull();
     assertThat(cache).containsEntry(key, List.of());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(Map.entry(key, value)).exclusively();
@@ -1590,136 +1576,121 @@ final class BoundedLocalCacheTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   void evict_resurrect_expireAfter(Cache<Int, Int> cache, CacheContext context) {
-    Int key = Int.valueOf(1);
-    cache.put(key, key);
-
     var started = new AtomicBoolean();
-    var done = new AtomicBoolean();
+    var writing = new AtomicBoolean();
     var evictor = new AtomicReference<@Nullable Thread>();
+    cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(Duration.ofHours(1));
-    cache.asMap().compute(key, (k, v) -> {
-      ConcurrentTestHarness.execute(() -> {
-        evictor.set(Thread.currentThread());
-        started.set(true);
-        cache.cleanUp();
-        done.set(true);
-      });
 
+    var future = CompletableFuture.runAsync(() -> {
+      evictor.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(writing);
+      cache.cleanUp();
+    }, executor);
+    cache.asMap().compute(context.absentKey(), (k, v) -> {
+      writing.set(true);
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = evictor.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
-      return key.negate();
+      var thread = requireNonNull(evictor.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
+      return context.absentKey();
     });
-    await().untilTrue(done);
 
-    assertThat(cache).containsEntry(key, key.negate());
+    assertThat(future).succeedsWithNull();
     assertThat(context).notifications().withCause(EXPIRED)
-        .contains(key, key).exclusively();
+        .contains(context.absentKey(), context.absentValue()).exclusively();
+    assertThat(cache).containsEntry(context.absentKey(), context.absentKey());
   }
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, expireAfterAccess = Expire.FOREVER)
   void evict_resurrect_expireAfterAccess(Cache<Int, Int> cache, CacheContext context) {
-    Int key = Int.valueOf(1);
-    cache.put(key, key);
-
     var started = new AtomicBoolean();
-    var done = new AtomicBoolean();
+    var writing = new AtomicBoolean();
     var evictor = new AtomicReference<@Nullable Thread>();
+    cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(Duration.ofMinutes(1));
-    cache.asMap().compute(key, (k, v) -> {
-      ConcurrentTestHarness.execute(() -> {
-        evictor.set(Thread.currentThread());
-        started.set(true);
-        cache.policy().expireAfterAccess().orElseThrow().setExpiresAfter(Duration.ZERO);
-        done.set(true);
-      });
 
+    var future = CompletableFuture.runAsync(() -> {
+      evictor.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(writing);
+      cache.policy().expireAfterAccess().orElseThrow().setExpiresAfter(Duration.ZERO);
+    }, executor);
+    cache.asMap().compute(context.absentKey(), (k, v) -> {
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = evictor.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
+      writing.set(true);
+      var thread = requireNonNull(evictor.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       cache.policy().expireAfterAccess().orElseThrow().setExpiresAfter(Duration.ofHours(1));
       return v;
     });
-    await().untilTrue(done);
 
-    assertThat(cache).containsEntry(key, key);
+    assertThat(future).succeedsWithNull();
     assertThat(context).notifications().isEmpty();
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, expireAfterWrite = Expire.FOREVER)
   void evict_resurrect_expireAfterWrite(Cache<Int, Int> cache, CacheContext context) {
-    Int key = Int.valueOf(1);
-    cache.put(key, key);
-
     var started = new AtomicBoolean();
-    var done = new AtomicBoolean();
+    var writing = new AtomicBoolean();
     var evictor = new AtomicReference<@Nullable Thread>();
+    cache.put(context.absentKey(), context.absentValue());
     context.ticker().advance(Duration.ofMinutes(1));
-    cache.asMap().compute(key, (k, v) -> {
-      ConcurrentTestHarness.execute(() -> {
-        evictor.set(Thread.currentThread());
-        started.set(true);
-        cache.policy().expireAfterWrite().orElseThrow().setExpiresAfter(Duration.ZERO);
-        done.set(true);
-      });
 
+    var future = CompletableFuture.runAsync(() -> {
+      evictor.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(writing);
+      cache.policy().expireAfterWrite().orElseThrow().setExpiresAfter(Duration.ZERO);
+    }, executor);
+    cache.asMap().compute(context.absentKey(), (k, v) -> {
+      writing.set(true);
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = evictor.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
+      var thread = requireNonNull(evictor.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       cache.policy().expireAfterWrite().orElseThrow().setExpiresAfter(Duration.ofHours(1));
       return v;
     });
-    await().untilTrue(done);
 
-    assertThat(cache).containsEntry(key, key);
+    assertThat(future).succeedsWithNull();
     assertThat(context).notifications().isEmpty();
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE)
   void evict_resurrect_expireAfterWrite_entry(Cache<Int, Int> cache, CacheContext context) {
-    Int key = Int.valueOf(1);
-    cache.put(key, key);
-
     var started = new AtomicBoolean();
-    var done = new AtomicBoolean();
+    var writing = new AtomicBoolean();
     var evictor = new AtomicReference<@Nullable Thread>();
+    cache.put(context.absentKey(), context.absentValue());
+
+    var future = CompletableFuture.runAsync(() -> {
+      evictor.set(Thread.currentThread());
+      await().untilTrue(writing);
+      started.set(true);
+      cache.cleanUp();
+    }, executor);
     context.ticker().advance(Duration.ofHours(1));
-    cache.asMap().compute(key, (k, v) -> {
-      ConcurrentTestHarness.execute(() -> {
-        evictor.set(Thread.currentThread());
-        started.set(true);
-        cache.cleanUp();
-        done.set(true);
-      });
-
+    cache.asMap().compute(context.absentKey(), (k, v) -> {
+      writing.set(true);
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = evictor.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
-      return key.negate();
+      var thread = requireNonNull(evictor.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
+      return context.absentKey();
     });
-    await().untilTrue(done);
 
-    assertThat(cache).containsEntry(key, key.negate());
+    assertThat(future).succeedsWithNull();
+    assertThat(cache).containsEntry(context.absentKey(), context.absentKey());
     assertThat(context).notifications().withCause(EXPIRED)
-        .contains(key, key).exclusively();
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
   }
 
   @ParameterizedTest
@@ -1727,35 +1698,30 @@ final class BoundedLocalCacheTest {
       expiry = CacheExpiry.CREATE, expiryTime = Expire.ONE_MINUTE)
   void evict_resurrect_expireAfterVar(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    Int key = Int.valueOf(1);
-    var oldValue = cache.put(key, key);
-    assertThat(oldValue).isNull();
-
     var started = new AtomicBoolean();
-    var done = new AtomicBoolean();
+    var writing = new AtomicBoolean();
     var evictor = new AtomicReference<@Nullable Thread>();
-    var node = requireNonNull(cache.data.get(cache.referenceKey(key)));
-    synchronized (node) {
-      context.ticker().advance(Duration.ofHours(1));
-      ConcurrentTestHarness.execute(() -> {
-        evictor.set(Thread.currentThread());
-        started.set(true);
-        cache.cleanUp();
-        done.set(true);
-      });
+    assertThat(cache.put(context.absentKey(), context.absentValue())).isNull();
+    var node = requireNonNull(cache.data.get(cache.referenceKey(context.absentKey())));
 
+    context.ticker().advance(Duration.ofHours(1));
+    var future = CompletableFuture.runAsync(() -> {
+      evictor.set(Thread.currentThread());
+      started.set(true);
+      await().untilTrue(writing);
+      cache.cleanUp();
+    }, executor);
+    synchronized (node) {
+      writing.set(true);
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = evictor.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
+      var thread = requireNonNull(evictor.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       node.setVariableTime(context.ticker().read() + TimeUnit.DAYS.toNanos(1));
     }
-    await().untilTrue(done);
 
-    assertThat(cache).containsEntry(key, key);
+    assertThat(future).succeedsWithNull();
     assertThat(context).notifications().isEmpty();
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   @ParameterizedTest
@@ -2135,20 +2101,19 @@ final class BoundedLocalCacheTest {
   }
 
   private static void checkDrainBlocks(BoundedLocalCache<Int, Int> cache, Runnable task) {
-    var done = new AtomicBoolean();
     var lock = cache.evictionLock;
+    CompletableFuture<?> future;
     lock.lock();
     try {
-      ConcurrentTestHarness.execute(() -> {
+      future = CompletableFuture.runAsync(() -> {
         cache.setDrainStatusRelease(REQUIRED);
         task.run();
-        done.set(true);
-      });
+      }, executor);
       await().until(lock::hasQueuedThreads);
     } finally {
       lock.unlock();
     }
-    await().untilTrue(done);
+    assertThat(future).succeedsWithNull();
   }
 
   @ParameterizedTest
@@ -3348,31 +3313,29 @@ final class BoundedLocalCacheTest {
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   void putIfAbsent_expireAfterRead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey()));
-    context.ticker().advance(Duration.ofHours(1));
-    var result = new AtomicReference<@Nullable Int>();
+    var writer = new AtomicReference<@Nullable Thread>();
+    var started = new AtomicBoolean();
+    var writing = new AtomicBoolean();
     long currentDuration = 1;
     requireNonNull(node);
 
+    context.ticker().advance(Duration.ofHours(1));
+    var future = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(writing);
+      started.set(true);
+      return cache.putIfAbsent(context.firstKey(), context.absentValue());
+    }, executor);
     synchronized (node) {
-      var started = new AtomicBoolean();
-      var writer = new AtomicReference<@Nullable Thread>();
-      ConcurrentTestHarness.execute(() -> {
-        writer.set(Thread.currentThread());
-        started.set(true);
-        var value = cache.putIfAbsent(context.firstKey(), context.absentValue());
-        result.set(value);
-      });
+      writing.set(true);
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = writer.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
+      var thread = requireNonNull(writer.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       node.setVariableTime(context.ticker().read() + currentDuration);
     }
 
     var expected = requireNonNull(context.original().get(context.firstKey()));
-    await().untilAsserted(() -> assertThat(result.get()).isEqualTo(expected));
+    assertThat(future).succeedsWith(expected);
     assertThat(node.getVariableTime()).isEqualTo(
         context.ticker().read() + context.expiryTime().timeNanos());
     verify(context.expiry()).expireAfterRead(context.firstKey(),
@@ -3869,10 +3832,7 @@ final class BoundedLocalCacheTest {
       var refreshes = localCache.refreshes();
 
       context.ticker().advance(Duration.ofMinutes(2));
-      ConcurrentTestHarness.execute(() -> {
-        var value = cache.get(context.absentKey());
-        assertThat(value).isEqualTo(context.absentValue());
-      });
+      var caller = CompletableFuture.supplyAsync(() -> cache.get(context.absentKey()), executor);
 
       await().untilTrue(reloading);
       assertThat(node.getWriteTime() & 1L).isEqualTo(1);
@@ -3883,8 +3843,9 @@ final class BoundedLocalCacheTest {
       assertThat(localCache.refreshes).isNull();
 
       refresh.set(true);
-      await().untilAsserted(() -> assertThat(refreshes).isNotEmpty());
-      await().untilAsserted(() -> assertThat(node.getWriteTime() & 1L).isEqualTo(0));
+      assertThat(caller).succeedsWith(context.absentValue());
+      assertThat(refreshes).isNotEmpty();
+      assertThat(node.getWriteTime() & 1L).isEqualTo(0);
 
       future.complete(newValue);
       await().untilAsserted(() -> assertThat(refreshes).isEmpty());

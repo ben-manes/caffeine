@@ -30,7 +30,7 @@ import org.pastalab.fray.junit.junit5.annotations.FrayTest;
 final class EvictionFrayTest {
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_resurrection_computeIfAbsent() throws InterruptedException {
+  void resurrection_computeIfAbsent() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(3)
@@ -55,7 +55,7 @@ final class EvictionFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_resurrection_put() throws InterruptedException {
+  void resurrection_put() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(3)
@@ -86,7 +86,7 @@ final class EvictionFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_concurrentRemove_sameKey() throws InterruptedException {
+  void concurrentRemove_sameKey() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(3)
@@ -114,7 +114,7 @@ final class EvictionFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_weightChange_duringEviction() throws InterruptedException {
+  void weightChange_duringEviction() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumWeight(20)
@@ -145,7 +145,7 @@ final class EvictionFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_weightConvergence_rapidUpdates() throws InterruptedException {
+  void weightConvergence_rapidUpdates() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumWeight(100)
@@ -177,7 +177,7 @@ final class EvictionFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_zeroWeight_neverEvicted() throws InterruptedException {
+  void zeroWeight_neverEvicted() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumWeight(10)
@@ -203,7 +203,7 @@ final class EvictionFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_singleEntry_contention() throws InterruptedException {
+  void singleEntry_contention() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(1)
@@ -229,7 +229,7 @@ final class EvictionFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_accessOrder_promotion() throws InterruptedException {
+  void accessOrder_promotion() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(5)
@@ -259,7 +259,7 @@ final class EvictionFrayTest {
 
   /** Weighted variant of eviction_resurrection_computeIfAbsent. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_resurrection_computeIfAbsent_weighted() throws InterruptedException {
+  void resurrection_computeIfAbsent_weighted() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .weigher((Integer k, Integer v) -> v)
         .executor(Runnable::run)
@@ -286,7 +286,7 @@ final class EvictionFrayTest {
 
   /** Weighted variant of eviction_resurrection_put. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_resurrection_put_weighted() throws InterruptedException {
+  void resurrection_put_weighted() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .weigher((Integer k, Integer v) -> v)
         .executor(Runnable::run)
@@ -313,7 +313,7 @@ final class EvictionFrayTest {
 
   /** Eviction with removal listener verifying notification consistency. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_removalListener_consistency() throws InterruptedException {
+  void removalListener_consistency() throws InterruptedException {
     var notifications = new ConcurrentLinkedQueue<RemovalCause>();
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .removalListener((key, value, cause) -> notifications.add(cause))
@@ -380,7 +380,7 @@ final class EvictionFrayTest {
    * the other thread's AddTask may have modified.
    */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_multiKey_concurrentEviction() throws InterruptedException {
+  void multiKey_concurrentEviction() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(5)
@@ -410,11 +410,11 @@ final class EvictionFrayTest {
 
   /** Weighted variant of multi-key concurrent eviction. Verifies weight convergence. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void eviction_multiKey_concurrentEviction_weighted() throws InterruptedException {
+  void multiKey_concurrentEviction_weighted() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .weigher((Integer k, Integer v) -> v)
         .executor(Runnable::run)
         .maximumWeight(25)
-        .weigher((Integer k, Integer v) -> v)
         .build();
     for (int i = 1; i <= 5; i++) {
       cache.put(i, 5);

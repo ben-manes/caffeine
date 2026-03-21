@@ -27,6 +27,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
@@ -86,7 +87,6 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.StartTime;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
-import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -111,21 +111,22 @@ final class ExpireAfterVarTest {
     Int key = context.absentKey();
     cache.put(key, key);
 
+    var future = CompletableFuture.runAsync(() -> {
+      while (!done.get()) {
+        context.ticker().advance(Duration.ofMinutes(1));
+        var value = cache.get(key, Int::new);
+        assertThat(value).isSameInstanceAs(key);
+        running.set(true);
+      }
+    }, executor);
     try {
-      ConcurrentTestHarness.execute(() -> {
-        while (!done.get()) {
-          context.ticker().advance(Duration.ofMinutes(1));
-          var value = cache.get(key, Int::new);
-          assertThat(value).isSameInstanceAs(key);
-          running.set(true);
-        }
-      });
       await().untilTrue(running);
       cache.cleanUp();
 
       assertThat(cache.get(key, Int::new)).isSameInstanceAs(key);
     } finally {
       done.set(true);
+      future.join();
     }
   }
 
@@ -1610,28 +1611,23 @@ final class ExpireAfterVarTest {
   @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
   void putIfAbsent_incomplete(AsyncCache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var done = new AtomicBoolean();
     var started = new AtomicBoolean();
     var future = new CompletableFuture<@Nullable Int>();
     var writer = new AtomicReference<@Nullable Thread>();
 
     cache.put(context.absentKey(), future);
-    ConcurrentTestHarness.execute(() -> {
+    var result = CompletableFuture.supplyAsync(() -> {
       writer.set(Thread.currentThread());
       started.set(true);
-      var result = expireAfterVar.putIfAbsent(context.absentKey(),
+      return expireAfterVar.putIfAbsent(context.absentKey(),
           context.absentValue(), Duration.ofDays(1));
-      assertThat(result).isNull();
-      done.set(true);
-    });
+    }, executor);
     await().untilTrue(started);
-    var threadState = EnumSet.of(BLOCKED, WAITING);
-    await().until(() -> {
-      var thread = writer.get();
-      return (thread != null) && threadState.contains(thread.getState());
-    });
+    var thread = requireNonNull(writer.get());
+    await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
+
     future.complete(null);
-    await().untilTrue(done);
+    assertThat(result).succeedsWithNull();
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
@@ -1643,32 +1639,29 @@ final class ExpireAfterVarTest {
     void putIfAbsent_incomplete_null(AsyncCache<Int, @Nullable Int> cache,
         CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
       var computeThread = new AtomicReference<@Nullable Thread>();
-      var threadState = EnumSet.of(BLOCKED, WAITING);
       var future1 = new CompletableFuture<@Nullable Int>();
       var future2 = new CompletableFuture<@Nullable Int>();
+      var threadState = EnumSet.of(BLOCKED, WAITING);
       cache.put(context.absentKey(), future1);
-      ConcurrentTestHarness.execute(() -> {
+
+      var compute = CompletableFuture.supplyAsync(() -> {
         computeThread.set(Thread.currentThread());
-        var result = cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
+        return cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
           f.join();
           return future2;
-        });
-        assertThat(result).isNotNull();
-      });
+        }).join();
+      }, executor);
       await().until(() -> {
         var thread = computeThread.get();
         return (thread != null) && threadState.contains(thread.getState());
       });
 
       var putIfAbsentThread = new AtomicReference<@Nullable Thread>();
-      var endPutIfAbsent = new AtomicBoolean();
-      ConcurrentTestHarness.execute(() -> {
+      var putIfAbsent = CompletableFuture.supplyAsync(() -> {
         putIfAbsentThread.set(Thread.currentThread());
-        var result = expireAfterVar.putIfAbsent(context.absentKey(),
+        return expireAfterVar.putIfAbsent(context.absentKey(),
             context.absentValue(), Duration.ofDays(1));
-        assertThat(result).isNull();
-        endPutIfAbsent.set(true);
-      });
+      }, executor);
       await().until(() -> {
         var thread = putIfAbsentThread.get();
         return (thread != null) && threadState.contains(thread.getState());
@@ -1679,7 +1672,8 @@ final class ExpireAfterVarTest {
       await().until(() -> future2.getNumberOfDependents() >= 2);
 
       future2.complete(null);
-      await().untilTrue(endPutIfAbsent);
+      assertThat(compute.join()).isNull();
+      assertThat(putIfAbsent).succeedsWithNull();
       assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
     }
   }
@@ -2142,17 +2136,15 @@ final class ExpireAfterVarTest {
 
     cache.put(key, future);
     var start = new AtomicBoolean();
-    var done = new AtomicBoolean();
-    ConcurrentTestHarness.execute(() -> {
+    var writer = CompletableFuture.supplyAsync(() -> {
       start.set(true);
-      Int result = expireAfterVar.compute(key, (k, oldValue) -> newValue, Duration.ofDays(1));
-      assertThat(result).isEqualTo(newValue);
-      done.set(true);
-    });
+      return expireAfterVar.compute(key, (k, oldValue) -> newValue, Duration.ofDays(1));
+    }, executor);
+
     await().untilTrue(start);
     future.complete(null);
 
-    await().untilTrue(done);
+    assertThat(writer).succeedsWith(newValue);
     verifyNoInteractions(context.expiry());
     assertThat(cache).containsEntry(key, newValue);
   }
@@ -2299,31 +2291,30 @@ final class ExpireAfterVarTest {
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var done = new AtomicBoolean();
     var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
     var writer = new AtomicReference<@Nullable Thread>();
     var future = new CompletableFuture<Int>() {
       @Override public boolean isDone() {
         return done.get() && super.isDone();
       }
     };
+
+    var compute = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(computing);
+      started.set(true);
+      return expireAfterVar.compute(context.firstKey(), (k1, v1) ->
+          context.absentValue(), Duration.ofDays(1));
+    }, executor);
     cache.asMap().compute(context.firstKey(), (k, v) -> {
-      ConcurrentTestHarness.execute(() -> {
-        writer.set(Thread.currentThread());
-        started.set(true);
-        var result = expireAfterVar.compute(context.firstKey(), (k1, v1) ->
-            context.absentValue(), Duration.ofDays(1));
-        assertThat(result).isEqualTo(context.absentValue());
-        done.set(true);
-      });
+      computing.set(true);
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = writer.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
+      var thread = requireNonNull(writer.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       return future;
     });
     future.completeExceptionally(new Exception());
-    await().untilTrue(done);
+    assertThat(compute).succeedsWith(context.absentValue());
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
   }
 

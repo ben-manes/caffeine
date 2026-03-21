@@ -12,10 +12,10 @@
  * the License.
  */
 
-package com.github.benmanes.caffeine.guava.compatibility;
+package com.github.benmanes.caffeine.guava;
 
-import static com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.identityLoader;
-import static com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.countingRemovalListener;
+import static com.github.benmanes.caffeine.guava.TestingCacheLoaders.identityLoader;
+import static com.github.benmanes.caffeine.guava.TestingRemovalListeners.countingRemovalListener;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -31,8 +31,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.github.benmanes.caffeine.guava.compatibility.TestingCacheLoaders.IdentityLoader;
-import com.github.benmanes.caffeine.guava.compatibility.TestingRemovalListeners.CountingRemovalListener;
+import com.github.benmanes.caffeine.guava.TestingCacheLoaders.IdentityLoader;
+import com.github.benmanes.caffeine.guava.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterators;

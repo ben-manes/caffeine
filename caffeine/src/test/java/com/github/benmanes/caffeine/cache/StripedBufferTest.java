@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -98,25 +99,35 @@ final class StripedBufferTest {
   @Test
   @SuppressWarnings("ThreadPriorityCheck")
   void expand_concurrent() {
+    var invalid = new AtomicReference<Integer>();
     var buffer = new FakeBuffer<Boolean>(FAILED);
     ConcurrentTestHarness.timeTasks(10 * NCPU, () -> {
       for (int i = 0; i < 1000; i++) {
-        assertThat(buffer.offer(true)).isAnyOf(SUCCESS, FULL, FAILED);
+        int added = buffer.offer(true);
+        if ((added != SUCCESS) && (added != FULL) && (added != FAILED)) {
+          invalid.set(added);
+        }
         Thread.yield();
       }
     });
+    assertThat(invalid.get()).isNull();
     assertThat(buffer.table).hasLength(MAXIMUM_TABLE_SIZE);
   }
 
   @SuppressWarnings("ThreadPriorityCheck")
   @ParameterizedTest @MethodSource("buffers")
   void produce(FakeBuffer<Integer> buffer) {
+    var invalid = new AtomicReference<Integer>();
     ConcurrentTestHarness.timeTasks(NCPU, () -> {
       for (int i = 0; i < 10; i++) {
-        assertThat(buffer.offer(ELEMENT)).isAnyOf(SUCCESS, FULL, FAILED);
+        int added = buffer.offer(ELEMENT);
+        if ((added != SUCCESS) && (added != FULL) && (added != FAILED)) {
+          invalid.set(added);
+        }
         Thread.yield();
       }
     });
+    assertThat(invalid.get()).isNull();
     assertThat(buffer.table).isNotNull();
     assertThat(requireNonNull(buffer.table).length).isAtMost(MAXIMUM_TABLE_SIZE);
   }

@@ -44,7 +44,7 @@ tasks.withType<SpotBugsTask>().configureEach {
     required = true
   }
   reports.create("sarif") {
-    required = true
+    required = isCI()
   }
   launcher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor

@@ -90,7 +90,7 @@ final class EvictionTest {
   void removalListener_fails(Cache<Int, Int> cache, CacheContext context) {
     var removalListener = (RejectingRemovalListener<Int, Int>) context.removalListener();
     // Guava-style caches reject before the max size is reached & are unpredictable
-    removalListener.rejected = 0;
+    removalListener.rejected.set(0);
     @Var long size = cache.estimatedSize();
     for (Int key : context.absentKeys()) {
       cache.put(key, key);
@@ -98,7 +98,7 @@ final class EvictionTest {
         break;
       }
     }
-    assertThat(removalListener.rejected).isEqualTo(1);
+    assertThat(removalListener.rejected.get()).isEqualTo(1);
   }
 
   /* --------------- Evict (size/weight) --------------- */

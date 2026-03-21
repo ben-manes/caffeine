@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report.table;
 
+import static com.github.freva.asciitable.AsciiTable.FANCY_ASCII;
+import static com.github.freva.asciitable.HorizontalAlign.LEFT;
+import static com.github.freva.asciitable.HorizontalAlign.RIGHT;
 import static java.util.Locale.US;
 
 import java.io.IOException;
@@ -22,11 +25,16 @@ import java.io.Writer;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.report.Metrics;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReporter;
-import com.jakewharton.fliptables.FlipTable;
+import com.github.freva.asciitable.AsciiTable;
+import com.github.freva.asciitable.Column;
+import com.google.common.base.Splitter;
+import com.google.common.base.Stopwatch;
 import com.typesafe.config.Config;
 
 /**
@@ -37,29 +45,33 @@ import com.typesafe.config.Config;
 public final class TableReporter extends TextReporter {
 
   public TableReporter(Config config, Set<Characteristic> characteristics) {
-    super(config, characteristics);
-  }
-
-  @Override
-  protected void write(Writer writer,
-      Set<String> headers, List<PolicyStats> results) throws IOException {
-    String[][] data = new String[results.size()][headers.size()];
-    for (int i = 0; i < results.size(); i++) {
-      PolicyStats policyStats = results.get(i);
-      data[i] = headers.stream()
-          .map(policyStats.metrics()::get)
-          .map(metrics()::format)
-          .toArray(String[]::new);
-    }
-    writer.write(FlipTable.of(headers.toArray(new String[0]), data));
-  }
-
-  @Override
-  protected Metrics metrics() {
-    return Metrics.builder()
+    var metrics = Metrics.builder()
         .percentFormatter(value -> String.format(US, "%.2f %%", 100 * value))
         .doubleFormatter(value -> String.format(US, "%.2f", value))
         .longFormatter(value -> String.format(US, "%,d", value))
+        .objectFormatter(TableReporter::formatObject)
         .build();
+    super(config, characteristics, metrics);
+  }
+
+  @Override
+  protected void write(Writer writer, Set<String> headers,
+      List<PolicyStats> results) throws IOException {
+    var table = AsciiTable.builder().border(FANCY_ASCII);
+    var columns = headers.stream()
+        .map(header -> new Column().header(header)
+            .dataAlign(header.equals("Policy") ? LEFT : RIGHT)
+            .with((PolicyStats policyStats) -> metrics().format(policyStats.metrics().get(header))))
+        .toList();
+    writer.write(table.data(results, columns).asString());
+  }
+
+  private static String formatObject(@Nullable Object object) {
+    if (object instanceof Stopwatch stopwatch) {
+      var parts = Splitter.on(' ').splitToList(stopwatch.toString());
+      var duration = Double.parseDouble(parts.getFirst());
+      return String.format(US, "%.1f %s", duration, parts.getLast());
+    }
+    return (object == null) ? "" : object.toString();
   }
 }

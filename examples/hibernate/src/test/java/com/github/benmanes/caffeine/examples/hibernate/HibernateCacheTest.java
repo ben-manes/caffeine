@@ -26,10 +26,10 @@ import org.junit.jupiter.api.Test;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class HibernateCacheTest {
+final class HibernateCacheTest {
 
   @Test
-  public void lookup() {
+  void lookup() {
     try (var sessionFactory = newSessionFactory()) {
       long projectId = sessionFactory.fromTransaction(session ->
           createData(session, "Ben", "Caffeine", "Hibernate"));
@@ -57,7 +57,7 @@ public final class HibernateCacheTest {
   }
 
   @Test
-  public void query() {
+  void query() {
     try (var sessionFactory = newSessionFactory()) {
       long projectId = sessionFactory.fromTransaction(session ->
           createData(session, "Ben", "Caffeine", "Hibernate"));

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.LocalCacheSubject.mapLocal;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
 import static com.github.benmanes.caffeine.testing.Nullness.nullReferenceQueue;
@@ -26,10 +27,11 @@ import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.ref.WeakReference;
-import java.util.EnumSet;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -41,7 +43,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.benmanes.caffeine.cache.References.WeakKeyEqualsReference;
-import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.testing.GcFinalization;
 import com.google.common.testing.NullPointerTester;
@@ -132,53 +133,52 @@ final class InternerTest {
   @SuppressWarnings("ConstantValue")
   void intern_weak_retry() {
     var canonical = new Int(1);
-    var other = new Int(1);
-
-    var done = new AtomicBoolean();
+    var duplicate = new Int(1);
     var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
     var writer = new AtomicReference<@Nullable Thread>();
     var interner = (WeakInterner<Int>) Interner.<Int>newWeakInterner();
 
+    var future = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(computing);
+      started.set(true);
+      return interner.intern(duplicate);
+    }, executor);
     var result = interner.cache.compute(canonical, (k, v) -> {
-      ConcurrentTestHarness.execute(() -> {
-        writer.set(Thread.currentThread());
-        started.set(true);
-        var value = interner.intern(other);
-        assertThat(value).isSameInstanceAs(canonical);
-        done.set(true);
-      });
+      computing.set(true);
       await().untilTrue(started);
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = writer.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
+      var thread = requireNonNull(writer.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       return true;
     });
-    await().untilTrue(done);
+    assertThat(future.join()).isSameInstanceAs(canonical);
     assertThat(result).isTrue();
+
     assertThat(interner.intern(canonical)).isSameInstanceAs(canonical);
   }
 
   @Test
   void intern_strong_present() {
-    var result = new AtomicReference<@Nullable Int>();
+    var started = new AtomicBoolean();
+    var computing = new AtomicBoolean();
     var writer = new AtomicReference<@Nullable Thread>();
     var interner = (StrongInterner<Int>) Interner.<Int>newStrongInterner();
 
+    var future = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      await().untilTrue(computing);
+      started.set(true);
+      return interner.intern(new Int(Int.MAX_VALUE));
+    }, executor);
     interner.map.computeIfAbsent(Int.MAX_VALUE, key -> {
-      ConcurrentTestHarness.execute(() -> {
-        writer.set(Thread.currentThread());
-        result.set(interner.intern(new Int(Int.MAX_VALUE)));
-      });
-      var threadState = EnumSet.of(BLOCKED, WAITING);
-      await().until(() -> {
-        var thread = writer.get();
-        return (thread != null) && threadState.contains(thread.getState());
-      });
+      computing.set(true);
+      await().untilTrue(started);
+      var thread = requireNonNull(writer.get());
+      await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
       return Int.MAX_VALUE;
     });
-    await().untilAsserted(() -> assertThat(result.get()).isSameInstanceAs(Int.MAX_VALUE));
+    assertThat(future.join()).isSameInstanceAs(Int.MAX_VALUE);
   }
 
   @Test
