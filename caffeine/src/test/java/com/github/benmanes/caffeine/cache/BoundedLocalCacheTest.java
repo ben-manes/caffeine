@@ -51,6 +51,7 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.github.benmanes.caffeine.testing.Nullness.nullReferenceQueue;
 import static com.github.benmanes.caffeine.testing.Nullness.nullString;
 import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
@@ -2574,30 +2575,18 @@ final class BoundedLocalCacheTest {
     // the catch-commit-rethrow pattern should: commit the eviction (retire the node), record
     // eviction stats with the old weight, send the EXPIRED notification, and rethrow the exception.
     var ticker = new FakeTicker();
-    var listener = new ConsumingRemovalListener<Int, Int>();
     var throwOnCreate = new AtomicBoolean();
+    var listener = new ConsumingRemovalListener<Int, Int>();
     var cache = Caffeine.newBuilder()
+        .expireAfter(Expiry.creating((Int key, Int value) -> {
+          checkState(!throwOnCreate.get() || (key.intValue() > 1), "expiry failure");
+          return Duration.ofMinutes(1);
+        }))
+        .weigher((Int key, Int value) -> value.intValue())
         .removalListener(listener)
-        .maximumWeight(100)
-        .weigher((Int k, Int v) -> v.intValue())
         .executor(Runnable::run)
         .ticker(ticker::read)
-        .expireAfter(new Expiry<Int, Int>() {
-          @Override public long expireAfterCreate(Int key, Int value, long currentTime) {
-            if (throwOnCreate.get() && (key.intValue() == 1)) {
-              throw new IllegalStateException("expiry failure");
-            }
-            return Duration.ofMinutes(1).toNanos();
-          }
-          @Override public long expireAfterUpdate(Int key, Int value,
-              long currentTime, long currentDuration) {
-            return currentDuration;
-          }
-          @Override public long expireAfterRead(Int key, Int value,
-              long currentTime, long currentDuration) {
-            return currentDuration;
-          }
-        })
+        .maximumWeight(100)
         .recordStats()
         .build();
 
@@ -2670,11 +2659,11 @@ final class BoundedLocalCacheTest {
     var listener = new ConsumingRemovalListener<Int, Int>();
     var cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofMinutes(1))
-        .removalListener(listener)
-        .maximumWeight(100)
         .weigher((Int k, Int v) -> v.intValue())
+        .removalListener(listener)
         .executor(Runnable::run)
         .ticker(ticker::read)
+        .maximumWeight(100)
         .recordStats()
         .build();
 
@@ -2707,22 +2696,10 @@ final class BoundedLocalCacheTest {
     // should be removed from the cache and load failure recorded.
     var throwOnCreate = new AtomicBoolean();
     var cache = Caffeine.newBuilder()
-        .expireAfter(new Expiry<Int, Int>() {
-          @Override public long expireAfterCreate(Int key, Int value, long currentTime) {
-            if (throwOnCreate.get()) {
-              throw new IllegalStateException("expiry create failure");
-            }
-            return Duration.ofMinutes(5).toNanos();
-          }
-          @Override public long expireAfterUpdate(Int key, Int value,
-              long currentTime, long currentDuration) {
-            return currentDuration;
-          }
-          @Override public long expireAfterRead(Int key, Int value,
-              long currentTime, long currentDuration) {
-            return currentDuration;
-          }
-        })
+        .expireAfter(Expiry.creating((Int key, Int value) -> {
+            checkState(!throwOnCreate.get(), "expiry create failure");
+            return Duration.ofMinutes(5);
+        }))
         .executor(Runnable::run)
         .recordStats()
         .buildAsync();
@@ -2754,12 +2731,10 @@ final class BoundedLocalCacheTest {
     var weigherCallCount = new MutableInt();
     LoadingCache<Int, Int> cache = Caffeine.newBuilder()
         .maximumWeight(1000)
-        .weigher((Int k, Int v) -> {
+        .weigher((Int key, Int value) -> {
           weigherCallCount.increment();
-          if (v.intValue() == 99) {
-            throw new IllegalStateException("weigher failure");
-          }
-          return v.intValue();
+          checkState(value.intValue() != 99, "weigher failure");
+          return value.intValue();
         })
         .executor(Runnable::run)
         .recordStats()

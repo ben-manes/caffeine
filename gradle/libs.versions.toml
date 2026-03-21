@@ -32,8 +32,9 @@ felix-scr = "2.2.14"
 findsecbugs = "1.14.0"
 flip-tables = "1.1.1"
 forbidden-apis = "3.10"
+fray = "0.8.2"
 google-java-format = "1.35.0"
-grpc = "1.79.0"
+grpc = "1.80.0"
 guava = "33.5.0-jre"
 guice = "7.0.0"
 h2 = "2.4.240"
@@ -43,7 +44,7 @@ httpclient = "4.5.14"
 idea = "1.4.1"
 infer-annotations = "0.18.0"
 jackrabbit = "1.92.0"
-jackson = "2.21.1"
+jackson = "2.21.2"
 jacoco = "0.8.14"
 jakarta-inject = "2.0.1"
 jamm = "0.4.0"
@@ -83,7 +84,7 @@ pax-exam = "4.14.0"
 pax-url = "3.0.2"
 picocli = "4.7.7"
 pmd = "7.22.0"
-protobuf = "4.34.0"
+protobuf = "4.34.1"
 revapi = "1.8.0"
 slf4j = "2.0.17"
 slf4j-test = "3.0.3"
@@ -133,6 +134,7 @@ felix-framework = { module = "org.apache.felix:org.apache.felix.framework", vers
 felix-scr = { module = "org.apache.felix:org.apache.felix.scr", version.ref = "felix-scr" }
 findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 flip-tables = { module = "com.jakewharton.fliptables:fliptables", version.ref = "flip-tables" }
+fray-junit = { module = "org.pastalab.fray:fray-junit", version.ref = "fray" }
 google-java-format = { module = "com.google.googlejavaformat:google-java-format", version.ref = "google-java-format" }
 grpc-bom = { module = "io.grpc:grpc-bom", version.ref = "grpc" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
@@ -231,6 +233,7 @@ dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.r
 dependency-check = { id = "org.owasp.dependencycheck", version.ref = "dependency-check" }
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
 forbidden-apis = { id = "de.thetaphi.forbiddenapis", version.ref = "forbidden-apis" }
+fray = { id = "org.pastalab.fray.gradle", version.ref = "fray" }
 idea = { id = "org.jetbrains.gradle.plugin.idea-ext", version.ref = "idea" }
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-plugin" }
 jmh-report = { id = "io.morethan.jmhreport", version.ref = "jmh-report" }

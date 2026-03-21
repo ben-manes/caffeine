@@ -25,6 +25,7 @@ dependencies {
   implementation(libs.bundles.pmd)
 
   implementation(plugin(libs.plugins.bnd))
+  implementation(plugin(libs.plugins.fray))
   implementation(plugin(libs.plugins.idea))
   implementation(plugin(libs.plugins.revapi))
   implementation(plugin(libs.plugins.nullaway))

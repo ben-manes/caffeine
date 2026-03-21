@@ -122,7 +122,7 @@ jobs:
       - name: Upload result to GitHub Code Scanning
         if: always() && hashFiles('pmd-combined.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4.33.0
+        uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
         with:
           sarif_file: pmd-combined.sarif
           category: pmd
@@ -202,7 +202,7 @@ jobs:
       - name: Upload result to GitHub Code Scanning
         if: always() && hashFiles('spotbugs-combined.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4.33.0
+        uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
         with:
           sarif_file: spotbugs-combined.sarif
           category: spotbugs

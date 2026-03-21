@@ -8,6 +8,7 @@ import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
+  id("org.pastalab.fray.gradle")
   id("java-library.caffeine")
   id("java-test-fixtures")
   id("jcstress.caffeine")
@@ -171,6 +172,8 @@ tasks.named<JavaCompile>("compileJmhJava").configure {
   }
 }
 
+fray.testTask = "frayTest"
+
 testing.suites {
   named<JvmTestSuite>("test") {
     useJUnitJupiter(libs.versions.junit.jupiter)
@@ -256,6 +259,30 @@ testing.suites {
       }
     }
   }
+  register<JvmTestSuite>("frayTest") {
+    useJUnitJupiter(libs.versions.junit.jupiter)
+
+    dependencies {
+      implementation(project())
+      implementation(libs.fray.junit)
+      implementation(testFixtures(project()))
+    }
+    targets.configureEach {
+      testTask.configure {
+        javaLauncher.unset()
+        incompatibleWithConfigurationCache()
+        maxParallelForks = Runtime.getRuntime().availableProcessors()
+
+        val shardingOptions = mapOf(
+          "shardCount" to providers.gradleProperty("shardCount")
+            .map { it.toIntOrNull() }.getOrElse(1).coerceAtLeast(1),
+          "shardIndex" to providers.gradleProperty("shardIndex")
+            .map { it.toIntOrNull() }.getOrElse(0))
+        inputs.properties(shardingOptions)
+        systemProperties(shardingOptions)
+      }
+    }
+  }
   register<JvmTestSuite>("fuzzTest") {
     useJUnitJupiter(libs.versions.junit.jupiter)
 
@@ -318,7 +345,6 @@ testing.suites {
       implementation(project())
       implementation(libs.truth)
       implementation(libs.jctools)
-      implementation(libs.hamcrest)
       implementation(libs.spotbugs.annotations)
 
       runtimeOnly(libs.junit.jupiter.vintage)

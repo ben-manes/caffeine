@@ -96,6 +96,7 @@ jobs:
             caffeine:googleTest
             caffeine:jsr166Test
             caffeine:moduleTest
+            caffeine:frayTest
             caffeine:osgiTest
             simulator:check
             jcache:check
@@ -277,7 +278,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
       - name: Publish to Codecov
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5.5.3
         if: >
           (github.event_name == 'push')
           && (github.event.repository.fork == false)
@@ -364,7 +365,7 @@ jobs:
           auth: ${{ secrets.GIST_TOKEN }}
           gist_url: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
       - name: Publish to Codecov
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5.5.3
         if: >
           github.event_name == 'push'
           && github.event.repository.fork == false

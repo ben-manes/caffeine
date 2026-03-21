@@ -90,7 +90,7 @@ runs:
         cache-read-only: ${{ inputs.local-cache-read-only }}
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Restore local build cache
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       if: ${{ inputs.local-build-cache == 'true' }}
       with:
         path: ~/.gradle/caches/build-cache-*

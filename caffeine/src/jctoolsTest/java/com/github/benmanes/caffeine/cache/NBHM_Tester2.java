@@ -13,14 +13,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Locale.US;
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
 import java.util.Hashtable;
@@ -47,9 +42,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 // Test NonBlockingHashMap via JUnit
 @SuppressFBWarnings({"ICAST_INTEGER_MULTIPLY_CAST_TO_LONG", "MUI_CALLING_SIZE_ON_SUBCONTAINER",
-    "MUI_GET_BEFORE_REMOVE", "MUI_USE_CONTAINSKEY", "SBSC_USE_STRINGBUFFER_CONCATENATION",
-    "STT_STRING_PARSING_A_FIELD", "UCPM_USE_CHARACTER_PARAMETERIZED_METHOD",
-    "UTAO_JUNIT_ASSERTION_ODDITIES_ACTUAL_CONSTANT", "WMI_WRONG_MAP_ITERATOR"})
+    "MUI_GET_BEFORE_REMOVE", "SBSC_USE_STRINGBUFFER_CONCATENATION", "STT_STRING_PARSING_A_FIELD",
+    "UCPM_USE_CHARACTER_PARAMETERIZED_METHOD", "WMI_WRONG_MAP_ITERATOR"})
 @SuppressWarnings({"all", "AssertEqualsArgumentOrderChecker", "EffectivelyPrivate",
     "EqualsUnsafeCast", "FieldMissingNullable", "ForEachIterable", "FutureReturnValueIgnored",
     "IdentifierName", "InconsistentOverloads", "JdkObsolete", "MethodCanBeStatic", "NullAway",
@@ -77,49 +71,49 @@ public class NBHM_Tester2 {
   // Test some basic stuff; add a few keys, remove a few keys
   @Test
   public void testBasic() {
-    assertTrue(_nbhm.isEmpty());
-    assertThat(_nbhm.putIfAbsent("k1", "v1"), nullValue());
+    assertThat(_nbhm).isEmpty();
+    assertThat(_nbhm.putIfAbsent("k1", "v1")).isNull();
     checkSizes(1);
-    assertThat(_nbhm.putIfAbsent("k2", "v2"), nullValue());
+    assertThat(_nbhm.putIfAbsent("k2", "v2")).isNull();
     checkSizes(2);
-    assertTrue(_nbhm.containsKey("k2"));
-    assertThat(_nbhm.put("k1", "v1a"), is("v1"));
-    assertThat(_nbhm.put("k2", "v2a"), is("v2"));
+    assertThat(_nbhm).containsKey("k2");
+    assertThat(_nbhm.put("k1", "v1a")).isEqualTo("v1");
+    assertThat(_nbhm.put("k2", "v2a")).isEqualTo("v2");
     checkSizes(2);
-    assertThat(_nbhm.putIfAbsent("k2", "v2b"), is("v2a"));
-    assertThat(_nbhm.remove("k1"), is("v1a"));
-    assertFalse(_nbhm.containsKey("k1"));
+    assertThat(_nbhm.putIfAbsent("k2", "v2b")).isEqualTo("v2a");
+    assertThat(_nbhm.remove("k1")).isEqualTo("v1a");
+    assertThat(_nbhm).doesNotContainKey("k1");
     checkSizes(1);
-    assertThat(_nbhm.remove("k1"), nullValue());
-    assertThat(_nbhm.remove("k2"), is("v2a"));
+    assertThat(_nbhm.remove("k1")).isNull();
+    assertThat(_nbhm.remove("k2")).isEqualTo("v2a");
     checkSizes(0);
-    assertThat(_nbhm.remove("k2"), nullValue());
-    assertThat(_nbhm.remove("k3"), nullValue());
-    assertTrue(_nbhm.isEmpty());
+    assertThat(_nbhm.remove("k2")).isNull();
+    assertThat(_nbhm.remove("k3")).isNull();
+    assertThat(_nbhm).isEmpty();
 
-    assertThat(_nbhm.put("k0", "v0"), nullValue());
-    assertTrue(_nbhm.containsKey("k0"));
+    assertThat(_nbhm.put("k0", "v0")).isNull();
+    assertThat(_nbhm).containsKey("k0");
     checkSizes(1);
-    assertThat(_nbhm.remove("k0"), is("v0"));
-    assertFalse(_nbhm.containsKey("k0"));
+    assertThat(_nbhm.remove("k0")).isEqualTo("v0");
+    assertThat(_nbhm).doesNotContainKey("k0");
     checkSizes(0);
 
-    assertThat(_nbhm.replace("k0", "v0"), nullValue());
-    assertFalse(_nbhm.containsKey("k0"));
-    assertThat(_nbhm.put("k0", "v0"), nullValue());
-    assertEquals(_nbhm.replace("k0", "v0a"), "v0");
-    assertEquals(_nbhm.get("k0"), "v0a");
-    assertThat(_nbhm.remove("k0"), is("v0a"));
-    assertFalse(_nbhm.containsKey("k0"));
+    assertThat(_nbhm.replace("k0", "v0")).isNull();
+    assertThat(_nbhm).doesNotContainKey("k0");
+    assertThat(_nbhm.put("k0", "v0")).isNull();
+    assertThat(_nbhm.replace("k0", "v0a")).isEqualTo("v0");
+    assertThat(_nbhm.get("k0")).isEqualTo("v0a");
+    assertThat(_nbhm.remove("k0")).isEqualTo("v0a");
+    assertThat(_nbhm).doesNotContainKey("k0");
     checkSizes(0);
 
-    assertThat(_nbhm.replace("k1", "v1"), nullValue());
-    assertFalse(_nbhm.containsKey("k1"));
-    assertThat(_nbhm.put("k1", "v1"), nullValue());
-    assertEquals(_nbhm.replace("k1", "v1a"), "v1");
-    assertEquals(_nbhm.get("k1"), "v1a");
-    assertThat(_nbhm.remove("k1"), is("v1a"));
-    assertFalse(_nbhm.containsKey("k1"));
+    assertThat(_nbhm.replace("k1", "v1")).isNull();
+    assertThat(_nbhm).doesNotContainKey("k1");
+    assertThat(_nbhm.put("k1", "v1")).isNull();
+    assertThat(_nbhm.replace("k1", "v1a")).isEqualTo("v1");
+    assertThat(_nbhm.get("k1")).isEqualTo("v1a");
+    assertThat(_nbhm.remove("k1")).isEqualTo("v1a");
+    assertThat(_nbhm).doesNotContainKey("k1");
     checkSizes(0);
 
     // Insert & Remove KeyBonks until the table resizes and we start
@@ -128,7 +122,7 @@ public class NBHM_Tester2 {
     Map<KeyBonk, String> dumb = makeMap();
     for (int i = 0; i < 10000; i++) {
       final KeyBonk happy1 = new KeyBonk(i);
-      assertThat(dumb.put(happy1, "and"), nullValue());
+      assertThat(dumb.put(happy1, "and")).isNull();
       if ((i & 1) == 0) {
         dumb.remove(happy1);
       }
@@ -151,7 +145,7 @@ public class NBHM_Tester2 {
 
   // Check all iterators for correct size counts
   private void checkSizes(int expectedSize) {
-    assertEquals("size()", _nbhm.size(), expectedSize);
+    assertWithMessage("size()").that(_nbhm.size()).isEqualTo(expectedSize);
     Collection<String> vals = _nbhm.values();
     checkSizes("values()", vals.size(), vals.iterator(), expectedSize);
     Set<String> keys = _nbhm.keySet();
@@ -162,41 +156,41 @@ public class NBHM_Tester2 {
 
   // Check that the iterator iterates the correct number of times
   private void checkSizes(String msg, int sz, Iterator<?> it, int expectedSize) {
-    assertEquals(msg, expectedSize, sz);
+    assertWithMessage(msg).that(sz).isEqualTo(expectedSize);
     int result = 0;
     while (it.hasNext()) {
       result++;
       it.next();
     }
-    assertEquals(msg, expectedSize, result);
+    assertWithMessage(msg).that(result).isEqualTo(expectedSize);
   }
 
   @Test
   public void testIteration() {
-    assertTrue(_nbhm.isEmpty());
-    assertThat(_nbhm.put("k1", "v1"), nullValue());
-    assertThat(_nbhm.put("k2", "v2"), nullValue());
+    assertThat(_nbhm).isEmpty();
+    assertThat(_nbhm.put("k1", "v1")).isNull();
+    assertThat(_nbhm.put("k2", "v2")).isNull();
 
     String str1 = "";
     for (Map.Entry<String, String> e : _nbhm.entrySet()) {
       str1 += e.getKey();
     }
-    assertThat("found all entries", str1, anyOf(is("k1k2"), is("k2k1")));
+    assertWithMessage("found all entries").that(str1).isAnyOf("k1k2", "k2k1");
 
     String str2 = "";
     for (String key : _nbhm.keySet()) {
       str2 += key;
     }
-    assertThat("found all keys", str2, anyOf(is("k1k2"), is("k2k1")));
+    assertWithMessage("found all keys").that(str2).isAnyOf("k1k2", "k2k1");
 
     String str3 = "";
     for (String val : _nbhm.values()) {
       str3 += val;
     }
-    assertThat("found all vals", str3, anyOf(is("v1v2"), is("v2v1")));
+    assertWithMessage("found all vals").that(str3).isAnyOf("v1v2", "v2v1");
 
-    assertThat("toString works", _nbhm.toString(),
-        anyOf(is("{k1=v1, k2=v2}"), is("{k2=v2, k1=v1}")));
+    assertWithMessage("toString works").that(_nbhm.toString())
+        .isAnyOf("{k1=v1, k2=v2}", "{k2=v2, k1=v1}");
     _nbhm.clear();
   }
 
@@ -240,51 +234,54 @@ public class NBHM_Tester2 {
     for (int i = 0; i < CNT; i++) {
       final Integer z = i;
       String s0 = nbhm.get(z);
-      assertThat(s0, nullValue());
+      assertThat(s0).isNull();
       nbhm.put(z, v);
       String s1 = nbhm.get(z);
-      assertThat(s1, is(v));
+      assertThat(s1).isEqualTo(v);
     }
-    assertThat(nbhm.size(), is(CNT));
+    assertThat(nbhm.size()).isEqualTo(CNT);
   }
 
   @Test
   public void testIterationBig() {
     final int CNT = 10000;
-    assertThat(_nbhm.size(), is(0));
+    assertThat(_nbhm.size()).isEqualTo(0);
     for (int i = 0; i < CNT; i++) {
       _nbhm.put("k" + i, "v" + i);
     }
-    assertThat(_nbhm.size(), is(CNT));
+    assertThat(_nbhm.size()).isEqualTo(CNT);
 
     int sz = 0;
     int sum = 0;
     for (String s : _nbhm.keySet()) {
       sz++;
-      assertThat("", s.charAt(0), is('k'));
+      assertThat(s.charAt(0)).isEqualTo('k');
       int x = Integer.parseInt(s.substring(1));
       sum += x;
-      assertTrue(x >= 0 && x <= (CNT - 1));
+      assertThat(x).isAtLeast(0);
+      assertThat(x).isAtMost(CNT - 1);
     }
-    assertThat("Found 10000 ints", sz, is(CNT));
-    assertThat("Found all integers in list", sum, is(CNT * (CNT - 1) / 2));
+    assertWithMessage("Found 10000 ints").that(sz).isEqualTo(CNT);
+    assertWithMessage("Found all integers in list").that(sum).isEqualTo(CNT * (CNT - 1) / 2);
 
-    assertThat("can remove 3", _nbhm.remove("k3"), is("v3"));
-    assertThat("can remove 4", _nbhm.remove("k4"), is("v4"));
+    assertWithMessage("can remove 3").that(_nbhm.remove("k3")).isEqualTo("v3");
+    assertWithMessage("can remove 4").that(_nbhm.remove("k4")).isEqualTo("v4");
     sz = 0;
     sum = 0;
     for (String s : _nbhm.keySet()) {
       sz++;
-      assertThat("", s.charAt(0), is('k'));
+      assertThat(s.charAt(0)).isEqualTo('k');
       int x = Integer.parseInt(s.substring(1));
       sum += x;
-      assertTrue(x >= 0 && x <= (CNT - 1));
+      assertThat(x).isAtLeast(0);
+      assertThat(x).isAtMost(CNT - 1);
       String v = _nbhm.get(s);
-      assertThat("", v.charAt(0), is('v'));
-      assertThat("", s.substring(1), is(v.substring(1)));
+      assertThat(v.charAt(0)).isEqualTo('v');
+      assertThat(s.substring(1)).isEqualTo(v.substring(1));
     }
-    assertThat("Found " + (CNT - 2) + " ints", sz, is(CNT - 2));
-    assertThat("Found all integers in list", sum, is(CNT * (CNT - 1) / 2 - (3 + 4)));
+    assertWithMessage("Found %s ints", (CNT - 2)).that(sz).isEqualTo(CNT - 2);
+    assertWithMessage("Found all integers in list")
+        .that(sum).isEqualTo(CNT * (CNT - 1) / 2 - (3 + 4));
     _nbhm.clear();
   }
 
@@ -315,8 +312,8 @@ public class NBHM_Tester2 {
     if (found) {
       System.out.println(buf + " }");
     }
-    assertThat("concurrent size=0", nbhm.size(), is(0));
-    assertThat("keyset size=0", nbhm.keySet().size(), is(0));
+    assertWithMessage("concurrent size=0").that(nbhm.size()).isEqualTo(0);
+    assertWithMessage("keyset size=0").that(nbhm.keySet().size()).isEqualTo(0);
   }
 
   void work_helper(Map<String, String> nbhm, String thrd, int d) {
@@ -324,11 +321,11 @@ public class NBHM_Tester2 {
     for (int j = 0; j < 10; j++) {
       // long start = System.nanoTime();
       for (int i = d; i < ITERS; i += 2) {
-        assertThat("this key not in there, so putIfAbsent must work",
-            nbhm.putIfAbsent("k" + i, thrd), is((String) null));
+        assertWithMessage("this key not in there, so putIfAbsent must work")
+            .that(nbhm.putIfAbsent("k" + i, thrd)).isNull();
       }
       for (int i = d; i < ITERS; i += 2) {
-        assertTrue(nbhm.remove("k" + i, thrd));
+        assertThat(nbhm.remove("k" + i, thrd)).isTrue();
       }
       // double delta_nanos = System.nanoTime()-start;
       // double delta_secs = delta_nanos/1000000000.0;
@@ -343,28 +340,17 @@ public class NBHM_Tester2 {
     items.put(100L, "100");
     items.put(101L, "101");
 
-    assertEquals("keySet().size()", 2, items.keySet().size());
-    assertTrue("keySet().contains(100)", items.keySet().contains(100L));
-    assertTrue("keySet().contains(101)", items.keySet().contains(101L));
+    assertWithMessage("keySet().size()").that(items.keySet().size()).isEqualTo(2);
+    assertWithMessage("keySet().contains(100)").that(items.keySet()).contains(100L);
+    assertWithMessage("keySet().contains(101)").that(items.keySet()).contains(101L);
 
-    assertEquals("values().size()", 2, items.values().size());
-    assertTrue("values().contains(\"100\")", items.values().contains("100"));
-    assertTrue("values().contains(\"101\")", items.values().contains("101"));
+    assertWithMessage("values().size()").that(items.values().size()).isEqualTo(2);
+    assertWithMessage("values().contains(\"100\")").that(items.values()).contains("100");
+    assertWithMessage("values().contains(\"101\")").that(items.values()).contains("101");
 
-    assertEquals("entrySet().size()", 2, items.entrySet().size());
-    boolean found100 = false;
-    boolean found101 = false;
-    for (Map.Entry<Long, String> entry : items.entrySet()) {
-      if (entry.getKey().equals(100L)) {
-        assertEquals("entry[100].getValue()==\"100\"", "100", entry.getValue());
-        found100 = true;
-      } else if (entry.getKey().equals(101L)) {
-        assertEquals("entry[101].getValue()==\"101\"", "101", entry.getValue());
-        found101 = true;
-      }
-    }
-    assertTrue("entrySet().contains([100])", found100);
-    assertTrue("entrySet().contains([101])", found101);
+    assertWithMessage("entrySet().size()").that(items.entrySet().size()).isEqualTo(2);
+    assertThat(items).containsEntry(100L, "100");
+    assertThat(items).containsEntry(101L, "101");
   }
 
   // Concurrent insertion & then iterator test.
@@ -389,14 +375,14 @@ public class NBHM_Tester2 {
     }
     ex.shutdown();
 
-    assertEquals("values().size()", ITEM_COUNT, nbhml.values().size());
-    assertEquals("entrySet().size()", ITEM_COUNT, nbhml.entrySet().size());
+    assertWithMessage("values().size()").that(nbhml.values().size()).isEqualTo(ITEM_COUNT);
+    assertWithMessage("entrySet().size()").that(nbhml.entrySet().size()).isEqualTo(ITEM_COUNT);
     int itemCount = 0;
     for (Iterator<TestKey> iterator = nbhml.values().iterator(); iterator.hasNext();) {
       iterator.next();
       itemCount++;
     }
-    assertEquals("values().iterator() count", ITEM_COUNT, itemCount);
+    assertWithMessage("values().iterator() count").that(itemCount).isEqualTo(ITEM_COUNT);
   }
 
   // --- Customer Test Case 3 ------------------------------------------------
@@ -455,11 +441,11 @@ public class NBHM_Tester2 {
 
     // validate results
     final Map<Long, TestKey> items = feeder.getMapMultithreaded();
-    assertEquals("size()", itemCount, items.size());
+    assertWithMessage("size()").that(items.size()).isEqualTo(itemCount);
 
-    assertEquals("values().size()", itemCount, items.values().size());
+    assertWithMessage("values().size()").that(items.values().size()).isEqualTo(itemCount);
 
-    assertEquals("entrySet().size()", itemCount, items.entrySet().size());
+    assertWithMessage("entrySet().size()").that(items.entrySet().size()).isEqualTo(itemCount);
 
     int iteratorCount = 0;
     for (Iterator<TestKey> iterator = items.values().iterator(); iterator.hasNext();) {
@@ -472,8 +458,8 @@ public class NBHM_Tester2 {
       iterator.next();
       iteratorCount2++;
     }
-    assertEquals("iterator counts differ", iteratorCount, iteratorCount2);
-    assertEquals("values().iterator() count", itemCount, iteratorCount);
+    assertWithMessage("iterator counts differ").that(iteratorCount2).isEqualTo(iteratorCount);
+    assertWithMessage("values().iterator() count").that(iteratorCount).isEqualTo(itemCount);
   }
 
   // --- Tests on equality of values
@@ -482,8 +468,8 @@ public class NBHM_Tester2 {
     Map<Integer, Value> map = makeMap();
     Value initialValue = new Value(10);
     map.put(1, initialValue);
-    assertTrue(map.replace(1, initialValue, new Value(20)));
-    assertTrue(map.replace(1, new Value(20), new Value(30)));
+    assertThat(map.replace(1, initialValue, new Value(20))).isTrue();
+    assertThat(map.replace(1, new Value(20), new Value(30))).isTrue();
   }
 
   @Test
@@ -491,9 +477,9 @@ public class NBHM_Tester2 {
     Map<Integer, Value> map = makeMap();
     Value initialValue = new Value(10);
     map.put(1, initialValue);
-    assertTrue(map.remove(1, initialValue));
+    assertThat(map.remove(1, initialValue)).isTrue();
     map.put(1, initialValue);
-    assertTrue(map.remove(1, new Value(10)));
+    assertThat(map.remove(1, new Value(10))).isTrue();
   }
 
   private static class Value {
@@ -649,7 +635,7 @@ public class NBHM_Tester2 {
         final Future<Integer> result = co.take();
         itemCount += result.get();
       }
-      assertTrue(itemCount > 0);
+      assertThat(itemCount).isGreaterThan(0);
       ex.shutdown();
       return map;
     }
