@@ -79,10 +79,12 @@
 \.xpm$
 \.xz$
 \.zip$
+^\.claude/
 ^\.github/actions/spelling/
 ^\Q.github/CODEOWNERS\E$
 ^\Q.github/SECURITY.md\E$
 ^\Q.github/workflows/check-spelling.yml\E$
+^\Q.github/workflows/semgrep.yml\E$
 ^\Q.inferconfig\E$
 ^\Q.typos.toml\E$
 ^\Qgradle/config/eclipse/org.eclipse.jdt.core.prefs\E$

@@ -1,6 +1,7 @@
 @file:Suppress("PackageDirectoryMismatch")
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -48,7 +49,7 @@ val downloadCaffeine by tasks.registering {
 
 tasks.withType<JavaCompile>().configureEach {
   inputs.files(downloadCaffeine.map { it.outputs.files })
-    .withPathSensitivity(PathSensitivity.RELATIVE)
+    .withPathSensitivity(RELATIVE)
 
   options.apply {
     errorprone {

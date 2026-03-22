@@ -27,7 +27,7 @@ env:
 jobs:
   lincheck:
     name: Lincheck
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     strategy:

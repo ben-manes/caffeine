@@ -478,9 +478,7 @@ final class BoundedLocalCacheTest {
 
     cache.evictionLock.lock();
     try {
-      var future = CompletableFuture.runAsync(() -> {
-        cache.rescheduleCleanUpIfIncomplete();
-      }, executor);
+      var future = CompletableFuture.runAsync(cache::rescheduleCleanUpIfIncomplete, executor);
       assertThat(future).succeedsWithNull();
       verifyNoInteractions(context.scheduler());
       await().untilAsserted(() -> assertThat(cache.drainStatus).isEqualTo(REQUIRED));

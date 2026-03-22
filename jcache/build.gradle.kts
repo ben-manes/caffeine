@@ -1,6 +1,7 @@
 /** JCache compatibility adapter. */
 @file:Suppress("UnstableApiUsage")
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.gradle.plugins.ide.eclipse.model.Library
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
@@ -103,8 +104,8 @@ testing.suites {
       testTask.configure {
         val caffeineOsgiJarFile = layout.file(caffeineOsgiBundle.map { it.singleFile })
         val jcacheJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
-        inputs.files(caffeineOsgiJarFile)
-        inputs.files(jcacheJarFile)
+        inputs.files(caffeineOsgiJarFile).withPathSensitivity(RELATIVE)
+        inputs.files(jcacheJarFile).withPathSensitivity(RELATIVE)
 
         val relativeDir = projectDir
         val versions = libs.versions
@@ -139,6 +140,7 @@ testing.suites {
     targets.configureEach {
       testTask.configure {
         inputs.files(unzipTestKit.map { it.outputs.files })
+          .withPathSensitivity(RELATIVE)
         testClassesDirs = layout.buildDirectory.files("tck")
 
         doFirst {
@@ -190,7 +192,7 @@ tasks.named<Jar>("jar").configure {
 
 tasks.named<Javadoc>("javadoc").configure {
   inputs.files(unzipJCacheJavaDoc.map { it.outputs.files })
-    .withPathSensitivity(PathSensitivity.RELATIVE)
+    .withPathSensitivity(RELATIVE)
   javadocOptions {
     addBooleanOption("Xdoclint:all,-missing", true)
     linksOffline("https://static.javadoc.io/javax.cache/cache-api/${libs.versions.jcache.get()}/",

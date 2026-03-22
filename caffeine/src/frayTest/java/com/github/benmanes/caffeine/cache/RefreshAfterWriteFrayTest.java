@@ -91,6 +91,44 @@ final class RefreshAfterWriteFrayTest {
     assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
   }
 
+  /** Refresh completes on an entry that is concurrently chosen as the eviction victim. */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void completion_evictedAsVictim() throws InterruptedException {
+    var ticker = new FakeTicker();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(3)
+        .build(key -> key * 10);
+
+    // Key 1 is loaded once (low frequency), keys 2-3 are accessed more (high frequency)
+    cache.get(1);
+    cache.get(2);
+    cache.get(3);
+    cache.get(2);
+    cache.get(3);
+    cache.get(2);
+    cache.get(3);
+    cache.cleanUp();
+
+    ticker.advance(Duration.ofMinutes(2));
+
+    // Thread A triggers refresh of key 1 (the least frequent entry)
+    // Thread B adds a new key, forcing eviction — key 1 is the likely victim
+    var threadA = new Thread(() -> cache.get(1));
+    var threadB = new Thread(() -> cache.put(4, 40));
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.cleanUp();
+
+    assertThat(cache.estimatedSize()).isAtMost(3);
+    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+  }
+
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void refresh_doubleSubmission_prevention() throws InterruptedException {
     var ticker = new FakeTicker();

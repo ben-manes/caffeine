@@ -1,6 +1,7 @@
 /** Guava compatibility adapter. The tests are forked from Guava commit e370dde. */
 @file:Suppress("UnstableApiUsage")
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
@@ -72,8 +73,8 @@ testing.suites {
       testTask.configure {
         val caffeineOsgiJarFile = layout.file(caffeineOsgiBundle.map { it.singleFile })
         val guavaJarFile = tasks.named<Jar>("jar").flatMap { it.archiveFile }
-        inputs.files(caffeineOsgiJarFile)
-        inputs.files(guavaJarFile)
+        inputs.files(caffeineOsgiJarFile).withPathSensitivity(RELATIVE)
+        inputs.files(guavaJarFile).withPathSensitivity(RELATIVE)
 
         val relativeDir = projectDir
         val versions = libs.versions

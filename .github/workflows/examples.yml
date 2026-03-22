@@ -155,7 +155,7 @@ jobs:
             echo '### Adaptivity'
             echo '```'
             cat $GITHUB_WORKSPACE/simulation.md
-            echo '```'
+            printf '\n```\n'
           } >> $GITHUB_STEP_SUMMARY
 
   stress:
