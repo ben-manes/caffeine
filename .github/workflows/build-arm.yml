@@ -15,7 +15,7 @@ env:
     api.adoptium.net:443
     api.foojay.io:443
     api.github.com:443
-    caffeine.gradle-enterprise.cloud:443
+    caffeine.develocity.cloud:443
     download.java.net:443
     download.oracle.com:443
     downloads.gradle.org:443

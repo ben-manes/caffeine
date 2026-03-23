@@ -21,6 +21,28 @@ Generated nodes: `caffeine/build/generated/sources/node/`
 5. Take as much reasoning time as needed.
 6. **Save findings to memory** after completing analysis — update the agent memory with key conclusions, confirmed invariants, and any new design decisions discovered.
 
+## Output Contract
+
+Every finding must use this structure:
+
+- **Location**: file path and method name
+- **Issue**: one-line summary
+- **Severity**: critical / high / medium / low
+- **Evidence**: the specific code behavior, interleaving, or input that triggers it
+- **Invariant/contract violated**: which documented invariant or API contract is broken
+- **Confidence**: high / medium (omit low-confidence speculation)
+- **Verification**: a targeted test idea — method name, required `-P` flags, and expected behavior
+
+Example verification:
+```
+./gradlew :caffeine:test --tests 'BoundedLocalCacheTest.methodName' -Pcompute=async -Pvalues=weak
+```
+
+When no defects are found, output:
+- **Confirmed invariants** and which mechanism protects each
+- **Coverage summary**: files inspected, methods traced, interleavings attempted
+- **Residual risk**: what was NOT inspected and why
+
 ## Project-Specific Context
 
 Several patterns that look suspicious are intentional design decisions:

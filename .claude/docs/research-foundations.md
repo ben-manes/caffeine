@@ -11,8 +11,14 @@ From the "Design of a Modern Cache" talk:
 - Must be correct & maintainable
 - APIs with low conceptual weight
 
-Performance mantras: Don't do it. Do it, but don't do it again. Do it cheaper.
-Do it less. Do it later. Do it when they're not looking. Do it concurrently.
+Performance mantras:
+ - Don't do it
+ - Do it, but don't do it again
+ - Do it cheaper
+ - Do it less
+ - Do it later
+ - Do it when they're not looking
+ - Do it concurrently
 
 ## Core Design
 
@@ -104,5 +110,6 @@ causing O(n) degeneration per operation.
 **Relevance:** Caffeine delegates to `ConcurrentHashMap` which uses tree bins
 (red-black trees) for collision resistance in JDK 8+. The frequency sketch uses
 a separate hash (`spread`/`rehash` functions) independent of the key's `hashCode()`,
-providing additional resilience. Not a direct implementation influence, but
-informs the threat model.
+providing additional resilience. The cache randomly admits ~1% of candidates to make
+frequency estimation attacks non-deterministic. Not a direct implementation influence,
+but informs the threat model.

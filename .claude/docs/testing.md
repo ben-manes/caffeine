@@ -2,7 +2,7 @@
 
 ## Parameterized Test System
 
-Tests use a custom JUnit 5 parameterization framework built on `@CacheSpec`.
+Tests use a custom JUnit Jupiter parameterization framework built on `@CacheSpec`.
 
 ### Writing a test
 
@@ -68,7 +68,7 @@ void myTest(Cache<Int, Int> cache, CacheContext context) {
 ### Filtering with -P flags
 
 ```bash
--Pimplementation=bounded   # bounded or unbounded
+-Pimplementation=caffeine  # caffeine or guava
 -Pkeys=strong              # strong or weak
 -Pvalues=strong            # strong, weak, or soft
 -Pcompute=sync             # sync or async

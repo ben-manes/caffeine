@@ -32,7 +32,7 @@ jobs:
             api.foojay.io:443
             api.github.com:443
             auth.docker.io:443
-            caffeine.gradle-enterprise.cloud:443
+            caffeine.develocity.cloud:443
             docs.oracle.com:443
             download.jetbrains.com:443
             download-cdn.jetbrains.com:443
@@ -67,8 +67,6 @@ jobs:
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-      - name: Patch gradle.properties for Qodana's Loom EA JDK
-        run: sed -i 's/-XX:+UseCompactObjectHeaders/-XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders/' gradle.properties
       - name: Qodana - Code Inspection
         uses: JetBrains/qodana-action@89eb4357efd2b52e639f3216e63edaf33b82622b # v2025.3.2
         env:
@@ -78,6 +76,6 @@ jobs:
           upload-result: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload SARIF file for GitHub Advanced Security Dashboard
-        uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json

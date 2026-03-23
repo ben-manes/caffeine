@@ -16,7 +16,7 @@ Run individual tests, not the full suite — it's slow and sharded across 40 CI 
 ### Test Filtering
 
 ```bash
-./gradlew :caffeine:test -Pimplementation=bounded   # Cache type (bounded/unbounded)
+./gradlew :caffeine:test -Pimplementation=caffeine  # Cache type (caffeine/guava)
 ./gradlew :caffeine:test -Pkeys=strong              # Key reference (strong/weak)
 ./gradlew :caffeine:test -Pvalues=strong            # Value reference (strong/weak/soft)
 ./gradlew :caffeine:test -Pcompute=sync             # Compute mode (sync/async)
@@ -26,16 +26,16 @@ Run individual tests, not the full suite — it's slow and sharded across 40 CI 
 ### Specialized Test Suites
 
 ```bash
-./gradlew :caffeine:frayTest         # Fray concurrency interleaving (slow)
+./gradlew :caffeine:frayTest         # Fray concurrency interleaving
 ./gradlew :caffeine:lincheckTest     # LinCheck linearizability
 ./gradlew :caffeine:fuzzTest         # Fuzzing (Jazzer)
 ./gradlew :caffeine:jcstress         # JCStress concurrency stress tests
-./gradlew :caffeine:googleTest       # Guava compatibility
-./gradlew :caffeine:apacheTest       # Apache Commons compatibility
-./gradlew :caffeine:eclipseTest      # Eclipse Collections compatibility
-./gradlew :caffeine:jctoolsTest      # JCTools compatibility
-./gradlew :caffeine:jsr166Test       # JSR-166 tests
-./gradlew :caffeine:openjdkTest      # OpenJDK tests
+./gradlew :caffeine:googleTest       # Guava collections tests
+./gradlew :caffeine:apacheTest       # Apache Commons collections tests
+./gradlew :caffeine:eclipseTest      # Eclipse Collections' collections tests
+./gradlew :caffeine:jctoolsTest      # JCTools collections tests
+./gradlew :caffeine:jsr166Test       # JSR-166 collections tests
+./gradlew :caffeine:openjdkTest      # OpenJDK collections tests
 ./gradlew :caffeine:moduleTest       # Java module system tests
 ./gradlew :caffeine:osgiTest         # OSGi bundle tests
 ```
@@ -47,6 +47,7 @@ Tests cannot be `@Disabled` or skipped — the build fails on any skipped test.
 ```bash
 ./gradlew :caffeine:build -Pspotbugs  # SpotBugs
 ./gradlew :caffeine:build -Ppmd       # PMD
+.github/scripts/analyze.sh            # all
 ```
 
 ErrorProne + NullAway run on every build. Fix warnings, don't suppress them.
@@ -54,9 +55,9 @@ ErrorProne + NullAway run on every build. Fix warnings, don't suppress them.
 ### Benchmarks & Analysis
 
 ```bash
-./gradlew jmh -PincludePattern=GetPutBenchmark  # JMH microbenchmarks
-./gradlew :caffeine:memoryOverhead              # JOL object layout analysis
-./gradlew :caffeine:stress --workload <type>    # Stress testing
+./gradlew jmh -PincludePattern=GetPutBenchmark               # JMH microbenchmarks
+./gradlew :caffeine:memoryOverhead                           # JOL object layout analysis
+./gradlew :caffeine:stress --workload read --duration PT30S  # Stress testing (read, write, refresh)
 ```
 
 ## Style
@@ -65,9 +66,10 @@ Google Java Style. Contributors must sign a CLA.
 
 ## Guidelines
 
-- Before suggesting dependency versions, Semgrep rulesets, or tool integrations, verify they exist (check Maven Central, registries, JDK release notes). Never recommend unverified tools.
+- Before suggesting dependency versions, Semgrep rulesets, or tool integrations, verify they exist (check Maven Central, registries, JDK release notes). Never recommend unverified tools. Use latest versions.
 - Stay focused on the specific task requested. Don't produce unsolicited broad recommendation plans or premature "ready for engineer follow-up" conclusions.
 - Lossy/best-effort semantics (read buffer drops, approximate frequency counts, eventual consistency) are intentional design trade-offs in the cache — not defects. Read `.claude/docs/design-decisions.md` before flagging these.
+- When fixing a bug or making a design change, update the relevant `.claude/docs/` and `.claude/rules/` files if the change affects documented behavior.
 
 ## Architecture
 
@@ -117,6 +119,8 @@ For deep dives, read these on demand (not auto-loaded to save context):
 ## Claude Code Extensions
 
 - **Rules** (`.claude/rules/`): project conventions, loaded automatically when relevant
+- **Skills** (`/review-change`): multi-layer parallel code review with blind + design-aware + regression pattern matching
 - **Skills** (`/audit-*`): 18 deep analysis skills for concurrency, correctness, and performance
+- **Skills** (`/audit-adversarial`): hostile full-codebase review with NO design context — finds bugs domain familiarity masks
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
 - **Auditor agent** (`.claude/agents/`): specialized Opus subagent with persistent memory for analysis tasks

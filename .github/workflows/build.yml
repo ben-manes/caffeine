@@ -16,7 +16,7 @@ env:
     api.foojay.io:443
     api.github.com:443
     api.snapcraft.io:443
-    caffeine.gradle-enterprise.cloud:443
+    caffeine.develocity.cloud:443
     cdn.azul.com:443
     cloudflare.com:443
     docker.io:443
@@ -278,7 +278,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         continue-on-error: true
       - name: Publish to Codecov
-        uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5.5.3
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         if: >
           (github.event_name == 'push')
           && (github.event.repository.fork == false)
@@ -365,7 +365,7 @@ jobs:
           auth: ${{ secrets.GIST_TOKEN }}
           gist_url: https://gist.githubusercontent.com/ben-manes/c20eb418f0e0bd6dfe1c25beb35faae4
       - name: Publish to Codecov
-        uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5.5.3
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         if: >
           github.event_name == 'push'
           && github.event.repository.fork == false

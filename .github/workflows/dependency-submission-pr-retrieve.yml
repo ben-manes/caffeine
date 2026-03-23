@@ -28,7 +28,7 @@ jobs:
           allowed-endpoints: >
             api.adoptium.net:443
             api.github.com:443
-            caffeine.gradle-enterprise.cloud:443
+            caffeine.develocity.cloud:443
             downloads.gradle.org:443
             downloads.gradle-dn.com:443
             github.com:443
@@ -39,6 +39,6 @@ jobs:
             repo1.maven.org:443
             services.gradle.org:443
       - name: Retrieve and submit dependency graph
-        uses: gradle/actions/dependency-submission@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        uses: gradle/actions/dependency-submission@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6.0.1
         with:
           dependency-graph: download-and-submit

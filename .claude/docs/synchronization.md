@@ -125,7 +125,7 @@ Synchronous. Re-entrant cache operations risk deadlock.
 ### Read buffer (BoundedBuffer — striped ring buffer)
 - Lossy: drops are benign (affects eviction quality, not correctness)
 - Lock-free CAS on per-stripe slots
-- Drained under evictionLock during maintenance
+- Drained under evictionLock during maintenance (single consumer)
 
 ### Write buffer (MpscGrowableArrayQueue)
 - Guaranteed delivery: if offer fails after retries, acquires evictionLock

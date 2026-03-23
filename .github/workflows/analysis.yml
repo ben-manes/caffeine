@@ -10,7 +10,7 @@ env:
     api.adoptium.net:443
     api.foojay.io:443
     api.github.com:443
-    caffeine.gradle-enterprise.cloud:443
+    caffeine.develocity.cloud:443
     downloads.gradle.org:443
     downloads.gradle-dn.com:443
     github.com:443
@@ -122,7 +122,7 @@ jobs:
       - name: Upload result to GitHub Code Scanning
         if: always() && hashFiles('pmd-combined.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
         with:
           sarif_file: pmd-combined.sarif
           category: pmd
@@ -202,7 +202,7 @@ jobs:
       - name: Upload result to GitHub Code Scanning
         if: always() && hashFiles('spotbugs-combined.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
         with:
           sarif_file: spotbugs-combined.sarif
           category: spotbugs

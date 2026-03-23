@@ -46,8 +46,7 @@ final class References {
      * @return The object to which this reference refers, or {@code null} if this reference object
      *         has been cleared
      */
-    @Nullable
-    E get();
+    @Nullable E get();
 
     /**
      * Returns the key that is associated to the cache entry holding this reference. If the cache

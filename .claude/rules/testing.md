@@ -1,7 +1,7 @@
 # Testing Conventions
 
 - Run individual tests with `--tests`, never the full suite during development
-- Tests use JUnit 5 (Jupiter) with Truth assertions and Awaitility for async
+- Tests use JUnit Jupiter with Truth assertions and Awaitility for async
 - Test classes are parameterized via `@CacheSpec` + `CacheProvider` — use `-P` flags to filter
 - New tests should follow the `@CacheSpec` parameterization pattern, not create caches manually
 - Use `CacheContext` for test utilities: `context.ticker()`, `context.absentKey()`, etc.

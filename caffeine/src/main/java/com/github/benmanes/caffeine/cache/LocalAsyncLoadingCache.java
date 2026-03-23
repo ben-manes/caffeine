@@ -86,9 +86,8 @@ abstract class LocalAsyncLoadingCache<K, V>
    * Returns a mapping function that adapts to {@link AsyncCacheLoader#asyncLoadAll}, if
    * implemented.
    */
-  @Nullable
-  BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> newBulkMappingFunction(
-      AsyncCacheLoader<? super K, V> cacheLoader) {
+  @Nullable BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> 
+      newBulkMappingFunction(AsyncCacheLoader<? super K, V> cacheLoader) {
     if (!canBulkLoad(cacheLoader)) {
       return null;
     }

@@ -52,8 +52,7 @@ public interface Cache<K, V extends @Nullable Object> {
    *     contain a mapping for the key
    * @throws NullPointerException if the specified key is null
    */
-  @Nullable
-  V getIfPresent(K key);
+  @Nullable V getIfPresent(K key);
 
   /**
    * Returns the value associated with the {@code key} in this cache, obtaining that value from the

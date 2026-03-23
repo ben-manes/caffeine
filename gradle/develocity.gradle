@@ -1,6 +1,6 @@
 develocity {
   if (!gradle.startParameter.isBuildScan()) {
-    server = 'https://caffeine.gradle-enterprise.cloud/'
+    server = 'https://caffeine.develocity.cloud/'
     buildScan.publishing.onlyIf { it.authenticated }
   }
   buildScan {

@@ -61,8 +61,7 @@ public interface Policy<K, V> {
    *         no mapping for the key
    * @throws NullPointerException if the specified key is null
    */
-  @Nullable
-  V getIfPresentQuietly(K key);
+  @Nullable V getIfPresentQuietly(K key);
 
   /**
    * Returns the cache entry associated with the {@code key} in this cache, or {@code null} if there

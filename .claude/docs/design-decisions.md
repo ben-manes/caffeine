@@ -7,9 +7,8 @@ these, stop — they're load-bearing.
 
 **Weight=0 is a pinning feature.** Entries with weight=0 are skipped during eviction
 (`evictFromWindow`, `evictFromMain`, `evictEntry`). This is an intentional user-facing
-API (inherited from Guava's
-ConcurrentLinkedHashMap where weight was >=1). Used internally for in-flight async
-futures.
+API (inherited from ConcurrentLinkedHashMap where weight was >=1, Guava's Cache where >= 0).
+Used internally for in-flight async futures.
 
 **Transient negative weightedSize is acceptable.** `maximumSize` allows eviction
 before/after threshold. Eventual consistency is fine given documented promises.
