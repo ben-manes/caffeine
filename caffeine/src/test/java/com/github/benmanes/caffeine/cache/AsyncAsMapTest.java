@@ -866,6 +866,19 @@ final class AsyncAsMapTest {
 
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  void replace_sameValueDifferentFuture(AsyncCache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
+      var oldFuture = requireNonNull(cache.asMap().get(key));
+      var newFuture = oldFuture.join().toFuture(); // new future, same resolved value
+      assertThat(cache.asMap().replace(key, newFuture)).isSameInstanceAs(oldFuture);
+      assertThat(cache).containsEntry(key, newFuture);
+    }
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void replace_differentValue(AsyncCache<Int, Int> cache, CacheContext context) {
     var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
@@ -987,6 +1000,20 @@ final class AsyncAsMapTest {
       var value = cache.asMap().get(key);
       assertThat(cache.asMap().replace(key, value, value)).isTrue();
       assertThat(cache).containsEntry(key, value);
+    }
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  void replaceConditionally_sameValueDifferentFuture(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    for (Int key : context.firstMiddleLastKeys()) {
+      var oldFuture = requireNonNull(cache.asMap().get(key));
+      var newFuture = oldFuture.join().toFuture(); // new future, same resolved value
+      assertThat(cache.asMap().replace(key, oldFuture, newFuture)).isTrue();
+      assertThat(cache).containsEntry(key, newFuture);
     }
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().isEmpty();
