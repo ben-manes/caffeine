@@ -38,11 +38,11 @@ final class SerializationProxy<K, V> implements Serializable {
   boolean weakValues;
   boolean softValues;
   boolean isRecordingStats;
-  long refreshAfterWriteNanos;
-  long expiresAfterWriteNanos;
-  long expiresAfterAccessNanos;
   long maximumSize = UNSET_INT;
   long maximumWeight = UNSET_INT;
+  long refreshAfterWriteNanos = UNSET_INT;
+  long expiresAfterWriteNanos = UNSET_INT;
+  long expiresAfterAccessNanos = UNSET_INT;
 
   @Nullable Ticker ticker;
   @Nullable Expiry<?, ?> expiry;
@@ -71,13 +71,13 @@ final class SerializationProxy<K, V> implements Serializable {
     if (expiry != null) {
       builder.expireAfter(expiry);
     }
-    if (expiresAfterWriteNanos > 0) {
+    if (expiresAfterWriteNanos != UNSET_INT) {
       builder.expireAfterWrite(Duration.ofNanos(expiresAfterWriteNanos));
     }
-    if (expiresAfterAccessNanos > 0) {
+    if (expiresAfterAccessNanos != UNSET_INT) {
       builder.expireAfterAccess(Duration.ofNanos(expiresAfterAccessNanos));
     }
-    if (refreshAfterWriteNanos > 0) {
+    if (refreshAfterWriteNanos != UNSET_INT) {
       builder.refreshAfterWrite(Duration.ofNanos(refreshAfterWriteNanos));
     }
     if (weakKeys) {

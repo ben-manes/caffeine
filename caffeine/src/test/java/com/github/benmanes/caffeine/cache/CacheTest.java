@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_ACCESS;
+import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_WRITE;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
@@ -100,6 +102,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.NullPointerTester;
+import com.google.common.testing.SerializableTester;
 import com.google.errorprone.annotations.Var;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -969,6 +972,26 @@ final class CacheTest {
   @ParameterizedTest
   void serialize(Cache<Int, Int> cache) {
     assertThat(cache).isReserialize();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      expireAfterAccess = {Expire.DISABLED, Expire.IMMEDIATELY},
+      expireAfterWrite = {Expire.DISABLED, Expire.IMMEDIATELY},
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE})
+  void serialize_zeroDurationExpiration(Cache<Int, Int> cache, CacheContext context) {
+    var copy = SerializableTester.reserialize(cache);
+    if (context.expireAfterWrite() != Expire.DISABLED) {
+      assertThat(copy.policy().expireAfterWrite()).isPresent();
+      assertThat(copy.policy().expireAfterWrite().orElseThrow()
+          .getExpiresAfter()).isEqualTo(context.expireAfterWrite().duration());
+    }
+    if (context.expireAfterAccess() != Expire.DISABLED) {
+      assertThat(copy.policy().expireAfterAccess()).isPresent();
+      assertThat(copy.policy().expireAfterAccess().orElseThrow()
+          .getExpiresAfter()).isEqualTo(context.expireAfterAccess().duration());
+    }
   }
 
   @CheckNoStats
