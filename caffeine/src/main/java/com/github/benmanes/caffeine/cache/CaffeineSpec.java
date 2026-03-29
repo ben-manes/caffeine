@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Locale.US;
@@ -79,13 +78,12 @@ public final class CaffeineSpec {
 
   final String specification;
 
-  int initialCapacity = UNSET_INT;
-  long maximumWeight = UNSET_INT;
-  long maximumSize = UNSET_INT;
   boolean recordStats;
-
+  @Nullable Long maximumSize;
+  @Nullable Long maximumWeight;
   @Nullable Strength keyStrength;
   @Nullable Strength valueStrength;
+  @Nullable Integer initialCapacity;
   @Nullable Duration expireAfterWrite;
   @Nullable Duration expireAfterAccess;
   @Nullable Duration refreshAfterWrite;
@@ -107,13 +105,13 @@ public final class CaffeineSpec {
    */
   Caffeine<Object, Object> toBuilder() {
     var builder = Caffeine.newBuilder();
-    if (initialCapacity != UNSET_INT) {
+    if (initialCapacity != null) {
       builder.initialCapacity(initialCapacity);
     }
-    if (maximumSize != UNSET_INT) {
+    if (maximumSize != null) {
       builder.maximumSize(maximumSize);
     }
-    if (maximumWeight != UNSET_INT) {
+    if (maximumWeight != null) {
       builder.maximumWeight(maximumWeight);
     }
     if (keyStrength != null) {
@@ -209,27 +207,33 @@ public final class CaffeineSpec {
 
   /** Configures the initial capacity. */
   void initialCapacity(String key, @Nullable String value) {
-    requireArgument(initialCapacity == UNSET_INT,
+    requireArgument(initialCapacity == null,
         "initial capacity was already set to %,d", initialCapacity);
     initialCapacity = parseInt(key, value);
+    requireArgument(initialCapacity >= 0,
+        "initial capacity must not be negative: %,d", initialCapacity);
   }
 
   /** Configures the maximum size. */
   void maximumSize(String key, @Nullable String value) {
-    requireArgument(maximumSize == UNSET_INT,
+    requireArgument(maximumSize == null,
         "maximum size was already set to %,d", maximumSize);
-    requireArgument(maximumWeight == UNSET_INT,
+    requireArgument(maximumWeight == null,
         "maximum weight was already set to %,d", maximumWeight);
     maximumSize = parseLong(key, value);
+    requireArgument(maximumSize >= 0,
+        "maximum size must not be negative: %,d", maximumSize);
   }
 
-  /** Configures the maximum size. */
+  /** Configures the maximum weight. */
   void maximumWeight(String key, @Nullable String value) {
-    requireArgument(maximumWeight == UNSET_INT,
+    requireArgument(maximumWeight == null,
         "maximum weight was already set to %,d", maximumWeight);
-    requireArgument(maximumSize == UNSET_INT,
+    requireArgument(maximumSize == null,
         "maximum size was already set to %,d", maximumSize);
     maximumWeight = parseLong(key, value);
+    requireArgument(maximumWeight >= 0,
+        "maximum weight must not be negative: %,d", maximumWeight);
   }
 
   /** Configures the keys as weak references. */
@@ -365,18 +369,17 @@ public final class CaffeineSpec {
     return Objects.equals(refreshAfterWrite, spec.refreshAfterWrite)
         && Objects.equals(expireAfterAccess, spec.expireAfterAccess)
         && Objects.equals(expireAfterWrite, spec.expireAfterWrite)
-        && (initialCapacity == spec.initialCapacity)
-        && (maximumWeight == spec.maximumWeight)
+        && Objects.equals(initialCapacity, spec.initialCapacity)
+        && Objects.equals(maximumWeight, spec.maximumWeight)
+        && Objects.equals(maximumSize, spec.maximumSize)
         && (valueStrength == spec.valueStrength)
         && (keyStrength == spec.keyStrength)
-        && (maximumSize == spec.maximumSize)
         && (recordStats == spec.recordStats);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(
-        initialCapacity, maximumSize, maximumWeight, keyStrength, valueStrength,
+    return Objects.hash(initialCapacity, maximumSize, maximumWeight, keyStrength, valueStrength,
         recordStats, expireAfterWrite, expireAfterAccess, refreshAfterWrite);
   }
 

@@ -161,6 +161,37 @@ final class CaffeineSpecTest {
   }
 
   @Test
+  void parseSimpleDuration_saturatesOnOverflow() {
+    // TimeUnit.toNanos() saturates to Long.MAX_VALUE on overflow (~292 years)
+    var saturated = CaffeineSpec.parseSimpleDuration("key", "999999999999999999d");
+    assertThat(saturated.toNanos()).isEqualTo(Long.MAX_VALUE);
+  }
+
+  @Test
+  void parse_negativeMaximumSize() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("maximumSize=-1"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("maximumSize=-52"));
+  }
+
+  @Test
+  void parse_negativeMaximumWeight() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("maximumWeight=-1"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("maximumWeight=-52"));
+  }
+
+  @Test
+  void parse_negativeInitialCapacity() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("initialCapacity=-1"));
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("initialCapacity=-52"));
+  }
+
+  @Test
   void toBuilder_invalidKeyStrength() {
     var spec = CaffeineSpec.parse("");
     spec.keyStrength = Strength.SOFT;
@@ -181,9 +212,9 @@ final class CaffeineSpecTest {
       spec.expireAfterWrite = configuration.get(2) ? Duration.ofMinutes(1) : null;
       spec.valueStrength = configuration.get(3) ? Strength.WEAK : null;
       spec.keyStrength = configuration.get(4) ? Strength.WEAK : null;
-      spec.initialCapacity = configuration.get(5) ? 1 : UNSET_INT;
-      spec.maximumWeight = configuration.get(6) ? 1 : UNSET_INT ;
-      spec.maximumSize = configuration.get(7) ? 1 : UNSET_INT;
+      spec.initialCapacity = configuration.get(5) ? 1 : null;
+      spec.maximumWeight = configuration.get(6) ? 1L : null;
+      spec.maximumSize = configuration.get(7) ? 1L : null;
       spec.recordStats = configuration.get(8);
       tester.addEqualityGroup(spec);
       hashes.add(spec.hashCode());
@@ -291,7 +322,7 @@ final class CaffeineSpecTest {
   private static void checkInitialCapacity(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder) {
     if (context.initialCapacity() == InitialCapacity.DEFAULT) {
-      assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+      assertThat(spec.initialCapacity).isNull();
       assertThat(builder.initialCapacity).isEqualTo(UNSET_INT);
     } else {
       assertThat(spec.initialCapacity).isEqualTo(context.initialCapacity().size());
@@ -302,7 +333,7 @@ final class CaffeineSpecTest {
   private static void checkMaximumSize(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder) {
     if ((context.maximum() == Maximum.DISABLED) || context.isWeighted()) {
-      assertThat(spec.maximumSize).isEqualTo(UNSET_LONG);
+      assertThat(spec.maximumSize).isNull();
       assertThat(builder.maximumSize).isEqualTo(UNSET_LONG);
     } else {
       assertThat(spec.maximumSize).isEqualTo(context.maximum().max());
@@ -317,7 +348,7 @@ final class CaffeineSpecTest {
   private static void checkMaximumWeight(CaffeineSpec spec,
       CacheContext context, Caffeine<?, ?> builder) {
     if ((context.maximum() == Maximum.DISABLED) || !context.isWeighted()) {
-      assertThat(spec.maximumWeight).isEqualTo(UNSET_LONG);
+      assertThat(spec.maximumWeight).isNull();
       assertThat(builder.maximumWeight).isEqualTo(UNSET_LONG);
     } else {
       assertThat(spec.maximumWeight).isEqualTo(context.maximum().max());

@@ -86,7 +86,7 @@ jobs:
         env:
           TOTAL_SHARDS: 40
           ADDITIONAL_SUITES: |
-            caffeine:fuzzTest --tests CaffeineSpecFuzzer --tests FrequencySketchFuzzer
+            caffeine:fuzzTest --tests CaffeineSpecFuzzer* --tests FrequencySketchFuzzer
             caffeine:fuzzTest --tests PacerFuzzer* --tests TimerWheelFuzzer --tests CacheFuzzer
             caffeine:lincheckTest
             caffeine:eclipseTest

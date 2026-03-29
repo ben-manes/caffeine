@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
 import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -41,9 +40,9 @@ final class CacheBuilderSpecTest {
   @Test
   void parse_empty() {
     CaffeineSpec spec = parse("");
-    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.initialCapacity).isNull();
+    assertThat(spec.maximumSize).isNull();
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isNull();
     assertThat(spec.valueStrength).isNull();
     assertThat(spec.expireAfterAccess).isNull();
@@ -56,8 +55,8 @@ final class CacheBuilderSpecTest {
   void parse_initialCapacity() {
     CaffeineSpec spec = parse("initialCapacity=10");
     assertThat(spec.initialCapacity).isEqualTo(10);
-    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumSize).isNull();
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isNull();
     assertThat(spec.valueStrength).isNull();
     assertThat(spec.expireAfterAccess).isNull();
@@ -76,7 +75,7 @@ final class CacheBuilderSpecTest {
   @Test
   void parse_maximumSize() {
     CaffeineSpec spec = parse("maximumSize=9000");
-    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.initialCapacity).isNull();
     assertThat(spec.maximumSize).isEqualTo(9000);
     assertThat(spec.keyStrength).isNull();
     assertThat(spec.valueStrength).isNull();
@@ -95,7 +94,7 @@ final class CacheBuilderSpecTest {
   @Test
   void parse_maximumWeight() {
     CaffeineSpec spec = parse("maximumWeight=9000");
-    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
+    assertThat(spec.initialCapacity).isNull();
     assertThat(spec.maximumWeight).isEqualTo(9000);
     assertThat(spec.keyStrength).isNull();
     assertThat(spec.valueStrength).isNull();
@@ -119,9 +118,9 @@ final class CacheBuilderSpecTest {
   @Test
   void parse_weakKeys() {
     CaffeineSpec spec = parse("weakKeys");
-    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.initialCapacity).isNull();
+    assertThat(spec.maximumSize).isNull();
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
     assertThat(spec.valueStrength).isNull();
     assertThat(spec.expireAfterWrite).isNull();
@@ -144,9 +143,9 @@ final class CacheBuilderSpecTest {
   @Test
   void parse_softValues() {
     CaffeineSpec spec = parse("softValues");
-    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.initialCapacity).isNull();
+    assertThat(spec.maximumSize).isNull();
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isNull();
     assertThat(spec.valueStrength).isEqualTo(Strength.SOFT);
     assertThat(spec.expireAfterWrite).isNull();
@@ -164,9 +163,9 @@ final class CacheBuilderSpecTest {
   @Test
   void parse_weakValues() {
     CaffeineSpec spec = parse("weakValues");
-    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.initialCapacity).isNull();
+    assertThat(spec.maximumSize).isNull();
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isNull();
     assertThat(spec.valueStrength).isEqualTo(Strength.WEAK);
     assertThat(spec.expireAfterWrite).isNull();
@@ -195,9 +194,9 @@ final class CacheBuilderSpecTest {
   @Test
   void parse_writeExpirationDays() {
     CaffeineSpec spec = parse("expireAfterWrite=10d");
-    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.initialCapacity).isNull();
+    assertThat(spec.maximumSize).isNull();
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isNull();
     assertThat(spec.valueStrength).isNull();
     assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofDays(10));
@@ -240,9 +239,9 @@ final class CacheBuilderSpecTest {
   @Test
   void parse_accessExpirationDays() {
     CaffeineSpec spec = parse("expireAfterAccess=10d");
-    assertThat(spec.initialCapacity).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumSize).isEqualTo(UNSET_INT);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.initialCapacity).isNull();
+    assertThat(spec.maximumSize).isNull();
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isNull();
     assertThat(spec.valueStrength).isNull();
     assertThat(spec.expireAfterWrite).isNull();
@@ -318,7 +317,7 @@ final class CacheBuilderSpecTest {
         + "weakKeys,weakValues,expireAfterAccess=10m,expireAfterWrite=1h");
     assertThat(spec.initialCapacity).isEqualTo(10);
     assertThat(spec.maximumSize).isEqualTo(20);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
     assertThat(spec.valueStrength).isEqualTo(Strength.WEAK);
     assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofHours(1));
@@ -339,7 +338,7 @@ final class CacheBuilderSpecTest {
         + "weakKeys \t ,softValues \n , \r  expireAfterWrite \t =  15s\n\n");
     assertThat(spec.initialCapacity).isEqualTo(10);
     assertThat(spec.maximumSize).isEqualTo(20);
-    assertThat(spec.maximumWeight).isEqualTo(UNSET_INT);
+    assertThat(spec.maximumWeight).isNull();
     assertThat(spec.keyStrength).isEqualTo(Strength.WEAK);
     assertThat(spec.valueStrength).isEqualTo(Strength.SOFT);
     assertThat(spec.expireAfterWrite).isEqualTo(Duration.ofSeconds(15));
