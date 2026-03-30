@@ -210,8 +210,6 @@ public final class CaffeineSpec {
     requireArgument(initialCapacity == null,
         "initial capacity was already set to %,d", initialCapacity);
     initialCapacity = parseInt(key, value);
-    requireArgument(initialCapacity >= 0,
-        "initial capacity must not be negative: %,d", initialCapacity);
   }
 
   /** Configures the maximum size. */
@@ -221,8 +219,6 @@ public final class CaffeineSpec {
     requireArgument(maximumWeight == null,
         "maximum weight was already set to %,d", maximumWeight);
     maximumSize = parseLong(key, value);
-    requireArgument(maximumSize >= 0,
-        "maximum size must not be negative: %,d", maximumSize);
   }
 
   /** Configures the maximum weight. */
@@ -232,8 +228,6 @@ public final class CaffeineSpec {
     requireArgument(maximumSize == null,
         "maximum size was already set to %,d", maximumSize);
     maximumWeight = parseLong(key, value);
-    requireArgument(maximumWeight >= 0,
-        "maximum weight must not be negative: %,d", maximumWeight);
   }
 
   /** Configures the keys as weak references. */

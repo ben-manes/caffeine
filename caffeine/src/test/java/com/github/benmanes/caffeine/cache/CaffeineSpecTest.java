@@ -170,25 +170,25 @@ final class CaffeineSpecTest {
   @Test
   void parse_negativeMaximumSize() {
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parse("maximumSize=-1"));
+        () -> Caffeine.from(CaffeineSpec.parse("maximumSize=-1")));
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parse("maximumSize=-52"));
+        () -> Caffeine.from(CaffeineSpec.parse("maximumSize=-52")));
   }
 
   @Test
   void parse_negativeMaximumWeight() {
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parse("maximumWeight=-1"));
+        () -> Caffeine.from(CaffeineSpec.parse("maximumWeight=-1")));
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parse("maximumWeight=-52"));
+        () -> Caffeine.from(CaffeineSpec.parse("maximumWeight=-52")));
   }
 
   @Test
   void parse_negativeInitialCapacity() {
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parse("initialCapacity=-1"));
+        () -> Caffeine.from(CaffeineSpec.parse("initialCapacity=-1")));
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parse("initialCapacity=-52"));
+        () -> Caffeine.from(CaffeineSpec.parse("initialCapacity=-52")));
   }
 
   @Test
