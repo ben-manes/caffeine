@@ -88,31 +88,31 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @param cache the instance that the entries belong to
    * @param currentTimeNanos the current time, in nanoseconds
    */
-  public void advance(BoundedLocalCache<K, V> cache, @Var long currentTimeNanos) {
-    @Var long previousTimeNanos = nanos;
-    long originalTimeNanos = nanos;
+  public void advance(BoundedLocalCache<K, V> cache, long currentTimeNanos) {
+    long previousTimeNanos = nanos;
     nanos = currentTimeNanos;
 
-    // If wrapping then temporarily shift the clock for a positive comparison. We assume that the
-    // advancements never exceed a total running time of Long.MAX_VALUE nanoseconds (292 years)
-    // so that an overflow only occurs due to using an arbitrary origin time (System.nanoTime()).
-    if ((previousTimeNanos < 0) && (currentTimeNanos > 0)) {
-      previousTimeNanos += Long.MAX_VALUE;
-      currentTimeNanos += Long.MAX_VALUE;
+    // If wrapping from negative to non-negative then shift for the delta computation so that
+    // the unsigned tick difference is correct. The raw previousTicks is used for the bucket
+    // start to stay consistent with how schedule() places timers.
+    @Var long previousDelta = previousTimeNanos;
+    @Var long currentDelta = currentTimeNanos;
+    if ((previousTimeNanos < 0) && (currentTimeNanos >= 0)) {
+      previousDelta += Long.MAX_VALUE;
+      currentDelta += Long.MAX_VALUE;
     }
 
     try {
       for (int i = 0; i < SHIFT.length; i++) {
-        long previousTicks = (previousTimeNanos >>> SHIFT[i]);
-        long currentTicks = (currentTimeNanos >>> SHIFT[i]);
-        long delta = (currentTicks - previousTicks);
+        long delta = ((currentDelta >>> SHIFT[i]) - (previousDelta >>> SHIFT[i]));
         if (delta <= 0L) {
           break;
         }
+        long previousTicks = (previousTimeNanos >>> SHIFT[i]);
         expire(cache, i, previousTicks, delta);
       }
     } catch (Throwable t) {
-      nanos = originalTimeNanos;
+      nanos = previousTimeNanos;
       throw t;
     }
   }
@@ -130,9 +130,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
     Node<K, V>[] timerWheel = wheel[index];
     int mask = timerWheel.length - 1;
 
-    // We assume that the delta does not overflow an integer and cause negative steps. This can
-    // occur only if the advancement exceeds 2^61 nanoseconds (73 years).
-    int steps = Math.min(1 + (int) delta, timerWheel.length);
+    int steps = (int) Math.min(1 + delta, timerWheel.length);
     int start = (int) (previousTicks & mask);
     int end = start + steps;
 

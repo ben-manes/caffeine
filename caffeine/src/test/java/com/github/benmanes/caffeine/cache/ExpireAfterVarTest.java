@@ -1272,6 +1272,51 @@ final class ExpireAfterVarTest {
         .hasSize(context.isAsync() ? 1 : 0);
   }
 
+  /* --------------- Expire --------------- */
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE,
+      startTime = StartTime.ONE_MINUTE_BEFORE_ZERO)
+  void expire_acrossZeroBoundary(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
+    context.cleanUp();
+
+    assertThat(cache).isEmpty();
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+  void expire_largeDelta(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofDays(365));
+    context.cleanUp();
+
+    assertThat(cache).isEmpty();
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+  void expire_asyncComputing(AsyncCache<Int, Int> cache, CacheContext context) {
+    var computing = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), computing);
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    context.cleanUp();
+
+    // The completed entries should expire; the computing future should remain
+    assertThat(cache).containsEntry(context.absentKey(), computing);
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+
+    computing.complete(context.absentValue());
+  }
+
   /* --------------- Policy --------------- */
 
   @CheckNoStats

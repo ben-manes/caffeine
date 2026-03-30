@@ -3542,6 +3542,55 @@ final class BoundedLocalCacheTest {
         Range.closed(expectedDelay - TimerWheel.SPANS[0], expectedDelay));
   }
 
+  @Test
+  void expirationDelay_asyncComputing_expireAfterAccess() {
+    var ticker = new FakeTicker();
+    var computing = new CompletableFuture<Integer>();
+    AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfterAccess(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .buildAsync();
+
+    // An incomplete future has accessTime set to now + ASYNC_EXPIRY (~220 years)
+    cache.put(1, computing);
+    var localCache = asBoundedLocalCache(cache);
+    localCache.maintenance(/* task= */ null);
+
+    // Async-only: delay should be the full expiration duration (upper bound), not ~220 years
+    @Var long delay = localCache.getExpirationDelay(ticker.read());
+    assertThat(delay).isEqualTo(Duration.ofMinutes(1).toNanos());
+
+    // Add a completed entry; delay should be based on the real entry, not the async one
+    cache.put(2, CompletableFuture.completedFuture(2));
+    localCache.maintenance(/* task= */ null);
+    delay = localCache.getExpirationDelay(ticker.read());
+    assertThat(delay).isAtMost(Duration.ofMinutes(2).toNanos());
+  }
+
+  @Test
+  void expirationDelay_asyncComputing_expireAfterWrite() {
+    var ticker = new FakeTicker();
+    var computing = new CompletableFuture<Integer>();
+    AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .buildAsync();
+
+    cache.put(1, computing);
+    var localCache = asBoundedLocalCache(cache);
+    localCache.maintenance(/* task= */ null);
+
+    @Var long delay = localCache.getExpirationDelay(ticker.read());
+    assertThat(delay).isEqualTo(Duration.ofMinutes(1).toNanos());
+
+    cache.put(2, CompletableFuture.completedFuture(2));
+    localCache.maintenance(/* task= */ null);
+    delay = localCache.getExpirationDelay(ticker.read());
+    assertThat(delay).isAtMost(Duration.ofMinutes(2).toNanos());
+  }
+
   /* --------------- Refresh --------------- */
 
   @Test

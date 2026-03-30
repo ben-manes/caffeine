@@ -2,7 +2,6 @@
 name: auditor
 description: Deep analysis agent for the Caffeine cache. Use for correctness audits, concurrency analysis, performance review, or any /audit-* skill.
 tools: Read, Grep, Glob, Bash
-model: opus
 effort: max
 memory: local
 ---

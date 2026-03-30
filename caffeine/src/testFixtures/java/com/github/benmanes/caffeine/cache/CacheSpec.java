@@ -856,7 +856,8 @@ public @interface CacheSpec {
   /** The starting time that the ticker can be configured with. */
   enum StartTime {
     RANDOM(() -> ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, Long.MAX_VALUE)),
-    ONE_MINUTE_FROM_MAX(() -> Long.MAX_VALUE - TimeUnit.MINUTES.toNanos(1));
+    ONE_MINUTE_FROM_MAX(() -> Long.MAX_VALUE - TimeUnit.MINUTES.toNanos(1)),
+    ONE_MINUTE_BEFORE_ZERO(() -> -TimeUnit.MINUTES.toNanos(1));
 
     private final LongSupplier startTime;
 

@@ -160,6 +160,53 @@ final class TimerWheelTest {
     verify(cache).evictEntry(any(), any(), anyLong());
   }
 
+  @Test
+  void advance_acrossZero() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+
+    // Advance from negative across the zero boundary with a small (2-tick) delta.
+    // This verifies that the wrap-around compensation computes the correct tick delta
+    // and that the bucket scanning aligns with where schedule() placed the timer.
+    timerWheel.nanos = -SPANS[0];
+    timerWheel.schedule(new Timer(0));
+
+    timerWheel.advance(cache, SPANS[0]);
+    verify(cache).evictEntry(any(), any(), anyLong());
+  }
+
+  @Test
+  void advance_toExactlyZero() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+
+    // The currentTimeNanos == 0 case requires >= in the compensation condition
+    timerWheel.nanos = -SPANS[0];
+    timerWheel.schedule(new Timer(0));
+
+    timerWheel.advance(cache, 0);
+    verify(cache).evictEntry(any(), any(), anyLong());
+  }
+
+  @Test
+  void advance_largeDelta() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+
+    // A delta that overflows (int) but is clamped to the wheel length before narrowing
+    timerWheel.nanos = 0;
+    timerWheel.schedule(new Timer(SPANS[0]));
+
+    timerWheel.advance(cache, Long.MAX_VALUE);
+    verify(cache).evictEntry(any(), any(), anyLong());
+  }
+
   @ParameterizedTest @MethodSource("clock")
   void advance_backwards(long clock) {
     BoundedLocalCache<Int, Int> cache = Mockito.mock();
