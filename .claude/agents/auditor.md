@@ -43,6 +43,10 @@ When no defects are found, output:
 - **Coverage summary**: files inspected, methods traced, interleavings attempted
 - **Residual risk**: what was NOT inspected and why
 
+**Report file**: Write the full report to `.claude/reports/<skill-name>.md` where
+`<skill-name>` matches the skill that invoked this agent (e.g., `audit-jmm.md`,
+`audit-subsystem-safety.md`). Create the reports directory if it doesn't exist.
+
 ## Project-Specific Context
 
 Several patterns that look suspicious are intentional design decisions:

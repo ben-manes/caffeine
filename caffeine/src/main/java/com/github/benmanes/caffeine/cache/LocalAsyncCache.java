@@ -76,8 +76,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   @Override
   default CompletableFuture<V> get(K key, Function<? super K, ? extends V> mappingFunction) {
     requireNonNull(mappingFunction);
-    return get(key, (k1, executor) -> CompletableFuture.supplyAsync(
-        () -> mappingFunction.apply(key), executor));
+    return get(key, (k, executor) -> CompletableFuture.supplyAsync(
+        () -> mappingFunction.apply(k), executor));
   }
 
   @Override

@@ -56,7 +56,7 @@ final class CacheFuzzer {
 
   /** Builds a cache with fuzzed configuration. */
   private static Cache<Integer, Integer> buildCache(FuzzedDataProvider data, AtomicLong ticker) {
-    var builder = Caffeine.newBuilder().ticker(ticker::get);
+    var builder = Caffeine.newBuilder().executor(Runnable::run).ticker(ticker::get);
 
     // Fuzz eviction: disabled, size-based, or weight-based
     int evictionMode = data.consumeInt(0, 2);

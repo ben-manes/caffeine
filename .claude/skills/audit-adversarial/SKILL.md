@@ -103,7 +103,7 @@ Classify each confirmed finding:
 
 ## Step 7: Report
 
-Write the full report to `/Users/ben/projects/caffeine/.claude/reports/adversarial-review.md`
+Write the full report to `.claude/reports/audit-adversarial.md`.
 
 Format:
 ```
