@@ -2319,7 +2319,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           V currentValue = prior.getValue();
           if ((currentValue != null) && !hasExpired(prior, now)) {
             if (!isComputingAsync(currentValue)) {
-              tryExpireAfterRead(prior, key, currentValue, expiry(), now);
+              tryExpireAfterRead(prior, key, currentValue, expiry, now);
               setAccessTime(prior, now);
             }
             afterRead(prior, now, /* recordHit= */ false);
@@ -2331,7 +2331,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         V currentValue = prior.getValue();
         if ((currentValue != null) && !hasExpired(prior, now)) {
           if (!isComputingAsync(currentValue)) {
-            tryExpireAfterRead(prior, key, currentValue, expiry(), now);
+            tryExpireAfterRead(prior, key, currentValue, expiry, now);
             setAccessTime(prior, now);
           }
           afterRead(prior, now, /* recordHit= */ false);
