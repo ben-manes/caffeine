@@ -3072,30 +3072,35 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @Override
   public int hashCode() {
     @Var int hash = 0;
+    @Var boolean drain = false;
     long now = expirationTicker().read();
     for (var node : data.values()) {
       K key = node.getKey();
       V value = node.getValue();
       if ((key == null) || (value == null)
           || !node.isAlive() || hasExpired(node, now)) {
-        scheduleDrainBuffers();
+        drain = true;
       } else {
         hash += key.hashCode() ^ value.hashCode();
       }
+    }
+    if (drain) {
+      scheduleDrainBuffers();
     }
     return hash;
   }
 
   @Override
   public String toString() {
-    var result = new StringBuilder().append('{');
+    @Var boolean drain = false;
     long now = expirationTicker().read();
+    var result = new StringBuilder().append('{');
     for (var node : data.values()) {
       K key = node.getKey();
       V value = node.getValue();
       if ((key == null) || (value == null)
           || !node.isAlive() || hasExpired(node, now)) {
-        scheduleDrainBuffers();
+        drain = true;
       } else {
         if (result.length() != 1) {
           result.append(',').append(' ');
@@ -3104,6 +3109,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         result.append('=');
         result.append((value == this) ? "(this Map)" : value);
       }
+    }
+    if (drain) {
+      scheduleDrainBuffers();
     }
     return result.append('}').toString();
   }
