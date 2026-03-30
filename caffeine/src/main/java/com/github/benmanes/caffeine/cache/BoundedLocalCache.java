@@ -4270,7 +4270,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         long now = cache.expirationTicker().read();
         return cache.hasExpired(node, now)
             ? OptionalLong.empty()
-            : OptionalLong.of(unit.convert(now - node.getWriteTime(), TimeUnit.NANOSECONDS));
+            : OptionalLong.of(unit.convert(
+                (now & ~1L) - (node.getWriteTime() & ~1L), TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
         return unit.convert(cache.expiresAfterWriteNanos(), TimeUnit.NANOSECONDS);
@@ -4498,7 +4499,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         long now = cache.expirationTicker().read();
         return cache.hasExpired(node, now)
             ? OptionalLong.empty()
-            : OptionalLong.of(unit.convert(now - node.getWriteTime(), TimeUnit.NANOSECONDS));
+            : OptionalLong.of(unit.convert(
+                (now & ~1L) - (node.getWriteTime() & ~1L), TimeUnit.NANOSECONDS));
       }
       @Override public long getRefreshesAfter(TimeUnit unit) {
         return unit.convert(cache.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);

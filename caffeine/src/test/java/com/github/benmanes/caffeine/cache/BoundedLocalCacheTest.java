@@ -143,6 +143,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.LocalCacheFactory.MethodHandleBasedFactory;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
+import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
@@ -4408,6 +4409,29 @@ final class BoundedLocalCacheTest {
     assertThat(cache.getIfPresent(context.absentKey())).isNotNull();
     context.ticker().advance(Duration.ofSeconds(15));
     assertThat(cache.getIfPresent(context.absentKey())).isNull();
+  }
+
+  @SuppressWarnings("unchecked")
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
+      expireAfterWrite = Expire.ONE_MINUTE, refreshAfterWrite = Expire.ONE_MINUTE)
+  void ageOf_masksWriteTimeTagBit(BoundedLocalCache<Int, Int> cache, CacheContext context,
+      @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite,
+      FixedRefresh<Int, Int> refreshAfterWrite) {
+    context.ticker().advance(Duration.ofNanos(2));
+
+    // Simulate refresh in-progress by setting the tag bit on writeTime
+    var node = requireNonNull(cache.data.get(
+        cache.nodeFactory.newLookupKey(context.firstKey())));
+    long writeTime = node.getWriteTime();
+    assertThat(node.casWriteTime(writeTime, writeTime | 1L)).isTrue();
+
+    // ageOf should mask the tag bit — age should be 2ns, not 1ns or 3ns
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(2);
+    assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(2);
+
+    // Clean up corrupted state
+    assertThat(node.casWriteTime(writeTime | 1L, writeTime)).isTrue();
   }
 
   @Test
