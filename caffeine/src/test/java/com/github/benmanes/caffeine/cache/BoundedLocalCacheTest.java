@@ -4460,7 +4460,6 @@ final class BoundedLocalCacheTest {
     assertThat(cache.getIfPresent(context.absentKey())).isNull();
   }
 
-  @SuppressWarnings("unchecked")
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, compute = Compute.SYNC,
       expireAfterWrite = Expire.ONE_MINUTE, refreshAfterWrite = Expire.ONE_MINUTE)

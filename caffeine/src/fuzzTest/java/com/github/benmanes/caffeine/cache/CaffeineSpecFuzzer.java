@@ -73,9 +73,7 @@ final class CaffeineSpecFuzzer {
         if (options.maximumWeight != null) {
           builder.weigher((key, value) -> 1);
         }
-        var cache = (options.refreshAfterWrite != null)
-            ? builder.build(key -> key)
-            : builder.build();
+        var cache = builder.build(key -> key);
         var policy = cache.policy();
 
         checkInitialCapacity(options, spec);

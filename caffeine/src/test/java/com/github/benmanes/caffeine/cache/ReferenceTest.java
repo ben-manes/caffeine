@@ -71,6 +71,9 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
+import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
+import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
+import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.References.LookupKeyEqualsReference;
 import com.github.benmanes.caffeine.cache.References.LookupKeyReference;
@@ -406,6 +409,65 @@ final class ReferenceTest {
       return stream.collect(toImmutableList());
     });
     assertThat(hottest).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
+  void weightOf_collected(CacheContext context, Eviction<Int, Int> eviction) {
+    var key = context.firstKey();
+    context.clear();
+    awaitFullGc();
+
+    assertThat(eviction.weightOf(key)).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.ONE_MINUTE)
+  void ageOf_access_collected(CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+    var key = context.firstKey();
+    context.clear();
+    awaitFullGc();
+
+    assertThat(expireAfterAccess.ageOf(key)).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterWrite = Expire.ONE_MINUTE)
+  void ageOf_write_collected(CacheContext context,
+      @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    var key = context.firstKey();
+    context.clear();
+    awaitFullGc();
+
+    assertThat(expireAfterWrite.ageOf(key)).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT},
+      expiry = CacheExpiry.CREATE, expiryTime = Expire.ONE_MINUTE)
+  void getExpiresAfter_collected(CacheContext context, VarExpiration<Int, Int> varExpiration) {
+    var key = context.firstKey();
+    context.clear();
+    awaitFullGc();
+
+    assertThat(varExpiration.getExpiresAfter(key)).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, refreshAfterWrite = Expire.ONE_MINUTE)
+  void ageOf_refresh_collected(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
+    var key = context.firstKey();
+    context.clear();
+    awaitFullGc();
+
+    assertThat(refreshAfterWrite.ageOf(key)).isEmpty();
   }
 
   /* --------------- LoadingCache --------------- */

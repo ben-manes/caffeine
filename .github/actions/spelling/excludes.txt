@@ -94,6 +94,7 @@
 ^gradle/config/pmd/rulesSets-test\.xml$
 ^gradle/config/spotbugs/exclude\.xml$
 ^wiki/design/design\.vsdx$
+gradle\.bat$
 gradle\.kts$
 gradle\.properties$
 hibernate\.properties$

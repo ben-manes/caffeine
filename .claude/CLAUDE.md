@@ -120,7 +120,7 @@ For deep dives, read these on demand (not auto-loaded to save context):
 
 - **Rules** (`.claude/rules/`): project conventions, loaded automatically when relevant
 - **Skills** (`/review-change`): multi-layer parallel code review with blind + design-aware + regression pattern matching
-- **Skills** (`/audit-*`): 18 deep analysis skills for concurrency, correctness, and performance
+- **Skills** (`/audit-*`): 19 deep analysis skills for concurrency, correctness, and performance
 - **Skills** (`/audit-adversarial`): hostile full-codebase review with NO design context — finds bugs domain familiarity masks
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
 - **Auditor agent** (`.claude/agents/`): specialized subagent with persistent memory for analysis tasks

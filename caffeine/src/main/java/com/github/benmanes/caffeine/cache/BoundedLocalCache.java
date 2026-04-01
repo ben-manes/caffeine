@@ -4173,7 +4173,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           return OptionalInt.empty();
         }
         Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
-        if ((node == null) || cache.hasExpired(node, cache.expirationTicker().read())) {
+        if ((node == null) || (node.getValue() == null)
+            || cache.hasExpired(node, cache.expirationTicker().read())) {
           return OptionalInt.empty();
         }
         synchronized (node) {
@@ -4239,7 +4240,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireNonNull(unit);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<K, V> node = cache.data.get(lookupKey);
-        if (node == null) {
+        if ((node == null) || (node.getValue() == null)) {
           return OptionalLong.empty();
         }
         long now = cache.expirationTicker().read();
@@ -4276,7 +4277,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireNonNull(unit);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<K, V> node = cache.data.get(lookupKey);
-        if (node == null) {
+        if ((node == null) || (node.getValue() == null)) {
           return OptionalLong.empty();
         }
         long now = cache.expirationTicker().read();
@@ -4317,7 +4318,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireNonNull(unit);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<K, V> node = cache.data.get(lookupKey);
-        if (node == null) {
+        if ((node == null) || (node.getValue() == null)) {
           return OptionalLong.empty();
         }
         long now = cache.expirationTicker().read();
@@ -4336,7 +4337,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           long durationNanos = TimeUnit.NANOSECONDS.convert(duration, unit);
           synchronized (node) {
             now = cache.expirationTicker().read();
-            if (cache.isComputingAsync(node.getValue()) || cache.hasExpired(node, now)) {
+            if ((node.getValue() == null) || cache.isComputingAsync(node.getValue())
+                || cache.hasExpired(node, now)) {
               return;
             }
             node.setVariableTime(now + Math.min(durationNanos, MAXIMUM_EXPIRY));
@@ -4505,7 +4507,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireNonNull(unit);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<K, V> node = cache.data.get(lookupKey);
-        if (node == null) {
+        if ((node == null) || (node.getValue() == null)) {
           return OptionalLong.empty();
         }
         long now = cache.expirationTicker().read();
