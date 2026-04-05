@@ -42,7 +42,7 @@ jobs:
           output: results.sarif
       - name: Check file existence
         id: check_files
-        uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # v3.0.0
+        uses: andstor/file-existence-action@558493d6c74bf472d87c84eab196434afc2fa029 # v3.1.0
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning

@@ -74,12 +74,44 @@ agent (scope inspected, attack surfaces checked, interleavings attempted).
 Re-launch with a more specific prompt only if coverage is shallow. Zero
 findings with thorough coverage proof is acceptable.
 
+## Step 3.5: Evaluator challenge (per reviewer)
+
+For each reviewer that returned findings OR a zero-findings coverage proof,
+spawn a separate evaluator subagent. The evaluator gets ONLY the reviewer's
+report — no source code, no design docs.
+
+```
+You are a hostile evaluator reviewing another auditor's report of a Java
+cache library. Your job is to find what the auditor MISSED.
+
+1. For each confirmed invariant, construct a 2-thread interleaving that
+   would violate it. If you cannot, explain what prevents it.
+2. For each zero-finding claim, identify the most likely bug category
+   the auditor could have missed given their stated coverage.
+3. For each finding, check whether the evidence is concrete or hand-wavy.
+   Flag findings that assert a bug without a specific interleaving.
+
+Output: prioritized list of challenges for the reviewer to address.
+```
+
+Have the original reviewer address each challenge by re-reading source code.
+Drop findings the reviewer cannot defend. Add new findings from challenges
+the reviewer confirms.
+
 ## Step 4: Consolidate and deduplicate
 
 Collect findings from all agents. Deduplicate (same issue found by multiple
 agents = higher confidence). Remove findings that are clearly wrong (misreading
 the code). Keep findings even if they might be "by design" — the point is to
 surface things domain familiarity masks.
+
+**Confidence decay check**: If any reviewer's findings are >60% medium-confidence,
+note this in the report — that reviewer's area may need a more targeted follow-up
+audit rather than more speculative findings.
+
+**Escalation**: If any reviewer flagged issues they could not resolve statically
+(e.g., "depends on JDK internal behavior"), mark these as ESCALATED for dynamic
+testing (Fray, LinCheck, JCStress) rather than guessing.
 
 ## Step 5: Adjudicate against design docs
 
@@ -94,7 +126,8 @@ them as bugs. The value is surfacing them for review, not asserting they're wron
 
 ## Step 6: Triage confirmed findings
 
-Classify each confirmed finding:
+Classify using `.claude/docs/finding-taxonomy.md` for severity and categories.
+Additionally tag each confirmed finding:
 - **bug** — incorrect behavior, provably wrong
 - **api-issue** — public API returns surprising/incorrect values
 - **validation-gap** — input accepted when it shouldn't be
@@ -126,4 +159,5 @@ Findings consolidated, deduplicated, and triaged by severity.
 
 ## Summary
 [N] likely bugs, [M] API issues, [K] validation gaps, [J] concerns.
+[N] evaluator challenges received across [M] reviewers.
 ```

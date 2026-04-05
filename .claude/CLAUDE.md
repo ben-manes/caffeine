@@ -69,7 +69,8 @@ Google Java Style. Contributors must sign a CLA.
 - Before suggesting dependency versions, Semgrep rulesets, or tool integrations, verify they exist (check Maven Central, registries, JDK release notes). Never recommend unverified tools. Use latest versions.
 - Stay focused on the specific task requested. Don't produce unsolicited broad recommendation plans or premature "ready for engineer follow-up" conclusions.
 - Lossy/best-effort semantics (read buffer drops, approximate frequency counts, eventual consistency) are intentional design trade-offs in the cache — not defects. Read `.claude/docs/design-decisions.md` before flagging these.
-- When fixing a bug or making a design change, update the relevant `.claude/docs/` and `.claude/rules/` files if the change affects documented behavior.
+- When fixing a bug or making a design change, update or create `.claude/` files (docs, rules, skills, agents) to keep them in sync with the change.
+- Don't blindly suggest committing after writing code. Actually run the tests and verify the output before proposing to commit.
 
 ## Architecture
 
@@ -123,4 +124,4 @@ For deep dives, read these on demand (not auto-loaded to save context):
 - **Skills** (`/audit-*`): 19 deep analysis skills for concurrency, correctness, and performance
 - **Skills** (`/audit-adversarial`): hostile full-codebase review with NO design context — finds bugs domain familiarity masks
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
-- **Auditor agent** (`.claude/agents/`): specialized subagent with persistent memory for analysis tasks
+- **Auditor agent** (`.claude/agents/`): multi-pass — analysis → reflection → evaluator challenge → targeted re-audit

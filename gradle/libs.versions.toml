@@ -20,12 +20,12 @@ dependency-analysis = "3.6.1"
 dependency-check = "12.2.0"
 ecj = "3.44.0"
 eclipse-collections = "13.0.0"
-ehcache3 = "3.11.1"
+ehcache3 = "3.12.0"
 errorprone = "2.48.0"
 errorprone-plugin = "5.1.0"
 errorprone-support = "0.28.0"
 expiring-map = "0.5.11"
-fastcsv = "4.1.1"
+fastcsv = "4.2.0"
 fast-filter = "1.0.2"
 fastutil = "8.5.18"
 felix-framework = "7.0.5"
@@ -50,7 +50,7 @@ jakarta-inject = "2.0.1"
 jamm = "0.4.0"
 java-object-layout = "0.17"
 javax-inject = "1"
-javapoet = "0.12.0"
+javapoet = "0.14.0"
 jazzer = "0.30.0"
 jcache = "1.1.1"
 jcommander = "1.82"
@@ -83,6 +83,9 @@ osgi-promise = "1.3.0"
 pax-exam = "4.14.0"
 pax-url = "3.0.2"
 picocli = "4.7.7"
+pitest = "1.23.0"
+pitest-junit5 = "1.2.3"
+pitest-plugin = "1.19.0"
 pmd = "7.23.0"
 protobuf = "4.34.1"
 revapi = "1.8.0"
@@ -189,6 +192,8 @@ pax-exam-junit4 = { module = "org.ops4j.pax.exam:pax-exam-junit4", version.ref =
 pax-exam-link-mvn = { module = "org.ops4j.pax.exam:pax-exam-link-mvn", version.ref = "pax-exam" }
 pax-url-aether = { module = "org.ops4j.pax.url:pax-url-aether", version.ref = "pax-url" }
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+pitest = { module = "org.pitest:pitest", version.ref = "pitest" }
+pitest-junit5 = { module = "org.pitest:pitest-junit5-plugin", version.ref = "pitest-junit5" }
 pmd = { module = "net.sourceforge.pmd:pmd", version.ref = "pmd" }
 pmd-ant = { module = "net.sourceforge.pmd:pmd-ant", version.ref = "pmd" }
 pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
@@ -240,6 +245,7 @@ jmh-report = { id = "io.morethan.jmhreport", version.ref = "jmh-report" }
 jvm-dependency-conflict-resolution = { id = "org.gradlex.jvm-dependency-conflict-resolution", version.ref = "jvm-dependency-conflict-resolution" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
 nullaway = { id = "net.ltgt.nullaway", version.ref = "nullaway-plugin" }
+pitest = { id = "info.solidsoft.pitest", version.ref = "pitest-plugin" }
 revapi = { id = "org.revapi.revapi-gradle-plugin", version.ref = "revapi" }
 sigstore = { id = "dev.sigstore.sign", version.ref = "sigstore" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }

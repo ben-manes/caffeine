@@ -4,7 +4,7 @@ description: Multi-layer adversarial code review of a diff or branch using paral
 argument-hint: "[branch or commit range, default: uncommitted changes]"
 context: fork
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, Bash, Agent
+allowed-tools: Read, Grep, Glob, Bash, Write, Agent, WebSearch, WebFetch, AskUserQuestion
 ---
 
 Review code changes using three parallel specialized reviewers, then triage

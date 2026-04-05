@@ -10,6 +10,7 @@ import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
   id("org.pastalab.fray.gradle")
+  id("info.solidsoft.pitest")
   id("java-library.caffeine")
   id("java-test-fixtures")
   id("jcstress.caffeine")
@@ -88,12 +89,16 @@ dependencies {
   javaPoetImplementation(libs.spotbugs.annotations)
 
   javaPoetRuntimeOnly(libs.google.java.format)
+
+  pitest(libs.pitest)
+  pitest(libs.pitest.junit5)
 }
 
 configurations.configureEach {
   resolutionStrategy {
     if (java.toolchain.languageVersion.get().asInt() < 17) {
       force("${libs.eclipse.collections.testutils.get().module}:12.0.0")
+      force("${libs.ehcache3.get().module}:3.11.1")
     }
   }
 }
@@ -174,6 +179,46 @@ tasks.named<JavaCompile>("compileJmhJava").configure {
 }
 
 fray.testTask = "frayTest"
+
+pitest {
+  fun fqcn(name: String) = "com.github.benmanes.caffeine.cache.$name"
+  val dataStructures = setOf(fqcn("AbstractLinkedDeque"), fqcn("Async"), fqcn("BoundedBuffer"),
+    fqcn("Caffeine"), fqcn("CaffeineSpec"), fqcn("FrequencySketch"), fqcn("Interner"),
+    fqcn("MpscGrowableArrayQueue"), fqcn("Pacer"), fqcn("Scheduler"),
+    fqcn("StripedBuffer"), fqcn("TimerWheel"))
+  val dataStructureTests = setOf(fqcn("AsyncTest"), fqcn("BoundedBufferTest"),
+    fqcn("CaffeineSpecTest"), fqcn("CaffeineTest"), fqcn("FrequencySketchTest"),
+    fqcn("InternerTest"), fqcn("LinkedDequeTest"), fqcn("MpscGrowableArrayQueueTest"),
+    fqcn("PacerTest"), fqcn("SchedulerTest"), fqcn("StripedBufferTest"), fqcn("TimerWheelTest"))
+  val cache = setOf(fqcn("BoundedLocalCache"), fqcn("UnboundedLocalCache"))
+  val cacheTests = setOf(fqcn("AsMapTest"), fqcn("AsyncAsMapTest"), fqcn("AsyncCacheTest"),
+    fqcn("AsyncLoadingCacheTest"), fqcn("BoundedLocalCacheTest"), fqcn("CacheTest"),
+    fqcn("EvictionTest"), fqcn("ExpirationTest"), fqcn("ExpireAfterAccessTest"),
+    fqcn("ExpireAfterVarTest"), fqcn("ExpireAfterWriteTest"), fqcn("LoadingCacheTest"),
+    fqcn("RefreshAfterWriteTest"), fqcn("UnboundedLocalCacheTest"))
+
+  // Scope: `-Ppit=dataStructures`, `-Ppit=cache`, or default (everything).
+  val scope = providers.gradleProperty("pit").getOrElse("all")
+  targetClasses = when (scope) {
+    "cache" -> cache
+    "dataStructures" -> dataStructures
+    else -> dataStructures + cache
+  }
+  targetTests = when (scope) {
+    "cache" -> cacheTests
+    "dataStructures" -> dataStructureTests
+    else -> dataStructureTests + cacheTests
+  }
+  if (scope == "cache") {
+    jvmArgs = listOf("-Dimplementation=caffeine", "-Dstats=enabled",
+      "-Dkeys=strong", "-Dvalues=strong")
+    skipFailingTests = true
+  }
+  threads = Runtime.getRuntime().availableProcessors()
+  junit5PluginVersion = libs.versions.pitest.junit5
+  pitestVersion = libs.versions.pitest.asProvider()
+  timestampedReports = false
+}
 
 testing.suites {
   named<JvmTestSuite>("test") {

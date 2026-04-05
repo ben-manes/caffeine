@@ -84,7 +84,7 @@ runs:
         echo "version=$version" >> $GITHUB_OUTPUT
         echo "vendor=$vendor" >> $GITHUB_OUTPUT
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6.0.1
+      uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
       with:
         add-job-summary: on-failure
         cache-read-only: ${{ inputs.local-cache-read-only }}

@@ -286,4 +286,62 @@ final class PacerTest {
     pacer.future = new CompletableFuture<>();
     assertThat(pacer.isScheduled()).isTrue();
   }
+
+  @Test
+  void maySkip_later() {
+    var pacer = new Pacer(Mockito.mock());
+    pacer.nextFireTime = NOW;
+    assertThat(pacer.maySkip(NOW + 1)).isTrue();
+  }
+
+  @Test
+  void maySkip_exactMatch() {
+    var pacer = new Pacer(Mockito.mock());
+    pacer.nextFireTime = NOW;
+    assertThat(pacer.maySkip(NOW)).isTrue();
+  }
+
+  @Test
+  void maySkip_earlierWithinTolerance() {
+    var pacer = new Pacer(Mockito.mock());
+    pacer.nextFireTime = NOW;
+    assertThat(pacer.maySkip(NOW - Pacer.TOLERANCE)).isTrue();
+  }
+
+  @Test
+  void maySkip_earlierExceedsTolerance() {
+    var pacer = new Pacer(Mockito.mock());
+    pacer.nextFireTime = NOW;
+    assertThat(pacer.maySkip(NOW - Pacer.TOLERANCE - 1)).isFalse();
+  }
+
+  @Test
+  void calculateSchedule_belowTolerance() {
+    var pacer = new Pacer(Mockito.mock());
+    long delay = Pacer.TOLERANCE - 1;
+    long scheduleAt = NOW + delay;
+    long actualDelay = pacer.calculateSchedule(NOW, delay, scheduleAt);
+    assertThat(actualDelay).isEqualTo(Pacer.TOLERANCE);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
+  }
+
+  @Test
+  void calculateSchedule_atTolerance() {
+    var pacer = new Pacer(Mockito.mock());
+    long delay = Pacer.TOLERANCE;
+    long scheduleAt = NOW + delay;
+    long actualDelay = pacer.calculateSchedule(NOW, delay, scheduleAt);
+    assertThat(actualDelay).isEqualTo(Pacer.TOLERANCE);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
+  }
+
+  @Test
+  void calculateSchedule_aboveTolerance() {
+    var pacer = new Pacer(Mockito.mock());
+    long delay = Pacer.TOLERANCE + 1;
+    long scheduleAt = NOW + delay;
+    long actualDelay = pacer.calculateSchedule(NOW, delay, scheduleAt);
+    assertThat(actualDelay).isEqualTo(delay);
+    assertThat(pacer.nextFireTime).isEqualTo(scheduleAt);
+  }
 }
